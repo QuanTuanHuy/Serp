@@ -16,6 +16,7 @@ import {
   useCheckOutStudentMutation,
   useGetAttendanceQuery,
   useGetRouteAttendanceManifestQuery,
+  useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
   useGetTripHistoryQuery,
@@ -90,6 +91,9 @@ export function SchoolBusAttendancePage() {
       skip: !selectedRouteId,
     });
   const { data: routeDetailData } = useGetRouteByIdQuery(selectedRouteId as number, {
+    skip: !selectedRouteId,
+  });
+  const { data: routePathData } = useGetRoutePathQuery(selectedRouteId as number, {
     skip: !selectedRouteId,
   });
   const selectedRouteDetail = routeDetailData?.data;
@@ -221,6 +225,7 @@ export function SchoolBusAttendancePage() {
                           route={selectedRouteDetail.route}
                           stops={selectedRouteDetail.stops}
                           assignment={selectedRouteDetail.assignment}
+                          routePath={routePathData?.data}
                           className='h-full w-full'
                         />
                       }

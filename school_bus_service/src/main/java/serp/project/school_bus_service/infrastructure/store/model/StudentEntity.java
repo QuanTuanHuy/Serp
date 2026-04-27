@@ -8,6 +8,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "school_bus_student")
 @Getter
@@ -36,5 +38,20 @@ public class StudentEntity extends BaseModel {
 
     @Column(name = "home_address", columnDefinition = "TEXT")
     private String homeAddress;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "gender")
+    private String gender;
+
+    @Column(name = "emergency_contact_name")
+    private String emergencyContactName;
+
+    @Column(name = "emergency_contact_phone")
+    private String emergencyContactPhone;
+
+    @Column(name = "special_note", columnDefinition = "TEXT")
+    private String specialNote;
 
 }

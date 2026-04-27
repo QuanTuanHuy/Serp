@@ -37,6 +37,18 @@ public class RouteStopEntity extends BaseModel {
     @Column(name = "estimated_student_count", nullable = false)
     private Integer estimatedStudentCount;
 
+    @Column(name = "planned_boarding_count", nullable = false)
+    private Integer plannedBoardingCount = 0;
+
+    @Column(name = "planned_dropoff_count", nullable = false)
+    private Integer plannedDropoffCount = 0;
+
+    @Column(name = "estimated_travel_time_from_previous")
+    private Integer estimatedTravelTimeFromPrevious;
+
+    @Column(name = "distance_from_previous_km")
+    private Double distanceFromPreviousKm;
+
     @Column(name = "planned_arrival_time")
     private LocalTime plannedArrivalTime;
 

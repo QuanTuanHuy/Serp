@@ -16,6 +16,9 @@ public class TransportRequestResponse extends BaseResponse {
     private String schoolName;
     private Double schoolLatitude;
     private Double schoolLongitude;
+    private String requestCode;
+    private LocalDateTime requestedAt;
+    private String requestSource;
     private String requestType;
     private String status;
     private LocalDate effectiveFrom;
@@ -24,4 +27,5 @@ public class TransportRequestResponse extends BaseResponse {
     private Long approvedBy;
     private LocalDateTime approvedAt;
     private String rejectionReason;
+    private String changeReason;
 }

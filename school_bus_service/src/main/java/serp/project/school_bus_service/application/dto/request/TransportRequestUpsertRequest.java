@@ -32,6 +32,8 @@ public class TransportRequestUpsertRequest extends BaseCommandRequest {
 
     private String notes;
 
+    private String changeReason;
+
     @Valid
     @NotEmpty
     private List<RequestStudentItemRequest> students;

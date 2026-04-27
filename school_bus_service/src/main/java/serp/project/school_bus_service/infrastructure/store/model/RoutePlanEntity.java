@@ -10,12 +10,14 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.enums.RouteGenerationMethod;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.ShiftType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "school_bus_route_plan")
@@ -78,8 +80,27 @@ public class RoutePlanEntity extends BaseModel {
     @Column(name = "planned_duration_min")
     private Integer plannedDurationMin;
 
+    @Column(name = "planned_student_count", nullable = false)
+    private Integer plannedStudentCount = 0;
+
+    @Column(name = "assigned_bus_capacity")
+    private Integer assignedBusCapacity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "route_generation_method", nullable = false)
+    private RouteGenerationMethod routeGenerationMethod = RouteGenerationMethod.MANUAL;
+
+    @Column(name = "estimated_cost")
+    private BigDecimal estimatedCost;
+
+    @Column(name = "version_no", nullable = false)
+    private Integer versionNo = 1;
+
     @Column(name = "planning_notes", columnDefinition = "TEXT")
     private String planningNotes;
+
+    @Column(name = "geometry_path", columnDefinition = "TEXT")
+    private String geometryPath;
 
     @Column(name = "started_at")
     private LocalDateTime startedAt;

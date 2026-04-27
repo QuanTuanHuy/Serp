@@ -10,5 +10,12 @@ public interface AttendanceRepository extends BaseRepository<AttendanceEntity, L
 
     List<AttendanceEntity> findByRouteIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(Long routeId, Long tenantId);
 
+    List<AttendanceEntity> findByTripIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(Long tripId, Long tenantId);
+
+    List<AttendanceEntity> findByTripIdAndStudentIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(
+            Long tripId,
+            Long studentId,
+            Long tenantId);
+
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
 }

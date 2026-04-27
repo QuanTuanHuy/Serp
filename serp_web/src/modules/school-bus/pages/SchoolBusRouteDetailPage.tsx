@@ -4,6 +4,7 @@ import Link from 'next/link';
 import * as React from 'react';
 import {
   ClipboardCheck,
+  BusFront,
   MapPinned,
   Pencil,
   PlayCircle,
@@ -16,10 +17,13 @@ import { Button } from '@/shared/components/ui';
 import {
   useAssignRouteMutation,
   useCompleteRouteMutation,
+  useComputeRoutePathMutation,
+  useCreateTripFromRouteMutation,
   useGenerateGreedyPlanMutation,
   useGetAttendantsQuery,
   useGetBusesQuery,
   useGetDriversQuery,
+  useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useStartRouteMutation,
 } from '../api/schoolBusApi';
@@ -65,16 +69,22 @@ export function SchoolBusRouteDetailPage({
   });
   const [generateGreedyPlan, { isLoading: planning }] =
     useGenerateGreedyPlanMutation();
+  const [computeRoutePath, { isLoading: computingPath }] =
+    useComputeRoutePathMutation();
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
   const [startRoute, { isLoading: starting }] = useStartRouteMutation();
   const [completeRoute, { isLoading: completing }] = useCompleteRouteMutation();
+  const [createTripFromRoute, { isLoading: creatingTrip }] =
+    useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
+  const { data: routePathData } = useGetRoutePathQuery(routeId);
 
   const detail = data?.data;
 
   const handleGeneratePlan = async () => {
     try {
       const response = await generateGreedyPlan(routeId).unwrap();
+      await computeRoutePath(routeId).unwrap();
       toast.success(
         response.data.length > 0
           ? `Generated ${response.data.length} stops`
@@ -82,6 +92,19 @@ export function SchoolBusRouteDetailPage({
       );
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to generate plan');
+    }
+  };
+
+  const handleComputePath = async () => {
+    try {
+      const response = await computeRoutePath(routeId).unwrap();
+      if (response.data?.estimated) {
+        toast.warning(response.data.warning || 'Routing fallback path applied');
+      } else {
+        toast.success('Computed real route path');
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to compute route path');
     }
   };
 
@@ -110,6 +133,15 @@ export function SchoolBusRouteDetailPage({
       toast.success(response.message || 'Route completed');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to complete route');
+    }
+  };
+
+  const handleCreateTrip = async () => {
+    try {
+      const response = await createTripFromRoute(routeId).unwrap();
+      toast.success(response.message || 'Trip created from route');
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to create trip');
     }
   };
 
@@ -162,6 +194,24 @@ export function SchoolBusRouteDetailPage({
               <Sparkles className='h-4 w-4' />
               {planning ? 'Generating...' : 'Generate plan'}
             </Button>
+            <Button
+              variant='outline'
+              className='rounded-full'
+              onClick={handleComputePath}
+            >
+              <MapPinned className='h-4 w-4' />
+              {computingPath ? 'Computing...' : 'Compute real path'}
+            </Button>
+            {['ASSIGNED', 'PLANNED'].includes(route.status) ? (
+              <Button
+                variant='outline'
+                className='rounded-full'
+                onClick={handleCreateTrip}
+              >
+                <BusFront className='h-4 w-4' />
+                {creatingTrip ? 'Creating trip...' : 'Create trip'}
+              </Button>
+            ) : null}
             {['PLANNED', 'ASSIGNED'].includes(route.status) ? (
               <Button className='rounded-full' onClick={handleStart}>
                 <PlayCircle className='h-4 w-4' />
@@ -253,6 +303,7 @@ export function SchoolBusRouteDetailPage({
                   route={detail.route}
                   stops={detail.stops}
                   assignment={detail.assignment}
+                  routePath={routePathData?.data}
                   className='h-full w-full'
                 />
               }

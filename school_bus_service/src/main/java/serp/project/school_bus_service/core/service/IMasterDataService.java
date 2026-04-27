@@ -34,6 +34,12 @@ import serp.project.school_bus_service.infrastructure.store.model.PickupPointEnt
 import serp.project.school_bus_service.infrastructure.store.model.SchoolEntity;
 import serp.project.school_bus_service.infrastructure.store.model.StudentEntity;
 
+/**
+ * Compatibility facade interface for master data operations.
+ * Delegates to dedicated resource services (ISchoolService, IStudentService, etc.).
+ * Retained so that existing callers (RouteServiceImpl, TransportRequestServiceImpl, etc.)
+ * do not need to change their injection in this phase.
+ */
 public interface IMasterDataService {
 
     PageResponse<SchoolResponse> getSchools(SchoolParamsRequest params, Long tenantId);

@@ -35,6 +35,7 @@ public class RoutePlanResponse extends BaseResponse {
     private Double plannedDistanceKm;
     private Integer plannedDurationMin;
     private String planningNotes;
+    private String geometryPath;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
 }

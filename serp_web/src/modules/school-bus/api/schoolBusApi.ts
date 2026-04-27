@@ -5,6 +5,10 @@ import type {
   DashboardSummary,
   OperationalReport,
   PagedResponse,
+  SchoolBusCapacityUtilization,
+  SchoolBusDemoEvent,
+  SchoolBusDemoSession,
+  SchoolBusDemoSpeedRequest,
   SchoolBusAttendance,
   SchoolBusAttendanceActionRequest,
   SchoolBusAttendanceManifest,
@@ -24,19 +28,26 @@ import type {
   SchoolBusPickupPoint,
   SchoolBusPickupPointUpsertRequest,
   SchoolBusRejectRequest,
+  SchoolBusManualDispatchRequest,
   SchoolBusRoute,
   SchoolBusRouteAssignment,
   SchoolBusRouteAssignmentRequest,
   SchoolBusRouteDetail,
+  SchoolBusRoutePath,
   SchoolBusRouteStop,
   SchoolBusRouteUpsertRequest,
   SchoolBusSchool,
   SchoolBusSchoolUpsertRequest,
   SchoolBusStudent,
   SchoolBusStudentUpsertRequest,
+  SchoolBusSubscription,
+  SchoolBusSubscriptionUpsertRequest,
   SchoolBusTransportRequest,
   SchoolBusTransportRequestDetail,
+  SchoolBusTransportRequestHistory,
   SchoolBusTransportRequestUpsertRequest,
+  SchoolBusTripAttendanceActionRequest,
+  SchoolBusTripExecution,
   SchoolBusTripHistory,
 } from '../types';
 
@@ -79,11 +90,48 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<DashboardSummary>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'SUMMARY' }],
     }),
-    getSchoolBusReport: builder.query<ApiResponse<OperationalReport>, void>({
-      query: () => ({ url: '/reports/operations-summary', method: 'GET' }),
+    getSchoolBusReport: builder.query<
+      ApiResponse<OperationalReport>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => ({
+        url: '/reports/operations-summary',
+        method: 'GET',
+        params: params || undefined,
+      }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<OperationalReport>(),
       providesTags: [{ type: 'schoolBus/Report', id: 'SUMMARY' }],
+    }),
+    getSchoolBusReportTrips: builder.query<
+      ApiResponse<PagedResponse<SchoolBusTripExecution>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/reports/trips', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<PagedResponse<SchoolBusTripExecution>>(),
+      providesTags: [{ type: 'schoolBus/Report', id: 'TRIPS' }],
+    }),
+    getSchoolBusReportAttendance: builder.query<
+      ApiResponse<PagedResponse<SchoolBusAttendance>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/reports/attendance', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<PagedResponse<SchoolBusAttendance>>(),
+      providesTags: [{ type: 'schoolBus/Report', id: 'ATTENDANCE' }],
+    }),
+    getSchoolBusReportCapacity: builder.query<
+      ApiResponse<PagedResponse<SchoolBusCapacityUtilization>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/reports/capacity-utilization', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<PagedResponse<SchoolBusCapacityUtilization>>(),
+      providesTags: [{ type: 'schoolBus/Report', id: 'CAPACITY' }],
     }),
     getBusTypes: builder.query<ApiResponse<SchoolBusBusType[]>, void>({
       query: () => ({ url: '/bus-types', method: 'GET' }),
@@ -716,6 +764,62 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
+    getTransportRequestHistory: builder.query<
+      ApiResponse<SchoolBusTransportRequestHistory[]>,
+      number
+    >({
+      query: (id) => ({
+        url: `/transport-requests/${id}/history`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusTransportRequestHistory[]>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TransportRequest', id: `HISTORY-${id}` },
+      ],
+    }),
+
+    getSubscriptions: builder.query<
+      ApiResponse<PagedResponse<SchoolBusSubscription>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/subscriptions', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<PagedResponse<SchoolBusSubscription>>(),
+      providesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+    }),
+    createSubscription: builder.mutation<
+      ApiResponse<SchoolBusSubscription>,
+      SchoolBusSubscriptionUpsertRequest
+    >({
+      query: (body) => ({ url: '/subscriptions', method: 'POST', body }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscription>(),
+      invalidatesTags: [
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
+      ],
+    }),
+    activateSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+      query: (id) => ({ url: `/subscriptions/${id}/activate`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscription>(),
+      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+    }),
+    pauseSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+      query: (id) => ({ url: `/subscriptions/${id}/pause`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscription>(),
+      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+    }),
+    stopSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+      query: (id) => ({ url: `/subscriptions/${id}/stop`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscription>(),
+      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+    }),
 
     getRoutes: builder.query<
       ApiResponse<PagedResponse<SchoolBusRoute>>,
@@ -756,6 +860,17 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusAttendanceManifest>(),
       providesTags: (_result, _error, id) => [
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
+      ],
+    }),
+    getRoutePath: builder.query<ApiResponse<SchoolBusRoutePath>, number>({
+      query: (id) => ({
+        url: `/routes/${id}/path`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRoutePath>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Route', id: `PATH-${id}` },
       ],
     }),
     createRoute: builder.mutation<
@@ -830,6 +945,41 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
+    manualDispatchRoute: builder.mutation<
+      ApiResponse<SchoolBusRouteAssignment>,
+      { id: number; body: SchoolBusManualDispatchRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/routes/${id}/manual-dispatch`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteAssignment>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id },
+        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+        { type: 'schoolBus/Route', id: `PATH-${id}` },
+      ],
+    }),
+    reorderRouteStops: builder.mutation<
+      ApiResponse<SchoolBusRouteStop[]>,
+      { id: number; orderedStopIds: number[] }
+    >({
+      query: ({ id, orderedStopIds }) => ({
+        url: `/routes/${id}/stops/reorder`,
+        method: 'PATCH',
+        body: { orderedStopIds },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteStop[]>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'schoolBus/Route', id },
+        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+        { type: 'schoolBus/Route', id: `PATH-${id}` },
+      ],
+    }),
     startRoute: builder.mutation<ApiResponse<SchoolBusRoute>, number>({
       query: (id) => ({ url: `/routes/${id}/start`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
@@ -858,6 +1008,18 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/TripHistory', id: 'LIST' },
       ],
     }),
+    computeRoutePath: builder.mutation<ApiResponse<SchoolBusRoutePath>, number>({
+      query: (id) => ({ url: `/routes/${id}/compute-path`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRoutePath>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id },
+        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+        { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
+        { type: 'schoolBus/Route', id: `PATH-${id}` },
+      ],
+    }),
 
     getAttendance: builder.query<
       ApiResponse<PagedResponse<SchoolBusAttendance>>,
@@ -868,6 +1030,191 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse:
         transformApiResponse<PagedResponse<SchoolBusAttendance>>(),
       providesTags: [{ type: 'schoolBus/Attendance', id: 'LIST' }],
+    }),
+    createTripFromRoute: builder.mutation<
+      ApiResponse<SchoolBusTripExecution>,
+      number
+    >({
+      query: (routePlanId) => ({
+        url: `/trips/from-route/${routePlanId}`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: [
+        { type: 'schoolBus/TripHistory', id: 'LIST' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+    getTrips: builder.query<
+      ApiResponse<PagedResponse<SchoolBusTripExecution>>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => listQuery('/trips', params),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<PagedResponse<SchoolBusTripExecution>>(),
+      providesTags: [{ type: 'schoolBus/TripHistory', id: 'TRIPS' }],
+    }),
+    getTripById: builder.query<ApiResponse<SchoolBusTripExecution>, number>({
+      query: (id) => ({ url: `/trips/${id}`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TripHistory', id: `TRIP-${id}` },
+      ],
+    }),
+    startTrip: builder.mutation<ApiResponse<SchoolBusTripExecution>, number>({
+      query: (id) => ({ url: `/trips/${id}/start`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TripHistory', id: 'TRIPS' },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${id}` },
+      ],
+    }),
+    arriveTripStop: builder.mutation<
+      ApiResponse<SchoolBusTripExecution>,
+      { tripId: number; routeStopId: number }
+    >({
+      query: ({ tripId, routeStopId }) => ({
+        url: `/trips/${tripId}/arrive-stop/${routeStopId}`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    departTripStop: builder.mutation<
+      ApiResponse<SchoolBusTripExecution>,
+      { tripId: number; routeStopId: number }
+    >({
+      query: ({ tripId, routeStopId }) => ({
+        url: `/trips/${tripId}/depart-stop/${routeStopId}`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    completeTrip: builder.mutation<ApiResponse<SchoolBusTripExecution>, number>({
+      query: (id) => ({ url: `/trips/${id}/complete`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TripHistory', id: 'TRIPS' },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${id}` },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+    getTripAttendance: builder.query<ApiResponse<SchoolBusAttendance[]>, number>({
+      query: (id) => ({ url: `/trips/${id}/attendance`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusAttendance[]>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Attendance', id: `TRIP-${id}` },
+      ],
+    }),
+    boardTripStudent: builder.mutation<
+      ApiResponse<SchoolBusAttendance>,
+      { tripId: number; body: SchoolBusTripAttendanceActionRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/trips/${tripId}/attendance/board`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusAttendance>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/Attendance', id: `TRIP-${tripId}` },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    dropoffTripStudent: builder.mutation<
+      ApiResponse<SchoolBusAttendance>,
+      { tripId: number; body: SchoolBusTripAttendanceActionRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/trips/${tripId}/attendance/dropoff`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusAttendance>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/Attendance', id: `TRIP-${tripId}` },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    absentTripStudent: builder.mutation<
+      ApiResponse<SchoolBusAttendance>,
+      { tripId: number; body: SchoolBusTripAttendanceActionRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/trips/${tripId}/attendance/absent`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusAttendance>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/Attendance', id: `TRIP-${tripId}` },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    startDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/start`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    pauseDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/pause`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    resumeDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/resume`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    stopDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/stop`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    setDemoTripSpeed: builder.mutation<
+      ApiResponse<SchoolBusDemoSession>,
+      { tripId: number; body: SchoolBusDemoSpeedRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/demo/trips/${tripId}/speed`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    getDemoTripState: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/state`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    getDemoTripEvents: builder.query<ApiResponse<SchoolBusDemoEvent[]>, number>({
+      query: (tripId) => ({ url: `/demo/trips/${tripId}/events`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoEvent[]>(),
+      providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
     }),
     checkInStudent: builder.mutation<
       ApiResponse<SchoolBusAttendance>,
@@ -921,6 +1268,9 @@ export const {
   useLazyReverseMapLocationQuery,
   useGetSchoolBusSummaryQuery,
   useGetSchoolBusReportQuery,
+  useGetSchoolBusReportTripsQuery,
+  useGetSchoolBusReportAttendanceQuery,
+  useGetSchoolBusReportCapacityQuery,
   useGetBusTypesQuery,
   useGetSchoolsQuery,
   useGetSchoolByIdQuery,
@@ -968,15 +1318,43 @@ export const {
   useUpdateTransportRequestMutation,
   useApproveTransportRequestMutation,
   useRejectTransportRequestMutation,
+  useGetTransportRequestHistoryQuery,
+  useGetSubscriptionsQuery,
+  useCreateSubscriptionMutation,
+  useActivateSubscriptionMutation,
+  usePauseSubscriptionMutation,
+  useStopSubscriptionMutation,
   useGetRoutesQuery,
   useGetRouteByIdQuery,
+  useGetRoutePathQuery,
   useGetRouteAttendanceManifestQuery,
   useCreateRouteMutation,
   useUpdateRouteMutation,
   useGenerateGreedyPlanMutation,
   useAssignRouteMutation,
+  useManualDispatchRouteMutation,
+  useReorderRouteStopsMutation,
   useStartRouteMutation,
   useCompleteRouteMutation,
+  useComputeRoutePathMutation,
+  useCreateTripFromRouteMutation,
+  useGetTripsQuery,
+  useGetTripByIdQuery,
+  useStartTripMutation,
+  useArriveTripStopMutation,
+  useDepartTripStopMutation,
+  useCompleteTripMutation,
+  useGetTripAttendanceQuery,
+  useBoardTripStudentMutation,
+  useDropoffTripStudentMutation,
+  useAbsentTripStudentMutation,
+  useStartDemoTripMutation,
+  usePauseDemoTripMutation,
+  useResumeDemoTripMutation,
+  useStopDemoTripMutation,
+  useSetDemoTripSpeedMutation,
+  useGetDemoTripStateQuery,
+  useGetDemoTripEventsQuery,
   useGetAttendanceQuery,
   useCheckInStudentMutation,
   useCheckOutStudentMutation,

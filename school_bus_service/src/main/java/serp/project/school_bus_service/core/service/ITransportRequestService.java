@@ -5,6 +5,7 @@ import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RequestStudentResponse;
+import serp.project.school_bus_service.application.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
 
@@ -18,6 +19,8 @@ public interface ITransportRequestService {
     TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId);
 
     List<RequestStudentResponse> getRequestStudents(Long requestId, Long tenantId);
+
+    List<TransportRequestHistoryResponse> getTransportRequestHistory(Long requestId, Long tenantId);
 
     TransportRequestResponse createTransportRequest(TransportRequestUpsertRequest request, Long tenantId, Long actorId);
 

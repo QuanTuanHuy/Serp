@@ -8,29 +8,37 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.application.dto.params.RoutePlanParamsRequest;
 import serp.project.school_bus_service.application.dto.request.RouteAssignmentRequest;
 import serp.project.school_bus_service.application.dto.request.RoutePlanUpsertRequest;
+import serp.project.school_bus_service.application.dto.request.ManualDispatchRequest;
+import serp.project.school_bus_service.application.dto.request.ReorderStopsRequest;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestItemResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.application.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.application.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.application.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.application.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.enums.RequestStatus;
 import serp.project.school_bus_service.core.service.IAuditLogService;
 import serp.project.school_bus_service.core.service.ICodeGeneratorService;
-import serp.project.school_bus_service.core.service.IMasterDataService;
+import serp.project.school_bus_service.core.service.IDepotService;
+import serp.project.school_bus_service.core.service.IRouteDispatchService;
+import serp.project.school_bus_service.core.service.IRouteLifecycleService;
+import serp.project.school_bus_service.core.service.IRoutePathService;
 import serp.project.school_bus_service.core.service.IRouteService;
+import serp.project.school_bus_service.core.service.IRouteStopService;
+import serp.project.school_bus_service.core.service.ISchoolService;
+import serp.project.school_bus_service.core.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.infrastructure.store.mapper.SchoolBusMapper;
-import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.AttendanceEntity;
+import serp.project.school_bus_service.infrastructure.store.model.DepotEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RequestStudentEntity;
-import serp.project.school_bus_service.infrastructure.store.model.RouteAssignmentEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RoutePlanEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RouteStopEntity;
 import serp.project.school_bus_service.infrastructure.store.model.SchoolEntity;
-import serp.project.school_bus_service.infrastructure.store.model.TripHistoryEntity;
+import serp.project.school_bus_service.infrastructure.store.model.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.ShiftType;
 import serp.project.school_bus_service.infrastructure.store.repository.RouteAssignmentRepository;
@@ -38,7 +46,6 @@ import serp.project.school_bus_service.infrastructure.store.repository.RoutePlan
 import serp.project.school_bus_service.infrastructure.store.repository.RouteStopRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.AttendanceRepository;
 import serp.project.school_bus_service.infrastructure.store.repository.RequestStudentRepository;
-import serp.project.school_bus_service.infrastructure.store.repository.TripHistoryRepository;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.kernel.shared.base.BaseRepository;
 import serp.project.school_bus_service.kernel.shared.code.SchoolBusCode;
@@ -47,13 +54,15 @@ import serp.project.school_bus_service.kernel.shared.exception.AppException;
 import serp.project.school_bus_service.kernel.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.infrastructure.store.specification.BaseSpecification;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Route service facade. Retains CRUD, query, and manifest logic directly.
+ * Delegates stop operations, dispatch, and lifecycle to dedicated services.
+ */
 @Service
 @RequiredArgsConstructor
 public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long> implements IRouteService {
@@ -63,17 +72,23 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final RouteAssignmentRepository routeAssignmentRepository;
     private final RequestStudentRepository requestStudentRepository;
     private final AttendanceRepository attendanceRepository;
-    private final TripHistoryRepository tripHistoryRepository;
-    private final IMasterDataService masterDataService;
-    private final RoutePlanningService routePlanningService;
+    private final ISchoolService schoolService;
+    private final IDepotService depotService;
+    private final IStudentSubscriptionService subscriptionService;
     private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
+    private final IRoutePathService routePathService;
+    private final IRouteStopService routeStopService;
+    private final IRouteDispatchService routeDispatchService;
+    private final IRouteLifecycleService routeLifecycleService;
     private final SchoolBusMapper mapper;
 
     @Override
     protected BaseRepository<RoutePlanEntity, Long> getRepository() {
         return routePlanRepository;
     }
+
+    // ---- Query / CRUD (kept here) ----
 
     @Override
     public PageResponse<RoutePlanResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId) {
@@ -86,6 +101,11 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
+    public RoutePlanEntity getRouteEntity(Long id, Long tenantId) {
+        return findById(routePlanRepository, id, tenantId);
+    }
+
+    @Override
     public RouteDetailResponse getRoute(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
         return mapper.toRouteDetailResponse(route,
@@ -94,24 +114,44 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
-    public RouteAttendanceManifestResponse getAttendanceManifest(Long routeId, Long tenantId) {
+    public RoutePathResponse getRoutePath(Long routeId, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        List<RequestStudentEntity> requestStudents = requestStudentRepository.findApprovedManifestBySchoolAndServiceDate(
-                route.getSchool().getId(),
-                route.getServiceDate(),
-                tenantId,
-                RequestStatus.APPROVED);
-        List<AttendanceEntity> attendances = attendanceRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(
-                routeId,
-                tenantId);
+        List<RouteStopEntity> stops = routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
 
-        Map<Long, RequestStudentEntity> manifestStudents = new LinkedHashMap<>();
-        for (RequestStudentEntity requestStudent : requestStudents) {
-            manifestStudents.putIfAbsent(requestStudent.getStudent().getId(), requestStudent);
+        RoutePathResponse storedPath = routePathService.deserialize(route.getGeometryPath());
+        if (storedPath != null && storedPath.getCoordinates() != null && storedPath.getCoordinates().size() >= 2) {
+            storedPath.setRouteId(routeId);
+            return storedPath;
         }
 
+        RoutePathResponse fallback = new RoutePathResponse();
+        fallback.setRouteId(routeId);
+        fallback.setProvider("ESTIMATED_LINE");
+        fallback.setEstimated(Boolean.TRUE);
+        fallback.setDistanceKm(route.getPlannedDistanceKm());
+        fallback.setDurationMin(route.getPlannedDurationMin());
+        return fallback;
+    }
+
+    @Override
+    public RouteAttendanceManifestResponse getAttendanceManifest(Long routeId, Long tenantId) {
+        RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
+        List<RequestStudentEntity> approvedStudents = requestStudentRepository
+                .findApprovedManifestBySchoolAndServiceDate(
+                        route.getSchool().getId(), route.getServiceDate(), tenantId, RequestStatus.APPROVED);
+        Map<Long, StudentSubscriptionEntity> manifestStudents = new LinkedHashMap<>();
+        for (StudentSubscriptionEntity subscription : subscriptionService.findEligibleSubscriptions(
+                route.getSchool().getId(), route.getRouteDirection(), route.getServiceDate(), tenantId)) {
+            boolean isApproved = approvedStudents.stream()
+                    .anyMatch(rs -> rs.getStudent().getId().equals(subscription.getStudent().getId()));
+            if (isApproved) {
+                manifestStudents.put(subscription.getStudent().getId(), subscription);
+            }
+        }
         Map<Long, AttendanceEntity> latestAttendances = new LinkedHashMap<>();
-        for (AttendanceEntity attendance : attendances) {
+        for (AttendanceEntity attendance : attendanceRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(routeId, tenantId)) {
             latestAttendances.putIfAbsent(attendance.getStudent().getId(), attendance);
         }
 
@@ -120,7 +160,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         response.setAssignment(mapper.toRouteAssignmentResponse(
                 routeAssignmentRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId).orElse(null)));
         response.setStudents(manifestStudents.values().stream()
-                .map(requestStudent -> toManifestItemResponse(requestStudent, latestAttendances.get(requestStudent.getStudent().getId())))
+                .map(subscription -> toManifestItemResponse(route, subscription,
+                        latestAttendances.get(subscription.getStudent().getId())))
                 .toList());
         return response;
     }
@@ -128,7 +169,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public List<RouteStopResponse> getRouteStops(Long routeId, Long tenantId) {
         findById(routePlanRepository, routeId, tenantId);
-        return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId).stream()
+        return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId)
+                .stream()
                 .map(mapper::toRouteStopResponse)
                 .toList();
     }
@@ -166,117 +208,55 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         return mapper.toRoutePlanResponse(saved);
     }
 
+    // ---- Delegated to sub-services ----
+
     @Override
-    @Transactional
     public List<RouteStopResponse> generateGreedyPlan(Long routeId, Long tenantId, Long actorId) {
-        RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        if (route.getStatus() == RouteStatus.COMPLETED || route.getStatus() == RouteStatus.IN_PROGRESS) {
-            throw new AppException(AppErrorCode.INVALID_STATE);
-        }
-
-        routeStopRepository.softDeleteByRouteIdAndTenantId(routeId, tenantId, actor(actorId));
-        List<RouteStopEntity> stops = routePlanningService.generateGreedyStops(route, tenantId);
-        routeStopRepository.saveAll(stops);
-        route.markUpdated(actor(actorId));
-        route.setStatus(RouteStatus.PLANNED);
-        route.setPlannedDurationMin(stops.size() * 10);
-        route.setPlannedDistanceKm((double) stops.size() * 2.5d);
-        routePlanRepository.save(route);
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "PLAN", "Generated greedy route stops");
-        return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId).stream()
-                .map(mapper::toRouteStopResponse)
-                .toList();
+        return routeStopService.generateGreedyPlan(routeId, tenantId, actorId);
     }
 
     @Override
-    @Transactional
-    public RouteAssignmentResponse assignRoute(Long routeId, RouteAssignmentRequest request, Long tenantId, Long actorId) {
-        RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        if (route.getStatus() == RouteStatus.COMPLETED || route.getStatus() == RouteStatus.CANCELLED) {
-            throw new AppException(AppErrorCode.INVALID_STATE);
-        }
-
-        validateAssignmentConflict(routeId, route.getServiceDate(), request, tenantId);
-
-        RouteAssignmentEntity assignment = routeAssignmentRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
-                .orElseGet(RouteAssignmentEntity::new);
-        if (assignment.getId() == null) {
-            assignment.markCreated(tenantId, actor(actorId));
-        } else {
-            assignment.markUpdated(actor(actorId));
-        }
-        assignment.setRoute(route);
-        assignment.setBus(masterDataService.getBus(request.getBusId(), tenantId));
-        assignment.setDriver(masterDataService.getDriver(request.getDriverId(), tenantId));
-        assignment.setAttendant(request.getAttendantId() == null ? null : masterDataService.getAttendant(request.getAttendantId(), tenantId));
-        assignment.setAssignedAt(LocalDateTime.now());
-        RouteAssignmentEntity saved = routeAssignmentRepository.save(assignment);
-        route.markUpdated(actor(actorId));
-        route.setStatus(RouteStatus.ASSIGNED);
-        routePlanRepository.save(route);
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "ASSIGN", "Assigned route resources");
-        return mapper.toRouteAssignmentResponse(saved);
+    public RouteAssignmentResponse assignRoute(Long routeId, RouteAssignmentRequest request, Long tenantId,
+            Long actorId) {
+        return routeDispatchService.assignRoute(routeId, request, tenantId, actorId);
     }
 
     @Override
-    @Transactional
+    public RouteAssignmentResponse manualDispatchRoute(Long routeId, ManualDispatchRequest request, Long tenantId,
+            Long actorId) {
+        return routeDispatchService.manualDispatchRoute(routeId, request, tenantId, actorId);
+    }
+
+    @Override
+    public List<RouteStopResponse> reorderRouteStops(Long routeId, ReorderStopsRequest request, Long tenantId,
+            Long actorId) {
+        return routeStopService.reorderRouteStops(routeId, request, tenantId, actorId);
+    }
+
+    @Override
     public RoutePlanResponse startRoute(Long routeId, Long tenantId, Long actorId) {
-        RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        if (route.getStatus() != RouteStatus.ASSIGNED && route.getStatus() != RouteStatus.PLANNED) {
-            throw new AppException(AppErrorCode.INVALID_STATE);
-        }
-        route.markUpdated(actor(actorId));
-        route.setStatus(RouteStatus.IN_PROGRESS);
-        route.setStartedAt(LocalDateTime.now());
-        RoutePlanEntity saved = routePlanRepository.save(route);
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "START", "Started route");
-        return mapper.toRoutePlanResponse(saved);
+        return routeLifecycleService.startRoute(routeId, tenantId, actorId);
     }
 
     @Override
-    @Transactional
     public RoutePlanResponse completeRoute(Long routeId, Long tenantId, Long actorId) {
-        RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        if (route.getStatus() != RouteStatus.IN_PROGRESS) {
-            throw new AppException(AppErrorCode.INVALID_STATE);
-        }
-
-        route.markUpdated(actor(actorId));
-        route.setStatus(RouteStatus.COMPLETED);
-        route.setCompletedAt(LocalDateTime.now());
-        RoutePlanEntity savedRoute = routePlanRepository.save(route);
-
-        RouteAssignmentEntity assignment = routeAssignmentRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
-                .orElse(null);
-        TripHistoryEntity tripHistory = tripHistoryRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
-                .orElseGet(TripHistoryEntity::new);
-        if (tripHistory.getId() == null) {
-            tripHistory.markCreated(tenantId, actor(actorId));
-        } else {
-            tripHistory.markUpdated(actor(actorId));
-        }
-        tripHistory.setRoute(route);
-        tripHistory.setRouteCode(route.getRouteCode());
-        tripHistory.setServiceDate(route.getServiceDate());
-        tripHistory.setStatus(route.getStatus().name());
-        tripHistory.setStartedAt(route.getStartedAt());
-        tripHistory.setCompletedAt(route.getCompletedAt());
-        if (assignment != null) {
-            tripHistory.setBus(assignment.getBus());
-            tripHistory.setDriver(assignment.getDriver());
-            tripHistory.setAttendant(assignment.getAttendant());
-        }
-        tripHistoryRepository.save(tripHistory);
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "COMPLETE", "Completed route and wrote trip history");
-        return mapper.toRoutePlanResponse(savedRoute);
+        return routeLifecycleService.completeRoute(routeId, tenantId, actorId);
     }
+
+    @Override
+    public RoutePathResponse computePath(Long routeId, Long tenantId, Long actorId) {
+        return routeStopService.computePath(routeId, tenantId, actorId);
+    }
+
+    // ---- Private helpers (kept for CRUD apply logic) ----
 
     private void applyRoute(RoutePlanEntity route, RoutePlanUpsertRequest request, Long tenantId) {
-        SchoolEntity school = masterDataService.getSchool(request.getSchoolId(), tenantId);
+        SchoolEntity school = schoolService.getSchool(request.getSchoolId(), tenantId);
         RouteDirection direction = parseEnum(RouteDirection.class, request.getRouteDirection(), "route direction");
-        RouteLocationType startType = parseEnum(RouteLocationType.class, request.getStartLocationType(), "start location type");
-        RouteLocationType endType = parseEnum(RouteLocationType.class, request.getEndLocationType(), "end location type");
+        RouteLocationType startType = parseEnum(RouteLocationType.class, request.getStartLocationType(),
+                "start location type");
+        RouteLocationType endType = parseEnum(RouteLocationType.class, request.getEndLocationType(),
+                "end location type");
 
         validateRouteLocationRule(direction, startType, endType);
 
@@ -294,14 +274,10 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private void validateRouteLocationRule(RouteDirection direction, RouteLocationType startType,
             RouteLocationType endType) {
         if (direction == RouteDirection.OUTBOUND && endType != RouteLocationType.SCHOOL) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
-                    "Outbound routes must end at the school");
+            throw new AppException(AppErrorCode.INVALID_REQUEST, "Outbound routes must end at the school");
         }
         if (direction == RouteDirection.RETURN && startType != RouteLocationType.SCHOOL) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
-                    "Return routes must start at the school");
+            throw new AppException(AppErrorCode.INVALID_REQUEST, "Return routes must start at the school");
         }
     }
 
@@ -314,7 +290,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             route.setStartDepot(null);
             return;
         }
-
         DepotEntity depot = getRequiredDepot(request.getStartDepotId(), tenantId, "start depot");
         route.setStartSchool(null);
         route.setStartDepot(depot);
@@ -329,7 +304,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             route.setEndDepot(null);
             return;
         }
-
         DepotEntity depot = getRequiredDepot(request.getEndDepotId(), tenantId, "end depot");
         route.setEndSchool(null);
         route.setEndDepot(depot);
@@ -337,22 +311,19 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
 
     private DepotEntity getRequiredDepot(Long depotId, Long tenantId, String fieldName) {
         if (depotId == null) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
+            throw new AppException(AppErrorCode.INVALID_REQUEST,
                     String.format("%s is required when location type is DEPOT", fieldName));
         }
-        return masterDataService.getDepot(depotId, tenantId);
+        return depotService.getDepot(depotId, tenantId);
     }
 
     private void validateSameSchool(Long requestedSchoolId, Long routeSchoolId, String fieldName) {
         if (requestedSchoolId == null) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
+            throw new AppException(AppErrorCode.INVALID_REQUEST,
                     String.format("%s is required when location type is SCHOOL", fieldName));
         }
         if (!routeSchoolId.equals(requestedSchoolId)) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
+            throw new AppException(AppErrorCode.INVALID_REQUEST,
                     String.format("%s must match the route school in v1", fieldName));
         }
     }
@@ -361,42 +332,21 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         try {
             return Enum.valueOf(enumType, value == null ? "" : value.toUpperCase());
         } catch (IllegalArgumentException exception) {
-            throw new AppException(
-                    AppErrorCode.INVALID_REQUEST,
+            throw new AppException(AppErrorCode.INVALID_REQUEST,
                     String.format("Invalid %s: %s", fieldName, value));
         }
     }
 
-    private void validateAssignmentConflict(Long routeId, LocalDate serviceDate, RouteAssignmentRequest request, Long tenantId) {
-        validateRouteResourceConflict(routeId, serviceDate,
-                routeAssignmentRepository.findByBusIdAndTenantIdAndIsDeletedFalse(request.getBusId(), tenantId));
-        validateRouteResourceConflict(routeId, serviceDate,
-                routeAssignmentRepository.findByDriverIdAndTenantIdAndIsDeletedFalse(request.getDriverId(), tenantId));
-        if (request.getAttendantId() != null) {
-            validateRouteResourceConflict(routeId, serviceDate,
-                    routeAssignmentRepository.findByAttendantIdAndTenantIdAndIsDeletedFalse(request.getAttendantId(), tenantId));
-        }
-    }
-
-    private void validateRouteResourceConflict(Long routeId, LocalDate serviceDate, List<RouteAssignmentEntity> assignments) {
-        boolean hasConflict = assignments.stream()
-                .map(RouteAssignmentEntity::getRoute)
-                .filter(route -> !route.getId().equals(routeId))
-                .filter(route -> route.getServiceDate().equals(serviceDate))
-                .anyMatch(route -> route.getStatus() != RouteStatus.CANCELLED && route.getStatus() != RouteStatus.COMPLETED);
-        if (hasConflict) {
-            throw new AppException(AppErrorCode.CONFLICT);
-        }
-    }
-
-    private RouteAttendanceManifestItemResponse toManifestItemResponse(RequestStudentEntity requestStudent,
-            AttendanceEntity latestAttendance) {
+    private RouteAttendanceManifestItemResponse toManifestItemResponse(RoutePlanEntity route,
+            StudentSubscriptionEntity subscription, AttendanceEntity latestAttendance) {
         RouteAttendanceManifestItemResponse response = new RouteAttendanceManifestItemResponse();
-        response.setStudentId(requestStudent.getStudent().getId());
-        response.setStudentName(requestStudent.getStudent().getFullName());
-        response.setPickupPointId(requestStudent.getPickupPoint() == null ? null : requestStudent.getPickupPoint().getId());
-        response.setPickupPointName(
-                requestStudent.getPickupPoint() == null ? null : requestStudent.getPickupPoint().getName());
+        response.setStudentId(subscription.getStudent().getId());
+        response.setStudentName(subscription.getStudent().getFullName());
+        var point = route.getRouteDirection() == RouteDirection.RETURN
+                ? subscription.getDropoffPoint()
+                : subscription.getPickupPoint();
+        response.setPickupPointId(point == null ? null : point.getId());
+        response.setPickupPointName(point == null ? null : point.getName());
         if (latestAttendance != null) {
             response.setLatestAttendanceType(latestAttendance.getAttendanceType().name());
             response.setLatestAttendanceStatus(latestAttendance.getStatus().name());

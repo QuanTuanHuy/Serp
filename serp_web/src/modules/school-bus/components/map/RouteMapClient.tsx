@@ -14,6 +14,7 @@ import { schoolBusBrand, schoolBusUi } from '../../theme';
 import type {
   SchoolBusRoute,
   SchoolBusRouteAssignment,
+  SchoolBusRoutePath,
   SchoolBusRouteStop,
 } from '../../types';
 import { createDirectionArrowIcon, createSchoolBusMarkerIcon } from './mapIcons';
@@ -22,6 +23,7 @@ interface RouteMapClientProps {
   route: SchoolBusRoute;
   stops: SchoolBusRouteStop[];
   assignment?: SchoolBusRouteAssignment | null;
+  routePath?: SchoolBusRoutePath | null;
   className?: string;
 }
 
@@ -29,6 +31,7 @@ export default function RouteMapClient({
   route,
   stops,
   assignment,
+  routePath,
   className,
 }: RouteMapClientProps) {
   const plottedStops = stops
@@ -55,7 +58,7 @@ export default function RouteMapClient({
           number,
         ])
       : null;
-  const lineCoordinates = [
+  const fallbackLineCoordinates = [
     ...(startCoordinate ? [startCoordinate] : []),
     ...plottedStops.map((stop) => [
       stop.pickupPointLatitude as number,
@@ -63,6 +66,17 @@ export default function RouteMapClient({
     ] as [number, number]),
     ...(endCoordinate ? [endCoordinate] : []),
   ];
+  const actualLineCoordinates =
+    routePath?.coordinates
+      ?.filter(
+        (point) =>
+          typeof point.latitude === 'number' &&
+          typeof point.longitude === 'number'
+      )
+      .map((point) => [point.latitude, point.longitude] as [number, number]) ??
+    [];
+  const lineCoordinates =
+    actualLineCoordinates.length >= 2 ? actualLineCoordinates : fallbackLineCoordinates;
   const routeColor =
     route.routeDirection === 'RETURN'
       ? schoolBusBrand.emerald
@@ -101,6 +115,12 @@ export default function RouteMapClient({
       className={cn('h-[420px] w-full', schoolBusUi.mapFrame, className)}
     >
       <RouteViewport coordinates={lineCoordinates} />
+
+      {routePath?.estimated && routePath.warning ? (
+        <div className='absolute right-3 top-3 z-[1000] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 shadow-sm'>
+          {routePath.warning}
+        </div>
+      ) : null}
 
       {startCoordinate ? (
         <Marker

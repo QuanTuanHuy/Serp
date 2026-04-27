@@ -11,13 +11,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.application.dto.params.RoutePlanParamsRequest;
+import serp.project.school_bus_service.application.dto.request.ManualDispatchRequest;
+import serp.project.school_bus_service.application.dto.request.ReorderStopsRequest;
 import serp.project.school_bus_service.application.dto.request.RouteAssignmentRequest;
-import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.application.dto.request.RoutePlanUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
 import serp.project.school_bus_service.application.dto.response.RouteAssignmentResponse;
+import serp.project.school_bus_service.application.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.application.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.application.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.application.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.application.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.core.service.IRouteService;
@@ -46,7 +49,8 @@ public class RouteController extends AbstractBaseController {
 
     @PostMapping
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
-    public ResponseEntity<GeneralResponse<RoutePlanResponse>> createRoute(@Valid @RequestBody RoutePlanUpsertRequest request) {
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> createRoute(
+            @Valid @RequestBody RoutePlanUpsertRequest request) {
         return created("Created route", routeService.createRoute(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
@@ -58,27 +62,50 @@ public class RouteController extends AbstractBaseController {
 
     @GetMapping("/{id}/attendance-manifest")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
-    public ResponseEntity<GeneralResponse<RouteAttendanceManifestResponse>> getAttendanceManifest(@PathVariable Long id) {
+    public ResponseEntity<GeneralResponse<RouteAttendanceManifestResponse>> getAttendanceManifest(
+            @PathVariable Long id) {
         return ok("Fetched attendance manifest", routeService.getAttendanceManifest(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
-    public ResponseEntity<GeneralResponse<RoutePlanResponse>> updateRoute(@PathVariable Long id, @Valid @RequestBody RoutePlanUpsertRequest request) {
+    public ResponseEntity<GeneralResponse<RoutePlanResponse>> updateRoute(
+            @PathVariable Long id,
+            @Valid @RequestBody RoutePlanUpsertRequest request) {
         return ok("Updated route", routeService.updateRoute(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/generate-greedy-plan")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.generate-plan')")
     public ResponseEntity<GeneralResponse<List<RouteStopResponse>>> generateGreedyPlan(@PathVariable Long id) {
-        return ok("Generated greedy route plan", routeService.generateGreedyPlan(id, getCurrentTenantId(), getCurrentUserId()));
+        return ok("Generated greedy route plan",
+                routeService.generateGreedyPlan(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/assign")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.assign')")
-    public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> assignRoute(@PathVariable Long id,
+    public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> assignRoute(
+            @PathVariable Long id,
             @Valid @RequestBody RouteAssignmentRequest request) {
         return ok("Assigned route", routeService.assignRoute(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/manual-dispatch")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.assign')")
+    public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> manualDispatchRoute(
+            @PathVariable Long id,
+            @Valid @RequestBody ManualDispatchRequest request) {
+        return ok("Manually dispatched route",
+                routeService.manualDispatchRoute(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PatchMapping("/{id}/stops/reorder")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    public ResponseEntity<GeneralResponse<List<RouteStopResponse>>> reorderRouteStops(
+            @PathVariable Long id,
+            @Valid @RequestBody ReorderStopsRequest request) {
+        return ok("Reordered route stops",
+                routeService.reorderRouteStops(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/start")
@@ -91,5 +118,17 @@ public class RouteController extends AbstractBaseController {
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.complete')")
     public ResponseEntity<GeneralResponse<RoutePlanResponse>> completeRoute(@PathVariable Long id) {
         return ok("Completed route", routeService.completeRoute(id, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/compute-path")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    public ResponseEntity<GeneralResponse<RoutePathResponse>> computePath(@PathVariable Long id) {
+        return ok("Computed route path", routeService.computePath(id, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/{id}/path")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    public ResponseEntity<GeneralResponse<RoutePathResponse>> getPath(@PathVariable Long id) {
+        return ok("Fetched route path", routeService.getRoutePath(id, getCurrentTenantId()));
     }
 }

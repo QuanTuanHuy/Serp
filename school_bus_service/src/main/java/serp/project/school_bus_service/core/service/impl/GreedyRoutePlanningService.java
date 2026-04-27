@@ -2,16 +2,14 @@ package serp.project.school_bus_service.core.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import serp.project.school_bus_service.enums.RequestStatus;
+import serp.project.school_bus_service.core.service.IRoutePlanningService;
+import serp.project.school_bus_service.core.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStopType;
 import serp.project.school_bus_service.infrastructure.store.model.PickupPointEntity;
-import serp.project.school_bus_service.infrastructure.store.model.RequestStudentEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RoutePlanEntity;
 import serp.project.school_bus_service.infrastructure.store.model.RouteStopEntity;
-import serp.project.school_bus_service.infrastructure.store.model.TransportRequestEntity;
-import serp.project.school_bus_service.infrastructure.store.repository.RequestStudentRepository;
-import serp.project.school_bus_service.infrastructure.store.repository.TransportRequestRepository;
+import serp.project.school_bus_service.infrastructure.store.model.StudentSubscriptionEntity;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -22,43 +20,29 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class GreedyRoutePlanningService implements RoutePlanningService {
+public class GreedyRoutePlanningService implements IRoutePlanningService {
 
-    private final TransportRequestRepository transportRequestRepository;
-    private final RequestStudentRepository requestStudentRepository;
+    private final IStudentSubscriptionService subscriptionService;
 
     @Override
     public List<RouteStopEntity> generateGreedyStops(RoutePlanEntity route, Long tenantId) {
-        List<TransportRequestEntity> approvedRequests = transportRequestRepository
-                .findBySchool_IdAndTenantIdAndStatusAndIsDeletedFalseOrderByCreatedAtAsc(
-                        route.getSchool().getId(),
-                        tenantId,
-                        RequestStatus.APPROVED)
-                .stream()
-                .filter(request -> !route.getServiceDate().isBefore(request.getEffectiveFrom()))
-                .filter(request -> request.getEffectiveTo() == null || !route.getServiceDate().isAfter(request.getEffectiveTo()))
-                .toList();
-
         Map<Long, PickupPointAggregate> pickupPointMap = new LinkedHashMap<>();
-        for (TransportRequestEntity request : approvedRequests) {
-            List<RequestStudentEntity> requestStudents = requestStudentRepository
-                    .findByRequestIdAndTenantIdAndIsDeletedFalse(request.getId(), tenantId);
-            for (RequestStudentEntity requestStudent : requestStudents) {
-                PickupPointEntity pickupPoint = requestStudent.getPickupPoint() != null
-                        ? requestStudent.getPickupPoint()
-                        : requestStudent.getStudent().getPickupPoint();
-                if (pickupPoint == null) {
-                    continue;
-                }
-
-                pickupPointMap.compute(pickupPoint.getId(), (key, existing) -> {
-                    if (existing == null) {
-                        return new PickupPointAggregate(pickupPoint, 1);
-                    }
-                    existing.increment();
-                    return existing;
-                });
+        for (StudentSubscriptionEntity subscription : subscriptionService.findEligibleSubscriptions(
+                route.getSchool().getId(), route.getRouteDirection(), route.getServiceDate(), tenantId)) {
+            PickupPointEntity point = route.getRouteDirection() == RouteDirection.RETURN
+                    ? subscription.getDropoffPoint()
+                    : subscription.getPickupPoint();
+            if (point == null) {
+                continue;
             }
+
+            pickupPointMap.compute(point.getId(), (key, existing) -> {
+                if (existing == null) {
+                    return new PickupPointAggregate(point, 1);
+                }
+                existing.increment();
+                return existing;
+            });
         }
 
         List<PickupPointAggregate> sortedPickupPoints = pickupPointMap.values().stream()

@@ -3,7 +3,11 @@ package serp.project.school_bus_service.kernel.shared.code;
 public enum SchoolBusCode {
     SCHOOL("SCHOOL", "SBU"),
     STUDENT("STUDENT", "STU"),
-    ROUTE("ROUTE", "RTE");
+    ROUTE("ROUTE", "RTE"),
+    REQUEST("REQUEST", "REQ"),
+    SUBSCRIPTION("SUBSCRIPTION", "SUB"),
+    TRIP("TRIP", "TRP"),
+    DEMO("DEMO", "DEM");
 
     private final String sequenceKey;
     private final String prefix;

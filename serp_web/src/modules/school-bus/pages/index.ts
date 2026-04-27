@@ -10,4 +10,7 @@ export * from './SchoolBusDispatchPage';
 export * from './SchoolBusRouteFormPage';
 export * from './SchoolBusRouteDetailPage';
 export * from './SchoolBusAttendancePage';
+export * from './SchoolBusSubscriptionsPage';
+export * from './SchoolBusTripsPage';
+export * from './SchoolBusDemoPage';
 export * from './SchoolBusReportsPage';

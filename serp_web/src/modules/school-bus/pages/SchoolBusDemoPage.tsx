@@ -1,0 +1,238 @@
+'use client';
+
+import * as React from 'react';
+import { Gauge, Pause, Play, RotateCcw, Square } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/shared/components/ui';
+import {
+  useGetDemoTripEventsQuery,
+  useGetDemoTripStateQuery,
+  useGetTripsQuery,
+  usePauseDemoTripMutation,
+  useResumeDemoTripMutation,
+  useSetDemoTripSpeedMutation,
+  useStartDemoTripMutation,
+  useStopDemoTripMutation,
+} from '../api/schoolBusApi';
+import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
+import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
+import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import { SchoolBusSection } from '../components/SchoolBusSection';
+import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { schoolBusUi } from '../theme';
+import { formatDateTime, getPageItems } from '../utils';
+
+export function SchoolBusDemoPage() {
+  const { data: tripsData } = useGetTripsQuery({
+    page: 0,
+    size: 50,
+    sortBy: 'serviceDate',
+    sortDirection: 'DESC',
+  });
+  const trips = getPageItems(tripsData?.data);
+  const [selectedTripId, setSelectedTripId] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (!selectedTripId && trips.length > 0) {
+      setSelectedTripId(trips[0].id);
+    }
+  }, [selectedTripId, trips]);
+
+  const { data: stateData } = useGetDemoTripStateQuery(selectedTripId as number, {
+    skip: !selectedTripId,
+  });
+  const { data: eventsData } = useGetDemoTripEventsQuery(selectedTripId as number, {
+    skip: !selectedTripId,
+  });
+  const [startDemo] = useStartDemoTripMutation();
+  const [pauseDemo] = usePauseDemoTripMutation();
+  const [resumeDemo] = useResumeDemoTripMutation();
+  const [stopDemo] = useStopDemoTripMutation();
+  const [setSpeed] = useSetDemoTripSpeedMutation();
+  const demo = stateData?.data;
+  const events = eventsData?.data || demo?.events || [];
+
+  const action = async (label: string, fn: () => Promise<any>) => {
+    if (!selectedTripId) {
+      return;
+    }
+    try {
+      const response = await fn();
+      toast.success(response.message || `${label} completed`);
+    } catch (error: any) {
+      toast.error(error?.data?.message || `${label} failed`);
+    }
+  };
+
+  return (
+    <SchoolBusPageShell
+      title='Simulation demo'
+      description='Demo mode runs on trip execution data. It does not replace real GPS, but gives a controlled operations walkthrough for school-bus demos.'
+    >
+      <div className='grid gap-4 md:grid-cols-3'>
+        <SchoolBusMetricCard
+          label='Demo status'
+          value={demo?.status || 'READY'}
+          hint='Current simulated session state'
+          icon={Gauge}
+          tone='info'
+        />
+        <SchoolBusMetricCard
+          label='Speed'
+          value={`x${demo?.speedMultiplier || 1}`}
+          hint='Simulation playback multiplier'
+          icon={Play}
+          tone='success'
+        />
+        <SchoolBusMetricCard
+          label='Progress'
+          value={`${Math.round(demo?.progressPercent || 0)}%`}
+          hint='Current progress along the trip'
+          icon={RotateCcw}
+          tone='warning'
+        />
+      </div>
+
+      <div className='grid gap-6 xl:grid-cols-[0.75fr_1.25fr]'>
+        <SchoolBusSection
+          title='Trip selector'
+          description='Choose a trip snapshot to drive a demo session.'
+        >
+          {trips.length === 0 ? (
+            <SchoolBusEmptyState
+              title='No trips available'
+              description='Create trips from dispatched routes before simulation can start.'
+              icon={Gauge}
+            />
+          ) : (
+            <div className='space-y-2'>
+              {trips.map((trip) => (
+                <button
+                  key={trip.id}
+                  type='button'
+                  onClick={() => setSelectedTripId(trip.id)}
+                  className={`${schoolBusUi.interactiveCard} w-full text-left ${
+                    selectedTripId === trip.id ? 'border-rose-300 bg-rose-50' : ''
+                  }`}
+                >
+                  <div className='flex items-center justify-between gap-3'>
+                    <div>
+                      <p className='font-semibold text-slate-950'>{trip.tripCode}</p>
+                      <p className='text-sm text-slate-500'>
+                        {trip.routeCode} - {trip.routeDirection}
+                      </p>
+                    </div>
+                    <SchoolBusStatusBadge status={trip.status} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </SchoolBusSection>
+
+        <SchoolBusSection
+          title='Demo controls'
+          description='Operate a demo session and inspect its event trail.'
+        >
+          <div className='space-y-5'>
+            <div className='flex flex-wrap gap-2'>
+              <Button
+                disabled={!selectedTripId}
+                onClick={() =>
+                  action('Start demo', () => startDemo(selectedTripId as number).unwrap())
+                }
+              >
+                <Play className='mr-2 h-4 w-4' />
+                Start
+              </Button>
+              <Button
+                variant='outline'
+                disabled={!selectedTripId}
+                onClick={() =>
+                  action('Pause demo', () => pauseDemo(selectedTripId as number).unwrap())
+                }
+              >
+                <Pause className='mr-2 h-4 w-4' />
+                Pause
+              </Button>
+              <Button
+                variant='outline'
+                disabled={!selectedTripId}
+                onClick={() =>
+                  action('Resume demo', () => resumeDemo(selectedTripId as number).unwrap())
+                }
+              >
+                <RotateCcw className='mr-2 h-4 w-4' />
+                Resume
+              </Button>
+              <Button
+                variant='outline'
+                disabled={!selectedTripId}
+                onClick={() =>
+                  action('Stop demo', () => stopDemo(selectedTripId as number).unwrap())
+                }
+              >
+                <Square className='mr-2 h-4 w-4' />
+                Stop
+              </Button>
+              {[1, 2, 5, 10].map((speed) => (
+                <Button
+                  key={speed}
+                  variant={demo?.speedMultiplier === speed ? 'default' : 'outline'}
+                  disabled={!selectedTripId}
+                  onClick={() =>
+                    action('Set speed', () =>
+                      setSpeed({
+                        tripId: selectedTripId as number,
+                        body: { speedMultiplier: speed },
+                      }).unwrap()
+                    )
+                  }
+                >
+                  x{speed}
+                </Button>
+              ))}
+            </div>
+
+            <div className='rounded-[24px] border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-sky-50 p-6'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='text-sm uppercase tracking-[0.28em] text-rose-500'>
+                    Simulated bus position
+                  </p>
+                  <p className='mt-2 text-3xl font-semibold text-slate-950'>
+                    {Math.round(demo?.progressPercent || 0)}%
+                  </p>
+                </div>
+                <SchoolBusStatusBadge status={demo?.status || 'READY'} />
+              </div>
+              <div className='mt-5 h-3 overflow-hidden rounded-full bg-slate-200'>
+                <div
+                  className='h-full rounded-full bg-rose-600 transition-all duration-500'
+                  style={{ width: `${Math.min(100, demo?.progressPercent || 0)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <p className='text-sm font-semibold text-slate-950'>Event log</p>
+              {events.length === 0 ? (
+                <p className='text-sm text-slate-500'>No demo events recorded yet.</p>
+              ) : (
+                events.map((event) => (
+                  <div key={event.id} className={schoolBusUi.interactiveCard}>
+                    <div className='flex items-center justify-between gap-3'>
+                      <p className='font-medium'>{event.eventType}</p>
+                      <p className='text-xs text-slate-500'>
+                        {formatDateTime(event.eventTime)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </SchoolBusSection>
+      </div>
+    </SchoolBusPageShell>
+  );
+}

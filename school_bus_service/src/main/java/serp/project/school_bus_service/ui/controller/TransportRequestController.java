@@ -15,11 +15,14 @@ import serp.project.school_bus_service.application.dto.request.RejectRequest;
 import serp.project.school_bus_service.application.dto.request.TransportRequestUpsertRequest;
 import serp.project.school_bus_service.application.dto.response.GeneralResponse;
 import serp.project.school_bus_service.application.dto.response.PageResponse;
+import serp.project.school_bus_service.application.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.application.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.core.service.ITransportRequestService;
 import serp.project.school_bus_service.kernel.shared.auth.AuthUtils;
 import serp.project.school_bus_service.kernel.shared.base.AbstractBaseController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/transport-requests")
@@ -51,6 +54,14 @@ public class TransportRequestController extends AbstractBaseController {
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
     public ResponseEntity<GeneralResponse<TransportRequestDetailResponse>> getTransportRequest(@PathVariable Long id) {
         return ok("Fetched transport request", transportRequestService.getTransportRequest(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/history")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    public ResponseEntity<GeneralResponse<List<TransportRequestHistoryResponse>>> getTransportRequestHistory(
+            @PathVariable Long id) {
+        return ok("Fetched transport request history",
+                transportRequestService.getTransportRequestHistory(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")

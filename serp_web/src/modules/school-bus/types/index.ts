@@ -79,6 +79,11 @@ export interface SchoolBusStudent extends SchoolBusBaseRecord {
   studentCode?: string | null;
   grade?: string | null;
   homeAddress?: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  specialNote?: string | null;
 }
 
 export interface SchoolBusBus extends SchoolBusBaseRecord {
@@ -141,6 +146,7 @@ export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
 }
 
 export interface SchoolBusTransportRequest extends SchoolBusBaseRecord {
+  requestCode?: string | null;
   parentProfileId: number;
   parentProfileName: string;
   schoolId: number;
@@ -152,9 +158,22 @@ export interface SchoolBusTransportRequest extends SchoolBusBaseRecord {
   effectiveFrom: string;
   effectiveTo?: string | null;
   notes?: string | null;
+  requestedAt?: string | null;
+  requestSource?: string | null;
+  changeReason?: string | null;
   approvedBy?: number | null;
   approvedAt?: string | null;
   rejectionReason?: string | null;
+}
+
+export interface SchoolBusTransportRequestHistory extends SchoolBusBaseRecord {
+  requestId: number;
+  oldStatus?: string | null;
+  newStatus: string;
+  changedBy?: number | null;
+  changedAt: string;
+  reason?: string | null;
+  notes?: string | null;
 }
 
 export interface SchoolBusTransportRequestDetail {
@@ -187,9 +206,30 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   status: string;
   plannedDistanceKm?: number | null;
   plannedDurationMin?: number | null;
+  plannedStudentCount?: number | null;
+  assignedBusCapacity?: number | null;
+  routeGenerationMethod?: string | null;
+  estimatedCost?: number | null;
+  versionNo?: number | null;
   planningNotes?: string | null;
+  geometryPath?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+}
+
+export interface SchoolBusRoutePathCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+export interface SchoolBusRoutePath {
+  routeId: number;
+  provider?: string | null;
+  estimated?: boolean | null;
+  distanceKm?: number | null;
+  durationMin?: number | null;
+  warning?: string | null;
+  coordinates: SchoolBusRoutePathCoordinate[];
 }
 
 export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
@@ -226,13 +266,127 @@ export interface SchoolBusRouteDetail {
 export interface SchoolBusAttendance extends SchoolBusBaseRecord {
   routeId: number;
   routeCode: string;
+  tripId?: number | null;
+  routeStopId?: number | null;
   studentId: number;
   studentName: string;
   attendanceType: string;
+  eventType?: string | null;
+  eventSource?: string | null;
   status: string;
   recordedAt: string;
   recordedBy: number;
   notes?: string | null;
+}
+
+export interface SchoolBusSubscription extends SchoolBusBaseRecord {
+  subscriptionCode: string;
+  studentId: number;
+  studentName: string;
+  schoolId: number;
+  schoolName: string;
+  pickupPointId?: number | null;
+  pickupPointName?: string | null;
+  dropoffPointId?: number | null;
+  dropoffPointName?: string | null;
+  tripOption: 'MORNING' | 'AFTERNOON' | 'ROUND_TRIP';
+  status: string;
+  monday: boolean;
+  tuesday: boolean;
+  wednesday: boolean;
+  thursday: boolean;
+  friday: boolean;
+  saturday: boolean;
+  sunday: boolean;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  sourceRequestId?: number | null;
+}
+
+export interface SchoolBusTripStopLog extends SchoolBusBaseRecord {
+  tripId: number;
+  routeStopId: number;
+  stopName: string;
+  stopOrder: number;
+  status: string;
+  actualArrivalTime?: string | null;
+  actualDepartureTime?: string | null;
+  delayMinutes?: number | null;
+  actualBoardedCount: number;
+  actualDroppedCount: number;
+  note?: string | null;
+}
+
+export interface SchoolBusTripStudent extends SchoolBusBaseRecord {
+  tripId: number;
+  studentId: number;
+  studentName: string;
+  pickupStopId?: number | null;
+  dropoffStopId?: number | null;
+  subscriptionId?: number | null;
+  status: string;
+  note?: string | null;
+}
+
+export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
+  tripCode: string;
+  routeId: number;
+  routeCode: string;
+  routeName: string;
+  serviceDate: string;
+  routeDirection: 'OUTBOUND' | 'RETURN';
+  shiftType: string;
+  status: string;
+  plannedStartAt?: string | null;
+  plannedEndAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  plannedDistanceKm?: number | null;
+  plannedDurationMin?: number | null;
+  actualDistanceKm?: number | null;
+  actualDurationMin?: number | null;
+  completionNote?: string | null;
+  simulationMode?: boolean;
+  busId?: number | null;
+  busPlateNumber?: string | null;
+  driverId?: number | null;
+  driverName?: string | null;
+  attendantId?: number | null;
+  attendantName?: string | null;
+  stops: SchoolBusTripStopLog[];
+  students: SchoolBusTripStudent[];
+}
+
+export interface SchoolBusDemoEvent extends SchoolBusBaseRecord {
+  demoSessionId: number;
+  eventType: string;
+  eventTime: string;
+  payloadJson?: string | null;
+}
+
+export interface SchoolBusDemoSession extends SchoolBusBaseRecord {
+  demoCode: string;
+  tripId: number;
+  tripCode: string;
+  status: string;
+  speedMultiplier: number;
+  currentStopOrder?: number | null;
+  currentLatitude?: number | null;
+  currentLongitude?: number | null;
+  progressPercent: number;
+  startedAt?: string | null;
+  pausedAt?: string | null;
+  completedAt?: string | null;
+  events: SchoolBusDemoEvent[];
+}
+
+export interface SchoolBusCapacityUtilization {
+  tripId: number;
+  tripCode: string;
+  routeCode: string;
+  plannedStudents: number;
+  busCapacity: number;
+  utilizationPercent: number;
 }
 
 export interface SchoolBusAttendanceManifestStudent {
@@ -313,6 +467,11 @@ export interface SchoolBusStudentUpsertRequest {
   fullName: string;
   grade?: string;
   homeAddress?: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  specialNote?: string;
   isActive?: boolean;
 }
 
@@ -375,7 +534,27 @@ export interface SchoolBusTransportRequestUpsertRequest {
   effectiveFrom: string;
   effectiveTo?: string | null;
   notes?: string;
+  changeReason?: string;
   students: SchoolBusTransportRequestStudentInput[];
+  isActive?: boolean;
+}
+
+export interface SchoolBusSubscriptionUpsertRequest {
+  studentId: number;
+  schoolId: number;
+  pickupPointId?: number | null;
+  dropoffPointId?: number | null;
+  tripOption: 'MORNING' | 'AFTERNOON' | 'ROUND_TRIP';
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  status?: string;
+  monday?: boolean;
+  tuesday?: boolean;
+  wednesday?: boolean;
+  thursday?: boolean;
+  friday?: boolean;
+  saturday?: boolean;
+  sunday?: boolean;
   isActive?: boolean;
 }
 
@@ -404,6 +583,23 @@ export interface SchoolBusRouteAssignmentRequest {
   busId: number;
   driverId: number;
   attendantId?: number | null;
+  isActive?: boolean;
+}
+
+export interface SchoolBusManualDispatchRequest extends SchoolBusRouteAssignmentRequest {
+  orderedStopIds?: number[];
+  notes?: string;
+}
+
+export interface SchoolBusTripAttendanceActionRequest {
+  routeStopId: number;
+  studentId: number;
+  notes?: string;
+  isActive?: boolean;
+}
+
+export interface SchoolBusDemoSpeedRequest {
+  speedMultiplier: number;
   isActive?: boolean;
 }
 

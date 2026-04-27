@@ -16,7 +16,9 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
   useCompleteRouteMutation,
+  useComputeRoutePathMutation,
   useGenerateGreedyPlanMutation,
+  useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
   useStartRouteMutation,
@@ -46,6 +48,8 @@ export function SchoolBusDispatchPage() {
     useGenerateGreedyPlanMutation();
   const [startRoute, { isLoading: starting }] = useStartRouteMutation();
   const [completeRoute, { isLoading: completing }] = useCompleteRouteMutation();
+  const [computeRoutePath, { isLoading: computingPath }] =
+    useComputeRoutePathMutation();
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
@@ -73,6 +77,10 @@ export function SchoolBusDispatchPage() {
     selectedRouteId as number,
     { skip: !selectedRouteId }
   );
+  const { data: selectedRoutePath } = useGetRoutePathQuery(
+    selectedRouteId as number,
+    { skip: !selectedRouteId }
+  );
   const selectedRouteMissingCoordinates =
     selectedRouteDetail?.data.stops.filter(
       (stop) =>
@@ -89,6 +97,7 @@ export function SchoolBusDispatchPage() {
   const handleGeneratePlan = async (routeId: number) => {
     try {
       const response = await generateGreedyPlan(routeId).unwrap();
+      await computeRoutePath(routeId).unwrap();
       const stopCount = response.data?.length || 0;
       toast.success(
         stopCount > 0
@@ -97,6 +106,22 @@ export function SchoolBusDispatchPage() {
       );
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to generate greedy plan');
+    }
+  };
+
+  const handleComputePath = async () => {
+    if (!selectedRouteId) {
+      return;
+    }
+    try {
+      const response = await computeRoutePath(selectedRouteId).unwrap();
+      if (response.data?.estimated) {
+        toast.warning(response.data.warning || 'Routing fallback path applied');
+      } else {
+        toast.success('Computed real route path');
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to compute route path');
     }
   };
 
@@ -281,6 +306,7 @@ export function SchoolBusDispatchPage() {
                   route={selectedRouteDetail.data.route}
                   stops={selectedRouteDetail.data.stops}
                   assignment={selectedRouteDetail.data.assignment}
+                  routePath={selectedRoutePath?.data}
                   className='h-full w-full'
                 />
               }
@@ -305,6 +331,15 @@ export function SchoolBusDispatchPage() {
                       Route line renders only plotted segments.
                     </p>
                   ) : null}
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='w-full rounded-full'
+                    disabled={!selectedRouteId || computingPath}
+                    onClick={handleComputePath}
+                  >
+                    {computingPath ? 'Computing path...' : 'Compute real path'}
+                  </Button>
                   <p className='text-xs text-slate-500'>
                     Status: {selectedRouteDetail.data.route.status}
                   </p>
