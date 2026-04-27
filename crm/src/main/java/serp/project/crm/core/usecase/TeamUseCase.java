@@ -15,9 +15,11 @@ import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
+import serp.project.crm.core.domain.dto.request.AssignTeamTerritoriesRequest;
 import serp.project.crm.core.domain.dto.request.ChangeTeamManagerRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamRequest;
+import serp.project.crm.core.domain.dto.response.TeamTerritoryResponse;
 import serp.project.crm.core.domain.dto.response.TeamResponse;
 import serp.project.crm.core.domain.dto.response.TeamSummaryResponse;
 import serp.project.crm.core.domain.entity.TeamEntity;
@@ -26,8 +28,10 @@ import serp.project.crm.core.domain.enums.TeamStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.TeamDtoMapper;
 import serp.project.crm.core.mapper.TeamMemberDtoMapper;
+import serp.project.crm.core.mapper.TerritoryDtoMapper;
 import serp.project.crm.core.service.ITeamMemberService;
 import serp.project.crm.core.service.ITeamService;
+import serp.project.crm.core.service.ITeamTerritoryService;
 import serp.project.crm.kernel.utils.ResponseUtils;
 
 import java.util.List;
@@ -39,9 +43,11 @@ public class TeamUseCase {
 
     private final ITeamService teamService;
     private final ITeamMemberService teamMemberService;
+    private final ITeamTerritoryService teamTerritoryService;
 
     private final TeamDtoMapper teamDtoMapper;
     private final TeamMemberDtoMapper memberDtoMapper;
+    private final TerritoryDtoMapper territoryDtoMapper;
     private final ResponseUtils responseUtils;
 
     @Transactional(rollbackFor = Exception.class)
@@ -203,6 +209,23 @@ public class TeamUseCase {
             throw e;
         } catch (Exception e) {
             log.error("[TeamUseCase] Unexpected error changing team manager: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> assignTerritories(Long teamId, AssignTeamTerritoriesRequest request, Long tenantId,
+            Long userId) {
+        try {
+            var territories = teamTerritoryService.assignTerritories(teamId, request.getTerritoryCodes(), tenantId,
+                    userId);
+            TeamTerritoryResponse response = territoryDtoMapper.toTeamTerritoryResponse(teamId, territories);
+            return responseUtils.success(response, "Team territories assigned successfully");
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error assigning territories: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("[TeamUseCase] Unexpected error assigning territories: {}", e.getMessage(), e);
             throw e;
         }
     }

@@ -86,6 +86,8 @@ public class ErrorMessage {
     public static final String AUTH_CONTEXT_REQUIRED = "Authentication context is required";
     public static final String TEAM_MANAGER_MUST_BELONG_TO_TEAM = "New manager must be an active member of the specified team";
     public static final String TEAM_MANAGER_ROLE_CHANGE_INVALID = "Previous manager role must be SALES_REP or VIEWER";
+    public static final String TERRITORY_NOT_FOUND = "Territory not found";
+    public static final String TERRITORY_ALREADY_ASSIGNED = "Territory already assigned to another active team";
 
     // Team member errors
     public static final String MEMBER_NOT_BELONG_TO_ORGANIZATION = "Member does not belong to the organization";
@@ -96,6 +98,7 @@ public class ErrorMessage {
     public static final String MEMBER_ALREADY_ACTIVE = "Member is already active";
     public static final String MEMBER_ALREADY_INACTIVE = "Member is already inactive";
     public static final String INVALID_TEAM_MEMBER_ROLE = "Invalid team member role. Must be MANAGER, SALES_REP, or VIEWER";
+    public static final String INVALID_TERRITORY_CODE = "One or more territory codes do not exist";
     
     // Validation errors
     public static final String INVALID_EMAIL_FORMAT = "Invalid email format";

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.AssignTeamTerritoriesRequest;
 import serp.project.crm.core.domain.dto.request.ChangeTeamManagerRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.CreateTeamRequest;
@@ -174,6 +175,21 @@ public class TeamController {
 
         log.info("PUT /api/v1/teams/{}/manager - Changing team manager for tenant: {}", id, tenantId);
         var response = teamUseCase.changeManager(id, request, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/{id}/territories")
+    public ResponseEntity<?> assignTerritories(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignTeamTerritoriesRequest request) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        if (tenantId == null || userId == null) {
+            return unauthorizedResponse();
+        }
+
+        log.info("PUT /api/v1/teams/{}/territories - Assigning territories for tenant: {}", id, tenantId);
+        var response = teamUseCase.assignTerritories(id, request, tenantId, userId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

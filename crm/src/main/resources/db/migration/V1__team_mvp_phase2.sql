@@ -97,3 +97,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_crm_team_quota_snapshots_tenant_team_period
 
 CREATE INDEX IF NOT EXISTS idx_crm_team_quota_snapshots_tenant_period
     ON crm_team_quota_snapshots (tenant_id, period);
+
+ALTER TABLE IF EXISTS leads
+    ADD COLUMN IF NOT EXISTS territory_code VARCHAR(50);
+
+CREATE INDEX IF NOT EXISTS idx_leads_tenant_territory_code
+    ON leads (tenant_id, territory_code);
