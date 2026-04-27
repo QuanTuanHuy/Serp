@@ -16,4 +16,9 @@ public interface ITerritoryPort {
     Optional<TerritoryEntity> findByCode(String territoryCode, Long tenantId);
     List<TerritoryEntity> findByCodes(List<String> territoryCodes, Long tenantId);
     Optional<TerritoryEntity> findByStateOrCity(String state, String city, Long tenantId);
+    Optional<TerritoryEntity> findByCodeAndTenantId(String territoryCode, Long tenantId);
+    Optional<TerritoryEntity> findMergedByCode(String territoryCode, Long tenantId);
+    List<TerritoryEntity> findMergedByCodes(List<String> territoryCodes, Long tenantId);
+    Optional<TerritoryEntity> findMergedByStateOrCity(String state, String city, Long tenantId);
+    List<TerritoryEntity> findAllByTenantIds(List<Long> tenantIds);
 }

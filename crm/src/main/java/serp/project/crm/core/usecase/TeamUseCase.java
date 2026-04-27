@@ -229,4 +229,18 @@ public class TeamUseCase {
             throw e;
         }
     }
+
+    @Transactional(readOnly = true)
+    public GeneralResponse<?> getTeamTerritories(Long teamId, Long tenantId) {
+        try {
+            var territories = teamTerritoryService.getActiveTerritoriesByTeam(teamId, tenantId);
+            return responseUtils.success(territoryDtoMapper.toTeamTerritoryResponse(teamId, territories));
+        } catch (AppException e) {
+            log.error("[TeamUseCase] Error fetching team territories: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("[TeamUseCase] Unexpected error fetching team territories: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
 }
