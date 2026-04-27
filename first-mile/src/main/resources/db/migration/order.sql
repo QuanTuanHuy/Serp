@@ -20,6 +20,7 @@ CREATE TABLE orders (
 
     -- Khung giờ giao hàng
                         delivery_request_time VARCHAR(255),
+                        pickup_method VARCHAR(50) DEFAULT 'COURIER_PICKUP',
 
     -- Thông tin người nhận
                         receiver_name VARCHAR(255),

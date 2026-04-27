@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import {
+  Building2,
   CheckCircle2,
   Eye,
   Loader2,
@@ -37,24 +38,32 @@ import type {
 interface OrderResultsCardProps {
   canViewOrders: boolean;
   canMutateOrders: boolean;
+  canConfirmDropOffAtPostOffice: boolean;
   data?: FirstMilePaginatedData<FirstMileOrderDetail>;
   isLoading: boolean;
   isFetching: boolean;
   loadingOrderActionId: number | null;
   confirmingOrderId: number | null;
+  loadingDropOffSuggestionOrderId: number | null;
   onViewDetail: (orderId: number) => void;
   onEdit: (order: FirstMileOrderDetail) => void;
   onRequestCancel: (order: FirstMileOrderDetail) => void;
   onRequestDelete: (order: FirstMileOrderDetail) => void;
   onConfirm: (order: FirstMileOrderDetail) => void;
+  onOpenDropOffSuggestions: (order: FirstMileOrderDetail) => void;
+  onOpenManagerDropOffConfirm: (order: FirstMileOrderDetail) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
   formatStatusLabel: (status: FirstMileOrderStatus) => string;
+  formatPickupMethodLabel: (
+    pickupMethod?: FirstMileOrderDetail['pickupMethod']
+  ) => string;
   getStatusBadgeVariant: (
     status: FirstMileOrderStatus
   ) => 'default' | 'secondary' | 'outline' | 'destructive';
   isDraftOrder: (order: FirstMileOrderDetail) => boolean;
   isConfirmableStatus: (status: FirstMileOrderStatus) => boolean;
+  isDropOffOrder: (order: FirstMileOrderDetail) => boolean;
   buildOrderAddressLabel: (
     name?: string,
     phone?: string,
@@ -67,22 +76,28 @@ interface OrderResultsCardProps {
 export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
   canViewOrders,
   canMutateOrders,
+  canConfirmDropOffAtPostOffice,
   data,
   isLoading,
   isFetching,
   loadingOrderActionId,
   confirmingOrderId,
+  loadingDropOffSuggestionOrderId,
   onViewDetail,
   onEdit,
   onRequestCancel,
   onRequestDelete,
   onConfirm,
+  onOpenDropOffSuggestions,
+  onOpenManagerDropOffConfirm,
   onPreviousPage,
   onNextPage,
   formatStatusLabel,
+  formatPickupMethodLabel,
   getStatusBadgeVariant,
   isDraftOrder,
   isConfirmableStatus,
+  isDropOffOrder,
   buildOrderAddressLabel,
   buildPostOfficeAssignmentLabel,
   formatDateTime,
@@ -109,6 +124,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                 <TableRow>
                   <TableHead className='min-w-[180px]'>Order</TableHead>
                   <TableHead className='min-w-[200px]'>Status</TableHead>
+                  <TableHead className='min-w-[180px]'>Pickup method</TableHead>
                   <TableHead className='min-w-[260px]'>Sender</TableHead>
                   <TableHead className='min-w-[260px]'>Receiver</TableHead>
                   <TableHead className='min-w-[160px]'>Post office</TableHead>
@@ -123,7 +139,25 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                 {data.items.map((order) => {
                   const isLoadingDetail = loadingOrderActionId === order.id;
                   const isConfirming = confirmingOrderId === order.id;
+                  const isLoadingSuggestions =
+                    loadingDropOffSuggestionOrderId === order.id;
                   const canUpdateDraft = canMutateOrders && isDraftOrder(order);
+                  const dropOffOrder = isDropOffOrder(order);
+                  const showDropOffSuggestions =
+                    canMutateOrders &&
+                    dropOffOrder &&
+                    isConfirmableStatus(order.status) &&
+                    !order.isConfirm;
+                  const showCourierConfirm =
+                    canMutateOrders &&
+                    !dropOffOrder &&
+                    isConfirmableStatus(order.status) &&
+                    !order.isConfirm;
+                  const showManagerDropOffConfirm =
+                    canConfirmDropOffAtPostOffice &&
+                    dropOffOrder &&
+                    isConfirmableStatus(order.status) &&
+                    !order.isConfirm;
 
                   return (
                     <TableRow key={order.id} className='group'>
@@ -142,6 +176,9 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             {order.isConfirm ? 'Confirmed' : 'Pending'}
                           </Badge>
                         </div>
+                      </TableCell>
+                      <TableCell className='whitespace-normal text-xs text-muted-foreground'>
+                        {formatPickupMethodLabel(order.pickupMethod)}
                       </TableCell>
                       <TableCell className='whitespace-normal text-xs text-muted-foreground'>
                         {buildOrderAddressLabel(
@@ -219,24 +256,60 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                                 <Trash2 className='h-3.5 w-3.5' />
                                 <span className='sr-only'>Delete order</span>
                               </Button>
-                              {isConfirmableStatus(order.status) ? (
-                                <Button
-                                  size='icon'
-                                  variant='outline'
-                                  title='Confirm order'
-                                  onClick={() => onConfirm(order)}
-                                  disabled={isConfirming}
-                                  className='h-8 w-8'
-                                >
-                                  {isConfirming ? (
-                                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                                  ) : (
-                                    <CheckCircle2 className='h-3.5 w-3.5' />
-                                  )}
-                                  <span className='sr-only'>Confirm order</span>
-                                </Button>
-                              ) : null}
                             </>
+                          ) : null}
+
+                          {showCourierConfirm ? (
+                            <Button
+                              size='icon'
+                              variant='outline'
+                              title='Confirm order'
+                              onClick={() => onConfirm(order)}
+                              disabled={isConfirming}
+                              className='h-8 w-8'
+                            >
+                              {isConfirming ? (
+                                <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                              ) : (
+                                <CheckCircle2 className='h-3.5 w-3.5' />
+                              )}
+                              <span className='sr-only'>Confirm order</span>
+                            </Button>
+                          ) : null}
+
+                          {showDropOffSuggestions ? (
+                            <Button
+                              size='icon'
+                              variant='outline'
+                              title='View suggested post offices'
+                              onClick={() => onOpenDropOffSuggestions(order)}
+                              disabled={isLoadingSuggestions}
+                              className='h-8 w-8'
+                            >
+                              {isLoadingSuggestions ? (
+                                <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                              ) : (
+                                <Building2 className='h-3.5 w-3.5' />
+                              )}
+                              <span className='sr-only'>
+                                View suggested post offices
+                              </span>
+                            </Button>
+                          ) : null}
+
+                          {showManagerDropOffConfirm ? (
+                            <Button
+                              size='icon'
+                              variant='outline'
+                              title='Confirm drop-off at post office'
+                              onClick={() => onOpenManagerDropOffConfirm(order)}
+                              className='h-8 w-8'
+                            >
+                              <CheckCircle2 className='h-3.5 w-3.5' />
+                              <span className='sr-only'>
+                                Confirm drop-off at post office
+                              </span>
+                            </Button>
                           ) : null}
                         </div>
                       </TableCell>

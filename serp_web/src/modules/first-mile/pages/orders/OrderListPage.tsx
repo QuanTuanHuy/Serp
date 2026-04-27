@@ -10,6 +10,7 @@ import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
+  useConfirmDropOffOrderAtPostOfficeMutation,
   firstMileApi,
   useCancelOrderMutation,
   useConfirmOrderMutation,
@@ -17,8 +18,10 @@ import {
   useGeocodeAddressMutation,
   useImportOrdersMutation,
   useLazyExportOrderTemplateQuery,
+  useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
   useGetOrdersQuery,
+  useGetPostOfficesQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useUpdateOrderMutation,
@@ -30,7 +33,9 @@ import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
   ImportHistory,
+  OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
+  PostOffice,
   Province,
   UpdateOrderRequest,
   ValidateImportFileResponse,
@@ -39,6 +44,8 @@ import {
   OrderAccessScopeCard,
   OrderCancelDialog,
   OrderDetailDialog,
+  OrderDropOffManagerConfirmCard,
+  OrderDropOffSuggestionsDialog,
   OrderFiltersCard,
   OrderFormDialog,
   OrderImportCard,
@@ -51,6 +58,7 @@ import {
   buildWardSelectOptions,
   DEFAULT_CREATE_ORDER_FORM,
   formatDateTime,
+  formatPickupMethodLabel,
   formatOrderImportProductsPreview,
   formatStatusLabel,
   getProvinceNameByCode,
@@ -58,6 +66,7 @@ import {
   getScopeDescription,
   getStatusBadgeVariant,
   IMPORT_PREVIEW_LIMIT,
+  isDropOffOrder,
   isConfirmableStatus,
   isDraftOrder,
   mapOrderProductsToRequest,
@@ -114,6 +123,17 @@ export const OrderListPage: React.FC = () => {
   const [confirmingOrderId, setConfirmingOrderId] = React.useState<
     number | null
   >(null);
+  const [dropOffSuggestionTarget, setDropOffSuggestionTarget] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [dropOffSuggestions, setDropOffSuggestions] = React.useState<
+    OrderDropOffPostOfficeSuggestion[]
+  >([]);
+  const [loadingDropOffSuggestionOrderId, setLoadingDropOffSuggestionOrderId] =
+    React.useState<number | null>(null);
+  const [managerDropOffOrderIdInput, setManagerDropOffOrderIdInput] =
+    React.useState('');
+  const [managerDropOffPostOfficeIdInput, setManagerDropOffPostOfficeIdInput] =
+    React.useState('');
   const [geocodingTarget, setGeocodingTarget] =
     React.useState<LocationTarget | null>(null);
   const [selectedImportFile, setSelectedImportFile] =
@@ -164,6 +184,7 @@ export const OrderListPage: React.FC = () => {
   const canViewOrders = accessScope !== 'NO_ACCESS';
   const canMutateOrders =
     accessScope === 'ADMIN_ALL' || accessScope === 'CUSTOMER_CREATED';
+  const canConfirmDropOffAtPostOffice = accessScope === 'MANAGER_POST_OFFICE';
 
   const { data, isLoading, isFetching, refetch } = useGetOrdersQuery(
     {
@@ -174,6 +195,19 @@ export const OrderListPage: React.FC = () => {
     },
     {
       skip: !canViewOrders,
+    }
+  );
+
+  const {
+    data: managerPostOfficesData,
+    isFetching: isFetchingManagerPostOffices,
+  } = useGetPostOfficesQuery(
+    {
+      page: 0,
+      size: 200,
+    },
+    {
+      skip: !canConfirmDropOffAtPostOffice,
     }
   );
 
@@ -210,6 +244,27 @@ export const OrderListPage: React.FC = () => {
     () => provincesData?.items ?? [],
     [provincesData]
   );
+
+  const managerPostOfficeOptions = React.useMemo<PostOffice[]>(
+    () => managerPostOfficesData?.items ?? [],
+    [managerPostOfficesData]
+  );
+
+  React.useEffect(() => {
+    if (
+      !canConfirmDropOffAtPostOffice ||
+      managerDropOffPostOfficeIdInput ||
+      managerPostOfficeOptions.length !== 1
+    ) {
+      return;
+    }
+
+    setManagerDropOffPostOfficeIdInput(String(managerPostOfficeOptions[0].id));
+  }, [
+    canConfirmDropOffAtPostOffice,
+    managerDropOffPostOfficeIdInput,
+    managerPostOfficeOptions,
+  ]);
 
   const senderWardSelectOptions = React.useMemo(
     () =>
@@ -365,6 +420,12 @@ export const OrderListPage: React.FC = () => {
   const [cancelOrder, { isLoading: isCancellingOrder }] =
     useCancelOrderMutation();
   const [confirmOrder] = useConfirmOrderMutation();
+  const [confirmDropOffOrderAtPostOffice, { isLoading: isConfirmingDropOff }] =
+    useConfirmDropOffOrderAtPostOfficeMutation();
+  const [
+    loadDropOffPostOfficeSuggestions,
+    { isFetching: isFetchingDropOffSuggestions },
+  ] = useLazyGetDropOffPostOfficeSuggestionsQuery();
   const [geocodeAddress] = useGeocodeAddressMutation();
   const [loadOrderById] = useLazyGetOrderByIdQuery();
   const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
@@ -771,6 +832,7 @@ export const OrderListPage: React.FC = () => {
         ? { pickup_time_end: createForm.pickupTimeEnd }
         : {}),
       delivery_request_time: createForm.deliveryRequestTime,
+      pickup_method: createForm.pickupMethod,
       ...(createForm.orderProductCategory !== 'NONE'
         ? { order_product_category: createForm.orderProductCategory }
         : {}),
@@ -816,6 +878,27 @@ export const OrderListPage: React.FC = () => {
         notification.success('Order created successfully.', {
           description: `Order code: ${createdOrder.orderCode}`,
         });
+
+        if (
+          createdOrder.id &&
+          createdOrder.pickupMethod === 'DROP_OFF_AT_POST_OFFICE'
+        ) {
+          setLoadingDropOffSuggestionOrderId(createdOrder.id);
+
+          try {
+            const suggestions = await loadDropOffPostOfficeSuggestions({
+              orderId: createdOrder.id,
+              limit: 5,
+            }).unwrap();
+
+            setDropOffSuggestionTarget(createdOrder);
+            setDropOffSuggestions(suggestions);
+          } catch {
+            // Ignore suggestion loading failures here because order creation already succeeded.
+          } finally {
+            setLoadingDropOffSuggestionOrderId(null);
+          }
+        }
       } else {
         if (editingOrderId === null) {
           notification.error('Missing order id for update.');
@@ -861,6 +944,13 @@ export const OrderListPage: React.FC = () => {
       return;
     }
 
+    if (isDropOffOrder(order)) {
+      notification.error(
+        'Drop-off orders must use post office suggestion flow and manager confirmation at post office.'
+      );
+      return;
+    }
+
     setConfirmingOrderId(order.id);
 
     try {
@@ -885,6 +975,147 @@ export const OrderListPage: React.FC = () => {
       });
     } finally {
       setConfirmingOrderId(null);
+    }
+  };
+
+  const parsePositiveIntegerInput = (value: string): number | null => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return null;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+      return null;
+    }
+
+    return parsedValue;
+  };
+
+  const handleOpenDropOffSuggestions = async (order: FirstMileOrderDetail) => {
+    if (!canMutateOrders) {
+      notification.error(
+        'Only TMS_ADMIN or TMS_CUSTOMER can view drop-off post office suggestions.'
+      );
+      return;
+    }
+
+    if (!isDropOffOrder(order)) {
+      notification.error(
+        'This order is not configured for post office drop-off.'
+      );
+      return;
+    }
+
+    setLoadingDropOffSuggestionOrderId(order.id);
+
+    try {
+      const suggestions = await loadDropOffPostOfficeSuggestions({
+        orderId: order.id,
+        limit: 5,
+      }).unwrap();
+
+      setDropOffSuggestionTarget(order);
+      setDropOffSuggestions(suggestions);
+    } catch (error) {
+      notification.error('Failed to load drop-off post office suggestions.', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setLoadingDropOffSuggestionOrderId(null);
+    }
+  };
+
+  const handleRefreshDropOffSuggestions = async () => {
+    if (!dropOffSuggestionTarget) {
+      return;
+    }
+
+    setLoadingDropOffSuggestionOrderId(dropOffSuggestionTarget.id);
+
+    try {
+      const suggestions = await loadDropOffPostOfficeSuggestions({
+        orderId: dropOffSuggestionTarget.id,
+        limit: 5,
+      }).unwrap();
+
+      setDropOffSuggestions(suggestions);
+    } catch (error) {
+      notification.error('Failed to refresh post office suggestions.', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setLoadingDropOffSuggestionOrderId(null);
+    }
+  };
+
+  const handleOpenManagerDropOffConfirm = (order: FirstMileOrderDetail) => {
+    if (!canConfirmDropOffAtPostOffice) {
+      notification.error(
+        'Only TMS_POSTOFFICER_MANAGER can confirm drop-off orders.'
+      );
+      return;
+    }
+
+    setManagerDropOffOrderIdInput(String(order.id));
+
+    if (order.originPostOfficeCode) {
+      const matchedPostOffice = managerPostOfficeOptions.find(
+        (postOffice) => postOffice.code === order.originPostOfficeCode
+      );
+
+      if (matchedPostOffice?.id) {
+        setManagerDropOffPostOfficeIdInput(String(matchedPostOffice.id));
+      }
+    }
+  };
+
+  const handleManagerConfirmDropOffOrder = async () => {
+    if (!canConfirmDropOffAtPostOffice) {
+      notification.error(
+        'Only TMS_POSTOFFICER_MANAGER can confirm drop-off orders.'
+      );
+      return;
+    }
+
+    const orderId = parsePositiveIntegerInput(managerDropOffOrderIdInput);
+    if (orderId === null) {
+      notification.error('Order ID must be a positive integer.');
+      return;
+    }
+
+    const postOfficeId = parsePositiveIntegerInput(
+      managerDropOffPostOfficeIdInput
+    );
+    if (postOfficeId === null) {
+      notification.error('Please select a valid post office.');
+      return;
+    }
+
+    try {
+      const confirmationResult = await confirmDropOffOrderAtPostOffice({
+        orderId,
+        postOfficeId,
+      }).unwrap();
+
+      const originPostOffice = confirmationResult.originPostOffice;
+      notification.success(
+        'Drop-off order confirmed at post office.',
+        originPostOffice
+          ? {
+              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
+            }
+          : undefined
+      );
+
+      setManagerDropOffOrderIdInput('');
+      setDropOffSuggestionTarget(null);
+      setDropOffSuggestions([]);
+      void refetch();
+    } catch (error) {
+      notification.error('Failed to confirm drop-off order at post office.', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
@@ -1031,6 +1262,21 @@ export const OrderListPage: React.FC = () => {
         description={getScopeDescription(accessScope)}
       />
 
+      {canConfirmDropOffAtPostOffice ? (
+        <OrderDropOffManagerConfirmCard
+          orderIdInput={managerDropOffOrderIdInput}
+          postOfficeIdInput={managerDropOffPostOfficeIdInput}
+          postOffices={managerPostOfficeOptions}
+          isLoadingPostOffices={isFetchingManagerPostOffices}
+          isSubmitting={isConfirmingDropOff}
+          onOrderIdInputChange={setManagerDropOffOrderIdInput}
+          onPostOfficeIdInputChange={setManagerDropOffPostOfficeIdInput}
+          onSubmit={() => {
+            void handleManagerConfirmDropOffOrder();
+          }}
+        />
+      ) : null}
+
       <OrderFiltersCard
         canViewOrders={canViewOrders}
         keywordInput={keywordInput}
@@ -1074,11 +1320,13 @@ export const OrderListPage: React.FC = () => {
       <OrderResultsCard
         canViewOrders={canViewOrders}
         canMutateOrders={canMutateOrders}
+        canConfirmDropOffAtPostOffice={canConfirmDropOffAtPostOffice}
         data={data}
         isLoading={isLoading}
         isFetching={isFetching}
         loadingOrderActionId={loadingOrderActionId}
         confirmingOrderId={confirmingOrderId}
+        loadingDropOffSuggestionOrderId={loadingDropOffSuggestionOrderId}
         onViewDetail={(orderId) => {
           void handleOpenOrderDetail(orderId);
         }}
@@ -1090,12 +1338,18 @@ export const OrderListPage: React.FC = () => {
         onConfirm={(order) => {
           void handleConfirmOrder(order);
         }}
+        onOpenDropOffSuggestions={(order) => {
+          void handleOpenDropOffSuggestions(order);
+        }}
+        onOpenManagerDropOffConfirm={handleOpenManagerDropOffConfirm}
         onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
         onNextPage={() => setPage((prev) => prev + 1)}
         formatStatusLabel={formatStatusLabel}
+        formatPickupMethodLabel={formatPickupMethodLabel}
         getStatusBadgeVariant={getStatusBadgeVariant}
         isDraftOrder={isDraftOrder}
         isConfirmableStatus={isConfirmableStatus}
+        isDropOffOrder={isDropOffOrder}
         buildOrderAddressLabel={buildOrderAddressLabel}
         buildPostOfficeAssignmentLabel={buildPostOfficeAssignmentLabel}
         formatDateTime={formatDateTime}
@@ -1137,10 +1391,27 @@ export const OrderListPage: React.FC = () => {
           }
         }}
         formatStatusLabel={formatStatusLabel}
+        formatPickupMethodLabel={formatPickupMethodLabel}
         buildOrderAddressLabel={buildOrderAddressLabel}
         getProvinceLabel={getProvinceLabel}
         getWardLabel={getWardLabel}
         formatDateTime={formatDateTime}
+      />
+
+      <OrderDropOffSuggestionsDialog
+        open={Boolean(dropOffSuggestionTarget)}
+        order={dropOffSuggestionTarget}
+        suggestions={dropOffSuggestions}
+        isLoading={isFetchingDropOffSuggestions}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDropOffSuggestionTarget(null);
+            setDropOffSuggestions([]);
+          }
+        }}
+        onRefresh={() => {
+          void handleRefreshDropOffSuggestions();
+        }}
       />
 
       <OrderCancelDialog

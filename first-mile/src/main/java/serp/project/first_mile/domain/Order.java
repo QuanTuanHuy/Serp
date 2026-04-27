@@ -105,6 +105,10 @@ public class Order extends AbstractAudit{
     @Builder.Default
     private Integer pickupAttempts = 0;
 
+    @Column(name = "pickup_method")
+    @Enumerated(EnumType.STRING)
+    private OrderPickupMethod pickupMethod;
+
     @Column(name = "order_product_category")
     @Enumerated(EnumType.STRING)
     private OrderProductCategory orderProductCategory;

@@ -30,6 +30,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.Province;
 import serp.project.first_mile.domain.Ward;
@@ -477,7 +478,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 addressQuery
         );
 
-        GeocodeCaller.GeoPoint geoPoint = geocodeCaller.searchFirst(addressQuery).orElse(null);
+        GeoPoint geoPoint = geocodeCaller.searchFirst(addressQuery).orElse(null);
         if (geoPoint == null) {
             return new GeocodeUpdateResult(false, GeocodeSkipReason.NO_GEOCODE_RESULT, null, null, addressQuery);
         }

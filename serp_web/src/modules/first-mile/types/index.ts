@@ -173,6 +173,10 @@ export type FirstMileDeliveryRequestTime =
 
 export type FirstMileOrderType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
 
+export type FirstMileOrderPickupMethod =
+  | 'COURIER_PICKUP'
+  | 'DROP_OFF_AT_POST_OFFICE';
+
 export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
 
 export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
@@ -202,6 +206,7 @@ export interface FirstMileOrderDetail {
   customerOrderCode?: string;
   status: FirstMileOrderStatus;
   isConfirm?: boolean;
+  pickupMethod?: FirstMileOrderPickupMethod;
   senderName?: string;
   senderPhone?: string;
   senderProvinceCode?: string;
@@ -281,6 +286,7 @@ export interface CreateOrderRequest {
   pickup_time_start?: string;
   pickup_time_end?: string;
   delivery_request_time: FirstMileDeliveryRequestTime;
+  pickup_method?: FirstMileOrderPickupMethod;
   order_product_category?: FirstMileOrderProductCategory;
   order_type: FirstMileOrderType;
   fee_payer: FirstMileFeePayer;
@@ -314,6 +320,22 @@ export interface OrderConfirmationResponse {
   status: FirstMileOrderStatus;
   alreadyConfirmed: boolean;
   originPostOffice?: OrderConfirmationOriginPostOffice | null;
+}
+
+export interface OrderDropOffPostOfficeSuggestion {
+  id: number;
+  code: string;
+  name: string;
+  provinceCode?: string;
+  wardCode?: string;
+  addressDetail?: string;
+  priority?: number;
+  currentLoad?: number;
+  dailyCapacity?: number;
+  remainingCapacity?: number;
+  latitude?: number;
+  longitude?: number;
+  distanceMeters?: number;
 }
 
 export type PickupShift = 'MORNING' | 'AFTERNOON' | 'EVENING';
