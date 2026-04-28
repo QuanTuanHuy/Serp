@@ -57,6 +57,7 @@ app:
   kafka:
     topics:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
+      sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
