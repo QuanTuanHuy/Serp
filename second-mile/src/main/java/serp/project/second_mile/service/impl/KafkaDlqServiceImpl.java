@@ -1,12 +1,5 @@
-/*
-Author: Nguyen The Anh
-Description: Part of Serp Project
-*/
+package serp.project.second_mile.service.impl;
 
-package serp.project.first_mile.service.impl;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -14,13 +7,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.first_mile.domain.KafkaDlqMessage;
-import serp.project.first_mile.dto.message.SyncUserFirstMileEvent;
-import serp.project.first_mile.enums.KafkaDlqMessageStatus;
-import serp.project.first_mile.repository.KafkaDlqMessageRepository;
-import serp.project.first_mile.service.KafkaDlqService;
-import serp.project.first_mile.service.PostOfficeStaffSyncService;
-import serp.project.first_mile.service.handler.DlqMessageHandler;
+import serp.project.second_mile.domain.KafkaDlqMessage;
+import serp.project.second_mile.enums.KafkaDlqMessageStatus;
+import serp.project.second_mile.repository.KafkaDlqMessageRepository;
+import serp.project.second_mile.service.KafkaDlqService;
+import serp.project.second_mile.service.handler.DlqMessageHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -102,7 +93,7 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
 
             // ỦY QUYỀN XỬ LÝ CHO HANDLER
             handler.process(message.getPayload());
-            
+
             message.setStatus(KafkaDlqMessageStatus.PROCESSED);
             message.setErrorMessage(null);
             message.setNextRetryAt(null);
@@ -130,7 +121,7 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
 
             message.setStatus(KafkaDlqMessageStatus.FAILED);
             message.setNextRetryAt(LocalDateTime.now().plusSeconds(resolveDelaySeconds(nextRetryCount)));
-            log.warn("Kafka DLQ retry failed: dlqId={}, topic={}, key={}, retries={}/{}", 
+            log.warn("Kafka DLQ retry failed: dlqId={}, topic={}, key={}, retries={}/{}",
                     message.getId(),
                     message.getTopic(),
                     message.getMessageKey(),
@@ -165,3 +156,4 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
         return value == null ? 0 : value;
     }
 }
+

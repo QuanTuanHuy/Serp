@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -50,6 +51,9 @@ import serp.project.first_mile.dto.response.WardExcelTemplateDTO;
 import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.KafkaProducer;
+import serp.project.first_mile.kafka.event.OrderSyncEvent;
+import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
@@ -90,6 +94,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class OrderServiceImpl implements OrderService {
 
@@ -138,6 +143,7 @@ public class OrderServiceImpl implements OrderService {
     private final TripOrderRepository tripOrderRepository;
     private final PickupCheckinRepository pickupCheckinRepository;
     private final FileStorageService fileStorageService;
+    private final SyncOrder syncOrder;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -285,6 +291,8 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
     }
 
@@ -436,14 +444,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if (Boolean.TRUE.equals(order.getIsConfirm())) {
-            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
-            return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order has already been confirmed. If you need to change the order details, please contact support."
+            );
         }
 
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             orderRepository.save(order);
-
+            // Gửi sự kiện kafka
+            syncOrder.sendOrderEvent(order);
             Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
             return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
         }
@@ -463,7 +474,8 @@ public class OrderServiceImpl implements OrderService {
 
         postOfficeRepository.save(postOffice);
         orderRepository.save(order);
-
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
 

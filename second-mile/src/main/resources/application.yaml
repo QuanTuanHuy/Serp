@@ -43,6 +43,7 @@ spring:
 app:
   kafka:
     topics:
+      sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
