@@ -9,16 +9,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import serp.project.second_mile.kafka.event.OrderSyncEvent;
-import serp.project.second_mile.service.OrderSyncService;
+import serp.project.second_mile.kafka.event.UserSyncEvent;
+import serp.project.second_mile.service.UserSyncService;
 
 @Component
 @RequiredArgsConstructor
-public class SyncOrderDlqHandler implements DlqMessageHandler {
+public class SyncUserDlqHandler implements DlqMessageHandler{
     private final ObjectMapper objectMapper;
-    private final OrderSyncService orderSyncService;
+    private final UserSyncService userSyncService;
 
-    @Value("${app.kafka.topics.sync-order:SYNC_ORDER}")
+    @Value("${app.kafka.topics.sync-user:SYNC_USER}")
     private String topic;
 
     @Override
@@ -28,7 +28,7 @@ public class SyncOrderDlqHandler implements DlqMessageHandler {
 
     @Override
     public void process(String payload) throws Exception {
-        OrderSyncEvent event = objectMapper.readValue(payload, OrderSyncEvent.class);
-        orderSyncService.syncOrder(event);
+        UserSyncEvent event = objectMapper.readValue(payload, UserSyncEvent.class);
+        userSyncService.syncUser(event);
     }
 }

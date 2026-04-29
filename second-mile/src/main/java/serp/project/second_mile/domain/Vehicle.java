@@ -25,4 +25,5 @@ public class Vehicle extends AbstractAudit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
 }

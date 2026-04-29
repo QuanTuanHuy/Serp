@@ -12,21 +12,21 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
-import serp.project.second_mile.kafka.event.OrderSyncEvent;
+import serp.project.second_mile.kafka.event.UserSyncEvent;
 import serp.project.second_mile.service.KafkaDlqService;
-import serp.project.second_mile.service.OrderSyncService;
+import serp.project.second_mile.service.UserSyncService;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class OrderSyncConsumer {
+public class UserSyncConsumer {
     private final ObjectMapper objectMapper;
     private final KafkaDlqService kafkaDlqService;
-    private final OrderSyncService orderSyncService;
+    private final UserSyncService userSyncService;
 
     @KafkaListener(
-            topics = "${app.kafka.topics.sync-order:SYNC_ORDER}",
-            groupId = "${spring.kafka.consumer.group-id:second-mile-sync-order}"
+            topics = "${app.kafka.topics.sync-user:SYNC_USER}",
+            groupId = "${spring.kafka.consumer.group-id:second-mile-sync-user}"
     )
     public void consume(
             String payload,
@@ -34,13 +34,13 @@ public class OrderSyncConsumer {
             @Header(value = KafkaHeaders.RECEIVED_KEY, required = false) String key
     ) {
         try {
-            OrderSyncEvent event = objectMapper.readValue(payload, OrderSyncEvent.class);
-            orderSyncService.syncOrder(event);
-            log.info("Consumed sync-order event: topic={}, key={}, orderCode={}, tenantId={}",
+            UserSyncEvent event = objectMapper.readValue(payload, UserSyncEvent.class);
+            userSyncService.syncUser(event);
+            log.info("Consumed sync-user event: topic={}, key={}, userId={}, roles={}",
                     topic,
                     key,
-                    event.getOrderCode(),
-                    event.getTenantId());
+                    event.getUserId(),
+                    event.getRoleNames());
         } catch (Exception exception) {
             Long tenantId = extractTenantId(payload);
             kafkaDlqService.saveFailedMessage(topic, key, payload, exception.getMessage(), tenantId);
@@ -57,11 +57,11 @@ public class OrderSyncConsumer {
 
     private Long extractTenantId(String payload) {
         try {
-            OrderSyncEvent event = objectMapper.readValue(payload, OrderSyncEvent.class);
+            UserSyncEvent event = objectMapper.readValue(payload, UserSyncEvent.class);
             if (event.getTenantId() != null) {
                 return event.getTenantId();
             }
-            return null;
+            return event.getOrganizationId();
         } catch (Exception exception) {
             return null;
         }
