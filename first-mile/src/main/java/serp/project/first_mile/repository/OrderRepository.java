@@ -94,8 +94,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 			@Param("tenantId") Long tenantId
 	);
 
-		Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
+	Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
 
-		List<Order> findByIdInAndTenantId(Collection<Long> ids, Long tenantId);
+	List<Order> findByIdInAndTenantId(Collection<Long> ids, Long tenantId);
 
+	Optional<Order> findByOrderCodeAndTenantId(String orderCode, Long tenantId);
 }

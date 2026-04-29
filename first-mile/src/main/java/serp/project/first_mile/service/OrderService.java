@@ -46,4 +46,6 @@ public interface OrderService {
 			MultipartFile photo,
 			Long tenantId
 	);
+
+	void publishOrderEvent(String orderCode);
 }

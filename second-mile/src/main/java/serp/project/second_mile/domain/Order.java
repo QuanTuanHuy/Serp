@@ -13,10 +13,16 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.second_mile.enums.OrderProductCategory;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.OrderType;
+
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -26,7 +32,7 @@ import serp.project.second_mile.enums.OrderType;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor
 @AllArgsConstructor
-public class Order extends AbstractAudit{
+public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -68,4 +74,19 @@ public class Order extends AbstractAudit{
 
     @Column(name = "note")
     private String note;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+    @Column(name = "tenant_id")
+    private Long tenantId;
 }

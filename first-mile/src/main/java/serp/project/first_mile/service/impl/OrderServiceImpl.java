@@ -587,6 +587,16 @@ public class OrderServiceImpl implements OrderService {
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
 
+    @Override
+    public void publishOrderEvent(String orderCode) {
+        var order = orderRepository.findByOrderCodeAndTenantId(orderCode, firstMileAccessUtils.getCurrentTenantIdOrThrow())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        if (order.getIsConfirm()) {
+            syncOrder.sendOrderEvent(order);
+        } else {
+            log.warn("The order with orderCode {} is not confirmed yet, skipping event publish.", orderCode);
+        }
+    }
     private void validateOrderForConfirmation(Order order) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);

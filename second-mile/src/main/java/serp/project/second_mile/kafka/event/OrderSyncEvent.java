@@ -15,6 +15,8 @@ import serp.project.second_mile.enums.OrderProductCategory;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.OrderType;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -58,6 +60,12 @@ public class OrderSyncEvent {
 
     @JsonProperty("updated_by")
     private String updatedBy;
+
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt;
+
+    @JsonProperty("updated_at")
+    private LocalDateTime updatedAt;
 
     @JsonProperty("tenant_id")
     private Long tenantId;

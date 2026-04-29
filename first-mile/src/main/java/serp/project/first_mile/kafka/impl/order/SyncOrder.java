@@ -34,6 +34,11 @@ public class SyncOrder {
                 .totalWeight(order.getTotalWeight())
                 .totalVolume(order.getTotalVolume())
                 .dimensions(order.getDimensions())
+                .createdBy(order.getCreatedBy())
+                .updatedBy(order.getUpdatedBy())
+                .tenantId(order.getTenantId())
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
                 .build();
         String key = order.getOrderCode();
         kafkaProducer.sendMessageAsync(key, orderSyncEvent, syncOrderTopic, (success, sentTopic, payload, ex) -> {;
