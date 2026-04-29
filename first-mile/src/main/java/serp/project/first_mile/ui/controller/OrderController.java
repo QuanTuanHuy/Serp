@@ -219,4 +219,12 @@ public class OrderController {
         log.info("REST request to pickup-checkin Order {} for tenant {}", orderId, tenantId);
         return orderService.checkInPickupOrder(orderId, latitude, longitude, photo, tenantId);
     }
+
+    // API test đồng bộ đơn
+    @PostMapping("/{orderCode}/publish-order-event")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public void publishOrderEvent(@PathVariable String orderCode) {
+        log.info("REST request to publish order event for order code {}", orderCode);
+        orderService.publishOrderEvent(orderCode);
+    }
 }

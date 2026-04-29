@@ -68,4 +68,10 @@ public class OrderSyncEvent {
 
     @JsonProperty("tenant_id")
     private Long tenantId;
+
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt;
+
+    @JsonProperty("updated_at")
+    private LocalDateTime updatedAt;
 }

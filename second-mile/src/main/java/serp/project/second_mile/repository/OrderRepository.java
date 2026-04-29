@@ -13,5 +13,5 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
-    Optional<Order> findByOrderCodeAndTenantId(Long id, Long tenantId);
+    Optional<Order> findByOrderCodeAndTenantId(String orderCode, Long tenantId);
 }
