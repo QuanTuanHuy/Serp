@@ -54,7 +54,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | ''>('');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | ''>('');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'estimatedValue'>('createdAt');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'estimatedValue'>(
+    'createdAt'
+  );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
@@ -81,7 +83,15 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
         sortOrder,
       },
     }),
-    [currentPage, debouncedSearchQuery, pageSize, sortBy, sortOrder, sourceFilter, statusFilter]
+    [
+      currentPage,
+      debouncedSearchQuery,
+      pageSize,
+      sortBy,
+      sortOrder,
+      sourceFilter,
+      statusFilter,
+    ]
   );
 
   const { data, isLoading, isFetching } = useGetLeadsQuery(queryArgs);
@@ -191,7 +201,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Leads</h1>
-          <p className='text-muted-foreground'>Manage and convert your sales prospects</p>
+          <p className='text-muted-foreground'>
+            Manage and convert your sales prospects
+          </p>
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
@@ -210,11 +222,36 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       </div>
 
       <div className='grid grid-cols-2 gap-4 sm:grid-cols-5'>
-        <StatsCard title='Total Leads' value={stats.total} icon={Target} variant='primary' />
-        <StatsCard title='New' value={stats.new} icon={Sparkles} variant='default' />
-        <StatsCard title='Contacted' value={stats.contacted} icon={Clock} variant='warning' />
-        <StatsCard title='Qualified' value={stats.qualified} icon={UserCheck} variant='success' />
-        <StatsCard title='Avg. Value' value={`$${stats.avgValue.toLocaleString()}`} icon={Target} variant='danger' />
+        <StatsCard
+          title='Total Leads'
+          value={stats.total}
+          icon={Target}
+          variant='primary'
+        />
+        <StatsCard
+          title='New'
+          value={stats.new}
+          icon={Sparkles}
+          variant='default'
+        />
+        <StatsCard
+          title='Contacted'
+          value={stats.contacted}
+          icon={Clock}
+          variant='warning'
+        />
+        <StatsCard
+          title='Qualified'
+          value={stats.qualified}
+          icon={UserCheck}
+          variant='success'
+        />
+        <StatsCard
+          title='Avg. Value'
+          value={`$${stats.avgValue.toLocaleString()}`}
+          icon={Target}
+          variant='danger'
+        />
       </div>
 
       <div className='flex flex-col gap-3 sm:flex-row'>
@@ -246,7 +283,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
         >
           <SlidersHorizontal className='h-4 w-4' />
           Filters
-          {hasActiveFilters && <span className='h-2 w-2 rounded-full bg-primary' />}
+          {hasActiveFilters && (
+            <span className='h-2 w-2 rounded-full bg-primary' />
+          )}
         </Button>
 
         <div className='flex rounded-lg border bg-muted p-1'>
@@ -254,7 +293,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
             onClick={() => setViewMode('grid')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'grid' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'grid'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='Grid view'
           >
@@ -264,7 +305,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
             onClick={() => setViewMode('list')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'list' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'list'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='List view'
           >
@@ -274,7 +317,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
             onClick={() => setViewMode('kanban')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'kanban' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'kanban'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='Kanban board'
           >
@@ -288,7 +333,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
           <CardContent className='p-4'>
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
               <div>
-                <label className='mb-1.5 block text-sm font-medium'>Status</label>
+                <label className='mb-1.5 block text-sm font-medium'>
+                  Status
+                </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => {
@@ -307,7 +354,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
               </div>
 
               <div>
-                <label className='mb-1.5 block text-sm font-medium'>Source</label>
+                <label className='mb-1.5 block text-sm font-medium'>
+                  Source
+                </label>
                 <select
                   value={sourceFilter}
                   onChange={(e) => {
@@ -326,7 +375,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
               </div>
 
               <div>
-                <label className='mb-1.5 block text-sm font-medium'>Sort By</label>
+                <label className='mb-1.5 block text-sm font-medium'>
+                  Sort By
+                </label>
                 <select
                   value={`${sortBy}-${sortOrder}`}
                   onChange={(e) => {
@@ -349,7 +400,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
 
             {hasActiveFilters && (
               <div className='mt-4 flex items-center justify-between border-t pt-4'>
-                <p className='text-sm text-muted-foreground'>{total} results found</p>
+                <p className='text-sm text-muted-foreground'>
+                  {total} results found
+                </p>
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
                   Clear all filters
                 </Button>
@@ -362,7 +415,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       {error && (
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
-            <p className='text-destructive'>Error loading leads. Please try again.</p>
+            <p className='text-destructive'>
+              Error loading leads. Please try again.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -378,58 +433,70 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
                 : 'flex flex-col'
           )}
         >
-          {Array.from({ length: viewMode === 'kanban' ? 4 : 6 }).map((_, index) => (
-            <Card key={index} className='animate-pulse'>
-              <CardContent className='p-5'>
-                <div className='mb-4 flex items-center gap-3'>
-                  <div className='h-10 w-10 rounded-full bg-muted' />
-                  <div className='flex-1'>
-                    <div className='mb-2 h-4 w-3/4 rounded bg-muted' />
-                    <div className='h-3 w-1/2 rounded bg-muted' />
+          {Array.from({ length: viewMode === 'kanban' ? 4 : 6 }).map(
+            (_, index) => (
+              <Card key={index} className='animate-pulse'>
+                <CardContent className='p-5'>
+                  <div className='mb-4 flex items-center gap-3'>
+                    <div className='h-10 w-10 rounded-full bg-muted' />
+                    <div className='flex-1'>
+                      <div className='mb-2 h-4 w-3/4 rounded bg-muted' />
+                      <div className='h-3 w-1/2 rounded bg-muted' />
+                    </div>
                   </div>
-                </div>
-                <div className='space-y-2'>
-                  <div className='h-3 w-full rounded bg-muted' />
-                  <div className='h-3 w-2/3 rounded bg-muted' />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className='space-y-2'>
+                    <div className='h-3 w-full rounded bg-muted' />
+                    <div className='h-3 w-2/3 rounded bg-muted' />
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          )}
         </div>
       )}
 
       {!isLoading && viewMode === 'kanban' && leads.length > 0 && (
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4'>
-          {LEAD_STATUSES.filter((item) => item.status !== 'DISQUALIFIED').map(({ status, label, color }) => (
-            <div key={status} className='min-h-[400px] rounded-xl bg-muted/30 p-4'>
-              <div className='mb-4 flex items-center justify-between'>
-                <div className='flex items-center gap-2'>
-                  <div className={cn('h-3 w-3 rounded-full', color)} />
-                  <h3 className='font-semibold'>{label}</h3>
+          {LEAD_STATUSES.filter((item) => item.status !== 'DISQUALIFIED').map(
+            ({ status, label, color }) => (
+              <div
+                key={status}
+                className='min-h-[400px] rounded-xl bg-muted/30 p-4'
+              >
+                <div className='mb-4 flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                    <div className={cn('h-3 w-3 rounded-full', color)} />
+                    <h3 className='font-semibold'>{label}</h3>
+                  </div>
+                  <span className='rounded-full bg-background px-2 py-1 text-sm text-muted-foreground'>
+                    {leadsByStatus[status]?.length || 0}
+                  </span>
                 </div>
-                <span className='rounded-full bg-background px-2 py-1 text-sm text-muted-foreground'>
-                  {leadsByStatus[status]?.length || 0}
-                </span>
-              </div>
 
-              <div className='space-y-3'>
-                {leadsByStatus[status]?.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    variant='kanban'
-                    onClick={() => router.push(`/crm/leads/${lead.id}`)}
-                    onConvert={
-                      status === 'QUALIFIED' ? () => handleConvertLead(lead.id) : undefined
-                    }
-                  />
-                ))}
-                {(!leadsByStatus[status] || leadsByStatus[status].length === 0) && (
-                  <p className='py-8 text-center text-sm text-muted-foreground'>No leads</p>
-                )}
+                <div className='space-y-3'>
+                  {leadsByStatus[status]?.map((lead) => (
+                    <LeadCard
+                      key={lead.id}
+                      lead={lead}
+                      variant='kanban'
+                      onClick={() => router.push(`/crm/leads/${lead.id}`)}
+                      onConvert={
+                        status === 'QUALIFIED'
+                          ? () => handleConvertLead(lead.id)
+                          : undefined
+                      }
+                    />
+                  ))}
+                  {(!leadsByStatus[status] ||
+                    leadsByStatus[status].length === 0) && (
+                    <p className='py-8 text-center text-sm text-muted-foreground'>
+                      No leads
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
 
@@ -489,7 +556,8 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       {viewMode !== 'kanban' && total > pageSize && (
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
-            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, total)} of {total} leads
+            Showing {(currentPage - 1) * pageSize + 1} to{' '}
+            {Math.min(currentPage * pageSize, total)} of {total} leads
           </p>
           <div className='flex items-center gap-2'>
             <Button

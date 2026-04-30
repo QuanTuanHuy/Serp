@@ -83,9 +83,7 @@ import {
   useSetPrimaryContactMutation,
   useUpdateContactMutation,
 } from '../../api/crmApi';
-import {
-  MOCK_OPPORTUNITIES,
-} from '../../mocks';
+import { MOCK_OPPORTUNITIES } from '../../mocks';
 import type {
   Customer,
   Contact,

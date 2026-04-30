@@ -25,7 +25,9 @@ export const CreateLeadPage: React.FC<CreateLeadPageProps> = ({
   const router = useRouter();
   const [createLead, { isLoading }] = useCreateLeadMutation();
 
-  const handleSubmit = async (data: CreateLeadRequest | Partial<CreateLeadRequest>) => {
+  const handleSubmit = async (
+    data: CreateLeadRequest | Partial<CreateLeadRequest>
+  ) => {
     try {
       const result = await createLead(data as CreateLeadRequest).unwrap();
       toast.success('Create lead successfully');
@@ -42,12 +44,19 @@ export const CreateLeadPage: React.FC<CreateLeadPageProps> = ({
     <div className={cn('p-6', className)}>
       <div className='mb-6 flex items-center justify-between'>
         <div className='flex items-center space-x-4'>
-          <Button variant='outline' onClick={onCancel ?? (() => router.push('/crm/leads'))}>
+          <Button
+            variant='outline'
+            onClick={onCancel ?? (() => router.push('/crm/leads'))}
+          >
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-foreground'>Create New Lead</h1>
-            <p className='text-muted-foreground'>Add a new sales prospect to your pipeline.</p>
+            <h1 className='text-2xl font-bold text-foreground'>
+              Create New Lead
+            </h1>
+            <p className='text-muted-foreground'>
+              Add a new sales prospect to your pipeline.
+            </p>
           </div>
         </div>
       </div>

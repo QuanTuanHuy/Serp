@@ -93,13 +93,10 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const stats = useMemo(() => {
     return {
       total,
-        active: accounts.filter((c) => c.status === 'ACTIVE').length,
-        companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
-        totalValue: accounts.reduce(
-          (sum, c) => sum + (c.totalValue || 0),
-          0
-        ),
-      };
+      active: accounts.filter((c) => c.status === 'ACTIVE').length,
+      companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
+      totalValue: accounts.reduce((sum, c) => sum + (c.totalValue || 0), 0),
+    };
   }, [accounts, total]);
 
   // Handle actions
@@ -354,7 +351,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={statusFilter}
                   onChange={(e) => {
-                     setStatusFilter(e.target.value as AccountStatus | '');
+                    setStatusFilter(e.target.value as AccountStatus | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -370,7 +367,9 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={typeFilter}
                   onChange={(e) => {
-                     setTypeFilter(e.target.value as 'PROSPECT' | 'CUSTOMER' | '');
+                    setTypeFilter(
+                      e.target.value as 'PROSPECT' | 'CUSTOMER' | ''
+                    );
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -471,7 +470,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           )}
         >
           {accounts.map((customer) => (
-             <AccountCard
+            <AccountCard
               key={customer.id}
               customer={customer}
               variant={viewMode === 'list' ? 'compact' : 'default'}

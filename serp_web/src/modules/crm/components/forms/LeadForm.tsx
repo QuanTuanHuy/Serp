@@ -26,8 +26,19 @@ import type {
   UpdateLeadRequest,
 } from '../../types';
 
-type FormLeadSource = 'WEBSITE' | 'SOCIAL_MEDIA' | 'REFERRAL' | 'COLD_CALL' | 'EMAIL_CAMPAIGN';
-type FormLeadStatus = 'NEW' | 'CONTACTED' | 'NURTURING' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED';
+type FormLeadSource =
+  | 'WEBSITE'
+  | 'SOCIAL_MEDIA'
+  | 'REFERRAL'
+  | 'COLD_CALL'
+  | 'EMAIL_CAMPAIGN';
+type FormLeadStatus =
+  | 'NEW'
+  | 'CONTACTED'
+  | 'NURTURING'
+  | 'QUALIFIED'
+  | 'DISQUALIFIED'
+  | 'CONVERTED';
 
 type LeadFormData = {
   name: string;
@@ -117,7 +128,9 @@ export const LeadForm: React.FC<LeadFormProps> = ({
   className,
 }) => {
   const isEditing = !!lead;
-  const [formData, setFormData] = useState<LeadFormData>(getDefaultValues(lead));
+  const [formData, setFormData] = useState<LeadFormData>(
+    getDefaultValues(lead)
+  );
   const [error, setError] = useState<string>('');
 
   const updateField = <K extends keyof LeadFormData>(
@@ -170,7 +183,9 @@ export const LeadForm: React.FC<LeadFormProps> = ({
       country: formData.country || undefined,
       leadSource: formData.leadSource,
       assignedTo: formData.assignedTo || undefined,
-      estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : undefined,
+      estimatedValue: formData.estimatedValue
+        ? Number(formData.estimatedValue)
+        : undefined,
       leadScore: formData.leadScore ? Number(formData.leadScore) : undefined,
       followUpDate: formData.followUpDate || undefined,
       notes: formData.notes || undefined,
@@ -191,43 +206,92 @@ export const LeadForm: React.FC<LeadFormProps> = ({
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='name'>Contact Name *</Label>
-              <Input id='name' value={formData.name} onChange={(e) => updateField('name', e.target.value)} disabled={isLoading} />
+              <Input
+                id='name'
+                value={formData.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='email'>Email *</Label>
-              <Input id='email' type='email' value={formData.email} onChange={(e) => updateField('email', e.target.value)} disabled={isLoading} />
+              <Input
+                id='email'
+                type='email'
+                value={formData.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='phone'>Phone</Label>
-              <Input id='phone' value={formData.phone} onChange={(e) => updateField('phone', e.target.value)} disabled={isLoading} />
+              <Input
+                id='phone'
+                value={formData.phone}
+                onChange={(e) => updateField('phone', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='company'>Company</Label>
-              <Input id='company' value={formData.company} onChange={(e) => updateField('company', e.target.value)} disabled={isLoading} />
+              <Input
+                id='company'
+                value={formData.company}
+                onChange={(e) => updateField('company', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='jobTitle'>Job Title</Label>
-              <Input id='jobTitle' value={formData.jobTitle} onChange={(e) => updateField('jobTitle', e.target.value)} disabled={isLoading} />
+              <Input
+                id='jobTitle'
+                value={formData.jobTitle}
+                onChange={(e) => updateField('jobTitle', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='industry'>Industry</Label>
-              <Input id='industry' value={formData.industry} onChange={(e) => updateField('industry', e.target.value)} disabled={isLoading} />
+              <Input
+                id='industry'
+                value={formData.industry}
+                onChange={(e) => updateField('industry', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='companySize'>Company Size</Label>
-              <Input id='companySize' value={formData.companySize} onChange={(e) => updateField('companySize', e.target.value)} disabled={isLoading} />
+              <Input
+                id='companySize'
+                value={formData.companySize}
+                onChange={(e) => updateField('companySize', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='website'>Website</Label>
-              <Input id='website' value={formData.website} onChange={(e) => updateField('website', e.target.value)} disabled={isLoading} />
+              <Input
+                id='website'
+                value={formData.website}
+                onChange={(e) => updateField('website', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
               <Label>Lead Source</Label>
-              <Select value={formData.leadSource} onValueChange={(value) => updateField('leadSource', value as FormLeadSource)} disabled={isLoading}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.leadSource}
+                onValueChange={(value) =>
+                  updateField('leadSource', value as FormLeadSource)
+                }
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='WEBSITE'>Website</SelectItem>
                   <SelectItem value='SOCIAL_MEDIA'>Social Media</SelectItem>
@@ -239,8 +303,16 @@ export const LeadForm: React.FC<LeadFormProps> = ({
             </div>
             <div className='space-y-2'>
               <Label>Lead Status</Label>
-              <Select value={formData.leadStatus} onValueChange={(value) => updateField('leadStatus', value as FormLeadStatus)} disabled={isLoading}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.leadStatus}
+                onValueChange={(value) =>
+                  updateField('leadStatus', value as FormLeadStatus)
+                }
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='NEW'>New</SelectItem>
                   <SelectItem value='CONTACTED'>Contacted</SelectItem>
@@ -253,52 +325,111 @@ export const LeadForm: React.FC<LeadFormProps> = ({
             </div>
             <div className='space-y-2'>
               <Label htmlFor='assignedTo'>Assigned User ID</Label>
-              <Input id='assignedTo' value={formData.assignedTo} onChange={(e) => updateField('assignedTo', e.target.value)} disabled={isLoading} />
+              <Input
+                id='assignedTo'
+                value={formData.assignedTo}
+                onChange={(e) => updateField('assignedTo', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='followUpDate'>Follow-up Date</Label>
-              <Input id='followUpDate' type='date' value={formData.followUpDate} onChange={(e) => updateField('followUpDate', e.target.value)} disabled={isLoading} />
+              <Input
+                id='followUpDate'
+                type='date'
+                value={formData.followUpDate}
+                onChange={(e) => updateField('followUpDate', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='estimatedValue'>Estimated Value</Label>
-              <Input id='estimatedValue' type='number' value={formData.estimatedValue} onChange={(e) => updateField('estimatedValue', e.target.value)} disabled={isLoading} />
+              <Input
+                id='estimatedValue'
+                type='number'
+                value={formData.estimatedValue}
+                onChange={(e) => updateField('estimatedValue', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='leadScore'>Lead Score</Label>
-              <Input id='leadScore' type='number' value={formData.leadScore} onChange={(e) => updateField('leadScore', e.target.value)} disabled={isLoading} />
+              <Input
+                id='leadScore'
+                type='number'
+                value={formData.leadScore}
+                onChange={(e) => updateField('leadScore', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='street'>Street</Label>
-              <Input id='street' value={formData.street} onChange={(e) => updateField('street', e.target.value)} disabled={isLoading} />
+              <Input
+                id='street'
+                value={formData.street}
+                onChange={(e) => updateField('street', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='city'>City</Label>
-              <Input id='city' value={formData.city} onChange={(e) => updateField('city', e.target.value)} disabled={isLoading} />
+              <Input
+                id='city'
+                value={formData.city}
+                onChange={(e) => updateField('city', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='state'>State</Label>
-              <Input id='state' value={formData.state} onChange={(e) => updateField('state', e.target.value)} disabled={isLoading} />
+              <Input
+                id='state'
+                value={formData.state}
+                onChange={(e) => updateField('state', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='postalCode'>Postal Code</Label>
-              <Input id='postalCode' value={formData.postalCode} onChange={(e) => updateField('postalCode', e.target.value)} disabled={isLoading} />
+              <Input
+                id='postalCode'
+                value={formData.postalCode}
+                onChange={(e) => updateField('postalCode', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2'>
               <Label htmlFor='country'>Country</Label>
-              <Input id='country' value={formData.country} onChange={(e) => updateField('country', e.target.value)} disabled={isLoading} />
+              <Input
+                id='country'
+                value={formData.country}
+                onChange={(e) => updateField('country', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
             <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='notes'>Notes</Label>
-              <Textarea id='notes' rows={4} value={formData.notes} onChange={(e) => updateField('notes', e.target.value)} disabled={isLoading} />
+              <Textarea
+                id='notes'
+                rows={4}
+                value={formData.notes}
+                onChange={(e) => updateField('notes', e.target.value)}
+                disabled={isLoading}
+              />
             </div>
           </div>
 
           <div className='flex justify-end gap-3 border-t pt-6'>
             {onCancel && (
-              <Button type='button' variant='outline' onClick={onCancel} disabled={isLoading}>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={onCancel}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
             )}

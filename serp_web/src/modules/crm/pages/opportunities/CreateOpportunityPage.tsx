@@ -29,7 +29,9 @@ export const CreateOpportunityPage: React.FC<CreateOpportunityPageProps> = ({
     data: CreateOpportunityRequest | Partial<CreateOpportunityRequest>
   ) => {
     try {
-      const result = await createOpportunity(data as CreateOpportunityRequest).unwrap();
+      const result = await createOpportunity(
+        data as CreateOpportunityRequest
+      ).unwrap();
       toast.success('Create opportunity successfully');
       onSuccess?.(result.data.id);
       router.push(`/crm/opportunities/${result.data.id}`);
