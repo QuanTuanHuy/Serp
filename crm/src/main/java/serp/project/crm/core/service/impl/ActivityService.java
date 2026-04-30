@@ -233,6 +233,26 @@ public class ActivityService implements IActivityService {
 
     @Override
     @Transactional
+    public ActivityEntity rescheduleActivity(Long id, Long dueDate, Long reminderDate, Long userId, Long tenantId) {
+        ActivityEntity activity = activityPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
+
+        try {
+            activity.reschedule(dueDate, userId);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+        activity.setReminderDate(reminderDate);
+        validateBusinessRules(activity, tenantId);
+
+        ActivityEntity rescheduled = activityPort.save(activity);
+        publishActivityUpdatedEvent(rescheduled);
+
+        return rescheduled;
+    }
+
+    @Override
+    @Transactional
     public void deleteActivity(Long id, Long tenantId) {
         ActivityEntity activity = activityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));

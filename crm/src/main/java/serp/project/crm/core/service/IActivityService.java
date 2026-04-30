@@ -40,6 +40,7 @@ public interface IActivityService {
 
     ActivityEntity completeActivity(Long id, ActivityOutcome outcome, String notes, Long userId, Long tenantId);
     ActivityEntity cancelActivity(Long id, Long userId, Long tenantId);
+    ActivityEntity rescheduleActivity(Long id, Long dueDate, Long reminderDate, Long userId, Long tenantId);
 
     void deleteActivity(Long id, Long tenantId);
 
