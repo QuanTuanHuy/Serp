@@ -38,7 +38,7 @@ public class UserProfileClientAdapter implements IUserProfileClient {
             String serviceToken = tokenUtils.getServiceToken();
 
             String url = serviceProperties.getServiceUrlByName(Constants.ServiceNames.ACCOUNT_SERVICE)
-                    + "/internal/api/v1/users/" + userId;
+                    + "/account-service/internal/api/v1/users/" + userId;
             var response = httpClientHelper
                     .get(url, null, Map.of("Authorization", "Bearer " + serviceToken), GeneralResponse.class)
                     .block();
