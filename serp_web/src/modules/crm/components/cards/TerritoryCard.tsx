@@ -18,7 +18,6 @@ import {
   ExternalLink,
   Edit,
   Building,
-  Users,
 } from 'lucide-react';
 import type { Territory } from '../../types';
 
@@ -206,20 +205,7 @@ export const TerritoryCard: React.FC<TerritoryCardProps> = ({
             <span className='text-muted-foreground'>Country:</span>
             <span className='font-medium'>{territory.countryCode}</span>
           </div>
-          {territory.assignedTeamName && (
-            <div className='flex items-center gap-2 text-sm'>
-              <Users className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>Team:</span>
-              <span className='font-medium'>{territory.assignedTeamName}</span>
-            </div>
-          )}
         </div>
-
-        {!territory.assignedTeamName && (
-          <div className='pt-4 border-t'>
-            <p className='text-sm text-muted-foreground italic'>Unassigned</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

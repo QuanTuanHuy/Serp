@@ -43,11 +43,11 @@ export const AssignTerritoryDialog: React.FC<AssignTerritoryDialogProps> = ({
     useAssignTerritoriesMutation();
 
   const { data, isLoading } = useGetTerritoriesQuery({
-    filters: { search: searchQuery || undefined },
+    filters: { keyword: searchQuery || undefined },
     pagination: { page: 1, limit: 50 },
   });
 
-  const territories = data?.data?.data || [];
+  const territories = data?.data || [];
 
   const toggleTerritory = (code: string) => {
     setSelectedCodes((prev) =>

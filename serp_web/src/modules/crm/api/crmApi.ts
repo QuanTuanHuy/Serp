@@ -1033,22 +1033,22 @@ export const crmApi = api.injectEndpoints({
 
     // Territory endpoints
     getTerritories: builder.query<
-      APIResponse<PaginatedResponse<import('../types').Territory>>,
+      APIResponse<import('../types').Territory[]>,
       {
         filters?: import('../types').TerritoryFilters;
         pagination: PaginationParams;
       }
     >({
-      query: ({ filters = {}, pagination }) => ({
+      query: ({ filters = {} }) => ({
         url: '/territories',
         method: 'GET',
-        params: { ...filters, ...pagination },
+        params: filters,
       }),
       extraOptions: { service: 'crm' },
       providesTags: (result) =>
-        result?.data?.data
+        result?.data
           ? [
-              ...result.data.data.map(({ territoryCode }) => ({
+              ...result.data.map(({ territoryCode }) => ({
                 type: 'Territory' as const,
                 id: territoryCode,
               })),
@@ -1128,7 +1128,14 @@ export const crmApi = api.injectEndpoints({
     }),
 
     getTerritoryOwner: builder.query<
-      APIResponse<import('../types').Team>,
+      APIResponse<{
+        territoryCode: string;
+        teamId: number;
+        teamName: string;
+        active: boolean;
+        assignedAt?: string;
+        assignedBy?: number;
+      }>,
       string
     >({
       query: (territoryCode) => ({

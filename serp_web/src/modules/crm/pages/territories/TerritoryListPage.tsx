@@ -11,10 +11,7 @@ import {
   Plus,
   Grid3X3,
   List,
-  SlidersHorizontal,
   MapPin,
-  ChevronLeft,
-  ChevronRight,
   X,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
@@ -45,14 +42,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'true' | 'false' | ''>('');
-  const [assignedFilter, setAssignedFilter] = useState<'true' | 'false' | ''>(
-    ''
-  );
-  const [sortBy, setSortBy] = useState<'territoryName' | 'createdAt'>(
-    'territoryName'
-  );
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTerritory, setEditingTerritory] = useState<Territory | null>(
     null
@@ -61,7 +50,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
-  const pageSize = 12;
   const [createTerritory] = useCreateTerritoryMutation();
   const [updateTerritory] = useUpdateTerritoryMutation();
   const [activateTerritory] = useActivateTerritoryMutation();
@@ -69,29 +57,24 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
 
   const { data, isLoading, error } = useGetTerritoriesQuery({
     filters: {
-      search: debouncedSearchQuery || undefined,
+      keyword: debouncedSearchQuery || undefined,
       active: activeFilter === '' ? undefined : activeFilter === 'true',
-      assignedOnly: assignedFilter === 'true' ? true : undefined,
-      unassignedOnly: assignedFilter === 'false' ? true : undefined,
     },
     pagination: {
-      page: currentPage,
-      limit: pageSize,
-      sortBy,
-      sortOrder,
+      page: 1,
+      limit: 100,
     },
   });
 
-  const territories = data?.data?.data || [];
-  const total = data?.data?.pagination?.total || 0;
-  const totalPages = data?.data?.pagination?.totalPages || 1;
+  const territories = data?.data || [];
+  const total = territories.length;
 
   const stats = useMemo(() => {
     return {
       total,
       active: territories.filter((t) => t.active).length,
-      assigned: territories.filter((t) => t.assignedTeamId).length,
-      unassigned: territories.filter((t) => !t.assignedTeamId).length,
+      assigned: 0,
+      unassigned: total,
     };
   }, [territories, total]);
 
@@ -156,11 +139,9 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
   const clearFilters = () => {
     setSearchQuery('');
     setActiveFilter('');
-    setAssignedFilter('');
-    setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || activeFilter || assignedFilter;
+  const hasActiveFilters = searchQuery || activeFilter;
 
   if (showCreateForm || editingTerritory) {
     return (
@@ -229,7 +210,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setCurrentPage(1);
             }}
             className='pl-10 pr-10'
           />
@@ -248,7 +228,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
           onClick={() => setShowFilters(!showFilters)}
           className='gap-2'
         >
-          <SlidersHorizontal className='h-4 w-4' />
           Filters
           {hasActiveFilters && (
             <span className='h-2 w-2 rounded-full bg-primary' />
@@ -293,52 +272,12 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
                   value={activeFilter}
                   onChange={(e) => {
                     setActiveFilter(e.target.value as 'true' | 'false' | '');
-                    setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
                   <option value=''>All</option>
                   <option value='true'>Active</option>
                   <option value='false'>Inactive</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='text-sm font-medium mb-1.5 block'>
-                  Assignment Status
-                </label>
-                <select
-                  value={assignedFilter}
-                  onChange={(e) => {
-                    setAssignedFilter(e.target.value as 'true' | 'false' | '');
-                    setCurrentPage(1);
-                  }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
-                >
-                  <option value=''>All</option>
-                  <option value='true'>Assigned</option>
-                  <option value='false'>Unassigned</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='text-sm font-medium mb-1.5 block'>
-                  Sort By
-                </label>
-                <select
-                  value={`${sortBy}-${sortOrder}`}
-                  onChange={(e) => {
-                    const [field, order] = e.target.value.split('-');
-                    setSortBy(field as typeof sortBy);
-                    setSortOrder(order as 'asc' | 'desc');
-                    setCurrentPage(1);
-                  }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
-                >
-                  <option value='territoryName-asc'>Name A-Z</option>
-                  <option value='territoryName-desc'>Name Z-A</option>
-                  <option value='createdAt-desc'>Newest First</option>
-                  <option value='createdAt-asc'>Oldest First</option>
                 </select>
               </div>
             </div>
@@ -449,53 +388,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
         </Card>
       )}
 
-      {total > pageSize && (
-        <div className='flex items-center justify-between pt-4'>
-          <p className='text-sm text-muted-foreground'>
-            Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, total)} of {total} territories
-          </p>
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <ChevronLeft className='h-4 w-4' />
-              Previous
-            </Button>
-            <div className='flex items-center gap-1'>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={cn(
-                      'h-8 w-8 rounded-md text-sm font-medium transition-colors',
-                      currentPage === pageNum
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    )}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <ChevronRight className='h-4 w-4' />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

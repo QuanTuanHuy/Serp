@@ -106,7 +106,7 @@ export const TeamDetailPage: React.FC = () => {
   const members = membersData?.data?.items || [];
   const territories = territoriesData?.data?.territories || [];
   const users = usersData?.data.items || [];
-  const availableTerritories = territoryOptionsData?.data?.data || [];
+  const availableTerritories = territoryOptionsData?.data || [];
   const managerName = team?.manager?.name || undefined;
 
   const handleDeleteTeam = async () => {

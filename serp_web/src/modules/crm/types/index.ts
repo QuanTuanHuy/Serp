@@ -511,14 +511,14 @@ export interface ChangeManagerRequest {
 export type TerritoryLevel = 'PROVINCE_CITY';
 
 export interface Territory extends BaseEntity {
+  id: string;
   territoryCode: string;
   territoryName: string;
   territoryLevel: TerritoryLevel;
   countryCode: string;
   parentTerritoryCode?: string;
   active: boolean;
-  assignedTeamId?: string;
-  assignedTeamName?: string;
+  source?: string;
 }
 
 export interface TeamTerritory extends BaseEntity {
@@ -535,12 +535,10 @@ export interface TeamTerritoryResponse {
 }
 
 export interface TerritoryFilters {
-  search?: string;
-  territoryLevel?: TerritoryLevel[];
-  countryCode?: string;
+  keyword?: string;
   active?: boolean;
-  assignedOnly?: boolean;
-  unassignedOnly?: boolean;
+  parentTerritoryCode?: string;
+  source?: string;
 }
 
 export interface CreateTerritoryRequest {

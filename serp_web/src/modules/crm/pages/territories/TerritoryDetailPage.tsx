@@ -12,11 +12,9 @@ import {
 } from '@/shared/components/ui';
 import { toast } from 'sonner';
 import { ArrowLeft, Edit, MapPin, Building, Users } from 'lucide-react';
-import { cn } from '@/shared/utils';
 import {
   useGetTerritoryQuery,
   useGetTerritoryOwnerQuery,
-  useUpdateTerritoryMutation,
   useActivateTerritoryMutation,
   useDeactivateTerritoryMutation,
 } from '../../api/crmApi';
@@ -34,7 +32,7 @@ export const TerritoryDetailPage: React.FC = () => {
   const [deactivateTerritory] = useDeactivateTerritoryMutation();
 
   const territory = territoryData?.data;
-  const ownerTeam = ownerData?.data;
+  const territoryOwner = ownerData?.data;
 
   const handleActivate = async () => {
     try {
@@ -159,23 +157,25 @@ export const TerritoryDetailPage: React.FC = () => {
             <CardTitle className='text-lg'>Assigned Team</CardTitle>
           </CardHeader>
           <CardContent>
-            {ownerTeam ? (
+            {territoryOwner ? (
               <div className='space-y-4'>
                 <div className='flex items-center gap-3'>
                   <div className='h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center'>
                     <Users className='h-5 w-5 text-blue-600' />
                   </div>
                   <div>
-                    <p className='font-medium'>{ownerTeam.name}</p>
+                    <p className='font-medium'>{territoryOwner.teamName}</p>
                     <p className='text-sm text-muted-foreground'>
-                      {ownerTeam.memberCount ?? 0} members
+                      Territory owner mapping is active
                     </p>
                   </div>
                 </div>
                 <Button
                   variant='outline'
                   size='sm'
-                  onClick={() => router.push(`/crm/teams/${ownerTeam.id}`)}
+                  onClick={() =>
+                    router.push(`/crm/teams/${territoryOwner.teamId}`)
+                  }
                 >
                   View Team
                 </Button>
