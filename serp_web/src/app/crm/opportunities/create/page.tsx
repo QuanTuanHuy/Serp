@@ -10,7 +10,9 @@ export default function CreateOpportunityRoute() {
 
   return (
     <CreateOpportunityPage
-      onSuccess={(opportunityId) => router.push(`/crm/opportunities/${opportunityId}`)}
+      onSuccess={(opportunityId) =>
+        router.push(`/crm/opportunities/${opportunityId}`)
+      }
       onCancel={() => router.back()}
     />
   );

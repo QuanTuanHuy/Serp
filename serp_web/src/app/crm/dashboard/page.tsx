@@ -234,7 +234,7 @@ export default function CRMDashboard() {
               <div
                 key={customer.id}
                 className='flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer'
-                    onClick={() => router.push(`/crm/accounts/${customer.id}`)}
+                onClick={() => router.push(`/crm/accounts/${customer.id}`)}
               >
                 <div className='flex items-center gap-3'>
                   <div className='flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm'>

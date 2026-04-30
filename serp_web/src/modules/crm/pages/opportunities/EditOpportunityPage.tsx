@@ -14,7 +14,10 @@ import {
   useGetOpportunityQuery,
   useUpdateOpportunityMutation,
 } from '../../api/crmApi';
-import type { CreateOpportunityRequest, UpdateOpportunityRequest } from '../../types';
+import type {
+  CreateOpportunityRequest,
+  UpdateOpportunityRequest,
+} from '../../types';
 
 interface EditOpportunityPageProps {
   opportunityId: string;

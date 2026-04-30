@@ -1,5 +1,3 @@
-// CustomerListPage Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,68 +12,67 @@ import {
   Grid3X3,
   List,
   SlidersHorizontal,
-  Users,
-  Building2,
+  MapPin,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { AccountCard } from '../../components/cards';
-import { AccountForm } from '../../components/forms';
+import { TerritoryCard } from '../../components/cards/TerritoryCard';
+import { TerritoryForm } from '../../components/forms/TerritoryForm';
 import { StatsCard } from '../../components/dashboard';
-import { ExportDropdown } from '../../components/shared';
-import { QuickAddAccountDialog } from '../../components/dialogs';
-import { CUSTOMER_EXPORT_COLUMNS } from '../../utils/export';
 import {
-  useCreateAccountMutation,
-  useDeleteAccountMutation,
-  useGetAccountsQuery,
-  useUpdateAccountMutation,
+  useGetTerritoriesQuery,
+  useCreateTerritoryMutation,
+  useUpdateTerritoryMutation,
+  useActivateTerritoryMutation,
+  useDeactivateTerritoryMutation,
 } from '../../api/crmApi';
 import type {
-  Account,
-  AccountStatus,
-  CreateAccountRequest,
-  UpdateAccountRequest,
+  Territory,
+  CreateTerritoryRequest,
+  UpdateTerritoryRequest,
 } from '../../types';
 
-interface CustomerListPageProps {
+interface TerritoryListPageProps {
   className?: string;
 }
 
-export const CustomerListPage: React.FC<CustomerListPageProps> = ({
+export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
   className,
 }) => {
   const router = useRouter();
 
-  // State management
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<AccountStatus | ''>('');
-  const [typeFilter, setTypeFilter] = useState<'PROSPECT' | 'CUSTOMER' | ''>(
+  const [activeFilter, setActiveFilter] = useState<'true' | 'false' | ''>('');
+  const [assignedFilter, setAssignedFilter] = useState<'true' | 'false' | ''>(
     ''
   );
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'totalValue'>(
-    'name'
+  const [sortBy, setSortBy] = useState<'territoryName' | 'createdAt'>(
+    'territoryName'
   );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Account | null>(null);
+  const [editingTerritory, setEditingTerritory] = useState<Territory | null>(
+    null
+  );
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const pageSize = 12;
-  const [createAccount] = useCreateAccountMutation();
-  const [updateAccount] = useUpdateAccountMutation();
-  const [deleteAccount] = useDeleteAccountMutation();
-  const { data, isLoading, error } = useGetAccountsQuery({
+  const [createTerritory] = useCreateTerritoryMutation();
+  const [updateTerritory] = useUpdateTerritoryMutation();
+  const [activateTerritory] = useActivateTerritoryMutation();
+  const [deactivateTerritory] = useDeactivateTerritoryMutation();
+
+  const { data, isLoading, error } = useGetTerritoriesQuery({
     filters: {
       search: debouncedSearchQuery || undefined,
-      status: statusFilter ? [statusFilter] : undefined,
-      type: typeFilter ? [typeFilter] : undefined,
+      active: activeFilter === '' ? undefined : activeFilter === 'true',
+      assignedOnly: assignedFilter === 'true' ? true : undefined,
+      unassignedOnly: assignedFilter === 'false' ? true : undefined,
     },
     pagination: {
       page: currentPage,
@@ -85,136 +82,97 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     },
   });
 
-  const accounts = data?.data?.data || [];
+  const territories = data?.data?.data || [];
   const total = data?.data?.pagination?.total || 0;
   const totalPages = data?.data?.pagination?.totalPages || 1;
 
-  // Calculate stats
   const stats = useMemo(() => {
     return {
       total,
-      active: accounts.filter((c) => c.status === 'ACTIVE').length,
-      companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
-      totalValue: accounts.reduce((sum, c) => sum + (c.totalValue || 0), 0),
+      active: territories.filter((t) => t.active).length,
+      assigned: territories.filter((t) => t.assignedTeamId).length,
+      unassigned: territories.filter((t) => !t.assignedTeamId).length,
     };
-  }, [accounts, total]);
+  }, [territories, total]);
 
-  // Handle actions
-  const handleCreateCustomer = async (
-    data: CreateAccountRequest | Partial<CreateAccountRequest>
+  const handleCreateTerritory = async (
+    data: CreateTerritoryRequest | UpdateTerritoryRequest
   ) => {
     try {
-      await createAccount(data as CreateAccountRequest).unwrap();
-      toast.success('Create account successfully');
+      await createTerritory(data as CreateTerritoryRequest).unwrap();
+      toast.success('Territory created successfully');
       setShowCreateForm(false);
     } catch (error) {
-      toast.error('Failed to create account', {
+      toast.error('Failed to create territory', {
         description: getErrorMessage(error),
       });
     }
   };
 
-  const handleQuickAddCustomer = async (data: {
-    name: string;
-    email: string;
-    phone?: string;
-    companySize?: string;
-    customerType: 'PROSPECT' | 'CUSTOMER';
-    status: 'ACTIVE' | 'INACTIVE';
-    address?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-    website?: string;
-    notes?: string;
-  }) => {
-    try {
-      await createAccount({
-        isActive: true,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        companySize: data.companySize,
-        notes: data.notes,
-        address: data.address || '',
-        city: data.city || '',
-        state: data.state || '',
-        zipCode: data.zipCode || '',
-        country: data.country || '',
-        website: data.website || '',
-        customerType: data.customerType,
-        status: data.status,
-        paymentTerms: '',
-        creditLimit: undefined,
-        tags: [],
-        customFields: {},
-        totalValue: 0,
-      } as CreateAccountRequest).unwrap();
-      toast.success('Create account successfully');
-      setShowQuickAdd(false);
-    } catch (error) {
-      toast.error('Failed to create account', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleEditCustomer = (customer: Account) => {
-    setEditingCustomer(customer);
-  };
-
-  const handleUpdateCustomer = async (
-    data: CreateAccountRequest | UpdateAccountRequest
+  const handleUpdateTerritory = async (
+    data: CreateTerritoryRequest | UpdateTerritoryRequest
   ) => {
-    if (!editingCustomer) return;
+    if (!editingTerritory) return;
     try {
-      await updateAccount({ id: editingCustomer.id, data }).unwrap();
-      toast.success('Update account successfully');
-      setEditingCustomer(null);
+      await updateTerritory({
+        territoryCode: editingTerritory.territoryCode,
+        data,
+      }).unwrap();
+      toast.success('Territory updated successfully');
+      setEditingTerritory(null);
     } catch (error) {
-      toast.error('Failed to update account', {
+      toast.error('Failed to update territory', {
         description: getErrorMessage(error),
       });
     }
   };
 
-  const handleDeleteCustomer = async (customerId: string) => {
+  const handleActivateTerritory = async (territoryCode: string) => {
     try {
-      await deleteAccount(customerId).unwrap();
-      toast.success('Delete account successfully');
+      await activateTerritory(territoryCode).unwrap();
+      toast.success('Territory activated successfully');
     } catch (error) {
-      toast.error('Failed to delete account', {
+      toast.error('Failed to activate territory', {
         description: getErrorMessage(error),
       });
     }
   };
 
-  const handleViewCustomer = (customerId: string) => {
-    router.push(`/crm/accounts/${customerId}`);
+  const handleDeactivateTerritory = async (territoryCode: string) => {
+    try {
+      await deactivateTerritory(territoryCode).unwrap();
+      toast.success('Territory deactivated successfully');
+    } catch (error) {
+      toast.error('Failed to deactivate territory', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleViewTerritory = (territoryCode: string) => {
+    router.push(`/crm/territories/${territoryCode}`);
   };
 
   const clearFilters = () => {
     setSearchQuery('');
-    setStatusFilter('');
-    setTypeFilter('');
+    setActiveFilter('');
+    setAssignedFilter('');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || statusFilter || typeFilter;
+  const hasActiveFilters = searchQuery || activeFilter || assignedFilter;
 
-  // Show create/edit form
-  if (showCreateForm || editingCustomer) {
+  if (showCreateForm || editingTerritory) {
     return (
       <div className={cn('', className)}>
-        <AccountForm
-          customer={editingCustomer || undefined}
+        <TerritoryForm
+          territory={editingTerritory || undefined}
           onSubmit={
-            editingCustomer ? handleUpdateCustomer : handleCreateCustomer
+            editingTerritory ? handleUpdateTerritory : handleCreateTerritory
           }
           onCancel={() => {
             setShowCreateForm(false);
-            setEditingCustomer(null);
+            setEditingTerritory(null);
           }}
         />
       </div>
@@ -223,65 +181,51 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Accounts</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Territories</h1>
           <p className='text-muted-foreground'>
-            Manage your account relationships
+            Manage geographic territories for lead routing
           </p>
         </div>
-        <div className='flex items-center gap-2'>
-          <ExportDropdown
-            data={accounts}
-            columns={CUSTOMER_EXPORT_COLUMNS}
-            filename='accounts'
-            onExportComplete={(format, count) => {
-              console.log(`Exported ${count} accounts as ${format}`);
-            }}
-          />
-          <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
-            <Plus className='h-4 w-4' />
-            Add Account
-          </Button>
-        </div>
+        <Button onClick={() => setShowCreateForm(true)} className='gap-2'>
+          <Plus className='h-4 w-4' />
+          Add Territory
+        </Button>
       </div>
 
-      {/* Quick Stats */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         <StatsCard
-          title='Total Accounts'
+          title='Total Territories'
           value={stats.total}
-          icon={Users}
+          icon={MapPin}
           variant='primary'
         />
         <StatsCard
           title='Active'
           value={stats.active}
-          icon={Users}
+          icon={MapPin}
           variant='success'
         />
         <StatsCard
-          title='Companies'
-          value={stats.companies}
-          icon={Building2}
+          title='Assigned'
+          value={stats.assigned}
+          icon={MapPin}
           variant='default'
         />
         <StatsCard
-          title='Total Value'
-          value={`$${stats.totalValue.toLocaleString()}`}
-          icon={Building2}
+          title='Unassigned'
+          value={stats.unassigned}
+          icon={MapPin}
           variant='warning'
         />
       </div>
 
-      {/* Search & Filters Bar */}
       <div className='flex flex-col sm:flex-row gap-3'>
-        {/* Search */}
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Search accounts by name, email, or company...'
+            placeholder='Search territories by name or code...'
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -299,7 +243,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           )}
         </div>
 
-        {/* Filter Toggle */}
         <Button
           variant={showFilters ? 'secondary' : 'outline'}
           onClick={() => setShowFilters(!showFilters)}
@@ -312,7 +255,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           )}
         </Button>
 
-        {/* View Toggle */}
         <div className='flex rounded-lg border bg-muted p-1'>
           <button
             onClick={() => setViewMode('grid')}
@@ -339,44 +281,43 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </div>
       </div>
 
-      {/* Expanded Filters */}
       {showFilters && (
         <Card>
           <CardContent className='p-4'>
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
-                  Status
+                  Active Status
                 </label>
                 <select
-                  value={statusFilter}
+                  value={activeFilter}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value as AccountStatus | '');
+                    setActiveFilter(e.target.value as 'true' | 'false' | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
-                  <option value=''>All Statuses</option>
-                  <option value='ACTIVE'>Active</option>
-                  <option value='INACTIVE'>Inactive</option>
+                  <option value=''>All</option>
+                  <option value='true'>Active</option>
+                  <option value='false'>Inactive</option>
                 </select>
               </div>
 
               <div>
-                <label className='text-sm font-medium mb-1.5 block'>Type</label>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Assignment Status
+                </label>
                 <select
-                  value={typeFilter}
+                  value={assignedFilter}
                   onChange={(e) => {
-                    setTypeFilter(
-                      e.target.value as 'PROSPECT' | 'CUSTOMER' | ''
-                    );
+                    setAssignedFilter(e.target.value as 'true' | 'false' | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
-                  <option value=''>All Types</option>
-                  <option value='PROSPECT'>Prospect</option>
-                  <option value='CUSTOMER'>Customer</option>
+                  <option value=''>All</option>
+                  <option value='true'>Assigned</option>
+                  <option value='false'>Unassigned</option>
                 </select>
               </div>
 
@@ -394,12 +335,10 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
-                  <option value='name-asc'>Name A-Z</option>
-                  <option value='name-desc'>Name Z-A</option>
+                  <option value='territoryName-asc'>Name A-Z</option>
+                  <option value='territoryName-desc'>Name Z-A</option>
                   <option value='createdAt-desc'>Newest First</option>
                   <option value='createdAt-asc'>Oldest First</option>
-                  <option value='totalValue-desc'>Highest Value</option>
-                  <option value='totalValue-asc'>Lowest Value</option>
                 </select>
               </div>
             </div>
@@ -418,18 +357,16 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </Card>
       )}
 
-      {/* Error State */}
       {error && (
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Error loading accounts. Please try again.
+              Error loading territories. Please try again.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Loading State */}
       {isLoading && (
         <div
           className={cn(
@@ -459,8 +396,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         </div>
       )}
 
-      {/* Account Grid/List */}
-      {!isLoading && accounts.length > 0 && (
+      {!isLoading && territories.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -469,33 +405,35 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               : 'flex flex-col'
           )}
         >
-          {accounts.map((customer) => (
-            <AccountCard
-              key={customer.id}
-              customer={customer}
+          {territories.map((territory) => (
+            <TerritoryCard
+              key={territory.territoryCode}
+              territory={territory}
               variant={viewMode === 'list' ? 'compact' : 'default'}
-              onClick={() => handleViewCustomer(customer.id)}
-              onEdit={() => handleEditCustomer(customer)}
-              onDelete={() => handleDeleteCustomer(customer.id)}
-              onEmailClick={() => console.log('Email:', customer.email)}
-              onCallClick={() => console.log('Call:', customer.phone)}
+              onClick={() => handleViewTerritory(territory.territoryCode)}
+              onEdit={() => setEditingTerritory(territory)}
+              onActivate={() =>
+                handleActivateTerritory(territory.territoryCode)
+              }
+              onDeactivate={() =>
+                handleDeactivateTerritory(territory.territoryCode)
+              }
             />
           ))}
         </div>
       )}
 
-      {/* Empty State */}
-      {!isLoading && accounts.length === 0 && !error && (
+      {!isLoading && territories.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
-              <Users className='w-10 h-10 text-muted-foreground' />
+              <MapPin className='w-10 h-10 text-muted-foreground' />
             </div>
-            <h3 className='text-lg font-semibold mb-2'>No accounts found</h3>
+            <h3 className='text-lg font-semibold mb-2'>No territories found</h3>
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
                 ? 'Try adjusting your filters to see more results.'
-                : 'Get started by adding your first account.'}
+                : 'Get started by adding your first territory.'}
             </p>
             {hasActiveFilters ? (
               <Button variant='outline' onClick={clearFilters}>
@@ -504,19 +442,18 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             ) : (
               <Button onClick={() => setShowCreateForm(true)}>
                 <Plus className='h-4 w-4 mr-2' />
-                Add First Account
+                Add First Territory
               </Button>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Pagination */}
       {total > pageSize && (
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
             Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, total)} of {total} accounts
+            {Math.min(currentPage * pageSize, total)} of {total} territories
           </p>
           <div className='flex items-center gap-2'>
             <Button
@@ -559,15 +496,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           </div>
         </div>
       )}
-
-      {/* Quick Add Dialog */}
-      <QuickAddAccountDialog
-        open={showQuickAdd}
-        onOpenChange={setShowQuickAdd}
-        onSubmit={handleQuickAddCustomer}
-      />
     </div>
   );
 };
 
-export default CustomerListPage;
+export default TerritoryListPage;

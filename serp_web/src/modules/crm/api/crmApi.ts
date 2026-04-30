@@ -1,6 +1,7 @@
 // CRM API Endpoints (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import { api } from '@/lib/store/api';
+import type { ApiResponse as BaseApiResponse } from '@/lib/store/api/types';
 import {
   mapAccountFormToBackendPayload,
   mapAccountListResponse,
@@ -159,7 +160,10 @@ export const crmApi = api.injectEndpoints({
       ],
     }),
 
-    updateContact: builder.mutation<APIResponse<Contact>, { id: string; data: Record<string, unknown> }>({
+    updateContact: builder.mutation<
+      APIResponse<Contact>,
+      { id: string; data: Record<string, unknown> }
+    >({
       query: ({ id, data }) => ({
         url: `/contacts/${id}`,
         method: 'PUT',
@@ -477,7 +481,9 @@ export const crmApi = api.injectEndpoints({
               ? Number(assignedTo)
               : undefined,
           accountId:
-            accountId && accountId.trim() !== '' ? Number(accountId) : undefined,
+            accountId && accountId.trim() !== ''
+              ? Number(accountId)
+              : undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
         },
@@ -790,6 +796,350 @@ export const crmApi = api.injectEndpoints({
       extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Activity', id: 'LIST' }],
     }),
+
+    // Team endpoints
+    getTeams: builder.query<
+      BaseApiResponse<{
+        items: import('../types').Team[];
+        pagination: {
+          page: number;
+          size: number;
+          totalItems: number;
+          totalPages: number;
+          hasNext: boolean;
+          hasPrevious: boolean;
+        };
+      }>,
+      { filters?: import('../types').TeamFilters; pagination: PaginationParams }
+    >({
+      query: ({ filters = {}, pagination }) => ({
+        url: '/teams',
+        method: 'GET',
+        params: {
+          page: pagination.page,
+          size: pagination.limit,
+          status: filters.status,
+        },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: (response: any, _meta, arg) => ({
+        code: response.code,
+        status: response.status,
+        message: response.message,
+        data: {
+          items: response.data?.items ?? [],
+          pagination: {
+            page: response.data?.pagination?.page ?? 1,
+            size: response.data?.pagination?.size ?? arg.pagination.limit ?? 20,
+            totalItems: response.data?.pagination?.totalItems ?? 0,
+            totalPages: response.data?.pagination?.totalPages ?? 0,
+            hasNext: response.data?.pagination?.hasNext ?? false,
+            hasPrevious: response.data?.pagination?.hasPrevious ?? false,
+          },
+        },
+      }),
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'Team' as const,
+                id,
+              })),
+              { type: 'Team', id: 'LIST' },
+            ]
+          : [{ type: 'Team', id: 'LIST' }],
+    }),
+
+    getTeam: builder.query<APIResponse<import('../types').Team>, string>({
+      query: (id) => ({ url: `/teams/${id}`, method: 'GET' }),
+      extraOptions: { service: 'crm' },
+      providesTags: (result, error, id) => [{ type: 'Team', id }],
+    }),
+
+    createTeam: builder.mutation<
+      APIResponse<import('../types').Team>,
+      import('../types').CreateTeamRequest
+    >({
+      query: (data) => ({ url: '/teams', method: 'POST', body: data }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: [{ type: 'Team', id: 'LIST' }],
+    }),
+
+    updateTeam: builder.mutation<
+      APIResponse<import('../types').Team>,
+      { id: string; data: import('../types').UpdateTeamRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/teams/${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Team', id },
+        { type: 'Team', id: 'LIST' },
+      ],
+    }),
+
+    deleteTeam: builder.mutation<APIResponse<null>, string>({
+      query: (id) => ({ url: `/teams/${id}`, method: 'DELETE' }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: [{ type: 'Team', id: 'LIST' }],
+    }),
+
+    getTeamMembers: builder.query<
+      BaseApiResponse<{
+        items: import('../types').TeamMember[];
+        pagination: {
+          page: number;
+          size: number;
+          totalItems: number;
+          totalPages: number;
+          hasNext: boolean;
+          hasPrevious: boolean;
+        };
+      }>,
+      { teamId: string; page?: number; size?: number }
+    >({
+      query: ({ teamId, page = 1, size = 20 }) => ({
+        url: `/teams/${teamId}/members`,
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: (response: any) => ({
+        code: response.code,
+        status: response.status,
+        message: response.message,
+        data: {
+          items: response.data?.items ?? [],
+          pagination: {
+            page: response.data?.pagination?.page ?? 1,
+            size: response.data?.pagination?.size ?? 20,
+            totalItems: response.data?.pagination?.totalItems ?? 0,
+            totalPages: response.data?.pagination?.totalPages ?? 0,
+            hasNext: response.data?.pagination?.hasNext ?? false,
+            hasPrevious: response.data?.pagination?.hasPrevious ?? false,
+          },
+        },
+      }),
+      providesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: `${teamId}-MEMBERS` },
+      ],
+    }),
+
+    addTeamMember: builder.mutation<
+      APIResponse<import('../types').TeamMember>,
+      {
+        teamId: string;
+        data: import('../types').CreateTeamMemberRequest;
+      }
+    >({
+      query: ({ teamId, data }) => ({
+        url: `/teams/${teamId}/members`,
+        method: 'POST',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: `${teamId}-MEMBERS` },
+      ],
+    }),
+
+    updateTeamMember: builder.mutation<
+      APIResponse<import('../types').TeamMember>,
+      {
+        teamId: string;
+        memberId: string;
+        data: import('../types').UpdateTeamMemberRequest;
+      }
+    >({
+      query: ({ teamId, memberId, data }) => ({
+        url: `/teams/${teamId}/members/${memberId}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: `${teamId}-MEMBERS` },
+      ],
+    }),
+
+    removeTeamMember: builder.mutation<
+      APIResponse<null>,
+      { teamId: string; memberId: string }
+    >({
+      query: ({ teamId, memberId }) => ({
+        url: `/teams/${teamId}/members/${memberId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: `${teamId}-MEMBERS` },
+      ],
+    }),
+
+    getTeamTerritories: builder.query<
+      APIResponse<import('../types').TeamTerritoryResponse>,
+      string
+    >({
+      query: (teamId) => ({
+        url: `/teams/${teamId}/territories`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      providesTags: (result, error, teamId) => [
+        { type: 'Team', id: `${teamId}-TERRITORIES` },
+      ],
+    }),
+
+    assignTerritories: builder.mutation<
+      APIResponse<import('../types').TeamTerritoryResponse>,
+      {
+        teamId: string;
+        data: import('../types').AssignTerritoriesRequest;
+      }
+    >({
+      query: ({ teamId, data }) => ({
+        url: `/teams/${teamId}/territories`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: `${teamId}-TERRITORIES` },
+        { type: 'Territory', id: 'LIST' },
+      ],
+    }),
+
+    changeTeamManager: builder.mutation<
+      APIResponse<import('../types').Team>,
+      {
+        teamId: string;
+        data: import('../types').ChangeManagerRequest;
+      }
+    >({
+      query: ({ teamId, data }) => ({
+        url: `/teams/${teamId}/manager`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { teamId }) => [
+        { type: 'Team', id: teamId },
+        { type: 'Team', id: `${teamId}-MEMBERS` },
+      ],
+    }),
+
+    // Territory endpoints
+    getTerritories: builder.query<
+      APIResponse<PaginatedResponse<import('../types').Territory>>,
+      {
+        filters?: import('../types').TerritoryFilters;
+        pagination: PaginationParams;
+      }
+    >({
+      query: ({ filters = {}, pagination }) => ({
+        url: '/territories',
+        method: 'GET',
+        params: { ...filters, ...pagination },
+      }),
+      extraOptions: { service: 'crm' },
+      providesTags: (result) =>
+        result?.data?.data
+          ? [
+              ...result.data.data.map(({ territoryCode }) => ({
+                type: 'Territory' as const,
+                id: territoryCode,
+              })),
+              { type: 'Territory', id: 'LIST' },
+            ]
+          : [{ type: 'Territory', id: 'LIST' }],
+    }),
+
+    getTerritory: builder.query<
+      APIResponse<import('../types').Territory>,
+      string
+    >({
+      query: (territoryCode) => ({
+        url: `/territories/${territoryCode}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      providesTags: (result, error, territoryCode) => [
+        { type: 'Territory', id: territoryCode },
+      ],
+    }),
+
+    createTerritory: builder.mutation<
+      APIResponse<import('../types').Territory>,
+      import('../types').CreateTerritoryRequest
+    >({
+      query: (data) => ({ url: '/territories', method: 'POST', body: data }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: [{ type: 'Territory', id: 'LIST' }],
+    }),
+
+    updateTerritory: builder.mutation<
+      APIResponse<import('../types').Territory>,
+      {
+        territoryCode: string;
+        data: import('../types').UpdateTerritoryRequest;
+      }
+    >({
+      query: ({ territoryCode, data }) => ({
+        url: `/territories/${territoryCode}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, { territoryCode }) => [
+        { type: 'Territory', id: territoryCode },
+        { type: 'Territory', id: 'LIST' },
+      ],
+    }),
+
+    activateTerritory: builder.mutation<
+      APIResponse<import('../types').Territory>,
+      string
+    >({
+      query: (territoryCode) => ({
+        url: `/territories/${territoryCode}/activate`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, territoryCode) => [
+        { type: 'Territory', id: territoryCode },
+      ],
+    }),
+
+    deactivateTerritory: builder.mutation<
+      APIResponse<import('../types').Territory>,
+      string
+    >({
+      query: (territoryCode) => ({
+        url: `/territories/${territoryCode}/deactivate`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'crm' },
+      invalidatesTags: (result, error, territoryCode) => [
+        { type: 'Territory', id: territoryCode },
+      ],
+    }),
+
+    getTerritoryOwner: builder.query<
+      APIResponse<import('../types').Team>,
+      string
+    >({
+      query: (territoryCode) => ({
+        url: `/territories/${territoryCode}/owner`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      providesTags: (result, error, territoryCode) => [
+        { type: 'Territory', id: `${territoryCode}-OWNER` },
+      ],
+    }),
   }),
 });
 
@@ -853,6 +1203,29 @@ export const {
   useBulkDeleteCustomersMutation,
   useBulkDeleteLeadsMutation,
   useBulkDeleteActivitiesMutation,
+
+  // Team hooks
+  useGetTeamsQuery,
+  useGetTeamQuery,
+  useCreateTeamMutation,
+  useUpdateTeamMutation,
+  useDeleteTeamMutation,
+  useGetTeamMembersQuery,
+  useAddTeamMemberMutation,
+  useUpdateTeamMemberMutation,
+  useRemoveTeamMemberMutation,
+  useGetTeamTerritoriesQuery,
+  useAssignTerritoriesMutation,
+  useChangeTeamManagerMutation,
+
+  // Territory hooks
+  useGetTerritoriesQuery,
+  useGetTerritoryQuery,
+  useCreateTerritoryMutation,
+  useUpdateTerritoryMutation,
+  useActivateTerritoryMutation,
+  useDeactivateTerritoryMutation,
+  useGetTerritoryOwnerQuery,
 } = crmApi;
 
 export const useGetAccountsQuery = useGetCustomersQuery;

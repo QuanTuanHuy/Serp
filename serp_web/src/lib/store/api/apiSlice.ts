@@ -174,6 +174,8 @@ export const api = createApi({
     'Opportunity',
     'Activity',
     'Analytics',
+    'Team',
+    'Territory',
     // Admin tags
     'admin/Organization',
     'admin/Subscription',

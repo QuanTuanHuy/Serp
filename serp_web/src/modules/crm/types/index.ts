@@ -444,6 +444,125 @@ export interface CRMUIState {
   filterPanelOpen: boolean;
 }
 
+// Team related types
+export type TeamStatus = 'ACTIVE' | 'INACTIVE';
+export type TeamMemberRole = 'MANAGER' | 'SALES_REP' | 'VIEWER';
+export type TeamMemberStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Team extends BaseEntity {
+  name: string;
+  description?: string;
+  managerUserId?: number;
+  notes?: string;
+  status: TeamStatus;
+  manager?: TeamMember;
+  memberCount?: number;
+}
+
+export interface TeamMember extends BaseEntity {
+  name: string;
+  email?: string;
+  phone?: string;
+  teamId: string;
+  userId?: number;
+  role: TeamMemberRole;
+  status: TeamMemberStatus;
+}
+
+export interface TeamFilters {
+  status?: TeamStatus;
+}
+
+export interface CreateTeamRequest {
+  name: string;
+  description?: string;
+  managerUserId: number;
+  notes?: string;
+}
+
+export interface UpdateTeamRequest {
+  name?: string;
+  description?: string;
+  managerUserId?: number;
+  notes?: string;
+  status?: TeamStatus;
+}
+
+export interface CreateTeamMemberRequest {
+  teamId: number;
+  userId: number;
+  role: TeamMemberRole;
+}
+
+export interface UpdateTeamMemberRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: TeamMemberRole;
+  status?: TeamMemberStatus;
+}
+
+export interface ChangeManagerRequest {
+  newManagerUserId: number;
+  previousManagerRole: TeamMemberRole;
+}
+
+// Territory related types
+export type TerritoryLevel = 'PROVINCE_CITY';
+
+export interface Territory extends BaseEntity {
+  territoryCode: string;
+  territoryName: string;
+  territoryLevel: TerritoryLevel;
+  countryCode: string;
+  parentTerritoryCode?: string;
+  active: boolean;
+  assignedTeamId?: string;
+  assignedTeamName?: string;
+}
+
+export interface TeamTerritory extends BaseEntity {
+  teamId: string;
+  territoryCode: string;
+  assignedBy?: number;
+  active: boolean;
+  territory?: Territory;
+}
+
+export interface TeamTerritoryResponse {
+  teamId: string;
+  territories: Territory[];
+}
+
+export interface TerritoryFilters {
+  search?: string;
+  territoryLevel?: TerritoryLevel[];
+  countryCode?: string;
+  active?: boolean;
+  assignedOnly?: boolean;
+  unassignedOnly?: boolean;
+}
+
+export interface CreateTerritoryRequest {
+  territoryCode: string;
+  territoryName: string;
+  territoryLevel?: TerritoryLevel;
+  countryCode?: string;
+  parentTerritoryCode?: string;
+  active?: boolean;
+}
+
+export interface UpdateTerritoryRequest {
+  territoryName?: string;
+  territoryLevel?: TerritoryLevel;
+  countryCode?: string;
+  parentTerritoryCode?: string;
+}
+
+export interface AssignTerritoriesRequest {
+  territoryCodes: string[];
+}
+
 // Export all types for barrel import
 export * from './api';
 export * from './constants';

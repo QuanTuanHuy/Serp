@@ -96,7 +96,11 @@ const sourceConfig: Record<
   WEBSITE: { icon: Globe, label: 'Website', color: 'text-blue-500' },
   REFERRAL: { icon: Users, label: 'Referral', color: 'text-emerald-500' },
   COLD_CALL: { icon: Phone, label: 'Cold Call', color: 'text-green-500' },
-  EMAIL_CAMPAIGN: { icon: Mail, label: 'Email Campaign', color: 'text-indigo-500' },
+  EMAIL_CAMPAIGN: {
+    icon: Mail,
+    label: 'Email Campaign',
+    color: 'text-indigo-500',
+  },
   EMAIL: { icon: Mail, label: 'Email', color: 'text-indigo-500' },
   PHONE: { icon: Phone, label: 'Phone', color: 'text-green-500' },
   SOCIAL_MEDIA: {
@@ -172,10 +176,7 @@ const getLeadScore = (lead: Lead): number => {
   const effectiveStatus = lead.leadStatus || getLegacyStatus(lead);
 
   if (effectiveStatus === 'QUALIFIED') score += 25;
-  else if (
-    effectiveStatus === 'CONTACTED' ||
-    effectiveStatus === 'NURTURING'
-  ) {
+  else if (effectiveStatus === 'CONTACTED' || effectiveStatus === 'NURTURING') {
     score += 15;
   } else if (effectiveStatus === 'NEW') {
     score += 5;
@@ -250,7 +251,8 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   const fullName = getDisplayName(lead);
   const leadInitials = getLeadInitials(lead);
   const leadScore = getLeadScore(lead);
-  const leadIndustry = lead.industry || (lead.customFields?.industry as string | undefined);
+  const leadIndustry =
+    lead.industry || (lead.customFields?.industry as string | undefined);
   const leadCompanySize =
     lead.companySize || (lead.customFields?.companySize as string | undefined);
 

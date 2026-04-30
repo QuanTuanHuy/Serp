@@ -102,8 +102,12 @@ const formatCurrency = (value: number): string => {
 };
 
 const getDisplayAccountName = (opportunity: Opportunity): string => {
-  return opportunity.customerName?.trim() ||
-    (opportunity.accountId ? `Account #${opportunity.accountId}` : 'Unlinked Account');
+  return (
+    opportunity.customerName?.trim() ||
+    (opportunity.accountId
+      ? `Account #${opportunity.accountId}`
+      : 'Unlinked Account')
+  );
 };
 
 const getDisplayValue = (opportunity: Opportunity): number => {
@@ -293,17 +297,15 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         {/* Info */}
         <div className='flex-1 min-w-0'>
           <p className='font-medium text-sm truncate'>{opportunity.name}</p>
-          <p className='text-xs text-muted-foreground truncate'>{accountName}</p>
+          <p className='text-xs text-muted-foreground truncate'>
+            {accountName}
+          </p>
         </div>
 
         {/* Value */}
         <div className='text-right shrink-0'>
-          <p className='font-bold text-sm'>
-            {formatCurrency(displayValue)}
-          </p>
-          <p className='text-xs text-muted-foreground'>
-            {probability}%
-          </p>
+          <p className='font-bold text-sm'>{formatCurrency(displayValue)}</p>
+          <p className='text-xs text-muted-foreground'>{probability}%</p>
         </div>
       </Card>
     );
@@ -338,7 +340,9 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
               <h3 className='font-semibold text-foreground truncate'>
                 {opportunity.name}
               </h3>
-              <p className='text-sm text-muted-foreground truncate'>{accountName}</p>
+              <p className='text-sm text-muted-foreground truncate'>
+                {accountName}
+              </p>
             </div>
           </div>
 
