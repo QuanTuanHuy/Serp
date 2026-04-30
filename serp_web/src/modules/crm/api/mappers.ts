@@ -191,18 +191,28 @@ type BackendOpportunityPipeline = {
 const toIsoString = (value?: number | string | null): string => {
   if (!value) return new Date(0).toISOString();
   const timestamp = typeof value === 'string' ? Number(value) : value;
-  if (Number.isFinite(timestamp)) return new Date(Number(timestamp)).toISOString();
+  if (Number.isFinite(timestamp))
+    return new Date(Number(timestamp)).toISOString();
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+  return Number.isNaN(date.getTime())
+    ? new Date(0).toISOString()
+    : date.toISOString();
 };
 
 const joinAddress = (address?: BackendAddress | null): string | undefined => {
   if (!address) return undefined;
-  const parts = [address.street, address.city, address.state, address.country].filter(Boolean);
+  const parts = [
+    address.street,
+    address.city,
+    address.state,
+    address.country,
+  ].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : undefined;
 };
 
-export const mapBackendAccountToAccount = (account: BackendAccount): Account => ({
+export const mapBackendAccountToAccount = (
+  account: BackendAccount
+): Account => ({
   id: String(account.id),
   createdAt: toIsoString(account.createdAt),
   updatedAt: toIsoString(account.updatedAt),
@@ -234,11 +244,14 @@ export const mapBackendAccountToAccount = (account: BackendAccount): Account => 
   lastContactDate: undefined,
 });
 
-export const mapBackendContactToContact = (contact: BackendContact): Contact => {
+export const mapBackendContactToContact = (
+  contact: BackendContact
+): Contact => {
   const name = (contact.name || '').trim();
   const parts = name.split(/\s+/).filter(Boolean);
   const lastName = parts.length > 1 ? parts[0] : '';
-  const firstName = parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
+  const firstName =
+    parts.length > 1 ? parts.slice(1).join(' ') : parts[0] || '';
 
   return {
     id: String(contact.id),
@@ -257,7 +270,9 @@ export const mapBackendContactToContact = (contact: BackendContact): Contact => 
   };
 };
 
-export const mapBackendActivityToActivity = (activity: BackendActivity): Activity => ({
+export const mapBackendActivityToActivity = (
+  activity: BackendActivity
+): Activity => ({
   id: String(activity.id),
   createdAt: toIsoString(activity.createdAt),
   updatedAt: toIsoString(activity.updatedAt),
@@ -273,8 +288,14 @@ export const mapBackendActivityToActivity = (activity: BackendActivity): Activit
   assignedTo: String(activity.assignedTo || ''),
   assignedToName: 'Unassigned',
   relatedTo: {
-    type: activity.accountId ? 'CUSTOMER' : activity.leadId ? 'LEAD' : 'OPPORTUNITY',
-    id: String(activity.accountId || activity.leadId || activity.opportunityId || ''),
+    type: activity.accountId
+      ? 'CUSTOMER'
+      : activity.leadId
+        ? 'LEAD'
+        : 'OPPORTUNITY',
+    id: String(
+      activity.accountId || activity.leadId || activity.opportunityId || ''
+    ),
     name: activity.subject || 'Related item',
   },
   participants: [],
@@ -307,10 +328,8 @@ const splitLeadName = (name?: string | null) => {
 export const mapBackendLeadToLead = (lead: BackendLead): Lead => {
   const name = (lead.name || '').trim();
   const { firstName, lastName } = splitLeadName(name);
-  const leadSource =
-    (lead.leadSource as Lead['leadSource']) || 'WEBSITE';
-  const leadStatus =
-    (lead.leadStatus as Lead['leadStatus']) || 'NEW';
+  const leadSource = (lead.leadSource as Lead['leadSource']) || 'WEBSITE';
+  const leadStatus = (lead.leadStatus as Lead['leadStatus']) || 'NEW';
 
   return {
     id: String(lead.id),
@@ -475,7 +494,11 @@ export const mapBackendOpportunityToOpportunity = (
 export const mapAccountFormToBackendPayload = (
   data: CreateAccountRequest | UpdateAccountRequest
 ) => {
-  const address = data.address?.split(',').map((part) => part.trim()).filter(Boolean) || [];
+  const address =
+    data.address
+      ?.split(',')
+      .map((part) => part.trim())
+      .filter(Boolean) || [];
 
   return {
     name: data.name,
@@ -553,7 +576,9 @@ export const mapCustomerFiltersToAccountSearch = (
   pagination: PaginationParams
 ) => ({
   keyword: filters.search || undefined,
-  statuses: filters.status?.map((status) => (status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE')),
+  statuses: filters.status?.map((status) =>
+    status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+  ),
   accountType: filters.type?.[0],
   page: pagination.page,
   size: pagination.limit,
@@ -563,7 +588,17 @@ export const mapCustomerFiltersToAccountSearch = (
 
 export const mapAccountListResponse = (
   response: GeneralResponse<PageResponse<BackendAccount>>
-) : APIResponse<{ data: Account[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrevious: boolean; } }> => ({
+): APIResponse<{
+  data: Account[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),
@@ -624,9 +659,7 @@ export const mapOpportunityFiltersToSearchRequest = (
       ? Number(filters.customerId[0])
       : undefined,
   leadId:
-    filters.leadId && filters.leadId[0]
-      ? Number(filters.leadId[0])
-      : undefined,
+    filters.leadId && filters.leadId[0] ? Number(filters.leadId[0]) : undefined,
   assignedTo:
     filters.assignedTo && filters.assignedTo[0]
       ? Number(filters.assignedTo[0])
@@ -678,7 +711,9 @@ export const mapLeadListResponse = (
   },
 });
 
-export const mapSingleLeadResponse = (response: GeneralResponse<BackendLead>) => ({
+export const mapSingleLeadResponse = (
+  response: GeneralResponse<BackendLead>
+) => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),
@@ -741,7 +776,9 @@ export const mapOpportunityPipelineResponse = (
     })),
     summary: {
       totalOpportunities: response.data?.summary?.totalOpportunities || 0,
-      totalPipelineValue: Number(response.data?.summary?.totalPipelineValue || 0),
+      totalPipelineValue: Number(
+        response.data?.summary?.totalPipelineValue || 0
+      ),
       weightedPipelineValue: Number(
         response.data?.summary?.weightedPipelineValue || 0
       ),
@@ -775,14 +812,18 @@ export const mapLeadConversionResponse = (
   },
 });
 
-export const mapSingleAccountResponse = (response: GeneralResponse<BackendAccount>) => ({
+export const mapSingleAccountResponse = (
+  response: GeneralResponse<BackendAccount>
+) => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),
   data: mapBackendAccountToAccount(response.data),
 });
 
-export const mapContactListResponse = (response: GeneralResponse<BackendContact[]>) => ({
+export const mapContactListResponse = (
+  response: GeneralResponse<BackendContact[]>
+) => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),
@@ -791,7 +832,17 @@ export const mapContactListResponse = (response: GeneralResponse<BackendContact[
 
 export const mapActivityListResponse = (
   response: GeneralResponse<PageResponse<BackendActivity>>
-) : APIResponse<{ data: Activity[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrevious: boolean; } }> => ({
+): APIResponse<{
+  data: Activity[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),

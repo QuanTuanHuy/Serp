@@ -169,7 +169,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const [wonActualValue, setWonActualValue] = useState('');
   const [wonNotes, setWonNotes] = useState('');
   const [reopenReason, setReopenReason] = useState('');
-  const [reopenStage, setReopenStage] = useState<OpportunityStage>('PROSPECTING');
+  const [reopenStage, setReopenStage] =
+    useState<OpportunityStage>('PROSPECTING');
 
   const { data, isLoading } = useGetOpportunityQuery(opportunityId);
   const { data: activitiesData, isLoading: isActivitiesLoading } =
@@ -186,8 +187,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const stageConfig = PIPELINE_STAGES.find(
     (stage) => stage.stage === opportunity?.stage
   );
-  const typeConfig =
-    OPPORTUNITY_TYPES[opportunity?.type || 'NEW_BUSINESS'];
+  const typeConfig = OPPORTUNITY_TYPES[opportunity?.type || 'NEW_BUSINESS'];
   const currentStageIndex = PIPELINE_STAGES.findIndex(
     (stage) => stage.stage === opportunity?.stage
   );
@@ -208,7 +208,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const daysUntilClose = useMemo(() => {
     if (!opportunity?.expectedCloseDate) return 0;
     return Math.floor(
-      (new Date(opportunity.expectedCloseDate).getTime() - new Date().getTime()) /
+      (new Date(opportunity.expectedCloseDate).getTime() -
+        new Date().getTime()) /
         (1000 * 60 * 60 * 24)
     );
   }, [opportunity?.expectedCloseDate]);
@@ -266,7 +267,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
           stage: selectedStage,
           notes: stageNotes || undefined,
           lossReason:
-            selectedStage === 'CLOSED_LOST' ? lostReason || undefined : undefined,
+            selectedStage === 'CLOSED_LOST'
+              ? lostReason || undefined
+              : undefined,
         },
       }).unwrap();
       toast.success('Update opportunity stage successfully');
@@ -359,9 +362,12 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         <Card>
           <CardContent className='py-16 text-center'>
             <AlertCircle className='mx-auto mb-4 h-12 w-12 text-muted-foreground' />
-            <h2 className='mb-2 text-xl font-semibold'>Opportunity Not Found</h2>
+            <h2 className='mb-2 text-xl font-semibold'>
+              Opportunity Not Found
+            </h2>
             <p className='mb-4 text-muted-foreground'>
-              The opportunity you're looking for doesn't exist or has been deleted.
+              The opportunity you're looking for doesn't exist or has been
+              deleted.
             </p>
             <Button asChild>
               <Link href='/crm/opportunities'>Back to Opportunities</Link>
@@ -376,7 +382,11 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     <div className={cn('space-y-6 p-6', className)}>
       <div className='flex items-start justify-between'>
         <div className='flex items-start gap-4'>
-          <Button variant='outline' size='icon' onClick={() => router.push('/crm/opportunities')}>
+          <Button
+            variant='outline'
+            size='icon'
+            onClick={() => router.push('/crm/opportunities')}
+          >
             <ArrowLeft className='h-4 w-4' />
           </Button>
           <div>
@@ -394,7 +404,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             <div className='flex flex-wrap items-center gap-4 text-sm text-muted-foreground'>
               <span className='flex items-center gap-1'>
                 <Building2 className='h-4 w-4' />
-                {opportunity?.customerName || `Account #${opportunity?.accountId || ''}`}
+                {opportunity?.customerName ||
+                  `Account #${opportunity?.accountId || ''}`}
               </span>
               <span className='flex items-center gap-1'>
                 <User className='h-4 w-4' />
@@ -430,7 +441,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             </>
           )}
           {isClosed && (
-            <Button variant='outline' onClick={() => setIsReopenDialogOpen(true)}>
+            <Button
+              variant='outline'
+              onClick={() => setIsReopenDialogOpen(true)}
+            >
               <RefreshCw className='mr-2 h-4 w-4' />
               Reopen
             </Button>
@@ -443,7 +457,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
               <DropdownMenuItem
-                onClick={() => router.push(`/crm/opportunities/${opportunityId}/edit`)}
+                onClick={() =>
+                  router.push(`/crm/opportunities/${opportunityId}/edit`)
+                }
               >
                 <Edit className='mr-2 h-4 w-4' />
                 Edit Opportunity
@@ -481,42 +497,50 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
           <div className='mb-4 flex items-center justify-between'>
             <h3 className='font-semibold'>Pipeline Progress</h3>
             {!isClosed && (
-              <Button variant='outline' size='sm' onClick={() => setIsStageDialogOpen(true)}>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setIsStageDialogOpen(true)}
+              >
                 Change Stage
               </Button>
             )}
           </div>
           <div className='mb-4 flex items-center gap-2'>
-            {PIPELINE_STAGES.filter((stage) => stage.stage !== 'CLOSED_LOST').map(
-              (stage, index) => {
-                const isActive = stage.stage === opportunity?.stage;
-                const isPast = index < currentStageIndex && opportunity?.stage !== 'CLOSED_LOST';
-                const isWon = opportunity?.stage === 'CLOSED_WON';
+            {PIPELINE_STAGES.filter(
+              (stage) => stage.stage !== 'CLOSED_LOST'
+            ).map((stage, index) => {
+              const isActive = stage.stage === opportunity?.stage;
+              const isPast =
+                index < currentStageIndex &&
+                opportunity?.stage !== 'CLOSED_LOST';
+              const isWon = opportunity?.stage === 'CLOSED_WON';
 
-                return (
-                  <div key={stage.stage} className='relative flex-1'>
-                    <div
-                      className={cn(
-                        'h-2 rounded-full transition-colors',
-                        isActive || isPast || isWon
-                          ? stage.stage === 'CLOSED_WON' && isWon
-                            ? 'bg-green-500'
-                            : 'bg-primary'
-                          : 'bg-muted'
-                      )}
-                    />
-                    <div
-                      className={cn(
-                        'mt-2 text-center text-xs',
-                        isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'
-                      )}
-                    >
-                      {stage.label}
-                    </div>
+              return (
+                <div key={stage.stage} className='relative flex-1'>
+                  <div
+                    className={cn(
+                      'h-2 rounded-full transition-colors',
+                      isActive || isPast || isWon
+                        ? stage.stage === 'CLOSED_WON' && isWon
+                          ? 'bg-green-500'
+                          : 'bg-primary'
+                        : 'bg-muted'
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      'mt-2 text-center text-xs',
+                      isActive
+                        ? 'font-semibold text-foreground'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    {stage.label}
                   </div>
-                );
-              }
-            )}
+                </div>
+              );
+            })}
           </div>
           <Progress value={probability} className='h-2' />
         </CardContent>
@@ -584,7 +608,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                       : 'text-orange-700 dark:text-orange-300'
                   )}
                 >
-                  {daysUntilClose < 0 ? `${Math.abs(daysUntilClose)} overdue` : daysUntilClose}
+                  {daysUntilClose < 0
+                    ? `${Math.abs(daysUntilClose)} overdue`
+                    : daysUntilClose}
                 </p>
               </div>
               <div className='rounded-full bg-orange-500/20 p-3'>
@@ -624,14 +650,19 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                 <CardContent>
                   <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Account</label>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Account
+                      </label>
                       <p className='flex items-center gap-2 font-medium'>
                         <Building2 className='h-4 w-4 text-muted-foreground' />
-                        {opportunity?.customerName || `Account #${opportunity?.accountId || ''}`}
+                        {opportunity?.customerName ||
+                          `Account #${opportunity?.accountId || ''}`}
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Assigned To</label>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Assigned To
+                      </label>
                       <p className='flex items-center gap-2 font-medium'>
                         <Avatar className='h-5 w-5 w-5'>
                           <AvatarFallback className='text-xs'>
@@ -645,19 +676,33 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                       </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Expected Close Date</label>
-                      <p className='font-medium'>{formatDate(opportunity?.expectedCloseDate)}</p>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Expected Close Date
+                      </label>
+                      <p className='font-medium'>
+                        {formatDate(opportunity?.expectedCloseDate)}
+                      </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Actual Close Date</label>
-                      <p className='font-medium'>{formatDate(opportunity?.actualCloseDate)}</p>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Actual Close Date
+                      </label>
+                      <p className='font-medium'>
+                        {formatDate(opportunity?.actualCloseDate)}
+                      </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Lead ID</label>
-                      <p className='font-medium'>{opportunity?.leadId || 'No linked lead'}</p>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Lead ID
+                      </label>
+                      <p className='font-medium'>
+                        {opportunity?.leadId || 'No linked lead'}
+                      </p>
                     </div>
                     <div>
-                      <label className='text-sm font-medium text-muted-foreground'>Days in Pipeline</label>
+                      <label className='text-sm font-medium text-muted-foreground'>
+                        Days in Pipeline
+                      </label>
                       <p className='font-medium'>{daysInPipeline}</p>
                     </div>
                   </div>
@@ -684,32 +729,50 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                 <CardContent className='space-y-4'>
                   <div className='flex items-center justify-between'>
                     <span className='text-sm text-muted-foreground'>Stage</span>
-                    <span className='font-medium'>{stageConfig?.label || 'Unknown'}</span>
+                    <span className='font-medium'>
+                      {stageConfig?.label || 'Unknown'}
+                    </span>
                   </div>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm text-muted-foreground'>Estimated Value</span>
-                    <span className='font-medium'>{formatCurrency(estimatedValue)}</span>
+                    <span className='text-sm text-muted-foreground'>
+                      Estimated Value
+                    </span>
+                    <span className='font-medium'>
+                      {formatCurrency(estimatedValue)}
+                    </span>
                   </div>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm text-muted-foreground'>Actual Value</span>
+                    <span className='text-sm text-muted-foreground'>
+                      Actual Value
+                    </span>
                     <span className='font-medium'>
                       {formatCurrency(opportunity?.actualValue)}
                     </span>
                   </div>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm text-muted-foreground'>Probability</span>
+                    <span className='text-sm text-muted-foreground'>
+                      Probability
+                    </span>
                     <span className='font-medium'>{probability}%</span>
                   </div>
                   {opportunity?.lostReason && (
                     <div>
-                      <span className='text-sm text-muted-foreground'>Loss Reason</span>
-                      <p className='mt-1 text-sm font-medium'>{opportunity.lostReason}</p>
+                      <span className='text-sm text-muted-foreground'>
+                        Loss Reason
+                      </span>
+                      <p className='mt-1 text-sm font-medium'>
+                        {opportunity.lostReason}
+                      </p>
                     </div>
                   )}
                   {opportunity?.reopenReason && (
                     <div>
-                      <span className='text-sm text-muted-foreground'>Reopen Reason</span>
-                      <p className='mt-1 text-sm font-medium'>{opportunity.reopenReason}</p>
+                      <span className='text-sm text-muted-foreground'>
+                        Reopen Reason
+                      </span>
+                      <p className='mt-1 text-sm font-medium'>
+                        {opportunity.reopenReason}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -721,23 +784,39 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                 </CardHeader>
                 <CardContent className='space-y-3'>
                   <div>
-                    <span className='text-sm text-muted-foreground'>Created</span>
-                    <p className='text-sm font-medium'>{formatDateTime(opportunity?.createdAt)}</p>
-                  </div>
-                  <div>
-                    <span className='text-sm text-muted-foreground'>Last Updated</span>
-                    <p className='text-sm font-medium'>{formatDateTime(opportunity?.updatedAt)}</p>
-                  </div>
-                  <div>
-                    <span className='text-sm text-muted-foreground'>Created By</span>
+                    <span className='text-sm text-muted-foreground'>
+                      Created
+                    </span>
                     <p className='text-sm font-medium'>
-                      {String(opportunity?.customFields?.createdBy || 'Not available')}
+                      {formatDateTime(opportunity?.createdAt)}
                     </p>
                   </div>
                   <div>
-                    <span className='text-sm text-muted-foreground'>Updated By</span>
+                    <span className='text-sm text-muted-foreground'>
+                      Last Updated
+                    </span>
                     <p className='text-sm font-medium'>
-                      {String(opportunity?.customFields?.updatedBy || 'Not available')}
+                      {formatDateTime(opportunity?.updatedAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>
+                      Created By
+                    </span>
+                    <p className='text-sm font-medium'>
+                      {String(
+                        opportunity?.customFields?.createdBy || 'Not available'
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className='text-sm text-muted-foreground'>
+                      Updated By
+                    </span>
+                    <p className='text-sm font-medium'>
+                      {String(
+                        opportunity?.customFields?.updatedBy || 'Not available'
+                      )}
                     </p>
                   </div>
                 </CardContent>
@@ -753,7 +832,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             </CardHeader>
             <CardContent>
               {isActivitiesLoading ? (
-                <p className='text-sm text-muted-foreground'>Loading activities...</p>
+                <p className='text-sm text-muted-foreground'>
+                  Loading activities...
+                </p>
               ) : activities.length > 0 ? (
                 <div className='space-y-4'>
                   {activities.map((activity) => (
@@ -765,14 +846,18 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                             {activity.description || 'No description provided.'}
                           </p>
                         </div>
-                        <Badge className={getActivityBadgeClass(activity.status)}>
+                        <Badge
+                          className={getActivityBadgeClass(activity.status)}
+                        >
                           {activity.status}
                         </Badge>
                       </div>
                       <div className='flex flex-wrap gap-4 text-sm text-muted-foreground'>
                         <span className='flex items-center gap-1'>
                           <Clock className='h-4 w-4' />
-                          {formatDateTime(activity.scheduledDate || activity.createdAt)}
+                          {formatDateTime(
+                            activity.scheduledDate || activity.createdAt
+                          )}
                         </span>
                         <span className='flex items-center gap-1'>
                           <User className='h-4 w-4' />
@@ -800,9 +885,12 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <div className='flex items-start gap-3 rounded-lg border border-dashed p-4'>
                 <Package className='mt-0.5 h-4 w-4' />
                 <div>
-                  <p className='font-medium text-foreground'>Products are not integrated yet</p>
+                  <p className='font-medium text-foreground'>
+                    Products are not integrated yet
+                  </p>
                   <p>
-                    This section is currently read-only and waiting for backend product line support.
+                    This section is currently read-only and waiting for backend
+                    product line support.
                   </p>
                 </div>
               </div>
@@ -819,9 +907,12 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <div className='flex items-start gap-3 rounded-lg border border-dashed p-4'>
                 <History className='mt-0.5 h-4 w-4' />
                 <div>
-                  <p className='font-medium text-foreground'>Timeline is not integrated yet</p>
+                  <p className='font-medium text-foreground'>
+                    Timeline is not integrated yet
+                  </p>
                   <p>
-                    Opportunity change history is currently shown only through the available activity feed.
+                    Opportunity change history is currently shown only through
+                    the available activity feed.
                   </p>
                 </div>
               </div>
@@ -843,7 +934,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <Label>Stage</Label>
               <Select
                 value={selectedStage}
-                onValueChange={(value) => setSelectedStage(value as OpportunityStage)}
+                onValueChange={(value) =>
+                  setSelectedStage(value as OpportunityStage)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder='Select stage' />
@@ -879,7 +972,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             )}
           </div>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setIsStageDialogOpen(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setIsStageDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleStageChange} disabled={!selectedStage}>
@@ -946,7 +1042,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             />
           </div>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setIsLostDialogOpen(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setIsLostDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button
@@ -965,7 +1064,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
           <DialogHeader>
             <DialogTitle>Reopen Opportunity</DialogTitle>
             <DialogDescription>
-              Select the stage to move this opportunity back into and explain why.
+              Select the stage to move this opportunity back into and explain
+              why.
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
@@ -973,7 +1073,9 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               <Label>Stage</Label>
               <Select
                 value={reopenStage}
-                onValueChange={(value) => setReopenStage(value as OpportunityStage)}
+                onValueChange={(value) =>
+                  setReopenStage(value as OpportunityStage)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder='Select stage' />
@@ -981,7 +1083,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
                 <SelectContent>
                   {PIPELINE_STAGES.filter(
                     (stage) =>
-                      stage.stage !== 'CLOSED_WON' && stage.stage !== 'CLOSED_LOST'
+                      stage.stage !== 'CLOSED_WON' &&
+                      stage.stage !== 'CLOSED_LOST'
                   ).map((stage) => (
                     <SelectItem key={stage.stage} value={stage.stage}>
                       {stage.label}
@@ -1001,7 +1104,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setIsReopenDialogOpen(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setIsReopenDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleReopen} disabled={!reopenReason.trim()}>
@@ -1016,11 +1122,15 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
           <DialogHeader>
             <DialogTitle>Delete Opportunity</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. This opportunity will be permanently deleted.
+              This action cannot be undone. This opportunity will be permanently
+              deleted.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>

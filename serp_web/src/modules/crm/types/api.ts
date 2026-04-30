@@ -86,7 +86,9 @@ export interface OpportunityPipeline {
 }
 
 export type OpportunityPipelineResponse = APIResponse<OpportunityPipeline>;
-export type OpportunityActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type OpportunityActivitiesResponse = APIResponse<
+  PaginatedResponse<Activity>
+>;
 export type ChangeOpportunityStageResponse = APIResponse<Opportunity>;
 export type CloseOpportunityWonResponse = APIResponse<Opportunity>;
 export type CloseOpportunityLostResponse = APIResponse<Opportunity>;

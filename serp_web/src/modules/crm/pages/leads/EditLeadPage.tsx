@@ -65,12 +65,17 @@ export const EditLeadPage: React.FC<EditLeadPageProps> = ({
     <div className={cn('p-6', className)}>
       <div className='mb-6 flex items-center justify-between'>
         <div className='flex items-center space-x-4'>
-          <Button variant='outline' onClick={() => router.push(`/crm/leads/${leadId}`)}>
+          <Button
+            variant='outline'
+            onClick={() => router.push(`/crm/leads/${leadId}`)}
+          >
             ← Back
           </Button>
           <div>
             <h1 className='text-2xl font-bold text-foreground'>Edit Lead</h1>
-            <p className='text-muted-foreground'>Update {lead?.name}'s information</p>
+            <p className='text-muted-foreground'>
+              Update {lead?.name}'s information
+            </p>
           </div>
         </div>
       </div>

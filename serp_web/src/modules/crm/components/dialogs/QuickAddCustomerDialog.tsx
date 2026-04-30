@@ -66,20 +66,20 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
   isLoading = false,
 }) => {
   const [formData, setFormData] = useState<QuickCustomerFormData>({
-      name: '',
-      email: '',
-      phone: '',
-      customerType: 'PROSPECT',
-      status: 'ACTIVE',
-      companySize: '',
-      website: '',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-      notes: '',
-    });
+    name: '',
+    email: '',
+    phone: '',
+    customerType: 'PROSPECT',
+    status: 'ACTIVE',
+    companySize: '',
+    website: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    notes: '',
+  });
 
   const [errors, setErrors] = useState<
     Partial<Record<keyof QuickCustomerFormData, string>>
@@ -318,9 +318,9 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
                   Creating...
                 </>
               ) : (
-                  'Create Account'
-                )}
-              </Button>
+                'Create Account'
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

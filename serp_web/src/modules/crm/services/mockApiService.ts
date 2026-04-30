@@ -297,7 +297,8 @@ export const leadApi = {
         ...opportunityData,
         accountId: opportunityData.accountId || customer.id,
         stage: opportunityData.stage || 'PROSPECTING',
-        estimatedValue: opportunityData.estimatedValue ?? opportunityData.value ?? 0,
+        estimatedValue:
+          opportunityData.estimatedValue ?? opportunityData.value ?? 0,
         value: opportunityData.value ?? opportunityData.estimatedValue ?? 0,
         probability: 10,
         isActive: true,

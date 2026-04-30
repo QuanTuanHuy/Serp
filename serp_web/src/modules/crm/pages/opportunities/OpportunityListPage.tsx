@@ -170,7 +170,8 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     };
 
     pipelineOpportunities.forEach((opportunity) => {
-      values[opportunity.stage] += opportunity.estimatedValue ?? opportunity.value ?? 0;
+      values[opportunity.stage] +=
+        opportunity.estimatedValue ?? opportunity.value ?? 0;
     });
 
     return values;
@@ -188,7 +189,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
       };
     }
 
-    const wonStage = pipelineStages.find((stage) => stage.stage === 'CLOSED_WON');
+    const wonStage = pipelineStages.find(
+      (stage) => stage.stage === 'CLOSED_WON'
+    );
 
     return {
       total: pipelineSummary.totalOpportunities,
@@ -233,16 +236,21 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || (stageFilter && stageFilter !== 'ALL');
-  const isLoading = viewMode === 'pipeline' ? isLoadingPipeline : isLoadingOpportunities;
-  const activeOpportunities = viewMode === 'pipeline' ? pipelineOpportunities : listOpportunities;
+  const hasActiveFilters =
+    searchQuery || (stageFilter && stageFilter !== 'ALL');
+  const isLoading =
+    viewMode === 'pipeline' ? isLoadingPipeline : isLoadingOpportunities;
+  const activeOpportunities =
+    viewMode === 'pipeline' ? pipelineOpportunities : listOpportunities;
 
   return (
     <div className={cn('space-y-6', className)}>
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>Opportunities</h1>
-          <p className='text-muted-foreground'>Track and manage your sales pipeline</p>
+          <p className='text-muted-foreground'>
+            Track and manage your sales pipeline
+          </p>
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
@@ -316,7 +324,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         >
           <SlidersHorizontal className='h-4 w-4' />
           Filters
-          {hasActiveFilters && <span className='h-2 w-2 rounded-full bg-primary' />}
+          {hasActiveFilters && (
+            <span className='h-2 w-2 rounded-full bg-primary' />
+          )}
         </Button>
 
         <div className='flex rounded-lg border bg-muted p-1'>
@@ -324,7 +334,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             onClick={() => setViewMode('pipeline')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'pipeline' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'pipeline'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='Pipeline view'
           >
@@ -334,7 +346,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             onClick={() => setViewMode('grid')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'grid' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'grid'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='Grid view'
           >
@@ -344,7 +358,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             onClick={() => setViewMode('list')}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'list' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+              viewMode === 'list'
+                ? 'bg-background shadow-sm'
+                : 'hover:bg-background/50'
             )}
             title='List view'
           >
@@ -410,7 +426,10 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             {hasActiveFilters && (
               <div className='mt-4 flex items-center justify-between border-t pt-4'>
                 <p className='text-sm text-muted-foreground'>
-                  {viewMode === 'pipeline' ? pipelineOpportunities.length : total} results found
+                  {viewMode === 'pipeline'
+                    ? pipelineOpportunities.length
+                    : total}{' '}
+                  results found
                 </p>
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
                   Clear all filters
@@ -437,68 +456,75 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         </Card>
       )}
 
-      {!isLoading && viewMode === 'pipeline' && pipelineOpportunities.length > 0 && (
-        <div className='overflow-x-auto pb-4'>
-          <div className='grid min-w-[1200px] grid-cols-6 gap-4'>
-            {PIPELINE_STAGES.map(({ stage, label, color }) => (
-              <div key={stage} className='min-h-[500px] rounded-xl bg-muted/30 p-4'>
-                <div className='mb-4'>
-                  <div className='mb-2 flex items-center justify-between'>
-                    <div className='flex items-center gap-2'>
-                      <div className={cn('h-3 w-3 rounded-full', color)} />
-                      <h3 className='text-sm font-semibold'>{label}</h3>
+      {!isLoading &&
+        viewMode === 'pipeline' &&
+        pipelineOpportunities.length > 0 && (
+          <div className='overflow-x-auto pb-4'>
+            <div className='grid min-w-[1200px] grid-cols-6 gap-4'>
+              {PIPELINE_STAGES.map(({ stage, label, color }) => (
+                <div
+                  key={stage}
+                  className='min-h-[500px] rounded-xl bg-muted/30 p-4'
+                >
+                  <div className='mb-4'>
+                    <div className='mb-2 flex items-center justify-between'>
+                      <div className='flex items-center gap-2'>
+                        <div className={cn('h-3 w-3 rounded-full', color)} />
+                        <h3 className='text-sm font-semibold'>{label}</h3>
+                      </div>
+                      <span className='rounded-full bg-background px-2 py-1 text-xs text-muted-foreground'>
+                        {opportunitiesByStage[stage]?.length || 0}
+                      </span>
                     </div>
-                    <span className='rounded-full bg-background px-2 py-1 text-xs text-muted-foreground'>
-                      {opportunitiesByStage[stage]?.length || 0}
-                    </span>
-                  </div>
-                  <p className='text-sm font-medium text-muted-foreground'>
-                    ${stageValues[stage].toLocaleString()}
-                  </p>
-                </div>
-
-                <div className='space-y-3'>
-                  {opportunitiesByStage[stage]?.map((opportunity) => (
-                    <OpportunityCard
-                      key={opportunity.id}
-                      opportunity={opportunity}
-                      variant='pipeline'
-                      onClick={() => handleViewOpportunity(opportunity.id)}
-                      onDelete={() => handleDeleteOpportunity(opportunity.id)}
-                    />
-                  ))}
-                  {opportunitiesByStage[stage].length === 0 && (
-                    <p className='py-8 text-center text-xs text-muted-foreground'>
-                      No deals
+                    <p className='text-sm font-medium text-muted-foreground'>
+                      ${stageValues[stage].toLocaleString()}
                     </p>
-                  )}
+                  </div>
+
+                  <div className='space-y-3'>
+                    {opportunitiesByStage[stage]?.map((opportunity) => (
+                      <OpportunityCard
+                        key={opportunity.id}
+                        opportunity={opportunity}
+                        variant='pipeline'
+                        onClick={() => handleViewOpportunity(opportunity.id)}
+                        onDelete={() => handleDeleteOpportunity(opportunity.id)}
+                      />
+                    ))}
+                    {opportunitiesByStage[stage].length === 0 && (
+                      <p className='py-8 text-center text-xs text-muted-foreground'>
+                        No deals
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      {!isLoading &&
+        viewMode !== 'pipeline' &&
+        listOpportunities.length > 0 && (
+          <div
+            className={cn(
+              'gap-4',
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                : 'flex flex-col'
+            )}
+          >
+            {listOpportunities.map((opportunity) => (
+              <OpportunityCard
+                key={opportunity.id}
+                opportunity={opportunity}
+                variant={viewMode === 'list' ? 'compact' : 'default'}
+                onClick={() => handleViewOpportunity(opportunity.id)}
+                onDelete={() => handleDeleteOpportunity(opportunity.id)}
+              />
             ))}
           </div>
-        </div>
-      )}
-
-      {!isLoading && viewMode !== 'pipeline' && listOpportunities.length > 0 && (
-        <div
-          className={cn(
-            'gap-4',
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-              : 'flex flex-col'
-          )}
-        >
-          {listOpportunities.map((opportunity) => (
-            <OpportunityCard
-              key={opportunity.id}
-              opportunity={opportunity}
-              variant={viewMode === 'list' ? 'compact' : 'default'}
-              onClick={() => handleViewOpportunity(opportunity.id)}
-              onDelete={() => handleDeleteOpportunity(opportunity.id)}
-            />
-          ))}
-        </div>
-      )}
+        )}
 
       {!isLoading && activeOpportunities.length === 0 && (
         <Card>
@@ -506,7 +532,9 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
             <div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted'>
               <TrendingUp className='h-10 w-10 text-muted-foreground' />
             </div>
-            <h3 className='mb-2 text-lg font-semibold'>No opportunities found</h3>
+            <h3 className='mb-2 text-lg font-semibold'>
+              No opportunities found
+            </h3>
             <p className='mx-auto mb-6 max-w-sm text-muted-foreground'>
               {hasActiveFilters
                 ? 'Try adjusting your filters to see more results.'
