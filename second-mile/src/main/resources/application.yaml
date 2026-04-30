@@ -33,7 +33,7 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id:
+      group-id: ${KAFKA_SECOND_MILE_GROUP_ID:second-mile-sync-order}
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -43,6 +43,8 @@ spring:
 app:
   kafka:
     topics:
+      sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
+      sync-user: ${SYNC_USER_TOPIC:SYNC_USER}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
