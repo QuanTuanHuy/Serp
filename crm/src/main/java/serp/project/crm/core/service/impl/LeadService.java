@@ -92,6 +92,40 @@ public class LeadService implements ILeadService {
         return updated;
     }
 
+    @Transactional
+    public LeadEntity updateLeadStatus(Long leadId, LeadStatus fromStatus, LeadStatus toStatus, String notes,
+            Long updatedBy, Long tenantId) {
+        LeadEntity lead = leadPort.findById(leadId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+
+        if (toStatus == LeadStatus.QUALIFIED) {
+            throw new AppException("Use qualify endpoint to move lead to QUALIFIED");
+        }
+        if (toStatus == LeadStatus.DISQUALIFIED) {
+            throw new AppException("Use disqualify endpoint to move lead to DISQUALIFIED");
+        }
+        if (toStatus == LeadStatus.CONVERTED) {
+            throw new AppException("Use convert endpoint to move lead to CONVERTED");
+        }
+
+        LeadStatus currentStatus = lead.getLeadStatus() != null ? lead.getLeadStatus() : LeadStatus.NEW;
+        if (fromStatus != null && fromStatus != currentStatus) {
+            throw new AppException("Lead status changed by another action. Please refresh and try again.",
+                    Constants.HttpStatusCode.CONFLICT);
+        }
+
+        try {
+            lead.updateStatus(toStatus, updatedBy, notes);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+
+        LeadEntity updated = leadPort.save(lead);
+        publishLeadUpdatedEvent(updated);
+
+        return updated;
+    }
+
     @Transactional(readOnly = true)
     public Optional<LeadEntity> getLeadById(Long id, Long tenantId) {
         return leadPort.findById(id, tenantId);

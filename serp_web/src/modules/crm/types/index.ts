@@ -163,12 +163,8 @@ export type ActivityType =
   | 'DEMO'
   | 'PROPOSAL'
   | 'FOLLOW_UP';
-export type ActivityStatus =
-  | 'PLANNED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'OVERDUE';
+export type ActivityStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+export type ActivityDisplayStatus = ActivityStatus | 'OVERDUE';
 export type ActivityOutcome =
   | 'REACHED'
   | 'VOICEMAIL'
@@ -323,10 +319,12 @@ export interface ActivityFilters {
 }
 
 export interface ActivityStats {
-  todayCount: number;
-  weekCount: number;
-  averagePerDay: number;
-  mostActiveHour: string;
+  total: number;
+  overdue: number;
+  upcoming: number;
+  byStatus: Partial<Record<ActivityStatus, number>>;
+  byType: Partial<Record<ActivityType, number>>;
+  byPriority: Partial<Record<Priority, number>>;
 }
 
 export type BulkActivityAction = 'COMPLETE' | 'CANCEL' | 'DELETE' | 'ASSIGN';
@@ -413,6 +411,52 @@ export type CreateLeadRequest = {
 };
 export type UpdateLeadRequest = Partial<CreateLeadRequest>;
 
+export interface LeadQualificationData {
+  budgetConfirmed?: boolean;
+  hasAuthority?: boolean;
+  needIdentified?: boolean;
+  timelineEstablished?: boolean;
+}
+
+export interface LeadConversionOpportunityData {
+  name?: string;
+  amount?: number;
+  expectedCloseDate?: string;
+  notes?: string;
+}
+
+export interface LeadConversionAccountData {
+  name?: string;
+  creditLimit?: number;
+  notes?: string;
+}
+
+export interface LeadConversionData {
+  createOpportunity?: boolean;
+  createAccount?: boolean;
+  existingAccountId?: number;
+  opportunityData?: LeadConversionOpportunityData;
+  accountData?: LeadConversionAccountData;
+}
+
+export interface UpdateLeadStatusRequest {
+  fromStatus?: LeadStatus;
+  toStatus: LeadStatus;
+  notes?: string;
+  qualification?: LeadQualificationData;
+  conversion?: LeadConversionData;
+}
+
+export interface LeadStatusTransitionResult {
+  lead: Lead;
+  fromStatus: LeadStatus;
+  toStatus: LeadStatus;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  message?: string;
+}
+
 export interface CreateOpportunityRequest {
   name: string;
   description?: string;
@@ -458,7 +502,7 @@ export interface UpdateOpportunityRequest {
 }
 
 export type BackendActivityType = 'CALL' | 'EMAIL' | 'MEETING' | 'TASK';
-export type BackendActivityStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+export type BackendActivityStatus = ActivityStatus;
 
 export interface CreateActivityRequest {
   subject: string;

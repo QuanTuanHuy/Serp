@@ -117,10 +117,8 @@ export const ACTIVITY_STATUSES: {
   color: string;
 }[] = [
   { value: 'PLANNED', label: 'Planned', color: 'blue' },
-  { value: 'IN_PROGRESS', label: 'In Progress', color: 'yellow' },
   { value: 'COMPLETED', label: 'Completed', color: 'green' },
   { value: 'CANCELLED', label: 'Cancelled', color: 'gray' },
-  { value: 'OVERDUE', label: 'Overdue', color: 'red' },
 ];
 
 // Priority constants

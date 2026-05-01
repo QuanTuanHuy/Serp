@@ -41,10 +41,8 @@ const statusColors: Record<string, string> = {
   // Activity Status
   PLANNED:
     'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
-  IN_PROGRESS: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200',
   COMPLETED: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
   CANCELLED: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
-  OVERDUE: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
 
   // Customer Status
   ACTIVE: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200',
@@ -74,10 +72,8 @@ const statusText: Record<string, string> = {
 
   // Activity Status
   PLANNED: 'Planned',
-  IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
-  OVERDUE: 'Overdue',
 
   // Customer Status
   ACTIVE: 'Active',
