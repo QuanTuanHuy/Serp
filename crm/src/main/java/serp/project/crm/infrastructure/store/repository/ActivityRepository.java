@@ -47,7 +47,9 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long>, 
             Pageable pageable);
 
     @Query("SELECT a FROM ActivityModel a WHERE a.tenantId = :tenantId " +
-            "AND a.status <> 'COMPLETED' AND a.dueDate BETWEEN :startTime AND :endTime")
+            "AND a.status <> 'COMPLETED' " +
+            "AND ((a.activityDate IS NOT NULL AND a.activityDate BETWEEN :startTime AND :endTime) " +
+            "OR (a.dueDate IS NOT NULL AND a.dueDate BETWEEN :startTime AND :endTime))")
     List<ActivityModel> findUpcomingActivities(@Param("tenantId") Long tenantId,
             @Param("startTime") Long startTime,
             @Param("endTime") Long endTime);
