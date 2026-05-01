@@ -18,10 +18,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import {
-  Card,
-  CardContent,
-} from '@/shared/components/ui/card';
+import { Card, CardContent } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/shared/utils';
 import { ActivityCalendarView } from '../../components/calendar';
@@ -94,7 +91,8 @@ export const CalendarPage: React.FC = () => {
     useCreateActivityMutation();
 
   // Navigation helpers
-  const navigateUnit = view === Views.MONTH ? 'month' : view === Views.WEEK ? 'week' : 'day';
+  const navigateUnit =
+    view === Views.MONTH ? 'month' : view === Views.WEEK ? 'week' : 'day';
 
   const goBack = useCallback(() => {
     setDate((prev) => moment(prev).subtract(1, navigateUnit).toDate());
@@ -145,8 +143,7 @@ export const CalendarPage: React.FC = () => {
     );
   };
 
-  const hasActiveFilters =
-    activeTypes.length > 0 || activeStatuses.length > 0;
+  const hasActiveFilters = activeTypes.length > 0 || activeStatuses.length > 0;
 
   const clearFilters = () => {
     setActiveTypes([]);
@@ -376,8 +373,7 @@ export const CalendarPage: React.FC = () => {
         onCreateActivity={handleCreateActivity}
         filters={{
           types: activeTypes.length > 0 ? activeTypes : undefined,
-          statuses:
-            activeStatuses.length > 0 ? activeStatuses : undefined,
+          statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
         }}
       />
 
