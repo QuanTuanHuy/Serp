@@ -169,6 +169,16 @@ export type ActivityStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'OVERDUE';
+export type ActivityOutcome =
+  | 'REACHED'
+  | 'VOICEMAIL'
+  | 'NO_ANSWER'
+  | 'BUSY'
+  | 'WRONG_NUMBER'
+  | 'OCCURRED'
+  | 'NO_SHOW'
+  | 'RESCHEDULED'
+  | 'CANCELLED_BY_CUSTOMER';
 
 export interface Activity extends BaseEntity {
   type: ActivityType;
@@ -423,11 +433,42 @@ export interface UpdateOpportunityRequest {
   customFields?: Record<string, any>;
 }
 
-export type CreateActivityRequest = Omit<
-  Activity,
-  'id' | 'createdAt' | 'updatedAt' | 'assignedToName'
->;
+export type BackendActivityType = 'CALL' | 'EMAIL' | 'MEETING' | 'TASK';
+export type BackendActivityStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+
+export interface CreateActivityRequest {
+  subject: string;
+  description?: string;
+  activityType: BackendActivityType;
+  status?: BackendActivityStatus;
+  location?: string;
+  leadId?: number;
+  accountId?: number;
+  opportunityId?: number;
+  contactId?: number;
+  assignedTo?: number;
+  activityDate?: number;
+  dueDate?: number;
+  reminderDate?: number;
+  durationMinutes?: number;
+  priority?: Priority;
+  progressPercent?: number;
+  notes?: string;
+  outcome?: ActivityOutcome;
+  attachments?: string[];
+}
+
 export type UpdateActivityRequest = Partial<CreateActivityRequest>;
+
+export interface CompleteActivityRequest {
+  outcome?: ActivityOutcome;
+  notes?: string;
+}
+
+export interface RescheduleActivityRequest {
+  dueDate: number;
+  reminderDate?: number;
+}
 
 // UI State types
 export interface CRMUIState {

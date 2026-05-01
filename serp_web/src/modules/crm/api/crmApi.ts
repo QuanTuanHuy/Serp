@@ -5,7 +5,10 @@ import type { ApiResponse as BaseApiResponse } from '@/lib/store/api/types';
 import {
   mapAccountFormToBackendPayload,
   mapAccountListResponse,
+  mapActivityArrayResponse,
+  mapActivityFormToBackendPayload,
   mapActivityListResponse,
+  mapSingleActivityResponse,
   mapContactListResponse,
   mapCustomerFiltersToAccountSearch,
   mapLeadConversionResponse,
@@ -32,6 +35,8 @@ import type {
   CreateLeadRequest,
   CreateOpportunityRequest,
   CreateActivityRequest,
+  CompleteActivityRequest,
+  RescheduleActivityRequest,
   UpdateAccountRequest,
   UpdateCustomerRequest,
   UpdateLeadRequest,
@@ -648,9 +653,14 @@ export const crmApi = api.injectEndpoints({
       query: ({ filters = {}, pagination }) => ({
         url: '/activities',
         method: 'GET',
-        params: { ...filters, ...pagination },
+        params: {
+          ...filters,
+          page: pagination.page,
+          size: pagination.limit,
+        },
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
       providesTags: (result) =>
         result?.data?.data
           ? [
@@ -669,7 +679,74 @@ export const crmApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
       providesTags: (result, error, id) => [{ type: 'Activity', id }],
+    }),
+
+    getActivitiesByType: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { type: string; pagination: PaginationParams }
+    >({
+      query: ({ type, pagination }) => ({
+        url: `/activities/type/${type}`,
+        method: 'GET',
+        params: { page: pagination.page, size: pagination.limit },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: [{ type: 'Activity', id: 'LIST' }],
+    }),
+
+    getActivitiesByStatus: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { status: string; pagination: PaginationParams }
+    >({
+      query: ({ status, pagination }) => ({
+        url: `/activities/status/${status}`,
+        method: 'GET',
+        params: { page: pagination.page, size: pagination.limit },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: [{ type: 'Activity', id: 'LIST' }],
+    }),
+
+    getActivitiesByAssignee: builder.query<
+      APIResponse<PaginatedResponse<Activity>>,
+      { assigneeId: string; pagination: PaginationParams }
+    >({
+      query: ({ assigneeId, pagination }) => ({
+        url: `/activities/assignee/${assigneeId}`,
+        method: 'GET',
+        params: { page: pagination.page, size: pagination.limit },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityListResponse,
+      providesTags: [{ type: 'Activity', id: 'LIST' }],
+    }),
+
+    getOverdueActivities: builder.query<APIResponse<Activity[]>, void>({
+      query: () => ({
+        url: '/activities/overdue',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityArrayResponse,
+      providesTags: [{ type: 'Activity', id: 'OVERDUE' }],
+    }),
+
+    getUpcomingActivities: builder.query<
+      APIResponse<Activity[]>,
+      { startDate: string; endDate: string }
+    >({
+      query: ({ startDate, endDate }) => ({
+        url: '/activities/upcoming',
+        method: 'GET',
+        params: { startDate, endDate },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapActivityArrayResponse,
+      providesTags: [{ type: 'Activity', id: 'UPCOMING' }],
     }),
 
     createActivity: builder.mutation<
@@ -679,9 +756,10 @@ export const crmApi = api.injectEndpoints({
       query: (data) => ({
         url: '/activities',
         method: 'POST',
-        body: data,
+        body: mapActivityFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
       invalidatesTags: [{ type: 'Activity', id: 'LIST' }],
     }),
 
@@ -692,12 +770,66 @@ export const crmApi = api.injectEndpoints({
       query: ({ id, data }) => ({
         url: `/activities/${id}`,
         method: 'PUT',
-        body: data,
+        body: mapActivityFormToBackendPayload(data),
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
       invalidatesTags: (result, error, { id }) => [
         { type: 'Activity', id },
         { type: 'Activity', id: 'LIST' },
+      ],
+    }),
+
+    completeActivity: builder.mutation<
+      APIResponse<Activity>,
+      { id: string; data?: CompleteActivityRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/activities/${id}/complete`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Activity', id },
+        { type: 'Activity', id: 'LIST' },
+        { type: 'Activity', id: 'OVERDUE' },
+        { type: 'Activity', id: 'UPCOMING' },
+      ],
+    }),
+
+    cancelActivity: builder.mutation<APIResponse<Activity>, string>({
+      query: (id) => ({
+        url: `/activities/${id}/cancel`,
+        method: 'PUT',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
+      invalidatesTags: (result, error, id) => [
+        { type: 'Activity', id },
+        { type: 'Activity', id: 'LIST' },
+        { type: 'Activity', id: 'OVERDUE' },
+        { type: 'Activity', id: 'UPCOMING' },
+      ],
+    }),
+
+    rescheduleActivity: builder.mutation<
+      APIResponse<Activity>,
+      { id: string; data: RescheduleActivityRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/activities/${id}/reschedule`,
+        method: 'PUT',
+        body: data,
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleActivityResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Activity', id },
+        { type: 'Activity', id: 'LIST' },
+        { type: 'Activity', id: 'OVERDUE' },
+        { type: 'Activity', id: 'UPCOMING' },
       ],
     }),
 
@@ -711,6 +843,8 @@ export const crmApi = api.injectEndpoints({
         invalidatesTags: (result, error, id) => [
           { type: 'Activity', id },
           { type: 'Activity', id: 'LIST' },
+          { type: 'Activity', id: 'OVERDUE' },
+          { type: 'Activity', id: 'UPCOMING' },
         ],
       }
     ),
@@ -1196,8 +1330,16 @@ export const {
   // Activity hooks
   useGetActivitiesQuery,
   useGetActivityQuery,
+  useGetActivitiesByTypeQuery,
+  useGetActivitiesByStatusQuery,
+  useGetActivitiesByAssigneeQuery,
+  useGetOverdueActivitiesQuery,
+  useGetUpcomingActivitiesQuery,
   useCreateActivityMutation,
   useUpdateActivityMutation,
+  useCompleteActivityMutation,
+  useCancelActivityMutation,
+  useRescheduleActivityMutation,
   useDeleteActivityMutation,
 
   // Analytics hooks

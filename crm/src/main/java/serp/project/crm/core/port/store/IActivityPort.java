@@ -7,6 +7,7 @@ package serp.project.crm.core.port.store;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
@@ -14,6 +15,7 @@ import serp.project.crm.core.domain.enums.TaskPriority;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface IActivityPort {
 
@@ -42,5 +44,15 @@ public interface IActivityPort {
     Long countByStatus(ActivityStatus status, Long tenantId);
 
     void deleteById(Long id, Long tenantId);
+
+    Pair<List<ActivityEntity>, Long> filter(ActivityFilterRequest filterRequest, Long tenantId);
+
+    List<ActivityEntity> findByIds(Set<Long> ids, Long tenantId);
+
+    long countByTenantId(Long tenantId);
+
+    long countByActivityType(ActivityType type, Long tenantId);
+
+    long countByPriority(TaskPriority priority, Long tenantId);
 
 }

@@ -6,6 +6,8 @@ import type {
   CreateAccountRequest,
   CreateLeadRequest,
   CreateOpportunityRequest,
+  CreateActivityRequest,
+  UpdateActivityRequest,
   Opportunity,
   OpportunityFilters,
   UpdateAccountRequest,
@@ -90,14 +92,17 @@ type BackendActivity = {
   accountId?: number | string | null;
   leadId?: number | string | null;
   opportunityId?: number | string | null;
+  contactId?: number | string | null;
   assignedTo?: number | string | null;
   activityDate?: number | string | null;
   dueDate?: number | string | null;
+  reminderDate?: number | string | null;
   durationMinutes?: number | null;
   priority?: string | null;
   location?: string | null;
   outcome?: string | null;
   notes?: string | null;
+  attachments?: string[] | null;
   createdAt?: number | string | null;
   updatedAt?: number | string | null;
 };
@@ -277,7 +282,7 @@ export const mapBackendActivityToActivity = (
   createdAt: toIsoString(activity.createdAt),
   updatedAt: toIsoString(activity.updatedAt),
   isActive: activity.status !== 'CANCELLED',
-  type: (activity.activityType as Activity['type']) || 'NOTE',
+  type: (activity.activityType as Activity['type']) || 'TASK',
   status: (activity.status as Activity['status']) || 'PLANNED',
   subject: activity.subject || 'Untitled activity',
   description: activity.description || undefined,
@@ -294,7 +299,7 @@ export const mapBackendActivityToActivity = (
         ? 'LEAD'
         : 'OPPORTUNITY',
     id: String(
-      activity.accountId || activity.leadId || activity.opportunityId || ''
+      activity.accountId || activity.leadId || activity.opportunityId || activity.contactId || ''
     ),
     name: activity.subject || 'Related item',
   },
@@ -304,7 +309,12 @@ export const mapBackendActivityToActivity = (
   followUpRequired: false,
   followUpDate: activity.dueDate ? toIsoString(activity.dueDate) : undefined,
   tags: [],
-  customFields: { notes: activity.notes || undefined },
+  customFields: {
+    notes: activity.notes || undefined,
+    reminderDate: activity.reminderDate ? toIsoString(activity.reminderDate) : undefined,
+    attachments: activity.attachments || [],
+    contactId: activity.contactId ? String(activity.contactId) : undefined,
+  },
 });
 
 const splitLeadName = (name?: string | null) => {
@@ -830,6 +840,15 @@ export const mapContactListResponse = (
   data: (response.data || []).map(mapBackendContactToContact),
 });
 
+export const mapSingleActivityResponse = (
+  response: GeneralResponse<BackendActivity>
+) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: mapBackendActivityToActivity(response.data),
+});
+
 export const mapActivityListResponse = (
   response: GeneralResponse<PageResponse<BackendActivity>>
 ): APIResponse<{
@@ -858,3 +877,16 @@ export const mapActivityListResponse = (
     },
   },
 });
+
+export const mapActivityArrayResponse = (
+  response: GeneralResponse<BackendActivity[]>
+) => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: (response.data || []).map(mapBackendActivityToActivity),
+});
+
+export const mapActivityFormToBackendPayload = (
+  data: CreateActivityRequest | UpdateActivityRequest
+): CreateActivityRequest | UpdateActivityRequest => data;

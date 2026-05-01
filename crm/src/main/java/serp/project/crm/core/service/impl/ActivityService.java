@@ -14,10 +14,12 @@ import org.springframework.util.StringUtils;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
+import serp.project.crm.core.domain.enums.TaskPriority;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
@@ -29,8 +31,11 @@ import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IActivityService;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -281,6 +286,129 @@ public class ActivityService implements IActivityService {
                 && contactPort.findById(activity.getContactId(), tenantId).isEmpty()) {
             throw new AppException(ErrorMessage.CONTACT_NOT_FOUND);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pair<List<ActivityEntity>, Long> filterActivities(ActivityFilterRequest filterRequest, Long tenantId) {
+        return activityPort.filter(filterRequest, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getActivityStats(Long tenantId) {
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("total", activityPort.countByTenantId(tenantId));
+        stats.put("overdue", (long) activityPort.findOverdueActivities(tenantId).size());
+        stats.put("upcoming", (long) activityPort.findUpcomingActivities(tenantId).size());
+
+        for (ActivityStatus status : ActivityStatus.values()) {
+            stats.put("status_" + status.name().toLowerCase(), activityPort.countByStatus(status, tenantId));
+        }
+        for (ActivityType type : ActivityType.values()) {
+            stats.put("type_" + type.name().toLowerCase(), activityPort.countByActivityType(type, tenantId));
+        }
+        for (TaskPriority priority : TaskPriority.values()) {
+            stats.put("priority_" + priority.name().toLowerCase(), activityPort.countByPriority(priority, tenantId));
+        }
+        return stats;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkCompleteActivities(Set<Long> activityIds, Long userId, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                if (activity.isCompleted() || activity.isCancelled()) {
+                    failed++;
+                    continue;
+                }
+                activity.markAsCompleted(null, null, userId);
+                activityPort.save(activity);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkCancelActivities(Set<Long> activityIds, Long userId, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                if (activity.isCompleted() || activity.isCancelled()) {
+                    failed++;
+                    continue;
+                }
+                activity.markAsCancelled(userId);
+                activityPort.save(activity);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkDeleteActivities(Set<Long> activityIds, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                activityPort.deleteById(activity.getId(), tenantId);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkReassignActivities(Set<Long> activityIds, Long newAssigneeId, Long userId,
+            Long tenantId) {
+        if (newAssigneeId == null) {
+            throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
+        }
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                activity.setAssignedTo(newAssigneeId);
+                activity.setUpdatedBy(userId);
+                validateAssignedUser(activity, tenantId);
+                activityPort.save(activity);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
     }
 
     private void applyTypeDefaults(ActivityEntity activity) {

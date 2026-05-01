@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
@@ -16,11 +17,13 @@ import serp.project.crm.core.domain.enums.TaskPriority;
 import serp.project.crm.core.port.store.IActivityPort;
 import serp.project.crm.infrastructure.store.mapper.ActivityMapper;
 import serp.project.crm.infrastructure.store.repository.ActivityRepository;
+import serp.project.crm.infrastructure.store.specification.ActivitySpecification;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -168,5 +171,38 @@ public class ActivityAdapter implements IActivityPort {
     public List<ActivityEntity> findByActivityDateBetween(Long startDate, Long endDate, Long tenantId) {
         // TODO: Add repository method for activity date range
         return List.of();
+    }
+
+    @Override
+    public Pair<List<ActivityEntity>, Long> filter(ActivityFilterRequest filterRequest, Long tenantId) {
+        var spec = ActivitySpecification.build(filterRequest, tenantId);
+        var pageable = activityMapper.toPageable(filterRequest.toPageRequest());
+        var page = activityRepository.findAll(spec, pageable)
+                .map(activityMapper::toEntity);
+        return activityMapper.pageToPair(page);
+    }
+
+    @Override
+    public List<ActivityEntity> findByIds(Set<Long> ids, Long tenantId) {
+        return activityRepository.findAllById(ids)
+                .stream()
+                .filter(model -> tenantId.equals(model.getTenantId()))
+                .map(activityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
+    public long countByTenantId(Long tenantId) {
+        return activityRepository.countByTenantId(tenantId);
+    }
+
+    @Override
+    public long countByActivityType(ActivityType type, Long tenantId) {
+        return activityRepository.countByTenantIdAndActivityType(tenantId, type.name());
+    }
+
+    @Override
+    public long countByPriority(TaskPriority priority, Long tenantId) {
+        return activityRepository.countByTenantIdAndPriority(tenantId, priority.name());
     }
 }
