@@ -411,10 +411,50 @@ export type CreateLeadRequest = {
 };
 export type UpdateLeadRequest = Partial<CreateLeadRequest>;
 
+export interface LeadQualificationData {
+  budgetConfirmed?: boolean;
+  hasAuthority?: boolean;
+  needIdentified?: boolean;
+  timelineEstablished?: boolean;
+}
+
+export interface LeadConversionOpportunityData {
+  name?: string;
+  amount?: number;
+  expectedCloseDate?: string;
+  notes?: string;
+}
+
+export interface LeadConversionAccountData {
+  name?: string;
+  creditLimit?: number;
+  notes?: string;
+}
+
+export interface LeadConversionData {
+  createOpportunity?: boolean;
+  createAccount?: boolean;
+  existingAccountId?: number;
+  opportunityData?: LeadConversionOpportunityData;
+  accountData?: LeadConversionAccountData;
+}
+
 export interface UpdateLeadStatusRequest {
   fromStatus?: LeadStatus;
   toStatus: LeadStatus;
   notes?: string;
+  qualification?: LeadQualificationData;
+  conversion?: LeadConversionData;
+}
+
+export interface LeadStatusTransitionResult {
+  lead: Lead;
+  fromStatus: LeadStatus;
+  toStatus: LeadStatus;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  message?: string;
 }
 
 export interface CreateOpportunityRequest {

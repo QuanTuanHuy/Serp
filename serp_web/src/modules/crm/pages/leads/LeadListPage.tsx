@@ -49,9 +49,7 @@ import { ExportDropdown } from '../../components/shared';
 import {
   useCreateLeadMutation,
   useDeleteLeadMutation,
-  useDisqualifyLeadMutation,
   useGetLeadsQuery,
-  useQualifyLeadMutation,
   useUpdateLeadStatusMutation,
 } from '../../api/crmApi';
 import { LEAD_EXPORT_COLUMNS } from '../../utils/export';
@@ -143,10 +141,6 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
   const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
   const [updateLeadStatus, { isLoading: isUpdatingStatus }] =
     useUpdateLeadStatusMutation();
-  const [qualifyLead, { isLoading: isQualifyingLead }] =
-    useQualifyLeadMutation();
-  const [disqualifyLead, { isLoading: isDisqualifyingLead }] =
-    useDisqualifyLeadMutation();
 
   const listQueryArgs = useMemo(
     () => ({
@@ -356,8 +350,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
   const hasActiveFilters =
     !!searchQuery || !!sourceFilter || (!isKanbanView && !!statusFilter);
   const visibleLeadCount = isKanbanView ? total : leads.length;
-  const isSubmittingStatusAction =
-    isUpdatingStatus || isQualifyingLead || isDisqualifyingLead;
+  const isSubmittingStatusAction = isUpdatingStatus;
 
   const handleQuickAddLead = async (data: {
     name: string;
@@ -424,7 +417,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     fromStatus: BoardLeadStatus,
     toStatus: BoardLeadStatus
   ) => {
-    await updateLeadStatus({
+    const result = await updateLeadStatus({
       id: leadId,
       data: {
         fromStatus,
@@ -432,7 +425,9 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
       },
     }).unwrap();
 
-    toast.success(`Moved lead to ${getStatusLabel(toStatus)}`);
+    toast.success(
+      result.data.message || `Moved lead to ${getStatusLabel(toStatus)}`
+    );
   };
 
   const handleSubmitPendingStatusDialog = async () => {
@@ -442,19 +437,19 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
     if (!notes) return;
 
     try {
-      if (pendingStatusDialog.toStatus === 'QUALIFIED') {
-        await qualifyLead({
-          id: pendingStatusDialog.leadId,
-          data: { notes },
-        }).unwrap();
-        toast.success('Qualify lead successfully');
-      } else {
-        await disqualifyLead({
-          id: pendingStatusDialog.leadId,
-          data: { notes },
-        }).unwrap();
-        toast.success('Disqualify lead successfully');
-      }
+      const result = await updateLeadStatus({
+        id: pendingStatusDialog.leadId,
+        data: {
+          fromStatus: pendingStatusDialog.fromStatus,
+          toStatus: pendingStatusDialog.toStatus,
+          notes,
+        },
+      }).unwrap();
+
+      toast.success(
+        result.data.message ||
+          `Moved lead to ${getStatusLabel(pendingStatusDialog.toStatus)}`
+      );
 
       closePendingStatusDialog();
     } catch (error) {

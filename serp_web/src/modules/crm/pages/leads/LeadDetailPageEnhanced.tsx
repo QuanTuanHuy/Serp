@@ -71,12 +71,10 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import {
-  useConvertLeadMutation,
   useDeleteLeadMutation,
-  useDisqualifyLeadMutation,
   useGetLeadActivitiesQuery,
   useGetLeadQuery,
-  useQualifyLeadMutation,
+  useUpdateLeadStatusMutation,
 } from '../../api/crmApi';
 import type { LeadSource, LeadStatus } from '../../types';
 
@@ -177,9 +175,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const { data: activitiesData, isLoading: isActivitiesLoading } =
     useGetLeadActivitiesQuery({ leadId, page: 1, size: 20 });
   const [deleteLead] = useDeleteLeadMutation();
-  const [qualifyLead] = useQualifyLeadMutation();
-  const [disqualifyLead] = useDisqualifyLeadMutation();
-  const [convertLead] = useConvertLeadMutation();
+  const [updateLeadStatus] = useUpdateLeadStatusMutation();
 
   const lead = data?.data;
   const activities = activitiesData?.data.data || [];
@@ -272,8 +268,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleQualify = async () => {
     try {
-      await qualifyLead({ id: leadId, data: { notes: qualifyNotes } }).unwrap();
-      toast.success('Qualify lead successfully');
+      const result = await updateLeadStatus({
+        id: leadId,
+        data: {
+          fromStatus: leadStatus,
+          toStatus: 'QUALIFIED',
+          notes: qualifyNotes.trim(),
+        },
+      }).unwrap();
+      toast.success(result.data.message || 'Qualify lead successfully');
       setShowQualifyDialog(false);
       setQualifyNotes('');
     } catch (error) {
@@ -285,11 +288,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleDisqualify = async () => {
     try {
-      await disqualifyLead({
+      const result = await updateLeadStatus({
         id: leadId,
-        data: { notes: disqualifyNotes },
+        data: {
+          fromStatus: leadStatus,
+          toStatus: 'DISQUALIFIED',
+          notes: disqualifyNotes.trim(),
+        },
       }).unwrap();
-      toast.success('Disqualify lead successfully');
+      toast.success(result.data.message || 'Disqualify lead successfully');
       setShowDisqualifyDialog(false);
       setDisqualifyNotes('');
     } catch (error) {
@@ -301,31 +308,35 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleConvert = async () => {
     try {
-      const result = await convertLead({
+      const result = await updateLeadStatus({
         id: leadId,
         data: {
-          createAccount: convertForm.createAccount,
-          createOpportunity: convertForm.createOpportunity,
-          existingAccountId: convertForm.existingAccountId
-            ? Number(convertForm.existingAccountId)
-            : undefined,
-          accountData: convertForm.createAccount
-            ? {
-                name: convertForm.accountName || lead?.company || lead?.name,
-                notes: convertForm.accountNotes || lead?.notes,
-              }
-            : undefined,
-          opportunityData: convertForm.createOpportunity
-            ? {
-                name:
-                  convertForm.opportunityName ||
-                  `Opportunity from ${lead?.name}`,
-                amount: convertForm.opportunityAmount
-                  ? Number(convertForm.opportunityAmount)
-                  : lead?.estimatedValue,
-                notes: convertForm.opportunityNotes || lead?.notes,
-              }
-            : undefined,
+          fromStatus: leadStatus,
+          toStatus: 'CONVERTED',
+          conversion: {
+            createAccount: convertForm.createAccount,
+            createOpportunity: convertForm.createOpportunity,
+            existingAccountId: convertForm.existingAccountId
+              ? Number(convertForm.existingAccountId)
+              : undefined,
+            accountData: convertForm.createAccount
+              ? {
+                  name: convertForm.accountName || lead?.company || lead?.name,
+                  notes: convertForm.accountNotes || lead?.notes,
+                }
+              : undefined,
+            opportunityData: convertForm.createOpportunity
+              ? {
+                  name:
+                    convertForm.opportunityName ||
+                    `Opportunity from ${lead?.name}`,
+                  amount: convertForm.opportunityAmount
+                    ? Number(convertForm.opportunityAmount)
+                    : lead?.estimatedValue,
+                  notes: convertForm.opportunityNotes || lead?.notes,
+                }
+              : undefined,
+          },
         },
       }).unwrap();
       toast.success(result.data.message || 'Convert lead successfully');

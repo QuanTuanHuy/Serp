@@ -16,6 +16,7 @@ import type {
   CustomerFilters,
   Lead,
   LeadFilters,
+  LeadStatusTransitionResult,
   PaginationParams,
   ActivityFilters,
   ActivityStats,
@@ -157,8 +158,10 @@ type BackendLead = {
   updatedBy?: number | string | null;
 };
 
-type BackendLeadConversion = {
-  leadId: number | string;
+type BackendLeadStatusTransition = {
+  lead: BackendLead;
+  fromStatus?: string | null;
+  toStatus?: string | null;
   accountId?: number | string | null;
   opportunityId?: number | string | null;
   contactId?: number | string | null;
@@ -824,14 +827,20 @@ export const mapOpportunityPipelineResponse = (
   },
 });
 
-export const mapLeadConversionResponse = (
-  response: GeneralResponse<BackendLeadConversion>
-) => ({
+export const mapLeadStatusTransitionResponse = (
+  response: GeneralResponse<BackendLeadStatusTransition>
+): APIResponse<LeadStatusTransitionResult> => ({
   success: response.code >= 200 && response.code < 300,
   message: response.message,
   timestamp: new Date().toISOString(),
   data: {
-    leadId: String(response.data.leadId),
+    lead: mapBackendLeadToLead(response.data.lead),
+    fromStatus:
+      (response.data.fromStatus as LeadStatusTransitionResult['fromStatus']) ||
+      'NEW',
+    toStatus:
+      (response.data.toStatus as LeadStatusTransitionResult['toStatus']) ||
+      'NEW',
     accountId:
       response.data.accountId === null || response.data.accountId === undefined
         ? undefined

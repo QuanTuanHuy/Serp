@@ -6,12 +6,12 @@
 package serp.project.crm.core.mapper;
 
 import org.springframework.stereotype.Component;
-import serp.project.crm.core.domain.dto.request.ConvertLeadRequest;
 import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
+import serp.project.crm.core.domain.dto.request.UpdateLeadStatusRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.AddressResponse;
-import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
 import serp.project.crm.core.domain.dto.response.LeadResponse;
+import serp.project.crm.core.domain.dto.response.LeadStatusTransitionResponse;
 import serp.project.crm.core.domain.entity.AddressEntity;
 import serp.project.crm.core.domain.entity.ContactEntity;
 import serp.project.crm.core.domain.entity.AccountEntity;
@@ -147,7 +147,7 @@ public class LeadDtoMapper {
         return toAccountEntity(lead, null);
     }
 
-    public AccountEntity toAccountEntity(LeadEntity lead, ConvertLeadRequest.AccountData accountData) {
+    public AccountEntity toAccountEntity(LeadEntity lead, UpdateLeadStatusRequest.AccountData accountData) {
         if (lead == null) {
             return null;
         }
@@ -183,12 +183,15 @@ public class LeadDtoMapper {
                 .build();
     }
 
-    public OpportunityEntity toOpportunityEntity(LeadEntity lead, Long accountId, ConvertLeadRequest request) {
+    public OpportunityEntity toOpportunityEntity(LeadEntity lead, Long accountId,
+            UpdateLeadStatusRequest.ConversionData conversionData) {
         if (lead == null) {
             return null;
         }
 
-        ConvertLeadRequest.OpportunityData opportunityData = request.getOpportunityData();
+        UpdateLeadStatusRequest.OpportunityData opportunityData = conversionData != null
+                ? conversionData.getOpportunityData()
+                : null;
 
         return OpportunityEntity.builder()
                 .name(opportunityData != null && opportunityData.getName() != null ? opportunityData.getName()
@@ -205,14 +208,15 @@ public class LeadDtoMapper {
                 .build();
     }
 
-    public LeadConversionResponse toConversionResponse(Long leadId, Long accountId, Long opportunityId,
-            Long contactId) {
-        return LeadConversionResponse.builder()
-                .leadId(leadId)
-                .accountId(accountId)
-                .opportunityId(opportunityId)
-                .contactId(contactId)
-                .message("Lead converted successfully")
+    public LeadStatusTransitionResponse toStatusTransitionResponse(LeadEntity lead, LeadStatusTransitionResponse base) {
+        return LeadStatusTransitionResponse.builder()
+                .lead(toResponse(lead))
+                .fromStatus(base.getFromStatus())
+                .toStatus(base.getToStatus())
+                .accountId(base.getAccountId())
+                .opportunityId(base.getOpportunityId())
+                .contactId(base.getContactId())
+                .message(base.getMessage())
                 .build();
     }
 }
