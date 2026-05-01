@@ -80,10 +80,10 @@ interface QuickAddActivityDialogProps {
 }
 
 const ACTIVITY_TYPE_CONFIG = [
-  { type: 'CALL' as ActivityType, label: 'Cuộc gọi', icon: Phone },
+  { type: 'CALL' as ActivityType, label: 'Call', icon: Phone },
   { type: 'EMAIL' as ActivityType, label: 'Email', icon: Mail },
-  { type: 'MEETING' as ActivityType, label: 'Cuộc họp', icon: Video },
-  { type: 'TASK' as ActivityType, label: 'Công việc', icon: CheckSquare },
+  { type: 'MEETING' as ActivityType, label: 'Meeting', icon: Video },
+  { type: 'TASK' as ActivityType, label: 'Task', icon: CheckSquare },
 ];
 
 export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
@@ -232,16 +232,16 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-lg max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Tạo hoạt động mới</DialogTitle>
+          <DialogTitle>Create New Activity</DialogTitle>
           <DialogDescription>
-            Lên lịch cuộc gọi, họp, task hoặc hoạt động khác
+            Schedule a call, meeting, task, or other activity
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4 py-4'>
           {/* Activity Type */}
           <div className='space-y-2'>
-            <Label>Loại hoạt động</Label>
+            <Label>Activity Type</Label>
             <div className='grid grid-cols-4 gap-2'>
               {ACTIVITY_TYPE_CONFIG.map(({ type, label, icon: Icon }) => (
                 <button
@@ -265,13 +265,13 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
           {/* Subject */}
           <div className='space-y-2'>
             <Label htmlFor='subject'>
-              Tiêu đề <span className='text-red-500'>*</span>
+              Subject <span className='text-red-500'>*</span>
             </Label>
             <Input
               id='subject'
               value={formData.subject}
               onChange={(e) => handleChange('subject', e.target.value)}
-              placeholder='VD: Gọi điện giới thiệu sản phẩm'
+              placeholder='Ex: Call to introduce product'
               className={cn(errors.subject && 'border-red-500')}
             />
             {errors.subject && (
@@ -282,7 +282,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
           {/* Related To */}
           <div className='grid grid-cols-2 gap-4'>
             <div className='space-y-2'>
-              <Label>Liên quan đến</Label>
+              <Label>Related To</Label>
               <Select
                 value={formData.relatedTo.type}
                 onValueChange={(value: 'CUSTOMER' | 'LEAD' | 'OPPORTUNITY') => {
@@ -343,7 +343,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 className='flex items-center gap-2'
               >
                 <Calendar className='h-4 w-4 text-muted-foreground' />
-                Ngày
+                Date
               </Label>
               <Input
                 id='scheduledDate'
@@ -359,7 +359,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 className='flex items-center gap-2'
               >
                 <Clock className='h-4 w-4 text-muted-foreground' />
-                Giờ
+                Time
               </Label>
               <Input
                 id='scheduledTime'
@@ -370,7 +370,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='duration'>Thời lượng (phút)</Label>
+              <Label htmlFor='duration'>Duration (minutes)</Label>
               <Select
                 value={String(formData.duration)}
                 onValueChange={(value) =>
@@ -381,12 +381,12 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='15'>15 phút</SelectItem>
-                  <SelectItem value='30'>30 phút</SelectItem>
-                  <SelectItem value='45'>45 phút</SelectItem>
-                  <SelectItem value='60'>1 giờ</SelectItem>
-                  <SelectItem value='90'>1.5 giờ</SelectItem>
-                  <SelectItem value='120'>2 giờ</SelectItem>
+                  <SelectItem value='15'>15 minutes</SelectItem>
+                  <SelectItem value='30'>30 minutes</SelectItem>
+                  <SelectItem value='45'>45 minutes</SelectItem>
+                  <SelectItem value='60'>1 hour</SelectItem>
+                  <SelectItem value='90'>1.5 hours</SelectItem>
+                  <SelectItem value='120'>2 hours</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -397,7 +397,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
             <div className='space-y-2'>
               <Label className='flex items-center gap-2'>
                 <Target className='h-4 w-4 text-muted-foreground' />
-                Mức độ ưu tiên
+                Priority
               </Label>
               <Select
                 value={formData.priority}
@@ -409,16 +409,16 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='LOW'>Thấp</SelectItem>
-                  <SelectItem value='MEDIUM'>Trung bình</SelectItem>
-                  <SelectItem value='HIGH'>Cao</SelectItem>
-                  <SelectItem value='URGENT'>Khẩn cấp</SelectItem>
+                  <SelectItem value='LOW'>Low</SelectItem>
+                  <SelectItem value='MEDIUM'>Medium</SelectItem>
+                  <SelectItem value='HIGH'>High</SelectItem>
+                  <SelectItem value='URGENT'>Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className='space-y-2'>
-              <Label>Trạng thái</Label>
+              <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value: ActivityStatus) =>
@@ -429,9 +429,9 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='PLANNED'>Đã lên kế hoạch</SelectItem>
-                  <SelectItem value='COMPLETED'>Hoàn thành</SelectItem>
-                  <SelectItem value='CANCELLED'>Đã hủy</SelectItem>
+                  <SelectItem value='PLANNED'>Planned</SelectItem>
+                  <SelectItem value='COMPLETED'>Completed</SelectItem>
+                  <SelectItem value='CANCELLED'>Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -459,13 +459,13 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
             <div className='space-y-2'>
               <Label htmlFor='location' className='flex items-center gap-2'>
                 <MapPin className='h-4 w-4 text-muted-foreground' />
-                Địa điểm
+                Location
               </Label>
               <Input
                 id='location'
                 value={formData.location}
                 onChange={(e) => handleChange('location', e.target.value)}
-                placeholder='VD: Phòng họp A hoặc link Google Meet'
+                placeholder='Ex: Meeting Room A or Google Meet link'
               />
             </div>
           )}
@@ -474,7 +474,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
           <div className='space-y-2'>
             <Label htmlFor='description' className='flex items-center gap-2'>
               <FileText className='h-4 w-4 text-muted-foreground' />
-              Mô tả
+              Description
             </Label>
             <Textarea
               id='description'
@@ -500,10 +500,10 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
               {isLoading ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Đang tạo...
+                  Creating...
                 </>
               ) : (
-                'Tạo hoạt động'
+                'Create Activity'
               )}
             </Button>
           </DialogFooter>

@@ -49,6 +49,8 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
         return 'Opportunities';
       case 'activities':
         return 'Activities';
+      case 'calendar':
+        return 'Calendar';
       case 'reports':
         return 'Reports';
       case 'settings':

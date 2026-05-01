@@ -12,5 +12,8 @@ export * from './opportunities';
 // Activity Pages
 export * from './activities';
 
+// Calendar Pages
+export * from './calendar';
+
 // Analytics Pages
 export * from './analytics';

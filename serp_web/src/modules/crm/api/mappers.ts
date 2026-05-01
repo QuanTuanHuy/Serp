@@ -301,7 +301,7 @@ export const mapBackendActivityToActivity = (
   status: (activity.status as Activity['status']) || 'PLANNED',
   subject: activity.subject || 'Untitled activity',
   description: activity.description || undefined,
-  scheduledDate: toIsoString(activity.activityDate),
+  scheduledDate: toIsoString(activity.activityDate ?? activity.dueDate),
   actualDate: undefined,
   duration: activity.durationMinutes || undefined,
   priority: (activity.priority as Activity['priority']) || 'MEDIUM',
