@@ -6,8 +6,12 @@ import {
   mapAccountFormToBackendPayload,
   mapAccountListResponse,
   mapActivityArrayResponse,
+  mapActivityFiltersToBackendRequest,
   mapActivityFormToBackendPayload,
   mapActivityListResponse,
+  mapBackendStatsToActivityStats,
+  mapBulkActivityRequestToBackend,
+  mapBulkActivityResponse,
   mapSingleActivityResponse,
   mapContactListResponse,
   mapCustomerFiltersToAccountSearch,
@@ -54,6 +58,9 @@ import type {
   SalesMetrics,
   LeadSourceMetrics,
   BulkOperationResult,
+  ActivityStats,
+  BulkActivityRequest,
+  BulkActivityResult,
 } from '../types';
 
 // Define CRM API slice extending the main API
@@ -646,18 +653,14 @@ export const crmApi = api.injectEndpoints({
     }),
 
     // Activity endpoints
-    getActivities: builder.query<
+    searchActivities: builder.query<
       APIResponse<PaginatedResponse<Activity>>,
       { filters?: ActivityFilters; pagination: PaginationParams }
     >({
       query: ({ filters = {}, pagination }) => ({
-        url: '/activities',
-        method: 'GET',
-        params: {
-          ...filters,
-          page: pagination.page,
-          size: pagination.limit,
-        },
+        url: '/activities/search',
+        method: 'POST',
+        body: mapActivityFiltersToBackendRequest(filters, pagination),
       }),
       extraOptions: { service: 'crm' },
       transformResponse: mapActivityListResponse,
@@ -671,6 +674,16 @@ export const crmApi = api.injectEndpoints({
               { type: 'Activity', id: 'LIST' },
             ]
           : [{ type: 'Activity', id: 'LIST' }],
+    }),
+
+    getActivityStats: builder.query<APIResponse<ActivityStats>, void>({
+      query: () => ({
+        url: '/activities/stats',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapBackendStatsToActivityStats,
+      providesTags: [{ type: 'Activity', id: 'STATS' }],
     }),
 
     getActivity: builder.query<APIResponse<Activity>, string>({
@@ -796,6 +809,7 @@ export const crmApi = api.injectEndpoints({
         { type: 'Activity', id: 'LIST' },
         { type: 'Activity', id: 'OVERDUE' },
         { type: 'Activity', id: 'UPCOMING' },
+        { type: 'Activity', id: 'STATS' },
       ],
     }),
 
@@ -811,6 +825,7 @@ export const crmApi = api.injectEndpoints({
         { type: 'Activity', id: 'LIST' },
         { type: 'Activity', id: 'OVERDUE' },
         { type: 'Activity', id: 'UPCOMING' },
+        { type: 'Activity', id: 'STATS' },
       ],
     }),
 
@@ -830,6 +845,7 @@ export const crmApi = api.injectEndpoints({
         { type: 'Activity', id: 'LIST' },
         { type: 'Activity', id: 'OVERDUE' },
         { type: 'Activity', id: 'UPCOMING' },
+        { type: 'Activity', id: 'STATS' },
       ],
     }),
 
@@ -845,9 +861,29 @@ export const crmApi = api.injectEndpoints({
           { type: 'Activity', id: 'LIST' },
           { type: 'Activity', id: 'OVERDUE' },
           { type: 'Activity', id: 'UPCOMING' },
+          { type: 'Activity', id: 'STATS' },
         ],
       }
     ),
+
+    bulkActivityOperations: builder.mutation<
+      APIResponse<BulkActivityResult>,
+      BulkActivityRequest
+    >({
+      query: (payload) => ({
+        url: '/activities/bulk',
+        method: 'POST',
+        body: mapBulkActivityRequestToBackend(payload),
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapBulkActivityResponse,
+      invalidatesTags: [
+        { type: 'Activity', id: 'LIST' },
+        { type: 'Activity', id: 'OVERDUE' },
+        { type: 'Activity', id: 'UPCOMING' },
+        { type: 'Activity', id: 'STATS' },
+      ],
+    }),
 
     // Analytics endpoints
     getCRMMetrics: builder.query<APIResponse<CRMMetrics>, void>({
@@ -1328,7 +1364,8 @@ export const {
   useDeleteOpportunityMutation,
 
   // Activity hooks
-  useGetActivitiesQuery,
+  useSearchActivitiesQuery,
+  useGetActivityStatsQuery,
   useGetActivityQuery,
   useGetActivitiesByTypeQuery,
   useGetActivitiesByStatusQuery,
@@ -1341,6 +1378,7 @@ export const {
   useCancelActivityMutation,
   useRescheduleActivityMutation,
   useDeleteActivityMutation,
+  useBulkActivityOperationsMutation,
 
   // Analytics hooks
   useGetCRMMetricsQuery,

@@ -307,16 +307,40 @@ export interface OpportunityFilters {
 }
 
 export interface ActivityFilters {
-  search?: string;
-  type?: ActivityType[];
-  status?: ActivityStatus[];
-  priority?: Priority[];
-  assignedTo?: string[];
-  relatedType?: ('CUSTOMER' | 'LEAD' | 'OPPORTUNITY')[];
-  relatedId?: string;
-  scheduledDateFrom?: string;
-  scheduledDateTo?: string;
-  tags?: string[];
+  keyword?: string;
+  types?: ActivityType[];
+  statuses?: ActivityStatus[];
+  priorities?: Priority[];
+  assignedTo?: string;
+  leadId?: string;
+  accountId?: string;
+  opportunityId?: string;
+  contactId?: string;
+  activityDateFrom?: string;
+  activityDateTo?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+}
+
+export interface ActivityStats {
+  todayCount: number;
+  weekCount: number;
+  averagePerDay: number;
+  mostActiveHour: string;
+}
+
+export type BulkActivityAction = 'COMPLETE' | 'CANCEL' | 'DELETE' | 'ASSIGN';
+
+export interface BulkActivityRequest {
+  activityIds: string[];
+  action: BulkActivityAction;
+  assigneeId?: string;
+}
+
+export interface BulkActivityResult {
+  successCount: number;
+  failedCount: number;
+  message?: string;
 }
 
 // Pagination & Sorting

@@ -84,6 +84,7 @@ import {
   useCompleteActivityMutation,
   useDeleteActivityMutation,
   useGetActivityQuery,
+  useRescheduleActivityMutation,
 } from '../../api/crmApi';
 
 interface ActivityDetailPageProps {
@@ -203,13 +204,19 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditStatusDialog, setShowEditStatusDialog] = useState(false);
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<ActivityStatus | ''>('');
   const [newNote, setNewNote] = useState('');
+  const [rescheduleData, setRescheduleData] = useState({
+    dueDate: '',
+    reminderDate: '',
+  });
 
   const { data, isLoading, isError } = useGetActivityQuery(activityId);
   const [completeActivity] = useCompleteActivityMutation();
   const [cancelActivity] = useCancelActivityMutation();
   const [deleteActivity] = useDeleteActivityMutation();
+  const [rescheduleActivity] = useRescheduleActivityMutation();
   const activity = data?.data;
 
   if (isLoading) {
@@ -342,6 +349,33 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
     }
   };
 
+  const handleReschedule = async () => {
+    try {
+      if (!rescheduleData.dueDate) {
+        toast.error('Due date is required');
+        return;
+      }
+
+      const dueDateEpoch = new Date(rescheduleData.dueDate).getTime();
+      const reminderDateEpoch = rescheduleData.reminderDate
+        ? new Date(rescheduleData.reminderDate).getTime()
+        : undefined;
+
+      await rescheduleActivity({
+        id: activityId,
+        data: {
+          dueDate: dueDateEpoch,
+          reminderDate: reminderDateEpoch,
+        },
+      }).unwrap();
+      toast.success('Activity rescheduled');
+      setShowRescheduleDialog(false);
+      setRescheduleData({ dueDate: '', reminderDate: '' });
+    } catch {
+      toast.error('Failed to reschedule activity');
+    }
+  };
+
   const handleAddNote = () => {
     setShowAddNoteDialog(false);
     setNewNote('');
@@ -396,6 +430,13 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
         </div>
 
         <div className='flex items-center gap-2'>
+          <Button
+            variant='outline'
+            onClick={() => setShowRescheduleDialog(true)}
+          >
+            <Clock className='mr-2 h-4 w-4' />
+            Reschedule
+          </Button>
           <Button
             variant='outline'
             onClick={() => setShowEditStatusDialog(true)}
@@ -460,7 +501,9 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               {/* Description */}
               <Card className='border-none shadow-sm'>
                 <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>Description</CardTitle>
+                  <CardTitle className='text-lg font-semibold'>
+                    Description
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className='whitespace-pre-wrap text-foreground/80'>
@@ -759,9 +802,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           {/* Related Entity */}
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Linked to
-              </CardTitle>
+              <CardTitle className='text-lg font-semibold'>Linked to</CardTitle>
             </CardHeader>
             <CardContent>
               <Link href={getRelatedLink()} className='block'>
@@ -773,9 +814,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                     <p className='text-sm text-muted-foreground'>
                       {relatedTypeLabel}
                     </p>
-                    <p className='font-medium text-foreground'>
-                      {relatedName}
-                    </p>
+                    <p className='font-medium text-foreground'>{relatedName}</p>
                   </div>
                   <ExternalLink className='h-4 w-4 text-muted-foreground' />
                 </div>
@@ -786,9 +825,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           {/* Assigned To */}
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Assignee
-              </CardTitle>
+              <CardTitle className='text-lg font-semibold'>Assignee</CardTitle>
             </CardHeader>
             <CardContent>
               <div className='flex items-center gap-3'>
@@ -815,7 +852,9 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           {/* Activity Info */}
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Activity info</CardTitle>
+              <CardTitle className='text-lg font-semibold'>
+                Activity info
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -844,9 +883,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Status
-                </span>
+                <span className='text-sm text-muted-foreground'>Status</span>
                 <span className={`text-sm font-medium ${statusConfig.color}`}>
                   {statusConfig.label}
                 </span>
@@ -879,7 +916,11 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                 <Copy className='mr-2 h-4 w-4' />
                 Duplicate activity
               </Button>
-              <Button className='w-full justify-start' variant='outline'>
+              <Button
+                className='w-full justify-start'
+                variant='outline'
+                onClick={() => setShowRescheduleDialog(true)}
+              >
                 <Calendar className='mr-2 h-4 w-4' />
                 Reschedule
               </Button>
@@ -986,6 +1027,72 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             </Button>
             <Button onClick={handleAddNote} disabled={!newNote.trim()}>
               Add note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog
+        open={showRescheduleDialog}
+        onOpenChange={setShowRescheduleDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reschedule activity</DialogTitle>
+            <DialogDescription>
+              Update the due date and reminder for this activity
+            </DialogDescription>
+          </DialogHeader>
+          <div className='space-y-4 py-4'>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Due Date
+              </label>
+              <input
+                type='datetime-local'
+                value={rescheduleData.dueDate}
+                onChange={(e) =>
+                  setRescheduleData({
+                    ...rescheduleData,
+                    dueDate: e.target.value,
+                  })
+                }
+                className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+              />
+            </div>
+            <div>
+              <label className='text-sm font-medium mb-1.5 block'>
+                Reminder Date (Optional)
+              </label>
+              <input
+                type='datetime-local'
+                value={rescheduleData.reminderDate}
+                onChange={(e) =>
+                  setRescheduleData({
+                    ...rescheduleData,
+                    reminderDate: e.target.value,
+                  })
+                }
+                className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setShowRescheduleDialog(false);
+                setRescheduleData({ dueDate: '', reminderDate: '' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReschedule}
+              disabled={!rescheduleData.dueDate}
+            >
+              Reschedule
             </Button>
           </DialogFooter>
         </DialogContent>
