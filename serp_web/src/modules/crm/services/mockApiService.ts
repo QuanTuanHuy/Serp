@@ -475,10 +475,7 @@ export const activityApi = {
     }
 
     if (!data.subject) {
-      throw createErrorResponse(
-        'Subject is required',
-        'VALIDATION_ERROR'
-      );
+      throw createErrorResponse('Subject is required', 'VALIDATION_ERROR');
     }
 
     const activity = activityService.create({
@@ -492,9 +489,15 @@ export const activityApi = {
       duration: data.durationMinutes,
       priority: data.priority || 'MEDIUM',
       assignedTo: data.assignedTo ? String(data.assignedTo) : '',
-      assignedToName: getUserNameById(data.assignedTo ? String(data.assignedTo) : ''),
+      assignedToName: getUserNameById(
+        data.assignedTo ? String(data.assignedTo) : ''
+      ),
       relatedTo: {
-        type: data.accountId ? 'CUSTOMER' : data.leadId ? 'LEAD' : 'OPPORTUNITY',
+        type: data.accountId
+          ? 'CUSTOMER'
+          : data.leadId
+            ? 'LEAD'
+            : 'OPPORTUNITY',
         id: String(data.accountId || data.leadId || data.opportunityId || ''),
         name: data.subject,
       },

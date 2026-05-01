@@ -30,6 +30,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { ExportDropdown } from '../../components/shared';
@@ -37,14 +38,17 @@ import { QuickAddActivityDialog } from '../../components/dialogs';
 import { ACTIVITY_EXPORT_COLUMNS } from '../../utils/export';
 import {
   useCreateActivityMutation,
-  useGetActivitiesQuery,
+  useSearchActivitiesQuery,
+  useGetActivityStatsQuery,
   useGetOverdueActivitiesQuery,
+  useBulkActivityOperationsMutation,
 } from '../../api/crmApi';
 import type {
   Activity,
   ActivityType,
   ActivityStatus,
   CreateActivityRequest,
+  Priority,
 } from '../../types';
 
 // Activity type configuration
@@ -92,6 +96,13 @@ const STATUS_CONFIG: Record<ActivityStatus, { label: string; color: string }> =
     OVERDUE: { label: 'Overdue', color: 'bg-red-100 text-red-700' },
   };
 
+const PRIORITY_CONFIG: Record<Priority, { label: string; color: string }> = {
+  LOW: { label: 'Low', color: 'bg-green-100 text-green-700' },
+  MEDIUM: { label: 'Medium', color: 'bg-yellow-100 text-yellow-700' },
+  HIGH: { label: 'High', color: 'bg-orange-100 text-orange-700' },
+  URGENT: { label: 'Urgent', color: 'bg-red-100 text-red-700' },
+};
+
 interface ActivityListPageProps {
   className?: string;
 }
@@ -105,22 +116,46 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<ActivityType | ''>('');
   const [statusFilter, setStatusFilter] = useState<ActivityStatus | ''>('');
+  const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
+  const [dueDateFrom, setDueDateFrom] = useState('');
+  const [dueDateTo, setDueDateTo] = useState('');
+  const [sortBy, setSortBy] = useState<string>('dueDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [selectedActivityIds, setSelectedActivityIds] = useState<Set<string>>(
+    new Set()
+  );
   const pageSize = 10;
 
-  const activityQuery = useGetActivitiesQuery({
+  const activityQuery = useSearchActivitiesQuery({
     filters: {
-      search: searchQuery || undefined,
-      type: typeFilter ? [typeFilter] : undefined,
-      status: statusFilter ? [statusFilter] : undefined,
+      keyword: searchQuery || undefined,
+      types: typeFilter ? [typeFilter] : undefined,
+      statuses: statusFilter ? [statusFilter] : undefined,
+      priorities: priorityFilter ? [priorityFilter] : undefined,
+      dueDateFrom: dueDateFrom || undefined,
+      dueDateTo: dueDateTo || undefined,
     },
-    pagination: { page: currentPage, limit: pageSize },
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      sortBy,
+      sortOrder,
+    },
   });
+  const {
+    data: statsData,
+    isLoading: isStatsLoading,
+    error: statsError,
+  } = useGetActivityStatsQuery();
   const { data: overdueData } = useGetOverdueActivitiesQuery();
-  const [createActivity, { isLoading: isCreating }] = useCreateActivityMutation();
+  const [createActivity, { isLoading: isCreating }] =
+    useCreateActivityMutation();
+  const [bulkActivityOperations, { isLoading: isBulkOperating }] =
+    useBulkActivityOperationsMutation();
 
   const activities = useMemo(
     () => activityQuery.data?.data?.data || [],
@@ -131,24 +166,66 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
   const totalPages = pagination?.totalPages || 1;
 
   const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayActivities = activities.filter(
-      (a) => a.scheduledDate?.split('T')[0] === today
-    );
+    console.log('Stats Data:', statsData);
+    console.log('Stats Loading:', isStatsLoading);
+    console.log('Stats Error:', statsError);
 
     return {
-      today: todayActivities.length,
+      today: statsData?.data?.todayCount || 0,
       overdue: overdueData?.data?.length || 0,
-      planned: activities.filter((a) => a.status === 'PLANNED').length,
-      completed: activities.filter((a) => a.status === 'COMPLETED').length,
+      planned: statsData?.data?.weekCount || 0,
+      completed: statsData?.data?.todayCount || 0,
     };
-  }, [activities, overdueData]);
+  }, [statsData, overdueData, isStatsLoading, statsError]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setTypeFilter('');
     setStatusFilter('');
+    setPriorityFilter('');
+    setDueDateFrom('');
+    setDueDateTo('');
+    setSortBy('dueDate');
+    setSortOrder('asc');
     setCurrentPage(1);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedActivityIds.size === activities.length) {
+      setSelectedActivityIds(new Set());
+    } else {
+      setSelectedActivityIds(new Set(activities.map((a: Activity) => a.id)));
+    }
+  };
+
+  const handleSelectActivity = (activityId: string) => {
+    const newSelected = new Set(selectedActivityIds);
+    if (newSelected.has(activityId)) {
+      newSelected.delete(activityId);
+    } else {
+      newSelected.add(activityId);
+    }
+    setSelectedActivityIds(newSelected);
+  };
+
+  const handleBulkAction = async (action: 'COMPLETE' | 'CANCEL' | 'DELETE') => {
+    if (selectedActivityIds.size === 0) return;
+
+    try {
+      const response = await bulkActivityOperations({
+        activityIds: Array.from(selectedActivityIds),
+        action,
+      }).unwrap();
+
+      const result = response.data;
+      toast.success(
+        `${result.successCount} activities ${action.toLowerCase()}d successfully` +
+          (result.failedCount > 0 ? `, ${result.failedCount} failed` : '')
+      );
+      setSelectedActivityIds(new Set());
+    } catch {
+      toast.error(`Failed to ${action.toLowerCase()} activities`);
+    }
   };
 
   const handleQuickAddActivity = async (data: CreateActivityRequest) => {
@@ -165,7 +242,13 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
     router.push(`/crm/activities/${activityId}`);
   };
 
-  const hasActiveFilters = searchQuery || typeFilter || statusFilter;
+  const hasActiveFilters =
+    searchQuery ||
+    typeFilter ||
+    statusFilter ||
+    priorityFilter ||
+    dueDateFrom ||
+    dueDateTo;
 
   const getActivityIcon = (type: ActivityType) => {
     const config = ACTIVITY_TYPES.find((t) => t.type === type);
@@ -349,7 +432,7 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
       {showFilters && (
         <Card>
           <CardContent className='p-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>Type</label>
                 <select
@@ -389,6 +472,96 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Priority
+                </label>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => {
+                    setPriorityFilter(e.target.value as Priority | '');
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value=''>All Priorities</option>
+                  {Object.entries(PRIORITY_CONFIG).map(
+                    ([priority, { label }]) => (
+                      <option key={priority} value={priority}>
+                        {label}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Due Date From
+                </label>
+                <input
+                  type='date'
+                  value={dueDateFrom}
+                  onChange={(e) => {
+                    setDueDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                />
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Due Date To
+                </label>
+                <input
+                  type='date'
+                  value={dueDateTo}
+                  onChange={(e) => {
+                    setDueDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                />
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value='dueDate'>Due Date</option>
+                  <option value='activityDate'>Activity Date</option>
+                  <option value='createdAt'>Created Date</option>
+                  <option value='priority'>Priority</option>
+                  <option value='status'>Status</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Sort Order
+                </label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => {
+                    setSortOrder(e.target.value as 'asc' | 'desc');
+                    setCurrentPage(1);
+                  }}
+                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                >
+                  <option value='asc'>Ascending</option>
+                  <option value='desc'>Descending</option>
+                </select>
+              </div>
             </div>
 
             {hasActiveFilters && (
@@ -401,6 +574,57 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bulk Action Toolbar */}
+      {selectedActivityIds.size > 0 && (
+        <Card className='bg-primary/5 border-primary/20'>
+          <CardContent className='p-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <span className='text-sm font-medium'>
+                  {selectedActivityIds.size} selected
+                </span>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setSelectedActivityIds(new Set())}
+                >
+                  Clear selection
+                </Button>
+              </div>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => handleBulkAction('COMPLETE')}
+                  disabled={isBulkOperating}
+                >
+                  <CheckCircle2 className='h-4 w-4 mr-2' />
+                  Complete
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => handleBulkAction('CANCEL')}
+                  disabled={isBulkOperating}
+                >
+                  <X className='h-4 w-4 mr-2' />
+                  Cancel
+                </Button>
+                <Button
+                  variant='destructive'
+                  size='sm'
+                  onClick={() => handleBulkAction('DELETE')}
+                  disabled={isBulkOperating}
+                >
+                  <Trash2 className='h-4 w-4 mr-2' />
+                  Delete
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -424,93 +648,136 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
             </Card>
           )}
 
-          {!activityQuery.isLoading && !activityQuery.isError && activities.map((activity) => {
-            const Icon = getActivityIcon(activity.type);
-            const colorClass = getActivityColor(activity.type);
-            const statusConfig = STATUS_CONFIG[activity.status];
-
-            return (
-              <Card
-                key={activity.id}
-                className='hover:shadow-md transition-shadow cursor-pointer'
-                onClick={() => handleViewActivity(activity.id)}
-              >
+          {!activityQuery.isLoading &&
+            !activityQuery.isError &&
+            activities.length > 0 && (
+              <Card className='mb-3'>
                 <CardContent className='p-4'>
-                  <div className='flex items-start gap-4'>
-                    {/* Icon */}
-                    <div
-                      className={cn(
-                        'p-2.5 rounded-xl',
-                        colorClass.split(' ')[1]
-                      )}
-                    >
-                      <Icon
-                        className={cn('h-5 w-5', colorClass.split(' ')[0])}
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex items-start justify-between gap-2'>
-                        <div>
-                          <h3 className='font-semibold text-sm'>
-                            {activity.subject}
-                          </h3>
-                          <p className='text-sm text-muted-foreground mt-0.5 line-clamp-1'>
-                            {activity.description}
-                          </p>
-                        </div>
-                        <Badge className={cn('shrink-0', statusConfig.color)}>
-                          {statusConfig.label}
-                        </Badge>
-                      </div>
-
-                      <div className='flex items-center gap-4 mt-3 text-xs text-muted-foreground'>
-                        <span className='flex items-center gap-1'>
-                          <Calendar className='h-3.5 w-3.5' />
-                          {formatDate(activity.scheduledDate)}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          {activity.relatedTo.type}: {activity.relatedTo.name}
-                        </span>
-                        <span>•</span>
-                        <span>Assigned: {activity.assignedToName}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <label className='flex items-center gap-3 cursor-pointer'>
+                    <input
+                      type='checkbox'
+                      checked={selectedActivityIds.size === activities.length}
+                      onChange={handleSelectAll}
+                      className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                    />
+                    <span className='text-sm font-medium'>
+                      Select all ({activities.length})
+                    </span>
+                  </label>
                 </CardContent>
               </Card>
-            );
-          })}
+            )}
 
-          {!activityQuery.isLoading && !activityQuery.isError && activities.length === 0 && (
-            <Card>
-              <CardContent className='py-16 text-center'>
-                <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
-                  <Calendar className='w-10 h-10 text-muted-foreground' />
-                </div>
-                <h3 className='text-lg font-semibold mb-2'>
-                  No activities found
-                </h3>
-                <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                  {hasActiveFilters
-                    ? 'Try adjusting your filters.'
-                    : 'Start by logging your first activity.'}
-                </p>
-                {hasActiveFilters ? (
-                  <Button variant='outline' onClick={clearFilters}>
-                    Clear Filters
-                  </Button>
-                ) : (
-                  <Button>
-                    <Plus className='h-4 w-4 mr-2' />
-                    Log First Activity
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {!activityQuery.isLoading &&
+            !activityQuery.isError &&
+            activities.map((activity: Activity) => {
+              const Icon = getActivityIcon(activity.type);
+              const colorClass = getActivityColor(activity.type);
+              const statusConfig = STATUS_CONFIG[activity.status];
+              const isSelected = selectedActivityIds.has(activity.id);
+
+              return (
+                <Card
+                  key={activity.id}
+                  className={cn(
+                    'hover:shadow-md transition-shadow',
+                    isSelected && 'ring-2 ring-primary'
+                  )}
+                >
+                  <CardContent className='p-4'>
+                    <div className='flex items-start gap-4'>
+                      {/* Checkbox */}
+                      <input
+                        type='checkbox'
+                        checked={isSelected}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSelectActivity(activity.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className='mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer'
+                      />
+
+                      {/* Icon */}
+                      <div
+                        className={cn(
+                          'p-2.5 rounded-xl cursor-pointer',
+                          colorClass.split(' ')[1]
+                        )}
+                        onClick={() => handleViewActivity(activity.id)}
+                      >
+                        <Icon
+                          className={cn('h-5 w-5', colorClass.split(' ')[0])}
+                        />
+                      </div>
+
+                      {/* Content */}
+                      <div
+                        className='flex-1 min-w-0 cursor-pointer'
+                        onClick={() => handleViewActivity(activity.id)}
+                      >
+                        <div className='flex items-start justify-between gap-2'>
+                          <div>
+                            <h3 className='font-semibold text-sm'>
+                              {activity.subject}
+                            </h3>
+                            <p className='text-sm text-muted-foreground mt-0.5 line-clamp-1'>
+                              {activity.description}
+                            </p>
+                          </div>
+                          <Badge className={cn('shrink-0', statusConfig.color)}>
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+
+                        <div className='flex items-center gap-4 mt-3 text-xs text-muted-foreground'>
+                          <span className='flex items-center gap-1'>
+                            <Calendar className='h-3.5 w-3.5' />
+                            {formatDate(activity.scheduledDate)}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {activity.relatedTo.type}: {activity.relatedTo.name}
+                          </span>
+                          <span>•</span>
+                          <span>Assigned: {activity.assignedToName}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+          {!activityQuery.isLoading &&
+            !activityQuery.isError &&
+            activities.length === 0 && (
+              <Card>
+                <CardContent className='py-16 text-center'>
+                  <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
+                    <Calendar className='w-10 h-10 text-muted-foreground' />
+                  </div>
+                  <h3 className='text-lg font-semibold mb-2'>
+                    No activities found
+                  </h3>
+                  <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
+                    {hasActiveFilters
+                      ? 'Try adjusting your filters.'
+                      : 'Start by logging your first activity.'}
+                  </p>
+                  {hasActiveFilters ? (
+                    <Button variant='outline' onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  ) : (
+                    <Button>
+                      <Plus className='h-4 w-4 mr-2' />
+                      Log First Activity
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
         </div>
       )}
 

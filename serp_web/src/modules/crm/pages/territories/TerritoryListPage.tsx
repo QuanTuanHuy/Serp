@@ -6,14 +6,7 @@ import { getErrorMessage } from '@/lib/store/api';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button, Card, CardContent, Input } from '@/shared/components/ui';
 import { toast } from 'sonner';
-import {
-  Search,
-  Plus,
-  Grid3X3,
-  List,
-  MapPin,
-  X,
-} from 'lucide-react';
+import { Search, Plus, Grid3X3, List, MapPin, X } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { TerritoryCard } from '../../components/cards/TerritoryCard';
 import { TerritoryForm } from '../../components/forms/TerritoryForm';
@@ -387,7 +380,6 @@ export const TerritoryListPage: React.FC<TerritoryListPageProps> = ({
           </CardContent>
         </Card>
       )}
-
     </div>
   );
 };

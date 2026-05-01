@@ -17,7 +17,17 @@ import type {
   Lead,
   LeadFilters,
   PaginationParams,
+  ActivityFilters,
+  ActivityStats,
+  BulkActivityRequest,
+  BulkActivityResult,
 } from '../types';
+
+export type BulkActivityRequestPayload = {
+  activityIds: number[];
+  action: BulkActivityRequest['action'];
+  assigneeId?: number;
+};
 
 type GeneralResponse<T> = {
   status: string;
@@ -94,6 +104,11 @@ type BackendActivity = {
   opportunityId?: number | string | null;
   contactId?: number | string | null;
   assignedTo?: number | string | null;
+  assignedToName?: string | null;
+  relatedLeadName?: string | null;
+  relatedCustomerName?: string | null;
+  relatedOpportunityName?: string | null;
+  relatedContactName?: string | null;
   activityDate?: number | string | null;
   dueDate?: number | string | null;
   reminderDate?: number | string | null;
@@ -291,7 +306,7 @@ export const mapBackendActivityToActivity = (
   duration: activity.durationMinutes || undefined,
   priority: (activity.priority as Activity['priority']) || 'MEDIUM',
   assignedTo: String(activity.assignedTo || ''),
-  assignedToName: 'Unassigned',
+  assignedToName: activity.assignedToName || 'Unassigned',
   relatedTo: {
     type: activity.accountId
       ? 'CUSTOMER'
@@ -299,9 +314,19 @@ export const mapBackendActivityToActivity = (
         ? 'LEAD'
         : 'OPPORTUNITY',
     id: String(
-      activity.accountId || activity.leadId || activity.opportunityId || activity.contactId || ''
+      activity.accountId ||
+        activity.leadId ||
+        activity.opportunityId ||
+        activity.contactId ||
+        ''
     ),
-    name: activity.subject || 'Related item',
+    name:
+      activity.relatedCustomerName ||
+      activity.relatedLeadName ||
+      activity.relatedOpportunityName ||
+      activity.relatedContactName ||
+      activity.subject ||
+      'Related item',
   },
   participants: [],
   location: activity.location || undefined,
@@ -311,7 +336,9 @@ export const mapBackendActivityToActivity = (
   tags: [],
   customFields: {
     notes: activity.notes || undefined,
-    reminderDate: activity.reminderDate ? toIsoString(activity.reminderDate) : undefined,
+    reminderDate: activity.reminderDate
+      ? toIsoString(activity.reminderDate)
+      : undefined,
     attachments: activity.attachments || [],
     contactId: activity.contactId ? String(activity.contactId) : undefined,
   },
@@ -890,3 +917,77 @@ export const mapActivityArrayResponse = (
 export const mapActivityFormToBackendPayload = (
   data: CreateActivityRequest | UpdateActivityRequest
 ): CreateActivityRequest | UpdateActivityRequest => data;
+
+const toEpochMillis = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+export const mapActivityFiltersToBackendRequest = (
+  filters: ActivityFilters,
+  pagination: PaginationParams
+) => ({
+  keyword: filters.keyword?.trim() || undefined,
+  types: filters.types && filters.types.length > 0 ? filters.types : undefined,
+  statuses:
+    filters.statuses && filters.statuses.length > 0
+      ? filters.statuses
+      : undefined,
+  priorities:
+    filters.priorities && filters.priorities.length > 0
+      ? filters.priorities
+      : undefined,
+  assignedTo: filters.assignedTo ? Number(filters.assignedTo) : undefined,
+  leadId: filters.leadId ? Number(filters.leadId) : undefined,
+  accountId: filters.accountId ? Number(filters.accountId) : undefined,
+  opportunityId: filters.opportunityId
+    ? Number(filters.opportunityId)
+    : undefined,
+  contactId: filters.contactId ? Number(filters.contactId) : undefined,
+  activityDateFrom: toEpochMillis(filters.activityDateFrom),
+  activityDateTo: toEpochMillis(filters.activityDateTo),
+  dueDateFrom: toEpochMillis(filters.dueDateFrom),
+  dueDateTo: toEpochMillis(filters.dueDateTo),
+  page: pagination.page,
+  size: pagination.limit,
+  sortBy: pagination.sortBy || undefined,
+  sortDirection: pagination.sortOrder?.toUpperCase() || undefined,
+});
+
+export const mapBackendStatsToActivityStats = (
+  response: GeneralResponse<ActivityStats>
+): APIResponse<ActivityStats> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    todayCount: response.data?.todayCount || 0,
+    weekCount: response.data?.weekCount || 0,
+    averagePerDay: response.data?.averagePerDay || 0,
+    mostActiveHour: response.data?.mostActiveHour || '00:00',
+  },
+});
+
+export const mapBulkActivityRequestToBackend = (
+  request: BulkActivityRequest
+): BulkActivityRequestPayload => ({
+  activityIds: request.activityIds.map(Number),
+  action: request.action,
+  assigneeId: request.assigneeId ? Number(request.assigneeId) : undefined,
+});
+
+export const mapBulkActivityResponse = (
+  response: GeneralResponse<BulkActivityResult>
+): APIResponse<BulkActivityResult> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    successCount: response.data?.successCount || 0,
+    failedCount: response.data?.failedCount || 0,
+    message: response.data?.message || response.message || undefined,
+  },
+});
