@@ -15,6 +15,7 @@ import {
   Grid3X3,
   List,
   Plus,
+  RefreshCcw,
   Search,
   SlidersHorizontal,
   X,
@@ -43,7 +44,7 @@ const STATUS_OPTIONS: Array<{ value: PlanOptimizationStatus; label: string }> =
     { value: 'DRAFT', label: 'Nháp' },
     { value: 'OPTIMIZING', label: 'Đang tối ưu' },
     { value: 'COMPLETED', label: 'Đã tối ưu' },
-    { value: 'FAILED', label: 'Thất bại' },
+    { value: 'FAILED', label: 'Tối ưu thất bại' },
   ];
 
 const buildFallbackFacility = (facilityId?: string): Facility => ({
@@ -91,6 +92,7 @@ export const DeliveryPlanListPage: React.FC = () => {
 
   const {
     data: plansResponse,
+    isFetching,
     isLoading,
     error,
     refetch,
@@ -156,6 +158,10 @@ export const DeliveryPlanListPage: React.FC = () => {
       filters.deliveryDate
   );
 
+  const handleRefreshData = () => {
+    refetch();
+  };
+
   const handleSearch = () => {
     setFilters((prev) => ({
       ...prev,
@@ -178,22 +184,32 @@ export const DeliveryPlanListPage: React.FC = () => {
     <div className='space-y-6'>
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Kế hoạch giao</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>
+            Kế hoạch giao hàng
+          </h1>
           <p className='text-muted-foreground'>
             Theo dõi và điều phối kế hoạch giao hàng
           </p>
         </div>
 
         <div className='flex flex-wrap items-center gap-2'>
-          <Button variant='outline' onClick={() => refetch()} className='gap-2'>
-            Làm mới
+          <Button
+            variant='outline'
+            className='border-slate-300 bg-white/90 text-slate-700 hover:bg-white'
+            onClick={handleRefreshData}
+            disabled={isFetching}
+          >
+            <RefreshCcw
+              className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin text-emerald-600' : ''}`}
+            />
+            {isFetching ? 'Đang tải...' : 'Làm mới'}
           </Button>
           <Button
             onClick={() => router.push('/logistics2/delivery-plans/create')}
             className='gap-2'
           >
             <Plus className='h-4 w-4' />
-            Tạo kế hoạch
+            Tạo mới kế hoạch
           </Button>
         </div>
       </div>
@@ -218,7 +234,7 @@ export const DeliveryPlanListPage: React.FC = () => {
           variant='success'
         />
         <StatsCard
-          title='Thất bại'
+          title='Tối ưu thất bại'
           value={stats.failed}
           icon={CalendarDays}
           variant='danger'

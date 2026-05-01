@@ -2,6 +2,8 @@ package serp.project.logistics2.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -242,7 +244,24 @@ public class DeliveryPlanService {
             Long tenantId,
             int page, int size, String sortBy, String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
-        return deliveryPlanRepository.search(query, facilityId, deliveryDate, optimizationStatus, tenantId, pageable);
+        var planPage = deliveryPlanRepository.search(query, facilityId, deliveryDate, optimizationStatus, tenantId, pageable);
+
+        List<String> vehicleIds = planPage.getContent().stream()
+                .flatMap(plan -> plan.getVehicleShippers().stream())
+                .map(VehicleShipperEntity::getVehicleId)
+                .distinct()
+                .toList();
+        List<VehicleEntity> vehicles = vehicleRepository.findAllById(vehicleIds);
+        Map<String, VehicleEntity> vehicleMap = vehicles.stream().collect(Collectors.toMap(VehicleEntity::getId, v -> v));
+
+        planPage.getContent().forEach(plan -> {
+            plan.getVehicleShippers().forEach(vs -> {
+                VehicleEntity vehicle = vehicleMap.get(vs.getVehicleId());
+                vs.setVehicle(vehicle);
+            });
+        });
+
+        return planPage;
     }
 
 }

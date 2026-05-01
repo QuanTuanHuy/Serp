@@ -50,6 +50,7 @@ import {
   useGetDeliveryPlanDetailQuery,
   useGetDeliverySlipsQuery,
   useGetFacilitiesQuery,
+  useGetFacilityDetailQuery,
   useGetRoutesQuery,
   useGetVehicleShippersQuery,
   useOptimizeDeliveryPlanMutation,
@@ -88,7 +89,7 @@ const PLAN_STATUS_META: Record<
     icon: CheckCircle2,
   },
   FAILED: {
-    label: 'Thất bại',
+    label: 'Tối ưu thất bại',
     badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
     icon: AlertCircle,
   },
@@ -197,10 +198,12 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
 
   const plan = planResponse?.data;
 
-  const { data: facilitiesResponse } = useGetFacilitiesQuery({
-    filters: {},
-    pagination: { page: 0, size: 200 },
-  });
+  const { data: facilityResponse } = useGetFacilityDetailQuery(
+    plan?.facilityId ?? '',
+    {
+      skip: !plan?.facilityId,
+    }
+  );
 
   const isDraft = plan?.optimizationStatus === 'DRAFT';
 
@@ -273,17 +276,15 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
     );
   }, [plan?.id]);
 
-  const facilityMap = useMemo(() => {
-    const map = new Map<string, Facility>();
+  const facilityData =
+    facilityResponse?.data || buildFallbackFacility(plan?.facilityId);
 
-    (facilitiesResponse?.data?.items || []).forEach((facility) => {
-      map.set(facility.id, facility);
-    });
-
-    return map;
-  }, [facilitiesResponse]);
-
-  const slips = slipsResponse?.data?.items || [];
+  const slips = useMemo(() => {
+    const allSlips = slipsResponse?.data?.items || [];
+    return allSlips.filter(
+      (slip) => slip.status === 'ASSIGNED' || slip.status === 'PENDING'
+    );
+  }, [slipsResponse]);
 
   const availableSlips = useMemo(() => {
     const keyword = searchSlipValue.trim().toLowerCase();
@@ -486,10 +487,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
   const statusMeta =
     PLAN_STATUS_META[plan.optimizationStatus] || PLAN_STATUS_META.DRAFT;
   const StatusIcon = statusMeta.icon;
-  const facility =
-    plan.facility ||
-    facilityMap.get(plan.facilityId) ||
-    buildFallbackFacility(plan.facilityId);
+  const facility = plan.facility || buildFallbackFacility(plan.facilityId);
   const routes = routesResponse?.data?.items || [];
 
   return (
@@ -592,7 +590,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               <CardContent className='grid gap-4 sm:grid-cols-2'>
                 <div>
                   <Label className='text-muted-foreground'>Kho giao</Label>
-                  <p className='font-medium'>{facility.name}</p>
+                  <p className='font-medium'>{facilityData.name}</p>
                 </div>
                 <div>
                   <Label className='text-muted-foreground'>Ngày giao</Label>
@@ -601,8 +599,10 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                   </p>
                 </div>
                 <div>
-                  <Label className='text-muted-foreground'>Người tạo</Label>
-                  <p className='font-medium'>#{plan.createdByUserId}</p>
+                  <Label className='text-muted-foreground'>Địa chỉ kho</Label>
+                  <p className='font-medium'>
+                    {facilityData.address?.fullAddress || 'Chưa có địa chỉ'}
+                  </p>
                 </div>
                 <div>
                   <Label className='text-muted-foreground'>
@@ -621,19 +621,19 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               </CardHeader>
               <CardContent className='space-y-3 text-sm'>
                 <div className='flex items-center justify-between'>
-                  <span className='text-muted-foreground'>Phiếu giao</span>
+                  <span className='text-muted-foreground'>Số đơn hàng</span>
                   <span className='font-medium'>
                     {formatNumber(plan.totalSlips)}
                   </span>
                 </div>
                 <div className='flex items-center justify-between'>
-                  <span className='text-muted-foreground'>Xe giao</span>
+                  <span className='text-muted-foreground'>Số xe giao</span>
                   <span className='font-medium'>
                     {formatNumber(plan.totalVehicles)}
                   </span>
                 </div>
                 <div className='flex items-center justify-between'>
-                  <span className='text-muted-foreground'>Lộ trình</span>
+                  <span className='text-muted-foreground'>Số lộ trình</span>
                   <span className='font-medium'>{routes.length}</span>
                 </div>
                 <div className='flex items-center justify-between'>
@@ -680,15 +680,15 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               <CardHeader>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
                   <div>
-                    <h3 className='font-semibold'>Danh sách phiếu giao</h3>
+                    <h3 className='font-semibold'>Danh sách đơn hàng</h3>
                     <p className='text-sm text-muted-foreground'>
                       {isDraft
-                        ? 'Chọn phiếu giao thuộc kho đã chọn.'
-                        : 'Danh sách phiếu giao của kế hoạch.'}
+                        ? 'Chọn đơn hàng thuộc kho đã chọn.'
+                        : 'Danh sách đơn hàng của kế hoạch.'}
                     </p>
                   </div>
                   <Badge variant='outline'>
-                    {selectedSlipIds.length} phiếu
+                    {selectedSlipIds.length} đơn hàng
                   </Badge>
                 </div>
               </CardHeader>
@@ -735,12 +735,19 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                             SLIP_STATUS_META.PENDING;
 
                           return (
-                            <button
-                              type='button'
+                            <div
+                              role='button'
                               key={slip.id}
+                              tabIndex={0}
                               onClick={() => toggleSlip(slip.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  toggleSlip(slip.id);
+                                }
+                              }}
                               className={cn(
-                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition',
+                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition cursor-pointer',
                                 isSelected
                                   ? 'border-primary/60 bg-primary/5'
                                   : 'hover:bg-muted/40'
@@ -778,7 +785,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                                     : ''}
                                 </p>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                     </div>
@@ -788,7 +795,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                     className={cn(
                       'gap-4',
                       plan.slips?.length
-                        ? 'grid grid-cols-1 md:grid-cols-2'
+                        ? 'grid grid-cols-1 md:grid-cols-1'
                         : 'flex flex-col'
                     )}
                   >
@@ -874,12 +881,19 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                             VEHICLE_STATUS_META.ACTIVE;
 
                           return (
-                            <button
-                              type='button'
+                            <div
+                              role='button'
                               key={shipper.id}
+                              tabIndex={0}
                               onClick={() => toggleVehicleShipper(shipper.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  toggleVehicleShipper(shipper.id);
+                                }
+                              }}
                               className={cn(
-                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition',
+                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition cursor-pointer',
                                 isSelected
                                   ? 'border-primary/60 bg-primary/5'
                                   : 'hover:bg-muted/40'
@@ -914,7 +928,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
                                     : ''}
                                 </p>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                     </div>

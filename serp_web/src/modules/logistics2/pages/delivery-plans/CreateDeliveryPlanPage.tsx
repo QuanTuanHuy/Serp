@@ -132,6 +132,7 @@ export const CreateDeliveryPlanPage = () => {
       ? {
           filters: {
             facilityId,
+            status: 'PENDING',
           },
           pagination: { page: 0, size: 200 },
         }
@@ -427,7 +428,8 @@ export const CreateDeliveryPlanPage = () => {
                 <div className='space-y-2 p-3'>
                   {!facilityId && (
                     <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                      Vui lòng chọn kho giao để hiển thị phiếu giao.
+                      Vui lòng chọn kho giao để hiển thị các phiếu giao từ kho
+                      đó.
                     </div>
                   )}
 
@@ -458,10 +460,21 @@ export const CreateDeliveryPlanPage = () => {
                         SLIP_STATUS_META.PENDING;
 
                       return (
-                        <button
-                          type='button'
+                        <div
+                          role='button'
+                          tabIndex={0}
                           key={slip.id}
                           onClick={() => toggleSlip(slip.id)}
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === 'Enter' ||
+                              e.key === ' ' ||
+                              e.key === 'Spacebar'
+                            ) {
+                              e.preventDefault();
+                              toggleSlip(slip.id);
+                            }
+                          }}
                           className={cn(
                             'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition',
                             isSelected
@@ -496,7 +509,7 @@ export const CreateDeliveryPlanPage = () => {
                                 : ''}
                             </p>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                 </div>
@@ -511,7 +524,7 @@ export const CreateDeliveryPlanPage = () => {
                   <h3 className='font-semibold'>Xe giao hàng</h3>
                   <p className='text-sm text-muted-foreground'>
                     {deliveryDate
-                      ? 'Chỉ hiển thị xe hoạt động đúng ngày giao.'
+                      ? 'Hãy chọn xe hoạt động ngày giao chỉ định.'
                       : 'Hãy chọn ngày giao trước.'}
                   </p>
                 </div>
@@ -531,7 +544,8 @@ export const CreateDeliveryPlanPage = () => {
                 <div className='space-y-2 p-3'>
                   {!deliveryDate && (
                     <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                      Vui lòng chọn ngày giao để hiển thị xe giao.
+                      Vui lòng chọn ngày giao để hiển thị các xe hoạt động vào
+                      ngày đó.
                     </div>
                   )}
 
@@ -564,10 +578,21 @@ export const CreateDeliveryPlanPage = () => {
                         VEHICLE_STATUS_META.ACTIVE;
 
                       return (
-                        <button
-                          type='button'
+                        <div
+                          role='button'
+                          tabIndex={0}
                           key={shipper.id}
                           onClick={() => toggleVehicleShipper(shipper.id)}
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === 'Enter' ||
+                              e.key === ' ' ||
+                              e.key === 'Spacebar'
+                            ) {
+                              e.preventDefault();
+                              toggleVehicleShipper(shipper.id);
+                            }
+                          }}
                           className={cn(
                             'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition',
                             isSelected
@@ -602,7 +627,7 @@ export const CreateDeliveryPlanPage = () => {
                                 : ''}
                             </p>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                 </div>
