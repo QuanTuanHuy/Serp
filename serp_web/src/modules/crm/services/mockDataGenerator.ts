@@ -518,16 +518,13 @@ export const generateMockActivities = (
     }
 
     const isCompleted = randomBool();
-    const isOverdue = !isCompleted && randomBool();
 
     const activity: Activity = {
       id: randomId(),
       type: activityType,
-      status: isOverdue
-        ? 'OVERDUE'
-        : isCompleted
-          ? 'COMPLETED'
-          : randomElement(['PLANNED', 'IN_PROGRESS'] as ActivityStatus[]),
+      status: isCompleted
+        ? 'COMPLETED'
+        : randomElement(['PLANNED', 'CANCELLED'] as ActivityStatus[]),
       subject: randomElement(subjects[activityType]),
       description: randomBool()
         ? 'Detailed discussion about requirements and next steps.'

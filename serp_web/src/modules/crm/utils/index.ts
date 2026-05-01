@@ -4,3 +4,4 @@
  */
 
 export * from './export';
+export * from './activity-status';

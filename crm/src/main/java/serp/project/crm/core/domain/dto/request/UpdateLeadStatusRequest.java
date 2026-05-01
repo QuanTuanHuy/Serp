@@ -6,11 +6,14 @@
 package serp.project.crm.core.domain.dto.request;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.LeadStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,22 +22,52 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Data
 @Builder
-public class ConvertLeadRequest {
-    private Long leadId;
+public class UpdateLeadStatusRequest {
 
-    @Builder.Default
-    private Boolean createOpportunity = true;
+    private LeadStatus fromStatus;
 
-    @Builder.Default
-    private Boolean createAccount = true;
+    @NotNull(message = "Target lead status is required")
+    private LeadStatus toStatus;
 
-    private Long existingAccountId;
-
-    @Valid
-    private OpportunityData opportunityData;
+    @Size(max = 1000, message = "Status update notes must not exceed 1000 characters")
+    private String notes;
 
     @Valid
-    private AccountData accountData;
+    private QualificationData qualification;
+
+    @Valid
+    private ConversionData conversion;
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Data
+    @Builder
+    public static class QualificationData {
+        private Boolean budgetConfirmed;
+        private Boolean hasAuthority;
+        private Boolean needIdentified;
+        private Boolean timelineEstablished;
+    }
+
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Data
+    @Builder
+    public static class ConversionData {
+        @Builder.Default
+        private Boolean createOpportunity = true;
+
+        @Builder.Default
+        private Boolean createAccount = true;
+
+        private Long existingAccountId;
+
+        @Valid
+        private OpportunityData opportunityData;
+
+        @Valid
+        private AccountData accountData;
+    }
 
     @NoArgsConstructor
     @AllArgsConstructor

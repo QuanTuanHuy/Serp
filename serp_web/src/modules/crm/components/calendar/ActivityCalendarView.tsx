@@ -49,10 +49,12 @@ import {
 import { ActivityEventCard } from './ActivityEventCard';
 import type {
   Activity,
+  ActivityDisplayStatus,
   ActivityType,
   ActivityStatus,
   Priority,
 } from '../../types';
+import { getActivityDisplayStatus } from '../../utils';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop<CRMCalendarEvent, object>(Calendar);
@@ -123,10 +125,9 @@ const EVENT_COLORS: Record<
   },
 };
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<ActivityDisplayStatus, string> = {
   PLANNED: 'bg-blue-100 text-blue-700',
   COMPLETED: 'bg-green-100 text-green-700',
-  IN_PROGRESS: 'bg-amber-100 text-amber-700',
   CANCELLED: 'bg-gray-100 text-gray-600',
   OVERDUE: 'bg-red-100 text-red-700',
 };
@@ -210,8 +211,9 @@ export function ActivityCalendarView({
   filters,
 }: ActivityCalendarViewProps) {
   const router = useRouter();
-  const [selectedEvent, setSelectedEvent] =
-    useState<CRMCalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CRMCalendarEvent | null>(
+    null
+  );
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverAnchorRef = useRef<HTMLDivElement>(null);
   const [popoverPosition, setPopoverPosition] = useState<{
@@ -238,10 +240,8 @@ export function ActivityCalendarView({
     };
   }, [date, view]);
 
-  const {
-    data: activitiesData,
-    isLoading,
-  } = useGetUpcomingActivitiesQuery(dateRange);
+  const { data: activitiesData, isLoading } =
+    useGetUpcomingActivitiesQuery(dateRange);
   const [rescheduleActivity] = useRescheduleActivityMutation();
   const [updateActivity] = useUpdateActivityMutation();
   const [completeActivity] = useCompleteActivityMutation();
@@ -257,9 +257,7 @@ export function ActivityCalendarView({
       filtered = filtered.filter((a) => filters.types!.includes(a.type));
     }
     if (filters?.statuses && filters.statuses.length > 0) {
-      filtered = filtered.filter((a) =>
-        filters.statuses!.includes(a.status)
-      );
+      filtered = filtered.filter((a) => filters.statuses!.includes(a.status));
     }
     if (filters?.priorities && filters.priorities.length > 0) {
       filtered = filtered.filter(
@@ -273,8 +271,7 @@ export function ActivityCalendarView({
   // Event style customization
   const eventStyleGetter = useCallback((event: CRMCalendarEvent) => {
     const activity = event.resource;
-    const colors =
-      EVENT_COLORS[activity.type] || EVENT_COLORS.TASK;
+    const colors = EVENT_COLORS[activity.type] || EVENT_COLORS.TASK;
     const dark = isDarkMode();
     const isInactive =
       activity.status === 'COMPLETED' || activity.status === 'CANCELLED';
@@ -299,16 +296,12 @@ export function ActivityCalendarView({
       start: string | Date;
     }) => {
       const activity = event.resource;
-      if (
-        activity.status === 'COMPLETED' ||
-        activity.status === 'CANCELLED'
-      ) {
+      if (activity.status === 'COMPLETED' || activity.status === 'CANCELLED') {
         toast.error('Cannot reschedule completed or cancelled activities');
         return;
       }
 
-      const newStart =
-        typeof start === 'string' ? new Date(start) : start;
+      const newStart = typeof start === 'string' ? new Date(start) : start;
       const newDueDate = newStart.getTime();
 
       try {
@@ -336,18 +329,12 @@ export function ActivityCalendarView({
       end: string | Date;
     }) => {
       const activity = event.resource;
-      if (
-        activity.status === 'COMPLETED' ||
-        activity.status === 'CANCELLED'
-      ) {
-        toast.error(
-          'Cannot modify completed or cancelled activities'
-        );
+      if (activity.status === 'COMPLETED' || activity.status === 'CANCELLED') {
+        toast.error('Cannot modify completed or cancelled activities');
         return;
       }
 
-      const startDate =
-        typeof start === 'string' ? new Date(start) : start;
+      const startDate = typeof start === 'string' ? new Date(start) : start;
       const endDate = typeof end === 'string' ? new Date(end) : end;
       const newDuration = Math.round(
         (endDate.getTime() - startDate.getTime()) / 60000
@@ -444,7 +431,9 @@ export function ActivityCalendarView({
 
   if (isLoading) {
     return (
-      <div className={cn('flex items-center justify-center h-[600px]', className)}>
+      <div
+        className={cn('flex items-center justify-center h-[600px]', className)}
+      >
         <div className='text-muted-foreground animate-pulse'>
           Loading calendar...
         </div>
@@ -529,11 +518,11 @@ export function ActivityCalendarView({
                 <Badge
                   className={cn(
                     'text-[10px] px-1.5 py-0',
-                    STATUS_COLORS[selectedActivity.status] ||
+                    STATUS_COLORS[getActivityDisplayStatus(selectedActivity)] ||
                       STATUS_COLORS.PLANNED
                   )}
                 >
-                  {selectedActivity.status}
+                  {getActivityDisplayStatus(selectedActivity)}
                 </Badge>
                 {selectedActivity.priority && (
                   <Badge variant='outline' className='text-[10px] px-1.5 py-0'>
