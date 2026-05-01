@@ -73,6 +73,12 @@ public class ErrorMessage {
     public static final String ACTIVITY_PROGRESS_INVALID = "Activity progressPercent must be between 0 and 100";
     public static final String ACTIVITY_DURATION_INVALID = "Activity durationMinutes must be greater than zero";
     public static final String ACTIVITY_DUE_DATE_REQUIRED_FOR_TASK = "Due date is required for task activities";
+
+    // Meeting request errors
+    public static final String MEETING_REQUEST_NOT_FOUND = "Meeting request not found";
+    public static final String MEETING_REQUEST_INVALID_WINDOW = "Meeting request has an invalid scheduling window";
+    public static final String MEETING_REQUEST_ALREADY_FINALIZED = "Meeting request is already finalized";
+    public static final String MEETING_REQUEST_SUBJECT_REQUIRED = "Meeting request subject is required";
     
     // Team errors
     public static final String TEAM_NOT_FOUND = "Team not found";

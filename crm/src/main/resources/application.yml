@@ -59,6 +59,10 @@ app:
       publicUrls:
       protectedUrls:
 
+  scheduler:
+    meeting:
+      interval-ms: 300000
+
 
 server:
   port: 8086
