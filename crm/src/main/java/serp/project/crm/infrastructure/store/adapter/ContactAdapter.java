@@ -109,4 +109,11 @@ public class ContactAdapter implements IContactPort {
         contactRepository.findByIdAndTenantId(id, tenantId)
                 .ifPresent(contactRepository::delete);
     }
+
+    @Override
+    public List<ContactEntity> findByIds(List<Long> ids, Long tenantId) {
+        return contactRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(contactMapper::toEntity)
+                .toList();
+    }
 }

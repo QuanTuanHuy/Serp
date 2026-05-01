@@ -7,14 +7,18 @@ package serp.project.crm.core.service;
 
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
+import serp.project.crm.core.domain.enums.TaskPriority;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.Map;
 
 public interface IActivityService {
 
@@ -45,4 +49,16 @@ public interface IActivityService {
     void deleteActivity(Long id, Long tenantId);
 
     void validateRelations(ActivityEntity activity, Long tenantId);
+
+    Pair<List<ActivityEntity>, Long> filterActivities(ActivityFilterRequest filterRequest, Long tenantId);
+
+    Map<String, Long> getActivityStats(Long tenantId);
+
+    Map<String, Integer> bulkCompleteActivities(Set<Long> activityIds, Long userId, Long tenantId);
+
+    Map<String, Integer> bulkCancelActivities(Set<Long> activityIds, Long userId, Long tenantId);
+
+    Map<String, Integer> bulkDeleteActivities(Set<Long> activityIds, Long tenantId);
+
+    Map<String, Integer> bulkReassignActivities(Set<Long> activityIds, Long newAssigneeId, Long userId, Long tenantId);
 }

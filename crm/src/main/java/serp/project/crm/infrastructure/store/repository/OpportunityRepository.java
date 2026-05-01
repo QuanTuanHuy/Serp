@@ -60,4 +60,6 @@ public interface OpportunityRepository
             @Param("stage") String stage);
 
     boolean existsByTenantIdAndAccountIdAndName(Long tenantId, Long accountId, String name);
+
+    List<OpportunityModel> findByTenantIdAndIdIn(Long tenantId, List<Long> ids);
 }
