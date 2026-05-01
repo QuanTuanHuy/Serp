@@ -17,11 +17,12 @@ import serp.project.crm.infrastructure.store.repository.TeamMemberRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class TeamMemberAdapter implements ITeamMemberPort {
+
+    private static final int MAX_TEAM_MEMBERS_PER_QUERY = 1000;
 
     private final TeamMemberRepository teamMemberRepository;
     private final TeamMemberMapper teamMemberMapper;
@@ -102,11 +103,11 @@ public class TeamMemberAdapter implements ITeamMemberPort {
 
     @Override
     public List<TeamMemberEntity> findAllByTeamId(Long teamId, Long tenantId) {
-        var pageable = org.springframework.data.domain.PageRequest.of(0, 1000);
-        return teamMemberRepository.findByTenantIdAndTeamId(tenantId, teamId, pageable)
+        return teamMemberRepository.findByTenantIdAndTeamId(tenantId, teamId,
+                        org.springframework.data.domain.PageRequest.of(0, MAX_TEAM_MEMBERS_PER_QUERY))
                 .stream()
                 .map(teamMemberMapper::toEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -115,7 +116,7 @@ public class TeamMemberAdapter implements ITeamMemberPort {
                         TeamMemberStatus.ACTIVE.name(), roles)
                 .stream()
                 .map(teamMemberMapper::toEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

@@ -5,12 +5,15 @@
 
 package serp.project.crm.core.domain.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
+
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,6 +32,9 @@ public class UpdateTeamMemberRequest {
     
     @Size(max = 100, message = "Role must not exceed 100 characters")
     private String role;
-    
+
     private TeamMemberStatus status;
+
+    @Valid
+    private List<WorkingHoursRequest> workingHours;
 }

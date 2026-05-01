@@ -14,6 +14,8 @@ import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
 
+import java.util.List;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -27,6 +29,7 @@ public class TeamMemberEntity extends BaseEntity {
     private Long userId;
     private String role;
     private TeamMemberStatus status;
+    private List<WorkingHoursEntity> workingHours;
 
     public void updateFrom(TeamMemberEntity updates) {
         if (updates.getName() != null)
@@ -39,6 +42,8 @@ public class TeamMemberEntity extends BaseEntity {
             this.role = updates.getRole();
         if (updates.getStatus() != null)
             this.status = updates.getStatus();
+        if (updates.getWorkingHours() != null)
+            this.workingHours = updates.getWorkingHours();
     }
 
     public void setDefaults() {

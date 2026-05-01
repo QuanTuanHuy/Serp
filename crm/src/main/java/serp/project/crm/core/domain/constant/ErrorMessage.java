@@ -106,6 +106,7 @@ public class ErrorMessage {
     public static final String MEMBER_ALREADY_ACTIVE = "Member is already active";
     public static final String MEMBER_ALREADY_INACTIVE = "Member is already inactive";
     public static final String INVALID_TEAM_MEMBER_ROLE = "Invalid team member role. Must be MANAGER, SALES_REP, or VIEWER";
+    public static final String INVALID_WORKING_HOURS = "Working hours configuration is invalid";
     public static final String INVALID_TERRITORY_CODE = "One or more territory codes do not exist";
     
     // Validation errors
