@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -78,7 +79,12 @@ import {
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { Separator } from '@/shared/components/ui/separator';
 import { Activity, ActivityType, ActivityStatus, Priority } from '../../types';
-import { MOCK_ACTIVITIES } from '../../mocks';
+import {
+  useCancelActivityMutation,
+  useCompleteActivityMutation,
+  useDeleteActivityMutation,
+  useGetActivityQuery,
+} from '../../api/crmApi';
 
 interface ActivityDetailPageProps {
   activityId: string;
@@ -90,7 +96,7 @@ const ACTIVITY_TYPE_CONFIG: Record<
   { label: string; icon: React.ElementType; color: string; bgColor: string }
 > = {
   CALL: {
-    label: 'Cuộc gọi',
+    label: 'Call',
     icon: Phone,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
@@ -102,19 +108,19 @@ const ACTIVITY_TYPE_CONFIG: Record<
     bgColor: 'bg-green-100',
   },
   MEETING: {
-    label: 'Cuộc họp',
+    label: 'Meeting',
     icon: Video,
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
   },
   TASK: {
-    label: 'Công việc',
+    label: 'Task',
     icon: ListTodo,
     color: 'text-orange-600',
     bgColor: 'bg-orange-100',
   },
   NOTE: {
-    label: 'Ghi chú',
+    label: 'Note',
     icon: MessageSquare,
     color: 'text-gray-600 dark:text-gray-300',
     bgColor: 'bg-gray-100 dark:bg-gray-800',
@@ -126,13 +132,13 @@ const ACTIVITY_TYPE_CONFIG: Record<
     bgColor: 'bg-pink-100',
   },
   PROPOSAL: {
-    label: 'Đề xuất',
+    label: 'Proposal',
     icon: FileText,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-100',
   },
   FOLLOW_UP: {
-    label: 'Theo dõi',
+    label: 'Follow Up',
     icon: RefreshCw,
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-100',
@@ -169,7 +175,7 @@ const ACTIVITY_STATUS_CONFIG: Record<
     icon: AlertCircle,
   },
   OVERDUE: {
-    label: 'Quá hạn',
+    label: 'Overdue',
     color: 'text-red-700',
     bgColor: 'bg-red-100',
     icon: AlertCircle,
@@ -181,14 +187,14 @@ const PRIORITY_CONFIG: Record<
   Priority,
   { label: string; color: string; bgColor: string }
 > = {
-  LOW: { label: 'Thấp', color: 'text-green-700', bgColor: 'bg-green-100' },
+  LOW: { label: 'Low', color: 'text-green-700', bgColor: 'bg-green-100' },
   MEDIUM: {
-    label: 'Trung bình',
+    label: 'Medium',
     color: 'text-yellow-700',
     bgColor: 'bg-yellow-100',
   },
-  HIGH: { label: 'Cao', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-  URGENT: { label: 'Khẩn cấp', color: 'text-red-700', bgColor: 'bg-red-100' },
+  HIGH: { label: 'High', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+  URGENT: { label: 'Urgent', color: 'text-red-700', bgColor: 'bg-red-100' },
 };
 
 export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
@@ -200,23 +206,34 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   const [newStatus, setNewStatus] = useState<ActivityStatus | ''>('');
   const [newNote, setNewNote] = useState('');
 
-  // Find activity from mock data
-  const activity = MOCK_ACTIVITIES.find((a) => a.id === activityId);
+  const { data, isLoading, isError } = useGetActivityQuery(activityId);
+  const [completeActivity] = useCompleteActivityMutation();
+  const [cancelActivity] = useCancelActivityMutation();
+  const [deleteActivity] = useDeleteActivityMutation();
+  const activity = data?.data;
 
-  if (!activity) {
+  if (isLoading) {
+    return (
+      <div className='flex h-[60vh] items-center justify-center text-muted-foreground'>
+        Loading activity...
+      </div>
+    );
+  }
+
+  if (isError || !activity) {
     return (
       <div className='flex h-[60vh] flex-col items-center justify-center'>
         <AlertCircle className='mb-4 h-16 w-16 text-muted-foreground' />
         <h2 className='mb-2 text-xl font-semibold text-foreground'>
-          Không tìm thấy hoạt động
+          Activity not found
         </h2>
         <p className='mb-4 text-muted-foreground'>
-          Hoạt động này không tồn tại hoặc đã bị xóa
+          This activity does not exist or has been deleted
         </p>
         <Button asChild>
           <Link href='/crm/activities'>
             <ArrowLeft className='mr-2 h-4 w-4' />
-            Quay lại danh sách
+            Back to list
           </Link>
         </Button>
       </div>
@@ -231,8 +248,8 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
 
   // Format date helper
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Chưa xác định';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
+    if (!dateString) return 'TBD';
+    return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -244,14 +261,29 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
 
   // Format duration helper
   const formatDuration = (minutes?: number) => {
-    if (!minutes) return 'Chưa xác định';
+    if (!minutes) return 'TBD';
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours > 0) {
-      return `${hours} giờ ${mins > 0 ? `${mins} phút` : ''}`;
+      return `${hours}h${mins > 0 ? ` ${mins}m` : ''}`;
     }
-    return `${mins} phút`;
+    return `${mins}m`;
   };
+
+  const relatedTypeLabel = {
+    CUSTOMER: 'Account',
+    LEAD: 'Lead',
+    OPPORTUNITY: 'Opportunity',
+  }[activity.relatedTo.type];
+
+  const relatedName =
+    activity.relatedTo.name ||
+    activity.customFields?.relatedName ||
+    activity.customFields?.relatedToName ||
+    activity.customFields?.accountName ||
+    activity.customFields?.leadName ||
+    activity.customFields?.opportunityName ||
+    'Unknown';
 
   // Get related entity link
   const getRelatedLink = () => {
@@ -282,50 +314,48 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
 
   const RelatedIcon = getRelatedIcon();
 
-  // Mock related activities (would come from API)
-  const relatedActivities = MOCK_ACTIVITIES.filter(
-    (a) => a.id !== activity.id && a.relatedTo.id === activity.relatedTo.id
-  ).slice(0, 5);
+  const relatedActivities: Activity[] = [];
+  const activityNotes = activity.customFields.notes
+    ? [
+        {
+          id: activity.id,
+          author: activity.assignedToName || 'System',
+          content: String(activity.customFields.notes),
+          createdAt: activity.updatedAt,
+        },
+      ]
+    : [];
 
-  // Mock activity notes/comments
-  const activityNotes = [
-    {
-      id: '1',
-      author: 'Nguyễn Văn An',
-      content: 'Đã liên hệ khách hàng, họ rất quan tâm đến sản phẩm.',
-      createdAt: '2025-01-15T10:30:00Z',
-    },
-    {
-      id: '2',
-      author: 'Trần Thị Bình',
-      content: 'Cần chuẩn bị thêm tài liệu demo cho cuộc họp tuần sau.',
-      createdAt: '2025-01-14T14:15:00Z',
-    },
-  ];
-
-  const handleStatusChange = () => {
-    if (newStatus) {
-      // Would update via API
-      console.log('Updating status to:', newStatus);
+  const handleStatusChange = async () => {
+    try {
+      if (newStatus === 'COMPLETED') {
+        await completeActivity({ id: activityId }).unwrap();
+        toast.success('Activity completed');
+      } else if (newStatus === 'CANCELLED') {
+        await cancelActivity(activityId).unwrap();
+        toast.success('Activity cancelled');
+      }
       setShowEditStatusDialog(false);
       setNewStatus('');
+    } catch {
+      toast.error('Failed to update activity status');
     }
   };
 
   const handleAddNote = () => {
-    if (newNote.trim()) {
-      // Would add via API
-      console.log('Adding note:', newNote);
-      setShowAddNoteDialog(false);
-      setNewNote('');
-    }
+    setShowAddNoteDialog(false);
+    setNewNote('');
   };
 
-  const handleDelete = () => {
-    // Would delete via API
-    console.log('Deleting activity:', activityId);
-    setShowDeleteDialog(false);
-    router.push('/crm/activities');
+  const handleDelete = async () => {
+    try {
+      await deleteActivity(activityId).unwrap();
+      toast.success('Activity deleted');
+      setShowDeleteDialog(false);
+      router.push('/crm/activities');
+    } catch {
+      toast.error('Failed to delete activity');
+    }
   };
 
   return (
@@ -371,12 +401,12 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             onClick={() => setShowEditStatusDialog(true)}
           >
             <RefreshCw className='mr-2 h-4 w-4' />
-            Cập nhật trạng thái
+            Update status
           </Button>
           <Button variant='outline' asChild>
             <Link href={`/crm/activities/${activityId}/edit`}>
               <Edit className='mr-2 h-4 w-4' />
-              Chỉnh sửa
+              Edit
             </Link>
           </Button>
           <DropdownMenu>
@@ -388,15 +418,15 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             <DropdownMenuContent align='end'>
               <DropdownMenuItem>
                 <Copy className='mr-2 h-4 w-4' />
-                Tạo bản sao
+                Duplicate
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell className='mr-2 h-4 w-4' />
-                Đặt nhắc nhở
+                Set reminder
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <ExternalLink className='mr-2 h-4 w-4' />
-                Xuất PDF
+                Export PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -404,7 +434,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                 onClick={() => setShowDeleteDialog(true)}
               >
                 <Trash2 className='mr-2 h-4 w-4' />
-                Xóa hoạt động
+                Delete activity
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -417,12 +447,12 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
         <div className='space-y-6 lg:col-span-2'>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className='w-full justify-start'>
-              <TabsTrigger value='details'>Chi tiết</TabsTrigger>
+              <TabsTrigger value='details'>Details</TabsTrigger>
               <TabsTrigger value='notes'>
-                Ghi chú ({activityNotes.length})
+                Notes ({activityNotes.length})
               </TabsTrigger>
               <TabsTrigger value='related'>
-                Liên quan ({relatedActivities.length})
+                Related ({relatedActivities.length})
               </TabsTrigger>
             </TabsList>
 
@@ -430,11 +460,11 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               {/* Description */}
               <Card className='border-none shadow-sm'>
                 <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>Mô tả</CardTitle>
+                  <CardTitle className='text-lg font-semibold'>Description</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className='whitespace-pre-wrap text-foreground/80'>
-                    {activity.description || 'Không có mô tả'}
+                    {activity.description || 'No description'}
                   </p>
                 </CardContent>
               </Card>
@@ -443,7 +473,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               <Card className='border-none shadow-sm'>
                 <CardHeader className='pb-3'>
                   <CardTitle className='text-lg font-semibold'>
-                    Thông tin lịch trình
+                    Schedule information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='space-y-4'>
@@ -454,7 +484,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                       </div>
                       <div>
                         <p className='text-sm text-muted-foreground'>
-                          Thời gian dự kiến
+                          Scheduled time
                         </p>
                         <p className='font-medium text-foreground'>
                           {formatDate(activity.scheduledDate)}
@@ -468,7 +498,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                         </div>
                         <div>
                           <p className='text-sm text-muted-foreground'>
-                            Thời gian thực tế
+                            Actual time
                           </p>
                           <p className='font-medium text-foreground'>
                             {formatDate(activity.actualDate)}
@@ -482,7 +512,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                       </div>
                       <div>
                         <p className='text-sm text-muted-foreground'>
-                          Thời lượng
+                          Duration
                         </p>
                         <p className='font-medium text-foreground'>
                           {formatDuration(activity.duration)}
@@ -496,7 +526,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                         </div>
                         <div>
                           <p className='text-sm text-muted-foreground'>
-                            Địa điểm
+                            Location
                           </p>
                           <p className='font-medium text-foreground'>
                             {activity.location}
@@ -514,7 +544,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   <CardHeader className='pb-3'>
                     <CardTitle className='flex items-center text-lg font-semibold'>
                       <Users className='mr-2 h-5 w-5 text-muted-foreground' />
-                      Người tham gia ({activity.participants.length})
+                      Participants ({activity.participants.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -547,7 +577,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                 <Card className='border-none shadow-sm'>
                   <CardHeader className='pb-3'>
                     <CardTitle className='text-lg font-semibold'>
-                      Kết quả
+                      Outcome
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -564,14 +594,14 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   <CardHeader className='pb-3'>
                     <CardTitle className='flex items-center text-lg font-semibold text-amber-800'>
                       <Bell className='mr-2 h-5 w-5' />
-                      Cần theo dõi
+                      Follow-up required
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className='flex items-center justify-between'>
                       <div>
                         <p className='text-amber-700'>
-                          Ngày theo dõi: {formatDate(activity.followUpDate)}
+                          Follow-up date: {formatDate(activity.followUpDate)}
                         </p>
                       </div>
                       <Button
@@ -579,7 +609,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                         className='bg-amber-600 hover:bg-amber-700'
                       >
                         <Calendar className='mr-2 h-4 w-4' />
-                        Tạo hoạt động theo dõi
+                        Create follow-up activity
                       </Button>
                     </div>
                   </CardContent>
@@ -636,7 +666,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                               </p>
                               <p className='text-sm text-muted-foreground'>
                                 {new Date(note.createdAt).toLocaleDateString(
-                                  'vi-VN',
+                                  'en-US',
                                   {
                                     day: '2-digit',
                                     month: '2-digit',
@@ -660,7 +690,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                 <Card className='border-none shadow-sm'>
                   <CardContent className='flex flex-col items-center justify-center py-12'>
                     <MessageSquare className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                    <p className='text-muted-foreground'>Chưa có ghi chú nào</p>
+                    <p className='text-muted-foreground'>No notes yet</p>
                   </CardContent>
                 </Card>
               )}
@@ -715,7 +745,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   <CardContent className='flex flex-col items-center justify-center py-12'>
                     <Calendar className='mb-4 h-12 w-12 text-muted-foreground/50' />
                     <p className='text-muted-foreground'>
-                      Không có hoạt động liên quan
+                      No related activities
                     </p>
                   </CardContent>
                 </Card>
@@ -730,7 +760,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-lg font-semibold'>
-                Liên kết với
+                Linked to
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -741,12 +771,10 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   </div>
                   <div className='flex-1'>
                     <p className='text-sm text-muted-foreground'>
-                      {activity.relatedTo.type === 'CUSTOMER' && 'Khách hàng'}
-                      {activity.relatedTo.type === 'LEAD' && 'Lead'}
-                      {activity.relatedTo.type === 'OPPORTUNITY' && 'Cơ hội'}
+                      {relatedTypeLabel}
                     </p>
                     <p className='font-medium text-foreground'>
-                      {activity.relatedTo.name}
+                      {relatedName}
                     </p>
                   </div>
                   <ExternalLink className='h-4 w-4 text-muted-foreground' />
@@ -759,7 +787,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-lg font-semibold'>
-                Người phụ trách
+                Assignee
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -787,12 +815,12 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           {/* Activity Info */}
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Thông tin</CardTitle>
+              <CardTitle className='text-lg font-semibold'>Activity info</CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  Mã hoạt động
+                  Activity ID
                 </span>
                 <span className='font-mono text-sm text-foreground'>
                   #{activity.id}
@@ -800,24 +828,24 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Ngày tạo</span>
+                <span className='text-sm text-muted-foreground'>Created</span>
                 <span className='text-sm text-foreground'>
-                  {new Date(activity.createdAt).toLocaleDateString('vi-VN')}
+                  {new Date(activity.createdAt).toLocaleDateString('en-US')}
                 </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  Cập nhật lần cuối
+                  Last updated
                 </span>
                 <span className='text-sm text-foreground'>
-                  {new Date(activity.updatedAt).toLocaleDateString('vi-VN')}
+                  {new Date(activity.updatedAt).toLocaleDateString('en-US')}
                 </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
-                  Trạng thái
+                  Status
                 </span>
                 <span className={`text-sm font-medium ${statusConfig.color}`}>
                   {statusConfig.label}
@@ -830,7 +858,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-lg font-semibold'>
-                Thao tác nhanh
+                Quick actions
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-2'>
@@ -844,16 +872,16 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   }}
                 >
                   <CheckCircle className='mr-2 h-4 w-4 text-green-600' />
-                  Đánh dấu hoàn thành
+                  Mark as completed
                 </Button>
               )}
               <Button className='w-full justify-start' variant='outline'>
                 <Copy className='mr-2 h-4 w-4' />
-                Tạo hoạt động tương tự
+                Duplicate activity
               </Button>
               <Button className='w-full justify-start' variant='outline'>
                 <Calendar className='mr-2 h-4 w-4' />
-                Lên lịch lại
+                Reschedule
               </Button>
             </CardContent>
           </Card>
@@ -864,10 +892,10 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa hoạt động</DialogTitle>
+            <DialogTitle>Confirm delete activity</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa hoạt động &quot;{activity.subject}
-              &quot;? Hành động này không thể hoàn tác.
+              Are you sure you want to delete activity &quot;{activity.subject}
+              &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -875,10 +903,10 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               variant='outline'
               onClick={() => setShowDeleteDialog(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
-              Xóa hoạt động
+              Delete activity
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -891,9 +919,9 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái</DialogTitle>
+            <DialogTitle>Update status</DialogTitle>
             <DialogDescription>
-              Chọn trạng thái mới cho hoạt động này
+              Select new status for this activity
             </DialogDescription>
           </DialogHeader>
           <div className='py-4'>
@@ -902,17 +930,19 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               onValueChange={(value) => setNewStatus(value as ActivityStatus)}
             >
               <SelectTrigger>
-                <SelectValue placeholder='Chọn trạng thái' />
+                <SelectValue placeholder='Select status' />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ACTIVITY_STATUS_CONFIG).map(([key, config]) => (
-                  <SelectItem key={key} value={key}>
-                    <div className='flex items-center gap-2'>
-                      <config.icon className={`h-4 w-4 ${config.color}`} />
-                      {config.label}
-                    </div>
-                  </SelectItem>
-                ))}
+                {Object.entries(ACTIVITY_STATUS_CONFIG)
+                  .filter(([key]) => key !== 'PLANNED')
+                  .map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className='flex items-center gap-2'>
+                        <config.icon className={`h-4 w-4 ${config.color}`} />
+                        {config.label}
+                      </div>
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -921,10 +951,10 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               variant='outline'
               onClick={() => setShowEditStatusDialog(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button onClick={handleStatusChange} disabled={!newStatus}>
-              Cập nhật
+              Update
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -934,14 +964,14 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
       <Dialog open={showAddNoteDialog} onOpenChange={setShowAddNoteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Thêm ghi chú</DialogTitle>
+            <DialogTitle>Add note</DialogTitle>
             <DialogDescription>
-              Thêm ghi chú mới cho hoạt động này
+              Add a new note for this activity
             </DialogDescription>
           </DialogHeader>
           <div className='py-4'>
             <Textarea
-              placeholder='Nhập nội dung ghi chú...'
+              placeholder='Enter note content...'
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               rows={4}
@@ -952,10 +982,10 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               variant='outline'
               onClick={() => setShowAddNoteDialog(false)}
             >
-              Hủy
+              Cancel
             </Button>
             <Button onClick={handleAddNote} disabled={!newNote.trim()}>
-              Thêm ghi chú
+              Add note
             </Button>
           </DialogFooter>
         </DialogContent>

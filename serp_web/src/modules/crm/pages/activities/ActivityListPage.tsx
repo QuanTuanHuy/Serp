@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import {
   Button,
@@ -34,8 +35,17 @@ import { cn } from '@/shared/utils';
 import { ExportDropdown } from '../../components/shared';
 import { QuickAddActivityDialog } from '../../components/dialogs';
 import { ACTIVITY_EXPORT_COLUMNS } from '../../utils/export';
-import { MOCK_ACTIVITIES } from '../../mocks';
-import type { Activity, ActivityType, ActivityStatus } from '../../types';
+import {
+  useCreateActivityMutation,
+  useGetActivitiesQuery,
+  useGetOverdueActivitiesQuery,
+} from '../../api/crmApi';
+import type {
+  Activity,
+  ActivityType,
+  ActivityStatus,
+  CreateActivityRequest,
+} from '../../types';
 
 // Activity type configuration
 const ACTIVITY_TYPES: {
@@ -63,30 +73,18 @@ const ACTIVITY_TYPES: {
     color: 'text-green-600 bg-green-100',
   },
   {
-    type: 'NOTE',
-    label: 'Note',
-    icon: FileText,
-    color: 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800',
-  },
-  {
     type: 'TASK',
     label: 'Task',
     icon: CheckCircle2,
     color: 'text-orange-600 bg-orange-100',
-  },
-  {
-    type: 'FOLLOW_UP',
-    label: 'Follow Up',
-    icon: Clock,
-    color: 'text-amber-600 bg-amber-100',
   },
 ];
 
 const STATUS_CONFIG: Record<ActivityStatus, { label: string; color: string }> =
   {
     PLANNED: { label: 'Planned', color: 'bg-blue-100 text-blue-700' },
-    IN_PROGRESS: { label: 'In Progress', color: 'bg-amber-100 text-amber-700' },
     COMPLETED: { label: 'Completed', color: 'bg-green-100 text-green-700' },
+    IN_PROGRESS: { label: 'In Progress', color: 'bg-amber-100 text-amber-700' },
     CANCELLED: {
       label: 'Cancelled',
       color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
@@ -113,73 +111,38 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const pageSize = 10;
 
-  // Filter and sort activities
-  const filteredActivities = useMemo(() => {
-    let result = [...MOCK_ACTIVITIES];
+  const activityQuery = useGetActivitiesQuery({
+    filters: {
+      search: searchQuery || undefined,
+      type: typeFilter ? [typeFilter] : undefined,
+      status: statusFilter ? [statusFilter] : undefined,
+    },
+    pagination: { page: currentPage, limit: pageSize },
+  });
+  const { data: overdueData } = useGetOverdueActivitiesQuery();
+  const [createActivity, { isLoading: isCreating }] = useCreateActivityMutation();
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (activity) =>
-          activity.subject.toLowerCase().includes(query) ||
-          activity.description?.toLowerCase().includes(query) ||
-          activity.relatedTo.name.toLowerCase().includes(query)
-      );
-    }
+  const activities = useMemo(
+    () => activityQuery.data?.data?.data || [],
+    [activityQuery.data]
+  );
+  const pagination = activityQuery.data?.data?.pagination;
+  const total = pagination?.total || 0;
+  const totalPages = pagination?.totalPages || 1;
 
-    // Type filter
-    if (typeFilter) {
-      result = result.filter((activity) => activity.type === typeFilter);
-    }
-
-    // Status filter
-    if (statusFilter) {
-      result = result.filter((activity) => activity.status === statusFilter);
-    }
-
-    // Sort by scheduled date (most recent first)
-    result.sort((a, b) => {
-      const dateA = a.scheduledDate ? new Date(a.scheduledDate).getTime() : 0;
-      const dateB = b.scheduledDate ? new Date(b.scheduledDate).getTime() : 0;
-      return dateB - dateA;
-    });
-
-    return result;
-  }, [searchQuery, typeFilter, statusFilter]);
-
-  // Paginate
-  const paginatedActivities = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredActivities.slice(start, start + pageSize);
-  }, [filteredActivities, currentPage]);
-
-  const total = filteredActivities.length;
-  const totalPages = Math.ceil(total / pageSize);
-
-  // Stats
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todayActivities = MOCK_ACTIVITIES.filter(
+    const todayActivities = activities.filter(
       (a) => a.scheduledDate?.split('T')[0] === today
     );
-    const overdue = MOCK_ACTIVITIES.filter(
-      (a) =>
-        a.status === 'OVERDUE' ||
-        (a.status === 'PLANNED' &&
-          a.scheduledDate &&
-          new Date(a.scheduledDate) < new Date())
-    );
-    const planned = MOCK_ACTIVITIES.filter((a) => a.status === 'PLANNED');
-    const completed = MOCK_ACTIVITIES.filter((a) => a.status === 'COMPLETED');
 
     return {
       today: todayActivities.length,
-      overdue: overdue.length,
-      planned: planned.length,
-      completed: completed.length,
+      overdue: overdueData?.data?.length || 0,
+      planned: activities.filter((a) => a.status === 'PLANNED').length,
+      completed: activities.filter((a) => a.status === 'COMPLETED').length,
     };
-  }, []);
+  }, [activities, overdueData]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -188,9 +151,14 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
     setCurrentPage(1);
   };
 
-  const handleQuickAddActivity = async (data: unknown) => {
-    console.log('Quick adding activity:', data);
-    setShowQuickAdd(false);
+  const handleQuickAddActivity = async (data: CreateActivityRequest) => {
+    try {
+      await createActivity(data).unwrap();
+      toast.success('Activity created successfully');
+      setShowQuickAdd(false);
+    } catch {
+      toast.error('Failed to create activity');
+    }
   };
 
   const handleViewActivity = (activityId: string) => {
@@ -236,7 +204,7 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
         </div>
         <div className='flex items-center gap-2'>
           <ExportDropdown
-            data={filteredActivities}
+            data={activities}
             columns={ACTIVITY_EXPORT_COLUMNS}
             filename='activities'
             onExportComplete={(format, count) => {
@@ -440,7 +408,23 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
       {/* Activity List */}
       {viewMode === 'list' && (
         <div className='space-y-3'>
-          {paginatedActivities.map((activity) => {
+          {activityQuery.isLoading && (
+            <Card>
+              <CardContent className='py-12 text-center text-muted-foreground'>
+                Loading activities...
+              </CardContent>
+            </Card>
+          )}
+
+          {activityQuery.isError && (
+            <Card>
+              <CardContent className='py-12 text-center text-destructive'>
+                Failed to load activities.
+              </CardContent>
+            </Card>
+          )}
+
+          {!activityQuery.isLoading && !activityQuery.isError && activities.map((activity) => {
             const Icon = getActivityIcon(activity.type);
             const colorClass = getActivityColor(activity.type);
             const statusConfig = STATUS_CONFIG[activity.status];
@@ -500,7 +484,7 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
             );
           })}
 
-          {paginatedActivities.length === 0 && (
+          {!activityQuery.isLoading && !activityQuery.isError && activities.length === 0 && (
             <Card>
               <CardContent className='py-16 text-center'>
                 <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
@@ -581,6 +565,7 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
         open={showQuickAdd}
         onOpenChange={setShowQuickAdd}
         onSubmit={handleQuickAddActivity}
+        isLoading={isCreating}
       />
     </div>
   );
