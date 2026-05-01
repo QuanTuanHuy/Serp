@@ -12,7 +12,6 @@ import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
-import serp.project.crm.core.domain.enums.TaskPriority;
 
 import java.time.LocalDateTime;
 import java.util.List;

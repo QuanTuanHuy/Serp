@@ -157,6 +157,14 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
+    public List<ActivityEntity> findUpcomingActivities(Long tenantId, Long startTime, Long endTime) {
+        return activityRepository.findUpcomingActivities(tenantId, startTime, endTime)
+                .stream()
+                .map(activityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Long countByStatus(ActivityStatus status, Long tenantId) {
         return activityRepository.countByTenantIdAndStatus(tenantId, status.name());
     }

@@ -38,6 +38,7 @@ public interface IActivityPort {
 
     List<ActivityEntity> findOverdueActivities(Long tenantId);
     List<ActivityEntity> findUpcomingActivities(Long tenantId);
+    List<ActivityEntity> findUpcomingActivities(Long tenantId, Long startTime, Long endTime);
     List<ActivityEntity> findByActivityDateBetween(Long startDate, Long endDate, Long tenantId);
     List<ActivityEntity> findAllByLeadId(Long leadId, Long tenantId);
 

@@ -172,17 +172,14 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional(readOnly = true)
     public List<ActivityEntity> getUpcomingActivities(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
-        // Implement later
-        List<ActivityEntity> allUpcoming = activityPort.findUpcomingActivities(tenantId);
+        if (startDate == null || endDate == null || startDate.isAfter(endDate)) {
+            throw new AppException(ErrorMessage.INVALID_DATE_RANGE);
+        }
 
-        Long startTimestamp = startDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
-        Long endTimestamp = endDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
+        Long startTimestamp = startDate.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        Long endTimestamp = endDate.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
 
-        return allUpcoming.stream()
-                .filter(activity -> activity.getDueDate() != null
-                        && activity.getDueDate() >= startTimestamp
-                        && activity.getDueDate() <= endTimestamp)
-                .toList();
+        return activityPort.findUpcomingActivities(tenantId, startTimestamp, endTimestamp);
     }
 
     @Override
