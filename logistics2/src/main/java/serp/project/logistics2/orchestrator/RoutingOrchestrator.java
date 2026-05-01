@@ -100,6 +100,17 @@ public class RoutingOrchestrator {
         // TODO: Thông báo cho người dùng về đơn hàng bị dropped
     }
 
+    public void failToOptimizePlan(RoutingResponse result) {
+        DeliveryPlanEntity plan = deliveryPlanRepository.findById(result.getPlanId()).orElse(null);
+        if (plan == null) {
+            log.error("[RoutingOrchestrator] Không tìm thấy Delivery Plan với ID: {}", result.getPlanId());
+            return;
+        }
+        plan.setOptimizationStatus(PlanOptimizationStatus.FAILED.name());
+        deliveryPlanRepository.save(plan);
+        log.info("[RoutingOrchestrator] Đã cập nhật Delivery Plan ID: {} sang trạng thái FAILED do tối ưu kế hoạch thất bại.", result.getPlanId());
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void selectRouteForDeliver(String routeId) {
         RouteEntity route = routeRepository.findById(routeId)

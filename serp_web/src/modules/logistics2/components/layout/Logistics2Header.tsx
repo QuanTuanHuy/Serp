@@ -27,6 +27,7 @@ interface Logistics2HeaderProps {
 }
 
 const PATH_LABELS: Record<string, string> = {
+  'delivery-plan': 'Delivery Plans',
   'delivery-plans': 'Delivery Plans',
   'delivery-slips': 'Delivery Slips',
   'outbound-shipments': 'Outbound Shipments',
