@@ -65,6 +65,7 @@ export interface QuickActivityFormData {
     id: string;
   };
   location?: string;
+  assignedTo?: string;
 }
 
 interface QuickAddActivityDialogProps {
@@ -103,6 +104,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     status: 'PLANNED',
     relatedTo: preselectedRelation || { type: 'CUSTOMER', id: '' },
     location: '',
+    assignedTo: '',
   });
 
   const { data: customersData } = useGetCustomersQuery({
@@ -160,6 +162,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
       leadId: formData.relatedTo.type === 'LEAD' ? relatedId : undefined,
       opportunityId:
         formData.relatedTo.type === 'OPPORTUNITY' ? relatedId : undefined,
+      assignedTo: formData.assignedTo ? Number(formData.assignedTo) : undefined,
     });
     resetForm();
   };
@@ -176,6 +179,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
       status: 'PLANNED',
       relatedTo: preselectedRelation || { type: 'CUSTOMER', id: '' },
       location: '',
+      assignedTo: '',
     });
     setErrors({});
   };
@@ -431,6 +435,23 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Assigned To */}
+          <div className='space-y-2'>
+            <Label className='flex items-center gap-2'>
+              <Users className='h-4 w-4 text-muted-foreground' />
+              Assigned To (Optional)
+            </Label>
+            <Input
+              type='number'
+              value={formData.assignedTo}
+              onChange={(e) => handleChange('assignedTo', e.target.value)}
+              placeholder='Enter user ID'
+            />
+            <p className='text-xs text-muted-foreground'>
+              Leave empty to assign to yourself
+            </p>
           </div>
 
           {/* Location (for meetings) */}

@@ -97,6 +97,13 @@ export type ReopenOpportunityResponse = APIResponse<Opportunity>;
 
 export type ActivityResponse = APIResponse<Activity>;
 export type ActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type SearchActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type ActivityStatsResponse = APIResponse<
+  import('./index').ActivityStats
+>;
+export type BulkActivityResponse = APIResponse<
+  import('./index').BulkActivityResult
+>;
 export type CreateActivityResponse = APIResponse<Activity>;
 export type UpdateActivityResponse = APIResponse<Activity>;
 export type DeleteActivityResponse = APIResponse<{ deleted: boolean }>;
