@@ -411,6 +411,12 @@ export type CreateLeadRequest = {
 };
 export type UpdateLeadRequest = Partial<CreateLeadRequest>;
 
+export interface UpdateLeadStatusRequest {
+  fromStatus?: LeadStatus;
+  toStatus: LeadStatus;
+  notes?: string;
+}
+
 export interface CreateOpportunityRequest {
   name: string;
   description?: string;

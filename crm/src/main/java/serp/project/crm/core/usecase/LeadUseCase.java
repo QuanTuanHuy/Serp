@@ -21,6 +21,7 @@ import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
 import serp.project.crm.core.domain.dto.request.DisqualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
+import serp.project.crm.core.domain.dto.request.UpdateLeadStatusRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.domain.dto.response.LeadAssignResponse;
 import serp.project.crm.core.domain.dto.response.LeadConversionResponse;
@@ -112,6 +113,29 @@ public class LeadUseCase {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error qualifying lead: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateLeadStatus(Long id, Long userId, UpdateLeadStatusRequest request, Long tenantId) {
+        try {
+            LeadEntity updatedLead = leadService.updateLeadStatus(
+                    id,
+                    request.getFromStatus(),
+                    request.getToStatus(),
+                    request.getNotes(),
+                    userId,
+                    tenantId);
+            LeadResponse response = leadDtoMapper.toResponse(updatedLead);
+
+            return responseUtils.success(response, "Lead status updated successfully");
+
+        } catch (AppException e) {
+            log.error("Error updating lead status: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error updating lead status: {}", e.getMessage(), e);
             throw e;
         }
     }

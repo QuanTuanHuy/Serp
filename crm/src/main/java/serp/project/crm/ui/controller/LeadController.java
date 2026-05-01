@@ -18,6 +18,7 @@ import serp.project.crm.core.domain.dto.request.CreateLeadRequest;
 import serp.project.crm.core.domain.dto.request.DisqualifyLeadRequest;
 import serp.project.crm.core.domain.dto.request.LeadFilterRequest;
 import serp.project.crm.core.domain.dto.request.QualifyLeadRequest;
+import serp.project.crm.core.domain.dto.request.UpdateLeadStatusRequest;
 import serp.project.crm.core.domain.dto.request.UpdateLeadRequest;
 import serp.project.crm.core.usecase.ActivityUseCase;
 import serp.project.crm.core.usecase.LeadUseCase;
@@ -54,6 +55,20 @@ public class LeadController {
             return null;
         }
         var response = leadUseCase.updateLead(id, userId, request, tenantId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateLeadStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateLeadStatusRequest request) {
+        Long userId = authUtils.getCurrentUserId().orElse(null);
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (userId == null || tenantId == null) {
+            return null;
+        }
+
+        var response = leadUseCase.updateLeadStatus(id, userId, request, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

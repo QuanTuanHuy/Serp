@@ -44,6 +44,7 @@ import type {
   UpdateAccountRequest,
   UpdateCustomerRequest,
   UpdateLeadRequest,
+  UpdateLeadStatusRequest,
   UpdateOpportunityRequest,
   UpdateActivityRequest,
   CustomerFilters,
@@ -293,6 +294,23 @@ export const crmApi = api.injectEndpoints({
         url: `/leads/${id}`,
         method: 'PUT',
         body: mapLeadFormToBackendPayload(data),
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleLeadResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Lead', id },
+        { type: 'Lead', id: 'LIST' },
+      ],
+    }),
+
+    updateLeadStatus: builder.mutation<
+      APIResponse<Lead>,
+      { id: string; data: UpdateLeadStatusRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/leads/${id}/status`,
+        method: 'PATCH',
+        body: data,
       }),
       extraOptions: { service: 'crm' },
       transformResponse: mapSingleLeadResponse,
@@ -1342,6 +1360,7 @@ export const {
   useGetLeadActivitiesQuery,
   useCreateLeadMutation,
   useUpdateLeadMutation,
+  useUpdateLeadStatusMutation,
   useDeleteLeadMutation,
   useConvertLeadMutation,
   useQualifyLeadMutation,
