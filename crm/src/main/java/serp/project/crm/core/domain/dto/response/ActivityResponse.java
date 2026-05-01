@@ -37,8 +37,9 @@ public class ActivityResponse {
     private Long accountId;
     private Long opportunityId;
     private Long contactId;
-    
+
     private Long assignedTo;
+    private String assignedToName;
     private Long activityDate;
     private Long dueDate;
     private Long reminderDate;
@@ -49,7 +50,12 @@ public class ActivityResponse {
     private ActivityOutcome outcome;
     private String notes;
     private List<String> attachments;
-    
+
+    private String relatedLeadName;
+    private String relatedCustomerName;
+    private String relatedOpportunityName;
+    private String relatedContactName;
+
     // Metadata
     private Long tenantId;
     private Long createdAt;

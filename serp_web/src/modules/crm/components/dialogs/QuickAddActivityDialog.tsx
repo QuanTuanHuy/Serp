@@ -33,14 +33,23 @@ import {
   Video,
   Users,
   Target,
-  MessageSquare,
-  Presentation,
   CheckSquare,
   MapPin,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import type { ActivityType, ActivityStatus, Priority } from '../../types';
-import { MOCK_CUSTOMERS, MOCK_LEADS, MOCK_OPPORTUNITIES } from '../../mocks';
+import type {
+  ActivityStatus,
+  ActivityType,
+  BackendActivityStatus,
+  BackendActivityType,
+  CreateActivityRequest,
+  Priority,
+} from '../../types';
+import {
+  useGetCustomersQuery,
+  useGetLeadsQuery,
+  useGetOpportunitiesQuery,
+} from '../../api/crmApi';
 
 export interface QuickActivityFormData {
   type: ActivityType;
@@ -61,7 +70,7 @@ export interface QuickActivityFormData {
 interface QuickAddActivityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: QuickActivityFormData) => void;
+  onSubmit: (data: CreateActivityRequest) => void;
   isLoading?: boolean;
   preselectedRelation?: {
     type: 'CUSTOMER' | 'LEAD' | 'OPPORTUNITY';
@@ -74,10 +83,6 @@ const ACTIVITY_TYPE_CONFIG = [
   { type: 'EMAIL' as ActivityType, label: 'Email', icon: Mail },
   { type: 'MEETING' as ActivityType, label: 'Cuộc họp', icon: Video },
   { type: 'TASK' as ActivityType, label: 'Công việc', icon: CheckSquare },
-  { type: 'NOTE' as ActivityType, label: 'Ghi chú', icon: MessageSquare },
-  { type: 'DEMO' as ActivityType, label: 'Demo', icon: Presentation },
-  { type: 'PROPOSAL' as ActivityType, label: 'Proposal', icon: FileText },
-  { type: 'FOLLOW_UP' as ActivityType, label: 'Follow up', icon: Target },
 ];
 
 export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
@@ -100,6 +105,19 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     location: '',
   });
 
+  const { data: customersData } = useGetCustomersQuery({
+    filters: {},
+    pagination: { page: 1, limit: 50 },
+  });
+  const { data: leadsData } = useGetLeadsQuery({
+    filters: {},
+    pagination: { page: 1, limit: 50 },
+  });
+  const { data: opportunitiesData } = useGetOpportunitiesQuery({
+    filters: {},
+    pagination: { page: 1, limit: 50 },
+  });
+
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
   const validateForm = (): boolean => {
@@ -119,10 +137,31 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit(formData);
-      resetForm();
-    }
+    if (!validateForm()) return;
+
+    const scheduledAt = formData.scheduledDate
+      ? new Date(
+          `${formData.scheduledDate}T${formData.scheduledTime || '00:00'}`
+        ).getTime()
+      : undefined;
+    const relatedId = Number(formData.relatedTo.id);
+
+    onSubmit({
+      subject: formData.subject,
+      description: formData.description || undefined,
+      activityType: formData.type as BackendActivityType,
+      status: formData.status as BackendActivityStatus,
+      location: formData.location || undefined,
+      activityDate: scheduledAt,
+      dueDate: formData.type === 'TASK' ? scheduledAt : undefined,
+      durationMinutes: formData.duration,
+      priority: formData.priority,
+      accountId: formData.relatedTo.type === 'CUSTOMER' ? relatedId : undefined,
+      leadId: formData.relatedTo.type === 'LEAD' ? relatedId : undefined,
+      opportunityId:
+        formData.relatedTo.type === 'OPPORTUNITY' ? relatedId : undefined,
+    });
+    resetForm();
   };
 
   const resetForm = () => {
@@ -161,22 +200,22 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
   const getRelatedOptions = () => {
     switch (formData.relatedTo.type) {
       case 'CUSTOMER':
-        return MOCK_CUSTOMERS.map((c) => ({
-          id: c.id,
-          name: c.name,
-          subtitle: c.companyName,
+        return (customersData?.data?.data || []).map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          subtitle: customer.companyName,
         }));
       case 'LEAD':
-        return MOCK_LEADS.map((l) => ({
-          id: l.id,
-          name: `${l.firstName} ${l.lastName}`,
-          subtitle: l.company,
+        return (leadsData?.data?.data || []).map((lead) => ({
+          id: lead.id,
+          name: lead.name || `${lead.firstName} ${lead.lastName}`.trim(),
+          subtitle: lead.company,
         }));
       case 'OPPORTUNITY':
-        return MOCK_OPPORTUNITIES.map((o) => ({
-          id: o.id,
-          name: o.name,
-          subtitle: o.customerName,
+        return (opportunitiesData?.data?.data || []).map((opportunity) => ({
+          id: opportunity.id,
+          name: opportunity.name,
+          subtitle: opportunity.customerName,
         }));
       default:
         return [];
@@ -387,7 +426,6 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='PLANNED'>Đã lên kế hoạch</SelectItem>
-                  <SelectItem value='IN_PROGRESS'>Đang thực hiện</SelectItem>
                   <SelectItem value='COMPLETED'>Hoàn thành</SelectItem>
                   <SelectItem value='CANCELLED'>Đã hủy</SelectItem>
                 </SelectContent>
@@ -396,7 +434,7 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
           </div>
 
           {/* Location (for meetings) */}
-          {(formData.type === 'MEETING' || formData.type === 'DEMO') && (
+          {formData.type === 'MEETING' && (
             <div className='space-y-2'>
               <Label htmlFor='location' className='flex items-center gap-2'>
                 <MapPin className='h-4 w-4 text-muted-foreground' />

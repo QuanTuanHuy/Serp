@@ -143,4 +143,11 @@ public class LeadAdapter implements ILeadPort {
                 .map(leadMapper::toEntity);
         return leadMapper.pageToPair(page);
     }
+
+    @Override
+    public List<LeadEntity> findByIds(List<Long> ids, Long tenantId) {
+        return leadRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(leadMapper::toEntity)
+                .toList();
+    }
 }

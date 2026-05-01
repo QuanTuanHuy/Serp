@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import serp.project.crm.core.domain.dto.GeneralResponse;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
+import serp.project.crm.core.domain.dto.request.BulkActivityRequest;
 import serp.project.crm.core.domain.dto.request.CompleteActivityRequest;
 import serp.project.crm.core.domain.dto.request.CreateActivityRequest;
 import serp.project.crm.core.domain.dto.request.RescheduleActivityRequest;
@@ -74,14 +76,71 @@ public class ActivityController {
     @GetMapping
     public ResponseEntity<?> getAllActivities(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDirection) {
         Optional<ResponseEntity<?>> unauthorized = requireTenantContext();
         if (unauthorized.isPresent()) {
             return unauthorized.get();
         }
 
-        PageRequest pageRequest = buildPageRequest(page, size);
+        PageRequest pageRequest = PageRequest.builder()
+                .page(page)
+                .size(size)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
+                .build();
         var response = activityUseCase.getAllActivities(getCurrentTenantId(), pageRequest);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<?> searchActivities(@Valid @RequestBody ActivityFilterRequest filter) {
+        Optional<ResponseEntity<?>> unauthorized = requireTenantContext();
+        if (unauthorized.isPresent()) {
+            return unauthorized.get();
+        }
+
+        var response = activityUseCase.filterActivities(filter, getCurrentTenantId());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getActivityStats() {
+        Optional<ResponseEntity<?>> unauthorized = requireTenantContext();
+        if (unauthorized.isPresent()) {
+            return unauthorized.get();
+        }
+
+        var response = activityUseCase.getActivityStats(getCurrentTenantId());
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<?> bulkOperations(@Valid @RequestBody BulkActivityRequest request) {
+        Optional<ResponseEntity<?>> unauthorized = requireUserContext();
+        if (unauthorized.isPresent()) {
+            return unauthorized.get();
+        }
+
+        GeneralResponse<?> response;
+        switch (request.getAction()) {
+            case COMPLETE:
+                response = activityUseCase.bulkCompleteActivities(request, getCurrentUserId(), getCurrentTenantId());
+                break;
+            case CANCEL:
+                response = activityUseCase.bulkCancelActivities(request, getCurrentUserId(), getCurrentTenantId());
+                break;
+            case DELETE:
+                response = activityUseCase.bulkDeleteActivities(request, getCurrentTenantId());
+                break;
+            case ASSIGN:
+                response = activityUseCase.bulkReassignActivities(request, getCurrentUserId(), getCurrentTenantId());
+                break;
+            default:
+                response = responseUtils.badRequest("Invalid bulk action");
+        }
+
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

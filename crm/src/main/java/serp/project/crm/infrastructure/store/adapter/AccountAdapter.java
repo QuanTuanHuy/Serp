@@ -121,4 +121,11 @@ public class AccountAdapter implements IAccountPort {
                 .map(AccountMapper::toEntity);
         return AccountMapper.pageToPair(page);
     }
+
+    @Override
+    public List<AccountEntity> findByIds(List<Long> ids, Long tenantId) {
+        return AccountRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(AccountMapper::toEntity)
+                .toList();
+    }
 }

@@ -48,4 +48,6 @@ public interface ContactRepository extends JpaRepository<ContactModel, Long> {
     long countByTenantIdAndAccountId(Long tenantId, Long accountId);
 
     long countByTenantIdAndActiveStatus(Long tenantId, String activeStatus);
+
+    List<ContactModel> findByTenantIdAndIdIn(Long tenantId, List<Long> ids);
 }
