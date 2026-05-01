@@ -45,7 +45,9 @@ public class RoutingKafkaConsumer {
 
             routingOrchestrator.createRouteForDeliveryPlan(response);
         } else {
-            log.warn("[RoutingKafkaConsumer] Kế hoạch thất bại hoặc không có nghiệm!");
+            log.warn("[RoutingKafkaConsumer] Kế hoạch thất bại hoặc không có nghiệm! Lý do: {}", response.getReason());
+
+            routingOrchestrator.failToOptimizePlan(response);
         }
     }
 }
