@@ -163,12 +163,8 @@ export type ActivityType =
   | 'DEMO'
   | 'PROPOSAL'
   | 'FOLLOW_UP';
-export type ActivityStatus =
-  | 'PLANNED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'OVERDUE';
+export type ActivityStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+export type ActivityDisplayStatus = ActivityStatus | 'OVERDUE';
 export type ActivityOutcome =
   | 'REACHED'
   | 'VOICEMAIL'
@@ -460,7 +456,7 @@ export interface UpdateOpportunityRequest {
 }
 
 export type BackendActivityType = 'CALL' | 'EMAIL' | 'MEETING' | 'TASK';
-export type BackendActivityStatus = 'PLANNED' | 'COMPLETED' | 'CANCELLED';
+export type BackendActivityStatus = ActivityStatus;
 
 export interface CreateActivityRequest {
   subject: string;

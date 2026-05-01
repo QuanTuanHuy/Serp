@@ -44,11 +44,13 @@ import {
 } from '../../api/crmApi';
 import type {
   Activity,
+  ActivityDisplayStatus,
   ActivityType,
   ActivityStatus,
   CreateActivityRequest,
   Priority,
 } from '../../types';
+import { getActivityDisplayStatus } from '../../utils';
 
 // Activity type configuration
 const ACTIVITY_TYPES: {
@@ -83,17 +85,20 @@ const ACTIVITY_TYPES: {
   },
 ];
 
-const STATUS_CONFIG: Record<ActivityStatus, { label: string; color: string }> =
-  {
-    PLANNED: { label: 'Planned', color: 'bg-blue-100 text-blue-700' },
-    COMPLETED: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-    IN_PROGRESS: { label: 'In Progress', color: 'bg-amber-100 text-amber-700' },
-    CANCELLED: {
-      label: 'Cancelled',
-      color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
-    },
-    OVERDUE: { label: 'Overdue', color: 'bg-red-100 text-red-700' },
-  };
+const STATUS_CONFIG: Record<
+  ActivityDisplayStatus,
+  { label: string; color: string }
+> = {
+  PLANNED: { label: 'Planned', color: 'bg-blue-100 text-blue-700' },
+  COMPLETED: { label: 'Completed', color: 'bg-green-100 text-green-700' },
+  CANCELLED: {
+    label: 'Cancelled',
+    color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
+  },
+  OVERDUE: { label: 'Overdue', color: 'bg-red-100 text-red-700' },
+};
+
+const FILTER_STATUSES: ActivityStatus[] = ['PLANNED', 'COMPLETED', 'CANCELLED'];
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; color: string }> = {
   LOW: { label: 'Low', color: 'bg-green-100 text-green-700' },
@@ -457,9 +462,9 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 >
                   <option value=''>All Statuses</option>
-                  {Object.entries(STATUS_CONFIG).map(([status, { label }]) => (
+                  {FILTER_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      {label}
+                      {STATUS_CONFIG[status].label}
                     </option>
                   ))}
                 </select>
@@ -665,7 +670,8 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
             activities.map((activity: Activity) => {
               const Icon = getActivityIcon(activity.type);
               const colorClass = getActivityColor(activity.type);
-              const statusConfig = STATUS_CONFIG[activity.status];
+              const displayStatus = getActivityDisplayStatus(activity);
+              const statusConfig = STATUS_CONFIG[displayStatus];
               const isSelected = selectedActivityIds.has(activity.id);
 
               return (

@@ -78,7 +78,13 @@ import {
 } from '@/shared/components/ui/select';
 import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { Separator } from '@/shared/components/ui/separator';
-import { Activity, ActivityType, ActivityStatus, Priority } from '../../types';
+import {
+  Activity,
+  ActivityDisplayStatus,
+  ActivityType,
+  ActivityStatus,
+  Priority,
+} from '../../types';
 import {
   useCancelActivityMutation,
   useCompleteActivityMutation,
@@ -86,6 +92,7 @@ import {
   useGetActivityQuery,
   useRescheduleActivityMutation,
 } from '../../api/crmApi';
+import { getActivityDisplayStatus } from '../../utils';
 
 interface ActivityDetailPageProps {
   activityId: string;
@@ -148,7 +155,7 @@ const ACTIVITY_TYPE_CONFIG: Record<
 
 // Activity status configuration
 const ACTIVITY_STATUS_CONFIG: Record<
-  ActivityStatus,
+  ActivityDisplayStatus,
   { label: string; color: string; bgColor: string; icon: React.ElementType }
 > = {
   PLANNED: {
@@ -156,12 +163,6 @@ const ACTIVITY_STATUS_CONFIG: Record<
     color: 'text-blue-700',
     bgColor: 'bg-blue-100',
     icon: Calendar,
-  },
-  IN_PROGRESS: {
-    label: 'In Progress',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-100',
-    icon: Clock,
   },
   COMPLETED: {
     label: 'Completed',
@@ -182,6 +183,8 @@ const ACTIVITY_STATUS_CONFIG: Record<
     icon: AlertCircle,
   },
 };
+
+const STATUS_UPDATE_OPTIONS: ActivityStatus[] = ['COMPLETED', 'CANCELLED'];
 
 // Priority configuration
 const PRIORITY_CONFIG: Record<
@@ -248,7 +251,8 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   }
 
   const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type];
-  const statusConfig = ACTIVITY_STATUS_CONFIG[activity.status];
+  const statusConfig =
+    ACTIVITY_STATUS_CONFIG[getActivityDisplayStatus(activity)];
   const priorityConfig = PRIORITY_CONFIG[activity.priority];
   const TypeIcon = typeConfig.icon;
   const StatusIcon = statusConfig.icon;
@@ -746,7 +750,9 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                     const relTypeConfig =
                       ACTIVITY_TYPE_CONFIG[relatedActivity.type];
                     const relStatusConfig =
-                      ACTIVITY_STATUS_CONFIG[relatedActivity.status];
+                      ACTIVITY_STATUS_CONFIG[
+                        getActivityDisplayStatus(relatedActivity)
+                      ];
                     const RelTypeIcon = relTypeConfig.icon;
                     return (
                       <Card
@@ -974,16 +980,18 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                 <SelectValue placeholder='Select status' />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ACTIVITY_STATUS_CONFIG)
-                  .filter(([key]) => key !== 'PLANNED')
-                  .map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
+                {STATUS_UPDATE_OPTIONS.map((status) => {
+                  const config = ACTIVITY_STATUS_CONFIG[status];
+
+                  return (
+                    <SelectItem key={status} value={status}>
                       <div className='flex items-center gap-2'>
                         <config.icon className={`h-4 w-4 ${config.color}`} />
                         {config.label}
                       </div>
                     </SelectItem>
-                  ))}
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
