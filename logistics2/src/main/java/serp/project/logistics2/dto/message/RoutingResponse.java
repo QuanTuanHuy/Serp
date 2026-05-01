@@ -11,6 +11,8 @@ public class RoutingResponse {
 
     private String status;
 
+    private String reason;
+
     @JsonProperty("total_plan_distance")
     private Float totalPlanDistance;
 

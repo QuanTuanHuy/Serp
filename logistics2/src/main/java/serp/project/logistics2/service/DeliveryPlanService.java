@@ -233,7 +233,21 @@ public class DeliveryPlanService {
     }
 
     public DeliveryPlanEntity getDeliveryPlanDetails(String deliveryPlanId, Long tenantId) {
-        return deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId).orElse(null);
+        var plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId).orElse(null);
+        if (plan == null) {
+            log.info("[DeliveryPlanService] Delivery plan {} not found", deliveryPlanId);
+            return null;
+        }
+
+        List<String> vehicleIds = plan.getVehicleShippers().stream()
+                .map(VehicleShipperEntity::getVehicleId)
+                .distinct()
+                .toList();
+        List<VehicleEntity> vehicles = vehicleRepository.findAllById(vehicleIds);
+        Map<String, VehicleEntity> vehicleMap = vehicles.stream().collect(Collectors.toMap(VehicleEntity::getId, v -> v));
+
+        plan.getVehicleShippers().forEach(vehicleShipper -> vehicleShipper.setVehicle(vehicleMap.get(vehicleShipper.getVehicleId())));
+        return plan;
     }
 
     public Page<DeliveryPlanEntity> searchDeliveryPlans(
