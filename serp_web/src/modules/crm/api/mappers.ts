@@ -964,10 +964,27 @@ export const mapBackendStatsToActivityStats = (
   message: response.message,
   timestamp: new Date().toISOString(),
   data: {
-    todayCount: response.data?.todayCount || 0,
-    weekCount: response.data?.weekCount || 0,
-    averagePerDay: response.data?.averagePerDay || 0,
-    mostActiveHour: response.data?.mostActiveHour || '00:00',
+    total: Number(response.data?.total || 0),
+    overdue: Number(response.data?.overdue || 0),
+    upcoming: Number(response.data?.upcoming || 0),
+    byStatus: Object.fromEntries(
+      Object.entries(response.data?.byStatus || {}).map(([key, value]) => [
+        key,
+        Number(value || 0),
+      ])
+    ),
+    byType: Object.fromEntries(
+      Object.entries(response.data?.byType || {}).map(([key, value]) => [
+        key,
+        Number(value || 0),
+      ])
+    ),
+    byPriority: Object.fromEntries(
+      Object.entries(response.data?.byPriority || {}).map(([key, value]) => [
+        key,
+        Number(value || 0),
+      ])
+    ),
   },
 });
 

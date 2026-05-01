@@ -86,8 +86,9 @@ export const activityApi = api.injectEndpoints({
       ],
     }),
 
-    // Get activity statistics (future enhancement)
-    getActivityStats: builder.query<
+    // Keep the endpoint name module-specific to avoid collisions
+    // with CRM endpoints injected into the shared RTK Query API.
+    getPtmActivityStats: builder.query<
       {
         todayCount: number;
         weekCount: number;
@@ -118,5 +119,5 @@ export const activityApi = api.injectEndpoints({
 export const {
   useGetActivityFeedQuery,
   useGetEntityActivitiesQuery,
-  useGetActivityStatsQuery,
+  useGetPtmActivityStatsQuery,
 } = activityApi;

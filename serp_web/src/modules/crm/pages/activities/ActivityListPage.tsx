@@ -40,7 +40,6 @@ import {
   useCreateActivityMutation,
   useSearchActivitiesQuery,
   useGetActivityStatsQuery,
-  useGetOverdueActivitiesQuery,
   useBulkActivityOperationsMutation,
 } from '../../api/crmApi';
 import type {
@@ -146,12 +145,9 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
       sortOrder,
     },
   });
-  const {
-    data: statsData,
-    isLoading: isStatsLoading,
-    error: statsError,
-  } = useGetActivityStatsQuery();
-  const { data: overdueData } = useGetOverdueActivitiesQuery();
+  const { data: statsData } = useGetActivityStatsQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const [createActivity, { isLoading: isCreating }] =
     useCreateActivityMutation();
   const [bulkActivityOperations, { isLoading: isBulkOperating }] =
@@ -166,17 +162,13 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
   const totalPages = pagination?.totalPages || 1;
 
   const stats = useMemo(() => {
-    console.log('Stats Data:', statsData);
-    console.log('Stats Loading:', isStatsLoading);
-    console.log('Stats Error:', statsError);
-
     return {
-      today: statsData?.data?.todayCount || 0,
-      overdue: overdueData?.data?.length || 0,
-      planned: statsData?.data?.weekCount || 0,
-      completed: statsData?.data?.todayCount || 0,
+      total: statsData?.data?.total || 0,
+      overdue: statsData?.data?.overdue || 0,
+      upcoming: statsData?.data?.upcoming || 0,
+      completed: statsData?.data?.byStatus?.COMPLETED || 0,
     };
-  }, [statsData, overdueData, isStatsLoading, statsError]);
+  }, [statsData]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -318,8 +310,8 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                 <Calendar className='h-5 w-5 text-blue-600' />
               </div>
               <div>
-                <p className='text-sm text-muted-foreground'>Today</p>
-                <p className='text-2xl font-bold'>{stats.today}</p>
+                <p className='text-sm text-muted-foreground'>Total</p>
+                <p className='text-2xl font-bold'>{stats.total}</p>
               </div>
             </div>
           </CardContent>
@@ -344,8 +336,8 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                 <Clock className='h-5 w-5 text-amber-600' />
               </div>
               <div>
-                <p className='text-sm text-muted-foreground'>Planned</p>
-                <p className='text-2xl font-bold'>{stats.planned}</p>
+                <p className='text-sm text-muted-foreground'>Upcoming</p>
+                <p className='text-2xl font-bold'>{stats.upcoming}</p>
               </div>
             </div>
           </CardContent>

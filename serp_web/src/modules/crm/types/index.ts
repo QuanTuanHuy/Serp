@@ -323,10 +323,12 @@ export interface ActivityFilters {
 }
 
 export interface ActivityStats {
-  todayCount: number;
-  weekCount: number;
-  averagePerDay: number;
-  mostActiveHour: string;
+  total: number;
+  overdue: number;
+  upcoming: number;
+  byStatus: Partial<Record<ActivityStatus, number>>;
+  byType: Partial<Record<ActivityType, number>>;
+  byPriority: Partial<Record<Priority, number>>;
 }
 
 export type BulkActivityAction = 'COMPLETE' | 'CANCEL' | 'DELETE' | 'ASSIGN';
