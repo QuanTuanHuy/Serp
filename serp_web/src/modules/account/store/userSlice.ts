@@ -59,6 +59,8 @@ export default userSlice.reducer;
 // Selectors
 export const selectUserProfile = (state: RootState) =>
   state.account.user.profile;
+export const selectOrganizationId = (state: RootState) =>
+  state.account.user.profile?.organizationId ?? null;
 export const selectUserLoading = (state: RootState) =>
   state.account.user.isLoading;
 export const selectUserError = (state: RootState) => state.account.user.error;
