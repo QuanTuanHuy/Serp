@@ -23,15 +23,32 @@ import {
 } from '@/shared/components/ui';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import {
+  ACCOUNT_TIERS,
+  PREFERRED_DAYS,
+  PREFERRED_TIME_SLOTS,
+} from '../../types/constants';
 import type {
-  Customer,
+  AccountTier,
   CreateCustomerRequest,
-  UpdateCustomerRequest,
-  CustomerType,
+  CrmDayOfWeek,
+  Customer,
   CustomerStatus,
+  CustomerType,
+  PreferredTimeSlot,
+  UpdateCustomerRequest,
 } from '../../types';
 
-// Validation schema
+const dayOfWeekSchema = z.enum([
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+]);
+
 const customerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
   email: z.string().email('Invalid email address'),
@@ -43,6 +60,7 @@ const customerSchema = z.object({
   country: z.string().optional(),
   customerType: z.enum(['PROSPECT', 'CUSTOMER']),
   status: z.enum(['ACTIVE', 'INACTIVE']),
+  industry: z.string().optional(),
   companySize: z.string().optional(),
   taxNumber: z.string().optional(),
   website: z.string().url('Invalid website URL').optional().or(z.literal('')),
@@ -50,27 +68,25 @@ const customerSchema = z.object({
   creditLimit: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
   tags: z.array(z.string()),
+  tier: z
+    .string()
+    .optional()
+    .refine(
+      (v) =>
+        v === undefined ||
+        v === '' ||
+        (['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'] as const).includes(
+          v as AccountTier
+        ),
+      { message: 'Invalid tier' }
+    ),
+  language: z.string().optional(),
+  timezone: z.string().optional(),
+  preferredTimeSlots: z.array(z.enum(['MORNING', 'AFTERNOON'])),
+  preferredDays: z.array(dayOfWeekSchema),
 });
 
-interface CustomerFormData {
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  customerType: CustomerType;
-  status: CustomerStatus;
-  companySize?: string;
-  taxNumber?: string;
-  website?: string;
-  paymentTerms?: string;
-  creditLimit?: number;
-  notes?: string;
-  tags: string[];
-}
+type CustomerFormData = z.infer<typeof customerSchema>;
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -81,6 +97,8 @@ interface CustomerFormProps {
   isLoading?: boolean;
   className?: string;
 }
+
+const TIER_NONE = '__none__';
 
 export const CustomerForm: React.FC<CustomerFormProps> = ({
   customer,
@@ -99,19 +117,49 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           email: customer.email,
           phone: customer.phone || '',
           address: customer.address || '',
-          city: customer.customFields.city || '',
-          state: customer.customFields.state || '',
-          zipCode: customer.customFields.zipCode || '',
-          country: customer.customFields.country || '',
+          city:
+            customer.customFields?.city !== undefined
+              ? String(customer.customFields.city)
+              : '',
+          state:
+            customer.customFields?.state !== undefined
+              ? String(customer.customFields.state)
+              : '',
+          zipCode:
+            customer.customFields?.zipCode !== undefined
+              ? String(customer.customFields.zipCode)
+              : '',
+          country:
+            customer.customFields?.country !== undefined
+              ? String(customer.customFields.country)
+              : '',
           customerType: customer.customerType,
           status: customer.status,
-          companySize: customer.customFields.companySize || '',
+          industry:
+            customer.industry ??
+            (customer.customFields?.industry as string | undefined) ??
+            customer.tags?.[0] ??
+            '',
+          companySize:
+            customer.companySize ??
+            (customer.customFields?.companySize as string | undefined) ??
+            '',
           taxNumber: customer.taxNumber || '',
           website: customer.website || '',
-          paymentTerms: customer.customFields.paymentTerms || '',
-          creditLimit: customer.customFields.creditLimit || undefined,
+          paymentTerms:
+            (customer.paymentTerms as string | undefined) ??
+            (customer.customFields?.paymentTerms as string | undefined) ??
+            '',
+          creditLimit:
+            customer.creditLimit ??
+            (customer.customFields?.creditLimit as number | undefined),
           notes: customer.notes || '',
           tags: customer.tags || [],
+          tier: customer.tier ?? '',
+          language: customer.language || '',
+          timezone: customer.timezone || 'Asia/Ho_Chi_Minh',
+          preferredTimeSlots: customer.preferredTimeSlots ?? [],
+          preferredDays: customer.preferredDays ?? [],
         }
       : {
           name: '',
@@ -124,6 +172,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           country: '',
           customerType: 'PROSPECT' as CustomerType,
           status: 'ACTIVE' as CustomerStatus,
+          industry: '',
           companySize: '',
           taxNumber: '',
           website: '',
@@ -131,6 +180,11 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
           creditLimit: undefined,
           notes: '',
           tags: [],
+          tier: '',
+          language: '',
+          timezone: 'Asia/Ho_Chi_Minh',
+          preferredTimeSlots: [],
+          preferredDays: [],
         },
   });
 
@@ -144,17 +198,93 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   } = customerForm;
 
   const customerType = watch('customerType');
+  const preferredTimeSlots = watch('preferredTimeSlots');
+  const preferredDays = watch('preferredDays');
 
-  // Handle form submission
-  const onFormSubmit = handleSubmit(async (data) => {
+  const togglePreferredSlot = (slot: PreferredTimeSlot) => {
+    const current = getValues('preferredTimeSlots');
+    if (current.includes(slot)) {
+      setValue(
+        'preferredTimeSlots',
+        current.filter((s) => s !== slot)
+      );
+    } else {
+      setValue('preferredTimeSlots', [...current, slot]);
+    }
+  };
+
+  const togglePreferredDay = (day: CrmDayOfWeek) => {
+    const current = getValues('preferredDays');
+    if (current.includes(day)) {
+      setValue(
+        'preferredDays',
+        current.filter((d) => d !== day)
+      );
+    } else {
+      setValue('preferredDays', [...current, day]);
+    }
+  };
+
+  const onFormSubmit = handleSubmit(async (values) => {
     try {
-      await onSubmit(data);
+      const tierRaw = values.tier?.trim();
+      const tierParsed: AccountTier | undefined =
+        tierRaw &&
+        (['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'] as const).includes(
+          tierRaw as AccountTier
+        )
+          ? (tierRaw as AccountTier)
+          : undefined;
+
+      const common = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone || undefined,
+        address: values.address || undefined,
+        city: values.city || undefined,
+        state: values.state || undefined,
+        zipCode: values.zipCode || undefined,
+        country: values.country || undefined,
+        customerType: values.customerType,
+        status: values.status,
+        isActive: values.status === 'ACTIVE',
+        industry: values.industry?.trim() || undefined,
+        companySize: values.companySize?.trim() || undefined,
+        taxNumber: values.taxNumber || undefined,
+        website: values.website || undefined,
+        paymentTerms: values.paymentTerms || undefined,
+        creditLimit: values.creditLimit,
+        notes: values.notes || undefined,
+        tags: values.tags,
+        tier: tierParsed,
+        language: values.language?.trim() || undefined,
+        timezone: values.timezone?.trim() || undefined,
+        preferredTimeSlots:
+          values.preferredTimeSlots.length > 0
+            ? values.preferredTimeSlots
+            : undefined,
+        preferredDays:
+          values.preferredDays.length > 0 ? values.preferredDays : undefined,
+      };
+
+      if (isEditing && customer) {
+        const updatePayload: UpdateCustomerRequest = {
+          ...common,
+          customFields: customer.customFields,
+        };
+        await onSubmit(updatePayload);
+      } else {
+        const createPayload = {
+          ...common,
+          customFields: {},
+        } as CreateCustomerRequest;
+        await onSubmit(createPayload);
+      }
     } catch (error) {
       console.error('Form submission error:', error);
     }
   });
 
-  // Handle tag management
   const handleTagAdd = (tag: string) => {
     if (tag.trim()) {
       const currentTags = getValues('tags');
@@ -171,6 +301,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
       currentTags.filter((tag) => tag !== tagToRemove)
     );
   };
+
+  const tierSelectValue = watch('tier') ?? '';
+  const tierForSelect =
+    tierSelectValue.trim() !== '' ? tierSelectValue : TIER_NONE;
 
   return (
     <Card className={cn('w-full', className)}>
@@ -228,6 +362,16 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   {...register('phone')}
                   disabled={isLoading}
                   placeholder='+84 xxx xxx xxx'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='industry'>Industry</Label>
+                <Input
+                  id='industry'
+                  {...register('industry')}
+                  disabled={isLoading}
+                  placeholder='e.g. Manufacturing'
                 />
               </div>
 
@@ -303,6 +447,102 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                   {...register('country')}
                   disabled={isLoading}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Tier & contact preferences */}
+          <div className='space-y-4'>
+            <h3 className='text-base font-medium text-foreground'>
+              Tier & contact preferences
+            </h3>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label>Tier</Label>
+                <Select
+                  value={tierForSelect}
+                  onValueChange={(value) =>
+                    setValue(
+                      'tier',
+                      value === TIER_NONE ? '' : (value as AccountTier)
+                    )
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select tier' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TIER_NONE}>Not set</SelectItem>
+                    {ACCOUNT_TIERS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='language'>Language</Label>
+                <Input
+                  id='language'
+                  {...register('language')}
+                  disabled={isLoading}
+                  placeholder='e.g. vi, en'
+                />
+              </div>
+              <div className='space-y-2 md:col-span-2'>
+                <Label htmlFor='timezone'>Timezone</Label>
+                <Input
+                  id='timezone'
+                  {...register('timezone')}
+                  disabled={isLoading}
+                  placeholder='Asia/Ho_Chi_Minh'
+                />
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <Label>Preferred contact times</Label>
+              <div className='flex flex-wrap gap-2'>
+                {PREFERRED_TIME_SLOTS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type='button'
+                    onClick={() => togglePreferredSlot(value)}
+                    disabled={isLoading}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-sm transition-colors',
+                      preferredTimeSlots.includes(value)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-background hover:bg-muted'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <Label>Preferred days</Label>
+              <div className='flex flex-wrap gap-2'>
+                {PREFERRED_DAYS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type='button'
+                    onClick={() => togglePreferredDay(value)}
+                    disabled={isLoading}
+                    className={cn(
+                      'rounded-md border px-2.5 py-1 text-sm transition-colors',
+                      preferredDays.includes(value)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-background hover:bg-muted'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -394,7 +634,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               />
             </div>
 
-            {/* Tags */}
             <div className='space-y-2'>
               <Label>Tags</Label>
               <div className='flex flex-wrap gap-2'>
@@ -426,7 +665,6 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
           <div className='flex justify-end gap-3 pt-6 border-t'>
             {onCancel && (
               <Button

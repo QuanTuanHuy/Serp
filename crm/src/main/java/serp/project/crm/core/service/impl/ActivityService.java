@@ -29,6 +29,7 @@ import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IActivityService;
+import serp.project.crm.core.service.IRepTimeBlockService;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -50,6 +51,7 @@ public class ActivityService implements IActivityService {
     private final IOpportunityPort opportunityPort;
     private final IAccountPort AccountPort;
     private final ITeamMemberPort teamMemberPort;
+    private final IRepTimeBlockService repTimeBlockService;
 
     private final IContactPort contactPort;
 
@@ -66,6 +68,7 @@ public class ActivityService implements IActivityService {
         validateBusinessRules(activity, tenantId);
 
         ActivityEntity saved = activityPort.save(activity);
+        syncRepTimeBlock(saved, tenantId);
 
         publishActivityCreatedEvent(saved);
 
@@ -89,6 +92,7 @@ public class ActivityService implements IActivityService {
         validateBusinessRules(existing, tenantId);
 
         ActivityEntity updated = activityPort.save(existing);
+        syncRepTimeBlock(updated, tenantId);
 
         publishActivityUpdatedEvent(updated);
 
@@ -204,6 +208,7 @@ public class ActivityService implements IActivityService {
         }
 
         ActivityEntity completed = activityPort.save(activity);
+        syncRepTimeBlock(completed, tenantId);
 
         publishActivityCompletedEvent(completed);
 
@@ -227,6 +232,7 @@ public class ActivityService implements IActivityService {
         activity.markAsCancelled(userId);
 
         ActivityEntity cancelled = activityPort.save(activity);
+        syncRepTimeBlock(cancelled, tenantId);
 
         publishActivityCancelledEvent(cancelled);
 
@@ -248,6 +254,7 @@ public class ActivityService implements IActivityService {
         validateBusinessRules(activity, tenantId);
 
         ActivityEntity rescheduled = activityPort.save(activity);
+        syncRepTimeBlock(rescheduled, tenantId);
         publishActivityUpdatedEvent(rescheduled);
 
         return rescheduled;
@@ -260,6 +267,7 @@ public class ActivityService implements IActivityService {
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
         activityPort.deleteById(id, tenantId);
+        repTimeBlockService.removeByActivityId(id, tenantId);
 
         publishActivityDeletedEvent(activity);
 
@@ -325,7 +333,8 @@ public class ActivityService implements IActivityService {
                     continue;
                 }
                 activity.markAsCompleted(null, null, userId);
-                activityPort.save(activity);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
                 success++;
             } catch (Exception e) {
                 failed++;
@@ -350,7 +359,8 @@ public class ActivityService implements IActivityService {
                     continue;
                 }
                 activity.markAsCancelled(userId);
-                activityPort.save(activity);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
                 success++;
             } catch (Exception e) {
                 failed++;
@@ -370,6 +380,7 @@ public class ActivityService implements IActivityService {
         List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
         for (ActivityEntity activity : activities) {
             try {
+                repTimeBlockService.removeByActivityId(activity.getId(), tenantId);
                 activityPort.deleteById(activity.getId(), tenantId);
                 success++;
             } catch (Exception e) {
@@ -397,7 +408,8 @@ public class ActivityService implements IActivityService {
                 activity.setAssignedTo(newAssigneeId);
                 activity.setUpdatedBy(userId);
                 validateAssignedUser(activity, tenantId);
-                activityPort.save(activity);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
                 success++;
             } catch (Exception e) {
                 failed++;
@@ -517,6 +529,10 @@ public class ActivityService implements IActivityService {
 
     private void publishActivityCancelledEvent(ActivityEntity activity) {
         log.debug("Event: Activity cancelled - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+    }
+
+    private void syncRepTimeBlock(ActivityEntity activity, Long tenantId) {
+        repTimeBlockService.syncFromActivity(activity, tenantId);
     }
 
     private void publishActivityDeletedEvent(ActivityEntity activity) {

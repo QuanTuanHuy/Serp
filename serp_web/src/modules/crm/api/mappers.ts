@@ -1,5 +1,6 @@
 import type {
   Account,
+  AccountTier,
   Activity,
   APIResponse,
   Contact,
@@ -14,6 +15,7 @@ import type {
   UpdateLeadRequest,
   UpdateOpportunityRequest,
   CustomerFilters,
+  CrmDayOfWeek,
   Lead,
   LeadFilters,
   LeadStatusTransitionResult,
@@ -22,6 +24,7 @@ import type {
   ActivityStats,
   BulkActivityRequest,
   BulkActivityResult,
+  PreferredTimeSlot,
 } from '../types';
 
 export type BulkActivityRequestPayload = {
@@ -54,6 +57,7 @@ type BackendAddress = {
   city?: string | null;
   state?: string | null;
   zipCode?: string | null;
+  postalCode?: string | null;
   country?: string | null;
 };
 
@@ -71,6 +75,11 @@ type BackendAccount = {
   paymentTerms?: string | null;
   activeStatus?: string | null;
   accountType?: string | null;
+  tier?: string | null;
+  preferredTimeSlots?: string[] | null;
+  preferredDays?: string[] | null;
+  language?: string | null;
+  timezone?: string | null;
   totalRevenue?: number | string | null;
   totalOpportunities?: number | null;
   wonOpportunities?: number | null;
@@ -228,44 +237,103 @@ const joinAddress = (address?: BackendAddress | null): string | undefined => {
     address.street,
     address.city,
     address.state,
+    address.postalCode ?? address.zipCode,
     address.country,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : undefined;
 };
 
+const ACCOUNT_TIER_SET = new Set<string>([
+  'STANDARD',
+  'SILVER',
+  'GOLD',
+  'PLATINUM',
+]);
+
+const PREFERRED_SLOT_SET = new Set<string>(['MORNING', 'AFTERNOON']);
+
+const CRM_DAY_SET = new Set<string>([
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+]);
+
 export const mapBackendAccountToAccount = (
   account: BackendAccount
-): Account => ({
-  id: String(account.id),
-  createdAt: toIsoString(account.createdAt),
-  updatedAt: toIsoString(account.updatedAt),
-  isActive: account.activeStatus !== 'INACTIVE',
-  name: account.name || '',
-  email: account.email || '',
-  phone: account.phone || undefined,
-  address: joinAddress(account.address),
-  customerType: account.accountType === 'CUSTOMER' ? 'CUSTOMER' : 'PROSPECT',
-  status: account.activeStatus === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
-  companyName: account.name || undefined,
-  taxNumber: account.taxId || undefined,
-  website: account.website || undefined,
-  notes: account.notes || undefined,
-  assignedSalesRep: undefined,
-  tags: account.industry ? [account.industry] : [],
-  customFields: {
+): Account => {
+  const zipOrPostal =
+    account.address?.postalCode ?? account.address?.zipCode ?? undefined;
+
+  const tierRaw = account.tier;
+  const tier: AccountTier | undefined =
+    tierRaw && ACCOUNT_TIER_SET.has(tierRaw)
+      ? (tierRaw as AccountTier)
+      : undefined;
+
+  const preferredTimeSlots: PreferredTimeSlot[] | undefined = account
+    .preferredTimeSlots?.length
+    ? (account.preferredTimeSlots.filter((s) =>
+        PREFERRED_SLOT_SET.has(s)
+      ) as PreferredTimeSlot[])
+    : undefined;
+
+  const preferredDays: CrmDayOfWeek[] | undefined = account.preferredDays
+    ?.length
+    ? (account.preferredDays.filter((d) =>
+        CRM_DAY_SET.has(d)
+      ) as CrmDayOfWeek[])
+    : undefined;
+
+  return {
+    id: String(account.id),
+    createdAt: toIsoString(account.createdAt),
+    updatedAt: toIsoString(account.updatedAt),
+    isActive: account.activeStatus !== 'INACTIVE',
+    name: account.name || '',
+    email: account.email || '',
+    phone: account.phone || undefined,
+    address: joinAddress(account.address),
+    customerType: account.accountType === 'CUSTOMER' ? 'CUSTOMER' : 'PROSPECT',
+    status: account.activeStatus === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    companyName: account.name || undefined,
+    taxNumber: account.taxId || undefined,
+    website: account.website || undefined,
+    notes: account.notes || undefined,
+    assignedSalesRep: undefined,
+    tags: account.industry ? [account.industry] : [],
     industry: account.industry || undefined,
     companySize: account.companySize || undefined,
-    city: account.address?.city || undefined,
-    state: account.address?.state || undefined,
-    zipCode: account.address?.zipCode || undefined,
-    country: account.address?.country || undefined,
+    tier,
+    preferredTimeSlots,
+    preferredDays,
+    language: account.language || undefined,
+    timezone: account.timezone || undefined,
+    creditLimit:
+      account.creditLimit === null || account.creditLimit === undefined
+        ? undefined
+        : Number(account.creditLimit),
     paymentTerms: account.paymentTerms || undefined,
-    creditLimit: account.creditLimit || undefined,
-    wonOpportunities: account.wonOpportunities || 0,
-  },
-  totalValue: Number(account.totalRevenue || 0),
-  lastContactDate: undefined,
-});
+    totalOpportunities: account.totalOpportunities ?? undefined,
+    wonOpportunities: account.wonOpportunities ?? undefined,
+    customFields: {
+      industry: account.industry || undefined,
+      companySize: account.companySize || undefined,
+      city: account.address?.city || undefined,
+      state: account.address?.state || undefined,
+      zipCode: zipOrPostal,
+      country: account.address?.country || undefined,
+      paymentTerms: account.paymentTerms || undefined,
+      creditLimit: account.creditLimit || undefined,
+      wonOpportunities: account.wonOpportunities || 0,
+    },
+    totalValue: Number(account.totalRevenue || 0),
+    lastContactDate: undefined,
+  };
+};
 
 export const mapBackendContactToContact = (
   contact: BackendContact
@@ -540,6 +608,8 @@ export const mapAccountFormToBackendPayload = (
       .map((part) => part.trim())
       .filter(Boolean) || [];
 
+  const industry = data.industry?.trim() || data.tags?.[0] || undefined;
+
   return {
     name: data.name,
     email: data.email || undefined,
@@ -547,11 +617,16 @@ export const mapAccountFormToBackendPayload = (
     website: data.website || undefined,
     notes: data.notes || undefined,
     accountType: data.customerType,
-    industry: data.tags?.[0] || undefined,
+    industry,
     companySize: data.companySize || undefined,
     taxId: data.taxNumber || undefined,
     creditLimit: data.creditLimit,
     paymentTerms: data.paymentTerms || undefined,
+    tier: data.tier,
+    preferredTimeSlots: data.preferredTimeSlots,
+    preferredDays: data.preferredDays,
+    language: data.language?.trim() || undefined,
+    timezone: data.timezone?.trim() || undefined,
     street: data.address || address[0],
     city: data.city || address[1],
     state: data.state || address[2],

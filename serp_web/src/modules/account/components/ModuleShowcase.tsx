@@ -130,28 +130,6 @@ function ModuleSurface({
               </p>
             </div>
           </div>
-
-          <div
-            className={cn(
-              'flex items-center gap-2 text-sm font-medium',
-              viewMode === 'grid'
-                ? 'mt-5 text-primary'
-                : 'lg:ml-6 lg:flex-shrink-0',
-              !isInteractive && 'text-muted-foreground'
-            )}
-          >
-            {isInteractive ? (
-              <>
-                <span>Open module</span>
-                <ArrowUpRight className='h-4 w-4' />
-              </>
-            ) : (
-              <>
-                <Lock className='h-4 w-4' />
-                <span>Unavailable right now</span>
-              </>
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>

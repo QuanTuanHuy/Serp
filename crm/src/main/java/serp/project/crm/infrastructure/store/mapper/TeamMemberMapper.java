@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
+import serp.project.crm.core.domain.enums.ExperienceLevel;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.infrastructure.store.model.TeamMemberModel;
 
@@ -33,6 +34,11 @@ public class TeamMemberMapper extends BaseMapper {
                 .userId(model.getUserId())
                 .role(model.getRole())
                 .status(stringToEnum(model.getStatus(), TeamMemberStatus.class))
+                .skills(parseJsonToList(model.getSkills()))
+                .languages(parseJsonToList(model.getLanguages()))
+                .experienceLevel(stringToEnum(model.getExperienceLevel(), ExperienceLevel.class))
+                .capacity(model.getCapacity())
+                .maxMeetings(model.getMaxMeetings())
                 .createdAt(toTimestamp(model.getCreatedAt()))
                 .updatedAt(toTimestamp(model.getUpdatedAt()))
                 .createdBy(model.getCreatedBy())
@@ -55,6 +61,11 @@ public class TeamMemberMapper extends BaseMapper {
                 .userId(entity.getUserId())
                 .role(entity.getRole())
                 .status(enumToString(entity.getStatus()))
+                .skills(serializeListToJson(entity.getSkills()))
+                .languages(serializeListToJson(entity.getLanguages()))
+                .experienceLevel(enumToString(entity.getExperienceLevel()))
+                .capacity(entity.getCapacity())
+                .maxMeetings(entity.getMaxMeetings())
                 .createdAt(toLocalDateTime(entity.getCreatedAt()))
                 .updatedAt(toLocalDateTime(entity.getUpdatedAt()))
                 .createdBy(entity.getCreatedBy())

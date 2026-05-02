@@ -10,6 +10,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.AccountTier;
+import serp.project.crm.core.domain.enums.PreferredTimeSlot;
+
+import java.time.DayOfWeek;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -60,4 +65,16 @@ public class UpdateAccountRequest {
     
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    private AccountTier tier;
+
+    private List<PreferredTimeSlot> preferredTimeSlots;
+
+    private List<DayOfWeek> preferredDays;
+
+    @Size(max = 50, message = "Language must not exceed 50 characters")
+    private String language;
+
+    @Size(max = 100, message = "Timezone must not exceed 100 characters")
+    private String timezone;
 }

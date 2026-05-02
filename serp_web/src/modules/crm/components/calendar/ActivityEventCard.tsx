@@ -44,9 +44,7 @@ export const ActivityEventCard: React.FC<ActivityEventCardProps> = ({
         )}
       >
         <Icon className={cn('h-3 w-3 flex-shrink-0', config.text)} />
-        <span
-          className={cn('truncate', isInactive && 'line-through')}
-        >
+        <span className={cn('truncate', isInactive && 'line-through')}>
           {activity.subject}
         </span>
       </div>
@@ -64,10 +62,7 @@ export const ActivityEventCard: React.FC<ActivityEventCardProps> = ({
       <div className='flex items-center gap-1'>
         <Icon className={cn('h-3 w-3 flex-shrink-0', config.text)} />
         <span
-          className={cn(
-            'font-medium truncate',
-            isInactive && 'line-through'
-          )}
+          className={cn('font-medium truncate', isInactive && 'line-through')}
         >
           {activity.subject}
         </span>

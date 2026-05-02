@@ -5,6 +5,9 @@
 
 package serp.project.crm.core.domain.dto.request;
 
+import java.math.BigDecimal;
+
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -21,9 +24,15 @@ public class ChangeOpportunityStageRequest {
     @NotNull(message = "Stage is required")
     private OpportunityStage stage;
 
+    @DecimalMin(value = "0.0", inclusive = true, message = "Actual value must be greater than or equal to 0")
+    private BigDecimal actualValue;
+
     @Size(max = 1000, message = "Loss reason must not exceed 1000 characters")
     private String lossReason;
 
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;
+
+    @Size(max = 1000, message = "Reopen reason must not exceed 1000 characters")
+    private String reopenReason;
 }
