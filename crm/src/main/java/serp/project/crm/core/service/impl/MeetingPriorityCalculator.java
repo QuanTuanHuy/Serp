@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.entity.MeetingRequestEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
-import serp.project.crm.core.domain.enums.AccountTier;
 import serp.project.crm.core.domain.enums.AccountType;
 
 import java.math.BigDecimal;
