@@ -29,6 +29,7 @@ import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IActivityService;
+import serp.project.crm.core.service.INotificationPublisher;
 import serp.project.crm.core.service.IRepTimeBlockService;
 
 import java.time.LocalDateTime;
@@ -52,6 +53,7 @@ public class ActivityService implements IActivityService {
     private final IAccountPort AccountPort;
     private final ITeamMemberPort teamMemberPort;
     private final IRepTimeBlockService repTimeBlockService;
+    private final INotificationPublisher notificationPublisher;
 
     private final IContactPort contactPort;
 
@@ -517,18 +519,22 @@ public class ActivityService implements IActivityService {
 
     private void publishActivityCreatedEvent(ActivityEntity activity) {
         log.debug("Event: Activity created - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingAssigned(activity, activity.getTenantId());
     }
 
     private void publishActivityUpdatedEvent(ActivityEntity activity) {
         log.debug("Event: Activity updated - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingUpdated(activity, activity.getTenantId());
     }
 
     private void publishActivityCompletedEvent(ActivityEntity activity) {
         log.debug("Event: Activity completed - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingCompleted(activity, activity.getTenantId());
     }
 
     private void publishActivityCancelledEvent(ActivityEntity activity) {
         log.debug("Event: Activity cancelled - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingCancelled(activity, activity.getTenantId());
     }
 
     private void syncRepTimeBlock(ActivityEntity activity, Long tenantId) {
