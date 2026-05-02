@@ -366,57 +366,70 @@ export const mapBackendContactToContact = (
 
 export const mapBackendActivityToActivity = (
   activity: BackendActivity
-): Activity => ({
-  id: String(activity.id),
-  createdAt: toIsoString(activity.createdAt),
-  updatedAt: toIsoString(activity.updatedAt),
-  isActive: activity.status !== 'CANCELLED',
-  type: (activity.activityType as Activity['type']) || 'TASK',
-  status: (activity.status as Activity['status']) || 'PLANNED',
-  subject: activity.subject || 'Untitled activity',
-  description: activity.description || undefined,
-  scheduledDate: toIsoString(activity.activityDate ?? activity.dueDate),
-  actualDate: undefined,
-  duration: activity.durationMinutes || undefined,
-  priority: (activity.priority as Activity['priority']) || 'MEDIUM',
-  assignedTo: String(activity.assignedTo || ''),
-  assignedToName: activity.assignedToName || 'Unassigned',
-  relatedTo: {
-    type: activity.accountId
-      ? 'CUSTOMER'
-      : activity.leadId
-        ? 'LEAD'
-        : 'OPPORTUNITY',
-    id: String(
-      activity.accountId ||
-        activity.leadId ||
-        activity.opportunityId ||
-        activity.contactId ||
-        ''
-    ),
-    name:
-      activity.relatedCustomerName ||
-      activity.relatedLeadName ||
-      activity.relatedOpportunityName ||
-      activity.relatedContactName ||
-      activity.subject ||
-      'Related item',
-  },
-  participants: [],
-  location: activity.location || undefined,
-  outcome: activity.outcome || undefined,
-  followUpRequired: false,
-  followUpDate: activity.dueDate ? toIsoString(activity.dueDate) : undefined,
-  tags: [],
-  customFields: {
-    notes: activity.notes || undefined,
-    reminderDate: activity.reminderDate
-      ? toIsoString(activity.reminderDate)
-      : undefined,
-    attachments: activity.attachments || [],
-    contactId: activity.contactId ? String(activity.contactId) : undefined,
-  },
-});
+): Activity => {
+  const assigneeIdRaw = activity.assignedTo;
+  const assigneeId =
+    assigneeIdRaw !== null &&
+    assigneeIdRaw !== undefined &&
+    String(assigneeIdRaw).trim() !== ''
+      ? String(assigneeIdRaw)
+      : '';
+  const assigneeNameRaw = activity.assignedToName?.trim();
+  const assignedToName =
+    assigneeNameRaw || (assigneeId ? `User #${assigneeId}` : 'Unassigned');
+
+  return {
+    id: String(activity.id),
+    createdAt: toIsoString(activity.createdAt),
+    updatedAt: toIsoString(activity.updatedAt),
+    isActive: activity.status !== 'CANCELLED',
+    type: (activity.activityType as Activity['type']) || 'TASK',
+    status: (activity.status as Activity['status']) || 'PLANNED',
+    subject: activity.subject || 'Untitled activity',
+    description: activity.description || undefined,
+    scheduledDate: toIsoString(activity.activityDate ?? activity.dueDate),
+    actualDate: undefined,
+    duration: activity.durationMinutes || undefined,
+    priority: (activity.priority as Activity['priority']) || 'MEDIUM',
+    assignedTo: assigneeId,
+    assignedToName,
+    relatedTo: {
+      type: activity.accountId
+        ? 'CUSTOMER'
+        : activity.leadId
+          ? 'LEAD'
+          : 'OPPORTUNITY',
+      id: String(
+        activity.accountId ||
+          activity.leadId ||
+          activity.opportunityId ||
+          activity.contactId ||
+          ''
+      ),
+      name:
+        activity.relatedCustomerName ||
+        activity.relatedLeadName ||
+        activity.relatedOpportunityName ||
+        activity.relatedContactName ||
+        activity.subject ||
+        'Related item',
+    },
+    participants: [],
+    location: activity.location || undefined,
+    outcome: activity.outcome || undefined,
+    followUpRequired: false,
+    followUpDate: activity.dueDate ? toIsoString(activity.dueDate) : undefined,
+    tags: [],
+    customFields: {
+      notes: activity.notes || undefined,
+      reminderDate: activity.reminderDate
+        ? toIsoString(activity.reminderDate)
+        : undefined,
+      attachments: activity.attachments || [],
+      contactId: activity.contactId ? String(activity.contactId) : undefined,
+    },
+  };
+};
 
 const splitLeadName = (name?: string | null) => {
   const normalized = (name || '').trim();

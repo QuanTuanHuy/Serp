@@ -31,6 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
+import { useGetMyOrganizationQuery } from '@/modules/settings/services/organizations/organizationsApi';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   useCreateMeetingRequestMutation,
   useGetCustomersQuery,
@@ -120,17 +122,6 @@ const formSchema = z
         });
       }
     }
-    const pu = data.preferredUserId?.trim();
-    if (pu) {
-      const n = Number.parseInt(pu, 10);
-      if (Number.isNaN(n) || n <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Preferred user must be a positive numeric id',
-          path: ['preferredUserId'],
-        });
-      }
-    }
   });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -173,6 +164,27 @@ export function RequestMeetingDialog({
   });
   const teams = teamsPayload?.data?.items ?? [];
 
+  const { data: organization } = useGetMyOrganizationQuery(undefined, {
+    skip: !open,
+  });
+  const organizationId = organization?.id;
+  const { data: orgUsersResponse, isLoading: orgUsersLoading } =
+    useGetOrganizationUsersQuery(
+      {
+        organizationId: organizationId as number,
+        page: 0,
+        pageSize: 100,
+        status: 'ACTIVE',
+      },
+      { skip: !open || !organizationId }
+    );
+  const orgUsers = orgUsersResponse?.data?.items ?? [];
+
+  const formatOrgUserLabel = (u: (typeof orgUsers)[number]) => {
+    const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+    return name || u.email || `User #${u.id}`;
+  };
+
   const { data: customersResult } = useGetCustomersQuery(
     {
       filters: { search: debouncedSearch || undefined },
@@ -204,6 +216,9 @@ export function RequestMeetingDialog({
       pickedAccountId: fixedAccountId ?? '',
     },
   });
+
+  const pickedAccountId = form.watch('pickedAccountId');
+  const teamIdValue = form.watch('teamId');
 
   useEffect(() => {
     if (!open) return;
@@ -314,33 +329,43 @@ export function RequestMeetingDialog({
               <Input
                 placeholder='Search accounts (type at least 2 characters)'
                 value={accountSearch}
-                onChange={(e) => setAccountSearch(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setAccountSearch(v);
+                  if (pickedAccountId) {
+                    form.setValue('pickedAccountId', '', {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
               />
-              {debouncedSearch.length >= 2 && customerHits.length > 0 && (
-                <div className='max-h-36 overflow-auto rounded-md border'>
-                  {customerHits.map((c) => (
-                    <button
-                      key={c.id}
-                      type='button'
-                      className='block w-full px-3 py-2 text-left text-sm hover:bg-muted'
-                      onClick={() => {
-                        form.setValue('pickedAccountId', c.id, {
-                          shouldValidate: true,
-                        });
-                        setAccountSearch(c.name || `Account ${c.id}`);
-                      }}
-                    >
-                      {c.name || `Account ${c.id}`}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {debouncedSearch.length >= 2 &&
+                customerHits.length > 0 &&
+                !pickedAccountId && (
+                  <div className='max-h-36 overflow-auto rounded-md border'>
+                    {customerHits.map((c) => (
+                      <button
+                        key={c.id}
+                        type='button'
+                        className='block w-full px-3 py-2 text-left text-sm hover:bg-muted'
+                        onClick={() => {
+                          form.setValue('pickedAccountId', String(c.id), {
+                            shouldValidate: true,
+                          });
+                          setAccountSearch(c.name || `Account ${c.id}`);
+                        }}
+                      >
+                        {c.name || `Account ${c.id}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
               {form.formState.errors.pickedAccountId && (
                 <p className='text-sm text-destructive'>
                   {form.formState.errors.pickedAccountId.message}
                 </p>
               )}
-              {needsAccountPick && !form.watch('pickedAccountId') && (
+              {needsAccountPick && !pickedAccountId && (
                 <p className='text-xs text-muted-foreground'>
                   Pick an account from search results.
                 </p>
@@ -351,17 +376,17 @@ export function RequestMeetingDialog({
           <div className='space-y-2'>
             <Label htmlFor='mr-team'>Team</Label>
             <Select
-              value={form.watch('teamId')}
+              value={teamIdValue ? String(teamIdValue) : undefined}
               onValueChange={(v) =>
                 form.setValue('teamId', v, { shouldValidate: true })
               }
             >
-              <SelectTrigger id='mr-team'>
+              <SelectTrigger id='mr-team' className='w-full'>
                 <SelectValue placeholder='Select team' />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position='popper' className='max-h-60 z-[100]'>
                 {teams.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
+                  <SelectItem key={String(t.id)} value={String(t.id)}>
                     {t.name}
                   </SelectItem>
                 ))}
@@ -493,15 +518,41 @@ export function RequestMeetingDialog({
               )}
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='mr-pref-user'>Preferred user id (optional)</Label>
-              <Input
-                id='mr-pref-user'
-                {...form.register('preferredUserId')}
-                placeholder='CRM user id'
-              />
-              {form.formState.errors.preferredUserId && (
-                <p className='text-xs text-destructive'>
-                  {form.formState.errors.preferredUserId.message}
+              <Label htmlFor='mr-pref-user'>
+                Preferred assignee (optional)
+              </Label>
+              <Select
+                disabled={orgUsersLoading || !organizationId}
+                value={
+                  form.watch('preferredUserId')?.trim()
+                    ? form.watch('preferredUserId')!
+                    : '_none'
+                }
+                onValueChange={(v) =>
+                  form.setValue('preferredUserId', v === '_none' ? '' : v, {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger id='mr-pref-user'>
+                  <SelectValue
+                    placeholder={
+                      orgUsersLoading ? 'Loading users…' : 'No preference'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent position='popper' className='max-h-60'>
+                  <SelectItem value='_none'>No preference</SelectItem>
+                  {orgUsers.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {formatOrgUserLabel(u)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!organizationId && open && (
+                <p className='text-xs text-muted-foreground'>
+                  Organization context is required to list users.
                 </p>
               )}
             </div>
