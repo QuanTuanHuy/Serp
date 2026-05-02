@@ -6,3 +6,5 @@
 export * from './export';
 export * from './activity-status';
 export * from './working-hours-time';
+export * from './opportunityConstants';
+export * from './opportunityFormatters';

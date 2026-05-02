@@ -1,18 +1,13 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Dialog Components Barrel Export
-*/
+// Author: QuanTuanHuy, Description: Part of Serp Project
 
-export { QuickAddCustomerDialog } from './QuickAddCustomerDialog';
-export type { QuickCustomerFormData } from './QuickAddCustomerDialog';
-export { QuickAddCustomerDialog as QuickAddAccountDialog } from './QuickAddCustomerDialog';
-export type { QuickCustomerFormData as QuickAccountFormData } from './QuickAddCustomerDialog';
-
-export { QuickAddLeadDialog } from './QuickAddLeadDialog';
-export type { QuickLeadFormData } from './QuickAddLeadDialog';
-
-export { QuickAddOpportunityDialog } from './QuickAddOpportunityDialog';
-export type { QuickOpportunityFormData } from './QuickAddOpportunityDialog';
-
+export { WonOpportunityDialog } from './WonOpportunityDialog';
+export { LostOpportunityDialog } from './LostOpportunityDialog';
+export { ReopenOpportunityDialog } from './ReopenOpportunityDialog';
+export { ChangeStageDialog } from './ChangeStageDialog';
+export { DeleteOpportunityDialog } from './DeleteOpportunityDialog';
 export { QuickAddActivityDialog } from './QuickAddActivityDialog';
-export type { QuickActivityFormData } from './QuickAddActivityDialog';
+export { QuickAddCustomerDialog } from './QuickAddCustomerDialog';
+export { QuickAddCustomerDialog as QuickAddAccountDialog } from './QuickAddCustomerDialog';
+export { QuickAddLeadDialog } from './QuickAddLeadDialog';
+export { QuickAddOpportunityDialog } from './QuickAddOpportunityDialog';
+export { AssignTerritoryDialog } from './AssignTerritoryDialog';

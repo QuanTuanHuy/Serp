@@ -2,35 +2,11 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  DragDropContext,
-  Draggable,
-  Droppable,
-  type DropResult,
-} from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
 import { getErrorMessage } from '@/lib/store/api';
-import { useDebounce } from '@/shared/hooks/use-debounce';
-import {
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from '@/shared/components/ui';
+import { Button, Card, CardContent, Input } from '@/shared/components/ui';
 import { toast } from 'sonner';
 import {
   Search,
@@ -40,56 +16,41 @@ import {
   Columns3,
   SlidersHorizontal,
   TrendingUp,
-  DollarSign,
-  Target,
-  Trophy,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { OpportunityCard } from '../../components/cards';
-import { StatsCard } from '../../components/dashboard';
 import { QuickAddOpportunityDialog } from '../../components/dialogs';
+import {
+  WonOpportunityDialog,
+  LostOpportunityDialog,
+  ReopenOpportunityDialog,
+} from '../../components/dialogs';
+import {
+  OpportunityStats,
+  OpportunityFilters,
+  OpportunityGridView,
+  OpportunityPipelineView,
+} from '../../components/opportunities';
 import { ExportDropdown } from '../../components/shared';
 import {
-  useChangeOpportunityStageMutation,
   useCreateOpportunityMutation,
   useDeleteOpportunityMutation,
-  useGetOpportunitiesQuery,
-  useGetOpportunityPipelineQuery,
+  useChangeOpportunityStageMutation,
 } from '../../api/crmApi';
 import { OPPORTUNITY_EXPORT_COLUMNS } from '../../utils/export';
+import {
+  useOpportunityFilters,
+  useOpportunityData,
+  usePipelineGrouping,
+  useStageTransition,
+} from '../../hooks';
 import type {
-  ChangeOpportunityStageRequest,
   CreateOpportunityRequest,
   Opportunity,
   OpportunityStage,
 } from '../../types';
-
-const PIPELINE_STAGES: {
-  stage: OpportunityStage;
-  label: string;
-  color: string;
-}[] = [
-  { stage: 'PROSPECTING', label: 'Prospecting', color: 'bg-blue-500' },
-  { stage: 'QUALIFICATION', label: 'Qualification', color: 'bg-cyan-500' },
-  { stage: 'PROPOSAL', label: 'Proposal', color: 'bg-yellow-500' },
-  { stage: 'NEGOTIATION', label: 'Negotiation', color: 'bg-orange-500' },
-  { stage: 'CLOSED_WON', label: 'Won', color: 'bg-green-500' },
-  { stage: 'CLOSED_LOST', label: 'Lost', color: 'bg-red-500' },
-];
-
-const ACTIVE_PIPELINE_STAGES = PIPELINE_STAGES.filter(
-  ({ stage }) => stage !== 'CLOSED_WON' && stage !== 'CLOSED_LOST'
-);
-
-type PendingStageTransition = {
-  opportunityId: string;
-  opportunityName: string;
-  fromStage: OpportunityStage;
-  toStage: OpportunityStage;
-};
 
 interface OpportunityListPageProps {
   className?: string;
@@ -99,157 +60,76 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
   className,
 }) => {
   const router = useRouter();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [stageFilter, setStageFilter] = useState<OpportunityStage | 'ALL'>(
-    'ALL'
-  );
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'value'>(
-    'createdAt'
-  );
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'pipeline'>(
     'pipeline'
   );
   const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [pendingStageTransition, setPendingStageTransition] =
-    useState<PendingStageTransition | null>(null);
-  const [wonActualValue, setWonActualValue] = useState('');
-  const [wonNotes, setWonNotes] = useState('');
-  const [lostReason, setLostReason] = useState('');
-  const [reopenReason, setReopenReason] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    stageFilter,
+    setStageFilter,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    currentPage,
+    setCurrentPage,
+    clearFilters,
+    hasActiveFilters,
+  } = useOpportunityFilters();
 
   const pageSize = viewMode === 'pipeline' ? 100 : 12;
 
-  const [changeOpportunityStage, { isLoading: isUpdatingOpportunityStage }] =
-    useChangeOpportunityStageMutation();
+  const {
+    listOpportunities,
+    pipelineOpportunities,
+    total,
+    totalPages,
+    stats,
+    isLoading,
+    activeError,
+    activeOpportunities,
+  } = useOpportunityData({
+    searchQuery,
+    stageFilter,
+    sortBy,
+    sortOrder,
+    currentPage,
+    pageSize,
+    viewMode,
+  });
+
+  const { opportunitiesByStage, stageValues, opportunityMap } =
+    usePipelineGrouping(pipelineOpportunities);
+
+  const {
+    pendingStageTransition,
+    setPendingStageTransition,
+    wonActualValue,
+    setWonActualValue,
+    wonNotes,
+    setWonNotes,
+    lostReason,
+    setLostReason,
+    reopenReason,
+    setReopenReason,
+    isUpdatingOpportunityStage,
+    resetPendingStageTransition,
+    handleSubmitWonTransition,
+    handleSubmitLostTransition,
+    handleSubmitReopenTransition,
+    isWonDialogOpen,
+    isLostDialogOpen,
+    isReopenDialogOpen,
+  } = useStageTransition();
+
   const [createOpportunity, { isLoading: isCreatingOpportunity }] =
     useCreateOpportunityMutation();
   const [deleteOpportunity] = useDeleteOpportunityMutation();
-
-  const {
-    data: opportunitiesResponse,
-    isLoading: isLoadingOpportunities,
-    error,
-  } = useGetOpportunitiesQuery({
-    filters: {
-      search: debouncedSearchQuery || undefined,
-      stage: stageFilter !== 'ALL' ? [stageFilter] : undefined,
-    },
-    pagination: {
-      page: currentPage,
-      limit: pageSize,
-      sortBy: sortBy === 'value' ? 'estimatedValue' : sortBy,
-      sortOrder,
-    },
-  });
-
-  const {
-    data: pipelineResponse,
-    isLoading: isLoadingPipeline,
-    error: pipelineError,
-  } = useGetOpportunityPipelineQuery({});
-
-  const listOpportunities = opportunitiesResponse?.data?.data || [];
-  const total = opportunitiesResponse?.data?.pagination?.total || 0;
-  const totalPages = opportunitiesResponse?.data?.pagination?.totalPages || 1;
-
-  const pipelineStages = pipelineResponse?.data?.stages || [];
-  const pipelineSummary = pipelineResponse?.data?.summary;
-
-  const pipelineOpportunities = useMemo(() => {
-    let result = pipelineStages.flatMap((stage) => stage.opportunities || []);
-
-    if (debouncedSearchQuery) {
-      const query = debouncedSearchQuery.toLowerCase();
-      result = result.filter(
-        (opp) =>
-          opp.name.toLowerCase().includes(query) ||
-          (opp.customerName && opp.customerName.toLowerCase().includes(query))
-      );
-    }
-
-    if (stageFilter !== 'ALL') {
-      result = result.filter((opp) => opp.stage === stageFilter);
-    }
-
-    return result;
-  }, [pipelineStages, debouncedSearchQuery, stageFilter]);
-
-  const opportunitiesByStage = useMemo(() => {
-    const grouped: Record<OpportunityStage, Opportunity[]> = {
-      PROSPECTING: [],
-      QUALIFICATION: [],
-      PROPOSAL: [],
-      NEGOTIATION: [],
-      CLOSED_WON: [],
-      CLOSED_LOST: [],
-    };
-
-    pipelineOpportunities.forEach((opportunity) => {
-      grouped[opportunity.stage].push(opportunity);
-    });
-
-    return grouped;
-  }, [pipelineOpportunities]);
-
-  const pipelineOpportunityMap = useMemo(
-    () =>
-      new Map(
-        pipelineOpportunities.map((opportunity) => [
-          opportunity.id,
-          opportunity,
-        ])
-      ),
-    [pipelineOpportunities]
-  );
-
-  const stageValues = useMemo(() => {
-    const values: Record<OpportunityStage, number> = {
-      PROSPECTING: 0,
-      QUALIFICATION: 0,
-      PROPOSAL: 0,
-      NEGOTIATION: 0,
-      CLOSED_WON: 0,
-      CLOSED_LOST: 0,
-    };
-
-    pipelineOpportunities.forEach((opportunity) => {
-      values[opportunity.stage] +=
-        opportunity.estimatedValue ?? opportunity.value ?? 0;
-    });
-
-    return values;
-  }, [pipelineOpportunities]);
-
-  const stats = useMemo(() => {
-    if (!pipelineSummary) {
-      return {
-        total: total,
-        totalValue: 0,
-        weightedValue: 0,
-        wonCount: 0,
-        wonValue: 0,
-        avgDealSize: 0,
-      };
-    }
-
-    const wonStage = pipelineStages.find(
-      (stage) => stage.stage === 'CLOSED_WON'
-    );
-
-    return {
-      total: pipelineSummary.totalOpportunities,
-      totalValue: pipelineSummary.totalPipelineValue,
-      weightedValue: pipelineSummary.weightedPipelineValue,
-      wonCount: wonStage?.count || 0,
-      wonValue: wonStage?.totalValue || 0,
-      avgDealSize: pipelineSummary.averageDealSize,
-    };
-  }, [pipelineSummary, pipelineStages, total]);
+  const [changeOpportunityStage] = useChangeOpportunityStageMutation();
 
   const handleViewOpportunity = (opportunityId: string) => {
     router.push(`/crm/opportunities/${opportunityId}`);
@@ -278,82 +158,6 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     }
   };
 
-  const resetPendingStageTransition = () => {
-    setPendingStageTransition(null);
-    setWonActualValue('');
-    setWonNotes('');
-    setLostReason('');
-    setReopenReason('');
-  };
-
-  const submitStageTransition = async (
-    payload: ChangeOpportunityStageRequest,
-    successMessage: string
-  ) => {
-    if (!pendingStageTransition) return;
-
-    await changeOpportunityStage({
-      id: pendingStageTransition.opportunityId,
-      data: payload,
-    }).unwrap();
-
-    toast.success(successMessage);
-    resetPendingStageTransition();
-  };
-
-  const handleSubmitWonTransition = async () => {
-    try {
-      await submitStageTransition(
-        {
-          stage: 'CLOSED_WON',
-          actualValue: wonActualValue ? Number(wonActualValue) : undefined,
-          notes: wonNotes.trim() || undefined,
-        },
-        'Opportunity moved to Closed Won'
-      );
-    } catch (error) {
-      toast.error('Failed to close opportunity as won', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleSubmitLostTransition = async () => {
-    if (!lostReason.trim()) return;
-
-    try {
-      await submitStageTransition(
-        {
-          stage: 'CLOSED_LOST',
-          lossReason: lostReason.trim(),
-        },
-        'Opportunity moved to Closed Lost'
-      );
-    } catch (error) {
-      toast.error('Failed to close opportunity as lost', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleSubmitReopenTransition = async () => {
-    if (!pendingStageTransition || !reopenReason.trim()) return;
-
-    try {
-      await submitStageTransition(
-        {
-          stage: pendingStageTransition.toStage,
-          reopenReason: reopenReason.trim(),
-        },
-        `Opportunity reopened to ${pendingStageTransition.toStage.replace('_', ' ')}`
-      );
-    } catch (error) {
-      toast.error('Failed to reopen opportunity', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
   const handlePipelineDragEnd = async ({
     destination,
     draggableId,
@@ -367,7 +171,7 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     if (fromStage === toStage) return;
 
     const opportunityId = draggableId.replace('opportunity-', '');
-    const opportunity = pipelineOpportunityMap.get(opportunityId);
+    const opportunity = opportunityMap.get(opportunityId);
 
     if (!opportunity) return;
 
@@ -395,7 +199,6 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         fromStage,
         toStage,
       });
-      setReopenReason('');
       return;
     }
 
@@ -406,13 +209,10 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         fromStage,
         toStage,
       });
-      setWonActualValue('');
-      setWonNotes('');
-      setLostReason('');
-      setReopenReason('');
       return;
     }
 
+    // Normal stage transition (between active stages)
     try {
       await changeOpportunityStage({
         id: opportunityId,
@@ -425,25 +225,6 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
       });
     }
   };
-
-  const clearFilters = () => {
-    setSearchQuery('');
-    setStageFilter('ALL');
-    setCurrentPage(1);
-  };
-
-  const hasActiveFilters = Boolean(searchQuery) || stageFilter !== 'ALL';
-  const isLoading =
-    viewMode === 'pipeline' ? isLoadingPipeline : isLoadingOpportunities;
-  const activeError = viewMode === 'pipeline' ? pipelineError : error;
-  const activeOpportunities =
-    viewMode === 'pipeline' ? pipelineOpportunities : listOpportunities;
-  const isWonDialogOpen = pendingStageTransition?.toStage === 'CLOSED_WON';
-  const isLostDialogOpen = pendingStageTransition?.toStage === 'CLOSED_LOST';
-  const isReopenDialogOpen =
-    pendingStageTransition?.fromStage === 'CLOSED_LOST' &&
-    pendingStageTransition?.toStage !== 'CLOSED_WON' &&
-    pendingStageTransition?.toStage !== 'CLOSED_LOST';
 
   return (
     <>
@@ -471,32 +252,12 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
           </div>
         </div>
 
-        <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
-          <StatsCard
-            title='Total Pipeline'
-            value={`$${Math.round(stats.totalValue).toLocaleString()}`}
-            icon={TrendingUp}
-            variant='primary'
-          />
-          <StatsCard
-            title='Weighted Value'
-            value={`$${Math.round(stats.weightedValue).toLocaleString()}`}
-            icon={DollarSign}
-            variant='warning'
-          />
-          <StatsCard
-            title='Won Deals'
-            value={stats.wonCount}
-            icon={Trophy}
-            variant='success'
-          />
-          <StatsCard
-            title='Avg. Deal Size'
-            value={`$${Math.round(stats.avgDealSize).toLocaleString()}`}
-            icon={Target}
-            variant='default'
-          />
-        </div>
+        <OpportunityStats
+          totalValue={stats.totalValue}
+          weightedValue={stats.weightedValue}
+          wonCount={stats.wonCount}
+          avgDealSize={stats.avgDealSize}
+        />
 
         <div className='flex flex-col gap-3 sm:flex-row'>
           <div className='relative flex-1'>
@@ -573,80 +334,25 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         </div>
 
         {showFilters && (
-          <Card>
-            <CardContent className='p-4'>
-              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label>Stage</Label>
-                  <Select
-                    value={stageFilter}
-                    onValueChange={(value) => {
-                      setStageFilter(value as OpportunityStage | 'ALL');
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='All stages' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='ALL'>All Stages</SelectItem>
-                      <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
-                      <SelectItem value='QUALIFICATION'>
-                        Qualification
-                      </SelectItem>
-                      <SelectItem value='PROPOSAL'>Proposal</SelectItem>
-                      <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
-                      <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
-                      <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label>Sort By</Label>
-                  <Select
-                    value={`${sortBy}-${sortOrder}`}
-                    onValueChange={(value) => {
-                      const [field, order] = value.split('-');
-                      setSortBy(field as typeof sortBy);
-                      setSortOrder(order as 'asc' | 'desc');
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Sort by' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='createdAt-desc'>
-                        Newest First
-                      </SelectItem>
-                      <SelectItem value='createdAt-asc'>
-                        Oldest First
-                      </SelectItem>
-                      <SelectItem value='name-asc'>Name A-Z</SelectItem>
-                      <SelectItem value='name-desc'>Name Z-A</SelectItem>
-                      <SelectItem value='value-desc'>Highest Value</SelectItem>
-                      <SelectItem value='value-asc'>Lowest Value</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {hasActiveFilters && (
-                <div className='mt-4 flex items-center justify-between border-t pt-4'>
-                  <p className='text-sm text-muted-foreground'>
-                    {viewMode === 'pipeline'
-                      ? pipelineOpportunities.length
-                      : total}{' '}
-                    results found
-                  </p>
-                  <Button variant='ghost' size='sm' onClick={clearFilters}>
-                    Clear all filters
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <OpportunityFilters
+            stageFilter={stageFilter}
+            onStageFilterChange={(value) => {
+              setStageFilter(value);
+              setCurrentPage(1);
+            }}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={(field, order) => {
+              setSortBy(field as typeof sortBy);
+              setSortOrder(order as 'asc' | 'desc');
+              setCurrentPage(1);
+            }}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+            resultCount={
+              viewMode === 'pipeline' ? pipelineOpportunities.length : total
+            }
+          />
         )}
 
         {activeError && (
@@ -668,125 +374,24 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
         {!isLoading &&
           viewMode === 'pipeline' &&
           pipelineOpportunities.length > 0 && (
-            <DragDropContext onDragEnd={handlePipelineDragEnd}>
-              <div className='overflow-x-auto pb-4'>
-                <div className='mb-4 flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3'>
-                  <p className='text-sm font-medium'>Pipeline Board</p>
-                  <p className='text-xs text-muted-foreground'>
-                    Drag opportunities across stages. Dropping into Won, Lost,
-                    or reopening from Lost will ask for more details.
-                  </p>
-                </div>
-                <div className='grid min-w-[1200px] grid-cols-6 gap-4'>
-                  {PIPELINE_STAGES.map(({ stage, label, color }) => (
-                    <Droppable key={stage} droppableId={stage}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={cn(
-                            'min-h-[500px] rounded-xl bg-muted/30 p-4 transition-colors',
-                            snapshot.isDraggingOver &&
-                              'bg-primary/10 ring-1 ring-primary/20'
-                          )}
-                        >
-                          <div className='mb-4'>
-                            <div className='mb-2 flex items-center justify-between'>
-                              <div className='flex items-center gap-2'>
-                                <div
-                                  className={cn('h-3 w-3 rounded-full', color)}
-                                />
-                                <h3 className='text-sm font-semibold'>
-                                  {label}
-                                </h3>
-                              </div>
-                              <span className='rounded-full bg-background px-2 py-1 text-xs text-muted-foreground'>
-                                {opportunitiesByStage[stage]?.length || 0}
-                              </span>
-                            </div>
-                            <p className='text-sm font-medium text-muted-foreground'>
-                              ${stageValues[stage].toLocaleString()}
-                            </p>
-                          </div>
-
-                          <div className='space-y-3'>
-                            {opportunitiesByStage[stage]?.map(
-                              (opportunity, index) => (
-                                <Draggable
-                                  key={opportunity.id}
-                                  draggableId={`opportunity-${opportunity.id}`}
-                                  index={index}
-                                  isDragDisabled={
-                                    opportunity.stage === 'CLOSED_WON'
-                                  }
-                                >
-                                  {(provided, snapshot) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={cn(
-                                        snapshot.isDragging && 'rotate-[1deg]'
-                                      )}
-                                    >
-                                      <OpportunityCard
-                                        opportunity={opportunity}
-                                        variant='pipeline'
-                                        className={cn(
-                                          snapshot.isDragging &&
-                                            'shadow-lg ring-2 ring-primary/20'
-                                        )}
-                                        onClick={() =>
-                                          handleViewOpportunity(opportunity.id)
-                                        }
-                                        onDelete={() =>
-                                          handleDeleteOpportunity(
-                                            opportunity.id
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                  )}
-                                </Draggable>
-                              )
-                            )}
-                            {provided.placeholder}
-                            {opportunitiesByStage[stage].length === 0 && (
-                              <p className='py-8 text-center text-xs text-muted-foreground'>
-                                No deals
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </Droppable>
-                  ))}
-                </div>
-              </div>
-            </DragDropContext>
+            <OpportunityPipelineView
+              opportunitiesByStage={opportunitiesByStage}
+              stageValues={stageValues}
+              onDragEnd={handlePipelineDragEnd}
+              onViewOpportunity={handleViewOpportunity}
+              onDeleteOpportunity={handleDeleteOpportunity}
+            />
           )}
 
         {!isLoading &&
           viewMode !== 'pipeline' &&
           listOpportunities.length > 0 && (
-            <div
-              className={cn(
-                'gap-4',
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                  : 'flex flex-col'
-              )}
-            >
-              {listOpportunities.map((opportunity) => (
-                <OpportunityCard
-                  key={opportunity.id}
-                  opportunity={opportunity}
-                  variant={viewMode === 'list' ? 'compact' : 'default'}
-                  onClick={() => handleViewOpportunity(opportunity.id)}
-                  onDelete={() => handleDeleteOpportunity(opportunity.id)}
-                />
-              ))}
-            </div>
+            <OpportunityGridView
+              opportunities={listOpportunities}
+              viewMode={viewMode}
+              onViewOpportunity={handleViewOpportunity}
+              onDeleteOpportunity={handleDeleteOpportunity}
+            />
           )}
 
         {!isLoading && activeOpportunities.length === 0 && (
@@ -874,167 +479,45 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
           isLoading={isCreatingOpportunity}
         />
 
-        <Dialog
-          open={Boolean(isWonDialogOpen)}
+        <WonOpportunityDialog
+          open={isWonDialogOpen}
           onOpenChange={(open) => {
-            if (!open) {
-              resetPendingStageTransition();
-            }
+            if (!open) resetPendingStageTransition();
           }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Move Opportunity to Closed Won</DialogTitle>
-              <DialogDescription>
-                Confirm the final value and add optional closing notes for
-                {pendingStageTransition
-                  ? ` ${pendingStageTransition.opportunityName}`
-                  : ' this opportunity'}
-                .
-              </DialogDescription>
-            </DialogHeader>
-            <div className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='wonActualValue'>Actual Value</Label>
-                <Input
-                  id='wonActualValue'
-                  type='number'
-                  min={0}
-                  value={wonActualValue}
-                  onChange={(event) => setWonActualValue(event.target.value)}
-                  placeholder='Optional final deal value'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='wonNotes'>Notes</Label>
-                <Textarea
-                  id='wonNotes'
-                  value={wonNotes}
-                  onChange={(event) => setWonNotes(event.target.value)}
-                  placeholder='Optional closing notes'
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant='outline'
-                onClick={resetPendingStageTransition}
-                disabled={isUpdatingOpportunityStage}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmitWonTransition}
-                disabled={isUpdatingOpportunityStage}
-              >
-                Confirm Won
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          onSubmit={handleSubmitWonTransition}
+          isLoading={isUpdatingOpportunityStage}
+          opportunityName={pendingStageTransition?.opportunityName}
+          actualValue={wonActualValue}
+          onActualValueChange={setWonActualValue}
+          notes={wonNotes}
+          onNotesChange={setWonNotes}
+        />
 
-        <Dialog
-          open={Boolean(isLostDialogOpen)}
+        <LostOpportunityDialog
+          open={isLostDialogOpen}
           onOpenChange={(open) => {
-            if (!open) {
-              resetPendingStageTransition();
-            }
+            if (!open) resetPendingStageTransition();
           }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Move Opportunity to Closed Lost</DialogTitle>
-              <DialogDescription>
-                Provide the reason for closing
-                {pendingStageTransition
-                  ? ` ${pendingStageTransition.opportunityName}`
-                  : ' this opportunity'}
-                as lost.
-              </DialogDescription>
-            </DialogHeader>
-            <div className='space-y-2'>
-              <Label htmlFor='lostReason'>Loss Reason</Label>
-              <Textarea
-                id='lostReason'
-                value={lostReason}
-                onChange={(event) => setLostReason(event.target.value)}
-                placeholder='Required loss reason'
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant='outline'
-                onClick={resetPendingStageTransition}
-                disabled={isUpdatingOpportunityStage}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant='destructive'
-                onClick={handleSubmitLostTransition}
-                disabled={!lostReason.trim() || isUpdatingOpportunityStage}
-              >
-                Confirm Lost
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          onSubmit={handleSubmitLostTransition}
+          isLoading={isUpdatingOpportunityStage}
+          opportunityName={pendingStageTransition?.opportunityName}
+          lostReason={lostReason}
+          onLostReasonChange={setLostReason}
+        />
 
-        <Dialog
-          open={Boolean(isReopenDialogOpen)}
+        <ReopenOpportunityDialog
+          open={isReopenDialogOpen}
           onOpenChange={(open) => {
-            if (!open) {
-              resetPendingStageTransition();
-            }
+            if (!open) resetPendingStageTransition();
           }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reopen Opportunity</DialogTitle>
-              <DialogDescription>
-                Move
-                {pendingStageTransition
-                  ? ` ${pendingStageTransition.opportunityName}`
-                  : ' this opportunity'}
-                back into the pipeline and explain why.
-              </DialogDescription>
-            </DialogHeader>
-            <div className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Target Stage</Label>
-                <div className='rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium'>
-                  {ACTIVE_PIPELINE_STAGES.find(
-                    (stage) => stage.stage === pendingStageTransition?.toStage
-                  )?.label || pendingStageTransition?.toStage}
-                </div>
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='reopenReason'>Reopen Reason</Label>
-                <Textarea
-                  id='reopenReason'
-                  value={reopenReason}
-                  onChange={(event) => setReopenReason(event.target.value)}
-                  placeholder='Required reopen reason'
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant='outline'
-                onClick={resetPendingStageTransition}
-                disabled={isUpdatingOpportunityStage}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSubmitReopenTransition}
-                disabled={!reopenReason.trim() || isUpdatingOpportunityStage}
-              >
-                Reopen Opportunity
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          onSubmit={handleSubmitReopenTransition}
+          isLoading={isUpdatingOpportunityStage}
+          opportunityName={pendingStageTransition?.opportunityName}
+          reopenStage={pendingStageTransition?.toStage || 'PROSPECTING'}
+          onReopenStageChange={() => {}}
+          reopenReason={reopenReason}
+          onReopenReasonChange={setReopenReason}
+        />
       </div>
     </>
   );
