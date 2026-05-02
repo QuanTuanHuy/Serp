@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Info, CheckCircle, AlertTriangle, AlertCircle, X } from 'lucide-react';
 import { toast, Toaster, Toast } from 'react-hot-toast';
 import { useAppSelector } from '@/shared/hooks';
+import { useAuth } from '@/modules/account/hooks';
 import { selectNotifications } from '../store/notificationSlice';
 import {
   NotificationResponse,
@@ -20,6 +21,8 @@ import {
   showBrowserNotification,
   requestNotificationPermission,
 } from '../utils/notificationSound';
+import { useGetPreferencesQuery } from '../services/preferenceApi';
+import { isQuietHoursNow } from '../utils/quietHours';
 
 const typeIcons: Record<NotificationType, React.ReactNode> = {
   INFO: <Info className='h-5 w-5 text-blue-500' />,
@@ -77,6 +80,10 @@ export function NotificationToastProvider() {
   const notifications = useAppSelector(selectNotifications);
   const prevNotificationsRef = useRef<NotificationResponse[]>([]);
   const hasRequestedPermission = useRef(false);
+  const { isAuthenticated, token } = useAuth();
+  const { data: preferences } = useGetPreferencesQuery(undefined, {
+    skip: !isAuthenticated || !token,
+  });
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -90,59 +97,67 @@ export function NotificationToastProvider() {
   useEffect(() => {
     const prevNotifications = prevNotificationsRef.current;
 
-    // Find new notifications
     const newNotifications = notifications.filter(
       (n) => !prevNotifications.some((prev) => prev.id === n.id)
     );
 
-    // Show toast for each new notification
+    const inAppOn = preferences?.enableInApp ?? true;
+    const pushOn = preferences?.enablePush ?? true;
+    const quiet =
+      preferences?.quietHours != null &&
+      isQuietHoursNow(preferences.quietHours);
+
     newNotifications.forEach((notification) => {
       const isUrgent = notification.priority === 'URGENT';
 
-      // Play sound and vibrate
-      notifyUser({
-        sound: true,
-        vibrate: true,
-        urgent: isUrgent,
-      });
+      if (inAppOn && !quiet) {
+        notifyUser({
+          sound: true,
+          vibrate: true,
+          urgent: isUrgent,
+        });
+      }
 
-      // Show browser notification if tab is not focused
-      if (document.hidden) {
+      if (document.hidden && pushOn && !quiet) {
         showBrowserNotification(notification.title, {
           body: notification.message,
           tag: `notification-${notification.id}`,
         });
       }
 
-      // Show toast
-      toast.custom(
-        (t) => (
-          <NotificationToastContent
-            notification={notification}
-            t={t}
-            onClose={() => toast.dismiss(t.id)}
-            onClick={() => {
-              toast.dismiss(t.id);
-              if (notification.actionUrl) {
-                if (notification.actionUrl.startsWith('/')) {
-                  router.push(notification.actionUrl);
-                } else {
-                  window.open(notification.actionUrl, '_blank');
+      if (inAppOn) {
+        toast.custom(
+          (t) => (
+            <NotificationToastContent
+              notification={notification}
+              t={t}
+              onClose={() => toast.dismiss(t.id)}
+              onClick={() => {
+                toast.dismiss(t.id);
+                if (notification.actionUrl) {
+                  if (notification.actionUrl.startsWith('/')) {
+                    router.push(notification.actionUrl);
+                  } else {
+                    window.open(
+                      notification.actionUrl,
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
+                  }
                 }
-              }
-            }}
-          />
-        ),
-        {
-          duration: isUrgent ? 10000 : 5000,
-          position: 'top-right',
-        }
-      );
+              }}
+            />
+          ),
+          {
+            duration: isUrgent ? 10000 : 5000,
+            position: 'top-right',
+          }
+        );
+      }
     });
 
-    // Update ref
     prevNotificationsRef.current = notifications;
-  }, [notifications, router]);
+  }, [notifications, router, preferences]);
 
   return (
     <Toaster

@@ -25,6 +25,7 @@ import serp.project.crm.core.port.store.IMeetingRequestPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.IRepTimeBlockPort;
 import serp.project.crm.core.service.IActivityService;
+import serp.project.crm.core.service.INotificationPublisher;
 import serp.project.crm.core.service.ITeamMemberService;
 
 import java.time.DayOfWeek;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,11 +73,14 @@ class MeetingRequestSchedulerServiceTest {
     @Mock
     private RepCompatibilityMatcher repCompatibilityMatcher;
     @Mock
+    private INotificationPublisher notificationPublisher;
+    @Mock
     private TransactionTemplate transactionTemplate;
 
     private MeetingRequestSchedulerService schedulerService;
 
     @BeforeEach
+    @SuppressWarnings("null")
     void setUp() {
         schedulerService = new MeetingRequestSchedulerService(
                 meetingRequestPort,
@@ -87,6 +92,7 @@ class MeetingRequestSchedulerServiceTest {
                 opportunityPort,
                 meetingPriorityCalculator,
                 repCompatibilityMatcher,
+                notificationPublisher,
                 transactionTemplate);
 
         doAnswer(invocation -> {
@@ -94,7 +100,7 @@ class MeetingRequestSchedulerServiceTest {
             Consumer<TransactionStatus> consumer = invocation.getArgument(0);
             consumer.accept(new SimpleTransactionStatus());
             return null;
-        }).when(transactionTemplate).executeWithoutResult(any());
+        }).when(transactionTemplate).executeWithoutResult(org.mockito.ArgumentMatchers.<Consumer<TransactionStatus>>any());
 
         when(meetingRequestPort.save(any(MeetingRequestEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -138,6 +144,8 @@ class MeetingRequestSchedulerServiceTest {
         assertThat(saved.getStatus()).isEqualTo(MeetingRequestStatus.SCHEDULED);
         assertThat(saved.getAssignedUserId()).isEqualTo(member.getUserId());
         assertThat(saved.getScheduledActivityId()).isEqualTo(999L);
+        verify(notificationPublisher, never()).publishMeetingRequestScheduled(any(), anyLong());
+        verify(notificationPublisher, never()).publishMeetingRequestFailed(any(), anyLong());
     }
 
     @Test
@@ -154,6 +162,7 @@ class MeetingRequestSchedulerServiceTest {
         ArgumentCaptor<MeetingRequestEntity> captor = ArgumentCaptor.forClass(MeetingRequestEntity.class);
         verify(meetingRequestPort).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(MeetingRequestStatus.FAILED);
+        verify(notificationPublisher).publishMeetingRequestFailed(request, request.getTenantId());
     }
 
     @Test
@@ -223,6 +232,7 @@ class MeetingRequestSchedulerServiceTest {
         MeetingRequestEntity lastSave = captor.getAllValues().get(captor.getAllValues().size() - 1);
         assertThat(lastSave.getFailureReason()).isEqualTo("NO_AVAILABLE_SLOT");
         assertThat(lastSave.getSchedulingAttempts()).isEqualTo(1);
+        verifyNoInteractions(notificationPublisher);
     }
 
     private MeetingRequestEntity buildPendingRequest() {

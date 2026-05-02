@@ -5,9 +5,10 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, CheckCheck, Settings, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui/button';
 import {
   DropdownMenu,
@@ -16,12 +17,14 @@ import {
 } from '@/shared/components/ui/dropdown-menu';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Separator } from '@/shared/components/ui/separator';
+import { getErrorMessage } from '@/lib/store/api/utils';
 import { useAppSelector, useAppDispatch } from '@/shared/hooks';
 import {
   selectNotifications,
   selectUnreadCount,
-  selectNotificationLoading,
   markAsRead,
+  markAllAsRead,
+  revertMarkAsRead,
 } from '../store/notificationSlice';
 import {
   useGetNotificationsQuery,
@@ -30,6 +33,7 @@ import {
 } from '../services/notificationApi';
 import { NotificationItem } from './NotificationItem';
 import { NotificationResponse } from '../types/notification.types';
+import { navigateNotificationAction } from '../utils/notificationActionNavigation';
 
 interface NotificationDropdownProps {
   maxItems?: number;
@@ -42,29 +46,27 @@ export function NotificationDropdown({
   const dispatch = useAppDispatch();
   const notifications = useAppSelector(selectNotifications);
   const unreadCount = useAppSelector(selectUnreadCount);
-  const isLoading = useAppSelector(selectNotificationLoading);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Fetch notifications when dropdown opens
   const { data, isFetching } = useGetNotificationsQuery(
     { page: 0, pageSize: maxItems },
-    { refetchOnMountOrArgChange: true }
+    { skip: !menuOpen, refetchOnMountOrArgChange: true }
   );
 
   const [markAsReadApi] = useMarkNotificationAsReadMutation();
   const [markAllAsReadApi] = useMarkAllNotificationsAsReadMutation();
 
-  // Use data from API if available, otherwise use from Redux state (real-time updates)
   const displayNotifications =
     data?.notifications || notifications.slice(0, maxItems);
 
   const handleMarkAsRead = useCallback(
     async (id: number) => {
-      // Optimistic update
       dispatch(markAsRead(id));
       try {
         await markAsReadApi(id).unwrap();
       } catch (error) {
-        console.error('Failed to mark notification as read:', error);
+        dispatch(revertMarkAsRead(id));
+        toast.error(getErrorMessage(error));
       }
     },
     [dispatch, markAsReadApi]
@@ -73,19 +75,16 @@ export function NotificationDropdown({
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsReadApi().unwrap();
+      dispatch(markAllAsRead());
+      toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      toast.error(getErrorMessage(error));
     }
-  }, [markAllAsReadApi]);
+  }, [markAllAsReadApi, dispatch]);
 
   const handleNotificationClick = useCallback(
     (notification: NotificationResponse) => {
-      if (notification.actionUrl) {
-        // If it's an internal URL, use router
-        if (notification.actionUrl.startsWith('/')) {
-          router.push(notification.actionUrl);
-        }
-      }
+      navigateNotificationAction(router, notification.actionUrl);
     },
     [router]
   );
@@ -95,11 +94,11 @@ export function NotificationDropdown({
   }, [router]);
 
   const handleSettings = useCallback(() => {
-    router.push('/settings/notifications');
+    router.push('/notifications/settings');
   }, [router]);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant='ghost' size='icon' className='relative'>
           <Bell className='h-5 w-5' />

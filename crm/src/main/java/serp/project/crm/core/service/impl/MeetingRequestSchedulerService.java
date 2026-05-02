@@ -31,6 +31,7 @@ import serp.project.crm.core.port.store.IMeetingRequestPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.IRepTimeBlockPort;
 import serp.project.crm.core.service.IActivityService;
+import serp.project.crm.core.service.INotificationPublisher;
 import serp.project.crm.core.service.ITeamMemberService;
 
 import java.time.DayOfWeek;
@@ -70,6 +71,7 @@ public class MeetingRequestSchedulerService {
     private final IOpportunityPort opportunityPort;
     private final MeetingPriorityCalculator meetingPriorityCalculator;
     private final RepCompatibilityMatcher repCompatibilityMatcher;
+    private final INotificationPublisher notificationPublisher;
     private final TransactionTemplate transactionTemplate;
 
     @Scheduled(fixedDelayString = "${app.scheduler.meeting.interval-ms:300000}")
@@ -190,6 +192,9 @@ public class MeetingRequestSchedulerService {
             request.setStatus(MeetingRequestStatus.FAILED);
         }
         meetingRequestPort.save(request);
+        if (MeetingRequestStatus.FAILED.equals(request.getStatus())) {
+            notificationPublisher.publishMeetingRequestFailed(request, request.getTenantId());
+        }
     }
 
     private void markFailed(MeetingRequestEntity request, String reason) {
@@ -197,6 +202,7 @@ public class MeetingRequestSchedulerService {
         request.setStatus(MeetingRequestStatus.FAILED);
         request.setFailureReason(reason);
         meetingRequestPort.save(request);
+        notificationPublisher.publishMeetingRequestFailed(request, request.getTenantId());
     }
 
     private Comparator<TeamMemberEntity> buildMemberComparator(MeetingRequestEntity request, AccountEntity account,

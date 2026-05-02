@@ -105,6 +105,26 @@ const notificationSlice = createSlice({
       state.unreadByCategory = {};
       state.hasUrgent = false;
     },
+    revertMarkAsRead: (state, action: PayloadAction<number>) => {
+      const id = action.payload;
+      const n = state.notifications.find((item) => item.id === id);
+      if (!n || !n.isRead) {
+        return;
+      }
+      const wasUrgent = n.priority === 'URGENT';
+      state.notifications = state.notifications.map((item) =>
+        item.id === id ? { ...item, isRead: false, readAt: undefined } : item
+      );
+      state.unreadCount += 1;
+      const cat = n.category;
+      state.unreadByCategory[cat] = (state.unreadByCategory[cat] || 0) + 1;
+      if (wasUrgent) {
+        state.hasUrgent = true;
+      }
+    },
+    syncUnreadTotalFromApi: (state, action: PayloadAction<number>) => {
+      state.unreadCount = Math.max(0, action.payload);
+    },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
@@ -166,6 +186,8 @@ export const {
   updateUnreadCount,
   markAsRead,
   markAllAsRead,
+  revertMarkAsRead,
+  syncUnreadTotalFromApi,
   setLoading,
   setError,
   clearNotifications,
