@@ -30,5 +30,5 @@ public interface IContactService {
     Pair<List<ContactEntity>, Long> getContactsByStatus(ActiveStatus status, Long tenantId, PageRequest pageRequest);
     Pair<List<ContactEntity>, Long> searchContacts(String keyword, Long tenantId, PageRequest pageRequest);
     Optional<ContactEntity> getPrimaryContact(Long accountId, Long tenantId);
-
+    List<ContactEntity> getContactsByIds(List<Long> ids, Long tenantId);
 }

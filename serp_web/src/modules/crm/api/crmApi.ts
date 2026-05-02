@@ -8,6 +8,7 @@ export * from './activityApi';
 export * from './analyticsApi';
 export * from './teamApi';
 export * from './territoryApi';
+export * from './meetingRequestApi';
 
 // Re-export mappers for backward compatibility
 export * from './mappers';

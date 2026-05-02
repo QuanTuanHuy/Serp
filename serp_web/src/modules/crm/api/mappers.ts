@@ -25,6 +25,9 @@ import type {
   BulkActivityRequest,
   BulkActivityResult,
   PreferredTimeSlot,
+  MeetingRequest,
+  MeetingRequestStatus,
+  MeetingRequestType,
 } from '../types';
 
 export type BulkActivityRequestPayload = {
@@ -363,57 +366,70 @@ export const mapBackendContactToContact = (
 
 export const mapBackendActivityToActivity = (
   activity: BackendActivity
-): Activity => ({
-  id: String(activity.id),
-  createdAt: toIsoString(activity.createdAt),
-  updatedAt: toIsoString(activity.updatedAt),
-  isActive: activity.status !== 'CANCELLED',
-  type: (activity.activityType as Activity['type']) || 'TASK',
-  status: (activity.status as Activity['status']) || 'PLANNED',
-  subject: activity.subject || 'Untitled activity',
-  description: activity.description || undefined,
-  scheduledDate: toIsoString(activity.activityDate ?? activity.dueDate),
-  actualDate: undefined,
-  duration: activity.durationMinutes || undefined,
-  priority: (activity.priority as Activity['priority']) || 'MEDIUM',
-  assignedTo: String(activity.assignedTo || ''),
-  assignedToName: activity.assignedToName || 'Unassigned',
-  relatedTo: {
-    type: activity.accountId
-      ? 'CUSTOMER'
-      : activity.leadId
-        ? 'LEAD'
-        : 'OPPORTUNITY',
-    id: String(
-      activity.accountId ||
-        activity.leadId ||
-        activity.opportunityId ||
-        activity.contactId ||
-        ''
-    ),
-    name:
-      activity.relatedCustomerName ||
-      activity.relatedLeadName ||
-      activity.relatedOpportunityName ||
-      activity.relatedContactName ||
-      activity.subject ||
-      'Related item',
-  },
-  participants: [],
-  location: activity.location || undefined,
-  outcome: activity.outcome || undefined,
-  followUpRequired: false,
-  followUpDate: activity.dueDate ? toIsoString(activity.dueDate) : undefined,
-  tags: [],
-  customFields: {
-    notes: activity.notes || undefined,
-    reminderDate: activity.reminderDate
-      ? toIsoString(activity.reminderDate)
-      : undefined,
-    attachments: activity.attachments || [],
-    contactId: activity.contactId ? String(activity.contactId) : undefined,
-  },
-});
+): Activity => {
+  const assigneeIdRaw = activity.assignedTo;
+  const assigneeId =
+    assigneeIdRaw !== null &&
+    assigneeIdRaw !== undefined &&
+    String(assigneeIdRaw).trim() !== ''
+      ? String(assigneeIdRaw)
+      : '';
+  const assigneeNameRaw = activity.assignedToName?.trim();
+  const assignedToName =
+    assigneeNameRaw || (assigneeId ? `User #${assigneeId}` : 'Unassigned');
+
+  return {
+    id: String(activity.id),
+    createdAt: toIsoString(activity.createdAt),
+    updatedAt: toIsoString(activity.updatedAt),
+    isActive: activity.status !== 'CANCELLED',
+    type: (activity.activityType as Activity['type']) || 'TASK',
+    status: (activity.status as Activity['status']) || 'PLANNED',
+    subject: activity.subject || 'Untitled activity',
+    description: activity.description || undefined,
+    scheduledDate: toIsoString(activity.activityDate ?? activity.dueDate),
+    actualDate: undefined,
+    duration: activity.durationMinutes || undefined,
+    priority: (activity.priority as Activity['priority']) || 'MEDIUM',
+    assignedTo: assigneeId,
+    assignedToName,
+    relatedTo: {
+      type: activity.accountId
+        ? 'CUSTOMER'
+        : activity.leadId
+          ? 'LEAD'
+          : 'OPPORTUNITY',
+      id: String(
+        activity.accountId ||
+          activity.leadId ||
+          activity.opportunityId ||
+          activity.contactId ||
+          ''
+      ),
+      name:
+        activity.relatedCustomerName ||
+        activity.relatedLeadName ||
+        activity.relatedOpportunityName ||
+        activity.relatedContactName ||
+        activity.subject ||
+        'Related item',
+    },
+    participants: [],
+    location: activity.location || undefined,
+    outcome: activity.outcome || undefined,
+    followUpRequired: false,
+    followUpDate: activity.dueDate ? toIsoString(activity.dueDate) : undefined,
+    tags: [],
+    customFields: {
+      notes: activity.notes || undefined,
+      reminderDate: activity.reminderDate
+        ? toIsoString(activity.reminderDate)
+        : undefined,
+      attachments: activity.attachments || [],
+      contactId: activity.contactId ? String(activity.contactId) : undefined,
+    },
+  };
+};
 
 const splitLeadName = (name?: string | null) => {
   const normalized = (name || '').trim();
@@ -1091,4 +1107,120 @@ export const mapBulkActivityResponse = (
     failedCount: response.data?.failedCount || 0,
     message: response.data?.message || response.message || undefined,
   },
+});
+
+type BackendMeetingRequest = {
+  id?: number | string | null;
+  teamId?: number | string | null;
+  preferredUserId?: number | string | null;
+  assignedTeamMemberId?: number | string | null;
+  assignedUserId?: number | string | null;
+  scheduledActivityId?: number | string | null;
+  scheduledStartTime?: number | string | null;
+  accountId?: number | string | null;
+  opportunityId?: number | string | null;
+  contactId?: number | string | null;
+  subject?: string | null;
+  description?: string | null;
+  location?: string | null;
+  meetingType?: string | null;
+  preferredTimeSlot?: string | null;
+  earliestStart?: number | string | null;
+  latestStart?: number | string | null;
+  requestedDeadline?: number | string | null;
+  durationMinutes?: number | string | null;
+  status?: string | null;
+  schedulingAttempts?: number | string | null;
+  priorityScore?: number | string | null;
+  failureReason?: string | null;
+  tenantId?: number | string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
+  createdBy?: number | string | null;
+  updatedBy?: number | string | null;
+};
+
+const mapBackendMeetingRequest = (
+  row: BackendMeetingRequest
+): MeetingRequest => ({
+  id: String(row.id ?? ''),
+  teamId: String(row.teamId ?? ''),
+  preferredUserId:
+    row.preferredUserId != null ? String(row.preferredUserId) : undefined,
+  assignedTeamMemberId:
+    row.assignedTeamMemberId != null
+      ? String(row.assignedTeamMemberId)
+      : undefined,
+  assignedUserId:
+    row.assignedUserId != null ? String(row.assignedUserId) : undefined,
+  scheduledActivityId:
+    row.scheduledActivityId != null
+      ? String(row.scheduledActivityId)
+      : undefined,
+  scheduledStartTime:
+    row.scheduledStartTime != null ? Number(row.scheduledStartTime) : undefined,
+  accountId: String(row.accountId ?? ''),
+  opportunityId:
+    row.opportunityId != null ? String(row.opportunityId) : undefined,
+  contactId: row.contactId != null ? String(row.contactId) : undefined,
+  subject: row.subject ?? undefined,
+  description: row.description ?? undefined,
+  location: row.location ?? undefined,
+  meetingType: (row.meetingType as MeetingRequestType) || 'DISCOVERY',
+  preferredTimeSlot:
+    row.preferredTimeSlot as MeetingRequest['preferredTimeSlot'],
+  earliestStart: Number(row.earliestStart ?? 0),
+  latestStart: Number(row.latestStart ?? 0),
+  requestedDeadline: Number(row.requestedDeadline ?? 0),
+  durationMinutes:
+    row.durationMinutes != null ? Number(row.durationMinutes) : undefined,
+  status: (row.status as MeetingRequestStatus) || 'PENDING',
+  schedulingAttempts:
+    row.schedulingAttempts != null ? Number(row.schedulingAttempts) : undefined,
+  priorityScore:
+    row.priorityScore != null ? Number(row.priorityScore) : undefined,
+  failureReason: row.failureReason ?? undefined,
+  tenantId: row.tenantId != null ? String(row.tenantId) : undefined,
+  createdAt: row.createdAt != null ? Number(row.createdAt) : undefined,
+  updatedAt: row.updatedAt != null ? Number(row.updatedAt) : undefined,
+  createdBy: row.createdBy != null ? String(row.createdBy) : undefined,
+  updatedBy: row.updatedBy != null ? String(row.updatedBy) : undefined,
+});
+
+export const mapMeetingRequestListResponse = (
+  response: GeneralResponse<PageResponse<BackendMeetingRequest>>
+): APIResponse<{
+  data: MeetingRequest[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    data: (response.data?.items || []).map(mapBackendMeetingRequest),
+    pagination: {
+      page: response.data?.pagination?.page || 1,
+      limit: response.data?.pagination?.size || 20,
+      total: Number(response.data?.pagination?.totalItems || 0),
+      totalPages: response.data?.pagination?.totalPages || 1,
+      hasNext: !!response.data?.pagination?.hasNext,
+      hasPrevious: !!response.data?.pagination?.hasPrevious,
+    },
+  },
+});
+
+export const mapSingleMeetingRequestResponse = (
+  response: GeneralResponse<BackendMeetingRequest>
+): APIResponse<MeetingRequest> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: mapBackendMeetingRequest(response.data),
 });

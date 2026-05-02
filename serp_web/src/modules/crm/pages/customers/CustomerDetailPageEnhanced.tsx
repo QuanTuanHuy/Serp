@@ -68,6 +68,7 @@ import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import { ContactList } from '../../components/contacts';
 import type { ContactFormData } from '../../components/contacts';
+import { RequestMeetingDialog } from '../../components/meeting-requests';
 import {
   useActivateAccountMutation,
   useCreateAccountContactMutation,
@@ -292,6 +293,7 @@ export const CustomerDetailPageEnhanced: React.FC<
   });
   const [isCreditLimitDialogOpen, setIsCreditLimitDialogOpen] = useState(false);
   const [creditLimitInput, setCreditLimitInput] = useState('');
+  const [meetingRequestOpen, setMeetingRequestOpen] = useState(false);
 
   const { data: accountResponse, isLoading: isAccountLoading } =
     useGetAccountQuery(customerId);
@@ -1058,9 +1060,13 @@ export const CustomerDetailPageEnhanced: React.FC<
                     <Mail className='w-4 h-4 mr-2' />
                     Send Email
                   </Button>
-                  <Button variant='outline' className='w-full justify-start'>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    onClick={() => setMeetingRequestOpen(true)}
+                  >
                     <Calendar className='w-4 h-4 mr-2' />
-                    Schedule Meeting
+                    Request meeting
                   </Button>
                   <Button variant='outline' className='w-full justify-start'>
                     <ShoppingCart className='w-4 h-4 mr-2' />
@@ -1669,6 +1675,13 @@ export const CustomerDetailPageEnhanced: React.FC<
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RequestMeetingDialog
+        open={meetingRequestOpen}
+        onOpenChange={setMeetingRequestOpen}
+        accountId={customerId}
+        accountName={customer.name}
+      />
     </div>
   );
 };

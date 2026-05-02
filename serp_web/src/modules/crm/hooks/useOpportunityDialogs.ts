@@ -6,15 +6,12 @@ import type { OpportunityStage } from '../types';
 export const useOpportunityDialogs = () => {
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isLostDialogOpen, setIsLostDialogOpen] = useState(false);
-  const [isWonDialogOpen, setIsWonDialogOpen] = useState(false);
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
 
   const [selectedStage, setSelectedStage] = useState<OpportunityStage | ''>('');
   const [stageNotes, setStageNotes] = useState('');
   const [lostReason, setLostReason] = useState('');
   const [wonActualValue, setWonActualValue] = useState('');
-  const [wonNotes, setWonNotes] = useState('');
   const [reopenReason, setReopenReason] = useState('');
   const [reopenStage, setReopenStage] =
     useState<OpportunityStage>('PROSPECTING');
@@ -24,7 +21,6 @@ export const useOpportunityDialogs = () => {
     setStageNotes('');
     setLostReason('');
     setWonActualValue('');
-    setWonNotes('');
     setReopenReason('');
     setReopenStage('PROSPECTING');
   }, []);
@@ -34,10 +30,6 @@ export const useOpportunityDialogs = () => {
     setIsStageDialogOpen,
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
-    isLostDialogOpen,
-    setIsLostDialogOpen,
-    isWonDialogOpen,
-    setIsWonDialogOpen,
     isReopenDialogOpen,
     setIsReopenDialogOpen,
     selectedStage,
@@ -48,8 +40,6 @@ export const useOpportunityDialogs = () => {
     setLostReason,
     wonActualValue,
     setWonActualValue,
-    wonNotes,
-    setWonNotes,
     reopenReason,
     setReopenReason,
     reopenStage,

@@ -10,6 +10,7 @@ import {
   AvatarFallback,
 } from '@/shared/components/ui';
 import { Building2 } from 'lucide-react';
+import { cn } from '@/shared/utils';
 import { formatDate, formatDateTime } from '../../utils';
 import type { Opportunity } from '../../types';
 
@@ -17,8 +18,10 @@ interface OpportunityOverviewTabProps {
   opportunity: Opportunity;
   stageLabel: string;
   estimatedValue: number;
+  weightedValue: number;
   probability: number;
   daysInPipeline: number;
+  daysUntilClose: number;
   formatCurrency: (value?: number) => string;
 }
 
@@ -26,10 +29,16 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
   opportunity,
   stageLabel,
   estimatedValue,
+  weightedValue,
   probability,
   daysInPipeline,
+  daysUntilClose,
   formatCurrency,
 }) => {
+  const daysToCloseDisplay =
+    daysUntilClose < 0
+      ? `${Math.abs(daysUntilClose)} overdue`
+      : String(daysUntilClose);
   return (
     <div className='grid grid-cols-1 gap-6 lg:grid-cols-3'>
       <div className='space-y-6 lg:col-span-2'>
@@ -142,6 +151,14 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
             </div>
             <div className='flex items-center justify-between'>
               <span className='text-sm text-muted-foreground'>
+                Weighted Value
+              </span>
+              <span className='font-medium'>
+                {formatCurrency(weightedValue)}
+              </span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm text-muted-foreground'>
                 Actual Value
               </span>
               <span className='font-medium'>
@@ -151,6 +168,19 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
             <div className='flex items-center justify-between'>
               <span className='text-sm text-muted-foreground'>Probability</span>
               <span className='font-medium'>{probability}%</span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm text-muted-foreground'>
+                Days to Close
+              </span>
+              <span
+                className={cn(
+                  'font-medium',
+                  daysUntilClose < 0 && 'text-destructive'
+                )}
+              >
+                {daysToCloseDisplay}
+              </span>
             </div>
             {opportunity.lostReason && (
               <div>

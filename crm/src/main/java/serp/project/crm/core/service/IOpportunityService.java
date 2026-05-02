@@ -56,4 +56,6 @@ public interface IOpportunityService {
             PageRequest pageRequest);
 
     List<OpportunityEntity> filterAllOpportunities(OpportunityFilterRequest filter, Long tenantId);
+
+    List<OpportunityEntity> getOpportunitiesByIds(List<Long> ids, Long tenantId);
 }

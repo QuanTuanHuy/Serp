@@ -2,14 +2,11 @@
 
 'use client';
 
-import Link from 'next/link';
 import {
   ArrowLeft,
   MoreHorizontal,
   Edit,
   Trash2,
-  Trophy,
-  XCircle,
   RefreshCw,
   TrendingUp,
   MessageSquare,
@@ -26,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui';
-import { Building2, Calendar, User } from 'lucide-react';
+import { Building2, Calendar, CalendarClock, User } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { formatDate } from '../../utils';
 import type { Opportunity } from '../../types';
@@ -47,10 +44,10 @@ interface OpportunityHeaderProps {
   onBack: () => void;
   onEdit: () => void;
   onChangeStage: () => void;
-  onMarkAsWon: () => void;
-  onMarkAsLost: () => void;
   onReopen: () => void;
   onDelete: () => void;
+  onRequestMeeting?: () => void;
+  canRequestMeeting?: boolean;
 }
 
 export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
@@ -62,10 +59,10 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
   onBack,
   onEdit,
   onChangeStage,
-  onMarkAsWon,
-  onMarkAsLost,
   onReopen,
   onDelete,
+  onRequestMeeting,
+  canRequestMeeting = false,
 }) => {
   return (
     <div className='flex items-start justify-between'>
@@ -102,26 +99,6 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
       </div>
 
       <div className='flex items-center gap-2'>
-        {!isClosed && (
-          <>
-            <Button
-              variant='outline'
-              className='text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950'
-              onClick={onMarkAsWon}
-            >
-              <Trophy className='mr-2 h-4 w-4' />
-              Mark as Won
-            </Button>
-            <Button
-              variant='outline'
-              className='text-red-600 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950'
-              onClick={onMarkAsLost}
-            >
-              <XCircle className='mr-2 h-4 w-4' />
-              Mark as Lost
-            </Button>
-          </>
-        )}
         {canReopen && (
           <Button variant='outline' onClick={onReopen}>
             <RefreshCw className='mr-2 h-4 w-4' />
@@ -143,6 +120,12 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
               <DropdownMenuItem onClick={onChangeStage}>
                 <TrendingUp className='mr-2 h-4 w-4' />
                 Change Stage
+              </DropdownMenuItem>
+            )}
+            {!isClosed && canRequestMeeting && onRequestMeeting && (
+              <DropdownMenuItem onClick={onRequestMeeting}>
+                <CalendarClock className='mr-2 h-4 w-4' />
+                Request meeting
               </DropdownMenuItem>
             )}
             <DropdownMenuItem disabled>
