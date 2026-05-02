@@ -276,7 +276,7 @@ export const VehicleRegistrationPage: React.FC = () => {
                 Lịch đăng ký xe giao hàng
               </h1>
               <p className='mt-1 max-w-3xl text-sm text-slate-700'>
-                Tài xế đăng ký xe theo ngày công
+                Vui lòng đăng ký xe theo ngày công
               </p>
             </div>
 
@@ -296,11 +296,11 @@ export const VehicleRegistrationPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+          <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
             <Card className='border-white/60 bg-white/70 shadow-sm backdrop-blur'>
               <CardContent className='p-4'>
                 <p className='text-xs font-medium uppercase tracking-wide text-slate-500'>
-                  Tổng đang ký trong tháng
+                  Số xe đăng ký trong tháng
                 </p>
                 <p className='mt-1 text-2xl font-semibold text-slate-800'>
                   {monthlyStats.total}
@@ -308,21 +308,10 @@ export const VehicleRegistrationPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className='border-emerald-200 bg-emerald-50/90 shadow-sm'>
-              <CardContent className='p-4'>
-                <p className='text-xs font-medium uppercase tracking-wide text-emerald-700'>
-                  Đang hoạt động
-                </p>
-                <p className='mt-1 text-2xl font-semibold text-emerald-800'>
-                  {monthlyStats.active}
-                </p>
-              </CardContent>
-            </Card>
-
             <Card className='border-amber-200 bg-amber-50/90 shadow-sm'>
               <CardContent className='p-4'>
                 <p className='text-xs font-medium uppercase tracking-wide text-amber-700'>
-                  Đã yêu cầu hủy
+                  Số xe đang chờ hủy
                 </p>
                 <p className='mt-1 text-2xl font-semibold text-amber-800'>
                   {monthlyStats.requestCancel}
@@ -333,7 +322,7 @@ export const VehicleRegistrationPage: React.FC = () => {
             <Card className='border-red-200 bg-red-50/90 shadow-sm'>
               <CardContent className='p-4'>
                 <p className='text-xs font-medium uppercase tracking-wide text-red-700'>
-                  Đã hủy
+                  Số xe đã hủy
                 </p>
                 <p className='mt-1 text-2xl font-semibold text-red-800'>
                   {monthlyStats.canceled}

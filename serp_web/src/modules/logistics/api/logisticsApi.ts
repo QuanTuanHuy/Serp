@@ -383,7 +383,10 @@ export const logisticsApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: { service: 'logistics' },
-      providesTags: (result, error, id) => [{ type: 'logistics/Order', id }],
+      providesTags: (result, error, id) => [
+        { type: 'logistics/Order', id },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
     }),
 
     // Product endpoints
@@ -544,11 +547,18 @@ export const logisticsApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     updateItemInShipment: builder.mutation<
@@ -561,11 +571,18 @@ export const logisticsApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     deleteItemFromShipment: builder.mutation<
@@ -577,11 +594,18 @@ export const logisticsApi = api.injectEndpoints({
         method: 'PATCH',
       }),
       extraOptions: { service: 'logistics' },
-      invalidatesTags: (result, error, { shipmentId }) => [
-        { type: 'logistics/Shipment', id: shipmentId },
-        { type: 'logistics/Shipment', id: 'LIST' },
-        { type: 'logistics/Order', id: result?.data?.orderId || 'LIST' },
-      ],
+      invalidatesTags: (result, error, { shipmentId }) => {
+        const orderId = result?.data?.orderId;
+
+        return [
+          { type: 'logistics/Shipment', id: shipmentId },
+          { type: 'logistics/Shipment', id: 'LIST' },
+          { type: 'logistics/Order', id: 'LIST' },
+          ...(orderId
+            ? [{ type: 'logistics/Order' as const, id: orderId }]
+            : []),
+        ];
+      },
     }),
 
     importShipment: builder.mutation<
@@ -692,6 +716,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/OutboundShipment', id: shipmentId },
         { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
       ],
     }),
 
@@ -712,6 +737,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/OutboundShipment', id: shipmentId },
         { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
       ],
     }),
 
@@ -727,6 +753,7 @@ export const logisticsApi = api.injectEndpoints({
       invalidatesTags: (result, error, { shipmentId }) => [
         { type: 'logistics/OutboundShipment', id: shipmentId },
         { type: 'logistics/OutboundShipment', id: 'LIST' },
+        { type: 'logistics/Order', id: 'LIST' },
       ],
     }),
 

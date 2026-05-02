@@ -27,6 +27,8 @@ jobs:
       ptm-schedule: ${{ steps.changes.outputs.ptm-schedule }}
       ptm-optimization: ${{ steps.changes.outputs.ptm-optimization }}
       crm: ${{ steps.changes.outputs.crm }}
+      first-mile: ${{ steps.changes.outputs.first-mile }}
+      second-mile: ${{ steps.changes.outputs.second-mile }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
@@ -53,6 +55,8 @@ jobs:
           echo "ptm-schedule=$(jq -r '."ptm-schedule"' changes.json)" >> $GITHUB_OUTPUT
           echo "ptm-optimization=$(jq -r '."ptm-optimization"' changes.json)" >> $GITHUB_OUTPUT
           echo "crm=$(jq -r .crm changes.json)" >> $GITHUB_OUTPUT
+          echo "first-mile=$(jq -r '."first-mile"' changes.json)" >> $GITHUB_OUTPUT
+          echo "second-mile=$(jq -r '."second-mile"' changes.json)" >> $GITHUB_OUTPUT
           echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
           echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
           echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
@@ -171,6 +175,44 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/crm
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-first-mile:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.first-mile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy First Mile Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_first_mile
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-second-mile:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.second-mile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Second Mile Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_second_mile
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
@@ -343,6 +385,8 @@ jobs:
           echo "- PTM Schedule: ${{ needs.check-changes.outputs.ptm-schedule }}" >> $GITHUB_STEP_SUMMARY
           echo "- PTM Optimization: ${{ needs.check-changes.outputs.ptm-optimization }}" >> $GITHUB_STEP_SUMMARY
           echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
+          echo "- First Mile: ${{ needs.check-changes.outputs.first-mile }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Second Mile: ${{ needs.check-changes.outputs.second-mile }}" >> $GITHUB_STEP_SUMMARY
           echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
           echo "- Discuss Service: ${{ needs.check-changes.outputs.discuss-service }}" >> $GITHUB_STEP_SUMMARY
           echo "- Logistics 2: ${{ needs.check-changes.outputs.logistics2 }}" >> $GITHUB_STEP_SUMMARY

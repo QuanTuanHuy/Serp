@@ -1,5 +1,8 @@
 import requests
+import logging
 from config import OSRM_BASE_URL
+
+logger = logging.getLogger(__name__)
 
 def get_distance_matrix(coordinates: list[str]) -> list[list[int]]:
     """Gọi OSRM lấy ma trận khoảng cách giữa các tọa độ (lng,lat)"""
@@ -27,6 +30,7 @@ def get_route_polyline(start_coord: str, end_coord: str) -> str:
         data = response.json()
         if data.get('code') == 'Ok':
             return data['routes'][0]['geometry']
+    logger.error("Failed to get route polyline from OSRM")
     return ""
 
 def get_full_route_polyline(coordinates: list[str]) -> str:
@@ -44,5 +48,5 @@ def get_full_route_polyline(coordinates: list[str]) -> str:
             if data.get('code') == 'Ok':
                 return data['routes'][0]['geometry']
     except Exception as e:
-        print(f"Lỗi khi lấy full polyline từ OSRM: {e}")
+        logger.error(f"Lỗi khi lấy full polyline từ OSRM: {e}")
     return ""

@@ -32,6 +32,7 @@ import type {
   RemoveDeliverySlipItemRequest,
   Route,
   RouteFilters,
+  RouteStop,
   SaleOrder,
   SaleOrderFilters,
   UpdateDeliveryPlanRequest,
@@ -351,7 +352,7 @@ export const logistics2Api = api.injectEndpoints({
     }),
 
     addDeliverySlipItem: builder.mutation<
-      GeneralResponse<null>,
+      GeneralResponse<DeliverySlip>,
       AddDeliverySlipItemRequest
     >({
       query: ({ slipId, data }) => ({
@@ -360,14 +361,27 @@ export const logistics2Api = api.injectEndpoints({
         body: data,
       }),
       extraOptions: LOGISTICS2_SERVICE,
-      invalidatesTags: (result, error, { slipId }) => [
-        { type: 'logistics2/DeliverySlip', id: slipId },
-        { type: 'logistics2/DeliverySlip', id: 'LIST' },
-      ],
+      invalidatesTags: (result, error, { slipId }) => {
+        const outboundShipmentId = result?.data?.outboundShipmentId;
+
+        return [
+          { type: 'logistics2/DeliverySlip', id: slipId },
+          { type: 'logistics2/DeliverySlip', id: 'LIST' },
+          { type: 'logistics2/OutboundShipment', id: 'LIST' },
+          ...(outboundShipmentId
+            ? [
+                {
+                  type: 'logistics2/OutboundShipment' as const,
+                  id: outboundShipmentId,
+                },
+              ]
+            : []),
+        ];
+      },
     }),
 
     updateDeliverySlipItem: builder.mutation<
-      GeneralResponse<null>,
+      GeneralResponse<DeliverySlip>,
       UpdateDeliverySlipItemRequest
     >({
       query: ({ slipId, itemId, data }) => ({
@@ -376,14 +390,27 @@ export const logistics2Api = api.injectEndpoints({
         body: data,
       }),
       extraOptions: LOGISTICS2_SERVICE,
-      invalidatesTags: (result, error, { slipId }) => [
-        { type: 'logistics2/DeliverySlip', id: slipId },
-        { type: 'logistics2/DeliverySlip', id: 'LIST' },
-      ],
+      invalidatesTags: (result, error, { slipId }) => {
+        const outboundShipmentId = result?.data?.outboundShipmentId;
+
+        return [
+          { type: 'logistics2/DeliverySlip', id: slipId },
+          { type: 'logistics2/DeliverySlip', id: 'LIST' },
+          { type: 'logistics2/OutboundShipment', id: 'LIST' },
+          ...(outboundShipmentId
+            ? [
+                {
+                  type: 'logistics2/OutboundShipment' as const,
+                  id: outboundShipmentId,
+                },
+              ]
+            : []),
+        ];
+      },
     }),
 
     removeDeliverySlipItem: builder.mutation<
-      GeneralResponse<null>,
+      GeneralResponse<DeliverySlip>,
       RemoveDeliverySlipItemRequest
     >({
       query: ({ slipId, itemId }) => ({
@@ -391,10 +418,23 @@ export const logistics2Api = api.injectEndpoints({
         method: 'DELETE',
       }),
       extraOptions: LOGISTICS2_SERVICE,
-      invalidatesTags: (result, error, { slipId }) => [
-        { type: 'logistics2/DeliverySlip', id: slipId },
-        { type: 'logistics2/DeliverySlip', id: 'LIST' },
-      ],
+      invalidatesTags: (result, error, { slipId }) => {
+        const outboundShipmentId = result?.data?.outboundShipmentId;
+
+        return [
+          { type: 'logistics2/DeliverySlip', id: slipId },
+          { type: 'logistics2/DeliverySlip', id: 'LIST' },
+          { type: 'logistics2/OutboundShipment', id: 'LIST' },
+          ...(outboundShipmentId
+            ? [
+                {
+                  type: 'logistics2/OutboundShipment' as const,
+                  id: outboundShipmentId,
+                },
+              ]
+            : []),
+        ];
+      },
     }),
 
     // Outbound shipment endpoints
@@ -431,6 +471,7 @@ export const logistics2Api = api.injectEndpoints({
       extraOptions: LOGISTICS2_SERVICE,
       providesTags: (result, error, shipmentId) => [
         { type: 'logistics2/OutboundShipment', id: shipmentId },
+        { type: 'logistics2/OutboundShipment', id: 'LIST' },
       ],
     }),
 
@@ -457,6 +498,31 @@ export const logistics2Api = api.injectEndpoints({
           : [{ type: 'logistics2/Route', id: 'LIST' }],
     }),
 
+    getRoutesByDeliverySlip: builder.query<
+      GeneralResponse<PageResponse<Route>>,
+      { deliverySlipId: string; pagination?: PaginationParams }
+    >({
+      query: ({ deliverySlipId, pagination }) => ({
+        url: '/routes/search-by-slip',
+        method: 'GET',
+        params: {
+          ...buildPaginationParams(pagination),
+          deliverySlipId,
+        },
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'logistics2/Route' as const,
+                id,
+              })),
+              { type: 'logistics2/Route', id: 'LIST' },
+            ]
+          : [{ type: 'logistics2/Route', id: 'LIST' }],
+    }),
+
     getRouteDetail: builder.query<GeneralResponse<Route>, string>({
       query: (routeId) => ({
         url: `/routes/search/${routeId}`,
@@ -466,6 +532,14 @@ export const logistics2Api = api.injectEndpoints({
       providesTags: (result, error, routeId) => [
         { type: 'logistics2/Route', id: routeId },
       ],
+    }),
+
+    getNextRouteStop: builder.query<GeneralResponse<RouteStop>, string>({
+      query: (vehicleShipperId) => ({
+        url: `/routes/next-stop/${vehicleShipperId}`,
+        method: 'GET',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
     }),
 
     selectRouteForDelivery: builder.mutation<GeneralResponse<null>, string>({
@@ -480,9 +554,21 @@ export const logistics2Api = api.injectEndpoints({
       ],
     }),
 
+    cancelRoute: builder.mutation<GeneralResponse<null>, string>({
+      query: (routeId) => ({
+        url: `/routes/cancel/${routeId}`,
+        method: 'PUT',
+      }),
+      extraOptions: LOGISTICS2_SERVICE,
+      invalidatesTags: (result, error, routeId) => [
+        { type: 'logistics2/Route', id: routeId },
+        { type: 'logistics2/Route', id: 'LIST' },
+      ],
+    }),
+
     completeRouteStop: builder.mutation<GeneralResponse<null>, string>({
       query: (routeStopId) => ({
-        url: `/routes/complete/${routeStopId}`,
+        url: `/routes/complete-stop/${routeStopId}`,
         method: 'PUT',
       }),
       extraOptions: LOGISTICS2_SERVICE,
@@ -491,7 +577,7 @@ export const logistics2Api = api.injectEndpoints({
 
     abortRouteStop: builder.mutation<GeneralResponse<null>, string>({
       query: (routeStopId) => ({
-        url: `/routes/abort/${routeStopId}`,
+        url: `/routes/abort-stop/${routeStopId}`,
         method: 'PUT',
       }),
       extraOptions: LOGISTICS2_SERVICE,
@@ -726,8 +812,11 @@ export const {
   useGetOutboundShipmentsQuery,
   useGetOutboundShipmentDetailQuery,
   useGetRoutesQuery,
+  useGetRoutesByDeliverySlipQuery,
   useGetRouteDetailQuery,
+  useGetNextRouteStopQuery,
   useSelectRouteForDeliveryMutation,
+  useCancelRouteMutation,
   useCompleteRouteStopMutation,
   useAbortRouteStopMutation,
   useGetVehiclesQuery,

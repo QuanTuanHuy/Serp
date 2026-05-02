@@ -1,5 +1,8 @@
+import logging
 from services.osrm_service import get_distance_matrix, get_route_polyline
 from services.ortools_service import solve_delivery_plan
+
+logger = logging.getLogger(__name__)
 
 def process_routing_request(message: dict) -> dict:
     try:
@@ -97,5 +100,5 @@ def process_routing_request(message: dict) -> dict:
         }
 
     except Exception as e:
-        print(f"Error processing plan {message.get('plan_id')}: {e}")
+        logger.error(f"Error processing plan {message.get('plan_id')}: {e}")
         return {"plan_id": message.get('plan_id', 'UNKNOWN'), "status": "FAILED", "reason": str(e)}

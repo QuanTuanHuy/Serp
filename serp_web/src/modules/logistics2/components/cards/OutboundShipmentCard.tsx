@@ -23,6 +23,7 @@ import {
   ArrowUpFromLine,
   Box,
   ReceiptText,
+  TruckIcon,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { formatDateVN } from '@/shared/utils/format';
@@ -37,16 +38,16 @@ const statusStyles = {
     icon: Clock,
     accent: '#3b82f6',
   },
-  IMPORTED: {
-    label: 'Đã nhập kho',
-    bg: 'bg-purple-100 dark:bg-purple-900/30',
-    text: 'text-purple-700 dark:text-purple-400',
-    dot: 'bg-purple-500',
-    icon: ArrowDownToLine,
-    accent: '#a855f7',
+  READY_TO_EXPORT: {
+    label: 'Sẵn sàng xuất',
+    bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+    text: 'text-yellow-700 dark:text-yellow-400',
+    dot: 'bg-yellow-500',
+    icon: TruckIcon,
+    accent: '#e3a149',
   },
-  EXPORTED: {
-    label: 'Đã xuất kho',
+  DELIVERED: {
+    label: 'Đã xuất',
     bg: 'bg-purple-100 dark:bg-purple-900/30',
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
@@ -102,15 +103,24 @@ export const OutboundShipmentCard = ({
         onClick={onClick}
       >
         <div className='overflow-x-auto'>
-          <div className='grid min-w-[900px] grid-cols-[3fr_2.5fr_2.5fr_2fr] items-center gap-4 p-4'>
+          <div className='grid min-w-[900px] grid-cols-[2.5fr_2fr_2.5fr_3fr_2fr] items-center gap-4 p-4'>
             <p className='text-sm font-semibold truncate'>{shipmentTitle}</p>
 
+            <Badge
+              variant='secondary'
+              className={cn('w-fit gap-1', status.bg, status.text)}
+            >
+              <StatusIcon className='h-3 w-3' />
+              <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+              {status.label}
+            </Badge>
+
             <p className='text-sm text-muted-foreground truncate'>
-              Đơn hàng: {orderLabel}
+              {orderLabel}
             </p>
 
             <p className='text-sm text-muted-foreground truncate'>
-              Khách hàng: {partyLabel}
+              {partyLabel}
             </p>
 
             <p

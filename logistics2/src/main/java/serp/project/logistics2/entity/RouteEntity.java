@@ -39,10 +39,10 @@ public class RouteEntity {
     private Float totalDistanceKm;
 
     @Column(name = "total_weight_loaded_kg")
-    private Long TotalWeightLoadedKg;
+    private Long totalWeightLoadedKg;
 
     @Column(name = "total_volume_loaded_cbm")
-    private Long TotalVolumeLoadedCbm;
+    private Long totalVolumeLoadedCbm;
 
     private String status;
 
@@ -66,6 +66,9 @@ public class RouteEntity {
     @Transient
     private List<RouteStopEntity> routeStops = new ArrayList<>();
 
+    @Transient
+    private VehicleShipperEntity vehicleShipper;
+
     public RouteEntity(String id, String deliveryPlanId, String vehicleShipperId, Float totalDistanceKm,
             Long totalWeightLoadedKg, Long totalVolumeLoadedCbm, String status, int routeStopCount,
             LocalDate deliveryDate, Long tenantId) {
@@ -73,8 +76,8 @@ public class RouteEntity {
         this.deliveryPlanId = deliveryPlanId;
         this.vehicleShipperId = vehicleShipperId;
         this.totalDistanceKm = totalDistanceKm;
-        TotalWeightLoadedKg = totalWeightLoadedKg;
-        TotalVolumeLoadedCbm = totalVolumeLoadedCbm;
+        this.totalWeightLoadedKg = totalWeightLoadedKg;
+        this.totalVolumeLoadedCbm = totalVolumeLoadedCbm;
         this.status = status;
         this.routeStopCount = routeStopCount;
         this.deliveryDate = deliveryDate;
@@ -95,8 +98,10 @@ public class RouteEntity {
         int routeStopCount = routeStops != null ? routeStops.size() : 0;
         RouteEntity route = new RouteEntity(id, deliveryPlanId, vehicleShipperId, totalDistanceKm, totalWeightLoadedKg,
                 totalVolumeLoadedCbm, status, routeStopCount, deliveryDate, tenantId);
-        routeStops.forEach(stop -> stop.setRouteId(id));
-        route.setRouteStops(routeStops);
+        if (routeStops != null) {
+            routeStops.forEach(stop -> stop.setRouteId(id));
+            route.setRouteStops(routeStops);
+        }
         return route;
     }
 }

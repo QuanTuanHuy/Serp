@@ -254,10 +254,10 @@ export interface DeliveryItem {
   productId: string;
   quantity: number;
   productName?: string;
-  weightKg?: number;
-  heightM?: number;
-  widthM?: number;
-  lengthM?: number;
+  weightKg: number;
+  heightM: number;
+  widthM: number;
+  lengthM: number;
   createdStamp?: string;
   lastUpdatedStamp?: string;
   tenantId?: number;
@@ -367,6 +367,7 @@ export interface Route {
   lastUpdatedStamp: string;
   tenantId: number;
   routeStops?: RouteStop[];
+  vehicleShipper: VehicleShipper;
 }
 
 export interface DeliveryPlan {

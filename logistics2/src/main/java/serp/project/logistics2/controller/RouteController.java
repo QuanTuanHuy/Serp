@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import serp.project.logistics2.dto.response.GeneralResponse;
 import serp.project.logistics2.dto.response.PageResponse;
 import serp.project.logistics2.entity.RouteEntity;
+import serp.project.logistics2.entity.RouteStopEntity;
 import serp.project.logistics2.exception.AppErrorCode;
 import serp.project.logistics2.exception.AppException;
 import serp.project.logistics2.orchestrator.RoutingOrchestrator;
@@ -55,11 +56,36 @@ public class RouteController {
                 .ok(GeneralResponse.success("Truy vấn danh sách lộ trình thành công", PageResponse.of(routePage)));
     }
 
+    @GetMapping("/search-by-slip")
+    public ResponseEntity<GeneralResponse<PageResponse<RouteEntity>>> searchRoute(
+            @Min(0) @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size,
+            @RequestParam(required = false, defaultValue = "createdStamp") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDirection,
+            @RequestParam(required = true) String deliverySlipId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info(
+                "[RouteController] Search routes with deliverySlipId {}, page {}, size {}, sortBy {}, sortDirection {} by tenant id {}",
+                deliverySlipId, page, size, sortBy, sortDirection, tenantId);
+        var routePage = routeService.search(deliverySlipId, tenantId.toString(),
+                page, size, sortBy, sortDirection);
+        return ResponseEntity
+                .ok(GeneralResponse.success("Truy vấn danh sách lộ trình thành công", PageResponse.of(routePage)));
+    }
+
     @GetMapping("/search/{routeId}")
     public ResponseEntity<GeneralResponse<RouteEntity>> getRouteById(@PathVariable String routeId) {
         log.info("[RouteController] Get route by id {}", routeId);
         var route = routeService.getDetailRoute(routeId);
         return ResponseEntity.ok(GeneralResponse.success("Truy vấn thông tin lộ trình thành công", route));
+    }
+
+    @GetMapping("/next-stop/{vehicleShipperId}")
+    public ResponseEntity<GeneralResponse<RouteStopEntity>> getNextStop(@PathVariable String vehicleShipperId) {
+        log.info("[RouteController] Get next route stop by vehicle shipper id {}", vehicleShipperId);
+        var routeStop = routingOrchestrator.getNextRouteStop(vehicleShipperId);
+        return ResponseEntity.ok(GeneralResponse.success("Truy vấn điểm dừng tiếp theo thành công", routeStop));
     }
 
     @PutMapping("/select/{routeId}")
@@ -69,14 +95,21 @@ public class RouteController {
         return ResponseEntity.ok(GeneralResponse.success("Chọn chuyến hàng để bắt đầu giao thành công"));
     }
 
-    @PutMapping("/complete/{routeStopId}")
+    @PutMapping("/cancel/{routeId}")
+    public ResponseEntity<GeneralResponse<?>> cancelRoute(@PathVariable String routeId) {
+        log.info("[RouteController] Cancel route id {} for delivery", routeId);
+        routingOrchestrator.cancelRoute(routeId);
+        return ResponseEntity.ok(GeneralResponse.success("Hủy chuyến giao thành công"));
+    }
+
+    @PutMapping("/complete-stop/{routeStopId}")
     public ResponseEntity<GeneralResponse<?>> completeRouteStop(@PathVariable String routeStopId) {
         log.info("[RouteController] Complete route stop id {}", routeStopId);
         routingOrchestrator.arriveAtStop(routeStopId);
         return ResponseEntity.ok(GeneralResponse.success("Hoàn thành giao hàng thành công tại điểm " + routeStopId));
     }
 
-    @PutMapping("/abort/{routeStopId}")
+    @PutMapping("/abort-stop/{routeStopId}")
     public ResponseEntity<GeneralResponse<?>> abortRouteStop(@PathVariable String routeStopId) {
         log.info("[RouteController] Abort route stop id {}", routeStopId);
         routingOrchestrator.failAtStop(routeStopId);

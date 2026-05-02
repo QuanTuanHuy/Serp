@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -41,6 +42,7 @@ import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
@@ -49,6 +51,9 @@ import serp.project.first_mile.dto.response.WardExcelTemplateDTO;
 import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.KafkaProducer;
+import serp.project.first_mile.kafka.event.OrderSyncEvent;
+import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
@@ -78,6 +83,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -88,6 +94,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class OrderServiceImpl implements OrderService {
 
@@ -102,6 +109,8 @@ public class OrderServiceImpl implements OrderService {
     private static final DateTimeFormatter ORDER_CODE_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
     private static final int ORDER_CODE_SEQUENCE_LENGTH = 4;
     private static final Object ORDER_CODE_LOCK = new Object();
+    private static final int DEFAULT_DROP_OFF_SUGGESTION_LIMIT = 5;
+    private static final int MAX_DROP_OFF_SUGGESTION_LIMIT = 20;
     private static final double DEFAULT_PICKUP_CHECKIN_RADIUS_METERS = 100.0;
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final String STORAGE_SERVICE_NAME = "first-mile";
@@ -134,6 +143,7 @@ public class OrderServiceImpl implements OrderService {
     private final TripOrderRepository tripOrderRepository;
     private final PickupCheckinRepository pickupCheckinRepository;
     private final FileStorageService fileStorageService;
+    private final SyncOrder syncOrder;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -281,6 +291,8 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
     }
 
@@ -293,12 +305,36 @@ public class OrderServiceImpl implements OrderService {
             MultipartFile photo,
             Long tenantId
     ) {
-        if (orderId == null || orderId <= 0 || checkinLatitude == null || checkinLongitude == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+        if (orderId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "orderId is required.");
+        }
+
+        if (orderId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "orderId must be greater than 0.");
+        }
+
+        if (checkinLatitude == null && checkinLongitude == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "latitude and longitude are required.");
+        }
+
+        if (checkinLatitude == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "latitude is required.");
+        }
+
+        if (checkinLongitude == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "longitude is required.");
         }
 
         if (!isValidCoordinate(checkinLatitude, checkinLongitude)) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    String.format(
+                            Locale.ROOT,
+                            "Invalid check-in coordinates (latitude=%s, longitude=%s). latitude must be between -90 and 90 and longitude between -180 and 180.",
+                            checkinLatitude,
+                            checkinLongitude
+                    )
+            );
         }
 
         if (photo == null || photo.isEmpty()) {
@@ -314,7 +350,10 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
         if (order.getStatus() == null || !PICKUP_CHECKIN_ORDER_STATUSES.contains(order.getStatus())) {
-            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            throw new AppException(
+                ErrorCode.ORDER_NOT_ASSIGNABLE,
+                String.format(Locale.ROOT, "Order status '%s' does not allow pickup check-in.", order.getStatus())
+            );
         }
 
         var tripOrder = tripOrderRepository
@@ -327,12 +366,15 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
 
         if (tripOrder.getId() == null || tripOrder.getTrip() == null || tripOrder.getTrip().getId() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Pickup trip assignment is invalid. Please contact support."
+            );
         }
 
         Point pickupLocation = order.getSenderLocation();
         if (pickupLocation == null || !isValidCoordinate(pickupLocation.getY(), pickupLocation.getX())) {
-            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE, "Order pickup location is missing or invalid.");
         }
 
         double allowedRadiusMeters = resolvePickupCheckinRadiusMeters();
@@ -394,15 +436,25 @@ public class OrderServiceImpl implements OrderService {
 
         validateCanMutateOrder(order, tenantId, actorScope);
 
+        if (OrderPickupMethod.DROP_OFF_AT_POST_OFFICE.equals(resolveOrderPickupMethod(order))) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Drop-off orders must be confirmed by a post office manager at the receiving post office."
+            );
+        }
+
         if (Boolean.TRUE.equals(order.getIsConfirm())) {
-            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
-            return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order has already been confirmed. If you need to change the order details, please contact support."
+            );
         }
 
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             orderRepository.save(order);
-
+            // Gửi sự kiện kafka
+            syncOrder.sendOrderEvent(order);
             Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
             return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
         }
@@ -422,10 +474,129 @@ public class OrderServiceImpl implements OrderService {
 
         postOfficeRepository.save(postOffice);
         orderRepository.save(order);
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
+        return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
+    }
+
+    @Override
+    public List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(
+            Long orderId,
+            Integer limit,
+            Long tenantId
+    ) {
+        if (orderId == null || orderId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        OrderActorScope actorScope = resolveActorScope(tenantId);
+        Order order = orderRepository.findByIdAndTenantId(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanMutateOrder(order, tenantId, actorScope);
+        ensureDropOffPickupMethod(order);
+        validateOrderForConfirmation(order);
+
+        int suggestionLimit = normalizeDropOffSuggestionLimit(limit);
+        Point senderLocation = order.getSenderLocation();
+        LocalDate operationalDate = LocalDate.now();
+        double senderLatitude = senderLocation.getY();
+        double senderLongitude = senderLocation.getX();
+
+        return postOfficeRepository.findAllByTenantId(tenantId)
+                .stream()
+                .map(postOffice -> buildSuggestionCandidate(postOffice, operationalDate, senderLatitude, senderLongitude))
+                .flatMap(Optional::stream)
+                .sorted(
+                Comparator.comparingInt((DropOffSuggestionCandidate candidate) -> safePriority(candidate.postOffice().getPriority()))
+                                .thenComparingDouble(DropOffSuggestionCandidate::distanceMeters)
+                                .thenComparingInt(candidate -> safeInt(candidate.postOffice().getCurrentLoad()))
+                                .thenComparingLong(candidate -> candidate.postOffice().getId() == null
+                                        ? Long.MAX_VALUE
+                                        : candidate.postOffice().getId())
+                )
+                .limit(suggestionLimit)
+                .map(this::toDropOffSuggestionResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderConfirmationResponse confirmDropOffOrderAtPostOffice(Long orderId, Long postOfficeId, Long tenantId) {
+        if (orderId == null || orderId <= 0 || postOfficeId == null || postOfficeId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        PostOffice postOffice = postOfficeRepository.findByIdAndTenantIdForUpdate(postOfficeId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
+
+        firstMileAccessUtils.ensureCurrentManagerAssignedToPostOfficeOrThrow(postOfficeId, tenantId);
+
+        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        ensureDropOffPickupMethod(order);
+
+        if (Boolean.TRUE.equals(order.getIsConfirm())) {
+            if (hasText(order.getOriginPostOfficeCode())
+                    && postOffice.getCode() != null
+                    && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
+                if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
+                    order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+                    orderRepository.save(order);
+                }
+                return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
+            }
+
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order has already been confirmed at another post office."
+            );
+        }
+
+        if (hasText(order.getOriginPostOfficeCode())) {
+            if (postOffice.getCode() != null
+                    && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
+                order.setIsConfirm(true);
+                order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+                orderRepository.save(order);
+                return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
+            }
+
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order is already linked to another origin post office."
+            );
+        }
+
+        validateOrderForConfirmation(order);
+
+        Point senderLocation = order.getSenderLocation();
+        if (!isPostOfficeSuitableForSender(postOffice, LocalDate.now(), senderLocation)) {
+            throw new AppException(ErrorCode.NO_SUITABLE_ORIGIN_POST_OFFICE);
+        }
+
+        postOffice.addLoad(1);
+        order.setOriginPostOfficeCode(postOffice.getCode());
+        order.setIsConfirm(true);
+        order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+
+        postOfficeRepository.save(postOffice);
+        orderRepository.save(order);
 
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
 
+    @Override
+    public void publishOrderEvent(String orderCode) {
+        var order = orderRepository.findByOrderCodeAndTenantId(orderCode, firstMileAccessUtils.getCurrentTenantIdOrThrow())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        if (order.getIsConfirm()) {
+            syncOrder.sendOrderEvent(order);
+        } else {
+            log.warn("The order with orderCode {} is not confirmed yet, skipping event publish.", orderCode);
+        }
+    }
     private void validateOrderForConfirmation(Order order) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
@@ -725,6 +896,14 @@ public class OrderServiceImpl implements OrderService {
         order.setPickupTimeEnd(payload.pickupTimeEnd());
         order.setDeliveryRequestTime(payload.deliveryRequestTime());
 
+        OrderPickupMethod pickupMethod = payload.pickupMethod();
+        if (pickupMethod == null) {
+            pickupMethod = order.getPickupMethod() == null
+                ? OrderPickupMethod.COURIER_PICKUP
+                : order.getPickupMethod();
+        }
+        order.setPickupMethod(pickupMethod);
+
         order.setOrderProductCategory(payload.orderProductCategory());
         order.setOrderType(payload.orderType());
         order.setFeePayer(payload.feePayer());
@@ -833,6 +1012,120 @@ public class OrderServiceImpl implements OrderService {
 
     private String formatOrderCode(String orderCodePrefix, int sequence) {
         return String.format(Locale.ROOT, "%s%0" + ORDER_CODE_SEQUENCE_LENGTH + "d", orderCodePrefix, sequence);
+    }
+
+    private OrderPickupMethod resolveOrderPickupMethod(Order order) {
+        if (order == null || order.getPickupMethod() == null) {
+            return OrderPickupMethod.COURIER_PICKUP;
+        }
+        return order.getPickupMethod();
+    }
+
+    private void ensureDropOffPickupMethod(Order order) {
+        if (!OrderPickupMethod.DROP_OFF_AT_POST_OFFICE.equals(resolveOrderPickupMethod(order))) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order pickup method is not drop-off at post office."
+            );
+        }
+    }
+
+    private int normalizeDropOffSuggestionLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return DEFAULT_DROP_OFF_SUGGESTION_LIMIT;
+        }
+        return Math.min(limit, MAX_DROP_OFF_SUGGESTION_LIMIT);
+    }
+
+    private Optional<DropOffSuggestionCandidate> buildSuggestionCandidate(
+            PostOffice postOffice,
+            LocalDate operationalDate,
+            double senderLatitude,
+            double senderLongitude
+    ) {
+        if (postOffice == null || postOffice.getLocation() == null) {
+            return Optional.empty();
+        }
+
+        Point postOfficeLocation = postOffice.getLocation();
+        if (!isValidCoordinate(postOfficeLocation.getY(), postOfficeLocation.getX())) {
+            return Optional.empty();
+        }
+
+        if (!isPostOfficeSuitableForSender(postOffice, operationalDate, toPoint(senderLatitude, senderLongitude))) {
+            return Optional.empty();
+        }
+
+        double distanceMeters = calculateDistanceMeters(
+                senderLatitude,
+                senderLongitude,
+                postOfficeLocation.getY(),
+                postOfficeLocation.getX()
+        );
+
+        return Optional.of(new DropOffSuggestionCandidate(postOffice, distanceMeters));
+    }
+
+    private OrderDropOffPostOfficeSuggestionResponse toDropOffSuggestionResponse(DropOffSuggestionCandidate candidate) {
+        PostOffice postOffice = candidate.postOffice();
+        Point location = postOffice.getLocation();
+
+        int currentLoad = safeInt(postOffice.getCurrentLoad());
+        int dailyCapacity = safeInt(postOffice.getDailyCapacity());
+        int remainingCapacity = Math.max(dailyCapacity - currentLoad, 0);
+
+        return new OrderDropOffPostOfficeSuggestionResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                postOffice.getProvinceCode(),
+                postOffice.getWardCode(),
+                postOffice.getAddressDetail(),
+                postOffice.getPriority(),
+                postOffice.getCurrentLoad(),
+                postOffice.getDailyCapacity(),
+                remainingCapacity,
+                location == null ? null : round3(location.getY()),
+                location == null ? null : round3(location.getX()),
+                round3(candidate.distanceMeters())
+        );
+    }
+
+    private boolean isPostOfficeSuitableForSender(PostOffice postOffice, LocalDate operationalDate, Point senderLocation) {
+        if (postOffice == null
+                || senderLocation == null
+                || postOffice.getLocation() == null
+                || postOffice.getDailyCapacity() == null
+                || postOffice.getCurrentLoad() == null
+                || !postOffice.isActive()
+                || !isPostOfficeOperationalOnDate(postOffice, operationalDate)
+                || !postOffice.canAccept(1)) {
+            return false;
+        }
+
+        Integer serviceRadiusMeters = postOffice.getServiceRadiusM();
+        if (serviceRadiusMeters == null || serviceRadiusMeters <= 0) {
+            return false;
+        }
+
+        double distanceMeters = calculateDistanceMeters(
+                senderLocation.getY(),
+                senderLocation.getX(),
+                postOffice.getLocation().getY(),
+                postOffice.getLocation().getX()
+        );
+
+        return distanceMeters <= serviceRadiusMeters;
+    }
+
+    private boolean isPostOfficeOperationalOnDate(PostOffice postOffice, LocalDate operationalDate) {
+        LocalDate startDate = postOffice.getOperationalStartDate();
+        if (startDate != null && startDate.isAfter(operationalDate)) {
+            return false;
+        }
+
+        LocalDate endDate = postOffice.getOperationalEndDate();
+        return endDate == null || !endDate.isBefore(operationalDate);
     }
 
     private double resolvePickupCheckinRadiusMeters() {
@@ -944,6 +1237,10 @@ public class OrderServiceImpl implements OrderService {
         return value == null ? 0 : value;
     }
 
+    private int safePriority(Integer value) {
+        return value == null ? Integer.MAX_VALUE : value;
+    }
+
     private long safeLong(Long value) {
         return value == null ? 0L : value;
     }
@@ -986,5 +1283,8 @@ public class OrderServiceImpl implements OrderService {
                     ExcelTemplateUtils.formatCodeAndName(productType.getProductTypeCode(), productType.getProductTypeName())
             );
         }
+    }
+
+    private record DropOffSuggestionCandidate(PostOffice postOffice, double distanceMeters) {
     }
 }

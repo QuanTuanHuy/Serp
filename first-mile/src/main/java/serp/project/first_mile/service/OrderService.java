@@ -10,8 +10,11 @@ import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
+import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
+
+import java.util.List;
 
 public interface OrderService {
 	byte[] exportTemplate(Long tenantId);
@@ -23,6 +26,10 @@ public interface OrderService {
 	PageResponse<OrderDetailResponse> getOrders(int page, int size, OrderFilterRequest filterRequest, Long tenantId);
 
 	OrderConfirmationResponse confirmOrder(Long orderId, Long tenantId);
+
+	List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(Long orderId, Integer limit, Long tenantId);
+
+	OrderConfirmationResponse confirmDropOffOrderAtPostOffice(Long orderId, Long postOfficeId, Long tenantId);
 
 	OrderDetailResponse createOrder(CreateOrderRequest request, Long tenantId);
 
@@ -39,4 +46,6 @@ public interface OrderService {
 			MultipartFile photo,
 			Long tenantId
 	);
+
+	void publishOrderEvent(String orderCode);
 }

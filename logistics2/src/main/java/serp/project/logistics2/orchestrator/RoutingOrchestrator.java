@@ -3,6 +3,8 @@ package serp.project.logistics2.orchestrator;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,6 +98,17 @@ public class RoutingOrchestrator {
                 result.getPlanId(), result.getDroppedSlipIds().size());
 
         // TODO: Thông báo cho người dùng về đơn hàng bị dropped
+    }
+
+    public void failToOptimizePlan(RoutingResponse result) {
+        DeliveryPlanEntity plan = deliveryPlanRepository.findById(result.getPlanId()).orElse(null);
+        if (plan == null) {
+            log.error("[RoutingOrchestrator] Không tìm thấy Delivery Plan với ID: {}", result.getPlanId());
+            return;
+        }
+        plan.setOptimizationStatus(PlanOptimizationStatus.FAILED.name());
+        deliveryPlanRepository.save(plan);
+        log.info("[RoutingOrchestrator] Đã cập nhật Delivery Plan ID: {} sang trạng thái FAILED do tối ưu kế hoạch thất bại.", result.getPlanId());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -212,7 +225,8 @@ public class RoutingOrchestrator {
         inProgressRoutes.forEach(routeId -> cancelRoute(routeId));
     }
 
-    private void cancelRoute(String routeId) {
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelRoute(String routeId) {
         RouteEntity route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new AppException((AppErrorCode.NOT_FOUND)));
         if (RouteStatus.valueOf(route.getStatus()).ordinal() >= RouteStatus.COMPLETED.ordinal()) {
@@ -246,6 +260,18 @@ public class RoutingOrchestrator {
                 }
             }
         });
+    }
+
+    public RouteStopEntity getNextRouteStop(String vehicleShipperId) {
+        Pageable pageable = PageRequest.of(0, 1);
+        List<RouteStopEntity> routeStops = routeStopRepository.findNextRouteStop(vehicleShipperId, pageable);
+        if (routeStops.isEmpty()) {
+            log.info("[RoutingOrchestrator] Không tìm thấy route stop nào đang chờ để giao hàng cho Vehicle Shipper ID: {}", vehicleShipperId);
+            return null;
+        }
+        var routeStop = routeStops.getFirst();
+        routeStop.setDeliverySlip(deliverySlipService.getSlip(routeStop.getDeliverySlipId(), routeStop.getTenantId()));
+        return routeStop;
     }
 
 }
