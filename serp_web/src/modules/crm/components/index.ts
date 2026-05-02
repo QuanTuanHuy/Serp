@@ -32,3 +32,6 @@ export * from './dialogs';
 
 // Calendar Components
 export * from './calendar';
+
+// Teams Components
+export * from './teams';

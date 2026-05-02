@@ -34,7 +34,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import type { CustomerType, CustomerStatus } from '../../types';
+import { ACCOUNT_TIERS } from '../../types/constants';
+import type { AccountTier, CustomerType, CustomerStatus } from '../../types';
+
+const TIER_NONE = '__none__';
 
 export interface QuickCustomerFormData {
   name: string;
@@ -42,6 +45,7 @@ export interface QuickCustomerFormData {
   phone?: string;
   customerType: CustomerType;
   status: CustomerStatus;
+  tier?: AccountTier;
   companySize?: string;
   website?: string;
   address?: string;
@@ -71,6 +75,7 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
     phone: '',
     customerType: 'PROSPECT',
     status: 'ACTIVE',
+    tier: undefined,
     companySize: '',
     website: '',
     address: '',
@@ -113,6 +118,7 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
         phone: '',
         customerType: 'PROSPECT',
         status: 'ACTIVE',
+        tier: undefined,
         companySize: '',
         website: '',
         address: '',
@@ -207,6 +213,33 @@ export const QuickAddCustomerDialog: React.FC<QuickAddCustomerDialogProps> = ({
             {errors.email && (
               <p className='text-xs text-red-500'>{errors.email}</p>
             )}
+          </div>
+
+          {/* Tier (optional) */}
+          <div className='space-y-2'>
+            <Label>Tier (optional)</Label>
+            <Select
+              value={formData.tier ?? TIER_NONE}
+              onValueChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  tier:
+                    value === TIER_NONE ? undefined : (value as AccountTier),
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder='Not set' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TIER_NONE}>Not set</SelectItem>
+                {ACCOUNT_TIERS.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Phone */}

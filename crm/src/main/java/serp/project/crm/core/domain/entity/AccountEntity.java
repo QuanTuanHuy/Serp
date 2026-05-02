@@ -6,6 +6,7 @@
 package serp.project.crm.core.domain.entity;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -14,7 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountTier;
 import serp.project.crm.core.domain.enums.AccountType;
+import serp.project.crm.core.domain.enums.PreferredTimeSlot;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,6 +44,11 @@ public class AccountEntity extends BaseEntity {
 
     private ActiveStatus activeStatus;
     private AccountType accountType;
+    private AccountTier tier;
+    private List<PreferredTimeSlot> preferredTimeSlots;
+    private List<DayOfWeek> preferredDays;
+    private String language;
+    private String timezone;
     private String notes;
 
     private AddressEntity address;
@@ -108,6 +116,16 @@ public class AccountEntity extends BaseEntity {
             this.notes = updates.getNotes();
         if (updates.getParentAccountId() != null)
             this.parentAccountId = updates.getParentAccountId();
+        if (updates.getTier() != null)
+            this.tier = updates.getTier();
+        if (updates.getPreferredTimeSlots() != null && !updates.getPreferredTimeSlots().isEmpty())
+            this.preferredTimeSlots = updates.getPreferredTimeSlots();
+        if (updates.getPreferredDays() != null && !updates.getPreferredDays().isEmpty())
+            this.preferredDays = updates.getPreferredDays();
+        if (updates.getLanguage() != null && !updates.getLanguage().isBlank())
+            this.language = updates.getLanguage();
+        if (updates.getTimezone() != null && !updates.getTimezone().isBlank())
+            this.timezone = updates.getTimezone();
     }
 
     public void setDefaults() {
@@ -116,6 +134,12 @@ public class AccountEntity extends BaseEntity {
         }
         if (this.accountType == null) {
             this.accountType = AccountType.PROSPECT;
+        }
+        if (this.tier == null) {
+            this.tier = AccountTier.STANDARD;
+        }
+        if (this.timezone == null || this.timezone.isBlank()) {
+            this.timezone = "Asia/Ho_Chi_Minh";
         }
         if (this.totalRevenue == null) {
             this.totalRevenue = BigDecimal.ZERO;

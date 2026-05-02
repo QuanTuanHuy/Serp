@@ -119,7 +119,7 @@ public class TeamUseCase {
                 return responseUtils.notFound(ErrorMessage.TEAM_NOT_FOUND);
             }
 
-            team.setMembers(teamMemberService.getAllMembersByTeam(id, tenantId));
+            team.setMembers(teamMemberService.getAllMembersByTeamWithWorkingHours(id, tenantId));
 
             TeamResponse response = teamDtoMapper.toResponse(team);
             return responseUtils.success(response);
@@ -138,7 +138,7 @@ public class TeamUseCase {
             List<TeamSummaryResponse> teamResponses = result.getFirst().stream()
                     .filter(team -> status == null || team.getStatus() == TeamStatus.valueOf(status.toUpperCase()))
                     .map(team -> {
-                        team.setMembers(teamMemberService.getAllMembersByTeam(team.getId(), tenantId));
+                        team.setMembers(teamMemberService.getAllMembersByTeamWithWorkingHours(team.getId(), tenantId));
                         return teamDtoMapper.toSummaryResponse(team);
                     })
                     .toList();
@@ -201,7 +201,7 @@ public class TeamUseCase {
             TeamEntity updatedTeam = teamService.updateTeam(teamId, TeamEntity.builder()
                     .managerUserId(request.getNewManagerUserId())
                     .build(), tenantId);
-            updatedTeam.setMembers(teamMemberService.getAllMembersByTeam(teamId, tenantId));
+            updatedTeam.setMembers(teamMemberService.getAllMembersByTeamWithWorkingHours(teamId, tenantId));
 
             return responseUtils.success(teamDtoMapper.toResponse(updatedTeam), "Team manager changed successfully");
         } catch (AppException e) {

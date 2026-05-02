@@ -100,7 +100,7 @@ public class TeamMemberUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getTeamMemberById(Long id, Long tenantId) {
         try {
-            TeamMemberEntity teamMember = teamMemberService.getTeamMemberById(id, tenantId).orElse(null);
+            TeamMemberEntity teamMember = teamMemberService.getTeamMemberByIdWithWorkingHours(id, tenantId).orElse(null);
 
             if (teamMember == null) {
                 return responseUtils.notFound("Team member not found");
@@ -118,7 +118,7 @@ public class TeamMemberUseCase {
     @Transactional(readOnly = true)
     public GeneralResponse<?> getTeamMembersByTeam(Long teamId, Long tenantId, PageRequest pageRequest) {
         try {
-            var result = teamMemberService.getTeamMembersByTeam(teamId, tenantId, pageRequest);
+            var result = teamMemberService.getTeamMembersByTeamWithWorkingHours(teamId, tenantId, pageRequest);
 
             List<TeamMemberResponse> memberResponses = result.getFirst().stream()
                     .map(teamMemberDtoMapper::toResponse)

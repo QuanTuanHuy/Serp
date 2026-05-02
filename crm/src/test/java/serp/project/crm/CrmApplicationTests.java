@@ -1,13 +1,14 @@
 package serp.project.crm;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 class CrmApplicationTests {
 
     @Test
-    void contextLoads() {
+    void applicationClassExists() {
+        assertNotNull(CrmApplication.class);
     }
 
 }

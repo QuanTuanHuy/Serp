@@ -1,6 +1,8 @@
 // CRM Constants (authors: QuanTuanHuy, Description: Part of Serp Project)
 
 import type {
+  AccountTier,
+  CrmDayOfWeek,
   CustomerType,
   CustomerStatus,
   LeadSource,
@@ -9,6 +11,7 @@ import type {
   OpportunityType,
   ActivityType,
   ActivityStatus,
+  PreferredTimeSlot,
   Priority,
 } from './index';
 
@@ -25,6 +28,31 @@ export const CUSTOMER_STATUSES: {
 }[] = [
   { value: 'ACTIVE', label: 'Active', color: 'green' },
   { value: 'INACTIVE', label: 'Inactive', color: 'gray' },
+];
+
+export const ACCOUNT_TIERS: { value: AccountTier; label: string }[] = [
+  { value: 'STANDARD', label: 'Standard' },
+  { value: 'SILVER', label: 'Silver' },
+  { value: 'GOLD', label: 'Gold' },
+  { value: 'PLATINUM', label: 'Platinum' },
+];
+
+export const PREFERRED_TIME_SLOTS: {
+  value: PreferredTimeSlot;
+  label: string;
+}[] = [
+  { value: 'MORNING', label: 'Morning (8–12)' },
+  { value: 'AFTERNOON', label: 'Afternoon (13–17)' },
+];
+
+export const PREFERRED_DAYS: { value: CrmDayOfWeek; label: string }[] = [
+  { value: 'MONDAY', label: 'Mon' },
+  { value: 'TUESDAY', label: 'Tue' },
+  { value: 'WEDNESDAY', label: 'Wed' },
+  { value: 'THURSDAY', label: 'Thu' },
+  { value: 'FRIDAY', label: 'Fri' },
+  { value: 'SATURDAY', label: 'Sat' },
+  { value: 'SUNDAY', label: 'Sun' },
 ];
 
 // Lead constants

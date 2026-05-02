@@ -16,12 +16,6 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
   Dialog,
   DialogContent,
@@ -40,6 +34,10 @@ import {
   Plus,
 } from 'lucide-react';
 import {
+  AddTeamMemberDialog,
+  EditTeamMemberDialog,
+} from '../../components/teams';
+import {
   useGetTeamQuery,
   useGetTeamMembersQuery,
   useGetTeamTerritoriesQuery,
@@ -51,12 +49,39 @@ import {
   useGetTerritoriesQuery,
 } from '../../api/crmApi';
 import type {
+  ExperienceLevel,
   TeamMember,
   CreateTeamMemberRequest,
   UpdateTeamMemberRequest,
-  TeamMemberRole,
-  TeamMemberStatus,
 } from '../../types';
+
+const EXPERIENCE_LABEL: Record<ExperienceLevel, string> = {
+  JUNIOR: 'Junior',
+  MID: 'Mid',
+  SENIOR: 'Senior',
+  EXPERT: 'Expert',
+};
+
+function memberDisplayName(member: TeamMember): string {
+  const n = member.name?.trim();
+  if (n) return n;
+  const e = member.email?.trim();
+  if (e) return e;
+  return 'Member';
+}
+
+function memberInitials(member: TeamMember): string {
+  const base = memberDisplayName(member);
+  return (
+    base
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((p) => p[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '?'
+  );
+}
 
 export const TeamDetailPage: React.FC = () => {
   const router = useRouter();
@@ -317,26 +342,60 @@ export const TeamDetailPage: React.FC = () => {
             <div className='space-y-2'>
               {members.map((member) => (
                 <Card key={member.id}>
-                  <CardContent className='flex items-center justify-between p-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center'>
+                  <CardContent className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='flex min-w-0 flex-1 items-start gap-3'>
+                      <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10'>
                         <span className='text-sm font-medium text-primary'>
-                          {member.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .slice(0, 2)
-                            .toUpperCase()}
+                          {memberInitials(member)}
                         </span>
                       </div>
-                      <div>
-                        <p className='font-medium'>{member.name}</p>
-                        <p className='text-sm text-muted-foreground'>
-                          {member.email}
+                      <div className='min-w-0 flex-1'>
+                        <p className='font-medium'>
+                          {memberDisplayName(member)}
                         </p>
+                        {member.email ? (
+                          <p className='truncate text-sm text-muted-foreground'>
+                            {member.email}
+                          </p>
+                        ) : null}
+                        <div className='mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground'>
+                          {member.experienceLevel ? (
+                            <Badge variant='secondary' className='font-normal'>
+                              {EXPERIENCE_LABEL[member.experienceLevel]}
+                            </Badge>
+                          ) : null}
+                          {member.capacity != null ||
+                          member.maxMeetings != null ? (
+                            <span>
+                              {member.capacity != null
+                                ? `${member.capacity}% load`
+                                : ''}
+                              {member.capacity != null &&
+                              member.maxMeetings != null
+                                ? ' · '
+                                : ''}
+                              {member.maxMeetings != null
+                                ? `${member.maxMeetings} mtgs`
+                                : ''}
+                            </span>
+                          ) : null}
+                          {member.skills?.length || member.languages?.length ? (
+                            <span>
+                              {member.skills?.length
+                                ? `${member.skills.length} skills`
+                                : ''}
+                              {member.skills?.length && member.languages?.length
+                                ? ' · '
+                                : ''}
+                              {member.languages?.length
+                                ? `${member.languages.length} langs`
+                                : ''}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                    <div className='flex items-center gap-3'>
+                    <div className='flex shrink-0 flex-wrap items-center gap-2 sm:gap-3'>
                       <Badge variant='outline'>{member.role}</Badge>
                       <Badge
                         variant={
@@ -418,7 +477,7 @@ export const TeamDetailPage: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <AddMemberDialog
+      <AddTeamMemberDialog
         open={showAddMember}
         onOpenChange={setShowAddMember}
         onSubmit={handleAddMember}
@@ -449,7 +508,7 @@ export const TeamDetailPage: React.FC = () => {
       />
 
       {editingMember && (
-        <EditMemberDialog
+        <EditTeamMemberDialog
           member={editingMember}
           open={!!editingMember}
           onOpenChange={(open) => !open && setEditingMember(null)}
@@ -457,100 +516,6 @@ export const TeamDetailPage: React.FC = () => {
         />
       )}
     </div>
-  );
-};
-
-interface AddMemberDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateTeamMemberRequest) => void;
-  teamId: string;
-  users: Array<{
-    id: number;
-    firstName?: string;
-    lastName?: string;
-    email: string;
-  }>;
-  isLoadingUsers: boolean;
-}
-
-const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
-  open,
-  onOpenChange,
-  onSubmit,
-  teamId,
-  users,
-  isLoadingUsers,
-}) => {
-  const [userId, setUserId] = useState('');
-  const [role, setRole] = useState<TeamMemberRole>('SALES_REP');
-
-  const handleSubmit = () => {
-    onSubmit({ teamId: Number(teamId), userId: Number(userId), role });
-    setUserId('');
-    setRole('SALES_REP');
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
-        </DialogHeader>
-        <div className='space-y-4'>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>User *</label>
-            <Select value={userId} onValueChange={setUserId}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    isLoadingUsers ? 'Loading users...' : 'Select user'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => {
-                  const fullName = [user.firstName, user.lastName]
-                    .filter(Boolean)
-                    .join(' ')
-                    .trim();
-
-                  return (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {fullName || user.email} ({user.email})
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Role *</label>
-            <Select
-              value={role}
-              onValueChange={(v) => setRole(v as TeamMemberRole)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='MANAGER'>Manager</SelectItem>
-                <SelectItem value='SALES_REP'>Sales Rep</SelectItem>
-                <SelectItem value='VIEWER'>Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!userId}>
-            Add Member
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 };
 
@@ -626,91 +591,6 @@ const AssignTerritoryDialog: React.FC<AssignTerritoryDialogProps> = ({
           <Button onClick={handleSubmit} disabled={!territoryCodes.trim()}>
             Assign
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-interface EditMemberDialogProps {
-  member: TeamMember;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: UpdateTeamMemberRequest) => void;
-}
-
-const EditMemberDialog: React.FC<EditMemberDialogProps> = ({
-  member,
-  open,
-  onOpenChange,
-  onSubmit,
-}) => {
-  const [name, setName] = useState(member.name);
-  const [email, setEmail] = useState(member.email || '');
-  const [phone, setPhone] = useState(member.phone || '');
-  const [role, setRole] = useState<TeamMemberRole>(member.role);
-  const [status, setStatus] = useState<TeamMemberStatus>(member.status);
-
-  const handleSubmit = () => {
-    onSubmit({ name, email, phone, role, status });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Team Member</DialogTitle>
-        </DialogHeader>
-        <div className='space-y-4'>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Name *</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Email</label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Phone</label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Role *</label>
-            <Select
-              value={role}
-              onValueChange={(v) => setRole(v as TeamMemberRole)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='MANAGER'>Manager</SelectItem>
-                <SelectItem value='SALES_REP'>Sales Rep</SelectItem>
-                <SelectItem value='VIEWER'>Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>Status *</label>
-            <Select
-              value={status}
-              onValueChange={(v) => setStatus(v as TeamMemberStatus)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ACTIVE'>Active</SelectItem>
-                <SelectItem value='INACTIVE'>Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>Update Member</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
