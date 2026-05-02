@@ -39,8 +39,16 @@ func (NotificationMapper) ToModel(e *entity.NotificationEntity) *m.NotificationM
 		metadata = datatypes.JSONMap(e.Metadata)
 	}
 
+	base := m.BaseModel{ID: e.ID}
+	if e.CreatedAt > 0 {
+		base.CreatedAt = TimeFromMs(e.CreatedAt)
+	}
+	if e.UpdatedAt > 0 {
+		base.UpdatedAt = TimeFromMs(e.UpdatedAt)
+	}
+
 	return &m.NotificationModel{
-		BaseModel:        m.BaseModel{ID: e.ID},
+		BaseModel:        base,
 		UserID:           e.UserID,
 		TenantID:         e.TenantID,
 		Title:            e.Title,
