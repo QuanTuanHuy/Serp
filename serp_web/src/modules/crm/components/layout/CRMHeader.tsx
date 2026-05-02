@@ -176,7 +176,7 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
           {/* Notifications */}
           <NotificationButton
             settingsPath='/crm/settings'
-            allNotificationsPath='/crm/activities'
+            allNotificationsPath='/notifications'
           />
 
           {/* Theme Toggle */}

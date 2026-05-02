@@ -30,8 +30,11 @@ export interface MeetingRequest {
   scheduledActivityId?: string;
   scheduledStartTime?: number;
   accountId: string;
+  accountName?: string;
   opportunityId?: string;
+  opportunityName?: string;
   contactId?: string;
+  contactName?: string;
   subject?: string;
   description?: string;
   location?: string;
