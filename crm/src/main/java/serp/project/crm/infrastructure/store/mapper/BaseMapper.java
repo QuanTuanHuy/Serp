@@ -7,6 +7,7 @@ package serp.project.crm.infrastructure.store.mapper;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +20,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
+@Slf4j
 public abstract class BaseMapper {
 
     protected static final ObjectMapper JSON_MAPPER = new ObjectMapper();
@@ -85,6 +88,33 @@ public abstract class BaseMapper {
         try {
             return JSON_MAPPER.writeValueAsString(list);
         } catch (Exception e) {
+            return null;
+        }
+    }
+
+    protected <E extends Enum<E>> List<E> parseJsonToEnumList(String json, Class<E> enumType) {
+        try {
+            return parseJsonToList(json).stream()
+                    .map(value -> stringToEnum(value, enumType))
+                    .filter(Objects::nonNull)
+                    .toList();
+        } catch (Exception ex) {
+            log.error("Failed to parse JSON to enum list: json={}, enumType={}, error={}", json, enumType.getSimpleName(), ex.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    protected <E extends Enum<E>> String serializeEnumListToJson(List<E> list) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        try {
+            return serializeListToJson(list.stream()
+                    .filter(Objects::nonNull)
+                    .map(Enum::name)
+                    .toList());
+        } catch (Exception ex) {
+            log.error("Failed to serialize enum list to JSON: listSize={}, error={}", list.size(), ex.getMessage());
             return null;
         }
     }

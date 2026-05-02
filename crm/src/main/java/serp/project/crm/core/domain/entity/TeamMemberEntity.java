@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import serp.project.crm.core.domain.constant.ErrorMessage;
+import serp.project.crm.core.domain.enums.ExperienceLevel;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
 
@@ -29,6 +30,11 @@ public class TeamMemberEntity extends BaseEntity {
     private Long userId;
     private String role;
     private TeamMemberStatus status;
+    private List<String> skills;
+    private List<String> languages;
+    private ExperienceLevel experienceLevel;
+    private Integer capacity;
+    private Integer maxMeetings;
     private List<WorkingHoursEntity> workingHours;
 
     public void updateFrom(TeamMemberEntity updates) {
@@ -42,6 +48,16 @@ public class TeamMemberEntity extends BaseEntity {
             this.role = updates.getRole();
         if (updates.getStatus() != null)
             this.status = updates.getStatus();
+        if (updates.getSkills() != null)
+            this.skills = updates.getSkills();
+        if (updates.getLanguages() != null)
+            this.languages = updates.getLanguages();
+        if (updates.getExperienceLevel() != null)
+            this.experienceLevel = updates.getExperienceLevel();
+        if (updates.getCapacity() != null)
+            this.capacity = updates.getCapacity();
+        if (updates.getMaxMeetings() != null)
+            this.maxMeetings = updates.getMaxMeetings();
         if (updates.getWorkingHours() != null)
             this.workingHours = updates.getWorkingHours();
     }
@@ -49,6 +65,15 @@ public class TeamMemberEntity extends BaseEntity {
     public void setDefaults() {
         if (this.status == null) {
             this.status = TeamMemberStatus.ACTIVE;
+        }
+        if (this.experienceLevel == null) {
+            this.experienceLevel = ExperienceLevel.MID;
+        }
+        if (this.capacity == null) {
+            this.capacity = 100;
+        }
+        if (this.maxMeetings == null) {
+            this.maxMeetings = 8;
         }
     }
 

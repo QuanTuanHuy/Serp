@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MeetingRequestPriorityServiceTest {
 
-    private final MeetingRequestPriorityService service = new MeetingRequestPriorityService();
+    private final MeetingPriorityCalculator service = new MeetingPriorityCalculator();
 
     @Test
     void urgentHighValueCustomerRequest_hasHigherPriority() {

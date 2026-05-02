@@ -16,6 +16,8 @@ import serp.project.crm.core.domain.constant.WorkingHoursDefaults;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.entity.MeetingRequestEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
+import serp.project.crm.core.domain.entity.AccountEntity;
+import serp.project.crm.core.domain.entity.RepTimeBlockEntity;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
 import serp.project.crm.core.domain.entity.WorkingHoursEntity;
 import serp.project.crm.core.domain.enums.ActivityStatus;
@@ -23,6 +25,7 @@ import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.MeetingRequestStatus;
 import serp.project.crm.core.domain.enums.PreferredTimeSlot;
 import serp.project.crm.core.exception.AppException;
+import serp.project.crm.core.port.concurrency.IRepCalendarLockPort;
 import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.port.store.IMeetingRequestPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
@@ -34,15 +37,19 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class MeetingRequestSchedulerService {
 
     private static final ZoneId BUSINESS_TIMEZONE = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -57,10 +64,12 @@ public class MeetingRequestSchedulerService {
     private final IMeetingRequestPort meetingRequestPort;
     private final ITeamMemberService teamMemberService;
     private final IRepTimeBlockPort repTimeBlockPort;
+    private final IRepCalendarLockPort repCalendarLockPort;
     private final IActivityService activityService;
     private final IAccountPort accountPort;
     private final IOpportunityPort opportunityPort;
-    private final MeetingRequestPriorityService meetingRequestPriorityService;
+    private final MeetingPriorityCalculator meetingPriorityCalculator;
+    private final RepCompatibilityMatcher repCompatibilityMatcher;
     private final TransactionTemplate transactionTemplate;
 
     @Scheduled(fixedDelayString = "${app.scheduler.meeting.interval-ms:300000}")
@@ -89,18 +98,22 @@ public class MeetingRequestSchedulerService {
             return;
         }
 
-        var account = accountPort.findById(request.getAccountId(), tenantId)
+        AccountEntity account = accountPort.findById(request.getAccountId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
         OpportunityEntity opportunity = request.getOpportunityId() != null
                 ? opportunityPort.findById(request.getOpportunityId(), tenantId).orElse(null)
                 : null;
 
-        request.setPriorityScore(meetingRequestPriorityService.calculate(request, account, opportunity));
+        request.setPriorityScore(meetingPriorityCalculator.calculate(request, account, opportunity));
         meetingRequestPort.save(request);
 
-        List<TeamMemberEntity> candidates = teamMemberService.getActiveMembersByTeamWithWorkingHours(request.getTeamId(), tenantId)
+        List<TeamMemberEntity> members = teamMemberService.getActiveMembersByTeamWithWorkingHours(request.getTeamId(), tenantId);
+        Map<Long, List<RepTimeBlockEntity>> upcomingBlocksByMemberId = loadUpcomingBlocksByMemberId(members, tenantId,
+                request.getEarliestStart());
+
+        List<TeamMemberEntity> candidates = members
                 .stream()
-                .sorted(buildMemberComparator(request, tenantId))
+                .sorted(buildMemberComparator(request, account, upcomingBlocksByMemberId))
                 .toList();
 
         if (candidates.isEmpty()) {
@@ -108,21 +121,31 @@ public class MeetingRequestSchedulerService {
             return;
         }
 
-        Optional<ScheduledAssignment> assignment = findAssignment(request, candidates, tenantId);
+        Optional<ScheduledAssignment> assignment = findAssignment(request, account, candidates, upcomingBlocksByMemberId,
+                tenantId);
         if (assignment.isEmpty()) {
             handleRetry(request, REASON_NO_AVAILABLE_SLOT);
             return;
         }
 
-        commitSchedule(request, assignment.get(), tenantId);
+        if (!commitSchedule(request, assignment.get(), tenantId)) {
+            handleRetry(request, REASON_NO_AVAILABLE_SLOT);
+        }
     }
 
-    private Optional<ScheduledAssignment> findAssignment(MeetingRequestEntity request, List<TeamMemberEntity> candidates,
+    private Optional<ScheduledAssignment> findAssignment(MeetingRequestEntity request, AccountEntity account,
+            List<TeamMemberEntity> candidates, Map<Long, List<RepTimeBlockEntity>> upcomingBlocksByMemberId,
             Long tenantId) {
-        List<TimeSlot> slots = generateCandidateSlots(request);
+        List<TimeSlot> slots = generateCandidateSlots(request, account);
         for (TeamMemberEntity candidate : candidates) {
+            List<RepTimeBlockEntity> upcomingBlocks = upcomingBlocksByMemberId.getOrDefault(candidate.getId(),
+                    Collections.emptyList());
             for (TimeSlot slot : slots) {
                 if (!isWithinWorkingHours(candidate, slot, request.getPreferredTimeSlot())) {
+                    continue;
+                }
+                if (!repCompatibilityMatcher.canTakeMoreMeetings(candidate,
+                        plannedMeetingsOnDate(upcomingBlocks, slot.startTime()))) {
                     continue;
                 }
                 if (isAvailable(candidate.getId(), tenantId, slot)) {
@@ -133,9 +156,19 @@ public class MeetingRequestSchedulerService {
         return Optional.empty();
     }
 
-    private void commitSchedule(MeetingRequestEntity request, ScheduledAssignment assignment, Long tenantId) {
-        ActivityEntity activity = buildActivity(request, assignment.teamMember());
-        activity.setActivityDate(assignment.slot().startTime());
+    /**
+     * @return false if the slot was taken after the initial conflict check (concurrent scheduler)
+     */
+    private boolean commitSchedule(MeetingRequestEntity request, ScheduledAssignment assignment, Long tenantId) {
+        TeamMemberEntity rep = assignment.teamMember();
+        TimeSlot slot = assignment.slot();
+        repCalendarLockPort.acquireExclusiveForRep(tenantId, rep.getId());
+        if (repTimeBlockPort.countConflicts(rep.getId(), tenantId, slot.startTime(), slot.endTime()) > 0) {
+            return false;
+        }
+
+        ActivityEntity activity = buildActivity(request, rep);
+        activity.setActivityDate(slot.startTime());
 
         Long actorId = request.getCreatedBy() != null ? request.getCreatedBy() : request.getUpdatedBy();
         ActivityEntity created = activityService.createActivity(activity, actorId, tenantId);
@@ -143,10 +176,11 @@ public class MeetingRequestSchedulerService {
         request.setStatus(MeetingRequestStatus.SCHEDULED);
         request.setFailureReason(null);
         request.setScheduledActivityId(created.getId());
-        request.setAssignedTeamMemberId(assignment.teamMember().getId());
-        request.setAssignedUserId(assignment.teamMember().getUserId());
-        request.setScheduledStartTime(assignment.slot().startTime());
+        request.setAssignedTeamMemberId(rep.getId());
+        request.setAssignedUserId(rep.getUserId());
+        request.setScheduledStartTime(slot.startTime());
         meetingRequestPort.save(request);
+        return true;
     }
 
     private void handleRetry(MeetingRequestEntity request, String reason) {
@@ -165,20 +199,27 @@ public class MeetingRequestSchedulerService {
         meetingRequestPort.save(request);
     }
 
-    private Comparator<TeamMemberEntity> buildMemberComparator(MeetingRequestEntity request, Long tenantId) {
+    private Comparator<TeamMemberEntity> buildMemberComparator(MeetingRequestEntity request, AccountEntity account,
+            Map<Long, List<RepTimeBlockEntity>> upcomingBlocksByMemberId) {
         return Comparator
-                .comparing((TeamMemberEntity member) -> request.getPreferredUserId() == null
-                        || !member.getUserId().equals(request.getPreferredUserId()))
-                .thenComparingInt(member -> plannedLoad(member.getId(), tenantId))
+                .comparingInt((TeamMemberEntity member) -> compatibilityScore(request, account, member,
+                        upcomingBlocksByMemberId.getOrDefault(member.getId(), Collections.emptyList())))
+                .reversed()
+                .thenComparingInt(member -> plannedLoad(upcomingBlocksByMemberId.getOrDefault(member.getId(),
+                        Collections.emptyList())))
                 .thenComparing(TeamMemberEntity::getUserId);
     }
 
-    private int plannedLoad(Long teamMemberId, Long tenantId) {
-        long now = System.currentTimeMillis();
-        return repTimeBlockPort.findUpcomingByTeamMemberId(teamMemberId, tenantId, now).size();
+    private int compatibilityScore(MeetingRequestEntity request, AccountEntity account, TeamMemberEntity member,
+            List<RepTimeBlockEntity> upcomingBlocks) {
+        return repCompatibilityMatcher.calculate(request, account, member, plannedLoad(upcomingBlocks));
     }
 
-    private List<TimeSlot> generateCandidateSlots(MeetingRequestEntity request) {
+    private int plannedLoad(List<RepTimeBlockEntity> upcomingBlocks) {
+        return upcomingBlocks.size();
+    }
+
+    private List<TimeSlot> generateCandidateSlots(MeetingRequestEntity request, AccountEntity account) {
         List<TimeSlot> slots = new ArrayList<>();
         int durationMinutes = request.getEffectiveDurationMinutes();
         Instant cursor = Instant.ofEpochMilli(request.getEarliestStart());
@@ -189,7 +230,14 @@ public class MeetingRequestSchedulerService {
             cursor = cursor.plus(Duration.ofMinutes(SLOT_STEP_MINUTES));
         }
 
-        return slots;
+        // Sort slots once by account preferences
+        return slots.stream()
+                .sorted(Comparator
+                        .comparing((TimeSlot slot) -> hasPreferredDays(account)
+                                && !matchesAccountPreferredDay(slot, account))
+                        .thenComparing(slot -> hasPreferredTimeSlots(account)
+                                && !matchesAccountPreferredTimeSlot(slot, account)))
+                .toList();
     }
 
     private boolean isWithinWorkingHours(TeamMemberEntity teamMember, TimeSlot slot, PreferredTimeSlot preferredTimeSlot) {
@@ -219,6 +267,72 @@ public class MeetingRequestSchedulerService {
 
     private boolean isAvailable(Long teamMemberId, Long tenantId, TimeSlot slot) {
         return repTimeBlockPort.countConflicts(teamMemberId, tenantId, slot.startTime(), slot.endTime()) == 0;
+    }
+
+    private Map<Long, List<RepTimeBlockEntity>> loadUpcomingBlocksByMemberId(List<TeamMemberEntity> members, Long tenantId,
+            Long earliestStart) {
+        long earliestBlockTime = earliestStart != null ? Math.min(System.currentTimeMillis(), earliestStart) : System.currentTimeMillis();
+        return members.stream()
+                .filter(member -> member.getId() != null)
+                .collect(Collectors.toMap(
+                        TeamMemberEntity::getId,
+                        member -> repTimeBlockPort.findUpcomingByTeamMemberId(member.getId(), tenantId, earliestBlockTime),
+                        (left, right) -> left));
+    }
+
+    private int plannedMeetingsOnDate(List<RepTimeBlockEntity> upcomingBlocks, long slotStartTime) {
+        LocalDate slotDate = Instant.ofEpochMilli(slotStartTime).atZone(BUSINESS_TIMEZONE).toLocalDate();
+        return (int) upcomingBlocks.stream()
+                .filter(block -> Instant.ofEpochMilli(block.getStartTime()).atZone(BUSINESS_TIMEZONE).toLocalDate()
+                        .equals(slotDate))
+                .count();
+    }
+
+    private boolean hasPreferredDays(AccountEntity account) {
+        return hasPreferences(account != null ? account.getPreferredDays() : null);
+    }
+
+    private boolean hasPreferredTimeSlots(AccountEntity account) {
+        return hasPreferences(account != null ? account.getPreferredTimeSlots() : null);
+    }
+
+    private <T> boolean hasPreferences(List<T> preferences) {
+        return preferences != null && !preferences.isEmpty();
+    }
+
+    private boolean matchesAccountPreferredDay(TimeSlot slot, AccountEntity account) {
+        if (!hasPreferredDays(account)) {
+            return true;
+        }
+
+        DayOfWeek dayOfWeek = Instant.ofEpochMilli(slot.startTime())
+                .atZone(resolveTimezone(account))
+                .getDayOfWeek();
+        return account.getPreferredDays().contains(dayOfWeek);
+    }
+
+    private boolean matchesAccountPreferredTimeSlot(TimeSlot slot, AccountEntity account) {
+        if (!hasPreferredTimeSlots(account)) {
+            return true;
+        }
+
+        int hour = Instant.ofEpochMilli(slot.startTime())
+                .atZone(resolveTimezone(account))
+                .getHour();
+        return account.getPreferredTimeSlots().stream().anyMatch(preferredTimeSlot -> preferredTimeSlot.contains(hour));
+    }
+
+    private ZoneId resolveTimezone(AccountEntity account) {
+        if (account == null || !StringUtils.hasText(account.getTimezone())) {
+            return BUSINESS_TIMEZONE;
+        }
+        try {
+            return ZoneId.of(account.getTimezone());
+        } catch (Exception ex) {
+            log.warn("Invalid timezone for account: accountId={}, timezone={}, error={}, falling back to {}",
+                    account.getId(), account.getTimezone(), ex.getMessage(), BUSINESS_TIMEZONE.getId());
+            return BUSINESS_TIMEZONE;
+        }
     }
 
     private List<WorkingHoursEntity> effectiveWorkingHours(TeamMemberEntity teamMember) {

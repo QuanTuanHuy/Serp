@@ -33,6 +33,11 @@ public class TeamMemberDtoMapper {
                 .teamId(request.getTeamId())
                 .userId(request.getUserId())
                 .role(request.getRole())
+                .skills(request.getSkills())
+                .languages(request.getLanguages())
+                .experienceLevel(request.getExperienceLevel())
+                .capacity(request.getCapacity())
+                .maxMeetings(request.getMaxMeetings())
                 .workingHours(toWorkingHoursEntities(request.getWorkingHours()))
                 .build();
     }
@@ -48,6 +53,11 @@ public class TeamMemberDtoMapper {
                 .phone(request.getPhone())
                 .role(request.getRole())
                 .status(request.getStatus())
+                .skills(request.getSkills())
+                .languages(request.getLanguages())
+                .experienceLevel(request.getExperienceLevel())
+                .capacity(request.getCapacity())
+                .maxMeetings(request.getMaxMeetings())
                 .workingHours(toWorkingHoursEntities(request.getWorkingHours()))
                 .build();
     }
@@ -66,6 +76,11 @@ public class TeamMemberDtoMapper {
                 .userId(entity.getUserId())
                 .role(entity.getRole())
                 .status(entity.getStatus())
+                .skills(entity.getSkills())
+                .languages(entity.getLanguages())
+                .experienceLevel(entity.getExperienceLevel())
+                .capacity(entity.getCapacity())
+                .maxMeetings(entity.getMaxMeetings())
                 .workingHours(toWorkingHoursResponses(entity.getWorkingHours()))
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())

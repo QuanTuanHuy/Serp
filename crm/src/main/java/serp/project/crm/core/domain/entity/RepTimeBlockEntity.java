@@ -23,4 +23,5 @@ public class RepTimeBlockEntity extends BaseEntity {
     private Long startTime;
     private Long endTime;
     private RepTimeBlockType blockType;
+    private Long version;
 }

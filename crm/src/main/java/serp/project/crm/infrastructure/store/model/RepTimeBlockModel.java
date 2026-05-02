@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,4 +48,8 @@ public class RepTimeBlockModel extends BaseModel {
 
     @Column(name = "block_type", nullable = false, length = 20)
     private String blockType;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 }

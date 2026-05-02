@@ -38,7 +38,7 @@ public class MeetingRequestService implements IMeetingRequestService {
     private final IContactPort contactPort;
     private final ITeamPort teamPort;
     private final IActivityService activityService;
-    private final MeetingRequestPriorityService meetingRequestPriorityService;
+    private final MeetingPriorityCalculator meetingPriorityCalculator;
 
     @Override
     @Transactional
@@ -57,7 +57,7 @@ public class MeetingRequestService implements IMeetingRequestService {
         var account = accountPort.findById(meetingRequest.getAccountId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.ACCOUNT_NOT_FOUND));
 
-        meetingRequest.setPriorityScore(meetingRequestPriorityService.calculate(meetingRequest, account, opportunity));
+        meetingRequest.setPriorityScore(meetingPriorityCalculator.calculate(meetingRequest, account, opportunity));
 
         return meetingRequestPort.save(meetingRequest);
     }

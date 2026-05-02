@@ -16,10 +16,10 @@ import serp.project.crm.core.domain.entity.TeamMemberEntity;
 import serp.project.crm.core.domain.entity.WorkingHoursEntity;
 import serp.project.crm.core.domain.enums.AccountType;
 import serp.project.crm.core.domain.enums.ActivityStatus;
-import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.MeetingRequestStatus;
 import serp.project.crm.core.domain.enums.MeetingRequestType;
 import serp.project.crm.core.domain.enums.TeamMemberStatus;
+import serp.project.crm.core.port.concurrency.IRepCalendarLockPort;
 import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.port.store.IMeetingRequestPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -41,8 +42,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,7 +65,11 @@ class MeetingRequestSchedulerServiceTest {
     @Mock
     private IRepTimeBlockPort repTimeBlockPort;
     @Mock
-    private MeetingRequestPriorityService meetingRequestPriorityService;
+    private IRepCalendarLockPort repCalendarLockPort;
+    @Mock
+    private MeetingPriorityCalculator meetingPriorityCalculator;
+    @Mock
+    private RepCompatibilityMatcher repCompatibilityMatcher;
     @Mock
     private TransactionTemplate transactionTemplate;
 
@@ -75,10 +81,12 @@ class MeetingRequestSchedulerServiceTest {
                 meetingRequestPort,
                 teamMemberService,
                 repTimeBlockPort,
+                repCalendarLockPort,
                 activityService,
                 accountPort,
                 opportunityPort,
-                meetingRequestPriorityService,
+                meetingPriorityCalculator,
+                repCompatibilityMatcher,
                 transactionTemplate);
 
         doAnswer(invocation -> {
@@ -90,6 +98,8 @@ class MeetingRequestSchedulerServiceTest {
 
         when(meetingRequestPort.save(any(MeetingRequestEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(repTimeBlockPort.findUpcomingByTeamMemberId(anyLong(), anyLong(), anyLong()))
+                .thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -107,8 +117,9 @@ class MeetingRequestSchedulerServiceTest {
         when(accountPort.findById(request.getAccountId(), request.getTenantId()))
                 .thenReturn(Optional.of(AccountEntity.builder().accountType(AccountType.CUSTOMER).build()));
         when(teamMemberService.getActiveMembersByTeamWithWorkingHours(request.getTeamId(), request.getTenantId())).thenReturn(List.of(member));
+        when(repCompatibilityMatcher.canTakeMoreMeetings(any(), anyInt())).thenReturn(true);
         when(repTimeBlockPort.countConflicts(member.getId(), request.getTenantId(), request.getEarliestStart(), request.getEarliestStart() + ChronoUnit.HOURS.getDuration().toMillis())).thenReturn(0L);
-        when(meetingRequestPriorityService.calculate(any(), any(), any())).thenReturn(80);
+        when(meetingPriorityCalculator.calculate(any(), any(), any())).thenReturn(80);
         when(activityService.createActivity(any(ActivityEntity.class), anyLong(), anyLong()))
                 .thenAnswer(invocation -> {
                     ActivityEntity activity = invocation.getArgument(0);
@@ -160,11 +171,12 @@ class MeetingRequestSchedulerServiceTest {
         when(accountPort.findById(request.getAccountId(), request.getTenantId()))
                 .thenReturn(Optional.of(AccountEntity.builder().accountType(AccountType.CUSTOMER).build()));
         when(teamMemberService.getActiveMembersByTeamWithWorkingHours(request.getTeamId(), request.getTenantId())).thenReturn(List.of(member));
+        when(repCompatibilityMatcher.canTakeMoreMeetings(any(), anyInt())).thenReturn(true);
         when(repTimeBlockPort.countConflicts(member.getId(), request.getTenantId(), request.getEarliestStart(), request.getEarliestStart() + ChronoUnit.HOURS.getDuration().toMillis()))
                 .thenReturn(1L);
         when(repTimeBlockPort.countConflicts(member.getId(), request.getTenantId(), request.getEarliestStart() + ChronoUnit.MINUTES.getDuration().toMillis() * 30, request.getEarliestStart() + ChronoUnit.MINUTES.getDuration().toMillis() * 90))
                 .thenReturn(0L);
-        when(meetingRequestPriorityService.calculate(any(), any(), any())).thenReturn(80);
+        when(meetingPriorityCalculator.calculate(any(), any(), any())).thenReturn(80);
         when(activityService.createActivity(any(ActivityEntity.class), anyLong(), anyLong()))
                 .thenAnswer(invocation -> {
                     ActivityEntity activity = invocation.getArgument(0);
@@ -176,6 +188,41 @@ class MeetingRequestSchedulerServiceTest {
         schedulerService.schedulePendingRequests();
 
         verify(activityService).createActivity(any(ActivityEntity.class), anyLong(), anyLong());
+    }
+
+    @Test
+    void schedulePendingRequests_retriesWhenSlotConflictsAfterLock() {
+        MeetingRequestEntity request = buildPendingRequest();
+        request.setLatestStart(request.getEarliestStart());
+
+        TeamMemberEntity member = TeamMemberEntity.builder()
+                .id(11L)
+                .userId(21L)
+                .status(TeamMemberStatus.ACTIVE)
+                .workingHours(List.of(defaultWorkingHours(DayOfWeek.MONDAY)))
+                .build();
+
+        long slotStart = request.getEarliestStart();
+        long slotEnd = slotStart + ChronoUnit.HOURS.getDuration().toMillis();
+
+        when(meetingRequestPort.findPendingRequests(anyLong(), anyInt())).thenReturn(List.of(request));
+        when(meetingRequestPort.findById(request.getId(), request.getTenantId())).thenReturn(Optional.of(request));
+        when(accountPort.findById(request.getAccountId(), request.getTenantId()))
+                .thenReturn(Optional.of(AccountEntity.builder().accountType(AccountType.CUSTOMER).build()));
+        when(teamMemberService.getActiveMembersByTeamWithWorkingHours(request.getTeamId(), request.getTenantId())).thenReturn(List.of(member));
+        when(repCompatibilityMatcher.canTakeMoreMeetings(any(), anyInt())).thenReturn(true);
+        when(repTimeBlockPort.countConflicts(member.getId(), request.getTenantId(), slotStart, slotEnd)).thenReturn(0L, 1L);
+        when(meetingPriorityCalculator.calculate(any(), any(), any())).thenReturn(80);
+
+        schedulerService.schedulePendingRequests();
+
+        verify(repCalendarLockPort).acquireExclusiveForRep(request.getTenantId(), member.getId());
+        verify(activityService, never()).createActivity(any(ActivityEntity.class), anyLong(), anyLong());
+        ArgumentCaptor<MeetingRequestEntity> captor = ArgumentCaptor.forClass(MeetingRequestEntity.class);
+        verify(meetingRequestPort, atLeastOnce()).save(captor.capture());
+        MeetingRequestEntity lastSave = captor.getAllValues().get(captor.getAllValues().size() - 1);
+        assertThat(lastSave.getFailureReason()).isEqualTo("NO_AVAILABLE_SLOT");
+        assertThat(lastSave.getSchedulingAttempts()).isEqualTo(1);
     }
 
     private MeetingRequestEntity buildPendingRequest() {

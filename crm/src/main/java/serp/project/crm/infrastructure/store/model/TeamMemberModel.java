@@ -51,4 +51,19 @@ public class TeamMemberModel extends BaseModel {
 
     @Column(name = "status", nullable = false, length = 20)
     private String status;
+
+    @Column(name = "skills", columnDefinition = "TEXT")
+    private String skills;
+
+    @Column(name = "languages", columnDefinition = "TEXT")
+    private String languages;
+
+    @Column(name = "experience_level", nullable = false, length = 20)
+    private String experienceLevel;
+
+    @Column(name = "capacity", nullable = false)
+    private Integer capacity;
+
+    @Column(name = "max_meetings", nullable = false)
+    private Integer maxMeetings;
 }
