@@ -6,7 +6,10 @@ import {
   NotificationProvider,
   StoreProvider,
 } from '@/shared/providers';
-import { NotificationToastProvider } from '@/modules/notifications';
+import {
+  NotificationToastProvider,
+  NotificationUnreadSync,
+} from '@/modules/notifications';
 
 import './globals.css';
 
@@ -45,6 +48,7 @@ export default function RootLayout({
         <StoreProvider>
           <ThemeProvider>
             <NotificationProvider>
+              <NotificationUnreadSync />
               <NotificationToastProvider />
               {children}
             </NotificationProvider>

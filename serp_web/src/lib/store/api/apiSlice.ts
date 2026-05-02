@@ -243,6 +243,7 @@ export const api = createApi({
     'Order',
     // Notification tags
     'Notification',
+    'NotificationPreference',
     // Discuss tags
     'Channel',
     'Message',

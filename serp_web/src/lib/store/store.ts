@@ -30,6 +30,8 @@ import { purchaseReducer } from '@/modules/purchase/store';
 import { logisticsReducer } from '@/modules/logistics/store';
 import { logistics2Reducer } from '@/modules/logistics2/store';
 import { notificationReducer } from '@/modules/notifications';
+import '@/modules/notifications/services/notificationApi';
+import '@/modules/notifications/services/preferenceApi';
 
 // reducer
 const accountReducer = combineReducers({

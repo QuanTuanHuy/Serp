@@ -53,6 +53,11 @@ export interface NotificationListResponse {
   pageSize: number;
 }
 
+/** REST GET /notifications/unread-count */
+export interface UnreadCountApiPayload {
+  unread_count: number;
+}
+
 // Query Params
 export interface GetNotificationParams {
   page?: number;
