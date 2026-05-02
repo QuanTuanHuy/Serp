@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.data.util.Pair;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
@@ -21,6 +22,9 @@ import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.service.IAccountService;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -137,6 +141,14 @@ public class AccountService implements IAccountService {
         return accountPort.findByIndustry(industry, tenantId, pageRequest);
     }
 
+    @Override
+    public List<AccountEntity> getAccountsByIds(Collection<Long> ids, Long tenantId) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return Collections.emptyList();
+        }
+        return accountPort.findByIds(new ArrayList<>(ids), tenantId);
+    }
+
     @Transactional(readOnly = true)
     public Long countAccountsByStatus(ActiveStatus status, Long tenantId) {
         return accountPort.countByActiveStatus(status, tenantId);
@@ -246,4 +258,5 @@ public class AccountService implements IAccountService {
     private void publishAccountDeletedEvent(AccountEntity Account) {
         log.debug("Event: Account deleted - ID: {}, Topic: {}", Account.getId(), Constants.KafkaTopic.ACCOUNT);
     }
+
 }

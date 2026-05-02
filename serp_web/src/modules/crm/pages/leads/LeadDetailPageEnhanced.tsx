@@ -76,6 +76,7 @@ import {
   useGetLeadQuery,
   useUpdateLeadStatusMutation,
 } from '../../api/crmApi';
+import { RequestMeetingDialog } from '../../components/meeting-requests';
 import type { LeadSource, LeadStatus } from '../../types';
 
 interface LeadDetailPageProps {
@@ -158,6 +159,8 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showQualifyDialog, setShowQualifyDialog] = useState(false);
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false);
+  const [showMeetingRequestDialog, setShowMeetingRequestDialog] =
+    useState(false);
   const [qualifyNotes, setQualifyNotes] = useState('');
   const [disqualifyNotes, setDisqualifyNotes] = useState('');
   const [convertForm, setConvertForm] = useState({
@@ -179,6 +182,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const lead = data?.data;
   const activities = activitiesData?.data.data || [];
+  const linkedAccountId =
+    lead?.convertedAccountId?.trim() ||
+    lead?.convertedToCustomerId?.trim() ||
+    undefined;
 
   const leadStatus = (lead?.leadStatus || 'NEW') as Exclude<LeadStatus, 'LOST'>;
   const leadSource = (lead?.leadSource || 'WEBSITE') as LeadSource;
@@ -828,10 +835,18 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               <Button
                 className='w-full justify-start'
                 variant='outline'
-                disabled
+                disabled={!linkedAccountId}
+                title={
+                  linkedAccountId
+                    ? undefined
+                    : 'Convert this lead to an account before requesting a meeting'
+                }
+                onClick={() =>
+                  linkedAccountId && setShowMeetingRequestDialog(true)
+                }
               >
                 <Calendar className='mr-2 h-4 w-4 text-purple-600' />
-                Schedule Meeting
+                Request meeting
               </Button>
               <Button
                 className='w-full justify-start'
@@ -877,6 +892,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {linkedAccountId && (
+        <RequestMeetingDialog
+          open={showMeetingRequestDialog}
+          onOpenChange={setShowMeetingRequestDialog}
+          accountId={linkedAccountId}
+          accountName={lead?.company || lead?.name}
+        />
+      )}
 
       <Dialog open={showQualifyDialog} onOpenChange={setShowQualifyDialog}>
         <DialogContent>

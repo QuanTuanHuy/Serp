@@ -29,8 +29,11 @@ public class MeetingRequestResponse {
     private Long scheduledStartTime;
 
     private Long accountId;
+    private String accountName;
     private Long opportunityId;
+    private String opportunityName;
     private Long contactId;
+    private String contactName;
 
     private String subject;
     private String description;

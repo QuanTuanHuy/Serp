@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
   Label,
   Select,
   SelectContent,
@@ -32,6 +33,8 @@ interface ChangeStageDialogProps {
   onStageNotesChange: (value: string) => void;
   lostReason?: string;
   onLostReasonChange?: (value: string) => void;
+  wonActualValue?: string;
+  onWonActualValueChange?: (value: string) => void;
 }
 
 export const ChangeStageDialog: React.FC<ChangeStageDialogProps> = ({
@@ -45,6 +48,8 @@ export const ChangeStageDialog: React.FC<ChangeStageDialogProps> = ({
   onStageNotesChange,
   lostReason = '',
   onLostReasonChange,
+  wonActualValue = '',
+  onWonActualValueChange,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,6 +90,21 @@ export const ChangeStageDialog: React.FC<ChangeStageDialogProps> = ({
               placeholder='Optional stage update notes'
             />
           </div>
+          {selectedStage === 'CLOSED_WON' && onWonActualValueChange && (
+            <div className='space-y-2'>
+              <Label htmlFor='stageWonActualValue'>
+                Actual value (optional)
+              </Label>
+              <Input
+                id='stageWonActualValue'
+                type='number'
+                inputMode='decimal'
+                value={wonActualValue}
+                onChange={(e) => onWonActualValueChange(e.target.value)}
+                placeholder='e.g. contract amount'
+              />
+            </div>
+          )}
           {selectedStage === 'CLOSED_LOST' && onLostReasonChange && (
             <div className='space-y-2'>
               <Label htmlFor='stageLossReason'>Loss Reason</Label>
@@ -105,7 +125,14 @@ export const ChangeStageDialog: React.FC<ChangeStageDialogProps> = ({
           >
             Cancel
           </Button>
-          <Button onClick={onSubmit} disabled={!selectedStage || isLoading}>
+          <Button
+            onClick={onSubmit}
+            disabled={
+              !selectedStage ||
+              isLoading ||
+              (selectedStage === 'CLOSED_LOST' && !lostReason.trim())
+            }
+          >
             Update Stage
           </Button>
         </DialogFooter>

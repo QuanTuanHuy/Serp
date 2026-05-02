@@ -296,6 +296,21 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
     activity.customFields?.opportunityName ||
     'Unknown';
 
+  const assigneeDisplayName =
+    activity.assignedToName?.trim() ||
+    (activity.assignedTo?.trim()
+      ? `User #${activity.assignedTo}`
+      : 'Unassigned');
+
+  const assigneeInitials =
+    assigneeDisplayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((segment) => segment[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?';
+
   // Get related entity link
   const getRelatedLink = () => {
     switch (activity.relatedTo.type) {
@@ -330,7 +345,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
     ? [
         {
           id: activity.id,
-          author: activity.assignedToName || 'System',
+          author: assigneeDisplayName || 'System',
           content: String(activity.customFields.notes),
           createdAt: activity.updatedAt,
         },
@@ -836,16 +851,11 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             <CardContent>
               <div className='flex items-center gap-3'>
                 <Avatar className='h-10 w-10'>
-                  <AvatarFallback>
-                    {activity.assignedToName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')}
-                  </AvatarFallback>
+                  <AvatarFallback>{assigneeInitials}</AvatarFallback>
                 </Avatar>
                 <div>
                   <p className='font-medium text-foreground'>
-                    {activity.assignedToName}
+                    {assigneeDisplayName}
                   </p>
                   <p className='text-sm text-muted-foreground'>
                     Sales Representative

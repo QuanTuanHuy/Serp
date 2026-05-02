@@ -7,5 +7,5 @@ export { OpportunityPipelineView } from './OpportunityPipelineView';
 export { PipelineProgress } from './PipelineProgress';
 export { OpportunityOverviewTab } from './OpportunityOverviewTab';
 export { OpportunityActivitiesTab } from './OpportunityActivitiesTab';
-export { OpportunityMetricsCards } from './OpportunityMetricsCards';
+export { OpportunityDealMetricsStrip } from './OpportunityDealMetricsStrip';
 export { OpportunityHeader } from './OpportunityHeader';

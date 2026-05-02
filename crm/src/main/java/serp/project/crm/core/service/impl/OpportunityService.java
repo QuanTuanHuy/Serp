@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
@@ -24,6 +26,7 @@ import serp.project.crm.core.service.INotificationPublisher;
 import serp.project.crm.core.service.IOpportunityService;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -117,6 +120,15 @@ public class OpportunityService implements IOpportunityService {
             PageRequest pageRequest) {
         pageRequest.validate();
         return opportunityPort.findByAssignedTo(userId, tenantId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OpportunityEntity> getOpportunitiesByIds(List<Long> ids, Long tenantId) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return Collections.emptyList();
+        }
+        return opportunityPort.findByIds(ids, tenantId);
     }
 
     @Override
