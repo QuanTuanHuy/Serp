@@ -290,8 +290,7 @@ export const CustomerDetailPageEnhanced: React.FC<
     description: '',
     scheduledDate: '',
   });
-  const [isCreditLimitDialogOpen, setIsCreditLimitDialogOpen] =
-    useState(false);
+  const [isCreditLimitDialogOpen, setIsCreditLimitDialogOpen] = useState(false);
   const [creditLimitInput, setCreditLimitInput] = useState('');
 
   const { data: accountResponse, isLoading: isAccountLoading } =
@@ -356,8 +355,8 @@ export const CustomerDetailPageEnhanced: React.FC<
     STATUS_CONFIG.ACTIVE;
 
   const tierLabel = customer.tier
-    ? ACCOUNT_TIERS.find((t) => t.value === customer.tier)?.label ??
-      customer.tier
+    ? (ACCOUNT_TIERS.find((t) => t.value === customer.tier)?.label ??
+      customer.tier)
     : null;
 
   const lifetimeValue = customer.totalValue;

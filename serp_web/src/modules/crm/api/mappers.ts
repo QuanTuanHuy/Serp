@@ -274,12 +274,12 @@ export const mapBackendAccountToAccount = (
       ? (tierRaw as AccountTier)
       : undefined;
 
-  const preferredTimeSlots: PreferredTimeSlot[] | undefined =
-    account.preferredTimeSlots?.length
-      ? (account.preferredTimeSlots.filter((s) =>
-          PREFERRED_SLOT_SET.has(s)
-        ) as PreferredTimeSlot[])
-      : undefined;
+  const preferredTimeSlots: PreferredTimeSlot[] | undefined = account
+    .preferredTimeSlots?.length
+    ? (account.preferredTimeSlots.filter((s) =>
+        PREFERRED_SLOT_SET.has(s)
+      ) as PreferredTimeSlot[])
+    : undefined;
 
   const preferredDays: CrmDayOfWeek[] | undefined = account.preferredDays
     ?.length
@@ -608,8 +608,7 @@ export const mapAccountFormToBackendPayload = (
       .map((part) => part.trim())
       .filter(Boolean) || [];
 
-  const industry =
-    data.industry?.trim() || data.tags?.[0] || undefined;
+  const industry = data.industry?.trim() || data.tags?.[0] || undefined;
 
   return {
     name: data.name,
