@@ -26,6 +26,7 @@ import {
   ReopenOpportunityDialog,
   DeleteOpportunityDialog,
 } from '../../components/dialogs';
+import { RequestMeetingDialog } from '../../components/meeting-requests';
 import {
   OpportunityHeader,
   OpportunityMetricsCards,
@@ -50,6 +51,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   className,
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [meetingRequestOpen, setMeetingRequestOpen] = useState(false);
 
   const {
     opportunity,
@@ -146,7 +148,19 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         onMarkAsLost={() => setIsLostDialogOpen(true)}
         onReopen={() => setIsReopenDialogOpen(true)}
         onDelete={() => setIsDeleteDialogOpen(true)}
+        canRequestMeeting={Boolean(opportunity.accountId?.trim())}
+        onRequestMeeting={() => setMeetingRequestOpen(true)}
       />
+
+      {opportunity.accountId?.trim() && (
+        <RequestMeetingDialog
+          open={meetingRequestOpen}
+          onOpenChange={setMeetingRequestOpen}
+          accountId={opportunity.accountId.trim()}
+          accountName={opportunity.customerName}
+          opportunityId={opportunityId}
+        />
+      )}
 
       <Card>
         <CardContent className='py-4'>

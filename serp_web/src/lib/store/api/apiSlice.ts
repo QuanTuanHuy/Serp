@@ -173,6 +173,7 @@ export const api = createApi({
     'Lead',
     'Opportunity',
     'Activity',
+    'MeetingRequest',
     'Analytics',
     'Team',
     'Territory',

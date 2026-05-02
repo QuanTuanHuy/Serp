@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui';
-import { Building2, Calendar, User } from 'lucide-react';
+import { Building2, Calendar, CalendarClock, User } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { formatDate } from '../../utils';
 import type { Opportunity } from '../../types';
@@ -51,6 +51,8 @@ interface OpportunityHeaderProps {
   onMarkAsLost: () => void;
   onReopen: () => void;
   onDelete: () => void;
+  onRequestMeeting?: () => void;
+  canRequestMeeting?: boolean;
 }
 
 export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
@@ -66,6 +68,8 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
   onMarkAsLost,
   onReopen,
   onDelete,
+  onRequestMeeting,
+  canRequestMeeting = false,
 }) => {
   return (
     <div className='flex items-start justify-between'>
@@ -102,6 +106,12 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
       </div>
 
       <div className='flex items-center gap-2'>
+        {!isClosed && canRequestMeeting && onRequestMeeting && (
+          <Button variant='outline' onClick={onRequestMeeting}>
+            <CalendarClock className='mr-2 h-4 w-4' />
+            Request meeting
+          </Button>
+        )}
         {!isClosed && (
           <>
             <Button

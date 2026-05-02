@@ -95,10 +95,11 @@ const DEFAULT_ACTIONS: QuickActionItem[] = [
   },
   {
     id: 'schedule-meeting',
-    label: 'Schedule Meeting',
-    description: 'Book a calendar event',
+    label: 'Meeting requests',
+    description: 'Queue a meeting for auto-scheduling',
     icon: Calendar,
     variant: 'default',
+    href: '/crm/meeting-requests',
   },
   {
     id: 'send-email',
