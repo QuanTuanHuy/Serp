@@ -21,15 +21,13 @@ import {
 import { cn } from '@/shared/utils';
 import {
   ChangeStageDialog,
-  WonOpportunityDialog,
-  LostOpportunityDialog,
   ReopenOpportunityDialog,
   DeleteOpportunityDialog,
 } from '../../components/dialogs';
 import { RequestMeetingDialog } from '../../components/meeting-requests';
 import {
   OpportunityHeader,
-  OpportunityMetricsCards,
+  OpportunityDealMetricsStrip,
   PipelineProgress,
   OpportunityOverviewTab,
   OpportunityActivitiesTab,
@@ -44,6 +42,13 @@ import {
 interface OpportunityDetailPageProps {
   opportunityId: string;
   className?: string;
+}
+
+function parseOptionalActualValue(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
@@ -74,10 +79,6 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     setIsStageDialogOpen,
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
-    isLostDialogOpen,
-    setIsLostDialogOpen,
-    isWonDialogOpen,
-    setIsWonDialogOpen,
     isReopenDialogOpen,
     setIsReopenDialogOpen,
     selectedStage,
@@ -88,8 +89,6 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     setLostReason,
     wonActualValue,
     setWonActualValue,
-    wonNotes,
-    setWonNotes,
     reopenReason,
     setReopenReason,
     reopenStage,
@@ -97,13 +96,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     resetDialogStates,
   } = useOpportunityDialogs();
 
-  const {
-    handleStageChange,
-    handleMarkAsWon,
-    handleMarkAsLost,
-    handleReopen,
-    handleDelete,
-  } = useOpportunityActions(opportunityId);
+  const { handleStageChange, handleReopen, handleDelete } =
+    useOpportunityActions(opportunityId);
 
   if (!isLoading && !opportunity) {
     return (
@@ -144,8 +138,6 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
           (window.location.href = `/crm/opportunities/${opportunityId}/edit`)
         }
         onChangeStage={() => setIsStageDialogOpen(true)}
-        onMarkAsWon={() => setIsWonDialogOpen(true)}
-        onMarkAsLost={() => setIsLostDialogOpen(true)}
         onReopen={() => setIsReopenDialogOpen(true)}
         onDelete={() => setIsDeleteDialogOpen(true)}
         canRequestMeeting={Boolean(opportunity.accountId?.trim())}
@@ -162,8 +154,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         />
       )}
 
-      <Card>
-        <CardContent className='py-4'>
+      <div className='space-y-6 rounded-lg border bg-card p-4 md:p-5'>
+        <div className='border-t pt-6'>
           <div className='mb-4 flex items-center justify-between'>
             <h3 className='font-semibold'>Pipeline Progress</h3>
             {!isClosed && (
@@ -180,16 +172,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             currentStage={opportunity.stage}
             probability={probability}
           />
-        </CardContent>
-      </Card>
-
-      <OpportunityMetricsCards
-        estimatedValue={estimatedValue}
-        weightedValue={weightedValue}
-        probability={probability}
-        daysUntilClose={daysUntilClose}
-        formatCurrency={formatCurrency}
-      />
+        </div>
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -204,8 +188,10 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
             opportunity={opportunity}
             stageLabel={stageConfig.label}
             estimatedValue={estimatedValue}
+            weightedValue={weightedValue}
             probability={probability}
             daysInPipeline={daysInPipeline}
+            daysUntilClose={daysUntilClose}
             formatCurrency={formatCurrency}
           />
         </TabsContent>
@@ -266,10 +252,15 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         open={isStageDialogOpen}
         onOpenChange={setIsStageDialogOpen}
         onSubmit={() => {
+          const actualValue =
+            selectedStage === 'CLOSED_WON'
+              ? parseOptionalActualValue(wonActualValue)
+              : undefined;
           handleStageChange(
             {
               stage: selectedStage as any,
               notes: stageNotes || undefined,
+              actualValue,
               lossReason:
                 selectedStage === 'CLOSED_LOST'
                   ? lostReason || undefined
@@ -288,34 +279,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         onStageNotesChange={setStageNotes}
         lostReason={lostReason}
         onLostReasonChange={setLostReason}
-      />
-
-      <WonOpportunityDialog
-        open={isWonDialogOpen}
-        onOpenChange={setIsWonDialogOpen}
-        onSubmit={() => {
-          handleMarkAsWon(wonActualValue, wonNotes, () => {
-            setIsWonDialogOpen(false);
-            resetDialogStates();
-          });
-        }}
-        actualValue={wonActualValue}
-        onActualValueChange={setWonActualValue}
-        notes={wonNotes}
-        onNotesChange={setWonNotes}
-      />
-
-      <LostOpportunityDialog
-        open={isLostDialogOpen}
-        onOpenChange={setIsLostDialogOpen}
-        onSubmit={() => {
-          handleMarkAsLost(lostReason, () => {
-            setIsLostDialogOpen(false);
-            resetDialogStates();
-          });
-        }}
-        lostReason={lostReason}
-        onLostReasonChange={setLostReason}
+        wonActualValue={wonActualValue}
+        onWonActualValueChange={setWonActualValue}
       />
 
       <ReopenOpportunityDialog
