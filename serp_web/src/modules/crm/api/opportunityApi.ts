@@ -12,6 +12,7 @@ import {
 import type {
   Opportunity,
   Activity,
+  ChangeOpportunityStageRequest,
   CreateOpportunityRequest,
   UpdateOpportunityRequest,
   OpportunityFilters,
@@ -151,51 +152,11 @@ export const opportunityApi = api.injectEndpoints({
       APIResponse<Opportunity>,
       {
         id: string;
-        data: {
-          stage: Opportunity['stage'];
-          lossReason?: string;
-          notes?: string;
-        };
+        data: ChangeOpportunityStageRequest;
       }
     >({
       query: ({ id, data }) => ({
         url: `/opportunities/${id}/stage`,
-        method: 'PUT',
-        body: data,
-      }),
-      extraOptions: { service: 'crm' },
-      transformResponse: mapSingleOpportunityResponse,
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'Opportunity', id },
-        { type: 'Opportunity', id: 'LIST' },
-        { type: 'Opportunity', id: 'PIPELINE' },
-      ],
-    }),
-
-    closeOpportunityWon: builder.mutation<
-      APIResponse<Opportunity>,
-      { id: string; data?: { actualValue?: number; notes?: string } }
-    >({
-      query: ({ id, data }) => ({
-        url: `/opportunities/${id}/close-won`,
-        method: 'PUT',
-        body: data,
-      }),
-      extraOptions: { service: 'crm' },
-      transformResponse: mapSingleOpportunityResponse,
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'Opportunity', id },
-        { type: 'Opportunity', id: 'LIST' },
-        { type: 'Opportunity', id: 'PIPELINE' },
-      ],
-    }),
-
-    closeOpportunityLost: builder.mutation<
-      APIResponse<Opportunity>,
-      { id: string; data: { lossReason: string } }
-    >({
-      query: ({ id, data }) => ({
-        url: `/opportunities/${id}/close-lost`,
         method: 'PUT',
         body: data,
       }),
@@ -214,27 +175,6 @@ export const opportunityApi = api.injectEndpoints({
     >({
       query: ({ id, data }) => ({
         url: `/opportunities/${id}/assign`,
-        method: 'PUT',
-        body: data,
-      }),
-      extraOptions: { service: 'crm' },
-      transformResponse: mapSingleOpportunityResponse,
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'Opportunity', id },
-        { type: 'Opportunity', id: 'LIST' },
-        { type: 'Opportunity', id: 'PIPELINE' },
-      ],
-    }),
-
-    reopenOpportunity: builder.mutation<
-      APIResponse<Opportunity>,
-      {
-        id: string;
-        data: { stage: Opportunity['stage']; reopenReason: string };
-      }
-    >({
-      query: ({ id, data }) => ({
-        url: `/opportunities/${id}/reopen`,
         method: 'PUT',
         body: data,
       }),
@@ -273,9 +213,6 @@ export const {
   useCreateOpportunityMutation,
   useUpdateOpportunityMutation,
   useChangeOpportunityStageMutation,
-  useCloseOpportunityWonMutation,
-  useCloseOpportunityLostMutation,
   useAssignOpportunityMutation,
-  useReopenOpportunityMutation,
   useDeleteOpportunityMutation,
 } = opportunityApi;

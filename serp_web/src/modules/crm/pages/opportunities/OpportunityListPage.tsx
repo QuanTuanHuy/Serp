@@ -4,12 +4,24 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from '@hello-pangea/dnd';
 import { getErrorMessage } from '@/lib/store/api';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   Button,
   Card,
   CardContent,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -17,6 +29,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from '@/shared/components/ui';
 import { toast } from 'sonner';
 import {
@@ -40,6 +53,7 @@ import { StatsCard } from '../../components/dashboard';
 import { QuickAddOpportunityDialog } from '../../components/dialogs';
 import { ExportDropdown } from '../../components/shared';
 import {
+  useChangeOpportunityStageMutation,
   useCreateOpportunityMutation,
   useDeleteOpportunityMutation,
   useGetOpportunitiesQuery,
@@ -47,6 +61,7 @@ import {
 } from '../../api/crmApi';
 import { OPPORTUNITY_EXPORT_COLUMNS } from '../../utils/export';
 import type {
+  ChangeOpportunityStageRequest,
   CreateOpportunityRequest,
   Opportunity,
   OpportunityStage,
@@ -64,6 +79,17 @@ const PIPELINE_STAGES: {
   { stage: 'CLOSED_WON', label: 'Won', color: 'bg-green-500' },
   { stage: 'CLOSED_LOST', label: 'Lost', color: 'bg-red-500' },
 ];
+
+const ACTIVE_PIPELINE_STAGES = PIPELINE_STAGES.filter(
+  ({ stage }) => stage !== 'CLOSED_WON' && stage !== 'CLOSED_LOST'
+);
+
+type PendingStageTransition = {
+  opportunityId: string;
+  opportunityName: string;
+  fromStage: OpportunityStage;
+  toStage: OpportunityStage;
+};
 
 interface OpportunityListPageProps {
   className?: string;
@@ -88,10 +114,18 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
   );
   const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [pendingStageTransition, setPendingStageTransition] =
+    useState<PendingStageTransition | null>(null);
+  const [wonActualValue, setWonActualValue] = useState('');
+  const [wonNotes, setWonNotes] = useState('');
+  const [lostReason, setLostReason] = useState('');
+  const [reopenReason, setReopenReason] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const pageSize = viewMode === 'pipeline' ? 100 : 12;
 
+  const [changeOpportunityStage, { isLoading: isUpdatingOpportunityStage }] =
+    useChangeOpportunityStageMutation();
   const [createOpportunity, { isLoading: isCreatingOpportunity }] =
     useCreateOpportunityMutation();
   const [deleteOpportunity] = useDeleteOpportunityMutation();
@@ -113,8 +147,11 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     },
   });
 
-  const { data: pipelineResponse, isLoading: isLoadingPipeline } =
-    useGetOpportunityPipelineQuery({});
+  const {
+    data: pipelineResponse,
+    isLoading: isLoadingPipeline,
+    error: pipelineError,
+  } = useGetOpportunityPipelineQuery({});
 
   const listOpportunities = opportunitiesResponse?.data?.data || [];
   const total = opportunitiesResponse?.data?.pagination?.total || 0;
@@ -158,6 +195,17 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
 
     return grouped;
   }, [pipelineOpportunities]);
+
+  const pipelineOpportunityMap = useMemo(
+    () =>
+      new Map(
+        pipelineOpportunities.map((opportunity) => [
+          opportunity.id,
+          opportunity,
+        ])
+      ),
+    [pipelineOpportunities]
+  );
 
   const stageValues = useMemo(() => {
     const values: Record<OpportunityStage, number> = {
@@ -230,385 +278,765 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
     }
   };
 
+  const resetPendingStageTransition = () => {
+    setPendingStageTransition(null);
+    setWonActualValue('');
+    setWonNotes('');
+    setLostReason('');
+    setReopenReason('');
+  };
+
+  const submitStageTransition = async (
+    payload: ChangeOpportunityStageRequest,
+    successMessage: string
+  ) => {
+    if (!pendingStageTransition) return;
+
+    await changeOpportunityStage({
+      id: pendingStageTransition.opportunityId,
+      data: payload,
+    }).unwrap();
+
+    toast.success(successMessage);
+    resetPendingStageTransition();
+  };
+
+  const handleSubmitWonTransition = async () => {
+    try {
+      await submitStageTransition(
+        {
+          stage: 'CLOSED_WON',
+          actualValue: wonActualValue ? Number(wonActualValue) : undefined,
+          notes: wonNotes.trim() || undefined,
+        },
+        'Opportunity moved to Closed Won'
+      );
+    } catch (error) {
+      toast.error('Failed to close opportunity as won', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleSubmitLostTransition = async () => {
+    if (!lostReason.trim()) return;
+
+    try {
+      await submitStageTransition(
+        {
+          stage: 'CLOSED_LOST',
+          lossReason: lostReason.trim(),
+        },
+        'Opportunity moved to Closed Lost'
+      );
+    } catch (error) {
+      toast.error('Failed to close opportunity as lost', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleSubmitReopenTransition = async () => {
+    if (!pendingStageTransition || !reopenReason.trim()) return;
+
+    try {
+      await submitStageTransition(
+        {
+          stage: pendingStageTransition.toStage,
+          reopenReason: reopenReason.trim(),
+        },
+        `Opportunity reopened to ${pendingStageTransition.toStage.replace('_', ' ')}`
+      );
+    } catch (error) {
+      toast.error('Failed to reopen opportunity', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handlePipelineDragEnd = async ({
+    destination,
+    draggableId,
+    source,
+  }: DropResult) => {
+    if (!destination) return;
+
+    const fromStage = source.droppableId as OpportunityStage;
+    const toStage = destination.droppableId as OpportunityStage;
+
+    if (fromStage === toStage) return;
+
+    const opportunityId = draggableId.replace('opportunity-', '');
+    const opportunity = pipelineOpportunityMap.get(opportunityId);
+
+    if (!opportunity) return;
+
+    if (opportunity.stage !== fromStage) {
+      toast.error(
+        'Opportunity stage is outdated. Please refresh and try again.'
+      );
+      return;
+    }
+
+    if (fromStage === 'CLOSED_WON') {
+      toast.error('Closed won opportunities cannot be moved.');
+      return;
+    }
+
+    if (fromStage === 'CLOSED_LOST') {
+      if (toStage === 'CLOSED_WON') {
+        toast.error('Reopen lost opportunities to an active stage first.');
+        return;
+      }
+
+      setPendingStageTransition({
+        opportunityId,
+        opportunityName: opportunity.name,
+        fromStage,
+        toStage,
+      });
+      setReopenReason('');
+      return;
+    }
+
+    if (toStage === 'CLOSED_WON' || toStage === 'CLOSED_LOST') {
+      setPendingStageTransition({
+        opportunityId,
+        opportunityName: opportunity.name,
+        fromStage,
+        toStage,
+      });
+      setWonActualValue('');
+      setWonNotes('');
+      setLostReason('');
+      setReopenReason('');
+      return;
+    }
+
+    try {
+      await changeOpportunityStage({
+        id: opportunityId,
+        data: { stage: toStage },
+      }).unwrap();
+      toast.success(`Opportunity moved to ${toStage.replace('_', ' ')}`);
+    } catch (error) {
+      toast.error('Failed to move opportunity', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setStageFilter('ALL');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters =
-    searchQuery || (stageFilter && stageFilter !== 'ALL');
+  const hasActiveFilters = Boolean(searchQuery) || stageFilter !== 'ALL';
   const isLoading =
     viewMode === 'pipeline' ? isLoadingPipeline : isLoadingOpportunities;
+  const activeError = viewMode === 'pipeline' ? pipelineError : error;
   const activeOpportunities =
     viewMode === 'pipeline' ? pipelineOpportunities : listOpportunities;
+  const isWonDialogOpen = pendingStageTransition?.toStage === 'CLOSED_WON';
+  const isLostDialogOpen = pendingStageTransition?.toStage === 'CLOSED_LOST';
+  const isReopenDialogOpen =
+    pendingStageTransition?.fromStage === 'CLOSED_LOST' &&
+    pendingStageTransition?.toStage !== 'CLOSED_WON' &&
+    pendingStageTransition?.toStage !== 'CLOSED_LOST';
 
   return (
-    <div className={cn('space-y-6', className)}>
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Opportunities</h1>
-          <p className='text-muted-foreground'>
-            Track and manage your sales pipeline
-          </p>
+    <>
+      <div className={cn('space-y-6', className)}>
+        <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+          <div>
+            <h1 className='text-2xl font-bold tracking-tight'>Opportunities</h1>
+            <p className='text-muted-foreground'>
+              Track and manage your sales pipeline
+            </p>
+          </div>
+          <div className='flex items-center gap-2'>
+            <ExportDropdown
+              data={activeOpportunities}
+              columns={OPPORTUNITY_EXPORT_COLUMNS}
+              filename='opportunities'
+              onExportComplete={(format, count) => {
+                toast.success(`Exported ${count} opportunities as ${format}`);
+              }}
+            />
+            <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
+              <Plus className='h-4 w-4' />
+              Add Opportunity
+            </Button>
+          </div>
         </div>
-        <div className='flex items-center gap-2'>
-          <ExportDropdown
-            data={activeOpportunities}
-            columns={OPPORTUNITY_EXPORT_COLUMNS}
-            filename='opportunities'
-            onExportComplete={(format, count) => {
-              toast.success(`Exported ${count} opportunities as ${format}`);
-            }}
+
+        <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
+          <StatsCard
+            title='Total Pipeline'
+            value={`$${Math.round(stats.totalValue).toLocaleString()}`}
+            icon={TrendingUp}
+            variant='primary'
           />
-          <Button onClick={() => setShowQuickAdd(true)} className='gap-2'>
-            <Plus className='h-4 w-4' />
-            Add Opportunity
-          </Button>
-        </div>
-      </div>
-
-      <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
-        <StatsCard
-          title='Total Pipeline'
-          value={`$${Math.round(stats.totalValue).toLocaleString()}`}
-          icon={TrendingUp}
-          variant='primary'
-        />
-        <StatsCard
-          title='Weighted Value'
-          value={`$${Math.round(stats.weightedValue).toLocaleString()}`}
-          icon={DollarSign}
-          variant='warning'
-        />
-        <StatsCard
-          title='Won Deals'
-          value={stats.wonCount}
-          icon={Trophy}
-          variant='success'
-        />
-        <StatsCard
-          title='Avg. Deal Size'
-          value={`$${Math.round(stats.avgDealSize).toLocaleString()}`}
-          icon={Target}
-          variant='default'
-        />
-      </div>
-
-      <div className='flex flex-col gap-3 sm:flex-row'>
-        <div className='relative flex-1'>
-          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-          <Input
-            placeholder='Search opportunities by name or account...'
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className='pl-10 pr-10'
+          <StatsCard
+            title='Weighted Value'
+            value={`$${Math.round(stats.weightedValue).toLocaleString()}`}
+            icon={DollarSign}
+            variant='warning'
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
-            >
-              <X className='h-4 w-4' />
-            </button>
-          )}
+          <StatsCard
+            title='Won Deals'
+            value={stats.wonCount}
+            icon={Trophy}
+            variant='success'
+          />
+          <StatsCard
+            title='Avg. Deal Size'
+            value={`$${Math.round(stats.avgDealSize).toLocaleString()}`}
+            icon={Target}
+            variant='default'
+          />
         </div>
 
-        <Button
-          variant={showFilters ? 'secondary' : 'outline'}
-          onClick={() => setShowFilters(!showFilters)}
-          className='gap-2'
-        >
-          <SlidersHorizontal className='h-4 w-4' />
-          Filters
-          {hasActiveFilters && (
-            <span className='h-2 w-2 rounded-full bg-primary' />
-          )}
-        </Button>
-
-        <div className='flex rounded-lg border bg-muted p-1'>
-          <button
-            onClick={() => setViewMode('pipeline')}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'pipeline'
-                ? 'bg-background shadow-sm'
-                : 'hover:bg-background/50'
+        <div className='flex flex-col gap-3 sm:flex-row'>
+          <div className='relative flex-1'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search opportunities by name or account...'
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className='pl-10 pr-10'
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+              >
+                <X className='h-4 w-4' />
+              </button>
             )}
-            title='Pipeline view'
-          >
-            <Columns3 className='h-4 w-4' />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'grid'
-                ? 'bg-background shadow-sm'
-                : 'hover:bg-background/50'
-            )}
-            title='Grid view'
-          >
-            <Grid3X3 className='h-4 w-4' />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-              viewMode === 'list'
-                ? 'bg-background shadow-sm'
-                : 'hover:bg-background/50'
-            )}
-            title='List view'
-          >
-            <List className='h-4 w-4' />
-          </button>
-        </div>
-      </div>
+          </div>
 
-      {showFilters && (
-        <Card>
-          <CardContent className='p-4'>
-            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label>Stage</Label>
-                <Select
-                  value={stageFilter}
-                  onValueChange={(value) => {
-                    setStageFilter(value as OpportunityStage | 'ALL');
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='All stages' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='ALL'>All Stages</SelectItem>
-                    <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
-                    <SelectItem value='QUALIFICATION'>Qualification</SelectItem>
-                    <SelectItem value='PROPOSAL'>Proposal</SelectItem>
-                    <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
-                    <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
-                    <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label>Sort By</Label>
-                <Select
-                  value={`${sortBy}-${sortOrder}`}
-                  onValueChange={(value) => {
-                    const [field, order] = value.split('-');
-                    setSortBy(field as typeof sortBy);
-                    setSortOrder(order as 'asc' | 'desc');
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Sort by' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='createdAt-desc'>Newest First</SelectItem>
-                    <SelectItem value='createdAt-asc'>Oldest First</SelectItem>
-                    <SelectItem value='name-asc'>Name A-Z</SelectItem>
-                    <SelectItem value='name-desc'>Name Z-A</SelectItem>
-                    <SelectItem value='value-desc'>Highest Value</SelectItem>
-                    <SelectItem value='value-asc'>Lowest Value</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+          <Button
+            variant={showFilters ? 'secondary' : 'outline'}
+            onClick={() => setShowFilters(!showFilters)}
+            className='gap-2'
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
             {hasActiveFilters && (
-              <div className='mt-4 flex items-center justify-between border-t pt-4'>
-                <p className='text-sm text-muted-foreground'>
-                  {viewMode === 'pipeline'
-                    ? pipelineOpportunities.length
-                    : total}{' '}
-                  results found
-                </p>
-                <Button variant='ghost' size='sm' onClick={clearFilters}>
-                  Clear all filters
-                </Button>
-              </div>
+              <span className='h-2 w-2 rounded-full bg-primary' />
             )}
-          </CardContent>
-        </Card>
-      )}
+          </Button>
 
-      {error && (
-        <Card>
-          <CardContent className='py-10 text-center text-sm text-muted-foreground'>
-            Failed to load opportunities.
-          </CardContent>
-        </Card>
-      )}
+          <div className='flex rounded-lg border bg-muted p-1'>
+            <button
+              onClick={() => setViewMode('pipeline')}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                viewMode === 'pipeline'
+                  ? 'bg-background shadow-sm'
+                  : 'hover:bg-background/50'
+              )}
+              title='Pipeline view'
+            >
+              <Columns3 className='h-4 w-4' />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-background shadow-sm'
+                  : 'hover:bg-background/50'
+              )}
+              title='Grid view'
+            >
+              <Grid3X3 className='h-4 w-4' />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+                viewMode === 'list'
+                  ? 'bg-background shadow-sm'
+                  : 'hover:bg-background/50'
+              )}
+              title='List view'
+            >
+              <List className='h-4 w-4' />
+            </button>
+          </div>
+        </div>
 
-      {isLoading && (
-        <Card>
-          <CardContent className='py-16 text-center text-muted-foreground'>
-            Loading opportunities...
-          </CardContent>
-        </Card>
-      )}
-
-      {!isLoading &&
-        viewMode === 'pipeline' &&
-        pipelineOpportunities.length > 0 && (
-          <div className='overflow-x-auto pb-4'>
-            <div className='grid min-w-[1200px] grid-cols-6 gap-4'>
-              {PIPELINE_STAGES.map(({ stage, label, color }) => (
-                <div
-                  key={stage}
-                  className='min-h-[500px] rounded-xl bg-muted/30 p-4'
-                >
-                  <div className='mb-4'>
-                    <div className='mb-2 flex items-center justify-between'>
-                      <div className='flex items-center gap-2'>
-                        <div className={cn('h-3 w-3 rounded-full', color)} />
-                        <h3 className='text-sm font-semibold'>{label}</h3>
-                      </div>
-                      <span className='rounded-full bg-background px-2 py-1 text-xs text-muted-foreground'>
-                        {opportunitiesByStage[stage]?.length || 0}
-                      </span>
-                    </div>
-                    <p className='text-sm font-medium text-muted-foreground'>
-                      ${stageValues[stage].toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div className='space-y-3'>
-                    {opportunitiesByStage[stage]?.map((opportunity) => (
-                      <OpportunityCard
-                        key={opportunity.id}
-                        opportunity={opportunity}
-                        variant='pipeline'
-                        onClick={() => handleViewOpportunity(opportunity.id)}
-                        onDelete={() => handleDeleteOpportunity(opportunity.id)}
-                      />
-                    ))}
-                    {opportunitiesByStage[stage].length === 0 && (
-                      <p className='py-8 text-center text-xs text-muted-foreground'>
-                        No deals
-                      </p>
-                    )}
-                  </div>
+        {showFilters && (
+          <Card>
+            <CardContent className='p-4'>
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label>Stage</Label>
+                  <Select
+                    value={stageFilter}
+                    onValueChange={(value) => {
+                      setStageFilter(value as OpportunityStage | 'ALL');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder='All stages' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='ALL'>All Stages</SelectItem>
+                      <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
+                      <SelectItem value='QUALIFICATION'>
+                        Qualification
+                      </SelectItem>
+                      <SelectItem value='PROPOSAL'>Proposal</SelectItem>
+                      <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
+                      <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
+                      <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className='space-y-2'>
+                  <Label>Sort By</Label>
+                  <Select
+                    value={`${sortBy}-${sortOrder}`}
+                    onValueChange={(value) => {
+                      const [field, order] = value.split('-');
+                      setSortBy(field as typeof sortBy);
+                      setSortOrder(order as 'asc' | 'desc');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder='Sort by' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='createdAt-desc'>
+                        Newest First
+                      </SelectItem>
+                      <SelectItem value='createdAt-asc'>
+                        Oldest First
+                      </SelectItem>
+                      <SelectItem value='name-asc'>Name A-Z</SelectItem>
+                      <SelectItem value='name-desc'>Name Z-A</SelectItem>
+                      <SelectItem value='value-desc'>Highest Value</SelectItem>
+                      <SelectItem value='value-asc'>Lowest Value</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className='mt-4 flex items-center justify-between border-t pt-4'>
+                  <p className='text-sm text-muted-foreground'>
+                    {viewMode === 'pipeline'
+                      ? pipelineOpportunities.length
+                      : total}{' '}
+                    results found
+                  </p>
+                  <Button variant='ghost' size='sm' onClick={clearFilters}>
+                    Clear all filters
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeError && (
+          <Card>
+            <CardContent className='py-10 text-center text-sm text-muted-foreground'>
+              Failed to load opportunities.
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoading && (
+          <Card>
+            <CardContent className='py-16 text-center text-muted-foreground'>
+              Loading opportunities...
+            </CardContent>
+          </Card>
+        )}
+
+        {!isLoading &&
+          viewMode === 'pipeline' &&
+          pipelineOpportunities.length > 0 && (
+            <DragDropContext onDragEnd={handlePipelineDragEnd}>
+              <div className='overflow-x-auto pb-4'>
+                <div className='mb-4 flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3'>
+                  <p className='text-sm font-medium'>Pipeline Board</p>
+                  <p className='text-xs text-muted-foreground'>
+                    Drag opportunities across stages. Dropping into Won, Lost,
+                    or reopening from Lost will ask for more details.
+                  </p>
+                </div>
+                <div className='grid min-w-[1200px] grid-cols-6 gap-4'>
+                  {PIPELINE_STAGES.map(({ stage, label, color }) => (
+                    <Droppable key={stage} droppableId={stage}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={cn(
+                            'min-h-[500px] rounded-xl bg-muted/30 p-4 transition-colors',
+                            snapshot.isDraggingOver &&
+                              'bg-primary/10 ring-1 ring-primary/20'
+                          )}
+                        >
+                          <div className='mb-4'>
+                            <div className='mb-2 flex items-center justify-between'>
+                              <div className='flex items-center gap-2'>
+                                <div
+                                  className={cn('h-3 w-3 rounded-full', color)}
+                                />
+                                <h3 className='text-sm font-semibold'>
+                                  {label}
+                                </h3>
+                              </div>
+                              <span className='rounded-full bg-background px-2 py-1 text-xs text-muted-foreground'>
+                                {opportunitiesByStage[stage]?.length || 0}
+                              </span>
+                            </div>
+                            <p className='text-sm font-medium text-muted-foreground'>
+                              ${stageValues[stage].toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div className='space-y-3'>
+                            {opportunitiesByStage[stage]?.map(
+                              (opportunity, index) => (
+                                <Draggable
+                                  key={opportunity.id}
+                                  draggableId={`opportunity-${opportunity.id}`}
+                                  index={index}
+                                  isDragDisabled={
+                                    opportunity.stage === 'CLOSED_WON'
+                                  }
+                                >
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={cn(
+                                        snapshot.isDragging && 'rotate-[1deg]'
+                                      )}
+                                    >
+                                      <OpportunityCard
+                                        opportunity={opportunity}
+                                        variant='pipeline'
+                                        className={cn(
+                                          snapshot.isDragging &&
+                                            'shadow-lg ring-2 ring-primary/20'
+                                        )}
+                                        onClick={() =>
+                                          handleViewOpportunity(opportunity.id)
+                                        }
+                                        onDelete={() =>
+                                          handleDeleteOpportunity(
+                                            opportunity.id
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  )}
+                                </Draggable>
+                              )
+                            )}
+                            {provided.placeholder}
+                            {opportunitiesByStage[stage].length === 0 && (
+                              <p className='py-8 text-center text-xs text-muted-foreground'>
+                                No deals
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Droppable>
+                  ))}
+                </div>
+              </div>
+            </DragDropContext>
+          )}
+
+        {!isLoading &&
+          viewMode !== 'pipeline' &&
+          listOpportunities.length > 0 && (
+            <div
+              className={cn(
+                'gap-4',
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                  : 'flex flex-col'
+              )}
+            >
+              {listOpportunities.map((opportunity) => (
+                <OpportunityCard
+                  key={opportunity.id}
+                  opportunity={opportunity}
+                  variant={viewMode === 'list' ? 'compact' : 'default'}
+                  onClick={() => handleViewOpportunity(opportunity.id)}
+                  onDelete={() => handleDeleteOpportunity(opportunity.id)}
+                />
               ))}
             </div>
-          </div>
+          )}
+
+        {!isLoading && activeOpportunities.length === 0 && (
+          <Card>
+            <CardContent className='py-16 text-center'>
+              <div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted'>
+                <TrendingUp className='h-10 w-10 text-muted-foreground' />
+              </div>
+              <h3 className='mb-2 text-lg font-semibold'>
+                No opportunities found
+              </h3>
+              <p className='mx-auto mb-6 max-w-sm text-muted-foreground'>
+                {hasActiveFilters
+                  ? 'Try adjusting your filters to see more results.'
+                  : 'Get started by creating your first opportunity.'}
+              </p>
+              {hasActiveFilters ? (
+                <Button variant='outline' onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => router.push('/crm/opportunities/create')}
+                >
+                  <Plus className='mr-2 h-4 w-4' />
+                  Create First Opportunity
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         )}
 
-      {!isLoading &&
-        viewMode !== 'pipeline' &&
-        listOpportunities.length > 0 && (
-          <div
-            className={cn(
-              'gap-4',
-              viewMode === 'grid'
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-                : 'flex flex-col'
-            )}
-          >
-            {listOpportunities.map((opportunity) => (
-              <OpportunityCard
-                key={opportunity.id}
-                opportunity={opportunity}
-                variant={viewMode === 'list' ? 'compact' : 'default'}
-                onClick={() => handleViewOpportunity(opportunity.id)}
-                onDelete={() => handleDeleteOpportunity(opportunity.id)}
-              />
-            ))}
-          </div>
-        )}
-
-      {!isLoading && activeOpportunities.length === 0 && (
-        <Card>
-          <CardContent className='py-16 text-center'>
-            <div className='mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted'>
-              <TrendingUp className='h-10 w-10 text-muted-foreground' />
-            </div>
-            <h3 className='mb-2 text-lg font-semibold'>
-              No opportunities found
-            </h3>
-            <p className='mx-auto mb-6 max-w-sm text-muted-foreground'>
-              {hasActiveFilters
-                ? 'Try adjusting your filters to see more results.'
-                : 'Get started by creating your first opportunity.'}
+        {viewMode !== 'pipeline' && total > pageSize && (
+          <div className='flex items-center justify-between pt-4'>
+            <p className='text-sm text-muted-foreground'>
+              Showing {(currentPage - 1) * pageSize + 1} to{' '}
+              {Math.min(currentPage * pageSize, total)} of {total} opportunities
             </p>
-            {hasActiveFilters ? (
-              <Button variant='outline' onClick={clearFilters}>
-                Clear Filters
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                <ChevronLeft className='h-4 w-4' />
+                Previous
               </Button>
-            ) : (
-              <Button onClick={() => router.push('/crm/opportunities/create')}>
-                <Plus className='mr-2 h-4 w-4' />
-                Create First Opportunity
+              <div className='flex items-center gap-1'>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={cn(
+                        'h-8 w-8 rounded-md text-sm font-medium transition-colors',
+                        currentPage === pageNum
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      )}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                variant='outline'
+                size='sm'
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+                <ChevronRight className='h-4 w-4' />
               </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {viewMode !== 'pipeline' && total > pageSize && (
-        <div className='flex items-center justify-between pt-4'>
-          <p className='text-sm text-muted-foreground'>
-            Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, total)} of {total} opportunities
-          </p>
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <ChevronLeft className='h-4 w-4' />
-              Previous
-            </Button>
-            <div className='flex items-center gap-1'>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={cn(
-                      'h-8 w-8 rounded-md text-sm font-medium transition-colors',
-                      currentPage === pageNum
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    )}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
             </div>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <ChevronRight className='h-4 w-4' />
-            </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      <QuickAddOpportunityDialog
-        open={showQuickAdd}
-        onOpenChange={setShowQuickAdd}
-        onSubmit={handleQuickAddOpportunity}
-        isLoading={isCreatingOpportunity}
-      />
-    </div>
+        <QuickAddOpportunityDialog
+          open={showQuickAdd}
+          onOpenChange={setShowQuickAdd}
+          onSubmit={handleQuickAddOpportunity}
+          isLoading={isCreatingOpportunity}
+        />
+
+        <Dialog
+          open={Boolean(isWonDialogOpen)}
+          onOpenChange={(open) => {
+            if (!open) {
+              resetPendingStageTransition();
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move Opportunity to Closed Won</DialogTitle>
+              <DialogDescription>
+                Confirm the final value and add optional closing notes for
+                {pendingStageTransition
+                  ? ` ${pendingStageTransition.opportunityName}`
+                  : ' this opportunity'}
+                .
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='wonActualValue'>Actual Value</Label>
+                <Input
+                  id='wonActualValue'
+                  type='number'
+                  min={0}
+                  value={wonActualValue}
+                  onChange={(event) => setWonActualValue(event.target.value)}
+                  placeholder='Optional final deal value'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='wonNotes'>Notes</Label>
+                <Textarea
+                  id='wonNotes'
+                  value={wonNotes}
+                  onChange={(event) => setWonNotes(event.target.value)}
+                  placeholder='Optional closing notes'
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={resetPendingStageTransition}
+                disabled={isUpdatingOpportunityStage}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitWonTransition}
+                disabled={isUpdatingOpportunityStage}
+              >
+                Confirm Won
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(isLostDialogOpen)}
+          onOpenChange={(open) => {
+            if (!open) {
+              resetPendingStageTransition();
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move Opportunity to Closed Lost</DialogTitle>
+              <DialogDescription>
+                Provide the reason for closing
+                {pendingStageTransition
+                  ? ` ${pendingStageTransition.opportunityName}`
+                  : ' this opportunity'}
+                as lost.
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-2'>
+              <Label htmlFor='lostReason'>Loss Reason</Label>
+              <Textarea
+                id='lostReason'
+                value={lostReason}
+                onChange={(event) => setLostReason(event.target.value)}
+                placeholder='Required loss reason'
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={resetPendingStageTransition}
+                disabled={isUpdatingOpportunityStage}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant='destructive'
+                onClick={handleSubmitLostTransition}
+                disabled={!lostReason.trim() || isUpdatingOpportunityStage}
+              >
+                Confirm Lost
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(isReopenDialogOpen)}
+          onOpenChange={(open) => {
+            if (!open) {
+              resetPendingStageTransition();
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reopen Opportunity</DialogTitle>
+              <DialogDescription>
+                Move
+                {pendingStageTransition
+                  ? ` ${pendingStageTransition.opportunityName}`
+                  : ' this opportunity'}
+                back into the pipeline and explain why.
+              </DialogDescription>
+            </DialogHeader>
+            <div className='space-y-4'>
+              <div className='space-y-2'>
+                <Label>Target Stage</Label>
+                <div className='rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium'>
+                  {ACTIVE_PIPELINE_STAGES.find(
+                    (stage) => stage.stage === pendingStageTransition?.toStage
+                  )?.label || pendingStageTransition?.toStage}
+                </div>
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='reopenReason'>Reopen Reason</Label>
+                <Textarea
+                  id='reopenReason'
+                  value={reopenReason}
+                  onChange={(event) => setReopenReason(event.target.value)}
+                  placeholder='Required reopen reason'
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={resetPendingStageTransition}
+                disabled={isUpdatingOpportunityStage}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitReopenTransition}
+                disabled={!reopenReason.trim() || isUpdatingOpportunityStage}
+              >
+                Reopen Opportunity
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 };
 

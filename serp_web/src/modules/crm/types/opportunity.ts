@@ -117,3 +117,11 @@ export interface UpdateOpportunityRequest {
   nextActionDate?: string;
   customFields?: Record<string, any>;
 }
+
+export interface ChangeOpportunityStageRequest {
+  stage: OpportunityStage;
+  actualValue?: number;
+  lossReason?: string;
+  notes?: string;
+  reopenReason?: string;
+}

@@ -70,14 +70,14 @@ import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import {
   useChangeOpportunityStageMutation,
-  useCloseOpportunityLostMutation,
-  useCloseOpportunityWonMutation,
   useDeleteOpportunityMutation,
   useGetOpportunityActivitiesQuery,
   useGetOpportunityQuery,
-  useReopenOpportunityMutation,
 } from '../../api/crmApi';
-import type { OpportunityStage } from '../../types';
+import type {
+  ChangeOpportunityStageRequest,
+  OpportunityStage,
+} from '../../types';
 
 const PIPELINE_STAGES: {
   stage: OpportunityStage;
@@ -176,9 +176,6 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   const { data: activitiesData, isLoading: isActivitiesLoading } =
     useGetOpportunityActivitiesQuery({ opportunityId, page: 1, size: 20 });
   const [changeOpportunityStage] = useChangeOpportunityStageMutation();
-  const [closeOpportunityWon] = useCloseOpportunityWonMutation();
-  const [closeOpportunityLost] = useCloseOpportunityLostMutation();
-  const [reopenOpportunity] = useReopenOpportunityMutation();
   const [deleteOpportunity] = useDeleteOpportunityMutation();
 
   const opportunity = data?.data;
@@ -193,6 +190,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
   );
   const isClosed =
     opportunity?.stage === 'CLOSED_WON' || opportunity?.stage === 'CLOSED_LOST';
+  const canReopen = opportunity?.stage === 'CLOSED_LOST';
   const probability = opportunity?.probability ?? stageConfig?.probability ?? 0;
   const estimatedValue = opportunity?.estimatedValue ?? opportunity?.value ?? 0;
   const weightedValue = (estimatedValue * probability) / 100;
@@ -255,13 +253,23 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     }
   };
 
+  const submitStageTransition = async (
+    payload: ChangeOpportunityStageRequest,
+    successMessage: string
+  ) => {
+    await changeOpportunityStage({
+      id: opportunityId,
+      data: payload,
+    }).unwrap();
+    toast.success(successMessage);
+  };
+
   const handleStageChange = async () => {
     if (!selectedStage) return;
 
     try {
-      await changeOpportunityStage({
-        id: opportunityId,
-        data: {
+      await submitStageTransition(
+        {
           stage: selectedStage,
           notes: stageNotes || undefined,
           lossReason:
@@ -269,8 +277,8 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               ? lostReason || undefined
               : undefined,
         },
-      }).unwrap();
-      toast.success('Update opportunity stage successfully');
+        'Update opportunity stage successfully'
+      );
       setIsStageDialogOpen(false);
       setSelectedStage('');
       setStageNotes('');
@@ -284,14 +292,14 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
 
   const handleMarkAsWon = async () => {
     try {
-      await closeOpportunityWon({
-        id: opportunityId,
-        data: {
+      await submitStageTransition(
+        {
+          stage: 'CLOSED_WON',
           actualValue: wonActualValue ? Number(wonActualValue) : undefined,
           notes: wonNotes || undefined,
         },
-      }).unwrap();
-      toast.success('Close opportunity as won successfully');
+        'Close opportunity as won successfully'
+      );
       setIsWonDialogOpen(false);
       setWonActualValue('');
       setWonNotes('');
@@ -306,11 +314,13 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     if (!lostReason.trim()) return;
 
     try {
-      await closeOpportunityLost({
-        id: opportunityId,
-        data: { lossReason: lostReason.trim() },
-      }).unwrap();
-      toast.success('Close opportunity as lost successfully');
+      await submitStageTransition(
+        {
+          stage: 'CLOSED_LOST',
+          lossReason: lostReason.trim(),
+        },
+        'Close opportunity as lost successfully'
+      );
       setIsLostDialogOpen(false);
       setLostReason('');
     } catch (error) {
@@ -324,14 +334,13 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
     if (!reopenReason.trim()) return;
 
     try {
-      await reopenOpportunity({
-        id: opportunityId,
-        data: {
+      await submitStageTransition(
+        {
           stage: reopenStage,
           reopenReason: reopenReason.trim(),
         },
-      }).unwrap();
-      toast.success('Reopen opportunity successfully');
+        'Reopen opportunity successfully'
+      );
       setIsReopenDialogOpen(false);
       setReopenReason('');
       setReopenStage('PROSPECTING');
@@ -438,7 +447,7 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
               </Button>
             </>
           )}
-          {isClosed && (
+          {canReopen && (
             <Button
               variant='outline'
               onClick={() => setIsReopenDialogOpen(true)}

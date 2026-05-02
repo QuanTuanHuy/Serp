@@ -267,7 +267,7 @@ public class OpportunityUseCase {
                 .expectedCloseDateTo(safeRequest.getToDate())
                 .build();
         List<OpportunityEntity> opportunities = opportunityService.filterAllOpportunities(filter, tenantId).stream()
-                .filter(opportunity -> opportunity.getStage() != null && opportunity.getStage().isActive())
+                .filter(opportunity -> opportunity.getStage() != null)
                 .sorted(Comparator.comparing(OpportunityEntity::getExpectedCloseDate,
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
@@ -278,9 +278,6 @@ public class OpportunityUseCase {
         int totalOpportunities = 0;
 
         for (OpportunityStage stage : OpportunityStage.values()) {
-            if (!stage.isActive()) {
-                continue;
-            }
             List<OpportunityEntity> stageOpportunities = opportunities.stream()
                     .filter(opportunity -> stage.equals(opportunity.getStage()))
                     .toList();
