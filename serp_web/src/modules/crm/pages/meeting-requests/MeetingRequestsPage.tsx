@@ -53,7 +53,8 @@ import {
   useGetMeetingRequestQuery,
   useGetMeetingRequestsQuery,
 } from '../../api/crmApi';
-import type { MeetingRequestStatus } from '../../types';
+import type { MeetingRequestStatus, PreferredTimeSlot } from '../../types';
+import { PREFERRED_TIME_SLOTS } from '../../types/constants';
 import {
   MEETING_REQUEST_STATUS_LABELS,
   MEETING_REQUEST_TYPE_LABELS,
@@ -73,6 +74,11 @@ function formatTs(ms?: number) {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+}
+
+function preferredTimeSlotLabel(slot?: PreferredTimeSlot) {
+  if (!slot) return undefined;
+  return PREFERRED_TIME_SLOTS.find((s) => s.value === slot)?.label;
 }
 
 function statusBadgeClass(status: MeetingRequestStatus) {
@@ -236,12 +242,25 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Link
-                          href={`/crm/accounts/${row.accountId}`}
-                          className='text-primary underline-offset-4 hover:underline'
-                        >
-                          #{row.accountId}
-                        </Link>
+                        <div className='flex flex-col gap-0.5'>
+                          <Link
+                            href={`/crm/accounts/${row.accountId}`}
+                            className='text-primary underline-offset-4 hover:underline'
+                          >
+                            {row.accountName?.trim() || `#${row.accountId}`}
+                          </Link>
+                          {(row.opportunityName?.trim() ||
+                            row.contactName?.trim()) && (
+                            <span className='text-xs text-muted-foreground'>
+                              {[
+                                row.opportunityName?.trim(),
+                                row.contactName?.trim(),
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -341,6 +360,24 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                 <p>{detail.subject?.trim() || '—'}</p>
               </div>
 
+              {detail.description?.trim() && (
+                <div>
+                  <p className='text-xs font-medium text-muted-foreground'>
+                    Description
+                  </p>
+                  <p className='whitespace-pre-wrap'>{detail.description}</p>
+                </div>
+              )}
+
+              {detail.location?.trim() && (
+                <div>
+                  <p className='text-xs font-medium text-muted-foreground'>
+                    Location
+                  </p>
+                  <p>{detail.location}</p>
+                </div>
+              )}
+
               <div className='grid gap-2 sm:grid-cols-2'>
                 <div>
                   <p className='text-xs font-medium text-muted-foreground'>
@@ -350,7 +387,7 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                     href={`/crm/accounts/${detail.accountId}`}
                     className='text-primary underline-offset-4 hover:underline'
                   >
-                    #{detail.accountId}
+                    {detail.accountName?.trim() || `#${detail.accountId}`}
                   </Link>
                 </div>
                 {detail.opportunityId && (
@@ -362,11 +399,24 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                       href={`/crm/opportunities/${detail.opportunityId}`}
                       className='text-primary underline-offset-4 hover:underline'
                     >
-                      #{detail.opportunityId}
+                      {detail.opportunityName?.trim() ||
+                        `#${detail.opportunityId}`}
                     </Link>
                   </div>
                 )}
               </div>
+
+              {(detail.contactId || detail.contactName?.trim()) && (
+                <div>
+                  <p className='text-xs font-medium text-muted-foreground'>
+                    Contact
+                  </p>
+                  <p>
+                    {detail.contactName?.trim() ||
+                      (detail.contactId ? `#${detail.contactId}` : '—')}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <p className='text-xs font-medium text-muted-foreground'>
@@ -380,6 +430,40 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                   Deadline: {formatTs(detail.requestedDeadline)}
                 </p>
               </div>
+
+              {(detail.preferredTimeSlot ||
+                detail.durationMinutes != null ||
+                detail.priorityScore != null) && (
+                <div className='grid gap-2 sm:grid-cols-2'>
+                  {detail.preferredTimeSlot && (
+                    <div>
+                      <p className='text-xs font-medium text-muted-foreground'>
+                        Preferred time slot
+                      </p>
+                      <p>
+                        {preferredTimeSlotLabel(detail.preferredTimeSlot) ??
+                          detail.preferredTimeSlot}
+                      </p>
+                    </div>
+                  )}
+                  {detail.durationMinutes != null && (
+                    <div>
+                      <p className='text-xs font-medium text-muted-foreground'>
+                        Duration
+                      </p>
+                      <p>{detail.durationMinutes} min</p>
+                    </div>
+                  )}
+                  {detail.priorityScore != null && (
+                    <div>
+                      <p className='text-xs font-medium text-muted-foreground'>
+                        Priority score
+                      </p>
+                      <p>{detail.priorityScore}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {detail.scheduledStartTime != null && (
                 <div>
@@ -421,6 +505,17 @@ export function MeetingRequestsPage({ className }: MeetingRequestsPageProps) {
                 <p className='text-xs text-muted-foreground'>
                   Scheduling attempts: {detail.schedulingAttempts}
                 </p>
+              )}
+
+              {(detail.createdAt != null || detail.updatedAt != null) && (
+                <div className='space-y-1 border-t pt-3 text-xs text-muted-foreground'>
+                  {detail.createdAt != null && (
+                    <p>Created: {formatTs(detail.createdAt)}</p>
+                  )}
+                  {detail.updatedAt != null && (
+                    <p>Updated: {formatTs(detail.updatedAt)}</p>
+                  )}
+                </div>
               )}
             </div>
           )}

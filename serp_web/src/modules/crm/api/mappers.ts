@@ -1118,8 +1118,11 @@ type BackendMeetingRequest = {
   scheduledActivityId?: number | string | null;
   scheduledStartTime?: number | string | null;
   accountId?: number | string | null;
+  accountName?: string | null;
   opportunityId?: number | string | null;
+  opportunityName?: string | null;
   contactId?: number | string | null;
+  contactName?: string | null;
   subject?: string | null;
   description?: string | null;
   location?: string | null;
@@ -1160,9 +1163,12 @@ const mapBackendMeetingRequest = (
   scheduledStartTime:
     row.scheduledStartTime != null ? Number(row.scheduledStartTime) : undefined,
   accountId: String(row.accountId ?? ''),
+  accountName: row.accountName?.trim() || undefined,
   opportunityId:
     row.opportunityId != null ? String(row.opportunityId) : undefined,
+  opportunityName: row.opportunityName?.trim() || undefined,
   contactId: row.contactId != null ? String(row.contactId) : undefined,
+  contactName: row.contactName?.trim() || undefined,
   subject: row.subject ?? undefined,
   description: row.description ?? undefined,
   location: row.location ?? undefined,
