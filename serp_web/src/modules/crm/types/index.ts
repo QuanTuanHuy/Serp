@@ -15,6 +15,22 @@ export interface BaseEntity {
 export type CustomerType = 'PROSPECT' | 'CUSTOMER';
 export type CustomerStatus = 'ACTIVE' | 'INACTIVE';
 
+/** Matches CRM `AccountTier` enum. */
+export type AccountTier = 'STANDARD' | 'SILVER' | 'GOLD' | 'PLATINUM';
+
+/** Matches CRM `PreferredTimeSlot` enum. */
+export type PreferredTimeSlot = 'MORNING' | 'AFTERNOON';
+
+/** Java `DayOfWeek` for account preferred contact days (same as team working hours). */
+export type CrmDayOfWeek =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
+
 export interface Customer extends BaseEntity {
   name: string;
   email: string;
@@ -31,6 +47,17 @@ export interface Customer extends BaseEntity {
   customFields: Record<string, any>;
   totalValue: number;
   lastContactDate?: string;
+  industry?: string;
+  companySize?: string;
+  tier?: AccountTier;
+  preferredTimeSlots?: PreferredTimeSlot[];
+  preferredDays?: CrmDayOfWeek[];
+  language?: string;
+  timezone?: string;
+  creditLimit?: number;
+  paymentTerms?: string;
+  totalOpportunities?: number;
+  wonOpportunities?: number;
 }
 
 export type AccountType = CustomerType;
@@ -364,15 +391,18 @@ export interface PaginatedResponse<T> {
 // Form types for create/update operations
 export type CreateCustomerRequest = Omit<
   Customer,
-  'id' | 'createdAt' | 'updatedAt' | 'totalValue' | 'lastContactDate'
+  | 'id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'totalValue'
+  | 'lastContactDate'
+  | 'totalOpportunities'
+  | 'wonOpportunities'
 > & {
   city?: string;
   state?: string;
   zipCode?: string;
   country?: string;
-  companySize?: string;
-  paymentTerms?: string;
-  creditLimit?: number;
 };
 export type UpdateCustomerRequest = Partial<CreateCustomerRequest>;
 
@@ -560,16 +590,6 @@ export type TeamMemberStatus = 'ACTIVE' | 'INACTIVE';
 
 /** Matches CRM `ExperienceLevel` enum (scheduling / matching). */
 export type ExperienceLevel = 'JUNIOR' | 'MID' | 'SENIOR' | 'EXPERT';
-
-/** Java `DayOfWeek` serialized by Jackson for CRM working hours. */
-export type CrmDayOfWeek =
-  | 'MONDAY'
-  | 'TUESDAY'
-  | 'WEDNESDAY'
-  | 'THURSDAY'
-  | 'FRIDAY'
-  | 'SATURDAY'
-  | 'SUNDAY';
 
 /** CRM `WorkingHoursRequest` / `WorkingHoursResponse` shape. */
 export interface WorkingHoursItem {

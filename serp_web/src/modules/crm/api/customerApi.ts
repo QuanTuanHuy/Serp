@@ -104,6 +104,49 @@ export const customerApi = api.injectEndpoints({
       }
     ),
 
+    activateAccount: builder.mutation<APIResponse<Customer>, string>({
+      query: (id) => ({
+        url: `/accounts/${id}/activate`,
+        method: 'PUT',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
+      invalidatesTags: (result, error, id) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: 'LIST' },
+      ],
+    }),
+
+    deactivateAccount: builder.mutation<APIResponse<Customer>, string>({
+      query: (id) => ({
+        url: `/accounts/${id}/deactivate`,
+        method: 'PUT',
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
+      invalidatesTags: (result, error, id) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: 'LIST' },
+      ],
+    }),
+
+    updateAccountCreditLimit: builder.mutation<
+      APIResponse<Customer>,
+      { id: string; creditLimit: number }
+    >({
+      query: ({ id, creditLimit }) => ({
+        url: `/accounts/${id}/credit-limit`,
+        method: 'PUT',
+        body: { creditLimit },
+      }),
+      extraOptions: { service: 'crm' },
+      transformResponse: mapSingleAccountResponse,
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Customer', id },
+        { type: 'Customer', id: 'LIST' },
+      ],
+    }),
+
     getAccountContacts: builder.query<APIResponse<Contact[]>, string>({
       query: (accountId) => ({
         url: `/accounts/${accountId}/contacts`,
@@ -204,6 +247,9 @@ export const {
   useCreateCustomerMutation,
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
+  useActivateAccountMutation,
+  useDeactivateAccountMutation,
+  useUpdateAccountCreditLimitMutation,
   useGetAccountContactsQuery,
   useCreateAccountContactMutation,
   useUpdateContactMutation,

@@ -36,6 +36,7 @@ import {
 import type {
   Account,
   AccountStatus,
+  AccountTier,
   CreateAccountRequest,
   UpdateAccountRequest,
 } from '../../types';
@@ -118,6 +119,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     name: string;
     email: string;
     phone?: string;
+    tier?: AccountTier;
     companySize?: string;
     customerType: 'PROSPECT' | 'CUSTOMER';
     status: 'ACTIVE' | 'INACTIVE';
@@ -131,10 +133,11 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   }) => {
     try {
       await createAccount({
-        isActive: true,
+        isActive: data.status === 'ACTIVE',
         name: data.name,
         email: data.email,
         phone: data.phone,
+        tier: data.tier,
         companySize: data.companySize,
         notes: data.notes,
         address: data.address || '',
@@ -149,7 +152,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         creditLimit: undefined,
         tags: [],
         customFields: {},
-        totalValue: 0,
       } as CreateAccountRequest).unwrap();
       toast.success('Create account successfully');
       setShowQuickAdd(false);
