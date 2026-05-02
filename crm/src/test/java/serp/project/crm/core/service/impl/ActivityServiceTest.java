@@ -24,6 +24,7 @@ import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IRepTimeBlockService;
+import serp.project.crm.core.service.INotificationPublisher;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -60,6 +61,9 @@ class ActivityServiceTest {
 
     @Mock
     private IContactPort contactPort;
+
+    @Mock
+    private INotificationPublisher notificationPublisher;
 
     @InjectMocks
     private ActivityService activityService;
@@ -122,12 +126,14 @@ class ActivityServiceTest {
 
         assertEquals(101L, created.getId());
         verify(repTimeBlockService).syncFromActivity(created, 30L);
+        verify(notificationPublisher).publishMeetingAssigned(created, 30L);
     }
 
     @Test
     void cancelMeetingActivityShouldRemoveRepTimeBlockThroughSync() {
         ActivityEntity activity = ActivityEntity.builder()
                 .id(11L)
+                .tenantId(30L)
                 .activityType(ActivityType.MEETING)
                 .status(ActivityStatus.PLANNED)
                 .subject("Demo")
@@ -143,5 +149,6 @@ class ActivityServiceTest {
         activityService.cancelActivity(11L, 50L, 30L);
 
         verify(repTimeBlockService).syncFromActivity(activity, 30L);
+        verify(notificationPublisher).publishMeetingCancelled(activity, 30L);
     }
 }

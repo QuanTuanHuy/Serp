@@ -20,10 +20,12 @@ import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
+import serp.project.crm.core.service.INotificationPublisher;
 import serp.project.crm.core.service.IOpportunityService;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -33,6 +35,7 @@ public class OpportunityService implements IOpportunityService {
 
     private final IOpportunityPort opportunityPort;
     private final ITeamMemberPort teamMemberPort;
+    private final INotificationPublisher notificationPublisher;
 
     @Override
     @Transactional
@@ -52,6 +55,7 @@ public class OpportunityService implements IOpportunityService {
     public OpportunityEntity updateOpportunity(Long id, OpportunityEntity updates, Long tenantId) {
         OpportunityEntity existing = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
+        Long previousAssignedTo = existing.getAssignedTo();
         if (updates.getName() != null && !updates.getName().equals(existing.getName())) {
             if (opportunityPort.existsByAccountIdAndName(
                     existing.getAccountId(), updates.getName(), tenantId)) {
@@ -73,6 +77,7 @@ public class OpportunityService implements IOpportunityService {
         OpportunityEntity updated = opportunityPort.save(existing);
 
         publishOpportunityUpdatedEvent(updated);
+        publishOpportunityAssignmentNotificationIfChanged(updated, tenantId, previousAssignedTo);
 
         return updated;
     }
@@ -195,6 +200,7 @@ public class OpportunityService implements IOpportunityService {
     public OpportunityEntity assignOpportunity(Long id, Long assignedTo, Long updatedBy, Long tenantId) {
         OpportunityEntity opportunity = opportunityPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
+        Long previousAssignedTo = opportunity.getAssignedTo();
         teamMemberPort.findByUserId(assignedTo, tenantId)
                 .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
@@ -207,6 +213,7 @@ public class OpportunityService implements IOpportunityService {
 
         OpportunityEntity updated = opportunityPort.save(opportunity);
         publishOpportunityUpdatedEvent(updated);
+        publishOpportunityAssignmentNotificationIfChanged(updated, tenantId, previousAssignedTo);
         return updated;
     }
 
@@ -285,5 +292,16 @@ public class OpportunityService implements IOpportunityService {
     private void publishOpportunityDeletedEvent(OpportunityEntity opportunity) {
         log.debug("Event: Opportunity deleted - ID: {}, Topic: {}", opportunity.getId(),
                 Constants.KafkaTopic.OPPORTUNITY);
+    }
+
+    private void publishOpportunityAssignmentNotificationIfChanged(OpportunityEntity updated, Long tenantId,
+            Long previousAssignedTo) {
+        if (updated.getAssignedTo() == null) {
+            return;
+        }
+        if (Objects.equals(previousAssignedTo, updated.getAssignedTo())) {
+            return;
+        }
+        notificationPublisher.publishOpportunityAssigned(updated, tenantId, previousAssignedTo);
     }
 }

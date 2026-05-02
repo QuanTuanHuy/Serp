@@ -16,7 +16,9 @@ import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Separator } from '@/shared/components/ui/separator';
 import { Loader2, CheckCheck, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/store/api/utils';
 import { useAppSelector, useAppDispatch } from '@/shared/hooks';
 import { cn } from '@/shared/utils';
 import {
@@ -24,6 +26,8 @@ import {
   selectUnreadCount,
   selectHasUrgent,
   markAsRead,
+  markAllAsRead,
+  revertMarkAsRead,
 } from '../store/notificationSlice';
 import {
   useGetNotificationsQuery,
@@ -32,6 +36,7 @@ import {
 } from '../services/notificationApi';
 import { NotificationItem } from './NotificationItem';
 import { NotificationResponse } from '../types/notification.types';
+import { navigateNotificationAction } from '../utils/notificationActionNavigation';
 
 interface NotificationButtonProps {
   className?: string;
@@ -43,7 +48,7 @@ interface NotificationButtonProps {
 export function NotificationButton({
   className,
   maxItems = 5,
-  settingsPath = '/settings/notifications',
+  settingsPath = '/notifications/settings',
   allNotificationsPath = '/notifications',
 }: NotificationButtonProps) {
   const router = useRouter();
@@ -51,10 +56,11 @@ export function NotificationButton({
   const notifications = useAppSelector(selectNotifications);
   const unreadCount = useAppSelector(selectUnreadCount);
   const hasUrgent = useAppSelector(selectHasUrgent);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { data, isFetching } = useGetNotificationsQuery(
     { page: 0, pageSize: maxItems },
-    { refetchOnMountOrArgChange: true }
+    { skip: !menuOpen, refetchOnMountOrArgChange: true }
   );
 
   const [markAsReadApi] = useMarkNotificationAsReadMutation();
@@ -69,7 +75,8 @@ export function NotificationButton({
       try {
         await markAsReadApi(id).unwrap();
       } catch (error) {
-        console.error('Failed to mark notification as read:', error);
+        dispatch(revertMarkAsRead(id));
+        toast.error(getErrorMessage(error));
       }
     },
     [dispatch, markAsReadApi]
@@ -78,22 +85,22 @@ export function NotificationButton({
   const handleMarkAllAsRead = useCallback(async () => {
     try {
       await markAllAsReadApi().unwrap();
+      dispatch(markAllAsRead());
+      toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      toast.error(getErrorMessage(error));
     }
-  }, [markAllAsReadApi]);
+  }, [markAllAsReadApi, dispatch]);
 
   const handleNotificationClick = useCallback(
     (notification: NotificationResponse) => {
-      if (notification.actionUrl?.startsWith('/')) {
-        router.push(notification.actionUrl);
-      }
+      navigateNotificationAction(router, notification.actionUrl);
     },
     [router]
   );
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant='ghost' size='sm' className={cn('relative', className)}>
           <Bell
