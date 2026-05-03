@@ -77,7 +77,7 @@ public class OrderService {
             log.info("[OrderService] Order {} not found for tenant {} or does not belong to tenant",
                     orderId, tenantId);
             return null;
-        } if (order.getOrderTypeId().equals(OrderType.SALES.name())) {
+        } if (!order.getOrderTypeId().equals(OrderType.SALES.name())) {
             log.info("[OrderService] Order {} is not a sales order", orderId);
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
