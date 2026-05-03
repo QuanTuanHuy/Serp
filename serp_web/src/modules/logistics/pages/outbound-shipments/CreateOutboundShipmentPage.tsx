@@ -22,7 +22,7 @@ export const CreateOutboundShipmentPage: React.FC<
   const handleSubmit = async (data: OutboundShipmentCreationForm) => {
     try {
       await createShipment(data).unwrap();
-      router.push(`/logistics/outbound-shipments/${orderId}`);
+      router.push(`/logistics/sale-orders/${orderId}`);
     } catch (error) {
       console.error('Không thể tạo phiếu xuất kho:', error);
       throw error;
@@ -31,7 +31,7 @@ export const CreateOutboundShipmentPage: React.FC<
 
   const handleCancel = () => {
     if (orderId) {
-      router.push(`/logistics/outbound-shipments/${orderId}`);
+      router.push(`/logistics/sale-orders/${orderId}`);
     } else {
       router.push('/logistics/outbound-shipments');
     }
