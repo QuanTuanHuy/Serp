@@ -76,6 +76,8 @@ class WorkflowServiceTest {
     @Mock
     private IScreenPort screenPort;
     @Mock
+    private WorkflowDraftVersionCloner workflowDraftVersionCloner;
+    @Mock
     private WorkflowDraftValidator workflowDraftValidator;
     @Mock
     private IStatusService statusService;
@@ -93,6 +95,7 @@ class WorkflowServiceTest {
                 workflowTransitionPort,
                 workflowTransitionRulePort,
                 screenPort,
+                workflowDraftVersionCloner,
                 workflowDraftValidator,
                 statusService
         );
@@ -172,6 +175,88 @@ class WorkflowServiceTest {
         ArgumentCaptor<WorkflowEntity> workflowCaptor = ArgumentCaptor.forClass(WorkflowEntity.class);
         verify(workflowPort).createWorkflow(workflowCaptor.capture());
         assertEquals("team_workflow_2", workflowCaptor.getValue().getWorkflowKey());
+    }
+
+    @Test
+    void updateWorkflowShouldUpdateMetadataWhenDraftAlreadyExists() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .workflowKey("team_workflow")
+                .name("Old Name")
+                .description("Old Desc")
+                .draftVersionId(DRAFT_VERSION_ID)
+                .lifecycleState(WorkflowLifecycleState.INACTIVE)
+                .build();
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+
+        WorkflowEntity updated = service.updateWorkflow(
+                WORKFLOW_ID,
+                " New Name ",
+                " New Desc ",
+                TENANT_ID,
+                USER_ID
+        );
+
+        assertEquals("New Name", updated.getName());
+        assertEquals("New Desc", updated.getDescription());
+        assertEquals(DRAFT_VERSION_ID, updated.getDraftVersionId());
+        verify(workflowDraftVersionCloner, never()).cloneVersionTree(any(), any(), any(), any());
+        verify(workflowVersionPort, never()).createWorkflowVersion(any());
+        verify(workflowPort).updateWorkflow(workflow);
+    }
+
+    @Test
+    void updateWorkflowShouldCreateNewDraftFromPublishedVersionWhenActiveHasNoDraft() {
+        WorkflowEntity workflow = WorkflowEntity.builder()
+                .id(WORKFLOW_ID)
+                .tenantId(TENANT_ID)
+                .workflowKey("team_workflow")
+                .name("Current Name")
+                .description("Current Desc")
+                .currentPublishedVersionId(90L)
+                .draftVersionId(null)
+                .lifecycleState(WorkflowLifecycleState.ACTIVE)
+                .build();
+        WorkflowVersionEntity publishedVersion = WorkflowVersionEntity.builder()
+                .id(90L)
+                .tenantId(TENANT_ID)
+                .workflowId(WORKFLOW_ID)
+                .versionNo(1)
+                .versionState(WorkflowVersionState.PUBLISHED)
+                .build();
+
+        when(workflowPort.getWorkflowById(WORKFLOW_ID, TENANT_ID)).thenReturn(Optional.of(workflow));
+        when(workflowVersionPort.getWorkflowVersionById(90L, TENANT_ID)).thenReturn(Optional.of(publishedVersion));
+        when(workflowVersionPort.getWorkflowVersionsByWorkflowIdIncludingSystem(WORKFLOW_ID, TENANT_ID))
+                .thenReturn(List.of(publishedVersion));
+        when(workflowVersionPort.createWorkflowVersion(any(WorkflowVersionEntity.class)))
+                .thenAnswer(invocation -> {
+                    WorkflowVersionEntity entity = invocation.getArgument(0);
+                    entity.setId(DRAFT_VERSION_ID);
+                    return entity;
+                });
+
+        WorkflowEntity updated = service.updateWorkflow(
+                WORKFLOW_ID,
+                " Updated Name ",
+                " Updated Desc ",
+                TENANT_ID,
+                USER_ID
+        );
+
+        ArgumentCaptor<WorkflowVersionEntity> versionCaptor = ArgumentCaptor.forClass(WorkflowVersionEntity.class);
+        verify(workflowVersionPort).createWorkflowVersion(versionCaptor.capture());
+        WorkflowVersionEntity createdDraft = versionCaptor.getValue();
+        assertEquals(2, createdDraft.getVersionNo());
+        assertEquals(WorkflowVersionState.DRAFT, createdDraft.getVersionState());
+        assertEquals(90L, createdDraft.getBaseVersionId());
+
+        verify(workflowDraftVersionCloner).cloneVersionTree(90L, DRAFT_VERSION_ID, TENANT_ID, USER_ID);
+        assertEquals(DRAFT_VERSION_ID, updated.getDraftVersionId());
+        assertEquals(90L, updated.getCurrentPublishedVersionId());
+        assertEquals("Updated Name", updated.getName());
+        assertEquals("Updated Desc", updated.getDescription());
     }
 
     @Test
