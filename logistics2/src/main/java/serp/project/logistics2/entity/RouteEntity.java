@@ -42,7 +42,7 @@ public class RouteEntity {
     private Long totalWeightLoadedKg;
 
     @Column(name = "total_volume_loaded_cbm")
-    private Long totalVolumeLoadedCbm;
+    private Double totalVolumeLoadedCbm;
 
     private String status;
 
@@ -70,7 +70,7 @@ public class RouteEntity {
     private VehicleShipperEntity vehicleShipper;
 
     public RouteEntity(String id, String deliveryPlanId, String vehicleShipperId, Float totalDistanceKm,
-            Long totalWeightLoadedKg, Long totalVolumeLoadedCbm, String status, int routeStopCount,
+            Long totalWeightLoadedKg, Double totalVolumeLoadedCbm, String status, int routeStopCount,
             LocalDate deliveryDate, Long tenantId) {
         this.id = id;
         this.deliveryPlanId = deliveryPlanId;
@@ -89,7 +89,7 @@ public class RouteEntity {
             String vehicleShipperId,
             Float totalDistanceKm,
             Long totalWeightLoadedKg,
-            Long totalVolumeLoadedCbm,
+            Double totalVolumeLoadedCbm,
             LocalDate deliveryDate,
             Long tenantId,
             List<RouteStopEntity> routeStops) {
