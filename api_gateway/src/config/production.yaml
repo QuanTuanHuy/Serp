@@ -121,3 +121,7 @@ external:
       port: ${DISCUSS_SERVICE_PORT}
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    pmCoreService:
+      host: ${PM_CORE_SERVICE_HOST}
+      port: ${PM_CORE_SERVICE_PORT}
+      timeout: 15s

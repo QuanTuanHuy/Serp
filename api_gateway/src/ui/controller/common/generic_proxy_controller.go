@@ -130,6 +130,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			TargetPrefix: "/discuss/api/v1",
 			Target:       props.DiscussService.BaseURL(),
 		},
+		{
+			Name:         "pm-core",
+			SourcePrefix: "/pm/api/v1",
+			TargetPrefix: "/pm-core/api/v1",
+			Target:       props.PmCoreService.BaseURL(),
+		},
 	}
 }
 
