@@ -76,6 +76,17 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class IssueLink {
+        public static final String TOPIC = "serp.pm.issuelink.events";
+        public static final String AGGREGATE = "ISSUE_LINK";
+
+        public static class EventType {
+            public static final String ISSUE_LINK_CREATED = "ISSUE_LINK_CREATED";
+            public static final String ISSUE_LINK_DELETED = "ISSUE_LINK_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class IssueType {
         public static final String TOPIC = "serp.pm.issuetype.events";
         public static final String AGGREGATE = "ISSUE_TYPE";
