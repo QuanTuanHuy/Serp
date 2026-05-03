@@ -19,7 +19,7 @@ FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-COPY --from=build /app/target/pm_core-*.jar app.jar
+COPY --from=build /app/target/pmcore-*.jar app.jar
 
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
