@@ -64,6 +64,7 @@ public class WorkflowService implements IWorkflowService {
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
     private final IScreenPort screenPort;
+    private final WorkflowDraftVersionCloner workflowDraftVersionCloner;
     private final WorkflowDraftValidator workflowDraftValidator;
     private final IStatusService statusService;
 
@@ -110,6 +111,30 @@ public class WorkflowService implements IWorkflowService {
         createdWorkflow.applyUpdate(userId, now);
         workflowPort.updateWorkflow(createdWorkflow);
         return createdWorkflow;
+    }
+
+    @Override
+    public WorkflowEntity updateWorkflow(Long workflowId,
+                                         String name,
+                                         String description,
+                                         Long tenantId,
+                                         Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        workflow.setName(TextNormalizationUtils.normalizeRequiredText(name, "name", WORKFLOW_NAME_MAX_LENGTH));
+        workflow.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                description,
+                "description",
+                WORKFLOW_DESCRIPTION_MAX_LENGTH
+        ));
+
+        if (workflow.getDraftVersionId() == null) {
+            forkDraftVersionFromPublished(workflow, tenantId, userId);
+        }
+
+        long now = System.currentTimeMillis();
+        workflow.applyUpdate(userId, now);
+        workflowPort.updateWorkflow(workflow);
+        return workflow;
     }
 
     @Override
@@ -485,6 +510,53 @@ public class WorkflowService implements IWorkflowService {
             );
         }
         return draftVersion;
+    }
+
+    private void forkDraftVersionFromPublished(WorkflowEntity workflow, Long tenantId, Long userId) {
+        if (workflow.getCurrentPublishedVersionId() == null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
+                    "Workflow has no editable draft or published version to fork: id=" + workflow.getId()
+            );
+        }
+
+        WorkflowVersionEntity sourcePublishedVersion = workflowVersionPort
+                .getWorkflowVersionById(workflow.getCurrentPublishedVersionId(), tenantId)
+                .orElseThrow(() -> new BusinessRuleViolationException(
+                        DomainErrorCode.WORKFLOW_NOT_ACTIVE,
+                        "Published workflow version not found: id=" + workflow.getCurrentPublishedVersionId()
+                ));
+        if (!WorkflowVersionState.PUBLISHED.equals(sourcePublishedVersion.getVersionState())) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_NOT_ACTIVE,
+                    "Workflow current version is not published: workflowId=" + workflow.getId()
+                            + ", versionId=" + sourcePublishedVersion.getId()
+            );
+        }
+
+        long now = System.currentTimeMillis();
+        WorkflowVersionEntity draftVersion = WorkflowVersionEntity.builder()
+                .tenantId(tenantId)
+                .workflowId(workflow.getId())
+                .versionNo(resolveNextWorkflowVersionNo(workflow.getId(), tenantId))
+                .versionState(WorkflowVersionState.DRAFT)
+                .baseVersionId(sourcePublishedVersion.getId())
+                .publishedAt(null)
+                .publishedBy(null)
+                .build();
+        draftVersion.applyCreate(userId, now);
+        WorkflowVersionEntity createdDraftVersion = workflowVersionPort.createWorkflowVersion(draftVersion);
+        workflowDraftVersionCloner.cloneVersionTree(sourcePublishedVersion.getId(), createdDraftVersion.getId(), tenantId, userId);
+        workflow.setDraftVersionId(createdDraftVersion.getId());
+    }
+
+    private Integer resolveNextWorkflowVersionNo(Long workflowId, Long tenantId) {
+        return workflowVersionPort.getWorkflowVersionsByWorkflowIdIncludingSystem(workflowId, tenantId)
+                .stream()
+                .map(WorkflowVersionEntity::getVersionNo)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
     }
 
     private void cleanupTransitionsForStep(Long workflowVersionId,

@@ -27,6 +27,8 @@ public class ListProjectsQueryHandler implements IQueryHandler<ListProjectsQuery
         ProjectListCriteria criteria = query.toCriteria();
         PageResult<ProjectSummaryView> result = projectReadPort.getProjects(
                         query.tenantId(),
+                        query.userId(),
+                        query.groupKeys(),
                         criteria.getSearch(),
                         criteria.getCategoryId(),
                         criteria.getProjectTypeKey(),

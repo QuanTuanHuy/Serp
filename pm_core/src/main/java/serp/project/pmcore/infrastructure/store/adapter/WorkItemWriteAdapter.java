@@ -85,15 +85,15 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
 //               AND deleted_at IS NULL
 //            """;
 //
-//    private static final String SOFT_DELETE_ISSUE_LINKS_SQL = """
-//            UPDATE issue_links
-//               SET deleted_at = :deletedAt,
-//                   updated_at = :deletedAt,
-//                   updated_by = :userId
-//             WHERE tenant_id = :tenantId
-//               AND (source_id IN (:workItemIds) OR target_id IN (:workItemIds))
-//               AND deleted_at IS NULL
-//            """;
+    private static final String SOFT_DELETE_ISSUE_LINKS_SQL = """
+            UPDATE issue_links
+               SET deleted_at = :deletedAt,
+                   updated_at = :deletedAt,
+                   updated_by = :userId
+             WHERE tenant_id = :tenantId
+               AND (source_id IN (:workItemIds) OR target_id IN (:workItemIds))
+               AND deleted_at IS NULL
+            """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -102,9 +102,11 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
 
     @Override
     public WorkItemEntity saveWorkItem(WorkItemEntity workItem) {
-        return workItemMapper.toEntity(
-                workItemRepository.save(workItemMapper.toModel(workItem))
-        );
+        var model = workItemMapper.toModel(workItem);
+        if (model == null) {
+            throw new IllegalArgumentException("workItem must not be null");
+        }
+        return workItemMapper.toEntity(workItemRepository.save(model));
     }
 
     @Override
@@ -134,12 +136,12 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
 //        int deletedSprintCount = jdbcTemplate.update(SOFT_DELETE_WORK_ITEM_SPRINTS_SQL, params);
         int deletedWorklogCount = jdbcTemplate.update(SOFT_DELETE_WORKLOGS_SQL, params);
 //        int deletedCustomFieldValueCount = jdbcTemplate.update(SOFT_DELETE_CUSTOM_FIELD_VALUES_SQL, params);
-//        int deletedLinkCount = jdbcTemplate.update(SOFT_DELETE_ISSUE_LINKS_SQL, params);
+        int deletedLinkCount = jdbcTemplate.update(SOFT_DELETE_ISSUE_LINKS_SQL, params);
 
         return WorkItemDeleteExecutionResult.builder()
                 .deletedWorkItemCount(deletedWorkItemCount)
                 .deletedRelationCount(deletedWorklogCount)
-                .deletedLinkCount(0)
+                .deletedLinkCount(deletedLinkCount)
                 .build();
     }
 }

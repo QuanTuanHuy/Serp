@@ -170,11 +170,15 @@ public class ProjectController {
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDirection) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
         PageView<ProjectSummaryView> response = listProjectsQueryHandler.handle(new ListProjectsQuery(
                 tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
                 search,
                 categoryId,
                 projectTypeKey,

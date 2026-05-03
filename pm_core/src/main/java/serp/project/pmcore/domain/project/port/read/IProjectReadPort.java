@@ -10,6 +10,7 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface IProjectReadPort {
     Optional<ProjectEntity> getProjectById(Long id, Long tenantId);
@@ -28,7 +29,11 @@ public interface IProjectReadPort {
 
     List<Long> getActiveProjectIdsByPrioritySchemeId(Long prioritySchemeId, Long tenantId);
 
-    PageResult<ProjectEntity> getProjects(Long tenantId, String search,
+    boolean existsActiveProjectByWorkflowSchemeId(Long workflowSchemeId, Long tenantId);
+
+    List<Long> getActiveProjectIdsByWorkflowSchemeId(Long workflowSchemeId, Long tenantId);
+
+    PageResult<ProjectEntity> getProjects(Long tenantId, Long userId, Set<String> groupKeys, String search,
                                           Long categoryId, String projectTypeKey,
                                           Boolean archived, int page, int size,
                                           String sortBy, String sortDirection);

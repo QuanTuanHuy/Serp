@@ -18,6 +18,12 @@ public interface IWorkflowService {
 
     WorkflowEntity createWorkflow(WorkflowEntity workflow, Long tenantId, Long userId);
 
+    WorkflowEntity updateWorkflow(Long workflowId,
+                                  String name,
+                                  String description,
+                                  Long tenantId,
+                                  Long userId);
+
     WorkflowEntity getVisibleWorkflowById(Long workflowId, Long tenantId);
 
     PageResult<WorkflowEntity> listVisibleWorkflows(Long tenantId, WorkflowListCriteria criteria);

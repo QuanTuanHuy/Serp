@@ -121,3 +121,7 @@ external:
       port: "8092"
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    pmCoreService:
+      host: localhost
+      port: "8093"
+      timeout: 15s
