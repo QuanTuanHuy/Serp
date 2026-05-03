@@ -36,7 +36,7 @@ public class RoutingResponse {
         private Long totalWeight;
 
         @JsonProperty("total_volume")
-        private Long totalVolume;
+        private Double totalVolume;
 
         private List<StopResult> stops;
     }
