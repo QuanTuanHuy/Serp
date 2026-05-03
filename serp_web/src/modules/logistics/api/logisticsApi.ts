@@ -389,6 +389,18 @@ export const logisticsApi = api.injectEndpoints({
       ],
     }),
 
+    getSaleOrder: builder.query<APIResponse<Order>, string>({
+      query: (saleOrderId) => ({
+        url: `/sale-order/search/${saleOrderId}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'logistics' },
+      providesTags: (result, error, id) => [
+        { type: 'logistics/Order', id },
+        { type: 'logistics/Order', id: 'LIST' },
+      ],
+    }),
+
     // Product endpoints
     getProducts: builder.query<
       APIResponse<PaginatedResponse<Product>>,
@@ -843,6 +855,7 @@ export const {
   // Order hooks
   useGetOrdersQuery,
   useGetOrderQuery,
+  useGetSaleOrderQuery,
 
   // Product hooks
   useGetProductsQuery,
