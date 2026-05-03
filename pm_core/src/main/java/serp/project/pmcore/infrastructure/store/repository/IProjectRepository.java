@@ -48,6 +48,15 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     List<Long> findActiveProjectIdsByPrioritySchemeId(@Param("prioritySchemeId") Long prioritySchemeId,
                                                       @Param("tenantId") Long tenantId);
 
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.workflowSchemeId = :workflowSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByWorkflowSchemeId(@Param("workflowSchemeId") Long workflowSchemeId,
+                                                  @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p.id FROM ProjectModel p WHERE p.workflowSchemeId = :workflowSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    List<Long> findActiveProjectIdsByWorkflowSchemeId(@Param("workflowSchemeId") Long workflowSchemeId,
+                                                      @Param("tenantId") Long tenantId);
+
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
     @Query(value = """
