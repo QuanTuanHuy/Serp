@@ -24,6 +24,11 @@ public class WorkflowSchemeEntity extends BaseEntity {
     private String name;
     private String description;
     private Long defaultWorkflowId;
+    private Long deletedAt;
 
     private List<WorkflowSchemeItemEntity> items;
+
+    public boolean isSystem() {
+        return tenantId != null && tenantId == 0L;
+    }
 }

@@ -160,4 +160,11 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,
 	)
+
+	RegisterPmCoreRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
 }
