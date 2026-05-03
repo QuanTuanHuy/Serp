@@ -22,6 +22,7 @@ import serp.project.pmcore.infrastructure.store.repository.IProjectRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -80,7 +81,7 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
-    public PageResult<ProjectEntity> getProjects(Long tenantId, String search,
+    public PageResult<ProjectEntity> getProjects(Long tenantId, Long userId, Set<String> groupKeys, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,
                                                  String sortBy, String sortDirection) {
@@ -89,11 +90,31 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
         String sortField = (sortBy != null && !sortBy.isEmpty()) ? sortBy : "id";
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
 
-        Page<ProjectModel> result = projectRepository.findAllWithFilters(
-                tenantId, search, categoryId, projectTypeKey, archived, pageable);
+        Page<ProjectModel> result = projectRepository.findVisibleProjectsWithFilters(
+                tenantId,
+                userId,
+                toNormalizedCsv(groupKeys),
+                search,
+                categoryId,
+                projectTypeKey,
+                archived,
+                pageable);
 
         List<ProjectEntity> entities = projectMapper.toEntities(result.getContent());
         return new PageResult<>(entities, result.getTotalElements());
+    }
+
+    private String toNormalizedCsv(Set<String> groupKeys) {
+        if (groupKeys == null || groupKeys.isEmpty()) {
+            return "";
+        }
+
+        return groupKeys.stream()
+                .filter(groupKey -> groupKey != null && !groupKey.isBlank())
+                .map(groupKey -> groupKey.trim().toLowerCase())
+                .distinct()
+                .sorted()
+                .reduce(",", (csv, groupKey) -> csv + groupKey + ",");
     }
 
     @Override
