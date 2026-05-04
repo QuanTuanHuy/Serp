@@ -8,6 +8,9 @@ package serp.project.second_mile.ui.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +25,12 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.second_mile.dto.ApiResponse;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.CreateHubRequest;
+import serp.project.second_mile.dto.request.HubImportDTO;
 import serp.project.second_mile.dto.request.HubFilterRequest;
 import serp.project.second_mile.dto.request.UpdateHubRequest;
 import serp.project.second_mile.dto.response.HubResponse;
+import serp.project.second_mile.dto.response.ImportHistoryResponse;
+import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.enums.HubStatus;
 import serp.project.second_mile.enums.HubType;
 import serp.project.second_mile.exception.MessageService;
@@ -82,6 +88,33 @@ public class HubController {
                 .message(messageService.getMessage("success.hubs.detail"))
                 .result(hubService.getHubById(id))
                 .build();
+    }
+
+    @GetMapping("/template")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ResponseEntity<byte[]> exportTemplate() {
+        log.info("REST request to export Hub Template Excel");
+
+        byte[] excelData = hubService.exportTemplate();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hub_template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelData);
+    }
+
+    @PostMapping("/validate")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ValidateImportFileDTO<HubImportDTO> validateFile(@RequestParam("file") MultipartFile file) {
+        log.info("REST request to validate Hub import file");
+        return hubService.validateImportFile(file);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ImportHistoryResponse importFile(@RequestParam("file") MultipartFile file) {
+        log.info("REST request to import Hub file");
+        return hubService.importHubsAsync(file);
     }
 
     @PostMapping
