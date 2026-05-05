@@ -37,7 +37,7 @@ export type PostOfficeStatus =
   | 'INACTIVE'
   | 'MAINTENANCE'
   | 'SUSPENDED';
-export type ImportType = 'ORDER' | 'POST_OFFICE' | 'VEHICLE';
+export type ImportType = 'ORDER' | 'POST_OFFICE' | 'VEHICLE' | 'HUB';
 export type ImportHistoryStatus =
   | 'PENDING'
   | 'PROCESSING'
@@ -71,6 +71,102 @@ export interface PostOffice {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+  hubId?: number;
+}
+
+export type HubType = 'REGIONAL' | 'LOCAL';
+
+export type HubStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+
+export interface Hub {
+  id: number;
+  code: string;
+  name: string;
+  hubType: HubType;
+  provinceCode: string;
+  wardCode: string;
+  addressDetail: string;
+  phoneNumber?: string;
+  latitude?: number;
+  longitude?: number;
+  operationalStartDate?: string;
+  operationalEndDate?: string;
+  workingStartTime?: string;
+  workingEndTime?: string;
+  dailyCapacity?: number;
+  currentLoad?: number;
+  status: HubStatus;
+  version?: number;
+  imageUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface HubPostOfficeMapping {
+  id: number;
+  hubId: number;
+  postOfficeCode: string;
+  createdAt?: string;
+  updatedAt?: string;
+  tenantId?: number;
+}
+
+export interface AssignHubPostOfficeRequest {
+  post_office_code: string;
+}
+
+export interface CreateHubRequest {
+  code: string;
+  name: string;
+  hub_type: HubType;
+  province_code: string;
+  ward_code: string;
+  address_detail: string;
+  phone_number?: string;
+  working_start_time?: string;
+  working_end_time?: string;
+  daily_capacity?: number;
+  current_load?: number;
+  latitude?: number;
+  longitude?: number;
+  status: HubStatus;
+}
+
+export interface UpdateHubRequest {
+  code: string;
+  name: string;
+  hub_type: HubType;
+  province_code: string;
+  ward_code: string;
+  address_detail: string;
+  phone_number?: string;
+  working_start_time?: string;
+  working_end_time?: string;
+  daily_capacity: number;
+  current_load: number;
+  latitude?: number;
+  longitude?: number;
+  status: HubStatus;
+}
+
+export interface HubImportItem {
+  stt?: string;
+  name?: string;
+  code?: string;
+  province_code?: string;
+  ward_code?: string;
+  address_detail?: string;
+  phone_number?: string;
+  hub_type?: HubType;
+  operational_start_date?: string;
+  operational_end_date?: string;
+  working_start_time?: string;
+  working_end_time?: string;
+  status?: HubStatus;
+  source_rows?: number[];
 }
 
 export type PostOfficeStaffRole = 'COURIER' | 'MANAGER';
@@ -637,10 +733,26 @@ export interface PickupCheckinResponse {
   allowedRadiusM?: number;
 }
 
+export interface HubListFilters {
+  keyword?: string;
+  code?: string;
+  name?: string;
+  hubType?: HubType;
+  provinceCode?: string;
+  wardCode?: string;
+  status?: HubStatus;
+  hasLocation?: boolean;
+  minDailyCapacity?: number;
+  maxDailyCapacity?: number;
+  minCurrentLoad?: number;
+  maxCurrentLoad?: number;
+}
+
 export interface PostOfficeListFilters {
   keyword?: string;
   code?: string;
   name?: string;
+  hubId?: number;
   provinceCode?: string;
   wardCode?: string;
   status?: PostOfficeStatus;

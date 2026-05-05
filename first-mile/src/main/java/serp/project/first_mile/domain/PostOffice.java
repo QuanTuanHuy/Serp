@@ -89,6 +89,12 @@ public class PostOffice extends AbstractAudit {
     @Column(name = "version")
     private Long version;
 
+    /**
+     * Hub id in second-mile (same tenant); optional — post office managed under a hub.
+     */
+    @Column(name = "hub_id")
+    private Long hubId;
+
     public boolean isActive() {
         return PostOfficeStatus.ACTIVE.equals(status);
     }

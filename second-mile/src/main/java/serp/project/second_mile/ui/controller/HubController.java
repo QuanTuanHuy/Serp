@@ -24,16 +24,19 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.second_mile.dto.ApiResponse;
 import serp.project.second_mile.dto.PageResponse;
+import serp.project.second_mile.dto.request.AssignHubPostOfficeRequest;
 import serp.project.second_mile.dto.request.CreateHubRequest;
 import serp.project.second_mile.dto.request.HubImportDTO;
 import serp.project.second_mile.dto.request.HubFilterRequest;
 import serp.project.second_mile.dto.request.UpdateHubRequest;
+import serp.project.second_mile.dto.response.HubPostOfficeMappingResponse;
 import serp.project.second_mile.dto.response.HubResponse;
 import serp.project.second_mile.dto.response.ImportHistoryResponse;
 import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.enums.HubStatus;
 import serp.project.second_mile.enums.HubType;
 import serp.project.second_mile.exception.MessageService;
+import serp.project.second_mile.service.HubPostOfficeService;
 import serp.project.second_mile.service.HubService;
 
 @RestController
@@ -42,6 +45,7 @@ import serp.project.second_mile.service.HubService;
 @Slf4j
 public class HubController {
     private final HubService hubService;
+    private final HubPostOfficeService hubPostOfficeService;
     private final MessageService messageService;
 
     @GetMapping
@@ -87,6 +91,42 @@ public class HubController {
         return ApiResponse.<HubResponse>builder()
                 .message(messageService.getMessage("success.hubs.detail"))
                 .result(hubService.getHubById(id))
+                .build();
+    }
+
+    @GetMapping("/{id}/post-offices")
+    public ApiResponse<PageResponse<HubPostOfficeMappingResponse>> listHubPostOffices(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.<PageResponse<HubPostOfficeMappingResponse>>builder()
+                .message(messageService.getMessage("success.hubs.post_offices.list"))
+                .result(hubPostOfficeService.listPostOfficesForHub(id, page, size))
+                .build();
+    }
+
+    @PostMapping("/{id}/post-offices")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<HubPostOfficeMappingResponse> assignPostOfficeToHub(
+            @PathVariable Long id,
+            @Valid @RequestBody AssignHubPostOfficeRequest request
+    ) {
+        return ApiResponse.<HubPostOfficeMappingResponse>builder()
+                .message(messageService.getMessage("success.hubs.post_offices.assign"))
+                .result(hubPostOfficeService.assignPostOfficeToHub(id, request))
+                .build();
+    }
+
+    @DeleteMapping("/{id}/post-offices/{postOfficeCode}")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<Void> removePostOfficeFromHub(
+            @PathVariable Long id,
+            @PathVariable String postOfficeCode
+    ) {
+        hubPostOfficeService.removePostOfficeFromHub(id, postOfficeCode);
+        return ApiResponse.<Void>builder()
+                .message(messageService.getMessage("success.hubs.post_offices.remove"))
                 .build();
     }
 
