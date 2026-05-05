@@ -35,6 +35,7 @@ spring:
         - classpath:db/migration/province.sql
         - classpath:db/migration/ward.sql
         - classpath:db/migration/post-office.sql
+        - classpath:db/migration/post-office-add-hub-id.sql
         - classpath:db/migration/post-office-staff.sql
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql
@@ -58,6 +59,9 @@ app:
     topics:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
+      sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
+    hub-post-office-sync:
+      consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}

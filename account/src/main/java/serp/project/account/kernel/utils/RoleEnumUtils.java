@@ -299,6 +299,8 @@ public class RoleEnumUtils {
                 return RoleEnum.CRM_SALES_PERSON;
             case "PTM":
                 return RoleEnum.PTM_USER;
+            case "PM":
+                return RoleEnum.PM_USER;
             case "TMS":
                 return RoleEnum.TMS_POSTOFFICER;
             case "ACCOUNTING":

@@ -92,7 +92,8 @@ public final class PostOfficeMapper {
                 postOffice.getUpdatedAt(),
                 postOffice.getCreatedBy(),
                 postOffice.getUpdatedBy(),
-                postOffice.getTenantId()
+                postOffice.getTenantId(),
+                postOffice.getHubId()
         );
     }
 

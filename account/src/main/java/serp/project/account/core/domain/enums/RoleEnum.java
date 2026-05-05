@@ -146,6 +146,17 @@ public enum RoleEnum {
      */
     PTM_USER("PTM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PTM User", true),
 
+    // PM (Project Management) Module
+    /**
+     * PM Admin - Project Management module administrator
+     */
+    PM_ADMIN("PM_ADMIN", RoleScope.MODULE, RoleType.ADMIN, 4, false, "PM Administrator"),
+
+    /**
+     * PM User
+     */
+    PM_USER("PM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PM User", true),
+
     // TMS (First-mile) Module
     /**
      * TMS Admin - First-mile module administrator
