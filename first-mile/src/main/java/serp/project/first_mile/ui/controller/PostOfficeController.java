@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
+import serp.project.first_mile.dto.request.AssignPostOfficeHubRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
@@ -66,7 +67,8 @@ public class PostOfficeController {
             @RequestParam(name = "min_current_load", required = false) Integer minCurrentLoad,
             @RequestParam(name = "max_current_load", required = false) Integer maxCurrentLoad,
             @RequestParam(name = "min_priority", required = false) Integer minPriority,
-            @RequestParam(name = "max_priority", required = false) Integer maxPriority
+            @RequestParam(name = "max_priority", required = false) Integer maxPriority,
+            @RequestParam(name = "hub_id", required = false) Long hubId
     ) {
         PostOfficeFilterRequest filterRequest = PostOfficeFilterRequest.builder()
                 .keyword(keyword)
@@ -84,6 +86,7 @@ public class PostOfficeController {
                 .maxCurrentLoad(maxCurrentLoad)
                 .minPriority(minPriority)
                 .maxPriority(maxPriority)
+                .hubId(hubId)
                 .build();
 
         return ApiResponse.<PageResponse<PostOfficeResponse>>builder()
@@ -118,6 +121,18 @@ public class PostOfficeController {
         return ApiResponse.<PostOfficeResponse>builder()
                 .message(messageService.getMessage("success.post_offices.update"))
                 .result(postOfficeService.updatePostOffice(id, request))
+                .build();
+    }
+
+    @PutMapping("/{id}/hub")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeResponse> assignPostOfficeHub(
+            @PathVariable Long id,
+            @RequestBody(required = false) AssignPostOfficeHubRequest request
+    ) {
+        return ApiResponse.<PostOfficeResponse>builder()
+                .message(messageService.getMessage("success.post_offices.hub.assign"))
+                .result(postOfficeService.assignPostOfficeHub(id, request))
                 .build();
     }
 

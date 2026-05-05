@@ -5,6 +5,10 @@
 
 import { api } from '@/lib/store/api';
 import type {
+  AssignHubPostOfficeRequest,
+  CreateHubRequest,
+  UpdateHubRequest,
+  HubImportItem,
   AutoAssignPickupPlanRequest,
   CancelOrderRequest,
   CreateOrderRequest,
@@ -16,6 +20,9 @@ import type {
   FirstMilePaginatedData,
   GeocodeAddressRequest,
   GeocodeAddressResponse,
+  Hub,
+  HubListFilters,
+  HubPostOfficeMapping,
   ImportHistory,
   ImportType,
   ManualAssignPickupOrdersRequest,
@@ -44,6 +51,7 @@ import type {
   Ward,
 } from '../types';
 import {
+  normalizeSecondMileHubImportHistory,
   unwrapFirstMilePageResult,
   unwrapFirstMilePageResultOrRaw,
   unwrapFirstMileResult,
@@ -51,9 +59,189 @@ import {
 } from './transforms';
 
 const FIRST_MILE_SERVICE = { service: 'first-mile' as const };
+const SECOND_MILE_SERVICE = { service: 'second-mile' as const };
 
 export const firstMileApi = api.injectEndpoints({
   endpoints: (builder) => ({
+    getHubs: builder.query<
+      FirstMilePaginatedData<Hub>,
+      { page?: number; size?: number } & HubListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        code,
+        name,
+        hubType,
+        provinceCode,
+        wardCode,
+        status,
+        hasLocation,
+        minDailyCapacity,
+        maxDailyCapacity,
+        minCurrentLoad,
+        maxCurrentLoad,
+      }) => ({
+        url: '/hubs',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(code ? { code } : {}),
+          ...(name ? { name } : {}),
+          ...(hubType ? { hub_type: hubType } : {}),
+          ...(provinceCode ? { province_code: provinceCode } : {}),
+          ...(wardCode ? { ward_code: wardCode } : {}),
+          ...(status ? { status } : {}),
+          ...(hasLocation !== undefined ? { has_location: hasLocation } : {}),
+          ...(minDailyCapacity !== undefined
+            ? { min_daily_capacity: minDailyCapacity }
+            : {}),
+          ...(maxDailyCapacity !== undefined
+            ? { max_daily_capacity: maxDailyCapacity }
+            : {}),
+          ...(minCurrentLoad !== undefined
+            ? { min_current_load: minCurrentLoad }
+            : {}),
+          ...(maxCurrentLoad !== undefined
+            ? { max_current_load: maxCurrentLoad }
+            : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<Hub>,
+    }),
+
+    getHubById: builder.query<Hub, number>({
+      query: (id) => ({
+        url: `/hubs/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Hub>,
+    }),
+
+    getHubPostOffices: builder.query<
+      FirstMilePaginatedData<HubPostOfficeMapping>,
+      { hubId: number; page?: number; size?: number }
+    >({
+      query: ({ hubId, page = 0, size = 20 }) => ({
+        url: `/hubs/${hubId}/post-offices`,
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<HubPostOfficeMapping>,
+    }),
+
+    assignPostOfficeToHub: builder.mutation<
+      HubPostOfficeMapping,
+      { hubId: number; request: AssignHubPostOfficeRequest }
+    >({
+      query: ({ hubId, request }) => ({
+        url: `/hubs/${hubId}/post-offices`,
+        method: 'POST',
+        body: request,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<HubPostOfficeMapping>,
+    }),
+
+    removePostOfficeFromHub: builder.mutation<
+      any,
+      { hubId: number; postOfficeCode: string }
+    >({
+      query: ({ hubId, postOfficeCode }) => ({
+        url: `/hubs/${hubId}/post-offices/${encodeURIComponent(postOfficeCode)}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw,
+    }),
+
+    exportHubTemplate: builder.query<Blob, void>({
+      query: () => ({
+        url: '/hubs/template',
+        method: 'GET',
+        responseHandler: (response) => response.blob(),
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+    }),
+
+    validateHubImport: builder.mutation<
+      ValidateImportFileResponse<HubImportItem>,
+      FormData
+    >({
+      query: (formData) => ({
+        url: '/hubs/validate',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: unknown) =>
+        response as ValidateImportFileResponse<HubImportItem>,
+    }),
+
+    importHubs: builder.mutation<ImportHistory, FormData>({
+      query: (formData) => ({
+        url: '/hubs/import',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: unknown) =>
+        normalizeSecondMileHubImportHistory(response),
+    }),
+
+    createHub: builder.mutation<Hub, CreateHubRequest>({
+      query: (body) => ({
+        url: '/hubs',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Hub>,
+    }),
+
+    updateHub: builder.mutation<
+      Hub,
+      { id: number; body: UpdateHubRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/hubs/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Hub>,
+    }),
+
+    deleteHub: builder.mutation<string, number>({
+      query: (id) => ({
+        url: `/hubs/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: { message?: string }) =>
+        response?.message || 'Deleted successfully',
+    }),
+
+    uploadHubImage: builder.mutation<Hub, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/hubs/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Hub>,
+    }),
+
     getPostOffices: builder.query<
       FirstMilePaginatedData<PostOffice>,
       { page?: number; size?: number } & PostOfficeListFilters
@@ -76,6 +264,7 @@ export const firstMileApi = api.injectEndpoints({
         maxCurrentLoad,
         minPriority,
         maxPriority,
+        hubId,
       }) => ({
         url: '/post-offices',
         method: 'GET',
@@ -109,6 +298,7 @@ export const firstMileApi = api.injectEndpoints({
             : {}),
           ...(minPriority !== undefined ? { min_priority: minPriority } : {}),
           ...(maxPriority !== undefined ? { max_priority: maxPriority } : {}),
+          ...(hubId !== undefined ? { hub_id: hubId } : {}),
         },
       }),
       extraOptions: FIRST_MILE_SERVICE,
@@ -693,6 +883,18 @@ export const firstMileApi = api.injectEndpoints({
 });
 
 export const {
+  useGetHubsQuery,
+  useGetHubByIdQuery,
+  useGetHubPostOfficesQuery,
+  useAssignPostOfficeToHubMutation,
+  useRemovePostOfficeFromHubMutation,
+  useLazyExportHubTemplateQuery,
+  useValidateHubImportMutation,
+  useImportHubsMutation,
+  useCreateHubMutation,
+  useUpdateHubMutation,
+  useDeleteHubMutation,
+  useUploadHubImageMutation,
   useGetPostOfficesQuery,
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,

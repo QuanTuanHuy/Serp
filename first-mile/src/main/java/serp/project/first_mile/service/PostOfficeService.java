@@ -7,6 +7,7 @@ package serp.project.first_mile.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
+import serp.project.first_mile.dto.request.AssignPostOfficeHubRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
@@ -24,6 +25,8 @@ public interface PostOfficeService {
     PostOfficeResponse createPostOffice(CreatePostOfficeRequest request);
 
     PostOfficeResponse updatePostOffice(Long id, UpdatePostOfficeRequest request);
+
+    PostOfficeResponse assignPostOfficeHub(Long id, AssignPostOfficeHubRequest request);
 
     PostOfficeResponse uploadImage(Long id, MultipartFile file);
 

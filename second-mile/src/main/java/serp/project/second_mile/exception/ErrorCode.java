@@ -10,6 +10,7 @@ public enum ErrorCode {
     // Hub errors (1xxx)
     HUB_NOT_FOUND(1001, "error.1001", HttpStatus.NOT_FOUND),
     HUB_CODE_EXISTED(1002, "error.1002", HttpStatus.CONFLICT),
+    HUB_POST_OFFICE_CODE_INVALID(1003, "error.1003", HttpStatus.BAD_REQUEST),
 
     RATE_LIMIT_EXCEEDED(9429, "error.9429", HttpStatus.TOO_MANY_REQUESTS),
 
