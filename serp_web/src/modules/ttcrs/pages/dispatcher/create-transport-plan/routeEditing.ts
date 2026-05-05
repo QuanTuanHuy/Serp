@@ -14,7 +14,7 @@ export interface EditableRoute {
   depotTruckCode: string;
   stops: EditableStop[];
   totalTravelTime: number;
-  driverName?: string;
+  driverId?: number;
 }
 
 export interface RouteValidation {
@@ -32,7 +32,7 @@ export interface TransportPlanOutput {
   };
   plans: {
     truckCode: string;
-    driverName?: string;
+    driverId?: number;
     stops: {
       sequence: number;
       locationCode: string;
@@ -76,7 +76,7 @@ export function validateRoute(route: EditableRoute): RouteValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!route.driverName) {
+  if (!route.driverId) {
     errors.push('No driver assigned');
   }
 
@@ -130,7 +130,7 @@ export function generatePlanOutput(
     },
     plans: routes.map((route) => ({
       truckCode: route.truckCode,
-      driverName: route.driverName,
+      driverId: route.driverId,
       stops: route.stops.map((stop, idx) => ({
         sequence: idx + 1,
         locationCode: stop.locationCode,

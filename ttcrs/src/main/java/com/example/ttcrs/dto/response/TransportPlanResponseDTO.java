@@ -18,4 +18,5 @@ public class TransportPlanResponseDTO {
     private LocalDateTime endTime;
     private TransportPlanStatus status;
     private int stopCount;
+    private LocalDateTime createdStamp;
 }

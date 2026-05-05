@@ -30,7 +30,7 @@ public class SecurityConfig {
     private final KeycloakConfig keycloakConfig;
 
     /**
-     * Filter chain cho internal service-to-service calls (prefix /internal/**)
+     * Filter chain cho internal service-to-service calls (prefix /internal/**) dùng để xác thực khi service khác gọi vào API nội bộ của TTCRS
      */
     @Bean
     @Order(1)

@@ -129,7 +129,7 @@ function normalize(
       currentLocationCode: t.currentLocationCode,
     })),
     ...drivers.map((d) => ({
-      id: d.id,
+      id: d.userId,
       kind: 'DRIVER' as ResourceKind,
       identifier: d.name,
       status: d.status,
@@ -367,15 +367,17 @@ export function ResourcesPage() {
           />
         </div>
 
-        <Button
-          id='resources-create-btn'
-          variant='outline'
-          size='sm'
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus className='h-4 w-4' />
-          Create a new resource
-        </Button>
+        {activeTab !== 'DRIVER' && (
+          <Button
+            id='resources-create-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className='h-4 w-4' />
+            Create a new resource
+          </Button>
+        )}
       </div>
 
       {/* ---- Main card ---- */}

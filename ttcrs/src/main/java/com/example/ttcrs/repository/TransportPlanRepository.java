@@ -10,5 +10,7 @@ import java.util.Optional;
 @Repository
 public interface TransportPlanRepository extends JpaRepository<TransportPlanEntity, Long> {
     List<TransportPlanEntity> findAllByTenantIdOrderByCreatedStampDesc(Long tenantId);
+    List<TransportPlanEntity> findAllByTenantIdAndDriverIdOrderByStartTimeDesc(Long tenantId, Long driverId);
     Optional<TransportPlanEntity> findByIdAndTenantId(Long id, Long tenantId);
+    Optional<TransportPlanEntity> findByIdAndTenantIdAndDriverId(Long id, Long tenantId, Long driverId);
 }

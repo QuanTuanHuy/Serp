@@ -1,17 +1,14 @@
 package com.example.ttcrs.dto.request.resource;
 
 import com.example.ttcrs.constant.DriverStatus;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * DTO for updating an existing Driver.
- * All fields are optional — only non-null values are applied.
- */
 @Getter
 @Setter
-public class UpdateDriverDTO {
+public class UpdateDriverStatusDTO {
 
-    private String name;
+    @NotNull(message = "status không được để trống")
     private DriverStatus status;
 }

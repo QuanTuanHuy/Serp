@@ -19,8 +19,8 @@ public class SaveTransportPlanDTO {
         @jakarta.validation.constraints.NotBlank(message = "truckCode is required")
         private String truckCode;
 
-        /** Nullable — driver can be assigned later */
-        private String driverName;
+        /** Nullable — driver userId from Account service */
+        private Long driverId;
 
         @NotEmpty(message = "stops must not be empty")
         @Valid

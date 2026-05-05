@@ -155,10 +155,10 @@ export interface TrailerItem {
 }
 
 export interface DriverItem {
-  id: number;
+  userId: number;
   name: string;
+  email: string;
   status: DriverStatus;
-  createdStamp: string | null;
 }
 
 // -------------------------------------------------------------------------
@@ -255,7 +255,7 @@ export interface SaveTransportPlanStopPayload {
 
 export interface SaveTransportPlanItemPayload {
   truckCode: string;
-  driverName: string | null;
+  driverId: number | null;
   stops: SaveTransportPlanStopPayload[];
 }
 
@@ -283,6 +283,7 @@ export interface TransportPlanSavedItem {
   endTime: string | null;
   status: TransportPlanStatus;
   stopCount: number;
+  createdStamp: string | null;
 }
 
 // Re-used for the list view
@@ -341,9 +342,7 @@ export interface CreateTrailerPayload {
   currentLocationCode: string;
 }
 
-export interface CreateDriverPayload {
-  name: string;
-}
+// Drivers are Account users with TTCRS_DRIVER role — no creation payload needed
 
 // -------------------------------------------------------------------------
 // Update payloads
@@ -384,6 +383,5 @@ export interface UpdateTrailerPayload {
 }
 
 export interface UpdateDriverPayload {
-  name?: string;
-  status?: DriverStatus;
+  status: DriverStatus;
 }

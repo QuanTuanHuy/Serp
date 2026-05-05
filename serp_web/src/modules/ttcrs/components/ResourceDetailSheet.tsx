@@ -38,7 +38,6 @@ import {
   useUpdateDispatcherTrailerMutation,
   useDeleteDispatcherTrailerMutation,
   useUpdateDispatcherDriverMutation,
-  useDeleteDispatcherDriverMutation,
 } from '../api/ttcrsApi';
 import type {
   ResourceRow,
@@ -105,13 +104,12 @@ export function ResourceDetailSheet({ resource, open, onClose }: ResourceDetailS
   const [updateTrailer,   { isLoading: savingTrailer }]   = useUpdateDispatcherTrailerMutation();
   const [deleteTrailer,   { isLoading: deletingTrailer }] = useDeleteDispatcherTrailerMutation();
   const [updateDriver,    { isLoading: savingDriver }]    = useUpdateDispatcherDriverMutation();
-  const [deleteDriver,    { isLoading: deletingDriver }]  = useDeleteDispatcherDriverMutation();
 
   const { data: locationsData } = useGetDispatcherLocationsQuery();
   const locationOptions = locationsData?.data ?? [];
 
-  const isSaving  = savingContainer  || savingTruck  || savingTrailer  || savingDriver;
-  const isDeleting = deletingContainer || deletingTruck || deletingTrailer || deletingDriver;
+  const isSaving   = savingContainer || savingTruck || savingTrailer || savingDriver;
+  const isDeleting = deletingContainer || deletingTruck || deletingTrailer;
 
   useEffect(() => {
     if (!resource) return;
@@ -152,7 +150,7 @@ export function ResourceDetailSheet({ resource, open, onClose }: ResourceDetailS
         case 'DRIVER':
           await updateDriver({
             id: resource.id,
-            body: { name: name.trim() || undefined, status: status as DriverStatus },
+            body: { status: status as DriverStatus },
           }).unwrap();
           break;
       }
@@ -164,13 +162,12 @@ export function ResourceDetailSheet({ resource, open, onClose }: ResourceDetailS
   }
 
   async function handleDelete() {
-    if (!resource) return;
+    if (!resource || kind === 'DRIVER') return;
     try {
       switch (kind) {
         case 'CONTAINER': await deleteContainer(resource.id).unwrap(); break;
         case 'TRUCK':     await deleteTruck(resource.id).unwrap();     break;
         case 'TRAILER':   await deleteTrailer(resource.id).unwrap();   break;
-        case 'DRIVER':    await deleteDriver(resource.id).unwrap();    break;
       }
       toast.success(`${resource.identifier} deleted`);
       setDeleteOpen(false);
@@ -213,10 +210,13 @@ export function ResourceDetailSheet({ resource, open, onClose }: ResourceDetailS
                 <Label htmlFor='res-name'>Name</Label>
                 <Input
                   id='res-name'
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder='Driver name'
+                  value={resource.identifier}
+                  readOnly
+                  className='bg-muted/40 text-muted-foreground'
                 />
+                <p className='text-xs text-muted-foreground'>
+                  Driver name is managed in Account settings.
+                </p>
               </div>
             ) : (
               <div className='space-y-1.5'>
@@ -284,16 +284,19 @@ export function ResourceDetailSheet({ resource, open, onClose }: ResourceDetailS
 
           {/* Footer */}
           <div className='border-t px-6 py-4 flex items-center justify-between gap-3'>
-            <Button
-              variant='outline'
-              size='sm'
-              className='border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700'
-              onClick={() => setDeleteOpen(true)}
-              disabled={isSaving || isDeleting}
-            >
-              <Trash2 className='h-4 w-4' />
-              Delete
-            </Button>
+            {!isDriver && (
+              <Button
+                variant='outline'
+                size='sm'
+                className='border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700'
+                onClick={() => setDeleteOpen(true)}
+                disabled={isSaving || isDeleting}
+              >
+                <Trash2 className='h-4 w-4' />
+                Delete
+              </Button>
+            )}
+            {isDriver && <div />}
 
             <div className='flex items-center gap-2'>
               <Button variant='outline' size='sm' onClick={onClose} disabled={isSaving}>

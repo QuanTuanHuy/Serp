@@ -24,7 +24,6 @@ import {
   useCreateDispatcherContainerMutation,
   useCreateDispatcherTruckMutation,
   useCreateDispatcherTrailerMutation,
-  useCreateDispatcherDriverMutation,
   useGetDispatcherLocationsQuery,
 } from '../api/ttcrsApi';
 import type {
@@ -33,7 +32,6 @@ import type {
   CreateContainerPayload,
   CreateTruckPayload,
   CreateTrailerPayload,
-  CreateDriverPayload,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -49,7 +47,6 @@ const KIND_TABS: { value: ResourceKind; label: string }[] = [
   { value: 'CONTAINER', label: 'Container' },
   { value: 'TRUCK', label: 'Truck' },
   { value: 'TRAILER', label: 'Trailer' },
-  { value: 'DRIVER', label: 'Driver' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -68,7 +65,6 @@ type FormState = {
   code: string;
   size: ResourceContainerSize | '';
   currentLocationCode: string;
-  name: string;
 };
 
 const INITIAL_FORM: FormState = {
@@ -76,7 +72,6 @@ const INITIAL_FORM: FormState = {
   code: '',
   size: '',
   currentLocationCode: '',
-  name: '',
 };
 
 // ---------------------------------------------------------------------------
@@ -97,12 +92,11 @@ export function CreateResourceDialog({
   const [createContainer, { isLoading: creatingContainer }] = useCreateDispatcherContainerMutation();
   const [createTruck,     { isLoading: creatingTruck     }] = useCreateDispatcherTruckMutation();
   const [createTrailer,   { isLoading: creatingTrailer   }] = useCreateDispatcherTrailerMutation();
-  const [createDriver,    { isLoading: creatingDriver    }] = useCreateDispatcherDriverMutation();
 
   const { data: locationsData } = useGetDispatcherLocationsQuery(undefined, { skip: !open });
   const locationCodes = locationsData?.data?.map((l) => l.locationCode) ?? [];
 
-  const isCreating = creatingContainer || creatingTruck || creatingTrailer || creatingDriver;
+  const isCreating = creatingContainer || creatingTruck || creatingTrailer;
 
   useEffect(() => {
     if (open) {
@@ -126,15 +120,10 @@ export function CreateResourceDialog({
   function validate(): boolean {
     const next: Partial<Record<keyof FormState, string>> = {};
 
-    if (form.kind === 'DRIVER') {
-      if (!form.name.trim()) next.name = 'Driver name is required';
-      else if (form.name.length > 100) next.name = 'Name must not exceed 100 characters';
-    } else {
-      if (!form.code.trim()) next.code = 'Code is required';
-      else if (form.code.length > 50) next.code = 'Code must not exceed 50 characters';
+    if (!form.code.trim()) next.code = 'Code is required';
+    else if (form.code.length > 50) next.code = 'Code must not exceed 50 characters';
 
-      if (!form.currentLocationCode) next.currentLocationCode = 'Current location is required';
-    }
+    if (!form.currentLocationCode) next.currentLocationCode = 'Current location is required';
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -171,10 +160,6 @@ export function CreateResourceDialog({
         };
         await createTrailer(payload).unwrap();
         toast.success('Trailer created successfully');
-      } else {
-        const payload: CreateDriverPayload = { name: form.name.trim() };
-        await createDriver(payload).unwrap();
-        toast.success('Driver created successfully');
       }
       onSuccess?.();
       onClose();
@@ -183,7 +168,6 @@ export function CreateResourceDialog({
     }
   }
 
-  const isDriver = form.kind === 'DRIVER';
   const currentKindLabel = KIND_TABS.find((t) => t.value === form.kind)?.label ?? '';
 
   return (
@@ -213,104 +197,83 @@ export function CreateResourceDialog({
         </div>
 
         <form id={formId} onSubmit={handleSubmit} className='space-y-4 pt-1'>
+          {/* Code */}
+          <div className='space-y-1.5'>
+            <Label htmlFor={`${formId}-code`}>
+              Code <span className='text-destructive'>*</span>
+            </Label>
+            <Input
+              id={`${formId}-code`}
+              type='text'
+              placeholder={
+                form.kind === 'CONTAINER'
+                  ? 'e.g. CONT-001'
+                  : form.kind === 'TRUCK'
+                  ? 'e.g. TRK-001'
+                  : 'e.g. TRL-001'
+              }
+              value={form.code}
+              onChange={(e) => set('code', e.target.value)}
+              className={cn(errors.code && 'border-destructive')}
+            />
+            {errors.code && <p className='text-xs text-destructive'>{errors.code}</p>}
+          </div>
 
-          {/* Driver — name field */}
-          {isDriver ? (
+          {/* Size — containers only */}
+          {form.kind === 'CONTAINER' && (
             <div className='space-y-1.5'>
-              <Label htmlFor={`${formId}-name`}>
-                Driver Name <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id={`${formId}-name`}
-                type='text'
-                placeholder='e.g. Nguyen Van A'
-                value={form.name}
-                onChange={(e) => set('name', e.target.value)}
-                className={cn(errors.name && 'border-destructive')}
-              />
-              {errors.name && <p className='text-xs text-destructive'>{errors.name}</p>}
+              <Label htmlFor={`${formId}-size`}>Size</Label>
+              <Select
+                value={form.size}
+                onValueChange={(v) => set('size', v as ResourceContainerSize)}
+              >
+                <SelectTrigger id={`${formId}-size`} className='w-full'>
+                  <SelectValue placeholder='Select size (optional)' />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTAINER_SIZES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <>
-              {/* Code */}
-              <div className='space-y-1.5'>
-                <Label htmlFor={`${formId}-code`}>
-                  Code <span className='text-destructive'>*</span>
-                </Label>
-                <Input
-                  id={`${formId}-code`}
-                  type='text'
-                  placeholder={
-                    form.kind === 'CONTAINER'
-                      ? 'e.g. CONT-001'
-                      : form.kind === 'TRUCK'
-                      ? 'e.g. TRK-001'
-                      : 'e.g. TRL-001'
-                  }
-                  value={form.code}
-                  onChange={(e) => set('code', e.target.value)}
-                  className={cn(errors.code && 'border-destructive')}
-                />
-                {errors.code && <p className='text-xs text-destructive'>{errors.code}</p>}
-              </div>
-
-              {/* Size — containers only */}
-              {form.kind === 'CONTAINER' && (
-                <div className='space-y-1.5'>
-                  <Label htmlFor={`${formId}-size`}>Size</Label>
-                  <Select
-                    value={form.size}
-                    onValueChange={(v) => set('size', v as ResourceContainerSize)}
-                  >
-                    <SelectTrigger id={`${formId}-size`} className='w-full'>
-                      <SelectValue placeholder='Select size (optional)' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONTAINER_SIZES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Current Location — required, dropdown from existing locations */}
-              <div className='space-y-1.5'>
-                <Label htmlFor={`${formId}-loc`}>
-                  Current Location <span className='text-destructive'>*</span>
-                </Label>
-                <Select
-                  value={form.currentLocationCode}
-                  onValueChange={(v) => set('currentLocationCode', v)}
-                >
-                  <SelectTrigger
-                    id={`${formId}-loc`}
-                    className={cn('w-full', errors.currentLocationCode && 'border-destructive')}
-                  >
-                    <SelectValue placeholder='Select a location' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationCodes.length === 0 ? (
-                      <SelectItem value='__none__' disabled>
-                        No locations available
-                      </SelectItem>
-                    ) : (
-                      locationCodes.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {errors.currentLocationCode && (
-                  <p className='text-xs text-destructive'>{errors.currentLocationCode}</p>
-                )}
-              </div>
-            </>
           )}
+
+          {/* Current Location */}
+          <div className='space-y-1.5'>
+            <Label htmlFor={`${formId}-loc`}>
+              Current Location <span className='text-destructive'>*</span>
+            </Label>
+            <Select
+              value={form.currentLocationCode}
+              onValueChange={(v) => set('currentLocationCode', v)}
+            >
+              <SelectTrigger
+                id={`${formId}-loc`}
+                className={cn('w-full', errors.currentLocationCode && 'border-destructive')}
+              >
+                <SelectValue placeholder='Select a location' />
+              </SelectTrigger>
+              <SelectContent>
+                {locationCodes.length === 0 ? (
+                  <SelectItem value='__none__' disabled>
+                    No locations available
+                  </SelectItem>
+                ) : (
+                  locationCodes.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.currentLocationCode && (
+              <p className='text-xs text-destructive'>{errors.currentLocationCode}</p>
+            )}
+          </div>
         </form>
 
         <DialogFooter className='gap-2 pt-2'>

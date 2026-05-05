@@ -1,5 +1,7 @@
 package com.example.ttcrs.config;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -21,5 +23,10 @@ public class GlobalConfig {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    @Bean
+    public Gson gson() {
+        return new GsonBuilder().create();
     }
 }

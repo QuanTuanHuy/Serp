@@ -96,10 +96,11 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
   const { data: driversData } = useGetDispatcherDriversQuery();
   const drivers = driversData?.data ?? [];
 
-  const handleAssignDriver = (routeIdx: number, driverName: string) => {
+  const handleAssignDriver = (routeIdx: number, driverIdStr: string) => {
+    const driverId = driverIdStr ? Number(driverIdStr) : undefined;
     setRoutes((prev) =>
       prev.map((route, idx) =>
-        idx === routeIdx ? { ...route, driverName: driverName || undefined } : route
+        idx === routeIdx ? { ...route, driverId } : route
       )
     );
   };
@@ -203,7 +204,7 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
     const payload = {
       plans: routes.map((route) => ({
         truckCode: route.truckCode,
-        driverName: route.driverName ?? null,
+        driverId: route.driverId ?? null,
         stops: route.stops.map((stop, idx) => ({
           sequence: idx + 1,
           locationCode: stop.locationCode,
@@ -356,7 +357,7 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                       <div className='mt-2 flex items-center gap-1.5'>
                         <User className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
                         <Select
-                          value={route.driverName ?? ''}
+                          value={route.driverId ? String(route.driverId) : ''}
                           onValueChange={(val) => handleAssignDriver(routeIdx, val)}
                         >
                           <SelectTrigger className='h-7 flex-1 text-xs'>
@@ -365,8 +366,8 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                           <SelectContent>
                             {drivers.map((driver) => (
                               <SelectItem
-                                key={driver.id}
-                                value={driver.name}
+                                key={driver.userId}
+                                value={String(driver.userId)}
                                 className='text-xs'
                               >
                                 {driver.name}

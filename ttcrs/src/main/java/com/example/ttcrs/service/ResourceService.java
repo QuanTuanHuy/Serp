@@ -1,25 +1,12 @@
 package com.example.ttcrs.service;
 
-import com.example.ttcrs.dto.request.resource.CreateContainerDTO;
-import com.example.ttcrs.dto.request.resource.CreateDriverDTO;
-import com.example.ttcrs.dto.request.resource.CreateTrailerDTO;
-import com.example.ttcrs.dto.request.resource.CreateTruckDTO;
-import com.example.ttcrs.dto.request.resource.UpdateContainerDTO;
-import com.example.ttcrs.dto.request.resource.UpdateDriverDTO;
-import com.example.ttcrs.dto.request.resource.UpdateTrailerDTO;
-import com.example.ttcrs.dto.request.resource.UpdateTruckDTO;
-import com.example.ttcrs.dto.response.ContainerResponseDTO;
-import com.example.ttcrs.dto.response.DriverResponseDTO;
-import com.example.ttcrs.dto.response.TrailerResponseDTO;
-import com.example.ttcrs.dto.response.TruckResponseDTO;
-import com.example.ttcrs.entity.ContainerEntity;
-import com.example.ttcrs.entity.DriverEntity;
-import com.example.ttcrs.entity.TrailerEntity;
-import com.example.ttcrs.entity.TruckEntity;
-import com.example.ttcrs.repository.ContainerRepository;
-import com.example.ttcrs.repository.DriverRepository;
-import com.example.ttcrs.repository.TrailerRepository;
-import com.example.ttcrs.repository.TruckRepository;
+import com.example.ttcrs.constant.DriverStatus;
+import com.example.ttcrs.dto.request.resource.*;
+import com.example.ttcrs.dto.response.*;
+import com.example.ttcrs.entity.*;
+import com.example.ttcrs.infrastructure.client.AccountClientAdapter;
+import com.example.ttcrs.infrastructure.client.dto.AccountUserDTO;
+import com.example.ttcrs.repository.*;
 import com.example.ttcrs.util.AuthUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,7 +26,8 @@ public class ResourceService {
     private final ContainerRepository containerRepository;
     private final TruckRepository truckRepository;
     private final TrailerRepository trailerRepository;
-    private final DriverRepository driverRepository;
+    private final DriverStatusRepository driverStatusRepository;
+    private final AccountClientAdapter accountClientAdapter;
     private final AuthUtils authUtils;
 
     private Long resolveTenantId() {
@@ -80,7 +71,7 @@ public class ResourceService {
             throw new IllegalArgumentException("Container not found: " + id);
         }
         log.info("Updating container id={}, tenantId={}", id, tenantId);
-        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
         if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
         return ContainerResponseDTO.fromEntity(containerRepository.save(entity));
     }
@@ -132,7 +123,7 @@ public class ResourceService {
             throw new IllegalArgumentException("Truck not found: " + id);
         }
         log.info("Updating truck id={}, tenantId={}", id, tenantId);
-        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
         if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
         return TruckResponseDTO.fromEntity(truckRepository.save(entity));
     }
@@ -184,7 +175,7 @@ public class ResourceService {
             throw new IllegalArgumentException("Trailer not found: " + id);
         }
         log.info("Updating trailer id={}, tenantId={}", id, tenantId);
-        if (dto.getStatus()              != null) entity.setStatus(dto.getStatus());
+        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
         if (dto.getCurrentLocationCode() != null) entity.setCurrentLocationCode(dto.getCurrentLocationCode());
         return TrailerResponseDTO.fromEntity(trailerRepository.save(entity));
     }
@@ -202,50 +193,49 @@ public class ResourceService {
         trailerRepository.save(entity);
     }
 
-    // ── Drivers ───────────────────────────────────────────────────────────
+    // ── Drivers (from Account service) ────────────────────────────────────
 
-    public List<DriverResponseDTO> getDrivers() {
+    public List<DriverDTO> getDrivers() {
         Long tenantId = resolveTenantId();
         log.debug("Fetching drivers for tenantId={}", tenantId);
-        return driverRepository.findAllByTenantId(tenantId)
-                .stream().map(DriverResponseDTO::fromEntity).toList();
+
+        List<AccountUserDTO> accountUsers = accountClientAdapter.getDriverUsers(tenantId);
+
+        Map<Long, DriverStatusEntity> statusMap = driverStatusRepository.findAllByTenantId(tenantId)
+                .stream()
+                .collect(Collectors.toMap(DriverStatusEntity::getUserId, Function.identity()));
+
+        return accountUsers.stream().map(user -> {
+            DriverStatusEntity statusEntity = statusMap.get(user.getId());
+            DriverStatus status = statusEntity != null ? statusEntity.getStatus() : DriverStatus.AVAILABLE;
+            return DriverDTO.builder()
+                    .userId(user.getId())
+                    .name(user.getFullName())
+                    .email(user.getEmail())
+                    .status(status)
+                    .build();
+        }).toList();
     }
 
     @Transactional
-    public DriverResponseDTO createDriver(CreateDriverDTO dto) {
+    public DriverDTO updateDriverStatus(Long userId, UpdateDriverStatusDTO dto) {
         Long tenantId = resolveTenantId();
-        log.info("Creating driver name={}, tenantId={}", dto.getName(), tenantId);
-        DriverEntity entity = DriverEntity.builder()
-                .tenantId(tenantId)
-                .name(dto.getName().trim())
+        log.info("Updating driver status userId={}, tenantId={}, status={}", userId, tenantId, dto.getStatus());
+
+        DriverStatusEntity entity = driverStatusRepository.findByUserIdAndTenantId(userId, tenantId)
+                .orElse(DriverStatusEntity.builder()
+                        .userId(userId)
+                        .tenantId(tenantId)
+                        .build());
+        entity.setStatus(dto.getStatus());
+        driverStatusRepository.save(entity);
+
+        AccountUserDTO user = accountClientAdapter.getUserById(userId);
+        return DriverDTO.builder()
+                .userId(userId)
+                .name(user != null ? user.getFullName() : "")
+                .email(user != null ? user.getEmail() : "")
+                .status(dto.getStatus())
                 .build();
-        return DriverResponseDTO.fromEntity(driverRepository.save(entity));
-    }
-
-    @Transactional
-    public DriverResponseDTO updateDriver(Long id, UpdateDriverDTO dto) {
-        Long tenantId = resolveTenantId();
-        DriverEntity entity = driverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + id));
-        if (!entity.getTenantId().equals(tenantId)) {
-            throw new IllegalArgumentException("Driver not found: " + id);
-        }
-        log.info("Updating driver id={}, tenantId={}", id, tenantId);
-        if (dto.getName()   != null && !dto.getName().isBlank()) entity.setName(dto.getName().trim());
-        if (dto.getStatus() != null) entity.setStatus(dto.getStatus());
-        return DriverResponseDTO.fromEntity(driverRepository.save(entity));
-    }
-
-    @Transactional
-    public void deleteDriver(Long id) {
-        Long tenantId = resolveTenantId();
-        DriverEntity entity = driverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + id));
-        if (!entity.getTenantId().equals(tenantId)) {
-            throw new IllegalArgumentException("Driver not found: " + id);
-        }
-        log.info("Soft-deleting driver id={}, tenantId={}", id, tenantId);
-        entity.setIsDeleted(true);
-        driverRepository.save(entity);
     }
 }

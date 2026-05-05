@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { Button } from '@/shared/components/ui/button';
+import { useAppSelector } from '@/shared/hooks';
+import { selectUserProfile } from '@/modules/account/store';
 import { useTtcrsSidebar } from '../../contexts/TtcrsSidebarContext';
 
 // ---------------------------------------------------------------------------
@@ -40,35 +42,28 @@ interface NavSection {
   items: NavItem[];
 }
 
-const NAV_SECTIONS: NavSection[] = [
+const DISPATCHER_SECTIONS: NavSection[] = [
   {
     heading: 'Transport',
     items: [
-      {
-        name: 'Requests',
-        href: '/ttcrs/dispatcher/requests',
-        icon: FileText,
-      },
-      {
-        name: 'Locations',
-        href: '/ttcrs/dispatcher/locations',
-        icon: MapPin,
-      },
-      {
-        name: 'Resources',
-        href: '/ttcrs/dispatcher/resources',
-        icon: Package2,
-      },
+      { name: 'Requests',  href: '/ttcrs/dispatcher/requests',  icon: FileText },
+      { name: 'Locations', href: '/ttcrs/dispatcher/locations', icon: MapPin },
+      { name: 'Resources', href: '/ttcrs/dispatcher/resources', icon: Package2 },
     ],
   },
   {
     heading: 'Planning',
     items: [
-      {
-        name: 'Truck Routes',
-        href: '/ttcrs/dispatcher/routes',
-        icon: Truck,
-      },
+      { name: 'Truck Routes', href: '/ttcrs/dispatcher/routes', icon: Truck },
+    ],
+  },
+];
+
+const DRIVER_SECTIONS: NavSection[] = [
+  {
+    heading: 'My Work',
+    items: [
+      { name: 'My Routes', href: '/ttcrs/driver/routes', icon: Route },
     ],
   },
 ];
@@ -81,6 +76,15 @@ export const TtcrsSidebar: React.FC = () => {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useTtcrsSidebar();
   const [isLogoHovered, setIsLogoHovered] = React.useState(false);
+
+  const user = useAppSelector(selectUserProfile);
+  const isDispatcher = user?.roles?.includes('TTCRS_DISPATCHER') ?? false;
+  const isDriver     = user?.roles?.includes('TTCRS_DRIVER') ?? false;
+
+  const navSections: NavSection[] = [
+    ...(isDispatcher ? DISPATCHER_SECTIONS : []),
+    ...(isDriver     ? DRIVER_SECTIONS     : []),
+  ];
 
   const isActive = (item: NavItem) =>
     item.exact
@@ -146,7 +150,7 @@ export const TtcrsSidebar: React.FC = () => {
         )}
 
         {/* Sections */}
-        {NAV_SECTIONS.map((section) => (
+        {navSections.map((section) => (
           <div key={section.heading} className='mb-4'>
             {/* Section heading — hidden when collapsed */}
             {!isCollapsed && (
@@ -199,11 +203,9 @@ export const TtcrsSidebar: React.FC = () => {
         <div className='border-t p-4'>
           <div className='rounded-lg bg-orange-50 p-3 text-xs text-muted-foreground dark:bg-orange-950'>
             <p className='font-medium text-orange-900 dark:text-orange-100'>
-              Dispatcher Console
+              {isDispatcher && !isDriver ? 'Dispatcher Console' : isDriver && !isDispatcher ? 'Driver Console' : 'TTCRS Console'}
             </p>
-            <p className='mt-1'>
-              Truck Trailer Container Routing
-            </p>
+            <p className='mt-1'>Truck Trailer Container Routing</p>
           </div>
         </div>
       )}
