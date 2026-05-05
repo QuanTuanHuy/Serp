@@ -7,6 +7,7 @@ public class PathConstants {
     public static final String API_BASE_PATH = "/api/v1";
 
     public static final String PROJECTS = API_BASE_PATH + "/projects";
+    public static final String PROJECT_COMPONENTS = PROJECTS + "/{projectId}/components";
     public static final String PROJECT_CATEGORIES = API_BASE_PATH + "/project-categories";
     public static final String PROJECT_BLUEPRINTS = API_BASE_PATH + "/project-blueprints";
     public static final String WORKITEMS = API_BASE_PATH + "/projects/{projectId}/work-items";

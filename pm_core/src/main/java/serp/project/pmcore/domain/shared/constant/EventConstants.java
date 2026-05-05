@@ -49,6 +49,18 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class ProjectComponent {
+        public static final String TOPIC = "serp.pm.component.events";
+        public static final String AGGREGATE = "PROJECT_COMPONENT";
+
+        public static class EventType {
+            public static final String PROJECT_COMPONENT_CREATED = "COMPONENT_CREATED";
+            public static final String PROJECT_COMPONENT_UPDATED = "PROJECT_COMPONENT_UPDATED";
+            public static final String PROJECT_COMPONENT_DELETED = "PROJECT_COMPONENT_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class WorkItem {
         public static final String TOPIC = "serp.pm.workitem.events";
         public static final String AGGREGATE = "WORK_ITEM";

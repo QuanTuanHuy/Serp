@@ -14,6 +14,11 @@ import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemResult;
+import serp.project.pmcore.application.workitem.command.component.ManageWorkItemComponentsCommand;
+import serp.project.pmcore.application.workitem.command.component.ManageWorkItemComponentsCommandHandler;
+import serp.project.pmcore.application.workitem.command.component.RemoveWorkItemComponentCommand;
+import serp.project.pmcore.application.workitem.command.component.RemoveWorkItemComponentCommandHandler;
+import serp.project.pmcore.application.workitem.command.component.RemoveWorkItemComponentResult;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommand;
@@ -25,8 +30,11 @@ import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemRes
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusCommand;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
+import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQuery;
+import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQueryHandler;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQuery;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQueryHandler;
+import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.application.workitem.query.get.WorkItemDetailView;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQuery;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQueryHandler;
@@ -41,9 +49,12 @@ import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.ManageWorkItemComponentsRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
+
+import java.util.List;
 
 @RestController
 @RequestMapping(PathConstants.WORKITEMS)
@@ -57,9 +68,12 @@ public class WorkItemController {
     private final DeleteWorkItemCommandHandler deleteWorkItemCommandHandler;
     private final UpdateWorkItemCommandHandler updateWorkItemCommandHandler;
     private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
+    private final ManageWorkItemComponentsCommandHandler manageWorkItemComponentsCommandHandler;
+    private final RemoveWorkItemComponentCommandHandler removeWorkItemComponentCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
+    private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
 
     @GetMapping
     public ResponseEntity<GeneralResponse<PageView<WorkItemSearchView>>> searchWorkItems(
@@ -193,6 +207,73 @@ public class WorkItemController {
                 )
         );
 
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @PostMapping("/{id}/components")
+    public ResponseEntity<GeneralResponse<List<WorkItemComponentView>>> manageWorkItemComponents(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @Valid @RequestBody ManageWorkItemComponentsRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        List<WorkItemComponentView> result = manageWorkItemComponentsCommandHandler.handle(
+                new ManageWorkItemComponentsCommand(
+                        projectId,
+                        id,
+                        request.getComponentIds(),
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/components")
+    public ResponseEntity<GeneralResponse<List<WorkItemComponentView>>> listWorkItemComponents(
+            @PathVariable Long projectId,
+            @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        List<WorkItemComponentView> result = listWorkItemComponentsQueryHandler.handle(
+                new ListWorkItemComponentsQuery(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @DeleteMapping("/{id}/components/{componentId}")
+    public ResponseEntity<GeneralResponse<RemoveWorkItemComponentResult>> removeWorkItemComponent(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @PathVariable Long componentId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        RemoveWorkItemComponentResult result = removeWorkItemComponentCommandHandler.handle(
+                new RemoveWorkItemComponentCommand(
+                        projectId,
+                        id,
+                        componentId,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
         return ResponseEntity.ok(responseUtils.success(result));
     }
 
