@@ -1,10 +1,10 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - PM projects route
+ * Description: Part of Serp Project - PM projects redirect
  */
 
-import { PMProjectsPage } from '@/modules/pm';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <PMProjectsPage />;
+  redirect('/pm/projects/list');
 }
