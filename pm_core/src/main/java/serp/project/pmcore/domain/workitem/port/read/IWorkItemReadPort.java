@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.workitem.port.read;
 
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
@@ -35,4 +36,6 @@ public interface IWorkItemReadPort {
     Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId);
 
     List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId);
+
+    List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId);
 }

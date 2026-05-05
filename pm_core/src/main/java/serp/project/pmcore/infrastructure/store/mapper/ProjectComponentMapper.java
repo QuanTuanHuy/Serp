@@ -62,4 +62,11 @@ public class ProjectComponentMapper extends BaseMapper {
         }
         return models.stream().map(this::toEntity).collect(Collectors.toList());
     }
+
+    public List<ProjectComponentModel> toModels(List<ProjectComponentEntity> entities) {
+        if (entities == null) {
+            return Collections.emptyList();
+        }
+        return entities.stream().map(this::toModel).collect(Collectors.toList());
+    }
 }

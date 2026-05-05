@@ -10,14 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
+import serp.project.pmcore.infrastructure.store.mapper.ProjectComponentMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
 import serp.project.pmcore.infrastructure.store.query.WorkItemQueryBuilder;
+import serp.project.pmcore.infrastructure.store.repository.IWorkItemComponentRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
 import java.util.List;
@@ -29,7 +32,9 @@ import java.util.Optional;
 public class WorkItemReadAdapter implements IWorkItemReadPort {
 
     private final IWorkItemRepository workItemRepository;
+    private final IWorkItemComponentRepository workItemComponentRepository;
     private final WorkItemMapper workItemMapper;
+    private final ProjectComponentMapper projectComponentMapper;
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final WorkItemQueryBuilder queryBuilder;
     private final WorkItemRowMapper rowMapper;
@@ -108,6 +113,13 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     public List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId) {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndParentId(tenantId, parentId)
+        );
+    }
+
+    @Override
+    public List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId) {
+        return projectComponentMapper.toEntities(
+                workItemComponentRepository.findActiveComponentsByWorkItemId(workItemId, tenantId)
         );
     }
 }
