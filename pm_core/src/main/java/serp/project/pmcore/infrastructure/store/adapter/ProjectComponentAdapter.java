@@ -31,8 +31,12 @@ public class ProjectComponentAdapter implements IProjectComponentPort {
 
     @Override
     public ProjectComponentEntity createComponent(ProjectComponentEntity component) {
+        ProjectComponentModel model = projectComponentMapper.toModel(component);
+        if (model == null) {
+            throw new IllegalArgumentException("component must not be null");
+        }
         return projectComponentMapper.toEntity(
-                projectComponentRepository.save(projectComponentMapper.toModel(component))
+                projectComponentRepository.save(model)
         );
     }
 
@@ -40,6 +44,16 @@ public class ProjectComponentAdapter implements IProjectComponentPort {
     public Optional<ProjectComponentEntity> getComponentById(Long componentId, Long projectId, Long tenantId) {
         return projectComponentRepository.findByIdAndProjectIdAndTenantId(componentId, projectId, tenantId)
                 .map(projectComponentMapper::toEntity);
+    }
+
+    @Override
+    public List<ProjectComponentEntity> getComponentsByIds(List<Long> componentIds, Long projectId, Long tenantId) {
+        if (componentIds == null || componentIds.isEmpty()) {
+            return List.of();
+        }
+        return projectComponentMapper.toEntities(
+                projectComponentRepository.findAllByIdInAndProjectIdAndTenantId(componentIds, projectId, tenantId)
+        );
     }
 
     @Override
@@ -66,7 +80,11 @@ public class ProjectComponentAdapter implements IProjectComponentPort {
 
     @Override
     public void updateComponent(ProjectComponentEntity component) {
-        projectComponentRepository.save(projectComponentMapper.toModel(component));
+        ProjectComponentModel model = projectComponentMapper.toModel(component);
+        if (model == null) {
+            throw new IllegalArgumentException("component must not be null");
+        }
+        projectComponentRepository.save(model);
     }
 
     @Override

@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -80,8 +81,8 @@ class WorkItemComponentHandlersTest {
     void manageHandlerShouldAddComponentsAndReturnActiveList() {
         ProjectComponentEntity backend = component(COMPONENT_ID, "Backend");
         ProjectComponentEntity frontend = component(31L, "Frontend");
-        when(projectComponentService.getComponentById(COMPONENT_ID, PROJECT_ID, TENANT_ID)).thenReturn(backend);
-        when(projectComponentService.getComponentById(31L, PROJECT_ID, TENANT_ID)).thenReturn(frontend);
+        when(projectComponentService.getComponentsByIds(List.of(COMPONENT_ID, 31L), PROJECT_ID, TENANT_ID))
+                .thenReturn(List.of(backend, frontend));
         when(workItemReadPort.getActiveComponentsByWorkItemId(WORK_ITEM_ID, TENANT_ID))
                 .thenReturn(List.of(backend, frontend));
 
@@ -95,6 +96,8 @@ class WorkItemComponentHandlersTest {
         ));
 
         verify(accessHelper).requireEditableWorkItem(PROJECT_ID, WORK_ITEM_ID, TENANT_ID, USER_ID, Set.of("devs"));
+        verify(projectComponentService).getComponentsByIds(List.of(COMPONENT_ID, 31L), PROJECT_ID, TENANT_ID);
+        verify(projectComponentService, never()).getComponentById(any(), any(), any());
         verify(workItemWritePort).addWorkItemComponents(WORK_ITEM_ID, TENANT_ID, USER_ID, List.of(COMPONENT_ID, 31L));
         assertEquals(2, result.size());
         assertEquals("Backend", result.getFirst().name());

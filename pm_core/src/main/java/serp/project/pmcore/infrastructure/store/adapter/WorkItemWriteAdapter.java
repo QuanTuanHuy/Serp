@@ -13,7 +13,6 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemDeleteExecutionResult;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.write.IWorkItemWritePort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
-import serp.project.pmcore.infrastructure.store.model.WorkItemComponentModel;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemComponentRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
@@ -24,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -111,6 +109,28 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
                AND deleted_at IS NULL
             """;
 
+    private static final String INSERT_WORK_ITEM_COMPONENT_SQL = """
+            INSERT INTO work_item_components (
+                tenant_id,
+                work_item_id,
+                component_id,
+                created_at,
+                created_by,
+                updated_at,
+                updated_by
+            )
+            VALUES (
+                :tenantId,
+                :workItemId,
+                :componentId,
+                :createdAt,
+                :createdBy,
+                :updatedAt,
+                :updatedBy
+            )
+            ON CONFLICT (tenant_id, work_item_id, component_id) WHERE deleted_at IS NULL DO NOTHING
+            """;
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     private final IWorkItemRepository workItemRepository;
@@ -173,25 +193,18 @@ public class WorkItemWriteAdapter implements IWorkItemWritePort {
         }
 
         List<Long> normalizedIds = new ArrayList<>(new LinkedHashSet<>(componentIds));
-        List<Long> existingIds = workItemComponentRepository.findActiveComponentIds(workItemId, tenantId, normalizedIds);
-        Set<Long> existingSet = new LinkedHashSet<>(existingIds);
-        long now = System.currentTimeMillis();
+        LocalDateTime now = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), java.time.ZoneOffset.UTC);
 
-        List<WorkItemComponentModel> newLinks = normalizedIds.stream()
-                .filter(componentId -> !existingSet.contains(componentId))
-                .map(componentId -> WorkItemComponentModel.builder()
-                        .tenantId(tenantId)
-                        .workItemId(workItemId)
-                        .componentId(componentId)
-                        .createdAt(LocalDateTime.ofInstant(Instant.ofEpochMilli(now), java.time.ZoneOffset.UTC))
-                        .createdBy(userId)
-                        .updatedAt(LocalDateTime.ofInstant(Instant.ofEpochMilli(now), java.time.ZoneOffset.UTC))
-                        .updatedBy(userId)
-                        .build())
-                .collect(Collectors.toCollection(ArrayList::new));
-
-        if (!newLinks.isEmpty()) {
-            workItemComponentRepository.saveAll(newLinks);
+        for (Long componentId : normalizedIds) {
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("tenantId", tenantId)
+                    .addValue("workItemId", workItemId)
+                    .addValue("componentId", componentId)
+                    .addValue("createdAt", now)
+                    .addValue("createdBy", userId)
+                    .addValue("updatedAt", now)
+                    .addValue("updatedBy", userId);
+            jdbcTemplate.update(INSERT_WORK_ITEM_COMPONENT_SQL, params);
         }
     }
 

@@ -23,7 +23,10 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.shared.util.TextNormalizationUtils;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -74,6 +77,33 @@ public class ProjectComponentService implements IProjectComponentService {
                             componentId, projectId, tenantId);
                     return ResourceNotFoundException.component(componentId);
                 });
+    }
+
+    @Override
+    public java.util.List<ProjectComponentEntity> getComponentsByIds(java.util.List<Long> componentIds,
+                                                                     Long projectId,
+                                                                     Long tenantId) {
+        ensureProjectExists(projectId, tenantId);
+        if (componentIds == null || componentIds.isEmpty()) {
+            return java.util.List.of();
+        }
+
+        java.util.List<ProjectComponentEntity> components =
+                projectComponentPort.getComponentsByIds(componentIds, projectId, tenantId);
+        Map<Long, ProjectComponentEntity> componentsById = components.stream()
+                .collect(Collectors.toMap(ProjectComponentEntity::getId, Function.identity()));
+
+        for (Long componentId : componentIds) {
+            if (!componentsById.containsKey(componentId)) {
+                log.warn("Project component not found: componentId={}, projectId={}, tenantId={}",
+                        componentId, projectId, tenantId);
+                throw ResourceNotFoundException.component(componentId);
+            }
+        }
+
+        return componentIds.stream()
+                .map(componentsById::get)
+                .toList();
     }
 
     @Override

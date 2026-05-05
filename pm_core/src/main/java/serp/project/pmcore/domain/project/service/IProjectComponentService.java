@@ -15,6 +15,8 @@ public interface IProjectComponentService {
 
     ProjectComponentEntity getComponentById(Long componentId, Long projectId, Long tenantId);
 
+    java.util.List<ProjectComponentEntity> getComponentsByIds(java.util.List<Long> componentIds, Long projectId, Long tenantId);
+
     PageResult<ProjectComponentEntity> listComponents(Long projectId, Long tenantId, ProjectComponentListCriteria criteria);
 
     ProjectComponentEntity updateComponent(Long componentId,

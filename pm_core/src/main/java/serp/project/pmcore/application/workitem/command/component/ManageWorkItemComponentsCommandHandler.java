@@ -39,13 +39,11 @@ public class ManageWorkItemComponentsCommandHandler
                 command.groupKeys()
         );
 
-        List<ProjectComponentEntity> requestedComponents = command.componentIds().stream()
-                .map(componentId -> projectComponentService.getComponentById(
-                        componentId,
-                        command.projectId(),
-                        command.tenantId()
-                ))
-                .toList();
+        List<ProjectComponentEntity> requestedComponents = projectComponentService.getComponentsByIds(
+                command.componentIds(),
+                command.projectId(),
+                command.tenantId()
+        );
         accessHelper.validateComponentsBelongToProject(requestedComponents, command.projectId());
 
         workItemWritePort.addWorkItemComponents(

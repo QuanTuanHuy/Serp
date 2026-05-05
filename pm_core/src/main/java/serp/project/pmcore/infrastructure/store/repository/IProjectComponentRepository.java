@@ -14,12 +14,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.ProjectComponentModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface IProjectComponentRepository extends JpaRepository<ProjectComponentModel, Long> {
 
     Optional<ProjectComponentModel> findByIdAndProjectIdAndTenantId(Long id, Long projectId, Long tenantId);
+
+    List<ProjectComponentModel> findAllByIdInAndProjectIdAndTenantId(List<Long> ids, Long projectId, Long tenantId);
 
     @Query(value = """
     SELECT *
