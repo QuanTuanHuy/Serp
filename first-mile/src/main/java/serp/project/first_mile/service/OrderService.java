@@ -3,12 +3,15 @@ package serp.project.first_mile.service;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
+import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
+import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
+import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
@@ -38,6 +41,10 @@ public interface OrderService {
 	OrderDetailResponse updateOrder(Long orderId, UpdateOrderRequest request, Long tenantId);
 
 	OrderDetailResponse cancelOrder(Long orderId, Long tenantId, CancelOrderRequest request);
+
+	OrderPaymentInitResponse initiateOrderPayment(Long orderId, Long tenantId);
+
+	OrderPaymentConfirmResponse confirmOrderPayment(Long orderId, Long tenantId, ConfirmOrderPaymentRequest request);
 
 	PickupCheckinResponse checkInPickupOrder(
 			Long orderId,

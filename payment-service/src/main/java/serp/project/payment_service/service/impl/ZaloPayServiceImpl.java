@@ -4,17 +4,10 @@ import serp.project.payment_service.config.ZaloPayConfig;
 import serp.project.payment_service.dto.transaction.TransactionHistoryFilterRequest;
 import serp.project.payment_service.dto.transaction.TransactionHistoryResponse;
 import serp.project.payment_service.dto.zalopay.*;
-import serp.project.payment_service.dto.zalopay.*;
-import serp.project.payment_service.dto.zalopay.*;
 import serp.project.payment_service.entity.ZaloPayTransaction;
 import serp.project.payment_service.entity.ZaloPayRefundTransaction;
-import serp.project.payment_service.enums.MessageType;
-import serp.project.payment_service.enums.ZaloPaySubReturnCode;
-import serp.project.payment_service.kafka.event.PaymentFailedEvent;
-import serp.project.payment_service.kafka.event.PaymentSuccessEvent;
-import serp.project.payment_service.kafka.event.RefundFailedEvent;
-import serp.project.payment_service.kafka.event.RefundSuccessEvent;
 import serp.project.payment_service.kafka.PaymentKafkaMessagePublisher;
+import serp.project.payment_service.enums.ZaloPaySubReturnCode;
 import serp.project.payment_service.repository.ZaloPayTransactionRepository;
 import serp.project.payment_service.repository.ZaloPayRefundTransactionRepository;
 import serp.project.payment_service.repository.specification.TransactionSpecification;
@@ -30,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
@@ -58,6 +52,9 @@ public class ZaloPayServiceImpl implements ZaloPayService {
     private final ZaloPayRefundTransactionRepository refundTransactionRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final PaymentKafkaMessagePublisher kafkaMessagePublisher;
+
+    @Value("${app.notification.default-tenant-id:1}")
+    private Long defaultTenantId;
     
     private static final String DATE_FORMAT = "yyMMdd";
     
@@ -81,7 +78,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
             String itemJson = objectMapper.writeValueAsString(request.getItems());
             
             // Xử lý embed_data
-            String embedDataJson = buildEmbedData(request.getEmbedData());
+            String embedDataJson = buildEmbedData(request.getEmbedData(), request);
             
             // Tạo HMAC input theo format: app_id|app_trans_id|app_user|amount|app_time|embed_data|item
             String hmacInput = String.format("%d|%s|%s|%d|%d|%s|%s",
@@ -240,7 +237,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
     /**
      * Build embed_data JSON string
      */
-    private String buildEmbedData(EmbedData embedData) throws JsonProcessingException {
+    private String buildEmbedData(EmbedData embedData, CreateOrderRequest request) throws JsonProcessingException {
         if (embedData == null) {
             embedData = new EmbedData();
         }
@@ -248,6 +245,23 @@ public class ZaloPayServiceImpl implements ZaloPayService {
         // Set redirect URL mặc định nếu chưa có
         if (embedData.getRedirectUrl() == null || embedData.getRedirectUrl().isEmpty()) {
             embedData.setRedirectUrl(zaloPayConfig.getRedirectUrl());
+        }
+
+        Map<String, Object> merchantInfo = readMerchantInfo(embedData.getMerchantInfo());
+        if (request.getTenantId() != null) {
+            merchantInfo.put("tenantId", request.getTenantId());
+        }
+        if (request.getActorId() != null) {
+            merchantInfo.put("actorId", request.getActorId());
+        }
+        if (request.getUserId() != null) {
+            merchantInfo.put("userId", request.getUserId());
+        }
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            merchantInfo.put("email", request.getEmail().trim());
+        }
+        if (!merchantInfo.isEmpty()) {
+            embedData.setMerchantInfo(objectMapper.writeValueAsString(merchantInfo));
         }
         
         return objectMapper.writeValueAsString(embedData);
@@ -459,144 +473,329 @@ public class ZaloPayServiceImpl implements ZaloPayService {
     }
     
     /**
-     * Gửi thông báo thanh toán thành công qua RabbitMQ
+     * Gửi thông báo thanh toán thành công qua Kafka envelope.
      */
     @Override
     public void sendPaymentSuccessNotification(ZaloPayTransaction transaction) {
         try {
-            // Chỉ gửi thông báo nếu transaction đang ở trạng thái PENDING (tránh gửi trùng lặp)
             if (transaction.getStatus() != ZaloPayTransaction.TransactionStatus.PENDING) {
-                log.info("Transaction {} not in PENDING status (current: {}). Skip sending success notification.", 
+                log.info("Transaction {} not in PENDING status (current: {}). Skip sending success notification.",
                         transaction.getAppTransId(), transaction.getStatus());
                 return;
             }
-            
-            // Lấy email từ transaction (đã lưu từ CreateOrderRequest)
-            String email = transaction.getEmail();
-            
-            // Fallback: nếu không có email trong transaction, thử lấy từ embed_data
-            if (email == null || email.isEmpty()) {
-                email = extractEmailFromEmbedData(transaction.getEmbedData());
-            }
-            
-            if (email == null || email.isEmpty()) {
-                log.warn("No email found in transaction: {}. Skip sending notification.", 
+
+            String email = resolveEmail(transaction);
+            if (email == null || email.isBlank()) {
+                log.warn("No email found in transaction: {}. Skip sending success notification.",
                         transaction.getAppTransId());
                 return;
             }
-            
-            // Lấy title từ transaction hoặc dùng mặc định
-            String title = transaction.getTitle();
-            if (title == null || title.isEmpty()) {
-                title = "Đơn hàng #" + transaction.getAppTransId();
-            }
-            
-            // Tạo event
-            PaymentSuccessEvent event = PaymentSuccessEvent.builder()
-                    .email(email)
-                    .appUser(transaction.getAppUser())
-                    .title(title)
-                    .description(transaction.getDescription())
-                    .appTransId(transaction.getAppTransId())
-                    .amount(transaction.getAmount())
-                    .paidAt(LocalDateTime.now())
-                    .build();
-            
-            kafkaMessagePublisher.publish(
-                    MessageType.PAYMENT_SUCCESS,
-                    buildKafkaKey(event.getAppUser(), event.getAppTransId()),
-                    event
+
+            NotificationContext context = resolveNotificationContext(transaction);
+            String title = resolveTitle(transaction);
+            String key = buildKafkaKey(transaction.getAppUser(), transaction.getAppTransId());
+
+            Map<String, Object> metadata = baseMetadata(transaction);
+            metadata.put("status", "SUCCESS");
+            metadata.put("paidAt", LocalDateTime.now().toString());
+
+            kafkaMessagePublisher.publishEmailRequested(
+                    key,
+                    context.tenantId(),
+                    context.actorId(),
+                    "PAYMENT_TRANSACTION",
+                    transaction.getAppTransId(),
+                    buildEmailPayload(
+                            email,
+                            "Thanh toán thành công - " + title,
+                            buildPaymentMessageBody(title, transaction.getAppTransId(), transaction.getAmount(), null, true),
+                            "PAYMENT_SUCCESS",
+                            "MEDIUM",
+                            metadata
+                    )
             );
-            
-            log.info("Payment success event published to Kafka for transaction: {} to email: {}", 
-                    transaction.getAppTransId(), email);
-            
+
+            if (context.userId() != null) {
+                kafkaMessagePublisher.publishUserNotificationRequested(
+                        key,
+                        context.tenantId(),
+                        context.actorId(),
+                        "PAYMENT_TRANSACTION",
+                        transaction.getAppTransId(),
+                        buildInAppNotificationPayload(
+                                context.userId(),
+                                context.tenantId(),
+                                "Thanh toán thành công",
+                                "Đơn hàng " + title + " đã thanh toán thành công.",
+                                "SUCCESS",
+                                "MEDIUM",
+                                transaction.getAppTransId(),
+                                metadata
+                        )
+                );
+            }
+
+            log.info("Payment success notification published for transaction={} tenantId={}",
+                    transaction.getAppTransId(), context.tenantId());
         } catch (Exception e) {
-            log.error("Failed to send payment success notification for transaction: {}. Error: {}", 
+            log.error("Failed to send payment success notification for transaction: {}. Error: {}",
                     transaction.getAppTransId(), e.getMessage(), e);
-            // Không throw exception để không block flow chính
         }
     }
-    
+
     /**
-     * Gửi thông báo thanh toán thất bại qua RabbitMQ
+     * Gửi thông báo thanh toán thất bại qua Kafka envelope.
      */
     @Override
     public void sendPaymentFailedNotification(ZaloPayTransaction transaction, String failureReason) {
         try {
-            // Chỉ gửi thông báo nếu transaction đang ở trạng thái PENDING (tránh gửi trùng lặp)
-            if (transaction.getStatus() != ZaloPayTransaction.TransactionStatus.PENDING) {
-                log.info("Transaction {} not in PENDING status (current: {}). Skip sending failed notification.", 
-                        transaction.getAppTransId(), transaction.getStatus());
-                return;
-            }
-            
-            // Lấy email từ transaction
-            String email = transaction.getEmail();
-            
-            // Fallback: nếu không có email trong transaction, thử lấy từ embed_data
-            if (email == null || email.isEmpty()) {
-                email = extractEmailFromEmbedData(transaction.getEmbedData());
-            }
-            
-            if (email == null || email.isEmpty()) {
-                log.warn("No email found in transaction: {}. Skip sending failure notification.", 
+            String email = resolveEmail(transaction);
+            if (email == null || email.isBlank()) {
+                log.warn("No email found in transaction: {}. Skip sending failed notification.",
                         transaction.getAppTransId());
                 return;
             }
-            
-            // Lấy title từ transaction hoặc dùng mặc định
-            String title = transaction.getTitle();
-            if (title == null || title.isEmpty()) {
-                title = "Đơn hàng #" + transaction.getAppTransId();
-            }
-            
-            // Tạo event
-            PaymentFailedEvent event = PaymentFailedEvent.builder()
-                    .email(email)
-                    .appUser(transaction.getAppUser())
-                    .title(title)
-                    .description(transaction.getDescription())
-                    .appTransId(transaction.getAppTransId())
-                    .amount(transaction.getAmount())
-                    .failureReason(failureReason)
-                    .failedAt(LocalDateTime.now())
-                    .build();
-            
-            kafkaMessagePublisher.publish(
-                    MessageType.PAYMENT_FAILED,
-                    buildKafkaKey(event.getAppUser(), event.getAppTransId()),
-                    event
+
+            NotificationContext context = resolveNotificationContext(transaction);
+            String title = resolveTitle(transaction);
+            String key = buildKafkaKey(transaction.getAppUser(), transaction.getAppTransId());
+
+            Map<String, Object> metadata = baseMetadata(transaction);
+            metadata.put("status", "FAILED");
+            metadata.put("failureReason", failureReason);
+            metadata.put("failedAt", LocalDateTime.now().toString());
+
+            kafkaMessagePublisher.publishEmailRequested(
+                    key,
+                    context.tenantId(),
+                    context.actorId(),
+                    "PAYMENT_TRANSACTION",
+                    transaction.getAppTransId(),
+                    buildEmailPayload(
+                            email,
+                            "Thanh toán thất bại - " + title,
+                            buildPaymentMessageBody(title, transaction.getAppTransId(), transaction.getAmount(), failureReason, false),
+                            "PAYMENT_FAILED",
+                            "HIGH",
+                            metadata
+                    )
             );
-            
-            log.info("Payment failed event published to Kafka for transaction: {} to email: {}", 
-                    transaction.getAppTransId(), email);
-            
+
+            if (context.userId() != null) {
+                kafkaMessagePublisher.publishUserNotificationRequested(
+                        key,
+                        context.tenantId(),
+                        context.actorId(),
+                        "PAYMENT_TRANSACTION",
+                        transaction.getAppTransId(),
+                        buildInAppNotificationPayload(
+                                context.userId(),
+                                context.tenantId(),
+                                "Thanh toán thất bại",
+                                "Đơn hàng " + title + " thanh toán thất bại: " + failureReason,
+                                "ERROR",
+                                "HIGH",
+                                transaction.getAppTransId(),
+                                metadata
+                        )
+                );
+            }
+
+            log.info("Payment failed notification published for transaction={} tenantId={}",
+                    transaction.getAppTransId(), context.tenantId());
         } catch (Exception e) {
-            log.error("Failed to send payment failed notification for transaction: {}. Error: {}", 
+            log.error("Failed to send payment failed notification for transaction: {}. Error: {}",
                     transaction.getAppTransId(), e.getMessage(), e);
-            // Không throw exception để không block flow chính
         }
     }
-    
+
+    private String resolveEmail(ZaloPayTransaction transaction) {
+        if (transaction.getEmail() != null && !transaction.getEmail().isBlank()) {
+            return transaction.getEmail().trim();
+        }
+        return extractEmailFromEmbedData(transaction.getEmbedData());
+    }
+
     /**
-     * Trích xuất email từ embed_data JSON
+     * Trích xuất email từ embed_data JSON.
      */
     private String extractEmailFromEmbedData(String embedDataJson) {
         try {
-            if (embedDataJson == null || embedDataJson.isEmpty()) {
+            Map<String, Object> embedData = readEmbedData(embedDataJson);
+            if (embedData.isEmpty()) {
                 return null;
             }
-            
-            // Parse JSON và lấy email
-            @SuppressWarnings("unchecked")
-            Map<String, Object> embedData = objectMapper.readValue(embedDataJson, Map.class);
-            return (String) embedData.get("email");
-            
+            Object directEmail = embedData.get("email");
+            if (directEmail instanceof String value && !value.isBlank()) {
+                return value.trim();
+            }
+            Map<String, Object> merchantInfo = extractMerchantInfo(embedData);
+            Object merchantEmail = merchantInfo.get("email");
+            if (merchantEmail instanceof String value && !value.isBlank()) {
+                return value.trim();
+            }
+            return null;
         } catch (Exception e) {
             log.error("Failed to extract email from embed_data: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String resolveTitle(ZaloPayTransaction transaction) {
+        if (transaction.getTitle() == null || transaction.getTitle().isBlank()) {
+            return "Đơn hàng #" + transaction.getAppTransId();
+        }
+        return transaction.getTitle();
+    }
+
+    private NotificationContext resolveNotificationContext(ZaloPayTransaction transaction) {
+        Map<String, Object> embedData = readEmbedData(transaction.getEmbedData());
+        Map<String, Object> merchantInfo = extractMerchantInfo(embedData);
+
+        Long tenantId = firstNonNull(
+                tryParseLong(merchantInfo.get("tenantId")),
+                tryParseLong(embedData.get("tenantId")),
+                defaultTenantId
+        );
+        Long actorId = firstNonNull(
+                tryParseLong(merchantInfo.get("actorId")),
+                tryParseLong(embedData.get("actorId"))
+        );
+        Long userId = firstNonNull(
+                tryParseLong(merchantInfo.get("userId")),
+                tryParseLong(embedData.get("userId")),
+                tryParseLong(transaction.getAppUser())
+        );
+        return new NotificationContext(tenantId, actorId, userId);
+    }
+
+    private Map<String, Object> readEmbedData(String embedDataJson) {
+        try {
+            if (embedDataJson == null || embedDataJson.isBlank()) {
+                return Collections.emptyMap();
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> embedData = objectMapper.readValue(embedDataJson, Map.class);
+            return embedData != null ? embedData : Collections.emptyMap();
+        } catch (Exception e) {
+            log.warn("Failed to parse embed_data JSON: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private Map<String, Object> extractMerchantInfo(Map<String, Object> embedData) {
+        Object rawMerchantInfo = embedData.get("merchantinfo");
+        if (rawMerchantInfo == null) {
+            rawMerchantInfo = embedData.get("merchantInfo");
+        }
+        return readMerchantInfo(rawMerchantInfo);
+    }
+
+    private Map<String, Object> readMerchantInfo(Object rawMerchantInfo) {
+        try {
+            if (rawMerchantInfo == null) {
+                return new HashMap<>();
+            }
+            if (rawMerchantInfo instanceof Map<?, ?> sourceMap) {
+                Map<String, Object> data = new HashMap<>();
+                sourceMap.forEach((key, value) -> data.put(String.valueOf(key), value));
+                return data;
+            }
+            if (rawMerchantInfo instanceof String text && !text.isBlank()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = objectMapper.readValue(text, Map.class);
+                return data != null ? new HashMap<>(data) : new HashMap<>();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse merchantinfo: {}", e.getMessage());
+        }
+        return new HashMap<>();
+    }
+
+    private Map<String, Object> baseMetadata(ZaloPayTransaction transaction) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("appUser", transaction.getAppUser());
+        metadata.put("appTransId", transaction.getAppTransId());
+        metadata.put("amount", transaction.getAmount());
+        metadata.put("description", transaction.getDescription());
+        metadata.put("sourceService", "payment-service");
+        return metadata;
+    }
+
+    private Map<String, Object> buildEmailPayload(String email, String subject, String body,
+                                                  String type, String priority, Map<String, Object> metadata) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("toEmails", List.of(email));
+        payload.put("subject", subject);
+        payload.put("body", body);
+        payload.put("isHtml", false);
+        payload.put("type", type);
+        payload.put("priority", priority);
+        payload.put("provider", "JAVA_MAIL");
+        payload.put("metadata", metadata);
+        return payload;
+    }
+
+    private Map<String, Object> buildInAppNotificationPayload(Long userId, Long tenantId, String title,
+                                                              String message, String type, String priority,
+                                                              String sourceEventId,
+                                                              Map<String, Object> metadata) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("userId", userId);
+        payload.put("tenantId", tenantId);
+        payload.put("title", title);
+        payload.put("message", message);
+        payload.put("type", type);
+        payload.put("category", "PAYMENT");
+        payload.put("priority", priority);
+        payload.put("sourceService", "payment-service");
+        payload.put("sourceEventId", sourceEventId);
+        payload.put("deliveryChannels", List.of("IN_APP"));
+        payload.put("metadata", metadata);
+        return payload;
+    }
+
+    private String buildPaymentMessageBody(String title, String appTransId, Long amount,
+                                           String failureReason, boolean success) {
+        if (success) {
+            return "Đơn hàng " + title + " (mã " + appTransId + ") đã thanh toán thành công với số tiền "
+                    + amount + " VND.";
+        }
+        return "Đơn hàng " + title + " (mã " + appTransId + ") thanh toán thất bại."
+                + (failureReason != null && !failureReason.isBlank() ? " Lý do: " + failureReason : "");
+    }
+
+    @SafeVarargs
+    private final <T> T firstNonNull(T... values) {
+        if (values == null) {
+            return null;
+        }
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private Long tryParseLong(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+        if (rawValue instanceof Number number) {
+            return number.longValue();
+        }
+        if (rawValue instanceof String text && !text.isBlank()) {
+            try {
+                return Long.parseLong(text.trim());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private record NotificationContext(Long tenantId, Long actorId, Long userId) {
     }
     
     @Override
@@ -1528,37 +1727,59 @@ public class ZaloPayServiceImpl implements ZaloPayService {
                         refundTransaction.getMRefundId());
                 return;
             }
-            
-            // Lấy title từ original transaction
-            String title = originalTransaction.getTitle();
-            if (title == null || title.isEmpty()) {
-                title = "Đơn hàng #" + originalTransaction.getAppTransId();
-            }
-            
-            // Tạo event
-            RefundSuccessEvent event = RefundSuccessEvent.builder()
-                    .email(email)
-                    .appUser(originalTransaction.getAppUser())
-                    .title(title)
-                    .description(originalTransaction.getDescription())
-                    .mRefundId(refundTransaction.getMRefundId())
-                    .zpTransId(refundTransaction.getZpTransId())
-                    .amount(refundTransaction.getAmount())
-                    .refundFeeAmount(refundTransaction.getRefundFeeAmount())
-                    .refundReason(refundTransaction.getDescription())
-                    .refundedAt(refundTransaction.getRefundedAt() != null ? 
-                            refundTransaction.getRefundedAt() : LocalDateTime.now())
-                    .build();
-            
-            kafkaMessagePublisher.publish(
-                    MessageType.REFUND_SUCCESS,
-                    buildKafkaKey(event.getAppUser(), event.getMRefundId()),
-                    event
+
+            NotificationContext context = resolveNotificationContext(originalTransaction);
+            String title = resolveTitle(originalTransaction);
+            String key = buildKafkaKey(originalTransaction.getAppUser(), refundTransaction.getMRefundId());
+
+            Map<String, Object> metadata = baseMetadata(originalTransaction);
+            metadata.put("status", "SUCCESS");
+            metadata.put("mRefundId", refundTransaction.getMRefundId());
+            metadata.put("zpTransId", refundTransaction.getZpTransId());
+            metadata.put("refundAmount", refundTransaction.getAmount());
+            metadata.put("refundFeeAmount", refundTransaction.getRefundFeeAmount());
+            metadata.put("refundedAt", refundTransaction.getRefundedAt() != null
+                    ? refundTransaction.getRefundedAt().toString()
+                    : LocalDateTime.now().toString());
+
+            kafkaMessagePublisher.publishEmailRequested(
+                    key,
+                    context.tenantId(),
+                    context.actorId(),
+                    "PAYMENT_REFUND",
+                    refundTransaction.getMRefundId(),
+                    buildEmailPayload(
+                            email,
+                            "Hoàn tiền thành công - " + title,
+                            "Yêu cầu hoàn tiền " + refundTransaction.getMRefundId() + " đã được xử lý thành công.",
+                            "REFUND_SUCCESS",
+                            "MEDIUM",
+                            metadata
+                    )
             );
-            
-            log.info("Refund success event published to Kafka for: {} to email: {}", 
-                    refundTransaction.getMRefundId(), email);
-            
+
+            if (context.userId() != null) {
+                kafkaMessagePublisher.publishUserNotificationRequested(
+                        key,
+                        context.tenantId(),
+                        context.actorId(),
+                        "PAYMENT_REFUND",
+                        refundTransaction.getMRefundId(),
+                        buildInAppNotificationPayload(
+                                context.userId(),
+                                context.tenantId(),
+                                "Hoàn tiền thành công",
+                                "Yêu cầu hoàn tiền " + refundTransaction.getMRefundId() + " đã thành công.",
+                                "SUCCESS",
+                                "MEDIUM",
+                                refundTransaction.getMRefundId(),
+                                metadata
+                        )
+                );
+            }
+
+            log.info("Refund success notification published for mRefundId={} tenantId={}",
+                    refundTransaction.getMRefundId(), context.tenantId());
         } catch (Exception e) {
             log.error("Failed to send refund success notification for: {}. Error: {}", 
                     refundTransaction.getMRefundId(), e.getMessage(), e);
@@ -1589,36 +1810,58 @@ public class ZaloPayServiceImpl implements ZaloPayService {
                         refundTransaction.getMRefundId());
                 return;
             }
-            
-            // Lấy title từ original transaction
-            String title = originalTransaction.getTitle();
-            if (title == null || title.isEmpty()) {
-                title = "Đơn hàng #" + originalTransaction.getAppTransId();
-            }
-            
-            // Tạo event
-            RefundFailedEvent event = RefundFailedEvent.builder()
-                    .email(email)
-                    .appUser(originalTransaction.getAppUser())
-                    .title(title)
-                    .description(originalTransaction.getDescription())
-                    .mRefundId(refundTransaction.getMRefundId())
-                    .zpTransId(refundTransaction.getZpTransId())
-                    .amount(refundTransaction.getAmount())
-                    .refundReason(refundTransaction.getDescription())
-                    .failureReason(failureReason)
-                    .failedAt(LocalDateTime.now())
-                    .build();
-            
-            kafkaMessagePublisher.publish(
-                    MessageType.REFUND_FAILED,
-                    buildKafkaKey(event.getAppUser(), event.getMRefundId()),
-                    event
+
+            NotificationContext context = resolveNotificationContext(originalTransaction);
+            String title = resolveTitle(originalTransaction);
+            String key = buildKafkaKey(originalTransaction.getAppUser(), refundTransaction.getMRefundId());
+
+            Map<String, Object> metadata = baseMetadata(originalTransaction);
+            metadata.put("status", "FAILED");
+            metadata.put("mRefundId", refundTransaction.getMRefundId());
+            metadata.put("zpTransId", refundTransaction.getZpTransId());
+            metadata.put("refundAmount", refundTransaction.getAmount());
+            metadata.put("failureReason", failureReason);
+            metadata.put("failedAt", LocalDateTime.now().toString());
+
+            kafkaMessagePublisher.publishEmailRequested(
+                    key,
+                    context.tenantId(),
+                    context.actorId(),
+                    "PAYMENT_REFUND",
+                    refundTransaction.getMRefundId(),
+                    buildEmailPayload(
+                            email,
+                            "Hoàn tiền thất bại - " + title,
+                            "Yêu cầu hoàn tiền " + refundTransaction.getMRefundId() + " thất bại: " + failureReason,
+                            "REFUND_FAILED",
+                            "HIGH",
+                            metadata
+                    )
             );
-            
-            log.info("Refund failed event published to Kafka for: {} to email: {}", 
-                    refundTransaction.getMRefundId(), email);
-            
+
+            if (context.userId() != null) {
+                kafkaMessagePublisher.publishUserNotificationRequested(
+                        key,
+                        context.tenantId(),
+                        context.actorId(),
+                        "PAYMENT_REFUND",
+                        refundTransaction.getMRefundId(),
+                        buildInAppNotificationPayload(
+                                context.userId(),
+                                context.tenantId(),
+                                "Hoàn tiền thất bại",
+                                "Yêu cầu hoàn tiền " + refundTransaction.getMRefundId()
+                                        + " thất bại: " + failureReason,
+                                "ERROR",
+                                "HIGH",
+                                refundTransaction.getMRefundId(),
+                                metadata
+                        )
+                );
+            }
+
+            log.info("Refund failed notification published for mRefundId={} tenantId={}",
+                    refundTransaction.getMRefundId(), context.tenantId());
         } catch (Exception e) {
             log.error("Failed to send refund failed notification for: {}. Error: {}", 
                     refundTransaction.getMRefundId(), e.getMessage(), e);

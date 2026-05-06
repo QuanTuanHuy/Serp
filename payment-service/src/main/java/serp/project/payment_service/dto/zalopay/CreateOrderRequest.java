@@ -80,6 +80,24 @@ public class CreateOrderRequest {
     @Email(message = "Email không hợp lệ")
     @Size(max = 100, message = "Email không được vượt quá 100 ký tự")
     private String email;
+
+    /**
+     * Tenant ID để tích hợp event thông báo nội bộ
+     */
+    @Positive(message = "Tenant ID phải là số dương")
+    private Long tenantId;
+
+    /**
+     * Actor ID khởi tạo giao dịch (optional)
+     */
+    @Positive(message = "Actor ID phải là số dương")
+    private Long actorId;
+
+    /**
+     * User ID nhận thông báo in-app (optional)
+     */
+    @Positive(message = "User ID phải là số dương")
+    private Long userId;
     
     /**
      * Địa chỉ người dùng

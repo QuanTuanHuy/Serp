@@ -6,7 +6,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_service}
     username: ${SPRING_DATASOURCE_USERNAME:serp}
-    password: ${SPRING_DATASOURCE_PASSWORD:serp}
+    password: ${SPRING_DATASOURCE_PASSWORD:serp123}
   jpa:
     hibernate:
       ddl-auto: none
@@ -37,12 +37,20 @@ spring:
 
 # Kafka topics (defaults align with SERP conventions)
 app:
+  notification:
+    default-tenant-id: ${PAYMENT_NOTIFICATION_DEFAULT_TENANT_ID:1}
   kafka:
+    source: ${PAYMENT_KAFKA_SOURCE:payment-service}
     topics:
       payment-success: ${PAYMENT_SUCCESS_TOPIC:PAYMENT_SUCCESS}
       payment-failed: ${PAYMENT_FAILED_TOPIC:PAYMENT_FAILED}
       refund-success: ${REFUND_SUCCESS_TOPIC:REFUND_SUCCESS}
       refund-failed: ${REFUND_FAILED_TOPIC:REFUND_FAILED}
+      email-events: ${EMAIL_EVENTS_TOPIC:serp.email.events}
+      user-notification-events: ${USER_NOTIFICATION_EVENTS_TOPIC:serp.notification.user.events}
+    event-types:
+      email-send-requested: ${EMAIL_SEND_REQUESTED_EVENT_TYPE:email.send.requested}
+      notification-create-requested: ${NOTIFICATION_CREATE_REQUESTED_EVENT_TYPE:notification.create.requested}
 
 # ZaloPay Configuration
 zalopay:

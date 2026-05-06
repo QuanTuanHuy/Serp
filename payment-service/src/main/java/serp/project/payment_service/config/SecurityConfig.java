@@ -31,12 +31,16 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_POST_ENDPOINTS = {
             "/v1/payments/zalopay/callback",  // ZaloPay callback phải public (no /api prefix)
-            "/v1/payments/zalopay/create-order"
+            "/v1/payments/zalopay/create-order",
+            "/v1/payments/*/callback",
+            "/v1/payments/*/create-order"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             "/v1/payments/zalopay/health",   // Health check (no /api prefix)
-            "/v1/payments/zalopay/banks"     // Lấy danh sách ngân hàng (no /api prefix)
+            "/v1/payments/zalopay/banks",     // Lấy danh sách ngân hàng (no /api prefix)
+            "/v1/payments/*/health",
+            "/v1/payments/*/banks"
     };
 
     private static final String[] ACTUATOR_ENDPOINTS = {
