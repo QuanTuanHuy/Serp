@@ -10,7 +10,7 @@ services:
       - serp-network
 
   serp-postgre-db:
-    image: postgres:16
+    image: postgis/postgis:17-3.5-alpine
     container_name: serp-postgre-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-serp}

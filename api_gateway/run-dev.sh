@@ -6,4 +6,4 @@ if [ -f .env ]; then
   set +a
 fi
 
-CGO_ENABLED=0 go run src/main.go
+go run src/main.go
