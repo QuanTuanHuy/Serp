@@ -107,6 +107,10 @@ external:
       host: localhost
       port: "8086"
       timeout: 15s
+    paymentService:
+      host: localhost
+      port: "8096"
+      timeout: 15s
     notificationService:
       host: localhost
       port: "8090"
