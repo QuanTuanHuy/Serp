@@ -44,6 +44,7 @@ type ExternalServiceProperties struct {
 	SalesService        ServiceProperty
 	DiscussService      ServiceProperty
 	PmCoreService       ServiceProperty
+	TtcrsService        ServiceProperty
 }
 
 func (e ExternalServiceProperties) Prefix() string {
