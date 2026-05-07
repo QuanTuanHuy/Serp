@@ -27,6 +27,9 @@ import type {
   UpdateTruckPayload,
   UpdateTrailerPayload,
   UpdateDriverPayload,
+  CancelRoutePayload,
+  CompleteStopPayload,
+  UploadEvidenceResponse,
 } from '../types';
 
 export const ttcrsApi = api.injectEndpoints({
@@ -435,6 +438,89 @@ export const ttcrsApi = api.injectEndpoints({
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
     }),
+
+    // -------------------------------------------------------------------------
+    // Driver execution actions
+    // -------------------------------------------------------------------------
+
+    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/start
+    startRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>({
+      query: (id) => ({ url: `/driver/transport-plans/${id}/start`, method: 'PATCH' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, id) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+      ],
+    }),
+
+    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/cancel
+    cancelRoute: builder.mutation<
+      TtcrsApiResponse<TransportPlanDetail>,
+      { id: number; body: CancelRoutePayload }
+    >({
+      query: ({ id, body }) => ({
+        url: `/driver/transport-plans/${id}/cancel`,
+        method: 'PATCH',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+      ],
+    }),
+
+    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/stops/{seq}/arrive
+    arriveAtStop: builder.mutation<
+      TtcrsApiResponse<TransportPlanDetail>,
+      { id: number; seq: number }
+    >({
+      query: ({ id, seq }) => ({
+        url: `/driver/transport-plans/${id}/stops/${seq}/arrive`,
+        method: 'PATCH',
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+      ],
+    }),
+
+    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/stops/{seq}/complete
+    completeStop: builder.mutation<
+      TtcrsApiResponse<TransportPlanDetail>,
+      { id: number; seq: number; body: CompleteStopPayload }
+    >({
+      query: ({ id, seq, body }) => ({
+        url: `/driver/transport-plans/${id}/stops/${seq}/complete`,
+        method: 'PATCH',
+        body,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+      ],
+    }),
+
+    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/restore
+    restoreRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>({
+      query: (id) => ({ url: `/driver/transport-plans/${id}/restore`, method: 'PATCH' }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: (_r, _e, id) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+      ],
+    }),
+
+    // POST /ttcrs/api/v1/driver/transport-plans/evidence/upload
+    uploadEvidence: builder.mutation<TtcrsApiResponse<UploadEvidenceResponse>, FormData>({
+      query: (formData) => ({
+        url: '/driver/transport-plans/evidence/upload',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: { service: 'ttcrs' },
+    }),
   }),
 });
 
@@ -467,4 +553,10 @@ export const {
   useGetTransportPlanDetailQuery,
   useGetMyTransportPlansQuery,
   useGetMyTransportPlanDetailQuery,
+  useStartRouteMutation,
+  useCancelRouteMutation,
+  useArriveAtStopMutation,
+  useCompleteStopMutation,
+  useRestoreRouteMutation,
+  useUploadEvidenceMutation,
 } = ttcrsApi;

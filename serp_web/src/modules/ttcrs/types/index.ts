@@ -297,10 +297,15 @@ export interface TransportPlanStopDetail {
   id: number;
   sequence: number;
   locationCode: string;
+  lat: number | null;
+  lng: number | null;
   action: StopAction;
   plannedArrivalTime: string | null;
   actualArrivalTime: string | null;
+  isCompleted: boolean;
   requestId: number | null;
+  requestSrcLocationCode: string | null;
+  requestDestLocationCode: string | null;
 }
 
 export interface TransportPlanDetail {
@@ -314,6 +319,30 @@ export interface TransportPlanDetail {
   status: TransportPlanStatus;
   createdStamp: string | null;
   stops: TransportPlanStopDetail[];
+  // Driver execution fields
+  cancelReason: string | null;
+  currentStop: number | null;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  totalDistance: number | null;
+  totalTime: number | null;
+}
+
+// -------------------------------------------------------------------------
+// Driver action payloads
+// -------------------------------------------------------------------------
+
+export interface CancelRoutePayload {
+  reason: string;
+}
+
+export interface CompleteStopPayload {
+  evidenceUrl: string | null;
+  totalDistance: number | null;
+}
+
+export interface UploadEvidenceResponse {
+  url: string;
 }
 
 // Normalized row used by the Resources page

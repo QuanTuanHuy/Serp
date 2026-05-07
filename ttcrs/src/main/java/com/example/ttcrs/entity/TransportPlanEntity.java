@@ -43,6 +43,24 @@ public class TransportPlanEntity {
     @Builder.Default
     private TransportPlanStatus status = TransportPlanStatus.CREATED;
 
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+
+    @Column(name = "current_stop")
+    private Integer currentStop;
+
+    @Column(name = "actual_start_time")
+    private LocalDateTime actualStartTime;
+
+    @Column(name = "actual_end_time")
+    private LocalDateTime actualEndTime;
+
+    @Column(name = "total_distance")
+    private Double totalDistance;
+
+    @Column(name = "total_time")
+    private Integer totalTime;
+
     @CreationTimestamp
     @Column(name = "created_stamp")
     private LocalDateTime createdStamp;

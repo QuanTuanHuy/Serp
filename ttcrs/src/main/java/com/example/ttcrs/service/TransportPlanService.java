@@ -2,9 +2,11 @@ package com.example.ttcrs.service;
 
 import com.example.ttcrs.constant.RequestStatus;
 import com.example.ttcrs.constant.StopAction;
+import com.example.ttcrs.constant.TransportPlanStatus;
 import com.example.ttcrs.dto.request.transportplan.SaveTransportPlanDTO;
 import com.example.ttcrs.dto.response.TransportPlanDetailDTO;
 import com.example.ttcrs.dto.response.TransportPlanResponseDTO;
+import com.example.ttcrs.entity.LocationEntity;
 import com.example.ttcrs.entity.RequestEntity;
 import com.example.ttcrs.entity.TransportPlanEntity;
 import com.example.ttcrs.entity.TransportPlanStopEntity;
@@ -38,15 +40,14 @@ public class TransportPlanService {
     private final TransportPlanStopRepository transportPlanStopRepository;
     private final TruckRepository             truckRepository;
     private final RequestRepository           requestRepository;
+    private final LocationRepository          locationRepository;
     private final AccountClientAdapter        accountClientAdapter;
     private final AuthUtils                   authUtils;
 
-    /**
-     * Persists the reviewed transport plan (Step 3 "Finish").
-     * One {@link TransportPlanEntity} per truck route,
-     * one {@link TransportPlanStopEntity} per stop.
-     * Also links each operational request to its transport plan.
-     */
+    // =========================================================================
+    // Save / List / Detail (existing)
+    // =========================================================================
+
     @Transactional
     public List<TransportPlanResponseDTO> savePlans(SaveTransportPlanDTO dto) {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -55,7 +56,6 @@ public class TransportPlanService {
         Map<String, TruckEntity> truckByCode = truckRepository.findAllByTenantId(tenantId)
                 .stream().collect(Collectors.toMap(TruckEntity::getCode, Function.identity(), (a, b) -> a));
 
-        // Pre-load all TTCRS_DRIVER users for this tenant into a map
         Map<Long, AccountUserDTO> driverById = accountClientAdapter.getDriverUsers(tenantId)
                 .stream().collect(Collectors.toMap(AccountUserDTO::getId, Function.identity(), (a, b) -> a));
 
@@ -154,7 +154,6 @@ public class TransportPlanService {
         return results;
     }
 
-    /** Returns all transport plans for the current tenant, newest first. */
     @Transactional(readOnly = true)
     public List<TransportPlanResponseDTO> getPlans() {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -166,14 +165,12 @@ public class TransportPlanService {
         if (plans.isEmpty()) return List.of();
 
         List<Long> planIds = plans.stream().map(TransportPlanEntity::getId).toList();
-
         Map<Long, Long> stopCounts = transportPlanStopRepository.countByPlanIds(planIds);
 
         Map<Long, TruckEntity> trucksById = truckRepository.findAllById(
                         plans.stream().map(TransportPlanEntity::getTruckId).distinct().toList())
                 .stream().collect(Collectors.toMap(TruckEntity::getId, Function.identity()));
 
-        // Load all TTCRS_DRIVER users once, then look up by userId
         Map<Long, AccountUserDTO> driversById = accountClientAdapter.getDriverUsers(tenantId)
                 .stream().collect(Collectors.toMap(AccountUserDTO::getId, Function.identity()));
 
@@ -195,7 +192,6 @@ public class TransportPlanService {
         }).toList();
     }
 
-    /** Returns all transport plans assigned to the currently authenticated driver. */
     @Transactional(readOnly = true)
     public List<TransportPlanResponseDTO> getPlansByDriver() {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -234,7 +230,6 @@ public class TransportPlanService {
         }).toList();
     }
 
-    /** Returns the full detail of one transport plan, validating that it belongs to the current driver. */
     @Transactional(readOnly = true)
     public TransportPlanDetailDTO getPlanDetailForDriver(Long id) {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -245,39 +240,9 @@ public class TransportPlanService {
         TransportPlanEntity plan = transportPlanRepository.findByIdAndTenantIdAndDriverId(id, tenantId, driverId)
                 .orElseThrow(() -> new IllegalArgumentException("Transport plan not found: " + id));
 
-        TruckEntity truck = truckRepository.findById(plan.getTruckId()).orElse(null);
-        AccountUserDTO driver = accountClientAdapter.getUserById(driverId);
-
-        List<TransportPlanStopEntity> stopEntities =
-                transportPlanStopRepository.findAllByTransportPlanIdOrderBySequenceAsc(id);
-
-        List<TransportPlanDetailDTO.StopDTO> stops = stopEntities.stream()
-                .map(s -> TransportPlanDetailDTO.StopDTO.builder()
-                        .id(s.getId())
-                        .sequence(s.getSequence())
-                        .locationCode(s.getLocationCode())
-                        .action(s.getAction())
-                        .plannedArrivalTime(s.getPlannedArrivalTime())
-                        .actualArrivalTime(s.getActualArrivalTime())
-                        .requestId(s.getRequestId())
-                        .build())
-                .toList();
-
-        return TransportPlanDetailDTO.builder()
-                .id(plan.getId())
-                .truckId(plan.getTruckId())
-                .truckCode(truck != null ? truck.getCode() : null)
-                .driverId(driverId)
-                .driverName(driver != null ? driver.getFullName() : null)
-                .startTime(plan.getStartTime())
-                .endTime(plan.getEndTime())
-                .status(plan.getStatus())
-                .createdStamp(plan.getCreatedStamp())
-                .stops(stops)
-                .build();
+        return buildDetailDTO(plan, tenantId, driverId);
     }
 
-    /** Returns the full detail of one transport plan (with stops). */
     @Transactional(readOnly = true)
     public TransportPlanDetailDTO getPlanDetail(Long id) {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -286,24 +251,236 @@ public class TransportPlanService {
         TransportPlanEntity plan = transportPlanRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Transport plan not found: " + id));
 
+        return buildDetailDTO(plan, tenantId, plan.getDriverId());
+    }
+
+    // =========================================================================
+    // Driver execution actions
+    // =========================================================================
+
+    /** CREATED → EXECUTING. Auto-arrives at DEPOT_START. Validates single-executing constraint. */
+    @Transactional
+    public TransportPlanDetailDTO startRoute(Long id) {
+        Long tenantId = requireTenantId();
+        Long driverId = requireDriverId();
+
+        TransportPlanEntity plan = requirePlanForDriver(id, tenantId, driverId);
+
+        if (plan.getStatus() != TransportPlanStatus.CREATED) {
+            throw new IllegalStateException("Route must be in CREATED status to start");
+        }
+        if (transportPlanRepository.existsByDriverIdAndStatus(driverId, TransportPlanStatus.EXECUTING)) {
+            throw new IllegalStateException("Driver already has an executing route");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        plan.setStatus(TransportPlanStatus.EXECUTING);
+        plan.setActualStartTime(now);
+
+        // Auto-arrive at the first stop (DEPOT_START)
+        List<TransportPlanStopEntity> stops =
+                transportPlanStopRepository.findAllByTransportPlanIdOrderBySequenceAsc(id);
+        if (!stops.isEmpty()) {
+            TransportPlanStopEntity first = stops.get(0);
+            first.setActualArrivalTime(now);
+            first.setIsCompleted(true);
+            transportPlanStopRepository.save(first);
+            plan.setCurrentStop(first.getSequence());
+        }
+
+        transportPlanRepository.save(plan);
+
+        // All linked requests → IN_PROGRESS
+        List<RequestEntity> linked = requestRepository.findAllByTransportPlanId(id);
+        linked.forEach(r -> r.setStatus(RequestStatus.IN_PROGRESS));
+        requestRepository.saveAll(linked);
+
+        log.info("Route {} started by driver {}", id, driverId);
+        return buildDetailDTO(plan, tenantId, driverId);
+    }
+
+    /** CREATED → CANCELLED. */
+    @Transactional
+    public TransportPlanDetailDTO cancelRoute(Long id, String reason) {
+        Long tenantId = requireTenantId();
+        Long driverId = requireDriverId();
+
+        TransportPlanEntity plan = requirePlanForDriver(id, tenantId, driverId);
+
+        if (plan.getStatus() != TransportPlanStatus.CREATED) {
+            throw new IllegalStateException("Route must be in CREATED status to cancel");
+        }
+
+        plan.setStatus(TransportPlanStatus.CANCELLED);
+        plan.setCancelReason(reason);
+        transportPlanRepository.save(plan);
+
+        log.info("Route {} cancelled by driver {}", id, driverId);
+        return buildDetailDTO(plan, tenantId, driverId);
+    }
+
+    /** Driver arrives at a stop: record actual_arrival_time, update current_stop. */
+    @Transactional
+    public TransportPlanDetailDTO arriveAtStop(Long planId, Integer seq) {
+        Long tenantId = requireTenantId();
+        Long driverId = requireDriverId();
+
+        TransportPlanEntity plan = requirePlanForDriver(planId, tenantId, driverId);
+
+        if (plan.getStatus() != TransportPlanStatus.EXECUTING) {
+            throw new IllegalStateException("Route is not in EXECUTING status");
+        }
+
+        TransportPlanStopEntity stop = transportPlanStopRepository
+                .findByTransportPlanIdAndSequence(planId, seq)
+                .orElseThrow(() -> new IllegalArgumentException("Stop not found: seq=" + seq));
+
+        stop.setActualArrivalTime(LocalDateTime.now());
+        transportPlanStopRepository.save(stop);
+
+        plan.setCurrentStop(seq);
+        transportPlanRepository.save(plan);
+
+        log.info("Driver {} arrived at stop seq={} on route {}", driverId, seq, planId);
+        return buildDetailDTO(plan, tenantId, driverId);
+    }
+
+    /**
+     * Driver completes a stop: save evidence, mark stop completed, advance state.
+     * If this is the last stop → route becomes COMPLETED.
+     */
+    @Transactional
+    public TransportPlanDetailDTO completeStop(Long planId, Integer seq,
+                                               String evidenceUrl, Double totalDistance) {
+        Long tenantId = requireTenantId();
+        Long driverId = requireDriverId();
+
+        TransportPlanEntity plan = requirePlanForDriver(planId, tenantId, driverId);
+
+        if (plan.getStatus() != TransportPlanStatus.EXECUTING) {
+            throw new IllegalStateException("Route is not in EXECUTING status");
+        }
+
+        TransportPlanStopEntity stop = transportPlanStopRepository
+                .findByTransportPlanIdAndSequence(planId, seq)
+                .orElseThrow(() -> new IllegalArgumentException("Stop not found: seq=" + seq));
+
+        // Save evidence for the associated request
+        if (stop.getRequestId() != null && evidenceUrl != null && !evidenceUrl.isBlank()) {
+            requestRepository.findById(stop.getRequestId()).ifPresent(req -> {
+                if (stop.getLocationCode().equalsIgnoreCase(req.getSrcLocationCode())) {
+                    req.setEvidenceAtSrc(evidenceUrl);
+                } else if (stop.getLocationCode().equalsIgnoreCase(req.getDestLocationCode())) {
+                    req.setEvidenceAtDest(evidenceUrl);
+                }
+                requestRepository.save(req);
+            });
+        }
+
+        stop.setIsCompleted(true);
+        transportPlanStopRepository.save(stop);
+
+        // Check if this is the last stop
+        List<TransportPlanStopEntity> allStops =
+                transportPlanStopRepository.findAllByTransportPlanIdOrderBySequenceAsc(planId);
+        boolean isLastStop = allStops.stream()
+                .mapToInt(TransportPlanStopEntity::getSequence)
+                .max()
+                .orElse(-1) == seq;
+
+        if (isLastStop) {
+            LocalDateTime now = LocalDateTime.now();
+            plan.setStatus(TransportPlanStatus.COMPLETED);
+            plan.setActualEndTime(now);
+            if (totalDistance != null) {
+                plan.setTotalDistance(totalDistance);
+            }
+            if (plan.getActualStartTime() != null) {
+                long minutes = java.time.Duration.between(plan.getActualStartTime(), now).toMinutes();
+                plan.setTotalTime((int) minutes);
+            }
+
+            // All requests → COMPLETED
+            List<RequestEntity> linked = requestRepository.findAllByTransportPlanId(planId);
+            linked.forEach(r -> r.setStatus(RequestStatus.COMPLETED));
+            requestRepository.saveAll(linked);
+
+            log.info("Route {} completed by driver {}", planId, driverId);
+        }
+
+        transportPlanRepository.save(plan);
+        return buildDetailDTO(plan, tenantId, driverId);
+    }
+
+    /** CANCELLED → CREATED. Linked requests → PENDING. */
+    @Transactional
+    public TransportPlanDetailDTO restoreRoute(Long id) {
+        Long tenantId = requireTenantId();
+        Long driverId = requireDriverId();
+
+        TransportPlanEntity plan = requirePlanForDriver(id, tenantId, driverId);
+
+        if (plan.getStatus() != TransportPlanStatus.CANCELLED) {
+            throw new IllegalStateException("Route must be in CANCELLED status to restore");
+        }
+
+        plan.setStatus(TransportPlanStatus.CREATED);
+        plan.setCancelReason(null);
+        transportPlanRepository.save(plan);
+
+        List<RequestEntity> linked = requestRepository.findAllByTransportPlanId(id);
+        linked.forEach(r -> r.setStatus(RequestStatus.PENDING));
+        requestRepository.saveAll(linked);
+
+        log.info("Route {} restored by driver {}", id, driverId);
+        return buildDetailDTO(plan, tenantId, driverId);
+    }
+
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
+
+    private TransportPlanDetailDTO buildDetailDTO(TransportPlanEntity plan, Long tenantId, Long driverId) {
         TruckEntity truck = truckRepository.findById(plan.getTruckId()).orElse(null);
-        AccountUserDTO driver = plan.getDriverId() != null
-                ? accountClientAdapter.getUserById(plan.getDriverId())
-                : null;
+        AccountUserDTO driver = driverId != null ? accountClientAdapter.getUserById(driverId) : null;
 
         List<TransportPlanStopEntity> stopEntities =
-                transportPlanStopRepository.findAllByTransportPlanIdOrderBySequenceAsc(id);
+                transportPlanStopRepository.findAllByTransportPlanIdOrderBySequenceAsc(plan.getId());
+
+        // Build locationCode → entity map for lat/lng enrichment
+        Map<String, LocationEntity> locationMap = locationRepository.findAllByTenantId(tenantId)
+                .stream().collect(Collectors.toMap(LocationEntity::getLocationCode, Function.identity(), (a, b) -> a));
+
+        // Build requestId → entity map for src/dest location codes
+        List<Long> requestIds = stopEntities.stream()
+                .map(TransportPlanStopEntity::getRequestId)
+                .filter(rid -> rid != null)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, RequestEntity> requestMap = requestIds.isEmpty()
+                ? Map.of()
+                : requestRepository.findAllById(requestIds)
+                        .stream().collect(Collectors.toMap(RequestEntity::getId, Function.identity()));
 
         List<TransportPlanDetailDTO.StopDTO> stops = stopEntities.stream()
-                .map(s -> TransportPlanDetailDTO.StopDTO.builder()
-                        .id(s.getId())
-                        .sequence(s.getSequence())
-                        .locationCode(s.getLocationCode())
-                        .action(s.getAction())
-                        .plannedArrivalTime(s.getPlannedArrivalTime())
-                        .actualArrivalTime(s.getActualArrivalTime())
-                        .requestId(s.getRequestId())
-                        .build())
+                .map(s -> {
+                    LocationEntity loc = locationMap.get(s.getLocationCode());
+                    RequestEntity req = s.getRequestId() != null ? requestMap.get(s.getRequestId()) : null;
+                    return TransportPlanDetailDTO.StopDTO.builder()
+                            .id(s.getId())
+                            .sequence(s.getSequence())
+                            .locationCode(s.getLocationCode())
+                            .lat(loc != null ? loc.getLat() : null)
+                            .lng(loc != null ? loc.getLng() : null)
+                            .action(s.getAction())
+                            .plannedArrivalTime(s.getPlannedArrivalTime())
+                            .actualArrivalTime(s.getActualArrivalTime())
+                            .isCompleted(s.getIsCompleted())
+                            .requestId(s.getRequestId())
+                            .requestSrcLocationCode(req != null ? req.getSrcLocationCode() : null)
+                            .requestDestLocationCode(req != null ? req.getDestLocationCode() : null)
+                            .build();
+                })
                 .toList();
 
         return TransportPlanDetailDTO.builder()
@@ -317,7 +494,28 @@ public class TransportPlanService {
                 .status(plan.getStatus())
                 .createdStamp(plan.getCreatedStamp())
                 .stops(stops)
+                .cancelReason(plan.getCancelReason())
+                .currentStop(plan.getCurrentStop())
+                .actualStartTime(plan.getActualStartTime())
+                .actualEndTime(plan.getActualEndTime())
+                .totalDistance(plan.getTotalDistance())
+                .totalTime(plan.getTotalTime())
                 .build();
+    }
+
+    private Long requireTenantId() {
+        return authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException("Tenant not found in JWT"));
+    }
+
+    private Long requireDriverId() {
+        return authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException("User not found in JWT"));
+    }
+
+    private TransportPlanEntity requirePlanForDriver(Long id, Long tenantId, Long driverId) {
+        return transportPlanRepository.findByIdAndTenantIdAndDriverId(id, tenantId, driverId)
+                .orElseThrow(() -> new IllegalArgumentException("Transport plan not found: " + id));
     }
 
     private StopAction mapAction(String raw) {

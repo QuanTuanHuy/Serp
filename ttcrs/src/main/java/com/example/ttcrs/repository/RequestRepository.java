@@ -24,6 +24,8 @@ public interface RequestRepository
         extends JpaRepository<RequestEntity, Long>,
                 JpaSpecificationExecutor<RequestEntity> {
 
+    List<RequestEntity> findAllByTransportPlanId(Long transportPlanId);
+
     // =========================================================================
     // Inner class chứa các Specification tĩnh — tái sử dụng linh hoạt
     // =========================================================================
