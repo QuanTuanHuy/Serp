@@ -36,11 +36,13 @@ public class InternalUserController {
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "ACTIVE") String status,
+            @RequestParam(required = false) Long roleId,
             @RequestParam(required = false) Long organizationId) {
         GetUserParams params = GetUserParams.builder()
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
                 .search(search)
                 .status(status)
+                .roleId(roleId)
                 .organizationId(organizationId)
                 .build();
         var response = userUseCase.getUsers(params);

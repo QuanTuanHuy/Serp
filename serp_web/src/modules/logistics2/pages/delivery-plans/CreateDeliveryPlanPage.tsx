@@ -125,6 +125,7 @@ export const CreateDeliveryPlanPage = () => {
 
   const {
     data: slipsResponse,
+    currentData: currentSlipsResponse,
     isLoading: isLoadingSlips,
     isFetching: isFetchingSlips,
   } = useGetDeliverySlipsQuery(
@@ -144,6 +145,7 @@ export const CreateDeliveryPlanPage = () => {
 
   const {
     data: vehicleShippersResponse,
+    currentData: currentVehicleShippersResponse,
     isLoading: isLoadingVehicleShippers,
     isFetching: isFetchingVehicleShippers,
   } = useGetVehicleShippersQuery(
@@ -181,7 +183,8 @@ export const CreateDeliveryPlanPage = () => {
     [facilities]
   );
 
-  const slips = slipsResponse?.data?.items || [];
+  const slips =
+    (isFetchingSlips ? currentSlipsResponse : slipsResponse)?.data?.items || [];
   const slipMap = useMemo(() => {
     const map = new Map<string, DeliverySlip>();
 
@@ -211,9 +214,17 @@ export const CreateDeliveryPlanPage = () => {
   }, [searchSlipValue, slips]);
 
   const vehicleShippers = useMemo(() => {
-    const allItems = vehicleShippersResponse?.data?.items || [];
+    const allItems =
+      (isFetchingVehicleShippers
+        ? currentVehicleShippersResponse
+        : vehicleShippersResponse
+      )?.data?.items || [];
     return allItems.filter((shipper) => shipper.status === 'ACTIVE');
-  }, [vehicleShippersResponse]);
+  }, [
+    currentVehicleShippersResponse,
+    isFetchingVehicleShippers,
+    vehicleShippersResponse,
+  ]);
 
   const vehicleShipperMap = useMemo(() => {
     const map = new Map<string, VehicleShipper>();
@@ -433,7 +444,7 @@ export const CreateDeliveryPlanPage = () => {
                     </div>
                   )}
 
-                  {facilityId && isLoadingSlips && (
+                  {facilityId && (isLoadingSlips || isFetchingSlips) && (
                     <div className='space-y-2'>
                       {Array.from({ length: 4 }).map((_, index) => (
                         <div
@@ -445,7 +456,7 @@ export const CreateDeliveryPlanPage = () => {
                   )}
 
                   {facilityId &&
-                    !isLoadingSlips &&
+                    !(isLoadingSlips || isFetchingSlips) &&
                     availableSlips.length === 0 && (
                       <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
                         Không có phiếu giao phù hợp.
@@ -453,6 +464,7 @@ export const CreateDeliveryPlanPage = () => {
                     )}
 
                   {facilityId &&
+                    !(isLoadingSlips || isFetchingSlips) &&
                     availableSlips.map((slip) => {
                       const isSelected = selectedSlipIds.includes(slip.id);
                       const statusMeta =
@@ -549,19 +561,20 @@ export const CreateDeliveryPlanPage = () => {
                     </div>
                   )}
 
-                  {deliveryDate && isLoadingVehicleShippers && (
-                    <div className='space-y-2'>
-                      {Array.from({ length: 4 }).map((_, index) => (
-                        <div
-                          key={index}
-                          className='h-16 rounded-lg bg-muted/60 animate-pulse'
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {deliveryDate &&
+                    (isLoadingVehicleShippers || isFetchingVehicleShippers) && (
+                      <div className='space-y-2'>
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div
+                            key={index}
+                            className='h-16 rounded-lg bg-muted/60 animate-pulse'
+                          />
+                        ))}
+                      </div>
+                    )}
 
                   {deliveryDate &&
-                    !isLoadingVehicleShippers &&
+                    !(isLoadingVehicleShippers || isFetchingVehicleShippers) &&
                     vehicleShippers.length === 0 && (
                       <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
                         Không có xe giao phù hợp.
@@ -569,6 +582,7 @@ export const CreateDeliveryPlanPage = () => {
                     )}
 
                   {deliveryDate &&
+                    !(isLoadingVehicleShippers || isFetchingVehicleShippers) &&
                     vehicleShippers.map((shipper) => {
                       const isSelected = selectedVehicleShipperIds.includes(
                         shipper.id

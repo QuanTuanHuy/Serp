@@ -17,6 +17,7 @@ import {
   PencilLine,
   Search,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -54,6 +55,7 @@ import {
   useGetRoutesQuery,
   useGetVehicleShippersQuery,
   useOptimizeDeliveryPlanMutation,
+  useRollbackDeliveryPlanMutation,
   useUpdateDeliveryPlanMutation,
 } from '../../api/logistics2Api';
 import { DeliverySlipCard } from '../../components/cards/DeliverySlipCard';
@@ -206,6 +208,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
   );
 
   const isDraft = plan?.optimizationStatus === 'DRAFT';
+  const isFailed = plan?.optimizationStatus === 'FAILED';
 
   const {
     data: slipsResponse,
@@ -265,6 +268,8 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
     useUpdateDeliveryPlanMutation();
   const [optimizeDeliveryPlan, { isLoading: isOptimizing }] =
     useOptimizeDeliveryPlanMutation();
+  const [rollbackDeliveryPlan, { isLoading: isRollingBack }] =
+    useRollbackDeliveryPlanMutation();
   const [deleteDeliveryPlan, { isLoading: isDeleting }] =
     useDeleteDeliveryPlanMutation();
 
@@ -432,6 +437,22 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
     }
   };
 
+  const handleRollbackPlan = async () => {
+    if (!plan) return;
+
+    try {
+      await rollbackDeliveryPlan(plan.id).unwrap();
+      notification.success('Đang rollback lộ trình', {
+        description: 'Hệ thống đang rollback lộ trình cho kế hoạch.',
+      });
+      await refetch();
+    } catch (rollbackError) {
+      notification.error('Không thể rollback lộ trình', {
+        description: getErrorMessage(rollbackError),
+      });
+    }
+  };
+
   const handleDeletePlan = async () => {
     if (!plan) return;
 
@@ -542,6 +563,21 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               Tính toán lộ trình
             </Button>
           </div>
+        )}
+
+        {isFailed && (
+          <Button
+            onClick={handleRollbackPlan}
+            disabled={isRollingBack}
+            className='gap-2'
+          >
+            {isRollingBack ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <Undo2 className='h-4 w-4' />
+            )}
+            Rollback
+          </Button>
         )}
       </div>
 
