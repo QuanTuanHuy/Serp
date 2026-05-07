@@ -72,6 +72,16 @@ public class DeliveryPlanController {
         return ResponseEntity.ok(GeneralResponse.success("Bắt đầu tối ưu kế hoạch giao hàng"));
     }
 
+    @PutMapping("/rollback/{planId}")
+    public ResponseEntity<GeneralResponse<?>> rollbackDeliveryPlan(
+            @PathVariable String planId) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
+        log.info("Received request to rollback failed delivery plan with id: {}", planId);
+        deliveryPlanService.rollbackDeliveryPlan(planId, tenantId);
+        return ResponseEntity.ok(GeneralResponse.success("Rollback kế hoạch giao hàng thất bại"));
+    }
+
     @DeleteMapping("/delete/{planId}")
     public ResponseEntity<GeneralResponse<?>> deleteDeliveryPlan(
             @PathVariable String planId) {
