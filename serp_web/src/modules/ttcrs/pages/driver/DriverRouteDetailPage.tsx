@@ -2,23 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, Loader2, Play, RotateCcw, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Loader2, Play, XCircle } from 'lucide-react';
 import { Badge, Button, Card, CardContent, Skeleton } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type { TransportPlanDetail, TransportPlanStopDetail } from '../../types';
 import {
   useGetMyTransportPlanDetailQuery,
   useStartRouteMutation,
-  useCancelRouteMutation,
   useArriveAtStopMutation,
   useCompleteStopMutation,
-  useRestoreRouteMutation,
 } from '../../api/ttcrsApi';
 import { RouteInfoCard } from './components/RouteInfoCard';
 import { StopsList } from './components/StopsList';
 import { DriverRouteMap } from './components/DriverRouteMap';
-import { CancelRouteDialog } from './components/CancelRouteDialog';
-import { RestoreRouteConfirmDialog } from './components/RestoreRouteConfirmDialog';
 import { ExecutingRouteView } from './components/executing/ExecutingRouteView';
 import { EvidencePage } from './components/executing/EvidencePage';
 
@@ -92,13 +88,8 @@ export function DriverRouteDetailPage({ id }: DriverRouteDetailPageProps) {
   const plan = data?.data ?? null;
 
   const [startRoute, { isLoading: isStarting }] = useStartRouteMutation();
-  const [cancelRoute, { isLoading: isCancelling }] = useCancelRouteMutation();
   const [arriveAtStop, { isLoading: isArriving }] = useArriveAtStopMutation();
   const [completeStop, { isLoading: isCompleting }] = useCompleteStopMutation();
-  const [restoreRoute, { isLoading: isRestoring }] = useRestoreRouteMutation();
-
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
 
   // Pre-fetched OSRM total distance for the whole route (used on last stop completion).
   const [osrmTotalDistanceKm, setOsrmTotalDistanceKm] = useState<number | null>(null);
@@ -142,16 +133,6 @@ export function DriverRouteDetailPage({ id }: DriverRouteDetailPageProps) {
     }
   };
 
-  const handleCancel = async (reason: string) => {
-    try {
-      await cancelRoute({ id, body: { reason } }).unwrap();
-      setCancelDialogOpen(false);
-      refetch();
-    } catch (err: any) {
-      alert(err?.data?.message ?? 'Failed to cancel route');
-    }
-  };
-
   const handleArrive = async (seq: number) => {
     const stop = plan?.stops.find((s) => s.sequence === seq) ?? null;
     if (!stop) return;
@@ -185,16 +166,6 @@ export function DriverRouteDetailPage({ id }: DriverRouteDetailPageProps) {
       setArrivedStop(prevArrived);
       setExecutingPhase(prevPhase);
       alert(err?.data?.message ?? 'Failed to complete stop');
-    }
-  };
-
-  const handleRestore = async () => {
-    try {
-      await restoreRoute(id).unwrap();
-      setRestoreDialogOpen(false);
-      refetch();
-    } catch (err: any) {
-      alert(err?.data?.message ?? 'Failed to restore route');
     }
   };
 
@@ -352,47 +323,6 @@ export function DriverRouteDetailPage({ id }: DriverRouteDetailPageProps) {
         </div>
       </div>
 
-      {/* CREATED: Cancel Route button */}
-      {plan.status === 'CREATED' && (
-        <div className="flex justify-center pb-4">
-          <Button
-            variant="destructive"
-            onClick={() => setCancelDialogOpen(true)}
-            disabled={isCancelling}
-          >
-            <XCircle className="mr-2 h-4 w-4" />
-            Cancel Route
-          </Button>
-        </div>
-      )}
-
-      {/* CANCELLED: Restore Route button */}
-      {plan.status === 'CANCELLED' && (
-        <div className="flex justify-center pb-4">
-          <Button
-            variant="outline"
-            onClick={() => setRestoreDialogOpen(true)}
-            disabled={isRestoring}
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Restore Route
-          </Button>
-        </div>
-      )}
-
-      {/* Dialogs */}
-      <CancelRouteDialog
-        open={cancelDialogOpen}
-        onOpenChange={setCancelDialogOpen}
-        onConfirm={handleCancel}
-        isPending={isCancelling}
-      />
-      <RestoreRouteConfirmDialog
-        open={restoreDialogOpen}
-        onOpenChange={setRestoreDialogOpen}
-        onConfirm={handleRestore}
-        isPending={isRestoring}
-      />
     </div>
   );
 }

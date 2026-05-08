@@ -47,5 +47,7 @@ public class TransportPlanDetailDTO {
         /** Non-null when requestId != null — used by frontend to decide evidenceAtSrc vs evidenceAtDest */
         private String requestSrcLocationCode;
         private String requestDestLocationCode;
+        /** Evidence URL for this stop (derived from request.evidenceAtSrc or evidenceAtDest). */
+        private String evidenceUrl;
     }
 }

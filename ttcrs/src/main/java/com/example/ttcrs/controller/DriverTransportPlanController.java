@@ -1,6 +1,5 @@
 package com.example.ttcrs.controller;
 
-import com.example.ttcrs.dto.request.driver.CancelRouteRequest;
 import com.example.ttcrs.dto.request.driver.CompleteStopRequest;
 import com.example.ttcrs.dto.response.ApiResponse;
 import com.example.ttcrs.dto.response.TransportPlanDetailDTO;
@@ -8,7 +7,6 @@ import com.example.ttcrs.dto.response.TransportPlanResponseDTO;
 import com.example.ttcrs.service.EvidenceStorageService;
 import com.example.ttcrs.service.TransportPlanService;
 import com.example.ttcrs.util.AuthUtils;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -56,20 +54,6 @@ public class DriverTransportPlanController {
         }
     }
 
-    /** Cancel route: CREATED → CANCELLED */
-    @PatchMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<TransportPlanDetailDTO>> cancelRoute(
-            @PathVariable Long id,
-            @Valid @RequestBody CancelRouteRequest body) {
-        try {
-            return ResponseEntity.ok(ApiResponse.ok(transportPlanService.cancelRoute(id, body.getReason())));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
     /** Driver arrived at stop N */
     @PatchMapping("/{id}/stops/{seq}/arrive")
     public ResponseEntity<ApiResponse<TransportPlanDetailDTO>> arriveAtStop(
@@ -93,18 +77,6 @@ public class DriverTransportPlanController {
         try {
             return ResponseEntity.ok(ApiResponse.ok(
                     transportPlanService.completeStop(id, seq, body.getEvidenceUrl(), body.getTotalDistance())));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    /** Restore route: CANCELLED → CREATED */
-    @PatchMapping("/{id}/restore")
-    public ResponseEntity<ApiResponse<TransportPlanDetailDTO>> restoreRoute(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(ApiResponse.ok(transportPlanService.restoreRoute(id)));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
         } catch (IllegalStateException e) {

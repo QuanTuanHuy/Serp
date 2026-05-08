@@ -306,6 +306,7 @@ export interface TransportPlanStopDetail {
   requestId: number | null;
   requestSrcLocationCode: string | null;
   requestDestLocationCode: string | null;
+  evidenceUrl: string | null;
 }
 
 export interface TransportPlanDetail {

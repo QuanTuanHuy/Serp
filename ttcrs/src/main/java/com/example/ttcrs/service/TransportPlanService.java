@@ -299,13 +299,13 @@ public class TransportPlanService {
         return buildDetailDTO(plan, tenantId, driverId);
     }
 
-    /** CREATED → CANCELLED. */
+    /** CREATED → CANCELLED (dispatcher). */
     @Transactional
     public TransportPlanDetailDTO cancelRoute(Long id, String reason) {
         Long tenantId = requireTenantId();
-        Long driverId = requireDriverId();
 
-        TransportPlanEntity plan = requirePlanForDriver(id, tenantId, driverId);
+        TransportPlanEntity plan = transportPlanRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Transport plan not found: " + id));
 
         if (plan.getStatus() != TransportPlanStatus.CREATED) {
             throw new IllegalStateException("Route must be in CREATED status to cancel");
@@ -315,8 +315,8 @@ public class TransportPlanService {
         plan.setCancelReason(reason);
         transportPlanRepository.save(plan);
 
-        log.info("Route {} cancelled by driver {}", id, driverId);
-        return buildDetailDTO(plan, tenantId, driverId);
+        log.info("Route {} cancelled by dispatcher", id);
+        return buildDetailDTO(plan, tenantId, plan.getDriverId());
     }
 
     /** Driver arrives at a stop: record actual_arrival_time, update current_stop. */
@@ -412,13 +412,13 @@ public class TransportPlanService {
         return buildDetailDTO(plan, tenantId, driverId);
     }
 
-    /** CANCELLED → CREATED. Linked requests → PENDING. */
+    /** CANCELLED → CREATED (dispatcher). Linked requests → PENDING. */
     @Transactional
     public TransportPlanDetailDTO restoreRoute(Long id) {
         Long tenantId = requireTenantId();
-        Long driverId = requireDriverId();
 
-        TransportPlanEntity plan = requirePlanForDriver(id, tenantId, driverId);
+        TransportPlanEntity plan = transportPlanRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Transport plan not found: " + id));
 
         if (plan.getStatus() != TransportPlanStatus.CANCELLED) {
             throw new IllegalStateException("Route must be in CANCELLED status to restore");
@@ -432,8 +432,8 @@ public class TransportPlanService {
         linked.forEach(r -> r.setStatus(RequestStatus.PENDING));
         requestRepository.saveAll(linked);
 
-        log.info("Route {} restored by driver {}", id, driverId);
-        return buildDetailDTO(plan, tenantId, driverId);
+        log.info("Route {} restored by dispatcher", id);
+        return buildDetailDTO(plan, tenantId, plan.getDriverId());
     }
 
     // =========================================================================
@@ -479,6 +479,7 @@ public class TransportPlanService {
                             .requestId(s.getRequestId())
                             .requestSrcLocationCode(req != null ? req.getSrcLocationCode() : null)
                             .requestDestLocationCode(req != null ? req.getDestLocationCode() : null)
+                            .evidenceUrl(req != null ? resolveEvidenceUrl(s.getLocationCode(), req) : null)
                             .build();
                 })
                 .toList();
@@ -501,6 +502,13 @@ public class TransportPlanService {
                 .totalDistance(plan.getTotalDistance())
                 .totalTime(plan.getTotalTime())
                 .build();
+    }
+
+    private String resolveEvidenceUrl(String locationCode, RequestEntity req) {
+        if (locationCode == null) return null;
+        if (locationCode.equalsIgnoreCase(req.getSrcLocationCode())) return req.getEvidenceAtSrc();
+        if (locationCode.equalsIgnoreCase(req.getDestLocationCode())) return req.getEvidenceAtDest();
+        return null;
     }
 
     private Long requireTenantId() {

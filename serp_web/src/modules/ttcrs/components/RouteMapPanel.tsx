@@ -193,20 +193,48 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
         }).addTo(group);
       }
 
-      route.stops.forEach((stop) => {
-        L.circleMarker([stop.lat, stop.lng], {
-          radius: stop.isDepot ? 5 : 8,
-          color: route.color,
-          fillColor: stop.isDepot ? '#ffffff' : route.color,
-          fillOpacity: stop.isDepot ? 0.9 : 1,
-          weight: 2,
-        })
+      // Group stops by locationCode so overlapping markers show combined sequences e.g. "1,4"
+      const byLocation = new Map<
+        string,
+        { stop: (typeof route.stops)[0]; seqs: number[] }
+      >();
+      route.stops.forEach((stop, stopIdx) => {
+        const key = stop.locationCode;
+        const existing = byLocation.get(key);
+        if (existing) {
+          existing.seqs.push(stopIdx + 1);
+        } else {
+          byLocation.set(key, { stop, seqs: [stopIdx + 1] });
+        }
+      });
+
+      byLocation.forEach(({ stop, seqs }) => {
+        const label = seqs.join(',');
+        const isDepot = stop.isDepot;
+        const multiVisit = seqs.length > 1;
+        // Wider pill for multi-sequence labels
+        const width = multiVisit ? Math.max(32, label.length * 8 + 16) : (isDepot ? 22 : 26);
+        const height = isDepot ? 22 : 26;
+        const bg = isDepot ? '#ffffff' : route.color;
+        const fg = isDepot ? route.color : '#ffffff';
+        const border = isDepot ? `2px solid ${route.color}` : '2px solid #fff';
+        const borderRadius = multiVisit ? '12px' : '50%';
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="min-width:${width}px;height:${height}px;padding:0 4px;border-radius:${borderRadius};background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;border:${border};box-shadow:0 1px 4px rgba(0,0,0,0.35);white-space:nowrap">${label}</div>`,
+          iconSize: [width, height],
+          iconAnchor: [width / 2, height / 2],
+        });
+        const actions = seqs
+          .map((s, i) => `${s}: ${route.stops[s - 1]?.action ?? ''}`)
+          .join('<br>');
+        L.marker([stop.lat, stop.lng], { icon })
           .bindPopup(
-            `<div style="font-size:12px;line-height:1.5">
+            `<div style="font-size:12px;line-height:1.6">
               <span style="font-family:monospace;font-weight:700">${stop.locationCode}</span><br>
-              <span style="color:#888">${stop.action}</span>
-              <br><span style="font-weight:600;color:${route.color}">${route.truckCode}</span>
-            </div>`
+              <span style="color:#888">${actions}</span><br>
+              <span style="font-weight:600;color:${route.color}">${route.truckCode}</span>
+            </div>`,
           )
           .addTo(group);
       });

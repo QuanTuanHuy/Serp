@@ -453,20 +453,20 @@ export const ttcrsApi = api.injectEndpoints({
       ],
     }),
 
-    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/cancel
+    // PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/cancel
     cancelRoute: builder.mutation<
       TtcrsApiResponse<TransportPlanDetail>,
       { id: number; body: CancelRoutePayload }
     >({
       query: ({ id, body }) => ({
-        url: `/driver/transport-plans/${id}/cancel`,
+        url: `/dispatcher/transport-plans/${id}/cancel`,
         method: 'PATCH',
         body,
       }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: (_r, _e, { id }) => [
-        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
-        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+        { type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'TRANSPORT_PLANS' },
       ],
     }),
 
@@ -502,13 +502,13 @@ export const ttcrsApi = api.injectEndpoints({
       ],
     }),
 
-    // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/restore
+    // PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/restore
     restoreRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>({
-      query: (id) => ({ url: `/driver/transport-plans/${id}/restore`, method: 'PATCH' }),
+      query: (id) => ({ url: `/dispatcher/transport-plans/${id}/restore`, method: 'PATCH' }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: (_r, _e, id) => [
-        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
-        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+        { type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` },
+        { type: 'ttcrs/Request', id: 'TRANSPORT_PLANS' },
       ],
     }),
 
