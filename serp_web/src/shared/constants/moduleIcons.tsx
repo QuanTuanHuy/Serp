@@ -32,6 +32,7 @@ export type ModuleCode =
   | 'TMS'
   | 'FIRST_MILE'
   | 'MARKETING'
+  | 'PM'
   | 'PTM'
   | 'PROJECT'
   | 'ACCOUNTING'
@@ -93,6 +94,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: Megaphone,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50 dark:bg-purple-950',
+  },
+  PM: {
+    icon: Briefcase,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950',
   },
 
   // Productivity
