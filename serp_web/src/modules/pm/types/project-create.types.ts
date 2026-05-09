@@ -7,6 +7,12 @@ import type { PMProjectTemplateType } from './project-list.types';
 
 export type PMProjectVisibility = 'PRIVATE' | 'TEAM' | 'ORGANIZATION';
 
+export interface PMProjectVisibilityOption {
+  value: PMProjectVisibility;
+  label: string;
+  description: string;
+}
+
 export interface PMProjectTemplateDefinition {
   type: PMProjectTemplateType;
   title: string;

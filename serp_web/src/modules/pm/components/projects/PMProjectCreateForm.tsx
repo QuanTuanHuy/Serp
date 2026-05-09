@@ -36,86 +36,16 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { PM_PROJECT_LIST_MOCKS } from '../../mocks/projectList';
-import type {
-  PMProjectTemplateDefinition,
-  PMProjectVisibility,
-} from '../../types/project-create.types';
-import type { PMProjectTemplateType } from '../../types/project-list.types';
+import type { PMProjectVisibility } from '../../types/project-create.types';
+import {
+  PM_PROJECT_TEMPLATE_OPTIONS,
+  PM_PROJECT_VISIBILITY_OPTIONS,
+  generatePMProjectKey,
+  getPMProjectTemplateDefinition,
+  normalizePMProjectKey,
+} from '../../utils/projectForm';
 import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
 import { PMProjectTemplatePicker } from './PMProjectTemplatePicker';
-
-const TEMPLATE_OPTIONS: PMProjectTemplateDefinition[] = [
-  {
-    type: 'BLANK',
-    title: 'Blank software project',
-    description:
-      'Start with a clean software project and configure the workflow for your team.',
-    usageHint: 'Best when the team wants manual setup and minimal defaults.',
-    boardBehavior: 'Basic board with minimal default statuses.',
-    workflowSummary: 'Clean starting point with no sprint-specific structure.',
-    presetSummary: [
-      'Basic software workflow',
-      'Minimal default statuses',
-      'No sprint-specific structure',
-    ],
-  },
-  {
-    type: 'KANBAN',
-    title: 'Software delivery - Kanban',
-    description:
-      'Use a continuous flow board for product maintenance, platform work, and ongoing delivery.',
-    usageHint:
-      'Best for teams that work with continuous prioritization and flow.',
-    boardBehavior: 'Board-centric workflow tuned for steady item movement.',
-    workflowSummary:
-      'Continuous delivery setup with statuses aligned to kanban movement.',
-    presetSummary: [
-      'Board-centric workflow',
-      'Continuous delivery setup',
-      'Statuses aligned with kanban movement',
-    ],
-  },
-  {
-    type: 'SCRUM',
-    title: 'Software delivery - Scrum',
-    description:
-      'Use sprint-based planning for backlog management, iteration execution, and release cadence.',
-    usageHint:
-      'Best for sprint planning, backlog ceremonies, and cadence-based delivery.',
-    boardBehavior:
-      'Sprint-ready board with backlog expectations and planning rhythm.',
-    workflowSummary:
-      'Agile delivery defaults for backlog, sprint planning, and execution.',
-    presetSummary: [
-      'Sprint-ready workflow',
-      'Backlog and board expectations',
-      'Agile cadence defaults',
-    ],
-  },
-];
-
-const VISIBILITY_OPTIONS: {
-  value: PMProjectVisibility;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'PRIVATE',
-    label: 'Private',
-    description: 'Only invited members can access the project workspace.',
-  },
-  {
-    value: 'TEAM',
-    label: 'Team',
-    description: 'Visible to the owning team and invited collaborators.',
-  },
-  {
-    value: 'ORGANIZATION',
-    label: 'Organization',
-    description:
-      'Visible across the organization for shared delivery tracking.',
-  },
-];
 
 const createProjectSchema = z
   .object({
@@ -172,39 +102,6 @@ interface PMProjectCreateFormProps {
   onCancel: () => void;
 }
 
-function normalizeProjectKey(value: string) {
-  return value
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, '')
-    .trim()
-    .replace(/[\s_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 12);
-}
-
-function generateProjectKey(projectName: string) {
-  const words = projectName
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, ' ')
-    .split(/[\s-]+/)
-    .filter(Boolean);
-
-  if (words.length === 0) {
-    return '';
-  }
-
-  if (words.length === 1) {
-    return words[0].slice(0, 6);
-  }
-
-  return words
-    .slice(0, 6)
-    .map((word) => word[0])
-    .join('')
-    .slice(0, 12);
-}
-
 export function PMProjectCreateForm({
   onSubmit,
   onCancel,
@@ -233,7 +130,7 @@ export function PMProjectCreateForm({
   const startDate = form.watch('startDate');
   const targetDate = form.watch('targetDate');
   const generatedKey = useMemo(
-    () => generateProjectKey(projectName),
+    () => generatePMProjectKey(projectName),
     [projectName]
   );
 
@@ -253,17 +150,15 @@ export function PMProjectCreateForm({
     []
   );
 
-  const selectedTemplate =
-    TEMPLATE_OPTIONS.find(
-      (template) => template.type === selectedTemplateType
-    ) || null;
+  const selectedTemplate = getPMProjectTemplateDefinition(selectedTemplateType);
 
   const selectedLead =
     leadOptions.find((lead) => lead.id === selectedLeadId) || null;
 
   const selectedVisibility =
-    VISIBILITY_OPTIONS.find((option) => option.value === visibility) ||
-    VISIBILITY_OPTIONS[1];
+    PM_PROJECT_VISIBILITY_OPTIONS.find(
+      (option) => option.value === visibility
+    ) || PM_PROJECT_VISIBILITY_OPTIONS[1];
 
   useEffect(() => {
     if (!hasManualKeyEdit) {
@@ -276,7 +171,7 @@ export function PMProjectCreateForm({
 
   const handleKeyChange = (value: string) => {
     setHasManualKeyEdit(true);
-    form.setValue('key', normalizeProjectKey(value), {
+    form.setValue('key', normalizePMProjectKey(value), {
       shouldDirty: true,
       shouldValidate: form.formState.isSubmitted,
     });
@@ -293,7 +188,7 @@ export function PMProjectCreateForm({
   const handleSubmit = async (values: PMProjectCreateFormValues) => {
     await onSubmit({
       ...values,
-      key: normalizeProjectKey(values.key),
+      key: normalizePMProjectKey(values.key),
     });
   };
 
@@ -319,7 +214,7 @@ export function PMProjectCreateForm({
                       <PMProjectTemplatePicker
                         value={field.value}
                         onValueChange={field.onChange}
-                        options={TEMPLATE_OPTIONS}
+                        options={PM_PROJECT_TEMPLATE_OPTIONS}
                         error={fieldState.error?.message}
                       />
                     </FormControl>
@@ -502,7 +397,7 @@ export function PMProjectCreateForm({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {VISIBILITY_OPTIONS.map((option) => (
+                            {PM_PROJECT_VISIBILITY_OPTIONS.map((option) => (
                               <SelectItem
                                 key={option.value}
                                 value={option.value}
