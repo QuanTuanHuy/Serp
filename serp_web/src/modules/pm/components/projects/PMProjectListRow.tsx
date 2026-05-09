@@ -123,6 +123,9 @@ export function PMProjectListRow({
             <p className='line-clamp-1 text-sm text-muted-foreground'>
               {project.description}
             </p>
+            <p className='text-xs text-muted-foreground lg:hidden'>
+              {project.category} · {project.lead.name}
+            </p>
             <div className='flex flex-wrap items-center gap-2 md:hidden'>
               <PMProjectTemplateBadge templateType={project.templateType} />
               {project.status !== 'ARCHIVED' && (

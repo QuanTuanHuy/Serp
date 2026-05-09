@@ -5,7 +5,9 @@
 
 'use client';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
+  Button,
   Card,
   CardContent,
   Table,
@@ -20,17 +22,31 @@ import { PMProjectListRow } from './PMProjectListRow';
 
 interface PMProjectListTableProps {
   projects: PMProjectListItem[];
+  currentPage: number;
+  pageSize: number;
   totalCount: number;
+  totalFilteredCount: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
   onOpen: (projectId: string) => void;
   onEdit: (projectId: string) => void;
 }
 
 export function PMProjectListTable({
   projects,
+  currentPage,
+  pageSize,
   totalCount,
+  totalFilteredCount,
+  totalPages,
+  onPageChange,
   onOpen,
   onEdit,
 }: PMProjectListTableProps) {
+  const rangeStart =
+    projects.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = projects.length === 0 ? 0 : rangeStart + projects.length - 1;
+
   return (
     <Card className='overflow-hidden rounded-2xl shadow-sm'>
       <CardContent className='p-0'>
@@ -91,10 +107,40 @@ export function PMProjectListTable({
           </TableBody>
         </Table>
 
-        <div className='border-t bg-background px-6 py-4 text-sm text-muted-foreground'>
-          {projects.length === 0
-            ? `No results from ${totalCount} software projects`
-            : `Showing ${projects.length} of ${totalCount} software projects`}
+        <div className='flex flex-col gap-3 border-t bg-background px-6 py-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between'>
+          <div>
+            {projects.length === 0
+              ? `No results from ${totalCount} software projects`
+              : `Showing ${rangeStart}-${rangeEnd} of ${totalFilteredCount} matching projects`}
+          </div>
+
+          <div className='flex items-center justify-between gap-3 lg:justify-end'>
+            <span className='text-xs uppercase tracking-[0.18em] text-muted-foreground'>
+              Page {currentPage} of {Math.max(totalPages, 1)}
+            </span>
+            <div className='flex items-center gap-2'>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className='mr-1 h-4 w-4' />
+                Previous
+              </Button>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+                <ChevronRight className='ml-1 h-4 w-4' />
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

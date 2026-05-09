@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FolderKanban, Plus } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
@@ -15,11 +15,15 @@ import type {
   PMProjectSort,
 } from '../types/project-list.types';
 import {
+  type PMProjectCategoryFilter,
   PMProjectListToolbar,
+  type PMProjectLeadFilter,
   type PMProjectStatusFilter,
   type PMProjectTemplateFilter,
 } from '../components/projects/PMProjectListToolbar';
 import { PMProjectListTable } from '../components/projects/PMProjectListTable';
+
+const PAGE_SIZE = 4;
 
 function matchesProjectSearch(project: PMProjectListItem, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
@@ -60,28 +64,95 @@ function sortProjects(projects: PMProjectListItem[], sortBy: PMProjectSort) {
 export function PMProjectsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] =
+    useState<PMProjectCategoryFilter>('ALL');
+  const [leadFilter, setLeadFilter] = useState<PMProjectLeadFilter>('ALL');
   const [templateFilter, setTemplateFilter] =
     useState<PMProjectTemplateFilter>('ALL');
   const [statusFilter, setStatusFilter] =
     useState<PMProjectStatusFilter>('ALL');
   const [sortBy, setSortBy] = useState<PMProjectSort>('recentlyUpdated');
 
+  const categoryOptions = useMemo(
+    () => [
+      ...new Set(PM_PROJECT_LIST_MOCKS.map((project) => project.category)),
+    ],
+    []
+  );
+
+  const leadOptions = useMemo(
+    () =>
+      PM_PROJECT_LIST_MOCKS.map((project) => project.lead).filter(
+        (lead, index, array) =>
+          array.findIndex((candidate) => candidate.id === lead.id) === index
+      ),
+    []
+  );
+
+  const [currentPage, setCurrentPage] = useState(1);
+
   const filteredProjects = useMemo(() => {
     const items = PM_PROJECT_LIST_MOCKS.filter((project) => {
       const matchesSearch = matchesProjectSearch(project, searchQuery);
+      const matchesCategory =
+        categoryFilter === 'ALL' || project.category === categoryFilter;
+      const matchesLead =
+        leadFilter === 'ALL' || project.lead.id === leadFilter;
       const matchesTemplate =
         templateFilter === 'ALL' || project.templateType === templateFilter;
       const matchesStatus =
         statusFilter === 'ALL' || project.status === statusFilter;
 
-      return matchesSearch && matchesTemplate && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesLead &&
+        matchesTemplate &&
+        matchesStatus
+      );
     });
 
     return sortProjects(items, sortBy);
-  }, [searchQuery, sortBy, statusFilter, templateFilter]);
+  }, [
+    categoryFilter,
+    leadFilter,
+    searchQuery,
+    sortBy,
+    statusFilter,
+    templateFilter,
+  ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProjects.length / PAGE_SIZE)
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchQuery,
+    categoryFilter,
+    leadFilter,
+    templateFilter,
+    statusFilter,
+    sortBy,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredProjects.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [currentPage, filteredProjects]);
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
+    categoryFilter !== 'ALL' ||
+    leadFilter !== 'ALL' ||
     templateFilter !== 'ALL' ||
     statusFilter !== 'ALL';
 
@@ -94,9 +165,12 @@ export function PMProjectsPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
+    setCategoryFilter('ALL');
+    setLeadFilter('ALL');
     setTemplateFilter('ALL');
     setStatusFilter('ALL');
     setSortBy('recentlyUpdated');
+    setCurrentPage(1);
   };
 
   const handleOpenProject = (projectId: string) => {
@@ -155,6 +229,12 @@ export function PMProjectsPage() {
       <PMProjectListToolbar
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        categoryOptions={categoryOptions}
+        leadFilter={leadFilter}
+        onLeadFilterChange={setLeadFilter}
+        leadOptions={leadOptions}
         templateFilter={templateFilter}
         onTemplateFilterChange={setTemplateFilter}
         statusFilter={statusFilter}
@@ -168,8 +248,13 @@ export function PMProjectsPage() {
       />
 
       <PMProjectListTable
-        projects={filteredProjects}
+        projects={paginatedProjects}
+        currentPage={currentPage}
+        pageSize={PAGE_SIZE}
         totalCount={PM_PROJECT_LIST_MOCKS.length}
+        totalFilteredCount={filteredProjects.length}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
         onOpen={handleOpenProject}
         onEdit={handleEditProject}
       />
