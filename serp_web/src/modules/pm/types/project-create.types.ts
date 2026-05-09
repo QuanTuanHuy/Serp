@@ -22,3 +22,22 @@ export interface PMProjectTemplateDefinition {
   workflowSummary: string;
   presetSummary: string[];
 }
+
+export interface PMProjectBlueprintOption extends PMProjectTemplateDefinition {
+  blueprintId: number;
+  blueprintName: string;
+  avatarUrl?: string;
+}
+
+export interface PMProjectCreateLeadOption {
+  id: string;
+  name: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface PMProjectCreateCategoryOption {
+  id: string;
+  name: string;
+  description?: string;
+}

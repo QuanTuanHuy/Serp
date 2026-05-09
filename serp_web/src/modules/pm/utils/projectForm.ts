@@ -4,6 +4,7 @@
  */
 
 import type {
+  PMProjectBlueprintOption,
   PMProjectTemplateDefinition,
   PMProjectVisibilityOption,
 } from '../types/project-create.types';
@@ -79,36 +80,38 @@ export const PM_PROJECT_VISIBILITY_OPTIONS: PMProjectVisibilityOption[] = [
 ];
 
 export function normalizePMProjectKey(value: string) {
-  return value
+  const normalized = value
     .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, '')
-    .trim()
-    .replace(/[\s_]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 12);
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 10);
+
+  if (!normalized) {
+    return '';
+  }
+
+  return /^[A-Z]/.test(normalized) ? normalized : `P${normalized}`.slice(0, 10);
 }
 
 export function generatePMProjectKey(projectName: string) {
   const words = projectName
     .toUpperCase()
-    .replace(/[^A-Z0-9\s-]/g, ' ')
-    .split(/[\s-]+/)
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .split(/\s+/)
     .filter(Boolean);
 
   if (words.length === 0) {
     return '';
   }
 
-  if (words.length === 1) {
-    return words[0].slice(0, 6);
-  }
+  const candidate =
+    words.length === 1
+      ? words[0]
+      : words
+          .slice(0, 10)
+          .map((word) => word[0])
+          .join('');
 
-  return words
-    .slice(0, 6)
-    .map((word) => word[0])
-    .join('')
-    .slice(0, 12);
+  return normalizePMProjectKey(candidate);
 }
 
 export function getPMProjectTemplateDefinition(
@@ -119,4 +122,62 @@ export function getPMProjectTemplateDefinition(
       (template) => template.type === templateType
     ) || null
   );
+}
+
+export function matchPMProjectTemplateType(
+  blueprintName: string
+): PMProjectTemplateType | null {
+  const normalizedName = blueprintName.trim().toLowerCase();
+
+  if (normalizedName.includes('kanban')) {
+    return 'KANBAN';
+  }
+
+  if (normalizedName.includes('scrum')) {
+    return 'SCRUM';
+  }
+
+  if (normalizedName.includes('blank')) {
+    return 'BLANK';
+  }
+
+  return null;
+}
+
+export function filterAvailablePMProjectTemplates(
+  blueprints: Array<{
+    id: number;
+    name: string;
+    avatarUrl?: string | null;
+  }>
+): PMProjectBlueprintOption[] {
+  const blueprintByTemplateType = new Map<
+    PMProjectTemplateType,
+    PMProjectBlueprintOption
+  >();
+
+  blueprints.forEach((blueprint) => {
+    const templateType = matchPMProjectTemplateType(blueprint.name);
+
+    if (!templateType || blueprintByTemplateType.has(templateType)) {
+      return;
+    }
+
+    const definition = getPMProjectTemplateDefinition(templateType);
+
+    if (!definition) {
+      return;
+    }
+
+    blueprintByTemplateType.set(templateType, {
+      ...definition,
+      blueprintId: blueprint.id,
+      blueprintName: blueprint.name,
+      avatarUrl: blueprint.avatarUrl || undefined,
+    });
+  });
+
+  return PM_PROJECT_TEMPLATE_OPTIONS.filter((template) =>
+    blueprintByTemplateType.has(template.type)
+  ).map((template) => blueprintByTemplateType.get(template.type)!);
 }

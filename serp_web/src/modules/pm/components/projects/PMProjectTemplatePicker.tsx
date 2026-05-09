@@ -24,6 +24,8 @@ export function PMProjectTemplatePicker({
   options,
   error,
 }: PMProjectTemplatePickerProps) {
+  const hasOptions = options.length > 0;
+
   return (
     <div className='space-y-4'>
       <div className='space-y-2'>
@@ -41,16 +43,22 @@ export function PMProjectTemplatePicker({
         </div>
       </div>
 
-      <div className='grid gap-4'>
-        {options.map((option) => (
-          <PMProjectTemplateCard
-            key={option.type}
-            template={option}
-            isSelected={value === option.type}
-            onSelect={onValueChange}
-          />
-        ))}
-      </div>
+      {hasOptions ? (
+        <div className='grid gap-4'>
+          {options.map((option) => (
+            <PMProjectTemplateCard
+              key={option.type}
+              template={option}
+              isSelected={value === option.type}
+              onSelect={onValueChange}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className='rounded-2xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground'>
+          No supported PM templates are currently available from the backend.
+        </div>
+      )}
 
       <div
         className={cn(
@@ -61,6 +69,9 @@ export function PMProjectTemplatePicker({
         {error ? <AlertCircle className='h-4 w-4 shrink-0' /> : null}
         <span>
           {error ||
+            (!hasOptions
+              ? 'Templates stay hidden until their blueprints are available in PM core.'
+              : null) ||
             'One template must be selected before the project can be created.'}
         </span>
       </div>

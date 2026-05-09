@@ -35,10 +35,13 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { PM_PROJECT_LIST_MOCKS } from '../../mocks/projectList';
-import type { PMProjectVisibility } from '../../types/project-create.types';
+import type {
+  PMProjectBlueprintOption,
+  PMProjectCreateCategoryOption,
+  PMProjectCreateLeadOption,
+  PMProjectVisibility,
+} from '../../types/project-create.types';
 import {
-  PM_PROJECT_TEMPLATE_OPTIONS,
   PM_PROJECT_VISIBILITY_OPTIONS,
   generatePMProjectKey,
   getPMProjectTemplateDefinition,
@@ -64,10 +67,10 @@ const createProjectSchema = z
       .string()
       .trim()
       .min(2, 'Project key is required')
-      .max(12, 'Project key must be 12 characters or fewer')
+      .max(10, 'Project key must be 10 characters or fewer')
       .regex(
-        /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
-        'Use uppercase letters, numbers, and hyphens only'
+        /^[A-Z][A-Z0-9]{1,9}$/,
+        'Use 2-10 uppercase letters or numbers, starting with a letter'
       ),
     description: z
       .string()
@@ -76,10 +79,10 @@ const createProjectSchema = z
       .optional()
       .or(z.literal('')),
     leadId: z.string().min(1, 'Project lead is required'),
-    category: z.string().min(1, 'Category is required'),
+    categoryId: z.string().optional().or(z.literal('')),
     visibility: z.enum(['PRIVATE', 'TEAM', 'ORGANIZATION']),
-    startDate: z.string().min(1, 'Start date is required'),
-    targetDate: z.string().min(1, 'Target date is required'),
+    startDate: z.string().optional().or(z.literal('')),
+    targetDate: z.string().optional().or(z.literal('')),
   })
   .superRefine((value, context) => {
     if (
@@ -98,11 +101,21 @@ const createProjectSchema = z
 export type PMProjectCreateFormValues = z.infer<typeof createProjectSchema>;
 
 interface PMProjectCreateFormProps {
+  templateOptions: PMProjectBlueprintOption[];
+  leadOptions: PMProjectCreateLeadOption[];
+  categoryOptions: PMProjectCreateCategoryOption[];
+  isCatalogLoading: boolean;
+  submitDisabledReason?: string;
   onSubmit: (values: PMProjectCreateFormValues) => Promise<void> | void;
   onCancel: () => void;
 }
 
 export function PMProjectCreateForm({
+  templateOptions,
+  leadOptions,
+  categoryOptions,
+  isCatalogLoading,
+  submitDisabledReason,
   onSubmit,
   onCancel,
 }: PMProjectCreateFormProps) {
@@ -114,7 +127,7 @@ export function PMProjectCreateForm({
       key: '',
       description: '',
       leadId: '',
-      category: '',
+      categoryId: '',
       visibility: 'TEAM',
       startDate: '',
       targetDate: '',
@@ -134,23 +147,10 @@ export function PMProjectCreateForm({
     [projectName]
   );
 
-  const categoryOptions = useMemo(
-    () => [
-      ...new Set(PM_PROJECT_LIST_MOCKS.map((project) => project.category)),
-    ],
-    []
-  );
-
-  const leadOptions = useMemo(
-    () =>
-      PM_PROJECT_LIST_MOCKS.map((project) => project.lead).filter(
-        (lead, index, array) =>
-          array.findIndex((candidate) => candidate.id === lead.id) === index
-      ),
-    []
-  );
-
-  const selectedTemplate = getPMProjectTemplateDefinition(selectedTemplateType);
+  const selectedTemplate =
+    templateOptions.find(
+      (template) => template.type === selectedTemplateType
+    ) || getPMProjectTemplateDefinition(selectedTemplateType);
 
   const selectedLead =
     leadOptions.find((lead) => lead.id === selectedLeadId) || null;
@@ -214,7 +214,7 @@ export function PMProjectCreateForm({
                       <PMProjectTemplatePicker
                         value={field.value}
                         onValueChange={field.onChange}
-                        options={PM_PROJECT_TEMPLATE_OPTIONS}
+                        options={templateOptions}
                         error={fieldState.error?.message}
                       />
                     </FormControl>
@@ -355,7 +355,7 @@ export function PMProjectCreateForm({
 
                   <FormField
                     control={form.control}
-                    name='category'
+                    name='categoryId'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
@@ -370,12 +370,17 @@ export function PMProjectCreateForm({
                           </FormControl>
                           <SelectContent>
                             {categoryOptions.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          {categoryOptions.length > 0
+                            ? 'Optional when the project does not need a PM category yet.'
+                            : 'No PM categories are available yet, so this field stays optional.'}
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -536,13 +541,21 @@ export function PMProjectCreateForm({
 
                 <Alert>
                   <Shield className='h-4 w-4' />
-                  <AlertTitle>Current implementation note</AlertTitle>
+                  <AlertTitle>Backend-driven availability</AlertTitle>
                   <AlertDescription>
-                    This flow is wired to the new PM route structure and uses a
-                    local redirect on submit until the PM create API is
-                    integrated.
+                    Templates only appear when their PM blueprints exist in the
+                    backend. The UI catalog remains ready for future blueprint
+                    types.
                   </AlertDescription>
                 </Alert>
+
+                {submitDisabledReason ? (
+                  <Alert variant='destructive'>
+                    <Shield className='h-4 w-4' />
+                    <AlertTitle>Project creation is blocked</AlertTitle>
+                    <AlertDescription>{submitDisabledReason}</AlertDescription>
+                  </Alert>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -550,10 +563,19 @@ export function PMProjectCreateForm({
               <Button type='button' variant='outline' onClick={onCancel}>
                 Cancel
               </Button>
-              <Button type='submit' disabled={form.formState.isSubmitting}>
+              <Button
+                type='submit'
+                disabled={
+                  form.formState.isSubmitting ||
+                  isCatalogLoading ||
+                  Boolean(submitDisabledReason)
+                }
+              >
                 {form.formState.isSubmitting
                   ? 'Creating project...'
-                  : 'Create project'}
+                  : isCatalogLoading
+                    ? 'Loading create options...'
+                    : 'Create project'}
               </Button>
             </div>
           </div>
