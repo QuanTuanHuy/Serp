@@ -12,8 +12,10 @@ import type { PaginatedResponse } from '@/lib/store/api/types';
 import type {
   PMCreateProjectRequest,
   PMCreateProjectResponse,
+  PMListProjectsParams,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
+  PMProjectSummaryApi,
 } from '../types/api';
 
 export const pmProjectApi = api.injectEndpoints({
@@ -58,6 +60,37 @@ export const pmProjectApi = api.injectEndpoints({
       transformResponse: createPaginatedTransform<PMProjectCategoryApi>(),
     }),
 
+    getPmProjects: builder.query<
+      PaginatedResponse<PMProjectSummaryApi>,
+      PMListProjectsParams
+    >({
+      query: ({
+        search,
+        categoryId,
+        projectTypeKey,
+        archived,
+        page = 0,
+        pageSize = 10,
+        sortBy,
+        sortDirection,
+      } = {}) => ({
+        url: '/projects',
+        method: 'GET',
+        params: {
+          page,
+          pageSize,
+          ...(search ? { search } : {}),
+          ...(typeof categoryId === 'number' ? { categoryId } : {}),
+          ...(projectTypeKey ? { projectTypeKey } : {}),
+          ...(typeof archived === 'boolean' ? { archived } : {}),
+          ...(sortBy ? { sortBy } : {}),
+          ...(sortDirection ? { sortDirection } : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMProjectSummaryApi>(),
+    }),
+
     createPmProject: builder.mutation<
       PMCreateProjectResponse,
       PMCreateProjectRequest
@@ -77,5 +110,6 @@ export const pmProjectApi = api.injectEndpoints({
 export const {
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
+  useGetPmProjectsQuery,
   useCreatePmProjectMutation,
 } = pmProjectApi;

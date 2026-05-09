@@ -22,11 +22,14 @@ import { PMProjectListRow } from './PMProjectListRow';
 
 interface PMProjectListTableProps {
   projects: PMProjectListItem[];
+  isLoading: boolean;
   currentPage: number;
   pageSize: number;
   totalCount: number;
   totalFilteredCount: number;
   totalPages: number;
+  emptyTitle?: string;
+  emptyDescription?: string;
   onPageChange: (page: number) => void;
   onOpen: (projectId: string) => void;
   onEdit: (projectId: string) => void;
@@ -34,11 +37,14 @@ interface PMProjectListTableProps {
 
 export function PMProjectListTable({
   projects,
+  isLoading,
   currentPage,
   pageSize,
   totalCount,
   totalFilteredCount,
   totalPages,
+  emptyTitle = 'No projects match the current filters',
+  emptyDescription = 'Try adjusting your search, status, or category filters.',
   onPageChange,
   onOpen,
   onEdit,
@@ -63,15 +69,9 @@ export function PMProjectListTable({
                 Lead
               </TableHead>
               <TableHead className='hidden h-12 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:table-cell'>
-                Template
-              </TableHead>
-              <TableHead className='hidden h-12 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground xl:table-cell'>
                 Category & Status
               </TableHead>
               <TableHead className='h-12 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground'>
-                Activity
-              </TableHead>
-              <TableHead className='hidden h-12 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:table-cell'>
                 Updated
               </TableHead>
               <TableHead className='h-12 px-6 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground'>
@@ -81,7 +81,20 @@ export function PMProjectListTable({
           </TableHeader>
 
           <TableBody>
-            {projects.length > 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className='px-6 py-16 text-center'>
+                  <div className='space-y-2'>
+                    <p className='text-base font-semibold text-foreground'>
+                      Loading projects...
+                    </p>
+                    <p className='text-sm text-muted-foreground'>
+                      Fetching the latest project list from PM Core.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : projects.length > 0 ? (
               projects.map((project) => (
                 <PMProjectListRow
                   key={project.id}
@@ -92,13 +105,13 @@ export function PMProjectListTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className='px-6 py-16 text-center'>
+                <TableCell colSpan={6} className='px-6 py-16 text-center'>
                   <div className='space-y-2'>
                     <p className='text-base font-semibold text-foreground'>
-                      No projects match the current filters
+                      {emptyTitle}
                     </p>
                     <p className='text-sm text-muted-foreground'>
-                      Try adjusting your search, status, or template filters.
+                      {emptyDescription}
                     </p>
                   </div>
                 </TableCell>
@@ -109,9 +122,11 @@ export function PMProjectListTable({
 
         <div className='flex flex-col gap-3 border-t bg-background px-6 py-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between'>
           <div>
-            {projects.length === 0
-              ? `No results from ${totalCount} software projects`
-              : `Showing ${rangeStart}-${rangeEnd} of ${totalFilteredCount} matching projects`}
+            {isLoading
+              ? 'Loading project results'
+              : projects.length === 0
+                ? `No results from ${totalCount} software projects`
+                : `Showing ${rangeStart}-${rangeEnd} of ${totalFilteredCount} matching projects`}
           </div>
 
           <div className='flex items-center justify-between gap-3 lg:justify-end'>

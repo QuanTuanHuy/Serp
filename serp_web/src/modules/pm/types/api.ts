@@ -66,3 +66,31 @@ export interface PMCreateProjectResponse {
   updatedAt?: string;
   updatedBy?: number;
 }
+
+export interface PMProjectSummaryApi {
+  id: number;
+  key: string;
+  name: string;
+  description?: string;
+  projectTypeKey: string;
+  leadUserId?: number;
+  leadUserName?: string;
+  avatarId?: number;
+  categoryId?: number;
+  categoryName?: string;
+  isArchived: boolean;
+  archivedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PMListProjectsParams {
+  search?: string;
+  categoryId?: number;
+  projectTypeKey?: string;
+  archived?: boolean;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}

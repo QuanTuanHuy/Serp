@@ -8,8 +8,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FolderKanban, Plus } from 'lucide-react';
+import { getErrorMessage } from '@/lib/store/api';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button } from '@/shared/components/ui';
-import { PM_PROJECT_LIST_MOCKS } from '../mocks/projectList';
+import { useGetPmProjectsQuery, useGetProjectCategoriesQuery } from '../api';
+import type { PMProjectSummaryApi } from '../types/api';
 import type {
   PMProjectListItem,
   PMProjectSort,
@@ -17,48 +20,62 @@ import type {
 import {
   type PMProjectCategoryFilter,
   PMProjectListToolbar,
-  type PMProjectLeadFilter,
   type PMProjectStatusFilter,
-  type PMProjectTemplateFilter,
 } from '../components/projects/PMProjectListToolbar';
 import { PMProjectListTable } from '../components/projects/PMProjectListTable';
 
 const PAGE_SIZE = 4;
 
-function matchesProjectSearch(project: PMProjectListItem, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
-
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return [
-    project.name,
-    project.key,
-    project.description,
-    project.category,
-    project.lead.name,
-  ].some((value) => value.toLowerCase().includes(normalizedQuery));
-}
-
-function sortProjects(projects: PMProjectListItem[], sortBy: PMProjectSort) {
-  const items = [...projects];
-
+function mapSortToApi(sortBy: PMProjectSort) {
   if (sortBy === 'name') {
-    return items.sort((left, right) => left.name.localeCompare(right.name));
+    return { sortBy: 'name', sortDirection: 'asc' as const };
   }
 
   if (sortBy === 'createdDate') {
-    return items.sort(
-      (left, right) =>
-        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
-    );
+    return { sortBy: 'createdAt', sortDirection: 'desc' as const };
   }
 
-  return items.sort(
-    (left, right) =>
-      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-  );
+  return { sortBy: 'updatedAt', sortDirection: 'desc' as const };
+}
+
+function mapStatusToArchived(statusFilter: PMProjectStatusFilter) {
+  if (statusFilter === 'ACTIVE') {
+    return false;
+  }
+
+  if (statusFilter === 'ARCHIVED') {
+    return true;
+  }
+
+  return undefined;
+}
+
+function mapProjectSummaryToListItem(
+  project: PMProjectSummaryApi
+): PMProjectListItem {
+  const fallbackTimestamp = new Date().toISOString();
+
+  return {
+    id: String(project.id),
+    name: project.name,
+    key: project.key,
+    description: project.description?.trim() || 'No description provided.',
+    category: project.categoryName?.trim() || 'Uncategorized',
+    status: project.isArchived ? 'ARCHIVED' : 'ACTIVE',
+    lead: {
+      id:
+        typeof project.leadUserId === 'number'
+          ? String(project.leadUserId)
+          : '',
+      name:
+        project.leadUserName?.trim() ||
+        (typeof project.leadUserId === 'number'
+          ? `User #${project.leadUserId}`
+          : 'Unassigned'),
+    },
+    updatedAt: project.updatedAt || project.createdAt || fallbackTimestamp,
+    createdAt: project.createdAt || project.updatedAt || fallbackTimestamp,
+  };
 }
 
 export function PMProjectsPage() {
@@ -66,77 +83,58 @@ export function PMProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] =
     useState<PMProjectCategoryFilter>('ALL');
-  const [leadFilter, setLeadFilter] = useState<PMProjectLeadFilter>('ALL');
-  const [templateFilter, setTemplateFilter] =
-    useState<PMProjectTemplateFilter>('ALL');
   const [statusFilter, setStatusFilter] =
     useState<PMProjectStatusFilter>('ALL');
   const [sortBy, setSortBy] = useState<PMProjectSort>('recentlyUpdated');
+  const [currentPage, setCurrentPage] = useState(1);
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
+  const sortConfig = useMemo(() => mapSortToApi(sortBy), [sortBy]);
+  const archivedFilter = useMemo(
+    () => mapStatusToArchived(statusFilter),
+    [statusFilter]
+  );
+
+  const { data: categoriesResponse, isLoading: isCategoryLoading } =
+    useGetProjectCategoriesQuery({ page: 0, pageSize: 100 });
+  const {
+    data: projectsResponse,
+    isLoading: isProjectsLoading,
+    isFetching: isProjectsFetching,
+    error: projectsError,
+  } = useGetPmProjectsQuery({
+    page: currentPage - 1,
+    pageSize: PAGE_SIZE,
+    projectTypeKey: 'software',
+    search: debouncedSearchQuery.trim() || undefined,
+    categoryId: categoryFilter === 'ALL' ? undefined : Number(categoryFilter),
+    archived: archivedFilter,
+    sortBy: sortConfig.sortBy,
+    sortDirection: sortConfig.sortDirection,
+  });
 
   const categoryOptions = useMemo(
-    () => [
-      ...new Set(PM_PROJECT_LIST_MOCKS.map((project) => project.category)),
-    ],
-    []
-  );
-
-  const leadOptions = useMemo(
     () =>
-      PM_PROJECT_LIST_MOCKS.map((project) => project.lead).filter(
-        (lead, index, array) =>
-          array.findIndex((candidate) => candidate.id === lead.id) === index
-      ),
-    []
+      [...(categoriesResponse?.data.items || [])]
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((category) => ({
+          id: String(category.id),
+          name: category.name,
+        })),
+    [categoriesResponse]
   );
 
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const filteredProjects = useMemo(() => {
-    const items = PM_PROJECT_LIST_MOCKS.filter((project) => {
-      const matchesSearch = matchesProjectSearch(project, searchQuery);
-      const matchesCategory =
-        categoryFilter === 'ALL' || project.category === categoryFilter;
-      const matchesLead =
-        leadFilter === 'ALL' || project.lead.id === leadFilter;
-      const matchesTemplate =
-        templateFilter === 'ALL' || project.templateType === templateFilter;
-      const matchesStatus =
-        statusFilter === 'ALL' || project.status === statusFilter;
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesLead &&
-        matchesTemplate &&
-        matchesStatus
-      );
-    });
-
-    return sortProjects(items, sortBy);
-  }, [
-    categoryFilter,
-    leadFilter,
-    searchQuery,
-    sortBy,
-    statusFilter,
-    templateFilter,
-  ]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredProjects.length / PAGE_SIZE)
+  const filteredProjects = useMemo(
+    () => (projectsResponse?.data.items || []).map(mapProjectSummaryToListItem),
+    [projectsResponse]
   );
+
+  const totalPages = Math.max(1, projectsResponse?.data.totalPages || 1);
+  const totalFilteredCount = projectsResponse?.data.totalItems || 0;
+  const totalProjectsCount = totalFilteredCount;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    searchQuery,
-    categoryFilter,
-    leadFilter,
-    templateFilter,
-    statusFilter,
-    sortBy,
-  ]);
+  }, [debouncedSearchQuery, categoryFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -144,30 +142,21 @@ export function PMProjectsPage() {
     }
   }, [currentPage, totalPages]);
 
-  const paginatedProjects = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredProjects.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [currentPage, filteredProjects]);
-
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
     categoryFilter !== 'ALL' ||
-    leadFilter !== 'ALL' ||
-    templateFilter !== 'ALL' ||
     statusFilter !== 'ALL';
 
-  const activeProjectsCount = useMemo(
-    () =>
-      PM_PROJECT_LIST_MOCKS.filter((project) => project.status === 'ACTIVE')
-        .length,
-    []
-  );
+  const tableEmptyTitle = projectsError
+    ? 'Unable to load projects'
+    : 'No projects match the current filters';
+  const tableEmptyDescription = projectsError
+    ? getErrorMessage(projectsError)
+    : 'Try adjusting your search, status, or category filters.';
 
   const clearFilters = () => {
     setSearchQuery('');
     setCategoryFilter('ALL');
-    setLeadFilter('ALL');
-    setTemplateFilter('ALL');
     setStatusFilter('ALL');
     setSortBy('recentlyUpdated');
     setCurrentPage(1);
@@ -201,16 +190,9 @@ export function PMProjectsPage() {
           <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>
             <span>
               <span className='font-semibold text-foreground'>
-                {PM_PROJECT_LIST_MOCKS.length}
+                {totalProjectsCount}
               </span>{' '}
               total projects
-            </span>
-            <span className='hidden h-1 w-1 rounded-full bg-border sm:inline-block' />
-            <span>
-              <span className='font-semibold text-foreground'>
-                {activeProjectsCount}
-              </span>{' '}
-              active projects
             </span>
           </div>
         </div>
@@ -232,28 +214,26 @@ export function PMProjectsPage() {
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         categoryOptions={categoryOptions}
-        leadFilter={leadFilter}
-        onLeadFilterChange={setLeadFilter}
-        leadOptions={leadOptions}
-        templateFilter={templateFilter}
-        onTemplateFilterChange={setTemplateFilter}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         sortBy={sortBy}
         onSortByChange={setSortBy}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={clearFilters}
-        resultCount={filteredProjects.length}
-        totalCount={PM_PROJECT_LIST_MOCKS.length}
+        resultCount={totalFilteredCount}
+        totalCount={totalProjectsCount}
       />
 
       <PMProjectListTable
-        projects={paginatedProjects}
+        projects={filteredProjects}
+        isLoading={isProjectsLoading || isProjectsFetching || isCategoryLoading}
         currentPage={currentPage}
         pageSize={PAGE_SIZE}
-        totalCount={PM_PROJECT_LIST_MOCKS.length}
-        totalFilteredCount={filteredProjects.length}
+        totalCount={totalProjectsCount}
+        totalFilteredCount={totalFilteredCount}
         totalPages={totalPages}
+        emptyTitle={tableEmptyTitle}
+        emptyDescription={tableEmptyDescription}
         onPageChange={setCurrentPage}
         onOpen={handleOpenProject}
         onEdit={handleEditProject}

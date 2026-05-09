@@ -16,28 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
-import type {
-  PMProjectSort,
-  PMProjectStatus,
-  PMProjectTemplateType,
-} from '../../types/project-list.types';
+import type { PMProjectSort } from '../../types/project-list.types';
 
-export type PMProjectTemplateFilter = 'ALL' | PMProjectTemplateType;
-export type PMProjectStatusFilter = 'ALL' | PMProjectStatus;
+export type PMProjectStatusFilter = 'ALL' | 'ACTIVE' | 'ARCHIVED';
 export type PMProjectCategoryFilter = 'ALL' | string;
-export type PMProjectLeadFilter = 'ALL' | string;
+
+interface PMProjectCategoryOption {
+  id: string;
+  name: string;
+}
 
 interface PMProjectListToolbarProps {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   categoryFilter: PMProjectCategoryFilter;
   onCategoryFilterChange: (value: PMProjectCategoryFilter) => void;
-  categoryOptions: string[];
-  leadFilter: PMProjectLeadFilter;
-  onLeadFilterChange: (value: PMProjectLeadFilter) => void;
-  leadOptions: Array<{ id: string; name: string }>;
-  templateFilter: PMProjectTemplateFilter;
-  onTemplateFilterChange: (value: PMProjectTemplateFilter) => void;
+  categoryOptions: PMProjectCategoryOption[];
   statusFilter: PMProjectStatusFilter;
   onStatusFilterChange: (value: PMProjectStatusFilter) => void;
   sortBy: PMProjectSort;
@@ -54,11 +48,6 @@ export function PMProjectListToolbar({
   categoryFilter,
   onCategoryFilterChange,
   categoryOptions,
-  leadFilter,
-  onLeadFilterChange,
-  leadOptions,
-  templateFilter,
-  onTemplateFilterChange,
   statusFilter,
   onStatusFilterChange,
   sortBy,
@@ -95,7 +84,7 @@ export function PMProjectListToolbar({
         </div>
       </div>
 
-      <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_220px_220px_220px_220px_auto]'>
+      <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_220px_220px_auto]'>
         <Select
           value={categoryFilter}
           onValueChange={(value) =>
@@ -108,46 +97,10 @@ export function PMProjectListToolbar({
           <SelectContent>
             <SelectItem value='ALL'>All categories</SelectItem>
             {categoryOptions.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
               </SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={leadFilter}
-          onValueChange={(value) =>
-            onLeadFilterChange(value as PMProjectLeadFilter)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder='Lead' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='ALL'>All leads</SelectItem>
-            {leadOptions.map((lead) => (
-              <SelectItem key={lead.id} value={lead.id}>
-                {lead.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={templateFilter}
-          onValueChange={(value) =>
-            onTemplateFilterChange(value as PMProjectTemplateFilter)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder='Template' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='ALL'>All templates</SelectItem>
-            <SelectItem value='BLANK'>Blank</SelectItem>
-            <SelectItem value='KANBAN'>Kanban</SelectItem>
-            <SelectItem value='SCRUM'>Scrum</SelectItem>
           </SelectContent>
         </Select>
 
@@ -163,7 +116,6 @@ export function PMProjectListToolbar({
           <SelectContent>
             <SelectItem value='ALL'>All statuses</SelectItem>
             <SelectItem value='ACTIVE'>Active</SelectItem>
-            <SelectItem value='COMPLETED'>Completed</SelectItem>
             <SelectItem value='ARCHIVED'>Archived</SelectItem>
           </SelectContent>
         </Select>

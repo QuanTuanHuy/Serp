@@ -28,7 +28,6 @@ import {
 } from '@/shared/components/ui';
 import type { PMProjectListItem } from '../../types/project-list.types';
 import { PMProjectStatusBadge } from './PMProjectStatusBadge';
-import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
 
 interface PMProjectListRowProps {
   project: PMProjectListItem;
@@ -45,15 +44,8 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function getProjectAccent(templateType: PMProjectListItem['templateType']) {
-  switch (templateType) {
-    case 'KANBAN':
-      return 'bg-blue-600';
-    case 'SCRUM':
-      return 'bg-violet-600';
-    default:
-      return 'bg-slate-700';
-  }
+function getProjectAccent(status: PMProjectListItem['status']) {
+  return status === 'ARCHIVED' ? 'bg-zinc-600' : 'bg-primary';
 }
 
 function formatRelativeTime(value: string) {
@@ -104,9 +96,7 @@ export function PMProjectListRow({
       <TableCell className='min-w-[280px] py-5'>
         <div className='flex items-start gap-4'>
           <div
-            className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${getProjectAccent(
-              project.templateType
-            )}`}
+            className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${getProjectAccent(project.status)}`}
           >
             {project.key.slice(0, 2)}
           </div>
@@ -126,12 +116,11 @@ export function PMProjectListRow({
             <p className='text-xs text-muted-foreground lg:hidden'>
               {project.category} · {project.lead.name}
             </p>
-            <div className='flex flex-wrap items-center gap-2 md:hidden'>
-              <PMProjectTemplateBadge templateType={project.templateType} />
-              {project.status !== 'ARCHIVED' && (
+            {project.status !== 'ARCHIVED' && (
+              <div className='md:hidden'>
                 <PMProjectStatusBadge status={project.status} />
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </TableCell>
@@ -158,10 +147,6 @@ export function PMProjectListRow({
       </TableCell>
 
       <TableCell className='hidden py-5 xl:table-cell'>
-        <PMProjectTemplateBadge templateType={project.templateType} />
-      </TableCell>
-
-      <TableCell className='hidden py-5 xl:table-cell'>
         <div className='space-y-1'>
           <p className='text-sm font-medium text-foreground'>
             {project.category}
@@ -173,18 +158,7 @@ export function PMProjectListRow({
       </TableCell>
 
       <TableCell className='py-5'>
-        <div className='space-y-1'>
-          <p className='text-sm font-semibold text-foreground'>
-            {project.openItemsCount} open items
-          </p>
-          <p className='text-xs text-muted-foreground'>
-            Updated {updatedLabel}
-          </p>
-        </div>
-      </TableCell>
-
-      <TableCell className='hidden py-5 text-sm text-muted-foreground lg:table-cell'>
-        {updatedLabel}
+        <p className='text-sm text-muted-foreground'>Updated {updatedLabel}</p>
       </TableCell>
 
       <TableCell

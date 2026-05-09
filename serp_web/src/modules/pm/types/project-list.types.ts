@@ -20,11 +20,10 @@ export interface PMProjectListItem {
   name: string;
   key: string;
   description: string;
-  templateType: PMProjectTemplateType;
+  templateType?: PMProjectTemplateType;
   category: string;
   status: PMProjectStatus;
   lead: PMProjectLead;
-  openItemsCount: number;
   updatedAt: string;
   createdAt: string;
 }
