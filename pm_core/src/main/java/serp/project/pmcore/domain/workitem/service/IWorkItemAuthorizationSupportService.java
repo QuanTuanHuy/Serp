@@ -22,9 +22,8 @@ public interface IWorkItemAuthorizationSupportService {
                                   ProjectPermissionEvaluationContext actorContext,
                                   String... permissionKeys);
 
-    void checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject subject,
-                                               ProjectPermissionEvaluationContext actorContext,
-                                               Long dueDate);
+    void checkScheduleIssuesPermission(ProjectPermissionSubject subject,
+                                       ProjectPermissionEvaluationContext actorContext);
 
     Long resolveAssigneeId(ProjectPermissionSubject subject,
                            Long requestedAssigneeId,

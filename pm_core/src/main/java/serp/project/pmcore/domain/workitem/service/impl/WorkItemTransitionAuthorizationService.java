@@ -42,8 +42,9 @@ public class WorkItemTransitionAuthorizationService implements IWorkItemTransiti
     public void checkFieldLevelPermissions(ProjectEntity project,
                                            ProjectPermissionEvaluationContext actorContext,
                                            TransitionWorkItemStatusData data) {
-        Long dueDate = WorkItemFieldValueUtils.asNullableLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE));
-        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject.from(project), actorContext, dueDate);
+        if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
+            workItemAuthorizationSupportService.checkScheduleIssuesPermission(ProjectPermissionSubject.from(project), actorContext);
+        }
 
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
             workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(

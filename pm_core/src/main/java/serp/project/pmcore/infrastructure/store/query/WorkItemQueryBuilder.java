@@ -37,7 +37,7 @@ public class WorkItemQueryBuilder {
 
     private static final Set<String> ALLOWED_SORT_COLUMNS = Set.of(
             "id", "key", "summary", "status_id", "priority_id", "assignee_id",
-            "reporter_id", "issue_type_id", "due_date", "created_at",
+            "reporter_id", "issue_type_id", "start_date", "due_date", "created_at",
             "updated_at", "rank", "issue_no", "resolution_id", "parent_id"
     );
 
@@ -48,7 +48,7 @@ public class WorkItemQueryBuilder {
             w.issue_no, w.key, w.summary, w.description,
             w.workflow_step_id, w.status_id, w.priority_id, w.resolution_id,
             w.assignee_id, w.reporter_id, w.parent_id,
-            w.security_level_id, w.due_date, w.rank,
+            w.security_level_id, w.start_date, w.due_date, w.rank,
             w.time_original_estimate, w.time_remaining_estimate, w.time_spent,
             w.created_at, w.updated_at, w.created_by, w.updated_by""";
 

@@ -35,6 +35,7 @@ public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkIt
                 .parentId(getNullableLong(rs, "parent_id"))
                 .securityLevelId(getNullableLong(rs, "security_level_id"))
                 .resolutionId(getNullableLong(rs, "resolution_id"))
+                .startDate(hasColumn(rs, "start_date") ? toEpochMilli(rs.getTimestamp("start_date")) : null)
                 .dueDate(toEpochMilli(rs.getTimestamp("due_date")))
                 .rank(rs.getString("rank"))
                 .timeOriginalEstimate(getNullableLong(rs, "time_original_estimate"))

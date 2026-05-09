@@ -50,6 +50,7 @@ import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.ManageWorkItemComponentsRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.PatchWorkItemScheduleRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
@@ -135,6 +136,7 @@ public class WorkItemController {
                 request.getPriorityId(),
                 request.getAssigneeId(),
                 request.getParentId(),
+                request.getStartDate(),
                 request.getDueDate(),
                 request.getTimeOriginalEstimate(),
                 request.getSecurityLevelId(),
@@ -151,6 +153,27 @@ public class WorkItemController {
     public ResponseEntity<GeneralResponse<UpdateWorkItemResult>> updateWorkItem(@PathVariable Long projectId,
                                                                                 @PathVariable Long id,
                                                                                 @Valid @RequestBody UpdateWorkItemRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateWorkItemResult result = updateWorkItemCommandHandler.handle(new UpdateWorkItemCommand(
+                projectId,
+                id,
+                request.toData(),
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @PatchMapping("/{id}/schedule")
+    public ResponseEntity<GeneralResponse<UpdateWorkItemResult>> patchWorkItemSchedule(@PathVariable Long projectId,
+                                                                                       @PathVariable Long id,
+                                                                                       @Valid @RequestBody PatchWorkItemScheduleRequest request) {
         Long userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
         Long tenantId = authUtils.getCurrentTenantId()

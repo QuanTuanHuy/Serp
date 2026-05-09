@@ -11,6 +11,7 @@ public class PathConstants {
     public static final String PROJECT_CATEGORIES = API_BASE_PATH + "/project-categories";
     public static final String PROJECT_BLUEPRINTS = API_BASE_PATH + "/project-blueprints";
     public static final String WORKITEMS = API_BASE_PATH + "/projects/{projectId}/work-items";
+    public static final String TIMELINE_WORK_ITEMS = PROJECTS + "/{projectId}/timeline/work-items";
     public static final String ISSUE_LINKS = WORKITEMS + "/{workItemId}/links";
     public static final String WORKLOGS = WORKITEMS + "/{workItemId}/worklogs";
     public static final String PROJECT_ROLE_ACTORS = PROJECTS + "/{projectId}/roles/{roleId}/actors";

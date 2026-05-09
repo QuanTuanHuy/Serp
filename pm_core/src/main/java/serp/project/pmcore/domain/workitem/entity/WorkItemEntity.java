@@ -36,6 +36,7 @@ public class WorkItemEntity extends BaseEntity {
     private Long parentId;
     private Long securityLevelId;
 
+    private Long startDate;
     private Long dueDate;
     private String rank;
 

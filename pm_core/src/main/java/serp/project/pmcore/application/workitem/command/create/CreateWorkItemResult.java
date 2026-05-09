@@ -31,6 +31,7 @@ public class CreateWorkItemResult {
     private Long reporterId;
     private Long parentId;
     private Long securityLevelId;
+    private Long startDate;
     private Long dueDate;
     private String rank;
     private Long timeOriginalEstimate;
@@ -58,6 +59,7 @@ public class CreateWorkItemResult {
                 .reporterId(entity.getReporterId())
                 .parentId(entity.getParentId())
                 .securityLevelId(entity.getSecurityLevelId())
+                .startDate(entity.getStartDate())
                 .dueDate(entity.getDueDate())
                 .rank(entity.getRank())
                 .timeOriginalEstimate(entity.getTimeOriginalEstimate())

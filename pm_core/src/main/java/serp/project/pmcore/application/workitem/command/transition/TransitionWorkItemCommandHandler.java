@@ -44,6 +44,7 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupport
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemTransitionAuthorizationService;
+import serp.project.pmcore.domain.workitem.validator.WorkItemScheduleValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.ArrayList;
@@ -163,6 +164,7 @@ public class TransitionWorkItemCommandHandler
                 resolvedAssigneeId,
                 resolvedSecurityLevelId
         );
+        validateScheduleRange(workItem, data);
 
         Map<String, Object> originalSnapshot = snapshotTrackedFields(workItem);
 
@@ -449,6 +451,7 @@ public class TransitionWorkItemCommandHandler
                 data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)
                         ? resolvedAssigneeId
                         : workItem.getAssigneeId());
+        effectiveSystemValues.put(WorkItemFieldConstants.START_DATE, workItem.getStartDate());
         effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE,
                 data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
                         ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
@@ -494,6 +497,7 @@ public class TransitionWorkItemCommandHandler
         snapshot.put(WorkItemFieldConstants.DESCRIPTION, workItem.getDescription());
         snapshot.put(WorkItemFieldConstants.PRIORITY_ID, workItem.getPriorityId());
         snapshot.put(WorkItemFieldConstants.ASSIGNEE_ID, workItem.getAssigneeId());
+        snapshot.put(WorkItemFieldConstants.START_DATE, workItem.getStartDate());
         snapshot.put(WorkItemFieldConstants.DUE_DATE, workItem.getDueDate());
         snapshot.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, workItem.getTimeOriginalEstimate());
         snapshot.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, workItem.getSecurityLevelId());
@@ -539,6 +543,7 @@ public class TransitionWorkItemCommandHandler
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DESCRIPTION, updatedWorkItem.getDescription());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.PRIORITY_ID, updatedWorkItem.getPriorityId());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.ASSIGNEE_ID, updatedWorkItem.getAssigneeId());
+        addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.START_DATE, updatedWorkItem.getStartDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DUE_DATE, updatedWorkItem.getDueDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, updatedWorkItem.getTimeOriginalEstimate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.SECURITY_LEVEL_ID, updatedWorkItem.getSecurityLevelId());
@@ -560,6 +565,13 @@ public class TransitionWorkItemCommandHandler
         if (!Objects.equals(originalSnapshot.get(fieldRef), newValue)) {
             changedFields.add(fieldRef);
         }
+    }
+
+    private void validateScheduleRange(WorkItemEntity workItem, TransitionWorkItemStatusData data) {
+        Long effectiveDueDate = data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
+                ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
+                : workItem.getDueDate();
+        WorkItemScheduleValidator.validateRange(workItem.getStartDate(), effectiveDueDate);
     }
 
     private void persistCustomFieldValues(Long workItemId,
