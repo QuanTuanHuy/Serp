@@ -44,6 +44,14 @@ public class ProjectCategoryAdapter implements IProjectCategoryPort {
     }
 
     @Override
+    public List<ProjectCategoryEntity> getCategoriesByIds(List<Long> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return List.of();
+        }
+        return projectCategoryMapper.toEntities(projectCategoryRepository.findAllById(categoryIds));
+    }
+
+    @Override
     public Optional<ProjectCategoryEntity> getCategoryByIdIncludingSystem(Long id, Long tenantId) {
         return projectCategoryRepository.findByIdAndTenantIdOrSystemTenant(id, tenantId)
                 .map(projectCategoryMapper::toEntity);
@@ -55,8 +63,8 @@ public class ProjectCategoryAdapter implements IProjectCategoryPort {
                 ? Sort.Direction.ASC : Sort.Direction.DESC;
         String sortField = switch (criteria.getSortBy()) {
             case "name" -> "name";
-            case "updated_at", "updatedAt" -> "updatedAt";
-            default -> "createdAt";
+            case "updated_at", "updatedAt" -> "updated_at";
+            default -> "created_at";
         };
         Pageable pageable = PageRequest.of(criteria.getPage(), criteria.getPageSize(), Sort.by(direction, sortField));
         Page<ProjectCategoryModel> result = projectCategoryRepository.findAllWithFilters(
