@@ -339,14 +339,16 @@ public class WorkflowService implements IWorkflowService {
                                                                   Long fromStepId,
                                                                   Long tenantId) {
         WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
-        Long draftVersionId = requireDraftVersionId(workflow);
-        if (fromStepId == null) {
-            return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(draftVersionId, tenantId);
+        Long publishedVersionId = workflow.getCurrentPublishedVersionId();
+        if (publishedVersionId == null) {
+            return List.of();
         }
-
-        List<WorkflowStepEntity> draftSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
-        requireStepInDraft(draftSteps, fromStepId);
-        return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(draftVersionId, fromStepId, tenantId);
+        if (fromStepId == null) {
+            return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(publishedVersionId, tenantId);
+        }
+        List<WorkflowStepEntity> publishedSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(publishedVersionId, tenantId);
+        requireStepInPublished(publishedSteps, fromStepId);
+        return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(publishedVersionId, fromStepId, tenantId);
     }
 
     @Override
@@ -596,6 +598,19 @@ public class WorkflowService implements IWorkflowService {
                 .filter(step -> Objects.equals(step.getId(), stepId))
                 .findFirst()
                 .orElseThrow(() -> ResourceNotFoundException.workflowStepById(stepId));
+    }
+
+    private WorkflowStepEntity requireStepInPublished(List<WorkflowStepEntity> publishedSteps, Long stepId) {
+        return publishedSteps.stream()
+                .filter(step -> Objects.equals(step.getId(), stepId))
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.error("[WorkflowService] Workflow step not found: id={}", stepId);
+                    return new DomainValidationException(
+                        DomainErrorCode.WORKFLOW_STEP_NOT_FOUND,
+                        "Workflow step not found: id=" + stepId
+                    );
+                });
     }
 
     private void validateTransitionScreen(Long screenId, Long tenantId) {

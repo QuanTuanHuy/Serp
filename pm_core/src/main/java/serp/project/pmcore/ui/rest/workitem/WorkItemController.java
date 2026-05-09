@@ -32,6 +32,9 @@ import serp.project.pmcore.application.workitem.command.transition.TransitionWor
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQuery;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQueryHandler;
+import serp.project.pmcore.application.workitem.query.createmeta.GetWorkItemCreateMetaQuery;
+import serp.project.pmcore.application.workitem.query.createmeta.GetWorkItemCreateMetaQueryHandler;
+import serp.project.pmcore.application.workitem.query.createmeta.WorkItemCreateMetaView;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQuery;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQueryHandler;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
@@ -73,6 +76,7 @@ public class WorkItemController {
     private final RemoveWorkItemComponentCommandHandler removeWorkItemComponentCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
+    private final GetWorkItemCreateMetaQueryHandler getWorkItemCreateMetaQueryHandler;
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
 
@@ -94,6 +98,26 @@ public class WorkItemController {
                 userId,
                 authUtils.getCurrentGroups(),
                 searchCriteria
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/create-meta")
+    public ResponseEntity<GeneralResponse<WorkItemCreateMetaView>> getWorkItemCreateMeta(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) Long issueTypeId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        WorkItemCreateMetaView response = getWorkItemCreateMetaQueryHandler.handle(new GetWorkItemCreateMetaQuery(
+                tenantId,
+                userId,
+                projectId,
+                issueTypeId,
+                authUtils.getCurrentGroups()
         ));
 
         return ResponseEntity.ok(responseUtils.success(response));
