@@ -1,14 +1,10 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - PM projects Calendar view
+ * Description: Part of Serp Project - Legacy PM projects calendar redirect
  */
 
+import { redirect } from 'next/navigation';
+
 export default function Page() {
-  return (
-    <div className='rounded-lg border bg-card p-8 text-card-foreground shadow-sm'>
-      <p className='text-muted-foreground'>
-        Projects Calendar view will appear here.
-      </p>
-    </div>
-  );
+  redirect('/pm/projects');
 }

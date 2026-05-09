@@ -6,34 +6,61 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { cn } from '@/shared/utils';
 
 type TabItem = {
   key: string;
   label: string;
-  href: string;
+  href: (projectId: string) => string;
 };
 
 const TABS: TabItem[] = [
-  { key: 'summary', label: 'Summary', href: '/pm/projects/summary' },
-  { key: 'timeline', label: 'Timeline', href: '/pm/projects/timeline' },
-  { key: 'kanban', label: 'Kanban board', href: '/pm/projects/kanban' },
-  { key: 'calendar', label: 'Calendar', href: '/pm/projects/calendar' },
-  { key: 'list', label: 'List', href: '/pm/projects/list' },
-  { key: 'components', label: 'Components', href: '/pm/projects/components' },
+  {
+    key: 'summary',
+    label: 'Summary',
+    href: (projectId) => `/pm/projects/${projectId}/summary`,
+  },
+  {
+    key: 'timeline',
+    label: 'Timeline',
+    href: (projectId) => `/pm/projects/${projectId}/timeline`,
+  },
+  {
+    key: 'board',
+    label: 'Board',
+    href: (projectId) => `/pm/projects/${projectId}/board`,
+  },
+  {
+    key: 'calendar',
+    label: 'Calendar',
+    href: (projectId) => `/pm/projects/${projectId}/calendar`,
+  },
+  {
+    key: 'components',
+    label: 'Components',
+    href: (projectId) => `/pm/projects/${projectId}/components`,
+  },
 ];
 
 function getActiveTabKey(pathname: string): string {
   const parts = pathname.split('/').filter(Boolean);
-  const maybeKey = parts[parts.length - 1] || 'list';
+  const maybeKey = parts[parts.length - 1] || 'summary';
   if (TABS.some((t) => t.key === maybeKey)) return maybeKey;
-  return 'list';
+  return 'summary';
 }
 
 export function PMProjectsTopTabs() {
+  const params = useParams<{ projectId?: string | string[] }>();
   const pathname = usePathname();
   const activeKey = getActiveTabKey(pathname);
+  const projectId = Array.isArray(params.projectId)
+    ? params.projectId[0]
+    : params.projectId;
+
+  if (!projectId) {
+    return null;
+  }
 
   return (
     <div className='-mx-1 overflow-x-auto border-b bg-background'>
@@ -46,7 +73,7 @@ export function PMProjectsTopTabs() {
           return (
             <Link
               key={tab.key}
-              href={tab.href}
+              href={tab.href(projectId)}
               className={cn(
                 'relative px-3 py-3 text-sm font-medium text-muted-foreground transition-colors',
                 'hover:text-foreground',
