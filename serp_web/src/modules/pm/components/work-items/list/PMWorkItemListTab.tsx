@@ -290,6 +290,7 @@ interface PMWorkItemDetailPanelContainerProps {
     priorityName?: string | null;
     assigneeName?: string | null;
     reporterName?: string | null;
+    createdAt?: number | null;
     dueDate?: number | null;
     updatedAt?: number | null;
   };
@@ -340,6 +341,7 @@ function PMWorkItemDetailPanelContainer({
       reporterName={
         data?.reporter?.displayName ?? fallbackItem?.reporterName ?? undefined
       }
+      createdAt={data?.createdAt ?? fallbackItem?.createdAt}
       dueDate={data?.dueDate ?? fallbackItem?.dueDate}
       updatedAt={data?.updatedAt ?? fallbackItem?.updatedAt}
     />

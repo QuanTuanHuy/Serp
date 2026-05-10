@@ -52,6 +52,7 @@ interface PMWorkItemDetailPanelProps {
   assigneeName?: string;
   reporterName?: string;
   dueDate?: number | null;
+  createdAt?: number | null;
   updatedAt?: number | null;
   isFetching?: boolean;
   loading?: boolean;
@@ -67,7 +68,7 @@ export function PMWorkItemListTable({
 }: WorkItemListProps) {
   return (
     <Card className='overflow-hidden shadow-sm'>
-      <CardHeader className='border-b px-4 py-3'>
+      <CardHeader className='border-b px-4 py-2.5'>
         <CardTitle className='text-sm font-medium text-muted-foreground'>
           {totalItems} work items
         </CardTitle>
@@ -80,13 +81,14 @@ export function PMWorkItemListTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className='w-28'>Key</TableHead>
-                  <TableHead>Summary</TableHead>
-                  <TableHead className='w-40'>Status</TableHead>
-                  <TableHead className='w-48'>Assignee</TableHead>
-                  <TableHead className='w-36'>Priority</TableHead>
-                  <TableHead className='w-36'>Due date</TableHead>
-                  <TableHead className='w-36'>Updated</TableHead>
+                  <TableHead>Work</TableHead>
+                  <TableHead className='w-32'>Status</TableHead>
+                  <TableHead className='w-36'>Assignee</TableHead>
+                  <TableHead className='w-36'>Reporter</TableHead>
+                  <TableHead className='w-28'>Priority</TableHead>
+                  <TableHead className='w-28'>Created</TableHead>
+                  <TableHead className='w-28'>Due</TableHead>
+                  <TableHead className='w-28'>Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -95,36 +97,43 @@ export function PMWorkItemListTable({
                     key={item.id}
                     onClick={() => onSelect(item.id)}
                     className={cn(
-                      'cursor-pointer',
-                      selectedIssueId === item.id && 'bg-primary/5'
+                      'cursor-pointer transition-colors hover:bg-muted/60',
+                      selectedIssueId === item.id &&
+                        'border-l-2 border-l-primary bg-primary/5'
                     )}
                   >
-                    <TableCell className='font-semibold text-primary'>
-                      {item.key}
-                    </TableCell>
-                    <TableCell>
-                      <div className='min-w-64'>
-                        <p className='line-clamp-1 font-medium'>
+                    <TableCell className='align-top'>
+                      <div className='min-w-64 max-w-3xl'>
+                        <p className='text-xs font-semibold uppercase tracking-wide text-primary'>
+                          {item.key}
+                        </p>
+                        <p className='line-clamp-1 font-medium leading-5'>
                           {item.summary}
                         </p>
-                        <p className='mt-1 text-xs text-muted-foreground'>
+                        <p className='mt-0.5 text-xs text-muted-foreground'>
                           {getWorkItemLabel(item)}
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='align-top'>
                       <PMStatusBadge item={item} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='align-top'>
                       <PMUserCell item={item} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='align-top'>
+                      <PMUserCell item={item} kind='reporter' />
+                    </TableCell>
+                    <TableCell className='align-top'>
                       <PMPriorityCell item={item} />
                     </TableCell>
-                    <TableCell className='text-sm text-muted-foreground'>
+                    <TableCell className='align-top text-sm text-muted-foreground'>
+                      {formatDate(item.createdAt)}
+                    </TableCell>
+                    <TableCell className='align-top text-sm text-muted-foreground'>
                       {formatDate(item.dueDate)}
                     </TableCell>
-                    <TableCell className='text-sm text-muted-foreground'>
+                    <TableCell className='align-top text-sm text-muted-foreground'>
                       {formatDate(item.updatedAt)}
                     </TableCell>
                   </TableRow>
@@ -163,7 +172,8 @@ export function PMWorkItemCompactList({
                 onClick={() => onSelect(item.id)}
                 className={cn(
                   'w-full rounded-lg border p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/60',
-                  selectedIssueId === item.id && 'border-primary bg-primary/5'
+                  selectedIssueId === item.id &&
+                    'border-primary bg-primary/5 shadow-sm'
                 )}
               >
                 <div className='flex items-start justify-between gap-3'>
@@ -199,6 +209,7 @@ export function PMWorkItemDetailPanel({
   assigneeName,
   reporterName,
   dueDate,
+  createdAt,
   updatedAt,
   isFetching,
   loading,
@@ -232,41 +243,62 @@ export function PMWorkItemDetailPanel({
 
   return (
     <Card className='min-h-96 shadow-sm'>
-      <CardContent className='space-y-6 p-6'>
-        <div className='flex flex-col gap-3 border-b pb-5 lg:flex-row lg:items-start lg:justify-between'>
-          <div>
-            <div className='flex items-center gap-2'>
-              <span className='text-sm font-semibold text-primary'>
-                {keyLabel}
-              </span>
-              {isFetching ? (
-                <RefreshCw className='h-3.5 w-3.5 animate-spin text-muted-foreground' />
-              ) : null}
+      <CardContent className='p-0'>
+        <div className='grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]'>
+          <div className='space-y-6 p-6'>
+            <div className='flex flex-col gap-3 border-b pb-5'>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm font-semibold text-primary'>
+                  {keyLabel}
+                </span>
+                {isFetching ? (
+                  <RefreshCw className='h-3.5 w-3.5 animate-spin text-muted-foreground' />
+                ) : null}
+              </div>
+              <div className='flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between'>
+                <h2 className='text-2xl font-semibold tracking-tight'>
+                  {title ?? 'Work item'}
+                </h2>
+                <PMDetailStatus statusName={statusName} />
+              </div>
             </div>
-            <h2 className='mt-2 text-2xl font-semibold tracking-tight'>
-              {title ?? 'Work item'}
-            </h2>
+
+            <section>
+              <h3 className='text-sm font-semibold'>Description</h3>
+              <p className='mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground'>
+                {description}
+              </p>
+            </section>
+
+            <section className='space-y-3'>
+              <h3 className='text-sm font-semibold'>Related work</h3>
+              <div className='rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground'>
+                Child items and linked work will appear here when available.
+              </div>
+            </section>
           </div>
-          <PMDetailStatus statusName={statusName} />
-        </div>
 
-        <section>
-          <h3 className='text-sm font-semibold'>Description</h3>
-          <p className='mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground'>
-            {description}
-          </p>
-        </section>
-
-        <div className='grid gap-4 md:grid-cols-2'>
-          <PMDetailField label='Issue type' value={issueTypeName ?? 'None'} />
-          <PMDetailField label='Priority' value={priorityName ?? 'None'} />
-          <PMDetailField
-            label='Assignee'
-            value={assigneeName ?? 'Unassigned'}
-          />
-          <PMDetailField label='Reporter' value={reporterName ?? 'None'} />
-          <PMDetailField label='Due date' value={formatDate(dueDate)} />
-          <PMDetailField label='Updated' value={formatDate(updatedAt)} />
+          <aside className='border-t bg-muted/20 lg:sticky lg:top-0 lg:h-fit lg:border-l lg:border-t-0'>
+            <div className='space-y-3 p-4'>
+              <PMDetailField
+                label='Status'
+                value={statusName ?? 'Unknown status'}
+              />
+              <PMDetailField
+                label='Issue type'
+                value={issueTypeName ?? 'None'}
+              />
+              <PMDetailField label='Priority' value={priorityName ?? 'None'} />
+              <PMDetailField
+                label='Assignee'
+                value={assigneeName ?? 'Unassigned'}
+              />
+              <PMDetailField label='Reporter' value={reporterName ?? 'None'} />
+              <PMDetailField label='Created' value={formatDate(createdAt)} />
+              <PMDetailField label='Due date' value={formatDate(dueDate)} />
+              <PMDetailField label='Updated' value={formatDate(updatedAt)} />
+            </div>
+          </aside>
         </div>
       </CardContent>
     </Card>
@@ -275,7 +307,7 @@ export function PMWorkItemDetailPanel({
 
 function PMStatusBadge({ item }: { item: PMWorkItemSearchApi }) {
   return (
-    <Badge variant='secondary' className='max-w-36 truncate'>
+    <Badge variant='secondary' className='max-w-28 truncate'>
       {item.statusName ?? `Status ${item.statusId}`}
     </Badge>
   );
@@ -284,20 +316,26 @@ function PMStatusBadge({ item }: { item: PMWorkItemSearchApi }) {
 function PMUserCell({
   item,
   compact = false,
+  kind = 'assignee',
 }: {
   item: PMWorkItemSearchApi;
   compact?: boolean;
+  kind?: 'assignee' | 'reporter';
 }) {
-  const name = item.assigneeName ?? 'Unassigned';
+  const isAssignee = kind === 'assignee';
+  const name = isAssignee
+    ? (item.assigneeName ?? 'Unassigned')
+    : (item.reporterName ?? 'None');
+  const avatarUrl = isAssignee
+    ? item.assigneeAvatarUrl
+    : item.reporterAvatarUrl;
   return (
     <div className='flex min-w-0 items-center gap-2'>
-      <Avatar className='h-7 w-7'>
-        {item.assigneeAvatarUrl ? (
-          <AvatarImage src={item.assigneeAvatarUrl} alt={name} />
-        ) : null}
+      <Avatar className='h-6 w-6'>
+        {avatarUrl ? <AvatarImage src={avatarUrl} alt={name} /> : null}
         <AvatarFallback className='text-[10px]'>
-          {item.assigneeName ? (
-            getInitials(item.assigneeName)
+          {name !== 'Unassigned' && name !== 'None' ? (
+            getInitials(name)
           ) : (
             <UserRound className='h-3 w-3' />
           )}
@@ -319,7 +357,7 @@ function PMPriorityCell({ item }: { item: PMWorkItemSearchApi }) {
   return (
     <span className='inline-flex items-center gap-1.5 text-sm text-muted-foreground'>
       <Flag
-        className='h-4 w-4'
+        className='h-3.5 w-3.5 shrink-0'
         style={item.priorityColor ? { color: item.priorityColor } : undefined}
       />
       <span className='truncate'>{item.priorityName ?? 'None'}</span>
@@ -337,11 +375,11 @@ function PMDetailStatus({ statusName }: { statusName?: string }) {
 
 function PMDetailField({ label, value }: { label: string; value: string }) {
   return (
-    <div className='rounded-lg border bg-muted/20 p-4'>
+    <div className='rounded-lg border bg-background p-3'>
       <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
         {label}
       </p>
-      <p className='mt-2 text-sm font-medium'>{value}</p>
+      <p className='mt-1.5 text-sm font-medium'>{value}</p>
     </div>
   );
 }
