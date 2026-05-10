@@ -131,6 +131,64 @@ export interface PMWorkItemPriorityOption {
   sequence?: number | null;
 }
 
+export interface PMStatusApi {
+  id: number;
+  tenantId: number;
+  statusKey: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  statusCategoryId?: number | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
+}
+
+export interface PMPriorityApi {
+  id: number;
+  tenantId: number;
+  priorityKey: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  color?: string | null;
+  sequence?: number | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
+}
+
+export interface PMIssueTypeApi {
+  id: number;
+  tenantId: number;
+  typeKey: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  hierarchyLevel?: number | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
+}
+
+export interface PMProjectScopedListParams {
+  projectId?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
 export interface PMWorkItemSecurityLevelOption {
   id: number;
   name: string;

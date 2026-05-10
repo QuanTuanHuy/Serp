@@ -13,7 +13,11 @@ import type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
   PMGetWorkItemBoardParams,
+  PMIssueTypeApi,
+  PMPriorityApi,
+  PMProjectScopedListParams,
   PMSearchWorkItemsParams,
+  PMStatusApi,
   PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
   PMWorkItemDetailApi,
@@ -148,6 +152,72 @@ export const pmWorkItemApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMWorkItemDetailApi>(),
     }),
 
+    getPmStatuses: builder.query<
+      PaginatedResponse<PMStatusApi>,
+      PMProjectScopedListParams | void
+    >({
+      query: (params) => ({
+        url: '/statuses',
+        method: 'GET',
+        params: {
+          ...(params?.projectId ? { projectId: params.projectId } : {}),
+          ...(params?.search ? { search: params.search } : {}),
+          page: params?.page ?? 0,
+          pageSize: params?.pageSize ?? 20,
+          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
+          ...(params?.sortDirection
+            ? { sortDirection: params.sortDirection }
+            : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMStatusApi>(),
+    }),
+
+    getPmPriorities: builder.query<
+      PaginatedResponse<PMPriorityApi>,
+      PMProjectScopedListParams | void
+    >({
+      query: (params) => ({
+        url: '/priorities',
+        method: 'GET',
+        params: {
+          ...(params?.projectId ? { projectId: params.projectId } : {}),
+          ...(params?.search ? { search: params.search } : {}),
+          page: params?.page ?? 0,
+          pageSize: params?.pageSize ?? 20,
+          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
+          ...(params?.sortDirection
+            ? { sortDirection: params.sortDirection }
+            : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMPriorityApi>(),
+    }),
+
+    getPmIssueTypes: builder.query<
+      PaginatedResponse<PMIssueTypeApi>,
+      PMProjectScopedListParams | void
+    >({
+      query: (params) => ({
+        url: '/issue-types',
+        method: 'GET',
+        params: {
+          ...(params?.projectId ? { projectId: params.projectId } : {}),
+          ...(params?.search ? { search: params.search } : {}),
+          page: params?.page ?? 0,
+          pageSize: params?.pageSize ?? 20,
+          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
+          ...(params?.sortDirection
+            ? { sortDirection: params.sortDirection }
+            : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMIssueTypeApi>(),
+    }),
+
     getPmWorkItemBoard: builder.query<
       PMWorkItemBoardResponse,
       { projectId: number; params?: PMGetWorkItemBoardParams }
@@ -181,5 +251,8 @@ export const {
   useGetPmWorkItemByIdQuery,
   useGetPmWorkItemBoardQuery,
   useGetPmWorkItemCreateMetaQuery,
+  useGetPmIssueTypesQuery,
+  useGetPmPrioritiesQuery,
+  useGetPmStatusesQuery,
   useSearchPmWorkItemsQuery,
 } = pmWorkItemApi;
