@@ -13,6 +13,7 @@ export {
 export {
   pmWorkItemApi,
   useCreatePmWorkItemMutation,
+  useGetPmWorkItemBoardQuery,
   useGetPmWorkItemCreateMetaQuery,
   useSearchPmWorkItemsQuery,
 } from './workItemApi';
@@ -21,11 +22,15 @@ export type {
   PMCreateProjectResponse,
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
+  PMGetWorkItemBoardParams,
   PMListProjectsParams,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
   PMProjectSummaryApi,
   PMSearchWorkItemsParams,
+  PMWorkItemBoardCardApi,
+  PMWorkItemBoardColumnApi,
+  PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
   PMWorkItemSearchApi,
 } from '../types/api';

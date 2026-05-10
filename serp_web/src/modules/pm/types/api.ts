@@ -282,3 +282,63 @@ export interface PMSearchWorkItemsParams {
   sortField?: string;
   sortDirection?: 'ASC' | 'DESC';
 }
+
+export interface PMWorkItemBoardIssueTypeApi {
+  id?: number | null;
+  name?: string | null;
+  iconUrl?: string | null;
+  hierarchyLevel?: number | null;
+}
+
+export interface PMWorkItemBoardPriorityApi {
+  id?: number | null;
+  name?: string | null;
+  iconUrl?: string | null;
+  color?: string | null;
+}
+
+export interface PMWorkItemBoardCardApi {
+  id: number;
+  projectId: number;
+  parentId?: number | null;
+  key: string;
+  summary: string;
+  description?: string | null;
+  assigneeId?: number | null;
+  reporterId?: number | null;
+  startDate?: string | number | null;
+  dueDate?: string | number | null;
+  rank: string;
+  issueType?: PMWorkItemBoardIssueTypeApi | null;
+  priority?: PMWorkItemBoardPriorityApi | null;
+}
+
+export interface PMWorkItemBoardStatusCategoryApi {
+  id?: number | null;
+  key?: string | null;
+  name?: string | null;
+}
+
+export interface PMWorkItemBoardColumnApi {
+  statusId: number;
+  statusKey: string;
+  statusName: string;
+  statusDescription?: string | null;
+  statusIconUrl?: string | null;
+  statusCategory?: PMWorkItemBoardStatusCategoryApi | null;
+  items: PMWorkItemBoardCardApi[];
+  total: number;
+}
+
+export interface PMWorkItemBoardResponse {
+  projectId: number;
+  columns: PMWorkItemBoardColumnApi[];
+}
+
+export interface PMGetWorkItemBoardParams {
+  keyword?: string;
+  statusIds?: number[];
+  assigneeIds?: number[];
+  issueTypeIds?: number[];
+  priorityIds?: number[];
+}

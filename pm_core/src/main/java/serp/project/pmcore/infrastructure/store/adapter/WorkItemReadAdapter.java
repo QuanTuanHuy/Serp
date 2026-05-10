@@ -12,6 +12,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
@@ -20,6 +23,8 @@ import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectComponentMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardItemRowMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardStatusRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineDependencyRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineItemRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
@@ -47,6 +52,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     private final WorkItemRowMapper rowMapper;
     private final WorkItemTimelineItemRowMapper timelineItemRowMapper;
     private final WorkItemTimelineDependencyRowMapper timelineDependencyRowMapper;
+    private final WorkItemBoardStatusRowMapper boardStatusRowMapper;
+    private final WorkItemBoardItemRowMapper boardItemRowMapper;
 
     @Override
     public Optional<WorkItemEntity> getWorkItemById(Long id, Long tenantId) {
@@ -225,6 +232,138 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                 .addValue("workItemIds", workItemIds);
 
         return jdbcTemplate.query(sql, params, timelineDependencyRowMapper);
+    }
+
+    @Override
+    public List<WorkItemBoardStatusProjection> listBoardStatuses(Long tenantId, WorkItemBoardCriteria criteria) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", criteria.getProjectId());
+
+        StringBuilder sql = new StringBuilder("""
+                WITH scheme_workflows AS (
+                    SELECT scheme.default_workflow_id AS workflow_id
+                    FROM projects p
+                    JOIN workflow_schemes scheme
+                      ON scheme.id = p.workflow_scheme_id
+                     AND scheme.tenant_id = p.tenant_id
+                     AND scheme.deleted_at IS NULL
+                    WHERE p.tenant_id = :tenantId
+                      AND p.id = :projectId
+                      AND p.deleted_at IS NULL
+                      AND scheme.default_workflow_id IS NOT NULL
+                    UNION
+                    SELECT scheme_item.workflow_id
+                    FROM projects p
+                    JOIN workflow_schemes scheme
+                      ON scheme.id = p.workflow_scheme_id
+                     AND scheme.tenant_id = p.tenant_id
+                     AND scheme.deleted_at IS NULL
+                    JOIN workflow_scheme_items scheme_item
+                      ON scheme_item.scheme_id = scheme.id
+                     AND scheme_item.tenant_id = p.tenant_id
+                     AND scheme_item.deleted_at IS NULL
+                    WHERE p.tenant_id = :tenantId
+                      AND p.id = :projectId
+                      AND p.deleted_at IS NULL
+                )
+                SELECT
+                    st.id AS status_id,
+                    st.status_key,
+                    st.name AS status_name,
+                    st.description AS status_description,
+                    st.icon_url AS status_icon_url,
+                    sc.id AS status_category_id,
+                    sc.key AS status_category_key,
+                    sc.name AS status_category_name
+                FROM scheme_workflows scheme_workflow
+                JOIN workflows wf
+                  ON wf.id = scheme_workflow.workflow_id
+                 AND wf.tenant_id = :tenantId
+                 AND wf.deleted_at IS NULL
+                JOIN workflow_versions wv
+                  ON wv.id = wf.current_published_version_id
+                 AND wv.tenant_id = :tenantId
+                 AND wv.deleted_at IS NULL
+                JOIN workflow_steps step
+                  ON step.workflow_version_id = wv.id
+                 AND step.tenant_id = :tenantId
+                 AND step.deleted_at IS NULL
+                JOIN statuses st
+                  ON st.id = step.status_id
+                 AND st.tenant_id = :tenantId
+                 AND st.deleted_at IS NULL
+                LEFT JOIN status_categories sc
+                  ON sc.id = st.category_id
+                 AND sc.tenant_id = :tenantId
+                 AND sc.deleted_at IS NULL
+                WHERE 1 = 1
+                """);
+        appendInFilter(sql, params, "st.id", "statusIds", criteria.getStatusIds());
+        sql.append("""
+                GROUP BY st.id, st.status_key, st.name, st.description, st.icon_url, sc.id, sc.key, sc.name
+                ORDER BY MIN(step.step_order) ASC NULLS LAST, MIN(step.id) ASC
+                """);
+
+        return jdbcTemplate.query(sql.toString(), params, boardStatusRowMapper);
+    }
+
+    @Override
+    public List<WorkItemBoardItemProjection> listBoardWorkItems(Long tenantId, WorkItemBoardCriteria criteria) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", criteria.getProjectId());
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                    w.id,
+                    w.project_id,
+                    w.parent_id,
+                    w.key,
+                    w.summary,
+                    w.description,
+                    w.assignee_id,
+                    w.reporter_id,
+                    w.start_date,
+                    w.due_date,
+                    w.rank,
+                    it.id AS issue_type_id,
+                    it.name AS issue_type_name,
+                    it.icon_url AS issue_type_icon_url,
+                    it.hierarchy_level AS issue_type_hierarchy_level,
+                    st.id AS status_id,
+                    st.status_key,
+                    st.name AS status_name,
+                    pr.id AS priority_id,
+                    pr.name AS priority_name,
+                    pr.icon_url AS priority_icon_url,
+                    pr.color AS priority_color
+                FROM work_items w
+                LEFT JOIN issue_types it ON it.id = w.issue_type_id AND it.deleted_at IS NULL
+                LEFT JOIN statuses st ON st.id = w.status_id AND st.deleted_at IS NULL
+                LEFT JOIN priorities pr ON pr.id = w.priority_id AND pr.deleted_at IS NULL
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+
+        appendInFilter(sql, params, "w.status_id", "statusIds", criteria.getStatusIds());
+        appendInFilter(sql, params, "w.assignee_id", "assigneeIds", criteria.getAssigneeIds());
+        appendInFilter(sql, params, "w.issue_type_id", "issueTypeIds", criteria.getIssueTypeIds());
+        appendInFilter(sql, params, "w.priority_id", "priorityIds", criteria.getPriorityIds());
+        if (criteria.getKeyword() != null && !criteria.getKeyword().isBlank()) {
+            params.addValue("keyword", "%" + criteria.getKeyword().trim().toLowerCase() + "%");
+            sql.append("""
+                    
+                      AND (
+                          LOWER(w.key) LIKE :keyword
+                          OR LOWER(w.summary) LIKE :keyword
+                      )
+                    """);
+        }
+        sql.append("\nORDER BY w.status_id ASC, w.rank ASC NULLS LAST, w.id ASC");
+
+        return jdbcTemplate.query(sql.toString(), params, boardItemRowMapper);
     }
 
     private String buildTimelineScopedCte(WorkItemTimelineCriteria criteria, MapSqlParameterSource params) {

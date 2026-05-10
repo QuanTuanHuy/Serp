@@ -30,6 +30,9 @@ import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemRes
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusCommand;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
+import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQuery;
+import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQueryHandler;
+import serp.project.pmcore.application.workitem.query.board.WorkItemBoardView;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQuery;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQueryHandler;
 import serp.project.pmcore.application.workitem.query.createmeta.GetWorkItemCreateMetaQuery;
@@ -46,6 +49,7 @@ import serp.project.pmcore.domain.shared.pagination.SortSpec;
 import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
@@ -76,6 +80,7 @@ public class WorkItemController {
     private final RemoveWorkItemComponentCommandHandler removeWorkItemComponentCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
+    private final ListWorkItemBoardQueryHandler listWorkItemBoardQueryHandler;
     private final GetWorkItemCreateMetaQueryHandler getWorkItemCreateMetaQueryHandler;
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
@@ -98,6 +103,37 @@ public class WorkItemController {
                 userId,
                 authUtils.getCurrentGroups(),
                 searchCriteria
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/board")
+    public ResponseEntity<GeneralResponse<WorkItemBoardView>> listWorkItemBoard(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) List<Long> statusIds,
+            @RequestParam(required = false) List<Long> assigneeIds,
+            @RequestParam(required = false) List<Long> issueTypeIds,
+            @RequestParam(required = false) List<Long> priorityIds) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        WorkItemBoardCriteria criteria = WorkItemBoardCriteria.builder()
+                .projectId(projectId)
+                .keyword(keyword)
+                .statusIds(statusIds)
+                .assigneeIds(assigneeIds)
+                .issueTypeIds(issueTypeIds)
+                .priorityIds(priorityIds)
+                .build();
+        WorkItemBoardView response = listWorkItemBoardQueryHandler.handle(new ListWorkItemBoardQuery(
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
+                criteria
         ));
 
         return ResponseEntity.ok(responseUtils.success(response));

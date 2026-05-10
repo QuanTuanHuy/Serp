@@ -12,7 +12,9 @@ import type { PaginatedResponse } from '@/lib/store/api/types';
 import type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
+  PMGetWorkItemBoardParams,
   PMSearchWorkItemsParams,
+  PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
   PMWorkItemSearchApi,
 } from '../types/api';
@@ -70,12 +72,38 @@ export const pmWorkItemApi = api.injectEndpoints({
       extraOptions: { service: 'pm' },
       transformResponse: createPaginatedTransform<PMWorkItemSearchApi>(),
     }),
+
+    getPmWorkItemBoard: builder.query<
+      PMWorkItemBoardResponse,
+      { projectId: number; params?: PMGetWorkItemBoardParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/work-items/board`,
+        method: 'GET',
+        params: {
+          ...(params?.keyword ? { keyword: params.keyword } : {}),
+          ...(params?.statusIds?.length ? { statusIds: params.statusIds } : {}),
+          ...(params?.assigneeIds?.length
+            ? { assigneeIds: params.assigneeIds }
+            : {}),
+          ...(params?.issueTypeIds?.length
+            ? { issueTypeIds: params.issueTypeIds }
+            : {}),
+          ...(params?.priorityIds?.length
+            ? { priorityIds: params.priorityIds }
+            : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemBoardResponse>(),
+    }),
   }),
   overrideExisting: false,
 });
 
 export const {
   useCreatePmWorkItemMutation,
+  useGetPmWorkItemBoardQuery,
   useGetPmWorkItemCreateMetaQuery,
   useSearchPmWorkItemsQuery,
 } = pmWorkItemApi;
