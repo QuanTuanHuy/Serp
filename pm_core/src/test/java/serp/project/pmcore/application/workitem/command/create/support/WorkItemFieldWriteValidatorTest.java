@@ -34,6 +34,12 @@ class WorkItemFieldWriteValidatorTest {
     void validateClientSuppliedWritableFieldsShouldAllowWritableSystemAndCustomFields() {
         WorkItemFieldRules rules = new WorkItemFieldRules(
                 Map.of(
+                        WorkItemFieldConstants.START_DATE,
+                        new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
+                                WorkItemFieldConstants.START_DATE,
+                                false,
+                                false,
+                                true),
                         WorkItemFieldConstants.DUE_DATE,
                         new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
                                 WorkItemFieldConstants.DUE_DATE,
@@ -55,6 +61,7 @@ class WorkItemFieldWriteValidatorTest {
                 CreateWorkItemData.builder()
                         .issueTypeId(1L)
                         .summary("Create task")
+                        .startDate(1_699_000_000_000L)
                         .dueDate(1_700_000_000_000L)
                         .customFields(Map.of("customfield_10001", "value"))
                         .build(),
@@ -66,9 +73,9 @@ class WorkItemFieldWriteValidatorTest {
     void validateClientSuppliedWritableFieldsShouldRejectHiddenSystemField() {
         WorkItemFieldRules rules = new WorkItemFieldRules(
                 Map.of(
-                        WorkItemFieldConstants.DUE_DATE,
+                        WorkItemFieldConstants.START_DATE,
                         new WorkItemFieldPolicy(WorkItemFieldConstants.FIELD_REF_TYPE_SYSTEM,
-                                WorkItemFieldConstants.DUE_DATE,
+                                WorkItemFieldConstants.START_DATE,
                                 false,
                                 true,
                                 true)
@@ -82,7 +89,7 @@ class WorkItemFieldWriteValidatorTest {
                         CreateWorkItemData.builder()
                                 .issueTypeId(1L)
                                 .summary("Create task")
-                                .dueDate(1_700_000_000_000L)
+                                .startDate(1_699_000_000_000L)
                                 .build(),
                         rules
                 )

@@ -17,6 +17,7 @@ public interface WorkItemDetailProjection {
     Long getResolutionId();
     Long getParentId();
     Long getSecurityLevelId();
+    Instant getStartDate();
     Instant getDueDate();
     String getRank();
     Long getTimeOriginalEstimate();

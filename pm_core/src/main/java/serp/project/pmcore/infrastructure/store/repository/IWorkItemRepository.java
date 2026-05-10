@@ -58,6 +58,7 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
                 w.resolution_id AS resolutionId,
                 w.parent_id AS parentId,
                 w.security_level_id AS securityLevelId,
+                w.start_date AS startDate,
                 w.due_date AS dueDate,
                 w.rank AS rank,
                 w.time_original_estimate AS timeOriginalEstimate,

@@ -8,11 +8,14 @@ package serp.project.pmcore.domain.fieldconfig.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeEntity;
 import serp.project.pmcore.domain.fieldconfig.entity.FieldConfigSchemeItemEntity;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemeItemPort;
 import serp.project.pmcore.domain.fieldconfig.port.IFieldConfigSchemePort;
 import serp.project.pmcore.domain.fieldconfig.service.IFieldConfigService;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
 @Service
@@ -32,7 +35,7 @@ public class FieldConfigService implements IFieldConfigService {
             );
         }
 
-        fieldConfigSchemePort
+        FieldConfigSchemeEntity fieldConfigScheme = fieldConfigSchemePort
                 .getFieldConfigSchemeById(fieldConfigSchemeId, tenantId)
                 .orElseThrow(() -> {
                     log.error("[FieldConfigService] Field config scheme not found: id={}, tenantId={}", fieldConfigSchemeId, tenantId);
@@ -42,16 +45,18 @@ public class FieldConfigService implements IFieldConfigService {
                     );
                 });
 
-        return fieldConfigSchemeItemPort
+        Long fieldConfigId = fieldConfigSchemeItemPort
                 .getItemBySchemeIdAndIssueTypeId(fieldConfigSchemeId, issueTypeId, tenantId)
                 .map(FieldConfigSchemeItemEntity::getFieldConfigId)
-                .orElseThrow(() -> {
-                    log.error("[FieldConfigService] Field config item not found: fieldConfigSchemeId={}, issueTypeId={}, tenantId={}",
-                            fieldConfigSchemeId, issueTypeId, tenantId);
-                    return new ResourceNotFoundException(
-                            DomainErrorCode.FIELD_CONFIG_NOT_FOUND,
-                            "Field configuration not found: fieldConfigSchemeId=" + fieldConfigSchemeId + ", issueTypeId=" + issueTypeId
-                    );
-                });
+                .orElse(fieldConfigScheme.getDefaultFieldConfigId());
+        if (fieldConfigId == null) {
+            log.error("[FieldConfigService] Field config item not found: fieldConfigSchemeId={}, issueTypeId={}, tenantId={}",
+                    fieldConfigSchemeId, issueTypeId, tenantId);
+            throw new DomainValidationException(
+                    DomainErrorCode.FIELD_CONFIG_SCHEME_COVERAGE_MISSING,
+                    "Field configuration scheme does not cover issueTypeId=" + issueTypeId + " for fieldConfigSchemeId=" + fieldConfigSchemeId
+            );
+        }
+        return fieldConfigId;
     }
 }

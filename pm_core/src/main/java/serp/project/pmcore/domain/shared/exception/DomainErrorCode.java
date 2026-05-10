@@ -98,6 +98,7 @@ public enum DomainErrorCode {
     WORK_ITEM_SECURITY_ACCESS_DENIED("Insufficient issue security level to transition this work item"),
     WORKFLOW_NOT_RESOLVABLE("Effective workflow cannot be resolved for this work item"),
     WORK_ITEM_WORKFLOW_STATE_INVALID("Work item workflow_step_id/status_id is inconsistent with the effective workflow"),
+    WORK_ITEM_SCHEDULE_INVALID("Work item schedule is invalid"),
     TRANSITION_FIELD_INVALID("Transition field payload is invalid"),
 
     // Issue types & issue type schemes

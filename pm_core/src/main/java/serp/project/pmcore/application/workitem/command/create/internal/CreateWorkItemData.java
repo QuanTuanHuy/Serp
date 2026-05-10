@@ -23,6 +23,7 @@ public class CreateWorkItemData {
     private Long priorityId;
     private Long assigneeId;
     private Long parentId;
+    private Long startDate;
     private Long dueDate;
     private Long timeOriginalEstimate;
     private Long securityLevelId;

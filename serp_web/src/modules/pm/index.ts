@@ -5,6 +5,7 @@
 
 export { PMLayout, PMHeader, PMSidebar } from './components/layout';
 export { PMAuthGuard } from './components/PMAuthGuard';
+export { CreateWorkItemDialog } from './components/work-items';
 export { PMDashboardPage } from './pages/PMDashboardPage';
 export { PMMyWorkPage } from './pages/PMMyWorkPage';
 export { PMProjectsPage } from './pages/PMProjectsPage';

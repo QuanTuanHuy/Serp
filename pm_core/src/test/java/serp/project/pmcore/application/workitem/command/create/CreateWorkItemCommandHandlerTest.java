@@ -255,6 +255,7 @@ class CreateWorkItemCommandHandlerTest {
                 "Create task",
                 null,
                 null,
+                null,
                 1_700_000_000_000L,
                 null,
                 null,
@@ -270,6 +271,7 @@ class CreateWorkItemCommandHandlerTest {
     void executeShouldRejectSystemFieldNotWritableOnCreate() {
         CreateWorkItemCommand request = createCommand(
                 "Write slice 4 tests",
+                null,
                 null,
                 null,
                 1_700_000_000_000L,
@@ -292,6 +294,7 @@ class CreateWorkItemCommandHandlerTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommandHandler.handle(createCommand(
                         "Create task",
+                        null,
                         null,
                         null,
                         null,
@@ -342,6 +345,7 @@ class CreateWorkItemCommandHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         ));
 
@@ -383,6 +387,7 @@ class CreateWorkItemCommandHandlerTest {
                         null,
                         null,
                         null,
+                        null,
                         Map.of("customfield_10001", "value"),
                         null
                 ))
@@ -414,6 +419,7 @@ class CreateWorkItemCommandHandlerTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommandHandler.handle(createCommand(
                         "Create story",
+                        null,
                         null,
                         null,
                         null,
@@ -461,6 +467,7 @@ class CreateWorkItemCommandHandlerTest {
                 BusinessRuleViolationException.class,
                 () -> createWorkItemCommandHandler.handle(createCommand(
                         "Create story",
+                        null,
                         null,
                         null,
                         null,
@@ -582,6 +589,7 @@ class CreateWorkItemCommandHandlerTest {
     private CreateWorkItemCommand createCommand(String summary,
                                                 String description,
                                                 Long priorityId,
+                                                Long startDate,
                                                 Long dueDate,
                                                 Long parentId,
                                                 Map<String, Object> customFields,
@@ -594,6 +602,7 @@ class CreateWorkItemCommandHandlerTest {
                 priorityId,
                 null,
                 parentId,
+                startDate,
                 dueDate,
                 null,
                 securityLevelId,

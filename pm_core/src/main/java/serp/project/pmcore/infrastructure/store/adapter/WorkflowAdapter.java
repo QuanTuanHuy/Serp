@@ -20,6 +20,7 @@ import serp.project.pmcore.infrastructure.store.model.WorkflowModel;
 import serp.project.pmcore.infrastructure.store.repository.IWorkflowRepository;
 import serp.project.pmcore.infrastructure.store.support.PageableUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -68,6 +69,11 @@ public class WorkflowAdapter implements IWorkflowPort {
                 pageable
         );
         return new PageResult<>(workflowMapper.toEntities(result.getContent()), result.getTotalElements());
+    }
+
+    @Override
+    public List<WorkflowEntity> getWorkflowsByIds(List<Long> workflowIds, Long tenantId) {
+        return workflowMapper.toEntities(workflowRepository.findAllByIdInAndTenantId(workflowIds, tenantId));
     }
 
     private Sort resolveSort(WorkflowListCriteria criteria) {

@@ -36,6 +36,9 @@ public class CreateWorkItemRequest {
     private Long assigneeId;
     private Long parentId;
 
+    @PositiveOrZero(message = "Start date must be a positive epoch timestamp")
+    private Long startDate;
+
     @PositiveOrZero(message = "Due date must be a positive epoch timestamp")
     private Long dueDate;
 

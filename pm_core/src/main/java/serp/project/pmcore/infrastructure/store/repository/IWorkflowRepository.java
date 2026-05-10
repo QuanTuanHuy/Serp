@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.WorkflowModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,6 +25,8 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
     Optional<WorkflowModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     Optional<WorkflowModel> findFirstByTenantIdAndWorkflowKeyOrderByIdAsc(Long tenantId, String workflowKey);
+
+    List<WorkflowModel> findAllByIdInAndTenantId(List<Long> workflowIds, Long tenantId);
 
     @Query(value = """
             SELECT w

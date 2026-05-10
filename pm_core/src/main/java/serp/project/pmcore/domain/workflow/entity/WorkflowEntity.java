@@ -31,4 +31,10 @@ public class WorkflowEntity extends BaseEntity {
     private Boolean isSystem;
 
     private List<WorkflowVersionEntity> versions;
+
+    public void publish(Long publishedVersionId) {
+        this.currentPublishedVersionId = publishedVersionId;
+        this.draftVersionId = null;
+        this.lifecycleState = WorkflowLifecycleState.ACTIVE;
+    }
 }
