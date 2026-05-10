@@ -229,14 +229,15 @@ export interface PMCreateWorkItemResponse {
   reporterId: number;
   parentId?: number;
   securityLevelId?: number;
-  dueDate?: string;
+  startDate?: number;
+  dueDate?: number;
   rank: string;
   timeOriginalEstimate?: number;
   timeRemainingEstimate?: number;
   timeSpent?: number;
-  createdAt: string;
+  createdAt: number;
   createdBy: number;
-  updatedAt: string;
+  updatedAt: number;
   updatedBy: number;
 }
 
@@ -256,14 +257,15 @@ export interface PMWorkItemSearchApi {
   reporterId?: number;
   parentId?: number;
   securityLevelId?: number;
-  dueDate?: string;
+  startDate?: number;
+  dueDate?: number;
   rank: string;
   timeOriginalEstimate?: number;
   timeRemainingEstimate?: number;
   timeSpent?: number;
-  createdAt: string;
+  createdAt: number;
   createdBy: number;
-  updatedAt: string;
+  updatedAt: number;
   updatedBy: number;
   issueTypeName?: string;
   issueTypeIconUrl?: string | null;
@@ -272,15 +274,106 @@ export interface PMWorkItemSearchApi {
   priorityIconUrl?: string | null;
   priorityColor?: string | null;
   prioritySequence?: number | null;
+  statusKey?: string;
+  statusName?: string;
+  statusIconUrl?: string | null;
+  statusCategoryKey?: string;
+  statusCategoryName?: string;
+  assigneeName?: string;
+  assigneeAvatarUrl?: string | null;
+  reporterName?: string;
+  reporterAvatarUrl?: string | null;
 }
 
 export interface PMSearchWorkItemsParams {
   keyword?: string;
+  statusIds?: number[];
+  priorityIds?: number[];
   issueTypeIds?: number[];
+  assigneeIds?: number[];
+  reporterIds?: number[];
+  resolutionIds?: number[];
+  parentId?: number;
+  excludeStatusIds?: number[];
+  excludeIssueTypeIds?: number[];
+  unassigned?: boolean;
+  unresolved?: boolean;
+  dueDateFrom?: number;
+  dueDateTo?: number;
+  createdFrom?: number;
+  createdTo?: number;
+  updatedFrom?: number;
+  updatedTo?: number;
+  sprintIds?: number[];
+  componentIds?: number[];
+  fixVersionIds?: number[];
+  isOverdue?: boolean;
+  hasTimeLogged?: boolean;
+  enriched?: boolean;
   page?: number;
   pageSize?: number;
   sortField?: string;
   sortDirection?: 'ASC' | 'DESC';
+}
+
+export interface PMWorkItemDetailIssueTypeApi {
+  id: number;
+  name: string;
+}
+
+export interface PMWorkItemDetailUserApi {
+  id: number;
+  displayName?: string | null;
+}
+
+export interface PMWorkItemDetailWorkflowStepApi {
+  id: number;
+  name: string;
+}
+
+export interface PMWorkItemDetailStatusApi {
+  id: number;
+  name: string;
+}
+
+export interface PMWorkItemDetailPriorityApi {
+  id: number;
+  name: string;
+  color?: string | null;
+}
+
+export interface PMWorkItemDetailApi {
+  id: number;
+  projectId: number;
+  issueTypeId?: number;
+  issueNo: number;
+  key: string;
+  summary: string;
+  description?: string | null;
+  workflowStepId?: number;
+  statusId?: number;
+  priorityId?: number;
+  resolutionId?: number;
+  assigneeId?: number;
+  reporterId?: number;
+  parentId?: number;
+  securityLevelId?: number;
+  startDate?: number;
+  dueDate?: number;
+  rank?: string;
+  timeOriginalEstimate?: number;
+  timeRemainingEstimate?: number;
+  timeSpent?: number;
+  issueType?: PMWorkItemDetailIssueTypeApi | null;
+  assignee?: PMWorkItemDetailUserApi | null;
+  reporter?: PMWorkItemDetailUserApi | null;
+  workflowStep?: PMWorkItemDetailWorkflowStepApi | null;
+  status?: PMWorkItemDetailStatusApi | null;
+  priority?: PMWorkItemDetailPriorityApi | null;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
 }
 
 export interface PMWorkItemBoardIssueTypeApi {

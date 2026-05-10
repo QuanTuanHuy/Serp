@@ -32,6 +32,11 @@ const TABS: TabItem[] = [
     href: (projectId) => `/pm/projects/${projectId}/board`,
   },
   {
+    key: 'list',
+    label: 'List',
+    href: (projectId) => `/pm/projects/${projectId}/list`,
+  },
+  {
     key: 'calendar',
     label: 'Calendar',
     href: (projectId) => `/pm/projects/${projectId}/calendar`,

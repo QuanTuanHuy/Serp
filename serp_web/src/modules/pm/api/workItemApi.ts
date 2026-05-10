@@ -16,6 +16,7 @@ import type {
   PMSearchWorkItemsParams,
   PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
+  PMWorkItemDetailApi,
   PMWorkItemSearchApi,
 } from '../types/api';
 
@@ -58,8 +59,70 @@ export const pmWorkItemApi = api.injectEndpoints({
         method: 'GET',
         params: {
           ...(params?.keyword ? { keyword: params.keyword } : {}),
+          ...(params?.statusIds?.length ? { statusIds: params.statusIds } : {}),
+          ...(params?.priorityIds?.length
+            ? { priorityIds: params.priorityIds }
+            : {}),
           ...(params?.issueTypeIds?.length
             ? { issueTypeIds: params.issueTypeIds }
+            : {}),
+          ...(params?.assigneeIds?.length
+            ? { assigneeIds: params.assigneeIds }
+            : {}),
+          ...(params?.reporterIds?.length
+            ? { reporterIds: params.reporterIds }
+            : {}),
+          ...(params?.resolutionIds?.length
+            ? { resolutionIds: params.resolutionIds }
+            : {}),
+          ...(typeof params?.parentId === 'number'
+            ? { parentId: params.parentId }
+            : {}),
+          ...(params?.excludeStatusIds?.length
+            ? { excludeStatusIds: params.excludeStatusIds }
+            : {}),
+          ...(params?.excludeIssueTypeIds?.length
+            ? { excludeIssueTypeIds: params.excludeIssueTypeIds }
+            : {}),
+          ...(typeof params?.unassigned === 'boolean'
+            ? { unassigned: params.unassigned }
+            : {}),
+          ...(typeof params?.unresolved === 'boolean'
+            ? { unresolved: params.unresolved }
+            : {}),
+          ...(typeof params?.dueDateFrom === 'number'
+            ? { dueDateFrom: params.dueDateFrom }
+            : {}),
+          ...(typeof params?.dueDateTo === 'number'
+            ? { dueDateTo: params.dueDateTo }
+            : {}),
+          ...(typeof params?.createdFrom === 'number'
+            ? { createdFrom: params.createdFrom }
+            : {}),
+          ...(typeof params?.createdTo === 'number'
+            ? { createdTo: params.createdTo }
+            : {}),
+          ...(typeof params?.updatedFrom === 'number'
+            ? { updatedFrom: params.updatedFrom }
+            : {}),
+          ...(typeof params?.updatedTo === 'number'
+            ? { updatedTo: params.updatedTo }
+            : {}),
+          ...(params?.sprintIds?.length ? { sprintIds: params.sprintIds } : {}),
+          ...(params?.componentIds?.length
+            ? { componentIds: params.componentIds }
+            : {}),
+          ...(params?.fixVersionIds?.length
+            ? { fixVersionIds: params.fixVersionIds }
+            : {}),
+          ...(typeof params?.isOverdue === 'boolean'
+            ? { isOverdue: params.isOverdue }
+            : {}),
+          ...(typeof params?.hasTimeLogged === 'boolean'
+            ? { hasTimeLogged: params.hasTimeLogged }
+            : {}),
+          ...(typeof params?.enriched === 'boolean'
+            ? { enriched: params.enriched }
             : {}),
           page: params?.page ?? 0,
           pageSize: params?.pageSize ?? 20,
@@ -71,6 +134,18 @@ export const pmWorkItemApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createPaginatedTransform<PMWorkItemSearchApi>(),
+    }),
+
+    getPmWorkItemById: builder.query<
+      PMWorkItemDetailApi,
+      { projectId: number; workItemId: number }
+    >({
+      query: ({ projectId, workItemId }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemDetailApi>(),
     }),
 
     getPmWorkItemBoard: builder.query<
@@ -103,6 +178,7 @@ export const pmWorkItemApi = api.injectEndpoints({
 
 export const {
   useCreatePmWorkItemMutation,
+  useGetPmWorkItemByIdQuery,
   useGetPmWorkItemBoardQuery,
   useGetPmWorkItemCreateMetaQuery,
   useSearchPmWorkItemsQuery,

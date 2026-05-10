@@ -57,7 +57,10 @@ public class WorkItemQueryBuilder {
             it.name AS issue_type_name, it.icon_url AS issue_type_icon_url,
             it.hierarchy_level AS issue_type_hierarchy_level,
             pr.name AS priority_name, pr.icon_url AS priority_icon_url,
-            pr.color AS priority_color, pr.sequence AS priority_sequence""";
+            pr.color AS priority_color, pr.sequence AS priority_sequence,
+            st.status_key AS status_key, st.name AS status_name,
+            st.icon_url AS status_icon_url,
+            sc.key AS status_category_key, sc.name AS status_category_name""";
 
     private static final String BASE_FROM = "\nFROM work_items w";
 
@@ -81,6 +84,10 @@ public class WorkItemQueryBuilder {
                     "w.issue_type_id", "it.id", "it.tenant_id = w.tenant_id");
             base.appendLeftJoin(joins, "priorities", "pr",
                     "w.priority_id", "pr.id", "pr.tenant_id = w.tenant_id");
+            base.appendLeftJoin(joins, "statuses", "st",
+                    "w.status_id", "st.id", "st.tenant_id = w.tenant_id");
+            base.appendLeftJoin(joins, "status_categories", "sc",
+                    "st.category_id", "sc.id", "sc.tenant_id = w.tenant_id");
         }
 
         base.appendScalar(where, params, "w.project_id", "projectId", FilterOperator.EQ, f.getProjectId());

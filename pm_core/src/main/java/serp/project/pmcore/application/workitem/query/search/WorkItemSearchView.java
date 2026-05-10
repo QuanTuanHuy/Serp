@@ -41,9 +41,20 @@ public record WorkItemSearchView(
         String priorityName,
         String priorityIconUrl,
         String priorityColor,
-        Integer prioritySequence
+        Integer prioritySequence,
+        String statusKey,
+        String statusName,
+        String statusIconUrl,
+        String statusCategoryKey,
+        String statusCategoryName,
+        String assigneeName,
+        String assigneeAvatarUrl,
+        String reporterName,
+        String reporterAvatarUrl
 ) {
-    public static WorkItemSearchView from(WorkItemEntity entity) {
+    public static WorkItemSearchView from(WorkItemEntity entity,
+                                          UserSummary assignee,
+                                          UserSummary reporter) {
         return new WorkItemSearchView(
                 entity.getId(),
                 entity.getProjectId(),
@@ -76,7 +87,23 @@ public record WorkItemSearchView(
                 entity.getPriorityName(),
                 entity.getPriorityIconUrl(),
                 entity.getPriorityColor(),
-                entity.getPrioritySequence()
+                entity.getPrioritySequence(),
+                entity.getStatusKey(),
+                entity.getStatusName(),
+                entity.getStatusIconUrl(),
+                entity.getStatusCategoryKey(),
+                entity.getStatusCategoryName(),
+                assignee != null ? assignee.displayName() : null,
+                assignee != null ? assignee.avatarUrl() : null,
+                reporter != null ? reporter.displayName() : null,
+                reporter != null ? reporter.avatarUrl() : null
         );
+    }
+
+    public record UserSummary(
+            Long id,
+            String displayName,
+            String avatarUrl
+    ) {
     }
 }

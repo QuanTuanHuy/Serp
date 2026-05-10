@@ -58,6 +58,13 @@ public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkIt
                     .priorityColor(rs.getString("priority_color"))
                     .prioritySequence(getNullableInt(rs, "priority_sequence"));
         }
+        if (hasColumn(rs, "status_name")) {
+            builder.statusKey(rs.getString("status_key"))
+                    .statusName(rs.getString("status_name"))
+                    .statusIconUrl(rs.getString("status_icon_url"))
+                    .statusCategoryKey(rs.getString("status_category_key"))
+                    .statusCategoryName(rs.getString("status_category_name"));
+        }
 
         return builder.build();
     }

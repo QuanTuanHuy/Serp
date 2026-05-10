@@ -5,3 +5,4 @@
 
 export { CreateWorkItemDialog } from './CreateWorkItemDialog';
 export { PMWorkItemBoard } from './board';
+export { PMWorkItemListTab } from './list';

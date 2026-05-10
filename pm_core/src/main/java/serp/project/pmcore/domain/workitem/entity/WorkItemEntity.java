@@ -53,4 +53,10 @@ public class WorkItemEntity extends BaseEntity {
     private String priorityIconUrl;
     private String priorityColor;
     private Integer prioritySequence;
+
+    private String statusKey;
+    private String statusName;
+    private String statusIconUrl;
+    private String statusCategoryKey;
+    private String statusCategoryName;
 }

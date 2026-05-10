@@ -17,12 +17,20 @@ import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
+import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +39,7 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
     private final IWorkItemReadPort workItemReadPort;
     private final IProjectReadPort projectReadPort;
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
+    private final IUserProfileClient userProfileClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,10 +54,46 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
                 ProjectPermissionKeys.BROWSE_PROJECTS
         );
 
-        PageResult<WorkItemSearchView> result = workItemReadPort.searchWorkItems(query.tenantId(), criteria)
-                .map(WorkItemSearchView::from);
+        PageResult<WorkItemEntity> workItems = workItemReadPort.searchWorkItems(query.tenantId(), criteria);
+        Map<Long, WorkItemSearchView.UserSummary> userSummaryMap = resolveUserSummaries(workItems.items());
+        PageResult<WorkItemSearchView> result = workItems.map(workItem -> WorkItemSearchView.from(
+                workItem,
+                nullableMapGet(userSummaryMap, workItem.getAssigneeId()),
+                nullableMapGet(userSummaryMap, workItem.getReporterId())
+        ));
 
         return PageViews.from(result, criteria);
+    }
+
+    private Map<Long, WorkItemSearchView.UserSummary> resolveUserSummaries(List<WorkItemEntity> workItems) {
+        List<Long> userIds = workItems.stream()
+                .flatMap(workItem -> Stream.of(workItem.getAssigneeId(), workItem.getReporterId()))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userProfileClient.getUserProfilesByIds(userIds).stream()
+                .filter(Objects::nonNull)
+                .filter(profile -> profile.getId() != null)
+                .collect(Collectors.toMap(
+                        UserProfileDto::getId,
+                        this::toUserSummary,
+                        (left, right) -> left
+                ));
+    }
+
+    private WorkItemSearchView.UserSummary toUserSummary(UserProfileDto profile) {
+        String displayName = profile.getFullName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = profile.getEmail();
+        }
+        return new WorkItemSearchView.UserSummary(profile.getId(), displayName, profile.getAvatarUrl());
+    }
+
+    private static WorkItemSearchView.UserSummary nullableMapGet(Map<Long, WorkItemSearchView.UserSummary> map, Long key) {
+        return key == null ? null : map.get(key);
     }
 
     private ProjectPermissionEvaluationContext buildEvaluationContext(Long userId, Set<String> groupKeys) {

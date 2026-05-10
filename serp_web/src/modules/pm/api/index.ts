@@ -13,6 +13,7 @@ export {
 export {
   pmWorkItemApi,
   useCreatePmWorkItemMutation,
+  useGetPmWorkItemByIdQuery,
   useGetPmWorkItemBoardQuery,
   useGetPmWorkItemCreateMetaQuery,
   useSearchPmWorkItemsQuery,
@@ -32,5 +33,6 @@ export type {
   PMWorkItemBoardColumnApi,
   PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
+  PMWorkItemDetailApi,
   PMWorkItemSearchApi,
 } from '../types/api';
