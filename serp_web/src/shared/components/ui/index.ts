@@ -167,9 +167,4 @@ export {
   TableCell,
   TableCaption,
 } from './table';
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from './table';
 
