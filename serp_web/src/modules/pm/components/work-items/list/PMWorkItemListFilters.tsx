@@ -1,20 +1,25 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - PM work item list filters
+ * Description: Part of Serp Project - PM work item filters
  */
 
 'use client';
 
+import type React from 'react';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   Input,
+  ScrollArea,
+  Separator,
 } from '@/shared/components/ui';
 import { useAppSelector } from '@/shared/hooks';
 import { cn } from '@/shared/utils';
@@ -24,42 +29,42 @@ import {
   useGetPmStatusesQuery,
   useSearchPmWorkItemsQuery,
 } from '../../../api';
-import {
-  type FilterCriterion,
-  parseIssueId,
-  parseNumberList,
-  serializeNumberList,
-} from './pmWorkItemList.utils';
+import type { FilterCriterion } from './pmWorkItemList.utils';
+import { serializeNumberList } from './pmWorkItemList.utils';
 
 interface PMWorkItemListFiltersProps {
   projectId: number;
+  open: boolean;
   parentId?: number;
   assigneeIds: number[];
   issueTypeIds: number[];
   statusIds: number[];
   priorityIds: number[];
   reporterIds: number[];
+  onOpenChange: (open: boolean) => void;
   onUpdate: (updates: Record<string, string | undefined>) => void;
   onClear: () => void;
 }
 
 export function PMWorkItemListFilters({
   projectId,
+  open,
   parentId,
   assigneeIds,
   issueTypeIds,
   statusIds,
   priorityIds,
   reporterIds,
+  onOpenChange,
   onUpdate,
   onClear,
 }: PMWorkItemListFiltersProps) {
   const organizationId = useAppSelector(selectOrganizationId);
-  const [openCriterion, setOpenCriterion] = useState<FilterCriterion | null>(
-    null
-  );
+  const [selectedCriterion, setSelectedCriterion] =
+    useState<FilterCriterion>('parent');
   const [parentSearch, setParentSearch] = useState('');
   const deferredParentSearch = useDeferredValue(parentSearch.trim());
+  const [parentLoadedSearch, setParentLoadedSearch] = useState('');
 
   const { data: statuses } = useGetPmStatusesQuery(
     {
@@ -69,7 +74,7 @@ export function PMWorkItemListFilters({
       sortBy: 'name',
       sortDirection: 'asc',
     },
-    { skip: openCriterion !== 'status' }
+    { skip: !open || selectedCriterion !== 'status' }
   );
 
   const { data: priorities } = useGetPmPrioritiesQuery(
@@ -80,7 +85,7 @@ export function PMWorkItemListFilters({
       sortBy: 'sequence',
       sortDirection: 'asc',
     },
-    { skip: openCriterion !== 'priority' }
+    { skip: !open || selectedCriterion !== 'priority' }
   );
 
   const { data: issueTypes } = useGetPmIssueTypesQuery(
@@ -91,7 +96,7 @@ export function PMWorkItemListFilters({
       sortBy: 'name',
       sortDirection: 'asc',
     },
-    { skip: openCriterion !== 'workType' }
+    { skip: !open || selectedCriterion !== 'workType' }
   );
 
   const { data: usersResponse } = useGetOrganizationUsersQuery(
@@ -103,8 +108,9 @@ export function PMWorkItemListFilters({
     },
     {
       skip:
+        !open ||
         !organizationId ||
-        (openCriterion !== 'assignee' && openCriterion !== 'reporter'),
+        (selectedCriterion !== 'assignee' && selectedCriterion !== 'reporter'),
     }
   );
 
@@ -121,7 +127,7 @@ export function PMWorkItemListFilters({
           sortDirection: 'DESC',
         },
       },
-      { skip: openCriterion !== 'parent' }
+      { skip: !open || selectedCriterion !== 'parent' }
     );
 
   const users = useMemo(
@@ -152,268 +158,279 @@ export function PMWorkItemListFilters({
     onUpdate({ [key]: serializeNumberList(nextValues) });
   };
 
-  const toggleCriterion = (criterion: FilterCriterion) => {
-    setOpenCriterion((prev) => (prev === criterion ? null : criterion));
-  };
+  const close = () => onOpenChange(false);
 
   return (
-    <Card className='shadow-sm'>
-      <CardContent className='space-y-4 p-4'>
-        <div className='flex items-center justify-between gap-3'>
-          <div className='flex items-center gap-2 text-sm font-medium'>
-            <SlidersHorizontal className='h-4 w-4 text-muted-foreground' />
-            Filters
-            {activeCount > 0 ? (
-              <Badge variant='secondary'>{activeCount}</Badge>
-            ) : null}
-          </div>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={onClear}
-            disabled={activeCount === 0}
-          >
-            Clear all
-          </Button>
-        </div>
-
-        <div className='grid gap-4 lg:grid-cols-2 xl:grid-cols-3'>
-          <FilterCriterionDropdown
-            title='Parent'
-            isOpen={openCriterion === 'parent'}
-            activeCount={parentId ? 1 : 0}
-            onToggle={() => toggleCriterion('parent')}
-          >
-            <div className='space-y-2 p-2'>
-              <Input
-                value={parentSearch}
-                onChange={(event) => setParentSearch(event.target.value)}
-                placeholder='Search parent'
-                className='h-8'
-              />
-              <div className='max-h-48 space-y-1 overflow-y-auto'>
-                <FilterCheckbox
-                  label='No parent filter'
-                  checked={!parentId}
-                  onCheckedChange={() => onUpdate({ parentId: undefined })}
-                />
-                {(parentResponse?.data.items || []).map((item) => (
-                  <FilterCheckbox
-                    key={item.id}
-                    label={`${item.key} ${item.summary}`}
-                    checked={parentId === item.id}
-                    onCheckedChange={() =>
-                      onUpdate({ parentId: String(item.id) })
-                    }
-                  />
-                ))}
-                {isParentFetching ? (
-                  <p className='px-2 py-1 text-xs text-muted-foreground'>
-                    Loading...
-                  </p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-w-5xl gap-0 p-0 sm:max-h-[85vh] sm:max-w-5xl'>
+        <DialogHeader className='border-b px-5 py-4'>
+          <div className='flex items-center justify-between gap-3'>
+            <div>
+              <DialogTitle className='flex items-center gap-2 text-base'>
+                <SlidersHorizontal className='h-4 w-4' />
+                Filters
+                {activeCount > 0 ? (
+                  <Badge variant='secondary'>{activeCount}</Badge>
                 ) : null}
-              </div>
+              </DialogTitle>
+              <p className='mt-1 text-sm text-muted-foreground'>
+                Pick criterion on left, values on right.
+              </p>
             </div>
-          </FilterCriterionDropdown>
+            <Button type='button' variant='ghost' size='sm' onClick={close}>
+              Close
+            </Button>
+          </div>
+        </DialogHeader>
 
-          <FilterCriterionDropdown
-            title='Assignee'
-            isOpen={openCriterion === 'assignee'}
-            activeCount={assigneeIds.length}
-            onToggle={() => toggleCriterion('assignee')}
-          >
-            <div className='max-h-64 space-y-1 overflow-y-auto p-2'>
-              {users.length === 0 ? (
-                <p className='px-2 py-1 text-xs text-muted-foreground'>
-                  No users
-                </p>
-              ) : null}
-              {users.map((user) => (
-                <FilterCheckbox
-                  key={user.id}
-                  label={
-                    `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                    user.email ||
-                    `User #${user.id}`
-                  }
-                  checked={assigneeIds.includes(Number(user.id))}
-                  onCheckedChange={() =>
-                    toggleListValue('assigneeIds', assigneeIds, Number(user.id))
+        <div className='grid min-h-[520px] grid-cols-[220px_minmax(0,1fr)]'>
+          <aside className='border-r bg-muted/20 p-3'>
+            <div className='space-y-1'>
+              {(
+                [
+                  'parent',
+                  'assignee',
+                  'workType',
+                  'status',
+                  'priority',
+                  'reporter',
+                ] as const
+              ).map((criterion) => {
+                const active =
+                  criterion === 'parent'
+                    ? parentId
+                    : criterion === 'assignee'
+                      ? assigneeIds.length
+                      : criterion === 'workType'
+                        ? issueTypeIds.length
+                        : criterion === 'status'
+                          ? statusIds.length
+                          : criterion === 'priority'
+                            ? priorityIds.length
+                            : reporterIds.length;
+                const activeCountForCriterion = active ?? 0;
+
+                return (
+                  <button
+                    key={criterion}
+                    type='button'
+                    onClick={() => setSelectedCriterion(criterion)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-background',
+                      selectedCriterion === criterion &&
+                        'bg-background shadow-sm'
+                    )}
+                  >
+                    <span className='capitalize'>
+                      {criterion.replace('workType', 'Work type')}
+                    </span>
+                    <span className='flex items-center gap-2'>
+                      {activeCountForCriterion > 0 ? (
+                        <Badge variant='secondary'>
+                          {activeCountForCriterion}
+                        </Badge>
+                      ) : null}
+                      <ChevronRight className='h-4 w-4 text-muted-foreground' />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Separator className='my-4' />
+            <Button
+              type='button'
+              variant='ghost'
+              className='w-full justify-start'
+              onClick={onClear}
+              disabled={activeCount === 0}
+            >
+              Clear all
+            </Button>
+          </aside>
+
+          <section className='flex min-h-0 flex-col'>
+            {selectedCriterion === 'parent' ? (
+              <CriterionPane title='Parent'>
+                <div className='space-y-2'>
+                  <Input
+                    value={parentSearch}
+                    onChange={(event) => setParentSearch(event.target.value)}
+                    placeholder='Search parent'
+                    className='h-9'
+                  />
+                  <ScrollArea className='h-[380px] rounded-md border'>
+                    <div className='space-y-1 p-2'>
+                      <FilterCheckbox
+                        label='No parent filter'
+                        checked={!parentId}
+                        onCheckedChange={() =>
+                          onUpdate({ parentId: undefined })
+                        }
+                      />
+                      {(parentResponse?.data.items || []).map((item) => (
+                        <FilterCheckbox
+                          key={item.id}
+                          label={`${item.key} ${item.summary}`}
+                          checked={parentId === item.id}
+                          onCheckedChange={() =>
+                            onUpdate({ parentId: String(item.id) })
+                          }
+                        />
+                      ))}
+                      {isParentFetching ? (
+                        <p className='px-2 py-1 text-xs text-muted-foreground'>
+                          Loading...
+                        </p>
+                      ) : null}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'assignee' ? (
+              <CriterionPane title='Assignee'>
+                <ValueList
+                  items={users.map((user) => ({
+                    id: Number(user.id),
+                    label:
+                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                      user.email ||
+                      `User #${user.id}`,
+                  }))}
+                  values={assigneeIds}
+                  onToggle={(id) =>
+                    toggleListValue('assigneeIds', assigneeIds, id)
                   }
                 />
-              ))}
-            </div>
-          </FilterCriterionDropdown>
+              </CriterionPane>
+            ) : null}
 
-          <FilterCriterionDropdown
-            title='Work type'
-            isOpen={openCriterion === 'workType'}
-            activeCount={issueTypeIds.length}
-            onToggle={() => toggleCriterion('workType')}
-          >
-            <div className='max-h-64 space-y-1 overflow-y-auto p-2'>
-              {(issueTypes?.data.items || []).length === 0 ? (
-                <p className='px-2 py-1 text-xs text-muted-foreground'>
-                  No types
-                </p>
-              ) : null}
-              {(issueTypes?.data.items || []).map((item) => (
-                <FilterCheckbox
-                  key={item.id}
-                  label={item.name}
-                  checked={issueTypeIds.includes(item.id)}
-                  onCheckedChange={() =>
-                    toggleListValue('issueTypeIds', issueTypeIds, item.id)
+            {selectedCriterion === 'workType' ? (
+              <CriterionPane title='Work type'>
+                <ValueList
+                  items={(issueTypes?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={issueTypeIds}
+                  onToggle={(id) =>
+                    toggleListValue('issueTypeIds', issueTypeIds, id)
                   }
                 />
-              ))}
-            </div>
-          </FilterCriterionDropdown>
+              </CriterionPane>
+            ) : null}
 
-          <FilterCriterionDropdown
-            title='Status'
-            isOpen={openCriterion === 'status'}
-            activeCount={statusIds.length}
-            onToggle={() => toggleCriterion('status')}
-          >
-            <div className='max-h-64 space-y-1 overflow-y-auto p-2'>
-              {(statuses?.data.items || []).length === 0 ? (
-                <p className='px-2 py-1 text-xs text-muted-foreground'>
-                  No statuses
-                </p>
-              ) : null}
-              {(statuses?.data.items || []).map((item) => (
-                <FilterCheckbox
-                  key={item.id}
-                  label={item.name}
-                  checked={statusIds.includes(item.id)}
-                  onCheckedChange={() =>
-                    toggleListValue('statusIds', statusIds, item.id)
+            {selectedCriterion === 'status' ? (
+              <CriterionPane title='Status'>
+                <ValueList
+                  items={(statuses?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={statusIds}
+                  onToggle={(id) => toggleListValue('statusIds', statusIds, id)}
+                />
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'priority' ? (
+              <CriterionPane title='Priority'>
+                <ValueList
+                  items={(priorities?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={priorityIds}
+                  onToggle={(id) =>
+                    toggleListValue('priorityIds', priorityIds, id)
                   }
                 />
-              ))}
-            </div>
-          </FilterCriterionDropdown>
+              </CriterionPane>
+            ) : null}
 
-          <FilterCriterionDropdown
-            title='Priority'
-            isOpen={openCriterion === 'priority'}
-            activeCount={priorityIds.length}
-            onToggle={() => toggleCriterion('priority')}
-          >
-            <div className='max-h-64 space-y-1 overflow-y-auto p-2'>
-              {(priorities?.data.items || []).length === 0 ? (
-                <p className='px-2 py-1 text-xs text-muted-foreground'>
-                  No priorities
-                </p>
-              ) : null}
-              {(priorities?.data.items || []).map((item) => (
-                <FilterCheckbox
-                  key={item.id}
-                  label={item.name}
-                  checked={priorityIds.includes(item.id)}
-                  onCheckedChange={() =>
-                    toggleListValue('priorityIds', priorityIds, item.id)
+            {selectedCriterion === 'reporter' ? (
+              <CriterionPane title='Reporter'>
+                <ValueList
+                  items={users.map((user) => ({
+                    id: Number(user.id),
+                    label:
+                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                      user.email ||
+                      `User #${user.id}`,
+                  }))}
+                  values={reporterIds}
+                  onToggle={(id) =>
+                    toggleListValue('reporterIds', reporterIds, id)
                   }
                 />
-              ))}
-            </div>
-          </FilterCriterionDropdown>
-
-          <FilterCriterionDropdown
-            title='Reporter'
-            isOpen={openCriterion === 'reporter'}
-            activeCount={reporterIds.length}
-            onToggle={() => toggleCriterion('reporter')}
-          >
-            <div className='max-h-64 space-y-1 overflow-y-auto p-2'>
-              {users.length === 0 ? (
-                <p className='px-2 py-1 text-xs text-muted-foreground'>
-                  No users
-                </p>
-              ) : null}
-              {users.map((user) => (
-                <FilterCheckbox
-                  key={user.id}
-                  label={
-                    `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                    user.email ||
-                    `User #${user.id}`
-                  }
-                  checked={reporterIds.includes(Number(user.id))}
-                  onCheckedChange={() =>
-                    toggleListValue('reporterIds', reporterIds, Number(user.id))
-                  }
-                />
-              ))}
-            </div>
-          </FilterCriterionDropdown>
+              </CriterionPane>
+            ) : null}
+          </section>
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-interface FilterCriterionDropdownProps {
-  title: string;
-  isOpen: boolean;
-  activeCount: number;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
-
-function FilterCriterionDropdown({
+function CriterionPane({
   title,
-  isOpen,
-  activeCount,
-  onToggle,
   children,
-}: FilterCriterionDropdownProps) {
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className='space-y-2'>
-      <button
-        type='button'
-        onClick={onToggle}
-        className='flex w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted'
-      >
-        <span className='flex items-center gap-2'>
-          {title}
-          {activeCount > 0 ? (
-            <Badge variant='secondary' className='h-5 px-1.5 text-xs'>
-              {activeCount}
-            </Badge>
-          ) : null}
-        </span>
-        <span
-          className={cn(
-            'text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
-          )}
-        >
-          ▼
-        </span>
-      </button>
-      {isOpen ? (
-        <div className='rounded-md border bg-background shadow-sm'>
-          {children}
-        </div>
-      ) : null}
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>
+          Pick one or more values.
+        </p>
+      </div>
+      {children}
     </div>
   );
 }
 
-interface FilterCheckboxProps {
-  label: string;
-  checked: boolean;
-  onCheckedChange: () => void;
+function ValueList({
+  items,
+  values,
+  onToggle,
+}: {
+  items: Array<{ id: number; label: string }>;
+  values: number[];
+  onToggle: (id: number) => void;
+}) {
+  return (
+    <ScrollArea className='h-[380px] rounded-md border'>
+      <div className='space-y-1 p-2'>
+        {items.length === 0 ? (
+          <p className='px-2 py-1 text-xs text-muted-foreground'>No options</p>
+        ) : null}
+        {items.map((item) => (
+          <FilterCheckbox
+            key={item.id}
+            label={item.label}
+            checked={values.includes(item.id)}
+            onCheckedChange={() => onToggle(item.id)}
+          />
+        ))}
+      </div>
+    </ScrollArea>
+  );
 }
 
 function FilterCheckbox({
   label,
   checked,
   onCheckedChange,
-}: FilterCheckboxProps) {
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: () => void;
+}) {
   return (
     <button
       type='button'

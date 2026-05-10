@@ -61,3 +61,21 @@ export function getInitials(name?: string | null): string {
 export function getWorkItemLabel(item: PMWorkItemSearchApi): string {
   return item.issueTypeName ?? 'Work item';
 }
+
+export function getActiveFilterCount(filters: {
+  parentId?: number;
+  assigneeIds: number[];
+  issueTypeIds: number[];
+  statusIds: number[];
+  priorityIds: number[];
+  reporterIds: number[];
+}): number {
+  return [
+    filters.parentId ? 1 : 0,
+    filters.assigneeIds.length,
+    filters.issueTypeIds.length,
+    filters.statusIds.length,
+    filters.priorityIds.length,
+    filters.reporterIds.length,
+  ].reduce((total, item) => total + item, 0);
+}

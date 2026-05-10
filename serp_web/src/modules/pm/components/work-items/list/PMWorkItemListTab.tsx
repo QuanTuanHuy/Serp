@@ -14,28 +14,22 @@ import {
   useState,
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import {
-  AlertCircle,
-  LayoutList,
-  ListChecks,
-  RefreshCw,
-  Search,
-} from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Button,
   Card,
   CardContent,
-  Input,
 } from '@/shared/components/ui';
-import { cn } from '@/shared/utils';
 import {
   useGetPmWorkItemByIdQuery,
   useSearchPmWorkItemsQuery,
 } from '../../../api';
+import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
 import { PMWorkItemListFilters } from './PMWorkItemListFilters';
 import {
   PMWorkItemCompactList,
@@ -43,6 +37,7 @@ import {
   PMWorkItemListTable,
 } from './PMWorkItemListViews';
 import {
+  getActiveFilterCount,
   parseIssueId,
   parseNumberList,
   parseViewMode,
@@ -66,6 +61,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const priorityIds = parseNumberList(searchParams.get('priorityIds'));
   const reporterIds = parseNumberList(searchParams.get('reporterIds'));
   const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const deferredKeyword = useDeferredValue(keyword.trim());
 
   const searchQuery = useSearchPmWorkItemsQuery({
@@ -156,67 +152,79 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
     });
   };
 
+  const activeFilterCount = getActiveFilterCount({
+    parentId,
+    assigneeIds,
+    issueTypeIds,
+    statusIds,
+    priorityIds,
+    reporterIds,
+  });
+
+  const activeFilterChips = [
+    parentId ? { key: 'parentId', label: 'Parent' } : null,
+    assigneeIds.length
+      ? { key: 'assigneeIds', label: `Assignee: ${assigneeIds.length}` }
+      : null,
+    issueTypeIds.length
+      ? { key: 'issueTypeIds', label: `Work type: ${issueTypeIds.length}` }
+      : null,
+    statusIds.length
+      ? { key: 'statusIds', label: `Status: ${statusIds.length}` }
+      : null,
+    priorityIds.length
+      ? { key: 'priorityIds', label: `Priority: ${priorityIds.length}` }
+      : null,
+    reporterIds.length
+      ? { key: 'reporterIds', label: `Reporter: ${reporterIds.length}` }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string }>;
+
+  const removeFilter = (key: string) => {
+    updateFilter({ [key]: undefined });
+  };
+
   return (
     <div className='space-y-4'>
-      <Card className='shadow-sm'>
-        <CardContent className='p-4'>
-          <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-            <div>
-              <p className='text-sm font-medium text-muted-foreground'>
-                Project work items
-              </p>
-              <h1 className='mt-1 text-2xl font-semibold tracking-tight'>
-                List
-              </h1>
-            </div>
-            <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-              <div className='relative sm:w-80'>
-                <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder='Search key or summary'
-                  className='pl-9'
-                />
-              </div>
-              <div className='inline-flex rounded-md border bg-background p-1'>
-                <Button
-                  type='button'
-                  variant={view === 'list' ? 'secondary' : 'ghost'}
-                  size='sm'
-                  onClick={() => setView('list')}
-                >
-                  <ListChecks className='mr-2 h-4 w-4' />
-                  List view
-                </Button>
-                <Button
-                  type='button'
-                  variant={view === 'detail' ? 'secondary' : 'ghost'}
-                  size='sm'
-                  onClick={() => setView('detail')}
-                >
-                  <LayoutList className='mr-2 h-4 w-4' />
-                  Detail view
-                </Button>
-              </div>
-              <Button
+      <PMWorkItemCommandBar
+        keyword={keyword}
+        view={view}
+        activeFilterCount={activeFilterCount}
+        isRefreshing={searchQuery.isFetching}
+        onKeywordChange={setKeyword}
+        onViewChange={setView}
+        onRefresh={() => searchQuery.refetch()}
+        onFilterClick={() => setFiltersOpen(true)}
+      />
+
+      {activeFilterChips.length > 0 ? (
+        <div className='flex flex-wrap items-center gap-2'>
+          {activeFilterChips.map((chip) => (
+            <Badge
+              key={chip.key}
+              variant='secondary'
+              className='inline-flex items-center gap-2 px-2 py-1'
+            >
+              <span>{chip.label}</span>
+              <button
                 type='button'
-                variant='outline'
-                onClick={() => searchQuery.refetch()}
-                disabled={searchQuery.isFetching}
+                className='text-xs text-muted-foreground hover:text-foreground'
+                onClick={() => removeFilter(chip.key)}
               >
-                <RefreshCw
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    searchQuery.isFetching && 'animate-spin'
-                  )}
-                />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                x
+              </button>
+            </Badge>
+          ))}
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
+        </div>
+      ) : null}
 
       {searchQuery.error ? (
         <Alert variant='destructive'>
@@ -230,12 +238,14 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
 
       <PMWorkItemListFilters
         projectId={projectId}
+        open={filtersOpen}
         parentId={parentId}
         assigneeIds={assigneeIds}
         issueTypeIds={issueTypeIds}
         statusIds={statusIds}
         priorityIds={priorityIds}
         reporterIds={reporterIds}
+        onOpenChange={setFiltersOpen}
         onUpdate={updateFilter}
         onClear={clearFilters}
       />
