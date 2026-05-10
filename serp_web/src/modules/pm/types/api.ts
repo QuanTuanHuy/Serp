@@ -493,3 +493,71 @@ export interface PMGetWorkItemBoardParams {
   issueTypeIds?: number[];
   priorityIds?: number[];
 }
+
+export interface PMWorkItemTimelineIssueTypeApi {
+  id?: number | null;
+  name?: string | null;
+  iconUrl?: string | null;
+  hierarchyLevel?: number | null;
+}
+
+export interface PMWorkItemTimelineStatusApi {
+  id?: number | null;
+  name?: string | null;
+}
+
+export interface PMWorkItemTimelinePriorityApi {
+  id?: number | null;
+  name?: string | null;
+  color?: string | null;
+}
+
+export interface PMWorkItemTimelineItemApi {
+  id: number;
+  projectId: number;
+  parentId?: number | null;
+  key: string;
+  summary: string;
+  assigneeId?: number | null;
+  startDate?: number | null;
+  dueDate?: number | null;
+  isUnscheduled: boolean;
+  hasChildren: boolean;
+  rank: string;
+  issueType?: PMWorkItemTimelineIssueTypeApi | null;
+  status?: PMWorkItemTimelineStatusApi | null;
+  priority?: PMWorkItemTimelinePriorityApi | null;
+}
+
+export interface PMWorkItemTimelineDependencyApi {
+  sourceId: number;
+  targetId: number;
+  linkTypeId?: number | null;
+  linkTypeKey?: string | null;
+  linkTypeName?: string | null;
+}
+
+export interface PMWorkItemTimelineResponse {
+  items: PMWorkItemTimelineItemApi[];
+  dependencies: PMWorkItemTimelineDependencyApi[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export interface PMGetWorkItemTimelineParams {
+  viewportStart?: number;
+  viewportEnd?: number;
+  includeUnscheduled?: boolean;
+  includeDependencies?: boolean;
+  parentId?: number;
+  depth?: number;
+  statusIds?: number[];
+  assigneeIds?: number[];
+  issueTypeIds?: number[];
+  priorityIds?: number[];
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
