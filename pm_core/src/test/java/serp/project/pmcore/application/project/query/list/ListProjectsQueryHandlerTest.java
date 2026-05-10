@@ -11,14 +11,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.shared.pagination.PageView;
+import serp.project.pmcore.domain.project.entity.ProjectCategoryEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
+import serp.project.pmcore.domain.project.service.IProjectCategoryService;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
 
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,11 +35,17 @@ class ListProjectsQueryHandlerTest {
     @Mock
     private IProjectReadPort projectReadPort;
 
+    @Mock
+    private IUserProfileClient userProfileClient;
+    
+    @Mock
+    private IProjectCategoryService projectCategoryService;
+
     private ListProjectsQueryHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new ListProjectsQueryHandler(projectReadPort);
+        handler = new ListProjectsQueryHandler(projectReadPort, userProfileClient, projectCategoryService);
     }
 
     @Test
@@ -63,6 +73,9 @@ class ListProjectsQueryHandlerTest {
                                 .updatedAt(2100L)
                                 .build()
                 ), 5L));
+
+        when(projectCategoryService.getCategoriesByIds(anyList()))
+                .thenReturn(List.of(ProjectCategoryEntity.builder().id(20L).name("Software").build()));
 
         PageView<ProjectSummaryView> response = handler.handle(new ListProjectsQuery(
                 TENANT_ID,

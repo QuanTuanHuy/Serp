@@ -7,7 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, LogOut, Search, User } from 'lucide-react';
+import { ChevronDown, LogOut, Plus, Search, User } from 'lucide-react';
 import { useUser } from '@/modules/account';
 import { NotificationButton } from '@/modules/notifications';
 import {
@@ -19,6 +19,7 @@ import {
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { cn } from '@/shared/utils';
+import { CreateWorkItemDialog } from '../work-items';
 
 function titleFromPath(pathname: string): string {
   if (pathname.startsWith('/pm/dashboard')) return 'Dashboard';
@@ -38,7 +39,18 @@ export function PMHeader({ className }: PMHeaderProps) {
   const title = useMemo(() => titleFromPath(pathname), [pathname]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isCreateWorkItemOpen, setIsCreateWorkItemOpen] = useState(false);
   const { getDisplayName, getInitials, user } = useUser();
+
+  const initialProjectId = useMemo(() => {
+    const match = pathname.match(/^\/pm\/projects\/(\d+)/);
+    if (!match) {
+      return undefined;
+    }
+
+    const projectId = Number(match[1]);
+    return Number.isNaN(projectId) ? undefined : projectId;
+  }, [pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +101,25 @@ export function PMHeader({ className }: PMHeaderProps) {
       </div>
 
       <div className='flex items-center gap-1'>
+        <Button
+          type='button'
+          className='mr-2 hidden shadow-sm sm:inline-flex'
+          onClick={() => setIsCreateWorkItemOpen(true)}
+        >
+          <Plus className='h-4 w-4' />
+          Create
+        </Button>
+
+        <Button
+          type='button'
+          size='icon'
+          className='mr-2 sm:hidden'
+          onClick={() => setIsCreateWorkItemOpen(true)}
+          aria-label='Create work item'
+        >
+          <Plus className='h-4 w-4' />
+        </Button>
+
         <NotificationButton />
         <ThemeToggle />
 
@@ -149,6 +180,12 @@ export function PMHeader({ className }: PMHeaderProps) {
           onClick={() => setShowUserMenu(false)}
         />
       )}
+
+      <CreateWorkItemDialog
+        open={isCreateWorkItemOpen}
+        onOpenChange={setIsCreateWorkItemOpen}
+        initialProjectId={initialProjectId}
+      />
     </header>
   );
 }

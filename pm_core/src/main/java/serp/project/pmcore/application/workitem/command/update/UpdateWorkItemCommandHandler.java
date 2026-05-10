@@ -41,6 +41,7 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
+import serp.project.pmcore.domain.workitem.validator.WorkItemScheduleValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.ArrayList;
@@ -146,6 +147,7 @@ public class UpdateWorkItemCommandHandler
                 resolvedSecurityLevelId,
                 customFieldPlan.missingRequiredFields()
         );
+        validateScheduleRange(workItem, data);
 
         Map<String, Object> originalSnapshot = snapshotTrackedFields(workItem);
 
@@ -179,8 +181,9 @@ public class UpdateWorkItemCommandHandler
     private void checkFieldLevelPermissions(ProjectPermissionSubject permissionSubject,
                                             ProjectPermissionEvaluationContext actorContext,
                                             UpdateWorkItemData data) {
-        if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
-            workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(permissionSubject, actorContext, 0L);
+        if (data.hasSystemField(WorkItemFieldConstants.START_DATE)
+                || data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
+            workItemAuthorizationSupportService.checkScheduleIssuesPermission(permissionSubject, actorContext);
         }
         if (data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
             workItemAuthorizationSupportService.checkRequiredPermissions(permissionSubject, actorContext, ProjectPermissionKeys.ASSIGN_ISSUES);
@@ -237,6 +240,10 @@ public class UpdateWorkItemCommandHandler
                 data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)
                         ? resolvedAssigneeId
                         : workItem.getAssigneeId());
+        effectiveSystemValues.put(WorkItemFieldConstants.START_DATE,
+                data.hasSystemField(WorkItemFieldConstants.START_DATE)
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.START_DATE))
+                        : workItem.getStartDate());
         effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE,
                 data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
                         ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
@@ -291,6 +298,7 @@ public class UpdateWorkItemCommandHandler
         snapshot.put(WorkItemFieldConstants.DESCRIPTION, workItem.getDescription());
         snapshot.put(WorkItemFieldConstants.PRIORITY_ID, workItem.getPriorityId());
         snapshot.put(WorkItemFieldConstants.ASSIGNEE_ID, workItem.getAssigneeId());
+        snapshot.put(WorkItemFieldConstants.START_DATE, workItem.getStartDate());
         snapshot.put(WorkItemFieldConstants.DUE_DATE, workItem.getDueDate());
         snapshot.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, workItem.getTimeOriginalEstimate());
         snapshot.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, workItem.getSecurityLevelId());
@@ -314,6 +322,9 @@ public class UpdateWorkItemCommandHandler
         if (data.hasSystemField(WorkItemFieldConstants.ASSIGNEE_ID)) {
             workItem.setAssigneeId(resolvedAssigneeId);
         }
+        if (data.hasSystemField(WorkItemFieldConstants.START_DATE)) {
+            workItem.setStartDate(WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.START_DATE)));
+        }
         if (data.hasSystemField(WorkItemFieldConstants.DUE_DATE)) {
             workItem.setDueDate(WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE)));
         }
@@ -334,6 +345,7 @@ public class UpdateWorkItemCommandHandler
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DESCRIPTION, updatedWorkItem.getDescription());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.PRIORITY_ID, updatedWorkItem.getPriorityId());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.ASSIGNEE_ID, updatedWorkItem.getAssigneeId());
+        addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.START_DATE, updatedWorkItem.getStartDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DUE_DATE, updatedWorkItem.getDueDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, updatedWorkItem.getTimeOriginalEstimate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.SECURITY_LEVEL_ID, updatedWorkItem.getSecurityLevelId());
@@ -352,6 +364,16 @@ public class UpdateWorkItemCommandHandler
                         (left, right) -> left,
                         LinkedHashMap::new
                 ));
+    }
+
+    private void validateScheduleRange(WorkItemEntity workItem, UpdateWorkItemData data) {
+        Long effectiveStartDate = data.hasSystemField(WorkItemFieldConstants.START_DATE)
+                ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.START_DATE))
+                : workItem.getStartDate();
+        Long effectiveDueDate = data.hasSystemField(WorkItemFieldConstants.DUE_DATE)
+                ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.DUE_DATE))
+                : workItem.getDueDate();
+        WorkItemScheduleValidator.validateRange(effectiveStartDate, effectiveDueDate);
     }
 
     private void addIfChanged(List<String> changedFields,

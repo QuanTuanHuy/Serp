@@ -7,6 +7,9 @@ package serp.project.pmcore.ui.rest.project;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Set;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +35,7 @@ import serp.project.pmcore.application.project.query.get.GetProjectByIdQueryHand
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQuery;
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQueryHandler;
 import serp.project.pmcore.application.project.query.get.ProjectDetailView;
+import serp.project.pmcore.application.project.query.get.ProjectExpandOption;
 import serp.project.pmcore.application.project.query.list.ListProjectsQuery;
 import serp.project.pmcore.application.project.query.list.ListProjectsQueryHandler;
 import serp.project.pmcore.application.project.query.list.ProjectSummaryView;
@@ -152,11 +156,17 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public ResponseEntity<GeneralResponse<ProjectDetailView>> getProjectById(
-            @PathVariable("id") Long projectId) {
+            @PathVariable("id") Long projectId,
+            @RequestParam(required = false) Set<ProjectExpandOption> expand) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
-        ProjectDetailView response = getProjectByIdQueryHandler.handle(new GetProjectByIdQuery(projectId, tenantId));
+        GetProjectByIdQuery query = new GetProjectByIdQuery(
+                projectId,
+                tenantId,
+                expand == null ? Set.of() : Set.copyOf(expand));
+
+        ProjectDetailView response = getProjectByIdQueryHandler.handle(query);
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

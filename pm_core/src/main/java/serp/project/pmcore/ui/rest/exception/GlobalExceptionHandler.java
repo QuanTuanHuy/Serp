@@ -172,6 +172,7 @@ public class GlobalExceptionHandler {
                  WORKFLOW_DRAFT_NOT_FOUND -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
+                 WORK_ITEM_SCHEDULE_INVALID,
                   ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS,
                    WORKFLOW_VALIDATION_FAILED,
                    TRANSITION_VALIDATION_FAILED,

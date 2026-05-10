@@ -20,6 +20,7 @@ public class WorkItemFieldUtils {
             case "description" -> WorkItemFieldConstants.DESCRIPTION;
             case "priority_id", "priority" -> WorkItemFieldConstants.PRIORITY_ID;
             case "assignee_id", "assignee" -> WorkItemFieldConstants.ASSIGNEE_ID;
+            case "start_date", "start" -> WorkItemFieldConstants.START_DATE;
             case "due_date", "due" -> WorkItemFieldConstants.DUE_DATE;
             case "time_original_estimate", "original_estimate" -> WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE;
             case "security_level_id", "security_level", "security" -> WorkItemFieldConstants.SECURITY_LEVEL_ID;

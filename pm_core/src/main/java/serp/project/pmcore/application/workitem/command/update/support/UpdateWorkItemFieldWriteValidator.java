@@ -55,7 +55,8 @@ public class UpdateWorkItemFieldWriteValidator {
                 case WorkItemFieldConstants.PRIORITY_ID,
                      WorkItemFieldConstants.ASSIGNEE_ID,
                      WorkItemFieldConstants.SECURITY_LEVEL_ID -> WorkItemFieldValueUtils.asNullablePositiveLong(rawValue);
-                case WorkItemFieldConstants.DUE_DATE,
+                case WorkItemFieldConstants.START_DATE,
+                     WorkItemFieldConstants.DUE_DATE,
                      WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE -> WorkItemFieldValueUtils.asNullableNonNegativeLong(rawValue);
                 default -> throw new BusinessRuleViolationException(
                         DomainErrorCode.FIELD_NOT_WRITABLE_ON_UPDATE,

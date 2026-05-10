@@ -7,7 +7,6 @@ package serp.project.pmcore.application.project.command.roleactor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.enums.ExternalServices;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
@@ -15,22 +14,16 @@ import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.kernel.utils.HttpClientHelper;
-import serp.project.pmcore.kernel.utils.TokenUtils;
+import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
 
 import java.util.Locale;
-import java.util.Map;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RoleActorSubjectValidator {
 
-    private final HttpClientHelper httpClientHelper;
-    private final TokenUtils tokenUtils;
-
-    @Value("${services.account.url:http://localhost:8081/account-service}")
-    private String accountServiceUrl;
+    private final IUserProfileClient userProfileClient;
 
     public ProjectRoleActorSubjectType validateAndNormalizeSubjectType(String rawSubjectType) {
         if (rawSubjectType == null || rawSubjectType.isBlank()) {
@@ -52,6 +45,7 @@ public class RoleActorSubjectValidator {
 
     public String validateAndNormalizeSubjectId(String rawSubjectId) {
         if (rawSubjectId == null || rawSubjectId.isBlank()) {
+            log.error("subjectId is required: rawSubjectId={}", rawSubjectId);
             throw new DomainValidationException(
                     DomainErrorCode.ROLE_ACTOR_SUBJECT_INVALID,
                     "subjectId is required"
@@ -91,19 +85,11 @@ public class RoleActorSubjectValidator {
             );
         }
 
-        String token = tokenUtils.getServiceToken()
-                .orElseThrow(() -> new DomainValidationException(
-                        DomainErrorCode.SERVICE_UNAVAILABLE,
-                        "Failed to obtain service token for account lookup"
-                ));
-
-        String url = accountServiceUrl + "/internal/api/v1/users/" + userId;
-        log.info("Validating user existence: url={}, userId={}", url, userId);
-        Map<String, String> headers = Map.of("Authorization", "Bearer " + token);
+        log.info("Validating user existence: userId={}", userId);
 
         try {
-            AccountEnvelope response = httpClientHelper.get(url, null, headers, AccountEnvelope.class);
-            if (response == null || response.data() == null) {
+            var profile = userProfileClient.getUserProfileById(userId);
+            if (profile == null) {
                 throw ResourceNotFoundException.user(userId);
             }
         } catch (AppException ex) {
@@ -124,6 +110,4 @@ public class RoleActorSubjectValidator {
         }
     }
 
-    record AccountEnvelope(Object data) {
-    }
 }

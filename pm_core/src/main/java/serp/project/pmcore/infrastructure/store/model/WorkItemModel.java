@@ -58,6 +58,8 @@ public class WorkItemModel extends BaseModel {
     @Column(name = "security_level_id")
     private Long securityLevelId;
 
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
     @Column(name = "due_date")
     private LocalDateTime dueDate;
     @Column(name = "rank")

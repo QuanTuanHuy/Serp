@@ -20,7 +20,7 @@ public class ProjectCategoryListCriteria extends SearchPageCriteria {
     public String getSortBy() {
         String sortBy = getRawSortBy();
         if (sortBy == null || sortBy.isBlank()) {
-            return "createdAt";
+            return "created_at";
         }
         return sortBy.trim();
     }

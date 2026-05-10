@@ -40,6 +40,7 @@ class WorkItemDraftFactoryTest {
                         .summary("Create task")
                         .description("Task details")
                         .parentId(501L)
+                        .startDate(1_699_000_000_000L)
                         .dueDate(1_700_000_000_000L)
                         .timeOriginalEstimate(3600L)
                         .build(),
@@ -62,6 +63,7 @@ class WorkItemDraftFactoryTest {
         assertEquals(601L, draft.getAssigneeId());
         assertEquals(701L, draft.getReporterId());
         assertEquals(801L, draft.getSecurityLevelId());
+        assertEquals(1_699_000_000_000L, draft.getStartDate());
         assertEquals(3600L, draft.getTimeOriginalEstimate());
         assertEquals(3600L, draft.getTimeRemainingEstimate());
         assertEquals(0L, draft.getTimeSpent());

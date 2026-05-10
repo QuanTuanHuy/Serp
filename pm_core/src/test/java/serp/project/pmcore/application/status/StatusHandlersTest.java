@@ -23,9 +23,15 @@ import serp.project.pmcore.application.status.query.get.GetStatusByIdQuery;
 import serp.project.pmcore.application.status.query.get.GetStatusByIdQueryHandler;
 import serp.project.pmcore.application.status.query.list.ListStatusesQuery;
 import serp.project.pmcore.application.status.query.list.ListStatusesQueryHandler;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.workflow.port.IWorkflowPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemeItemPort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowSchemePort;
+import serp.project.pmcore.domain.workflow.port.IWorkflowStepPort;
 import serp.project.pmcore.domain.workitem.dto.StatusUpdateData;
 import serp.project.pmcore.domain.workitem.entity.StatusEntity;
+import serp.project.pmcore.domain.workitem.port.IStatusPort;
 import serp.project.pmcore.domain.workitem.query.StatusListCriteria;
 import serp.project.pmcore.domain.workitem.service.IStatusService;
 
@@ -49,7 +55,19 @@ class StatusHandlersTest {
 
     @Mock
     private IStatusService statusService;
-
+    @Mock
+    private IStatusPort statusPort;
+    @Mock
+    private IProjectReadPort projectReadPort;
+    @Mock
+    private IWorkflowSchemePort workflowSchemePort;
+    @Mock
+    private IWorkflowSchemeItemPort workflowSchemeItemPort;
+    @Mock
+    private IWorkflowPort workflowPort;
+    @Mock
+    private IWorkflowStepPort workflowStepPort;
+    
     private CreateStatusCommandHandler createHandler;
     private UpdateStatusCommandHandler updateHandler;
     private DeleteStatusCommandHandler deleteHandler;
@@ -62,7 +80,15 @@ class StatusHandlersTest {
         updateHandler = new UpdateStatusCommandHandler(statusService);
         deleteHandler = new DeleteStatusCommandHandler(statusService);
         getHandler = new GetStatusByIdQueryHandler(statusService);
-        listHandler = new ListStatusesQueryHandler(statusService);
+        listHandler = new ListStatusesQueryHandler(
+            statusService,
+            statusPort,
+            projectReadPort,
+            workflowSchemePort,
+            workflowSchemeItemPort,
+            workflowPort,
+            workflowStepPort
+        );
     }
 
     @Test
@@ -127,6 +153,7 @@ class StatusHandlersTest {
                 "progress",
                 CATEGORY_ID,
                 false,
+                null,
                 0,
                 1,
                 "name",
