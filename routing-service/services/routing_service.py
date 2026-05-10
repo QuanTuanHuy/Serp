@@ -1,6 +1,7 @@
 import logging
 from services.osrm_service import get_distance_matrix, get_route_polyline
 from services.ortools_service import solve_delivery_plan
+from config import VOLUME_SCALE_FACTOR
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ def process_routing_request(message: dict) -> dict:
             coordinates.append(f"{slip['lng']},{slip['lat']}")
             index_to_node_id[index] = slip['slip_id']
             weight_demands.append(int(slip['weight']))
-            volume_demands.append(int(slip['volume']))
+            volume_demands.append(int(float(slip['volume']) * VOLUME_SCALE_FACTOR))
 
         # 2. Gọi OSRM lấy ma trận
         distance_matrix = get_distance_matrix(coordinates)
@@ -37,7 +38,7 @@ def process_routing_request(message: dict) -> dict:
         # 4. Trích xuất Vehicles
         vehicle_ids = [v['vehicle_id'] for v in vehicles]
         vehicle_max_weights = [int(v['max_weight']) for v in vehicles]
-        vehicle_max_volumes = [int(v['max_volume']) for v in vehicles]
+        vehicle_max_volumes = [int(float(v['max_volume']) * VOLUME_SCALE_FACTOR) for v in vehicles]
         num_vehicles = len(vehicles)
 
         # 5. Giải VRP bằng OR-Tools
@@ -82,7 +83,7 @@ def process_routing_request(message: dict) -> dict:
                 "vehicle_id": route['vehicle_id'],
                 "route_distance": route['distance'] / 1000.0, # Chuyển mét sang km nếu cần
                 "total_weight": route['total_weight'],
-                "total_volume": route['total_volume'],
+                "total_volume": route['total_volume'] / VOLUME_SCALE_FACTOR, # Chuyển về đơn vị gốc
                 "stops": stops
             })
 

@@ -286,7 +286,27 @@ public enum ModuleEnum {
             PricingModel.PER_USER,
             ModuleStatus.BETA,
             "0.4.0",
-            List.of("HELPDESK"));
+            List.of("HELPDESK")),
+
+    // ==================== LOGISTICS & ROUTING ====================
+    /**
+     * TTCRS - Truck Container Routing Service
+     * Quản lý lộ trình xe tải, container, tối ưu tuyến đường
+     */
+    TTCRS(
+            "TTCRS",
+            "Truck Container Routing Service",
+            "serp-ttcrs",
+            "Operations",
+            "truck",
+            15,
+            ModuleType.SYSTEM,
+            true,
+            false,
+            PricingModel.PER_USER,
+            ModuleStatus.ACTIVE,
+            "1.0.0",
+            List.of());
 
     // Fields
     private final String code;

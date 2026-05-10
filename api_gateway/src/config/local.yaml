@@ -125,3 +125,7 @@ external:
       host: localhost
       port: "8093"
       timeout: 15s
+    ttcrsService:
+      host: localhost
+      port: "8094"
+      timeout: 15s

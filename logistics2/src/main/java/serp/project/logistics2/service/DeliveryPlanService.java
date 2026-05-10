@@ -170,6 +170,22 @@ public class DeliveryPlanService {
         deliveryPlanRepository.save(plan);
     }
 
+    @Transactional
+    public void rollbackDeliveryPlan(String deliveryPlanId, Long tenantId) {
+        DeliveryPlanEntity plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId)
+                .orElseThrow(() -> {
+                    log.info("Delivery plan {} is not found", deliveryPlanId);
+                    return new AppException(AppErrorCode.NOT_FOUND);
+                });
+        if (!plan.getOptimizationStatus().equals(PlanOptimizationStatus.FAILED.name())) {
+            log.info("Delivery plan {} is not in failed status", deliveryPlanId);
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        plan.setOptimizationStatus(PlanOptimizationStatus.FAILED.name());
+        deliveryPlanRepository.save(plan);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updateDeliveryPlan(String deliveryPlanId, DeliveryPlanUpdateForm form, Long tenantId) {
         DeliveryPlanEntity plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId)

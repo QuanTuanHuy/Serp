@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import {
   useGetOrderQuery,
   useGetFacilitiesQuery,
+  useGetSaleOrderQuery,
 } from '../../api/logisticsApi';
 import type {
   OutboundShipment,
@@ -74,7 +75,7 @@ export const OutboundShipmentForm: React.FC<OutboundShipmentFormProps> = ({
     data: orderResponse,
     isLoading: loadingOrder,
     isError: orderError,
-  } = useGetOrderQuery(orderId, { skip: !orderId });
+  } = useGetSaleOrderQuery(orderId, { skip: !orderId });
 
   const order = orderResponse?.data;
 

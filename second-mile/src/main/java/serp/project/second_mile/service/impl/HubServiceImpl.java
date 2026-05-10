@@ -7,6 +7,10 @@ package serp.project.second_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,34 +21,53 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.CreateHubRequest;
+import serp.project.second_mile.dto.request.HubImportDTO;
 import serp.project.second_mile.dto.request.HubFilterRequest;
 import serp.project.second_mile.dto.request.UpdateHubRequest;
 import serp.project.second_mile.dto.response.HubResponse;
+import serp.project.second_mile.dto.response.ImportHistoryResponse;
+import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
+import serp.project.second_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.second_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
 import serp.project.second_mile.mapper.HubMapper;
 import serp.project.second_mile.repository.HubRepository;
+import serp.project.second_mile.repository.ProvinceRepository;
+import serp.project.second_mile.repository.WardRepository;
+import serp.project.second_mile.repository.projection.CodeNameProjection;
 import serp.project.second_mile.repository.specification.HubSpecification;
 import serp.project.second_mile.service.FileStorageService;
+import serp.project.second_mile.service.HubImportExcelService;
 import serp.project.second_mile.service.HubService;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class HubServiceImpl implements HubService {
+    private static final String TEMPLATE_PATH = "excel/hub_template.xlsx";
+    private static final String UNIT_SHEET_NAME = "Unit";
+    private static final int START_ROW_INDEX = 1;
+    private static final int PROVINCE_COLUMN_INDEX = 0;
+    private static final int WARD_COLUMN_INDEX = 1;
     private static final String STORAGE_SERVICE_NAME = "second-mile";
     private static final String HUB_IMAGE_FOLDER = "hub-image";
 
     private final HubRepository hubRepository;
+    private final ProvinceRepository provinceRepository;
+    private final WardRepository wardRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final FileStorageService fileStorageService;
+    private final HubImportExcelService hubImportExcelService;
 
     @Override
     @Transactional(readOnly = true)
@@ -77,6 +100,46 @@ public class HubServiceImpl implements HubService {
     public HubResponse getHubById(Long id) {
         Hub hub = getHubOrThrow(id);
         return HubMapper.toResponse(hub);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportTemplate() {
+        secondMileAccessUtils.getCurrentTenantIdOrThrow();
+
+        List<CodeNameProjection> provinces = provinceRepository.findTemplateCodeNameList();
+        List<CodeNameProjection> wards = wardRepository.findTemplateCodeNameList();
+
+        try (InputStream inputStream = new ClassPathResource(TEMPLATE_PATH).getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet unitSheet = workbook.getSheet(UNIT_SHEET_NAME);
+            if (unitSheet == null) {
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+            }
+
+            populateProvinceColumn(unitSheet, provinces);
+            populateWardColumn(unitSheet, wards);
+
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+        }
+    }
+
+    @Override
+    public ValidateImportFileDTO<HubImportDTO> validateImportFile(MultipartFile file) {
+        Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
+        return hubImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importHubsAsync(MultipartFile file) {
+        Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
+        return hubImportExcelService.importHubsAsync(file, tenantId);
     }
 
     @Override
@@ -199,6 +262,30 @@ public class HubServiceImpl implements HubService {
                 || (maxValue != null && maxValue < 0)
                 || (minValue != null && maxValue != null && minValue > maxValue)) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void populateProvinceColumn(Sheet sheet, List<CodeNameProjection> provinces) {
+        for (int i = 0; i < provinces.size(); i++) {
+            CodeNameProjection province = provinces.get(i);
+            ExcelTemplateUtils.setTextCellValue(
+                    sheet,
+                    START_ROW_INDEX + i,
+                    PROVINCE_COLUMN_INDEX,
+                    ExcelTemplateUtils.formatCodeAndName(province.getCode(), province.getName())
+            );
+        }
+    }
+
+    private void populateWardColumn(Sheet sheet, List<CodeNameProjection> wards) {
+        for (int i = 0; i < wards.size(); i++) {
+            CodeNameProjection ward = wards.get(i);
+            ExcelTemplateUtils.setTextCellValue(
+                    sheet,
+                    START_ROW_INDEX + i,
+                    WARD_COLUMN_INDEX,
+                    ExcelTemplateUtils.formatCodeAndName(ward.getCode(), ward.getName())
+            );
         }
     }
 

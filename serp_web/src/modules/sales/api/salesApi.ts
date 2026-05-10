@@ -507,7 +507,10 @@ export const salesApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'sales' },
-      invalidatesTags: [{ type: 'Order', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Order', id: 'LIST' },
+        { type: 'Product', id: 'LIST' },
+      ],
     }),
 
     updateOrder: builder.mutation<
@@ -523,6 +526,7 @@ export const salesApi = api.injectEndpoints({
       invalidatesTags: (result, error, { orderId }) => [
         { type: 'Order', id: orderId },
         { type: 'Order', id: 'LIST' },
+        { type: 'Product', id: 'LIST' },
       ],
     }),
 
@@ -535,6 +539,7 @@ export const salesApi = api.injectEndpoints({
       invalidatesTags: (result, error, orderId) => [
         { type: 'Order', id: orderId },
         { type: 'Order', id: 'LIST' },
+        { type: 'Product', id: 'LIST' },
       ],
     }),
 
@@ -551,6 +556,7 @@ export const salesApi = api.injectEndpoints({
       invalidatesTags: (result, error, { orderId }) => [
         { type: 'Order', id: orderId },
         { type: 'Order', id: 'LIST' },
+        { type: 'Product', id: 'LIST' },
       ],
     }),
 
@@ -566,6 +572,7 @@ export const salesApi = api.injectEndpoints({
       invalidatesTags: (result, error, { orderId }) => [
         { type: 'Order', id: orderId },
         { type: 'Order', id: 'LIST' },
+        { type: 'Product', id: 'LIST' },
       ],
     }),
 

@@ -1,15 +1,7 @@
-/**
- * Order Detail Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Purchase order detail with management actions
- */
-
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import {
   Card,
   CardContent,
@@ -20,43 +12,61 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Input,
   Label,
 } from '@/shared/components/ui';
 import {
   ArrowLeft,
-  Edit,
   Phone,
   MapPin,
   Calendar,
   User,
   Package,
-  DollarSign,
   Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
   FileText,
   TrendingUp,
-  Building2,
   Truck,
   PanelsTopLeft,
   Mail,
+  Warehouse,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
-  useGetOrderQuery,
   useGetOutboundShipmentsQuery,
   useGetCustomerQuery,
+  useGetFacilitiesQuery,
+  useGetSaleOrderQuery,
 } from '../../api/logisticsApi';
 import { UserProfile, useGetUsersQuery } from '@/modules/admin';
-import { ShipmentCard } from '../../components/cards/ShipmentCard';
-import type { OutboundShipment, Shipment } from '../../types';
+import type {
+  InventoryItemDetail,
+  OrderItemEntity,
+  OutboundShipment,
+} from '../../types';
 import { OutboundShipmentCard } from '../../components/cards/OutboundShipmentCard';
 
 interface OrderDetailPageProps {
   orderId: string;
 }
+
+type InventoryDetailSegmentItem = {
+  detail: InventoryItemDetail;
+  productName: string;
+  skuCode?: string;
+  unit?: string;
+  orderItemId: string;
+  orderItemSeqId: number;
+};
+
+type InventoryDetailSegment = {
+  facilityId: string;
+  facilityName?: string;
+  details: InventoryDetailSegmentItem[];
+  totalQuantity: number;
+  totalRemainingQuantity: number;
+};
 
 // Order status configuration
 const STATUS_CONFIG = {
@@ -103,6 +113,10 @@ const formatDate = (dateString?: string) => {
   });
 };
 
+const formatNumber = (value?: number) => {
+  return new Intl.NumberFormat('vi-VN').format(value ?? 0);
+};
+
 const formatFullname = (user: UserProfile | undefined) => {
   if (!user) return 'N/A';
   return `${user.firstName || ''} ${user.lastName || ''}`.trim();
@@ -115,7 +129,11 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   const [activeTab, setActiveTab] = useState('overview');
 
   // Fetch order data
-  const { data: orderResponse, isLoading, isError } = useGetOrderQuery(orderId);
+  const {
+    data: orderResponse,
+    isLoading,
+    isError,
+  } = useGetSaleOrderQuery(orderId);
   const order = orderResponse?.data;
 
   // Keep hooks execution order stable across renders.
@@ -141,6 +159,11 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   });
   const customer = customersResponse?.data;
 
+  const { data: facilitiesResponse } = useGetFacilitiesQuery({
+    filters: {},
+    pagination: { page: 0, size: 100 },
+  });
+
   // Collect unique user IDs from order
   const userIds = [
     order?.createdByUserId,
@@ -160,6 +183,70 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   // Create user map for quick lookup
   const userMap = new Map(
     usersResponse?.data?.items?.map((user) => [user.id, user]) || []
+  );
+
+  const facilityMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    facilitiesResponse?.data?.items?.forEach((facility) => {
+      map.set(facility.id, facility.name);
+    });
+
+    return map;
+  }, [facilitiesResponse]);
+
+  const inventoryDetailSegments = useMemo<InventoryDetailSegment[]>(() => {
+    if (!order?.items?.length) {
+      return [];
+    }
+
+    const segmentMap = new Map<string, InventoryDetailSegment>();
+
+    order.items.forEach((orderItem: OrderItemEntity) => {
+      const productName = orderItem.product?.name || orderItem.productId;
+      const skuCode = orderItem.product?.skuCode;
+      const unit = orderItem.product?.unit || orderItem.unit;
+
+      (orderItem.allocatedInventoryItems || []).forEach((detail) => {
+        const facilityId = detail.facilityId || 'UNASSIGNED';
+        const remainingQuantity = detail.notYetOutboundQuantity ?? 0;
+
+        const segment =
+          segmentMap.get(facilityId) ||
+          ({
+            facilityId,
+            facilityName: facilityMap.get(facilityId),
+            details: [],
+            totalQuantity: 0,
+            totalRemainingQuantity: 0,
+          } as InventoryDetailSegment);
+
+        segment.facilityName =
+          facilityMap.get(facilityId) || segment.facilityName;
+
+        segment.details.push({
+          detail,
+          productName,
+          skuCode,
+          unit,
+          orderItemId: orderItem.id,
+          orderItemSeqId: orderItem.orderItemSeqId,
+        });
+
+        segment.totalQuantity += detail.quantity;
+        segment.totalRemainingQuantity += remainingQuantity;
+        segmentMap.set(facilityId, segment);
+      });
+    });
+
+    return Array.from(segmentMap.values()).sort((left, right) =>
+      left.facilityId.localeCompare(right.facilityId)
+    );
+  }, [facilityMap, order?.items]);
+
+  const inventoryDetailCount = inventoryDetailSegments.reduce(
+    (count, segment) => count + segment.details.length,
+    0
   );
 
   if (isLoading) {
@@ -236,7 +323,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
         <TabsList>
           <TabsTrigger value='overview'>Tổng quan</TabsTrigger>
           <TabsTrigger value='items'>
-            Sản phẩm ({order.items?.length || 0})
+            Tồn kho ({inventoryDetailCount})
           </TabsTrigger>
           <TabsTrigger value='shipments'>
             Phiếu kho ({shipments.length})
@@ -471,79 +558,128 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-2'>
                   <Package className='h-5 w-5 text-primary' />
-                  <h3 className='font-semibold'>Danh sách sản phẩm</h3>
+                  <h3 className='font-semibold'>Chi tiết phân bổ tồn kho</h3>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {order.items && order.items.length > 0 ? (
-                <div className='space-y-3'>
-                  {order.items.map((item, index) => (
+              {inventoryDetailSegments.length > 0 ? (
+                <div className='space-y-4'>
+                  {inventoryDetailSegments.map((segment) => (
                     <div
-                      key={item.id || index}
-                      className='flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors'
+                      key={segment.facilityId}
+                      className='overflow-hidden rounded-2xl border bg-gradient-to-br from-background to-muted/20 shadow-sm'
                     >
-                      <div className='flex-1'>
-                        <p className='font-medium'>
-                          {item.product?.name || item.productId}
-                        </p>
-                        <p className='text-sm text-muted-foreground'>
-                          SKU: {item.product?.skuCode || 'N/A'}
-                        </p>
+                      <div className='flex flex-col gap-4 border-b bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between'>
+                        <div className='flex items-start gap-3'>
+                          <div className='flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary'>
+                            <Warehouse className='h-5 w-5' />
+                          </div>
+                          <div>
+                            <p className='text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground'>
+                              Kho
+                            </p>
+                            <h4 className='text-lg font-semibold tracking-tight'>
+                              {segment.facilityName || segment.facilityId}
+                            </h4>
+                          </div>
+                        </div>
                       </div>
-                      <div className='flex items-center gap-8 text-sm'>
-                        <div>
-                          <Label className='text-muted-foreground'>
-                            Số lượng
-                          </Label>
-                          <p className='font-medium'>
-                            {item.quantity} {item.product?.unit || ''}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className='text-muted-foreground'>
-                            Còn thiếu
-                          </Label>
-                          <p className='font-medium'>
-                            {item.quantityRemaining} {item.product?.unit || ''}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className='text-muted-foreground'>
-                            Đơn giá
-                          </Label>
-                          <p className='font-medium'>
-                            {formatCurrency(item.price)}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className='text-muted-foreground'>Thuế</Label>
-                          <p className='font-medium'>{item.tax}%</p>
-                        </div>
-                        <div>
-                          <Label className='text-muted-foreground'>
-                            Giảm giá
-                          </Label>
-                          <p className='font-medium'>
-                            {formatCurrency(item.discount)}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className='text-muted-foreground'>
-                            Thành tiền
-                          </Label>
-                          <p className='font-semibold text-primary'>
-                            {formatCurrency(item.amount)}
-                          </p>
-                        </div>
+
+                      <div className='divide-y'>
+                        {segment.details.map((entry) => {
+                          const remainingQuantity =
+                            entry.detail.notYetOutboundQuantity ?? 0;
+                          const manufacturingDate =
+                            entry.detail.manufacturingDate ||
+                            entry.detail.inventoryItem?.manufacturingDate;
+                          const expirationDate =
+                            entry.detail.expirationDate ||
+                            entry.detail.inventoryItem?.expirationDate;
+
+                          return (
+                            <div
+                              key={entry.detail.id}
+                              className='grid gap-4 px-5 py-4 xl:grid-cols-[minmax(0,1.9fr)_repeat(4,minmax(0,1fr))]'
+                            >
+                              <div className='space-y-2'>
+                                <div className='flex flex-wrap items-center gap-2'>
+                                  <p className='text-base font-semibold text-foreground'>
+                                    {entry.productName}
+                                  </p>
+
+                                  {remainingQuantity > 0 ? (
+                                    <Badge className='bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400'>
+                                      Còn tồn
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant='secondary'>
+                                      Đã xuất hết
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className='rounded-xl bg-muted/40 px-3 py-2 text-sm text-muted-foreground'>
+                                  <span className='font-medium text-foreground'>
+                                    Lô:
+                                  </span>{' '}
+                                  {entry.detail.lotId || 'N/A'}
+                                </div>
+                              </div>
+
+                              <div className='rounded-xl border bg-background/80 px-4 py-3'>
+                                <p className='text-xs text-muted-foreground'>
+                                  Ngày sản xuất
+                                </p>
+                                <p className='mt-1 font-medium'>
+                                  {formatDate(manufacturingDate)}
+                                </p>
+                              </div>
+
+                              <div className='rounded-xl border bg-background/80 px-4 py-3'>
+                                <p className='text-xs text-muted-foreground'>
+                                  Hạn sử dụng
+                                </p>
+                                <p className='mt-1 font-medium'>
+                                  {formatDate(expirationDate)}
+                                </p>
+                              </div>
+
+                              <div className='rounded-xl border bg-background/80 px-4 py-3'>
+                                <p className='text-xs text-muted-foreground'>
+                                  Số lượng
+                                </p>
+                                <p className='mt-1 text-lg font-semibold'>
+                                  {formatNumber(entry.detail.quantity)}{' '}
+                                  {entry.unit || ''}
+                                </p>
+                              </div>
+
+                              <div className='rounded-xl border bg-background/80 px-4 py-3'>
+                                <p className='text-xs text-muted-foreground'>
+                                  Chưa xuất kho
+                                </p>
+                                <p className='mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-400'>
+                                  {formatNumber(remainingQuantity)}{' '}
+                                  {entry.unit || ''}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className='py-12 text-center text-muted-foreground'>
-                  <Package className='h-12 w-12 mx-auto mb-4 opacity-50' />
-                  <p>Chưa có sản phẩm nào trong đơn hàng</p>
+                <div className='rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/10 py-16 text-center text-muted-foreground'>
+                  <Package className='mx-auto mb-4 h-12 w-12 opacity-40' />
+                  <p className='font-medium text-foreground'>
+                    Chưa có dữ liệu tồn kho được phân bổ
+                  </p>
+                  <p className='mt-2 text-sm'>
+                    Danh sách này sẽ hiển thị khi các order item đã được gán
+                    inventory detail theo từng kho.
+                  </p>
                 </div>
               )}
             </CardContent>

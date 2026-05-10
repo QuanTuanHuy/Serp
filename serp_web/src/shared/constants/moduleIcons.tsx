@@ -45,7 +45,8 @@ export type ModuleCode =
   | 'FIELD_SERVICE'
   | 'DISCUSSION'
   | 'ADMIN'
-  | 'SETTINGS';
+  | 'SETTINGS'
+  | 'TTCRS';
 
 export interface ModuleIconConfig {
   icon: LucideIcon;
@@ -139,6 +140,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50 dark:bg-cyan-950',
   },
+  TTCRS: {
+    icon: MapPin,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
+  },
 
   // Finance
   ACCOUNTING: {
@@ -218,6 +224,9 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (canonicalCode === 'CRM') return '/crm/dashboard';
   if (canonicalCode === 'TMS') {
     return '/first-mile';
+  }
+  if (canonicalCode === 'TTCRS') {
+    return '/ttcrs/dispatcher/locations';
   }
 
   const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();

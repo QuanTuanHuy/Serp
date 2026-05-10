@@ -11,3 +11,6 @@ OSRM_BASE_URL = os.getenv("OSRM_BASE_URL", "http://openerp:5000")
 
 # OR-Tools Config
 ORTOOLS_TIME_LIMIT_SEC = int(os.getenv("ORTOOLS_TIME_LIMIT_SEC", "60"))  # 60 giây
+
+# Algorithm Config
+VOLUME_SCALE_FACTOR = int(os.getenv("VOLUME_SCALE_FACTOR", "1000000"))

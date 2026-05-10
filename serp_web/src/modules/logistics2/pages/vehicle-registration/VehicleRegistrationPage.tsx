@@ -44,6 +44,7 @@ import type { VehicleShipper } from '../../types';
 import { VehicleRegistrationCalendar } from './VehicleRegistrationCalendar';
 import { VehicleRegistrationDialog } from './VehicleRegistrationDialog';
 import type { VehicleRegistrationDay } from './vehicleRegistration.types';
+import { useUser } from '@/modules/account/hooks/useUser';
 
 const DATE_KEY_FORMAT = 'yyyy-MM-dd';
 
@@ -108,6 +109,7 @@ const buildCalendarDays = (
 export const VehicleRegistrationPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const notification = useNotification();
+  const { user } = useUser();
 
   const [displayMonth, setDisplayMonth] = useState(() =>
     startOfMonth(new Date())
@@ -150,6 +152,9 @@ export const VehicleRegistrationPage: React.FC = () => {
     error: vehicleShippersError,
     refetch: refetchVehicleShippers,
   } = useGetVehicleShippersQuery({
+    filters: {
+      shipperId: user?.id || 0,
+    },
     pagination: {
       page: 0,
       size: 500,
