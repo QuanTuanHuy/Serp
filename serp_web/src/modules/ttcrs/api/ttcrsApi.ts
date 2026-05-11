@@ -83,6 +83,56 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/customer/requests
+    // -------------------------------------------------------------------------
+    getCustomerRequests: builder.query<
+      TtcrsApiResponse<TtcrsPageResponse<TtcrsRequest>>,
+      RequestFilterParams
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params.statuses?.length) params.statuses.forEach((s) => searchParams.append('statuses', s));
+        if (params.type) searchParams.set('type', params.type);
+        if (params.srcLocationCode) searchParams.set('srcLocationCode', params.srcLocationCode);
+        if (params.destLocationCode) searchParams.set('destLocationCode', params.destLocationCode);
+        if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
+        if (params.createdTo) searchParams.set('createdTo', params.createdTo);
+        if (params.page !== undefined) searchParams.set('page', String(params.page));
+        if (params.size !== undefined) searchParams.set('size', String(params.size));
+        if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+        if (params.sortDirection) searchParams.set('sortDirection', params.sortDirection);
+        return { url: `/customer/requests?${searchParams.toString()}`, method: 'GET' };
+      },
+      extraOptions: { service: 'ttcrs' },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({ type: 'ttcrs/Request' as const, id })),
+              { type: 'ttcrs/Request', id: 'CUSTOMER_LIST' },
+            ]
+          : [{ type: 'ttcrs/Request', id: 'CUSTOMER_LIST' }],
+    }),
+
+    // GET /ttcrs/api/v1/customer/requests/{id}
+    getCustomerRequestDetail: builder.query<TtcrsApiResponse<TtcrsRequest>, number>({
+      query: (id) => ({ url: `/customer/requests/${id}`, method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id: `CUSTOMER_${id}` }],
+    }),
+
+    // -------------------------------------------------------------------------
+    // GET /ttcrs/api/v1/dispatcher/requests/{id}
+    // -------------------------------------------------------------------------
+    getDispatcherRequestDetail: builder.query<
+      TtcrsApiResponse<TtcrsRequest>,
+      number
+    >({
+      query: (id) => ({ url: `/dispatcher/requests/${id}`, method: 'GET' }),
+      extraOptions: { service: 'ttcrs' },
+      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id }],
+    }),
+
+    // -------------------------------------------------------------------------
     // POST /ttcrs/api/v1/dispatcher/requests
     // -------------------------------------------------------------------------
     createDispatcherRequests: builder.mutation<
@@ -526,6 +576,9 @@ export const ttcrsApi = api.injectEndpoints({
 
 export const {
   useGetDispatcherRequestsQuery,
+  useGetDispatcherRequestDetailQuery,
+  useGetCustomerRequestsQuery,
+  useGetCustomerRequestDetailQuery,
   useCreateDispatcherRequestsMutation,
   useUpdateDispatcherRequestsStatusMutation,
   useUpdateDispatcherRequestMutation,

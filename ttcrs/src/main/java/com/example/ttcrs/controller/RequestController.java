@@ -89,6 +89,27 @@ public class RequestController {
     }
 
     // =========================================================================
+    // GET /ttcrs/api/v1/dispatcher/requests/{id}
+    // =========================================================================
+
+    /**
+     * Lấy chi tiết một Request theo ID (dành cho Dispatcher).
+     *
+     * @param id ID của request
+     * @return {@code 200 OK} với request detail
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<RequestResponseDTO>> getRequestById(@PathVariable Long id) {
+        log.info("GET /ttcrs/api/v1/dispatcher/requests/{}", id);
+        try {
+            RequestResponseDTO result = requestService.getRequestById(id);
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // =========================================================================
     // POST /ttcrs/api/v1/dispatcher/requests
     // =========================================================================
 

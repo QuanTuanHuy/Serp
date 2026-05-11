@@ -9,10 +9,12 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  Map,
   Route,
   Search,
 } from 'lucide-react';
-import { useAppSelector } from '@/shared/hooks';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '@/modules/account/store';
 import { AccessDenied } from '@/modules/account/components';
 import {
@@ -20,6 +22,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Input,
   Skeleton,
   Table,
@@ -33,8 +36,15 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { useGetTransportPlansQuery } from '../../api/ttcrsApi';
-import type { TransportPlanListItem, TransportPlanStatus } from '../../types';
+import { toast } from 'sonner';
+import { ttcrsApi, useGetTransportPlansQuery } from '../../api/ttcrsApi';
+import type {
+  TransportPlanDetail,
+  TransportPlanStatus,
+  TtcrsApiResponse,
+} from '../../types';
+import { TransportRoutesMapModal } from './components/TransportRoutesMapModal';
+import type { RoutePolylineData } from '../../components/RouteMapPanel';
 
 // -------------------------------------------------------------------------
 // Constants
@@ -57,12 +67,8 @@ const STATUS_BADGE: Record<TransportPlanStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
 };
 
-type SortField =
-  | 'truckCode'
-  | 'driverName'
-  | 'status'
-  | 'startTime'
-  | 'stopCount';
+type SortField = 'truckCode' | 'driverName' | 'status' | 'startTime' | 'stopCount';
+const ROUTE_COLORS = ['#3b82f6', '#f97316', '#22c55e', '#8b5cf6', '#ef4444', '#14b8a6'];
 
 // -------------------------------------------------------------------------
 // Helpers
@@ -70,7 +76,36 @@ type SortField =
 
 function formatDateTime(dt: string | null) {
   if (!dt) return '—';
-  return dt.replace('T', ' ').slice(0, 16);
+  const [datePart, timePart] = dt.replace('T', ' ').split(' ');
+  if (!datePart || !timePart) return dt.replace('T', ' ').slice(0, 16);
+
+  const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return dt.replace('T', ' ').slice(0, 16);
+
+  return `${day}-${month}-${year} ${timePart.slice(0, 5)}`;
+}
+
+function buildRoutePolylineData(
+  plan: TransportPlanDetail,
+  color: string
+): RoutePolylineData {
+  const orderedStops = [...plan.stops]
+    .filter((stop) => stop.lat != null && stop.lng != null)
+    .sort((a, b) => a.sequence - b.sequence);
+
+  return {
+    truckCode: plan.truckCode,
+    color,
+    coords: orderedStops.map((stop) => [stop.lat!, stop.lng!] as [number, number]),
+    stops: orderedStops.map((stop) => ({
+      locationCode: stop.locationCode,
+      action: stop.action,
+      arrivalTime: stop.actualArrivalTime ?? stop.plannedArrivalTime ?? '',
+      isDepot: stop.action === 'DEPOT_START' || stop.action === 'DEPOT_END',
+      lat: stop.lat!,
+      lng: stop.lng!,
+    })),
+  };
 }
 
 // -------------------------------------------------------------------------
@@ -79,16 +114,20 @@ function formatDateTime(dt: string | null) {
 
 export function TransportRoutesPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const user = useAppSelector(selectUserProfile);
   const isDispatcher = user?.roles?.includes('TTCRS_DISPATCHER') ?? false;
 
-  const [search, setSearch] = useState('');
-  const [statusTab, setStatusTab] = useState<TransportPlanStatus | 'ALL'>(
-    'ALL'
-  );
-  const [sortBy, setSortBy] = useState<SortField>('startTime');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [page, setPage] = useState(0);
+  const [search, setSearch]           = useState('');
+  const [statusTab, setStatusTab]     = useState<TransportPlanStatus | 'ALL'>('ALL');
+  const [sortBy, setSortBy]           = useState<SortField>('startTime');
+  const [sortDir, setSortDir]         = useState<'asc' | 'desc'>('desc');
+  const [page, setPage]               = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [selectedRoutes, setSelectedRoutes] = useState<RoutePolylineData[]>([]);
 
   const { data, isLoading, isError } = useGetTransportPlansQuery();
   const plans = data?.data ?? [];
@@ -121,7 +160,8 @@ export function TransportRoutesPage() {
   }, [plans, statusTab, search, sortBy, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleRows = paginated;
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -142,6 +182,63 @@ export function TransportRoutesPage() {
     ) : (
       <ArrowUpDown className='ml-1 h-3 w-3 opacity-40' />
     );
+
+  const toggleRow = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = visibleRows.length > 0 && visibleRows.every((row) => next.has(row.id));
+      if (allSelected) {
+        visibleRows.forEach((row) => next.delete(row.id));
+      } else {
+        visibleRows.forEach((row) => next.add(row.id));
+      }
+      return next;
+    });
+  };
+
+  const handleViewSelectedOnMap = async () => {
+    const selectedPlans = plans.filter((plan) => selectedIds.has(plan.id));
+    if (selectedPlans.length === 0) return;
+
+    setMapOpen(true);
+    setMapLoading(true);
+    setMapError(null);
+    setSelectedRoutes([]);
+
+    try {
+      const details: TtcrsApiResponse<TransportPlanDetail>[] = await Promise.all(
+        selectedPlans.map((plan) =>
+          dispatch(ttcrsApi.endpoints.getTransportPlanDetail.initiate(plan.id)).unwrap()
+        )
+      );
+
+      const routes = details
+        .map((response: TtcrsApiResponse<TransportPlanDetail>, index: number) =>
+          buildRoutePolylineData(
+            response.data,
+            ROUTE_COLORS[index % ROUTE_COLORS.length]
+          )
+        )
+        .filter((route: RoutePolylineData) => route.coords.length > 0);
+
+      setSelectedRoutes(routes);
+    } catch {
+      const message = 'Failed to load selected routes for map view.';
+      setMapError(message);
+      toast.error(message);
+    } finally {
+      setMapLoading(false);
+    }
+  };
 
   if (!isDispatcher && user !== null) {
     return (
@@ -180,6 +277,21 @@ export function TransportRoutesPage() {
               setPage(0);
             }}
           />
+        </div>
+
+        <div className='ml-auto flex items-center gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={handleViewSelectedOnMap}
+            disabled={selectedIds.size === 0 || mapLoading}
+          >
+            {mapLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Map className='h-4 w-4' />}
+            View selected on map
+            <span className='ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground'>
+              {selectedIds.size}
+            </span>
+          </Button>
         </div>
       </div>
 
@@ -227,9 +339,14 @@ export function TransportRoutesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className='w-8 text-center text-muted-foreground'>
-                    #
+                  <TableHead className='w-10 px-4 py-3'>
+                    <Checkbox
+                      checked={visibleRows.length > 0 && visibleRows.every((row) => selectedIds.has(row.id))}
+                      onCheckedChange={toggleAllVisible}
+                      disabled={visibleRows.length === 0}
+                    />
                   </TableHead>
+                  <TableHead className='w-8 text-center text-muted-foreground'>#</TableHead>
                   <TableHead>
                     <button
                       className='flex items-center text-xs font-medium uppercase'
@@ -271,17 +388,25 @@ export function TransportRoutesPage() {
                       Stops <SortIcon field='stopCount' />
                     </button>
                   </TableHead>
+                  <TableHead>Created At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginated.map((plan, idx) => (
                   <TableRow
                     key={plan.id}
-                    className='cursor-pointer hover:bg-muted/50'
-                    onClick={() =>
-                      router.push(`/ttcrs/dispatcher/routes/${plan.id}`)
-                    }
+                    className={cn(
+                      'cursor-pointer hover:bg-muted/50',
+                      selectedIds.has(plan.id) && 'bg-blue-50 dark:bg-blue-950/20'
+                    )}
+                    onClick={() => router.push(`/ttcrs/dispatcher/routes/${plan.id}`)}
                   >
+                    <TableCell className='px-4 py-3' onClick={(e) => { e.stopPropagation(); toggleRow(plan.id); }}>
+                      <Checkbox
+                        checked={selectedIds.has(plan.id)}
+                        onCheckedChange={() => toggleRow(plan.id)}
+                      />
+                    </TableCell>
                     <TableCell className='text-center text-xs text-muted-foreground'>
                       {page * PAGE_SIZE + idx + 1}
                     </TableCell>
@@ -301,15 +426,10 @@ export function TransportRoutesPage() {
                         {plan.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.startTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.endTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {plan.stopCount}
-                    </TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.startTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.endTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{plan.stopCount}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.createdStamp)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -351,6 +471,18 @@ export function TransportRoutesPage() {
           </div>
         </div>
       )}
+
+      <TransportRoutesMapModal
+        open={mapOpen}
+        onClose={() => {
+          setMapOpen(false);
+          setMapError(null);
+          setSelectedRoutes([]);
+        }}
+        routes={selectedRoutes}
+        loading={mapLoading}
+        error={mapError}
+      />
     </div>
   );
 }

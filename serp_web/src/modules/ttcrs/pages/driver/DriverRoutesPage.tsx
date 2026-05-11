@@ -70,7 +70,13 @@ type SortField =
 
 function formatDateTime(dt: string | null) {
   if (!dt) return '—';
-  return dt.replace('T', ' ').slice(0, 16);
+  const [datePart, timePart] = dt.replace('T', ' ').split(' ');
+  if (!datePart || !timePart) return dt.replace('T', ' ').slice(0, 16);
+
+  const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return dt.replace('T', ' ').slice(0, 16);
+
+  return `${day}-${month}-${year} ${timePart.slice(0, 5)}`;
 }
 
 // -------------------------------------------------------------------------
@@ -289,16 +295,10 @@ export function DriverRoutesPage() {
                         {plan.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.startTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.endTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{plan.stopCount}</TableCell>
                     <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.startTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.endTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {plan.stopCount}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums text-muted-foreground'>
                       {formatDateTime(plan.createdStamp)}
                     </TableCell>
                   </TableRow>

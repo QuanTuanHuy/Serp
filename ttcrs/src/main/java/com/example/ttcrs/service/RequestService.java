@@ -251,6 +251,75 @@ public class RequestService {
     }
 
     /**
+     * Lấy danh sách Request có phân trang cho Customer.
+     * Lọc theo tenantId + created_by = userId từ JWT.
+     */
+    public PageResponse<RequestResponseDTO> getCustomerRequests(RequestFilterDTO filter) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve tenant from token."));
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve userId from token."));
+
+        Specification<RequestEntity> spec = Specification
+                .where(RequestSpecs.withTenantId(tenantId))
+                .and(RequestSpecs.withCreatedBy(userId))
+                .and(RequestSpecs.withStatuses(filter.getStatuses()))
+                .and(RequestSpecs.withType(filter.getType()))
+                .and(RequestSpecs.withSrcLocationCode(filter.getSrcLocationCode()))
+                .and(RequestSpecs.withDestLocationCode(filter.getDestLocationCode()))
+                .and(RequestSpecs.withCreatedBetween(filter.getCreatedFrom(), filter.getCreatedTo()));
+
+        Page<RequestResponseDTO> resultPage = requestRepository
+                .findAll(spec, buildPageable(filter))
+                .map(RequestResponseDTO::fromEntity);
+
+        return PageResponse.from(resultPage);
+    }
+
+    /**
+     * Lấy chi tiết một Request theo ID (dành cho Customer).
+     * Kiểm tra tenantId + created_by = userId để đảm bảo chỉ thấy request của mình.
+     */
+    public RequestResponseDTO getCustomerRequestById(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve tenant from token."));
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve userId from token."));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId) || !userId.equals(entity.getCreatedBy())) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+
+        return RequestResponseDTO.fromEntity(entity);
+    }
+
+    /**
+     * Lấy chi tiết một Request theo ID (dành cho Dispatcher).
+     *
+     * @param id ID của request
+     * @return {@link RequestResponseDTO}
+     * @throws IllegalArgumentException nếu không tìm thấy hoặc không thuộc tenant
+     */
+    public RequestResponseDTO getRequestById(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token."
+                ));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+
+        return RequestResponseDTO.fromEntity(entity);
+    }
+
+    /**
      * Cập nhật một Request theo ID.
      * Chỉ được phép cập nhật khi request đang ở trạng thái PENDING.
      *

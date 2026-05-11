@@ -107,6 +107,28 @@ public interface RequestRepository
         }
 
         /**
+         * Lọc theo customer_id.
+         * Nếu null → không áp dụng.
+         */
+        public static Specification<RequestEntity> withCustomerId(Long customerId) {
+            return (root, query, cb) ->
+                    customerId == null
+                            ? cb.conjunction()
+                            : cb.equal(root.get("customerId"), customerId);
+        }
+
+        /**
+         * Lọc theo created_by (userId của người tạo).
+         * Nếu null → không áp dụng.
+         */
+        public static Specification<RequestEntity> withCreatedBy(Long createdBy) {
+            return (root, query, cb) ->
+                    createdBy == null
+                            ? cb.conjunction()
+                            : cb.equal(root.get("createdBy"), createdBy);
+        }
+
+        /**
          * Lọc theo khoảng thời gian tạo (created_at BETWEEN from AND to).
          * Từng đầu có thể null (open-ended range).
          */

@@ -31,6 +31,8 @@ export interface TtcrsRequest {
   containerSize: ContainerSize | null;
   dropTrailerRequired: boolean | null;
   reason: string | null;
+  evidenceAtSrc: string | null;
+  evidenceAtDest: string | null;
   status: RequestStatus;
   type: RequestType;
   transportPlanId: number | null;

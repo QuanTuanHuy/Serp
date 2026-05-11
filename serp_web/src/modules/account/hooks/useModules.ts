@@ -101,7 +101,7 @@ export const useModules = () => {
             code: module.moduleCode,
             name: module.moduleName,
             description: module.moduleDescription || '',
-            href: getModuleRoute(module.moduleCode),
+            href: getModuleRoute(module.moduleCode, user?.roles ?? []),
             isActive: module.isActive,
             isAdmin:
               module.moduleCode === 'ADMIN' || module.moduleCode === 'SETTINGS',

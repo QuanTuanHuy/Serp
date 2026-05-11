@@ -45,7 +45,7 @@ import {
   useGetDispatcherRequestsQuery,
   useUpdateDispatcherRequestsStatusMutation,
 } from '../../api/ttcrsApi';
-import { CreateRequestDialog, RequestDetailSheet } from '../../components';
+import { CreateRequestDialog } from '../../components';
 import type { RequestStatus, RequestType, TtcrsRequest } from '../../types';
 
 // -------------------------------------------------------------------------
@@ -97,7 +97,8 @@ type SortableRequestField =
   | 'srcLocationCode'
   | 'destLocationCode'
   | 'status'
-  | 'type';
+  | 'type'
+  | 'createdAt';
 
 // -------------------------------------------------------------------------
 // Helpers
@@ -105,6 +106,17 @@ type SortableRequestField =
 
 function formatId(id: number): string {
   return `REQ-${String(id).padStart(5, '0')}`;
+}
+
+function formatDateTime(dt: string | null) {
+  if (!dt) return '—';
+  const [datePart, timePart] = dt.replace('T', ' ').split(' ');
+  if (!datePart || !timePart) return dt.replace('T', ' ').slice(0, 16);
+
+  const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return dt.replace('T', ' ').slice(0, 16);
+
+  return `${day}-${month}-${year} ${timePart.slice(0, 5)}`;
 }
 
 // -------------------------------------------------------------------------
@@ -204,9 +216,6 @@ export function DispatcherDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<TtcrsRequest | null>(
-    null
-  );
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -298,7 +307,7 @@ export function DispatcherDashboardPage() {
   const isPlannedTab = activeTab === 'PLANNED';
   const isInProgressTab = activeTab === 'IN_PROGRESS';
   const showCheckbox = isPlannedTab || isInProgressTab;
-  const colCount = showCheckbox ? 8 : 7;
+  const colCount = showCheckbox ? 9 : 8;
 
   const toggleRow = (id: number) => {
     setSelectedIds((prev) => {
@@ -559,11 +568,14 @@ export function DispatcherDashboardPage() {
                     onClick={() => handleSort('type')}
                   >
                     Type
-                    <SortIcon
-                      field='type'
-                      sortBy={sortBy}
-                      sortDirection={sortDirection}
-                    />
+                    <SortIcon field='type' sortBy={sortBy} sortDirection={sortDirection} />
+                  </TableHead>
+                  <TableHead
+                    className={sortableHeadClass}
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    Created At
+                    <SortIcon field='createdAt' sortBy={sortBy} sortDirection={sortDirection} />
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -588,7 +600,7 @@ export function DispatcherDashboardPage() {
                           selectedIds.has(req.id) &&
                           'bg-blue-50 dark:bg-blue-950/20'
                       )}
-                      onClick={() => setSelectedRequest(req)}
+                      onClick={() => router.push(`/ttcrs/dispatcher/requests/${req.id}`)}
                     >
                       {showCheckbox && (
                         <TableCell
@@ -638,6 +650,9 @@ export function DispatcherDashboardPage() {
                       </TableCell>
                       <TableCell className='px-4 py-3'>
                         <TypeBadge type={req.type} />
+                      </TableCell>
+                      <TableCell className='px-4 py-3 text-muted-foreground'>
+                        {formatDateTime(req.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -703,17 +718,6 @@ export function DispatcherDashboardPage() {
         }}
       />
 
-      {/* ---- Request Detail Sheet ---- */}
-      <RequestDetailSheet
-        request={selectedRequest}
-        open={selectedRequest !== null}
-        onClose={() => setSelectedRequest(null)}
-        customerName={
-          selectedRequest?.customerId
-            ? customerMap.get(selectedRequest.customerId)
-            : undefined
-        }
-      />
     </div>
   );
 }

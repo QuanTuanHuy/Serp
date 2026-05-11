@@ -36,6 +36,17 @@ interface Step1Props {
   isNextLoading: boolean;
 }
 
+function formatDateTime(dt: string | null) {
+  if (!dt) return '—';
+  const [datePart, timePart] = dt.replace('T', ' ').split(' ');
+  if (!datePart || !timePart) return dt.replace('T', ' ').slice(0, 16);
+
+  const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return dt.replace('T', ' ').slice(0, 16);
+
+  return `${day}-${month}-${year} ${timePart.slice(0, 5)}`;
+}
+
 export function Step1SelectRequests({
   selectedIds,
   onToggle,
@@ -130,7 +141,7 @@ export function Step1SelectRequests({
                     Type
                   </TableHead>
                   <TableHead className='px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                    Container Size
+                    Created At
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -197,7 +208,7 @@ export function Step1SelectRequests({
                         <TypeBadge type={request.type} />
                       </TableCell>
                       <TableCell className='px-4 py-3 text-sm text-muted-foreground'>
-                        {request.containerSize ?? '-'}
+                        {formatDateTime(request.createdAt)}
                       </TableCell>
                     </TableRow>
                   ))
