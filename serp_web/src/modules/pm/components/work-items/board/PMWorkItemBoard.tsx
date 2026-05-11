@@ -5,28 +5,51 @@
 
 'use client';
 
-import { useDeferredValue, useState } from 'react';
-import { AlertCircle, RefreshCw, Search } from 'lucide-react';
+import { startTransition, useDeferredValue, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { AlertCircle } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Input,
-} from '@/shared/components/ui';
+import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui';
 import { useGetPmWorkItemBoardQuery } from '../../../api';
 import { PMWorkItemBoardColumn } from './PMWorkItemBoardColumn';
 import { PMWorkItemBoardEmpty } from './PMWorkItemBoardEmpty';
 import { PMWorkItemBoardSkeleton } from './PMWorkItemBoardSkeleton';
+import { PMWorkItemBoardToolbar } from './PMWorkItemBoardToolbar';
 
 interface PMWorkItemBoardProps {
   projectId: number;
 }
 
 export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
-  const [keyword, setKeyword] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKeyword = searchParams.get('q') ?? '';
+  const [keyword, setKeyword] = useState(searchKeyword);
   const deferredKeyword = useDeferredValue(keyword.trim());
+
+  useEffect(() => {
+    setKeyword(searchKeyword);
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    if (deferredKeyword === searchKeyword) return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (deferredKeyword) {
+      nextParams.set('q', deferredKeyword);
+    } else {
+      nextParams.delete('q');
+    }
+
+    const queryString = nextParams.toString();
+    startTransition(() => {
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    });
+  }, [deferredKeyword, pathname, router, searchKeyword, searchParams]);
+
   const {
     data: board,
     error,
@@ -44,45 +67,21 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const hasCards = Boolean(
     board?.columns.some((column) => column.items.length > 0)
   );
+  const columnCount = board?.columns.length ?? 0;
+  const totalItems =
+    board?.columns.reduce((total, column) => total + column.total, 0) ?? 0;
 
   return (
     <div className='space-y-4'>
-      <div className='rounded-xl border bg-card p-4 shadow-sm'>
-        <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-          <div>
-            <p className='text-sm font-medium text-muted-foreground'>
-              Project board
-            </p>
-            <h1 className='mt-1 text-2xl font-semibold tracking-tight text-foreground'>
-              Work items by status
-            </h1>
-          </div>
-          <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-            <div className='relative sm:w-72'>
-              <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-              <Input
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder='Search key or summary'
-                className='pl-9'
-              />
-            </div>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw
-                className={
-                  isFetching ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'
-                }
-              />
-              Refresh
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PMWorkItemBoardToolbar
+        keyword={keyword}
+        columnCount={columnCount}
+        totalItems={totalItems}
+        isLoading={isLoading}
+        isRefreshing={isFetching}
+        onKeywordChange={setKeyword}
+        onRefresh={() => refetch()}
+      />
 
       {error ? (
         <Alert variant='destructive'>
