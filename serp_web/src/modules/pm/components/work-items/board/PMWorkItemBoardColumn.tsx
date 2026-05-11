@@ -14,11 +14,11 @@ interface PMWorkItemBoardColumnProps {
 
 function getStatusCategoryAccent(key?: string | null): string {
   switch (key) {
-    case 'TO_DO':
+    case 'new':
       return 'bg-slate-400 dark:bg-slate-500';
-    case 'IN_PROGRESS':
+    case 'indeterminate':
       return 'bg-blue-500';
-    case 'DONE':
+    case 'done':
       return 'bg-emerald-500';
     default:
       return 'bg-border';

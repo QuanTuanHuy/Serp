@@ -27,6 +27,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndPriorityId(Long tenantId, Long priorityId);
 
+    List<WorkItemModel> findAllByTenantIdAndResolutionId(Long tenantId, Long resolutionId);
+
     boolean existsByTenantIdAndStatusId(Long tenantId, Long statusId);
 
     @Query("SELECT DISTINCT w.issueTypeId FROM WorkItemModel w WHERE w.tenantId = :tenantId AND w.projectId IN :projectIds AND w.issueTypeId IN :issueTypeIds AND w.deletedAt IS NULL")

@@ -132,6 +132,7 @@ public enum DomainErrorCode {
     // Resolution rules
     RESOLUTION_NOT_FOUND("Resolution not found"),
     RESOLUTION_IS_SYSTEM("Cannot modify a system resolution"),
+    RESOLUTION_IN_USE("Cannot delete resolution that has work items"),
     RESOLUTION_REQUIRED("Resolution must be set before transitioning to done"),
 
     // Links, logs & counters

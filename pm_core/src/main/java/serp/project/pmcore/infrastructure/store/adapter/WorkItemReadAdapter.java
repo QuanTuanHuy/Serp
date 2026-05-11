@@ -83,6 +83,13 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> getWorkItemsByResolutionId(Long resolutionId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndResolutionId(tenantId, resolutionId)
+        );
+    }
+
+    @Override
     public boolean existsActiveWorkItemByStatusId(Long statusId, Long tenantId) {
         return workItemRepository.existsByTenantIdAndStatusId(tenantId, statusId);
     }
