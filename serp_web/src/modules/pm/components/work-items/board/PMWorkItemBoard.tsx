@@ -5,16 +5,34 @@
 
 'use client';
 
-import { startTransition, useDeferredValue, useEffect, useState } from 'react';
+import {
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
-import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+} from '@/shared/components/ui';
 import { useGetPmWorkItemBoardQuery } from '../../../api';
 import { PMWorkItemBoardColumn } from './PMWorkItemBoardColumn';
 import { PMWorkItemBoardEmpty } from './PMWorkItemBoardEmpty';
+import { PMWorkItemBoardFilters } from './PMWorkItemBoardFilters';
 import { PMWorkItemBoardSkeleton } from './PMWorkItemBoardSkeleton';
 import { PMWorkItemBoardToolbar } from './PMWorkItemBoardToolbar';
+import {
+  getActiveBoardFilterCount,
+  parseNumberList,
+} from './pmWorkItemBoard.utils';
 
 interface PMWorkItemBoardProps {
   projectId: number;
@@ -25,8 +43,33 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchKeyword = searchParams.get('q') ?? '';
+  const assigneeIds = parseNumberList(searchParams.get('assigneeIds'));
+  const issueTypeIds = parseNumberList(searchParams.get('issueTypeIds'));
+  const priorityIds = parseNumberList(searchParams.get('priorityIds'));
   const [keyword, setKeyword] = useState(searchKeyword);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const deferredKeyword = useDeferredValue(keyword.trim());
+
+  const updateUrl = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) {
+          nextParams.set(key, value);
+        } else {
+          nextParams.delete(key);
+        }
+      }
+
+      const queryString = nextParams.toString();
+      startTransition(() => {
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams]
+  );
 
   useEffect(() => {
     setKeyword(searchKeyword);
@@ -60,6 +103,9 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
     projectId,
     params: {
       keyword: deferredKeyword || undefined,
+      assigneeIds,
+      issueTypeIds,
+      priorityIds,
     },
   });
 
@@ -70,18 +116,97 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const columnCount = board?.columns.length ?? 0;
   const totalItems =
     board?.columns.reduce((total, column) => total + column.total, 0) ?? 0;
+  const activeFilterCount = getActiveBoardFilterCount({
+    assigneeIds,
+    issueTypeIds,
+    priorityIds,
+  });
+
+  const activeFilterChips = useMemo(
+    () =>
+      [
+        assigneeIds.length
+          ? { key: 'assigneeIds', label: `Assignee: ${assigneeIds.length}` }
+          : null,
+        issueTypeIds.length
+          ? { key: 'issueTypeIds', label: `Work type: ${issueTypeIds.length}` }
+          : null,
+        priorityIds.length
+          ? { key: 'priorityIds', label: `Priority: ${priorityIds.length}` }
+          : null,
+      ].filter(Boolean) as Array<{ key: string; label: string }>,
+    [assigneeIds.length, issueTypeIds.length, priorityIds.length]
+  );
+
+  const updateFilter = (updates: Record<string, string | undefined>) => {
+    updateUrl(updates);
+  };
+
+  const clearFilters = () => {
+    updateFilter({
+      assigneeIds: undefined,
+      issueTypeIds: undefined,
+      priorityIds: undefined,
+    });
+  };
+
+  const removeFilter = (key: string) => {
+    updateFilter({ [key]: undefined });
+  };
 
   return (
     <div className='space-y-4'>
+      <PMWorkItemBoardFilters
+        projectId={projectId}
+        open={filtersOpen}
+        assigneeIds={assigneeIds}
+        issueTypeIds={issueTypeIds}
+        priorityIds={priorityIds}
+        onOpenChange={setFiltersOpen}
+        onUpdate={updateFilter}
+        onClear={clearFilters}
+      />
+
       <PMWorkItemBoardToolbar
         keyword={keyword}
         columnCount={columnCount}
         totalItems={totalItems}
+        activeFilterCount={activeFilterCount}
         isLoading={isLoading}
         isRefreshing={isFetching}
         onKeywordChange={setKeyword}
+        onFilterClick={() => setFiltersOpen(true)}
         onRefresh={() => refetch()}
       />
+
+      {activeFilterChips.length > 0 ? (
+        <div className='flex flex-wrap items-center gap-2'>
+          {activeFilterChips.map((chip) => (
+            <Badge
+              key={chip.key}
+              variant='secondary'
+              className='inline-flex items-center gap-2 px-2 py-1'
+            >
+              <span>{chip.label}</span>
+              <button
+                type='button'
+                className='text-xs text-muted-foreground hover:text-foreground'
+                onClick={() => removeFilter(chip.key)}
+              >
+                x
+              </button>
+            </Badge>
+          ))}
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
+        </div>
+      ) : null}
 
       {error ? (
         <Alert variant='destructive'>

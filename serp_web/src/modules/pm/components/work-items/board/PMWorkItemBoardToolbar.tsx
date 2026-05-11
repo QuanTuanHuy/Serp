@@ -5,17 +5,19 @@
 
 'use client';
 
-import { RefreshCw, Search } from 'lucide-react';
-import { Button, Input } from '@/shared/components/ui';
+import { RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { Badge, Button, Input } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 
 interface PMWorkItemBoardToolbarProps {
   keyword: string;
   columnCount: number;
   totalItems: number;
+  activeFilterCount: number;
   isLoading: boolean;
   isRefreshing: boolean;
   onKeywordChange: (value: string) => void;
+  onFilterClick: () => void;
   onRefresh: () => void;
 }
 
@@ -23,9 +25,11 @@ export function PMWorkItemBoardToolbar({
   keyword,
   columnCount,
   totalItems,
+  activeFilterCount,
   isLoading,
   isRefreshing,
   onKeywordChange,
+  onFilterClick,
   onRefresh,
 }: PMWorkItemBoardToolbarProps) {
   const summary = isLoading
@@ -54,6 +58,16 @@ export function PMWorkItemBoardToolbar({
               className='pl-9'
             />
           </div>
+
+          <Button type='button' variant='outline' onClick={onFilterClick}>
+            <SlidersHorizontal className='mr-2 h-4 w-4' />
+            Filter
+            {activeFilterCount > 0 ? (
+              <Badge variant='secondary' className='ml-2 h-5 px-1.5 text-xs'>
+                {activeFilterCount}
+              </Badge>
+            ) : null}
+          </Button>
 
           <Button
             type='button'
