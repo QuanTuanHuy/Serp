@@ -226,14 +226,14 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
       ) : null}
 
       {!isLoading && !error && hasColumns ? (
-        <div className='rounded-xl border bg-card p-3 shadow-sm'>
-          <div className='flex gap-4 overflow-x-auto pb-2'>
+        <div className='rounded-2xl border border-border/60 bg-muted/10 p-2 shadow-sm'>
+          <div className='flex gap-4 overflow-x-auto px-1 pb-2 pt-1'>
             {board?.columns.map((column) => (
               <PMWorkItemBoardColumn key={column.statusId} column={column} />
             ))}
           </div>
           {!hasCards ? (
-            <p className='px-2 pb-1 pt-3 text-sm text-muted-foreground'>
+            <p className='px-3 pb-2 pt-3 text-sm text-muted-foreground'>
               No work items match current board filters.
             </p>
           ) : null}
