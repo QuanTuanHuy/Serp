@@ -155,7 +155,7 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   };
 
   return (
-    <div className='space-y-4'>
+    <div className='space-y-4 pb-2'>
       <PMWorkItemBoardFilters
         projectId={projectId}
         open={filtersOpen}
@@ -226,16 +226,19 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
       ) : null}
 
       {!isLoading && !error && hasColumns ? (
-        <div className='rounded-2xl border border-border/60 bg-muted/10 p-2 shadow-sm'>
-          <div className='flex gap-4 overflow-x-auto px-1 pb-2 pt-1'>
+        <div className='rounded-2xl border border-border/60 bg-muted/10 p-2 shadow-sm sm:p-3'>
+          <div className='flex gap-4 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin]'>
             {board?.columns.map((column) => (
               <PMWorkItemBoardColumn key={column.statusId} column={column} />
             ))}
           </div>
           {!hasCards ? (
-            <p className='px-3 pb-2 pt-3 text-sm text-muted-foreground'>
-              No work items match current board filters.
-            </p>
+            <div className='px-3 pb-2 pt-3'>
+              <PMWorkItemBoardEmpty
+                title='No work items match current filters'
+                description='Clear some filters or try a broader keyword to bring work items back into this board.'
+              />
+            </div>
           ) : null}
         </div>
       ) : null}

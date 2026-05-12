@@ -456,6 +456,8 @@ export interface PMWorkItemBoardCardApi {
   summary: string;
   description?: string | null;
   assigneeId?: number | null;
+  assigneeName?: string | null;
+  assigneeAvatarUrl?: string | null;
   reporterId?: number | null;
   startDate?: string | number | null;
   dueDate?: string | number | null;

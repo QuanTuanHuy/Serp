@@ -330,6 +330,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                     w.summary,
                     w.description,
                     w.assignee_id,
+                    CAST(NULL AS VARCHAR) AS assignee_name,
+                    CAST(NULL AS VARCHAR) AS assignee_avatar_url,
                     w.reporter_id,
                     w.start_date,
                     w.due_date,
