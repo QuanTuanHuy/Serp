@@ -8,6 +8,7 @@ package serp.project.pmcore.domain.workflow.port;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workflow.query.WorkflowListCriteria;
 
+import java.util.List;
 import java.util.Optional;
 
 import serp.project.pmcore.domain.workflow.entity.WorkflowEntity;
@@ -24,4 +25,6 @@ public interface IWorkflowPort {
     Optional<WorkflowEntity> getWorkflowByWorkflowKey(Long tenantId, String workflowKey);
 
     PageResult<WorkflowEntity> listWorkflowsIncludingSystem(Long tenantId, WorkflowListCriteria criteria);
+
+    List<WorkflowEntity> getWorkflowsByIds(List<Long> workflowIds, Long tenantId);
 }

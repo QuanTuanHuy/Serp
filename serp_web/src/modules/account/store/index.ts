@@ -27,6 +27,7 @@ export {
   setError as setUserError,
   clearProfile,
   selectUserProfile,
+  selectOrganizationId,
   selectUserLoading,
   selectUserError,
 } from './userSlice';

@@ -30,6 +30,7 @@ public class Constants {
         public static final int BAD_REQUEST = 400;
         public static final int UNAUTHORIZED = 401;
         public static final int FORBIDDEN = 403;
+        public static final int CONFLICT = 409;
         public static final int NOT_FOUND = 404;
         public static final int INTERNAL_SERVER_ERROR = 500;
     }
@@ -93,10 +94,16 @@ public class Constants {
         public static final String CONTACT = "crm.contact";
         public static final String ACTIVITY = "crm.activity";
         public static final String TEAM = "crm.team";
+        public static final String USER_NOTIFICATION = "serp.notification.user.events";
 
         public static final String ACCOUNT_DLQ = "crm.account.dlq";
         public static final String LEAD_DLQ = "crm.lead.dlq";
         public static final String OPPORTUNITY_DLQ = "crm.opportunity.dlq";
+    }
+
+    @UtilityClass
+    public static class NotificationEventType {
+        public static final String CREATE_REQUESTED = "notification.create.requested";
     }
 
     @UtilityClass
@@ -143,6 +150,10 @@ public class Constants {
         public static final String TEAM_DELETED = "TEAM_DELETED";
         public static final String TEAM_MEMBER_ADDED = "TEAM_MEMBER_ADDED";
         public static final String TEAM_MEMBER_REMOVED = "TEAM_MEMBER_REMOVED";
+
+        // Notification events
+        public static final String NOTIFICATION_CREATE_REQUESTED = "notification.create.requested";
+        public static final String NOTIFICATION_BULK_CREATE_REQUESTED = "notification.bulk_create.requested";
     }
 
     @UtilityClass

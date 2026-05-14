@@ -41,4 +41,6 @@ public interface IAccountPort {
     Pair<List<AccountEntity>, Long> findByIndustry(String industry, Long tenantId, PageRequest pageRequest);
 
     Pair<List<AccountEntity>, Long> filter(AccountFilterRequest filter, PageRequest pageRequest, Long tenantId);
+
+    List<AccountEntity> findByIds(List<Long> ids, Long tenantId);
 }

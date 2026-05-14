@@ -15,6 +15,7 @@ public record ListIssueTypesQuery(
         String search,
         Integer hierarchyLevel,
         Boolean isSystem,
+        Long projectId,
         Integer page,
         Integer pageSize,
         String sortBy,
@@ -24,7 +25,7 @@ public record ListIssueTypesQuery(
         return IssueTypeListCriteria.builder()
                 .search(search)
                 .hierarchyLevel(hierarchyLevel)
-                .isSystem(isSystem)
+                .isSystem(projectId != null ? null : isSystem)
                 .page(page)
                 .pageSize(pageSize)
                 .sortBy(sortBy)

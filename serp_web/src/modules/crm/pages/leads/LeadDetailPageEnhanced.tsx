@@ -71,13 +71,12 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import {
-  useConvertLeadMutation,
   useDeleteLeadMutation,
-  useDisqualifyLeadMutation,
   useGetLeadActivitiesQuery,
   useGetLeadQuery,
-  useQualifyLeadMutation,
+  useUpdateLeadStatusMutation,
 } from '../../api/crmApi';
+import { RequestMeetingDialog } from '../../components/meeting-requests';
 import type { LeadSource, LeadStatus } from '../../types';
 
 interface LeadDetailPageProps {
@@ -138,7 +137,10 @@ const LEAD_STATUS_CONFIG: Record<
   },
 };
 
-const LEAD_SOURCE_CONFIG: Record<LeadSource, { label: string; icon: React.ElementType }> = {
+const LEAD_SOURCE_CONFIG: Record<
+  LeadSource,
+  { label: string; icon: React.ElementType }
+> = {
   WEBSITE: { label: 'Website', icon: Globe },
   SOCIAL_MEDIA: { label: 'Social Media', icon: MessageSquare },
   REFERRAL: { label: 'Referral', icon: Users },
@@ -157,6 +159,8 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showQualifyDialog, setShowQualifyDialog] = useState(false);
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false);
+  const [showMeetingRequestDialog, setShowMeetingRequestDialog] =
+    useState(false);
   const [qualifyNotes, setQualifyNotes] = useState('');
   const [disqualifyNotes, setDisqualifyNotes] = useState('');
   const [convertForm, setConvertForm] = useState({
@@ -174,12 +178,14 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const { data: activitiesData, isLoading: isActivitiesLoading } =
     useGetLeadActivitiesQuery({ leadId, page: 1, size: 20 });
   const [deleteLead] = useDeleteLeadMutation();
-  const [qualifyLead] = useQualifyLeadMutation();
-  const [disqualifyLead] = useDisqualifyLeadMutation();
-  const [convertLead] = useConvertLeadMutation();
+  const [updateLeadStatus] = useUpdateLeadStatusMutation();
 
   const lead = data?.data;
   const activities = activitiesData?.data.data || [];
+  const linkedAccountId =
+    lead?.convertedAccountId?.trim() ||
+    lead?.convertedToCustomerId?.trim() ||
+    undefined;
 
   const leadStatus = (lead?.leadStatus || 'NEW') as Exclude<LeadStatus, 'LOST'>;
   const leadSource = (lead?.leadSource || 'WEBSITE') as LeadSource;
@@ -199,10 +205,18 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
     if (lead?.company) score += 20;
     if (lead?.estimatedValue && lead.estimatedValue > 0) score += 20;
     if (leadStatus === 'QUALIFIED') score += 25;
-    else if (leadStatus === 'CONTACTED' || leadStatus === 'NURTURING') score += 15;
+    else if (leadStatus === 'CONTACTED' || leadStatus === 'NURTURING')
+      score += 15;
     else if (leadStatus === 'NEW') score += 5;
     return Math.min(score, 100);
-  }, [lead?.company, lead?.email, lead?.estimatedValue, lead?.leadScore, lead?.phone, leadStatus]);
+  }, [
+    lead?.company,
+    lead?.email,
+    lead?.estimatedValue,
+    lead?.leadScore,
+    lead?.phone,
+    leadStatus,
+  ]);
 
   if (!isLoading && !lead) {
     return (
@@ -211,7 +225,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         <h2 className='mb-2 text-xl font-semibold text-foreground'>
           Lead not found
         </h2>
-        <p className='mb-4 text-muted-foreground'>This lead does not exist or has been deleted.</p>
+        <p className='mb-4 text-muted-foreground'>
+          This lead does not exist or has been deleted.
+        </p>
         <Button asChild>
           <Link href='/crm/leads'>
             <ArrowLeft className='mr-2 h-4 w-4' />
@@ -259,8 +275,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleQualify = async () => {
     try {
-      await qualifyLead({ id: leadId, data: { notes: qualifyNotes } }).unwrap();
-      toast.success('Qualify lead successfully');
+      const result = await updateLeadStatus({
+        id: leadId,
+        data: {
+          fromStatus: leadStatus,
+          toStatus: 'QUALIFIED',
+          notes: qualifyNotes.trim(),
+        },
+      }).unwrap();
+      toast.success(result.data.message || 'Qualify lead successfully');
       setShowQualifyDialog(false);
       setQualifyNotes('');
     } catch (error) {
@@ -272,8 +295,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleDisqualify = async () => {
     try {
-      await disqualifyLead({ id: leadId, data: { notes: disqualifyNotes } }).unwrap();
-      toast.success('Disqualify lead successfully');
+      const result = await updateLeadStatus({
+        id: leadId,
+        data: {
+          fromStatus: leadStatus,
+          toStatus: 'DISQUALIFIED',
+          notes: disqualifyNotes.trim(),
+        },
+      }).unwrap();
+      toast.success(result.data.message || 'Disqualify lead successfully');
       setShowDisqualifyDialog(false);
       setDisqualifyNotes('');
     } catch (error) {
@@ -285,30 +315,35 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
   const handleConvert = async () => {
     try {
-      const result = await convertLead({
+      const result = await updateLeadStatus({
         id: leadId,
         data: {
-          createAccount: convertForm.createAccount,
-          createOpportunity: convertForm.createOpportunity,
-          existingAccountId: convertForm.existingAccountId
-            ? Number(convertForm.existingAccountId)
-            : undefined,
-          accountData: convertForm.createAccount
-            ? {
-                name: convertForm.accountName || lead?.company || lead?.name,
-                notes: convertForm.accountNotes || lead?.notes,
-              }
-            : undefined,
-          opportunityData: convertForm.createOpportunity
-            ? {
-                name:
-                  convertForm.opportunityName || `Opportunity from ${lead?.name}`,
-                amount: convertForm.opportunityAmount
-                  ? Number(convertForm.opportunityAmount)
-                  : lead?.estimatedValue,
-                notes: convertForm.opportunityNotes || lead?.notes,
-              }
-            : undefined,
+          fromStatus: leadStatus,
+          toStatus: 'CONVERTED',
+          conversion: {
+            createAccount: convertForm.createAccount,
+            createOpportunity: convertForm.createOpportunity,
+            existingAccountId: convertForm.existingAccountId
+              ? Number(convertForm.existingAccountId)
+              : undefined,
+            accountData: convertForm.createAccount
+              ? {
+                  name: convertForm.accountName || lead?.company || lead?.name,
+                  notes: convertForm.accountNotes || lead?.notes,
+                }
+              : undefined,
+            opportunityData: convertForm.createOpportunity
+              ? {
+                  name:
+                    convertForm.opportunityName ||
+                    `Opportunity from ${lead?.name}`,
+                  amount: convertForm.opportunityAmount
+                    ? Number(convertForm.opportunityAmount)
+                    : lead?.estimatedValue,
+                  notes: convertForm.opportunityNotes || lead?.notes,
+                }
+              : undefined,
+          },
         },
       }).unwrap();
       toast.success(result.data.message || 'Convert lead successfully');
@@ -335,7 +370,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           <div>
             <h1 className='text-2xl font-bold text-foreground'>{lead?.name}</h1>
             <div className='mt-1 flex flex-wrap items-center gap-2'>
-              <Badge className={`${statusConfig.bgColor} ${statusConfig.color}`}>
+              <Badge
+                className={`${statusConfig.bgColor} ${statusConfig.color}`}
+              >
                 <StatusIcon className='mr-1 h-3 w-3' />
                 {statusConfig.label}
               </Badge>
@@ -361,7 +398,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
             <CheckCircle className='mr-2 h-4 w-4' />
             Qualify
           </Button>
-          <Button variant='outline' onClick={() => setShowDisqualifyDialog(true)}>
+          <Button
+            variant='outline'
+            onClick={() => setShowDisqualifyDialog(true)}
+          >
             <AlertCircle className='mr-2 h-4 w-4' />
             Disqualify
           </Button>
@@ -420,27 +460,41 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           </div>
           <Progress value={statusProgress()} className='h-2' />
           <div className='mt-3 flex justify-between'>
-            {['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED'].map((status, index) => {
-              const config = LEAD_STATUS_CONFIG[status as Exclude<LeadStatus, 'LOST'>];
-              const Icon = config.icon;
-              const isActive = statusConfig.step >= index + 1;
-              const isCurrent = statusConfig.step === index + 1;
-              return (
-                <div
-                  key={status}
-                  className={cn(
-                    'flex flex-col items-center',
-                    isActive ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground',
-                    isCurrent && 'font-semibold'
-                  )}
-                >
-                  <div className={cn('rounded-full p-2', isActive ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-muted')}>
-                    <Icon className='h-4 w-4' />
+            {['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED'].map(
+              (status, index) => {
+                const config =
+                  LEAD_STATUS_CONFIG[status as Exclude<LeadStatus, 'LOST'>];
+                const Icon = config.icon;
+                const isActive = statusConfig.step >= index + 1;
+                const isCurrent = statusConfig.step === index + 1;
+                return (
+                  <div
+                    key={status}
+                    className={cn(
+                      'flex flex-col items-center',
+                      isActive
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-muted-foreground',
+                      isCurrent && 'font-semibold'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'rounded-full p-2',
+                        isActive
+                          ? 'bg-blue-100 dark:bg-blue-900/30'
+                          : 'bg-muted'
+                      )}
+                    >
+                      <Icon className='h-4 w-4' />
+                    </div>
+                    <span className='mt-1 hidden text-xs sm:block'>
+                      {config.label}
+                    </span>
                   </div>
-                  <span className='mt-1 hidden text-xs sm:block'>{config.label}</span>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         </CardContent>
       </Card>
@@ -450,7 +504,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className='w-full justify-start'>
               <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='activities'>Activities ({activities.length})</TabsTrigger>
+              <TabsTrigger value='activities'>
+                Activities ({activities.length})
+              </TabsTrigger>
               <TabsTrigger value='notes'>Notes</TabsTrigger>
             </TabsList>
 
@@ -523,7 +579,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <DollarSign className='h-4 w-4 text-emerald-600' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>Estimated Value</p>
+                      <p className='text-sm text-muted-foreground'>
+                        Estimated Value
+                      </p>
                       <p className='font-medium text-foreground'>
                         {formatCurrency(lead?.estimatedValue)}
                       </p>
@@ -534,7 +592,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                       <Calendar className='h-4 w-4 text-pink-600' />
                     </div>
                     <div>
-                      <p className='text-sm text-muted-foreground'>Follow Up Date</p>
+                      <p className='text-sm text-muted-foreground'>
+                        Follow Up Date
+                      </p>
                       <p className='font-medium text-foreground'>
                         {formatDate(lead?.followUpDate)}
                       </p>
@@ -546,7 +606,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     </div>
                     <div>
                       <p className='text-sm text-muted-foreground'>Source</p>
-                      <p className='font-medium text-foreground'>{sourceConfig.label}</p>
+                      <p className='font-medium text-foreground'>
+                        {sourceConfig.label}
+                      </p>
                     </div>
                   </div>
                   <div className='flex items-center gap-3'>
@@ -565,7 +627,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
               <Card className='border-none shadow-sm'>
                 <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>Primary Notes</CardTitle>
+                  <CardTitle className='text-lg font-semibold'>
+                    Primary Notes
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className='whitespace-pre-wrap text-foreground/80'>
@@ -588,16 +652,21 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     <Card
                       key={activity.id}
                       className='cursor-pointer border-none shadow-sm transition-shadow hover:shadow-md'
-                      onClick={() => router.push(`/crm/activities/${activity.id}`)}
+                      onClick={() =>
+                        router.push(`/crm/activities/${activity.id}`)
+                      }
                     >
                       <CardContent className='flex items-center gap-4 p-4'>
                         <div className='rounded-lg bg-blue-100 p-2'>
                           <Activity className='h-5 w-5 text-blue-600' />
                         </div>
                         <div className='flex-1'>
-                          <p className='font-medium text-foreground'>{activity.subject}</p>
+                          <p className='font-medium text-foreground'>
+                            {activity.subject}
+                          </p>
                           <p className='text-sm text-muted-foreground'>
-                            {formatDate(activity.scheduledDate)} • {activity.type}
+                            {formatDate(activity.scheduledDate)} •{' '}
+                            {activity.type}
                           </p>
                         </div>
                         <Badge variant='outline'>{activity.status}</Badge>
@@ -610,7 +679,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 <Card className='border-none shadow-sm'>
                   <CardContent className='flex flex-col items-center justify-center py-12'>
                     <Activity className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                    <p className='text-muted-foreground'>No activities available.</p>
+                    <p className='text-muted-foreground'>
+                      No activities available.
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -641,7 +712,14 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               <div className='flex items-center justify-center'>
                 <div className='relative'>
                   <svg className='h-32 w-32 -rotate-90'>
-                    <circle cx='64' cy='64' r='56' fill='none' className='stroke-muted' strokeWidth='12' />
+                    <circle
+                      cx='64'
+                      cy='64'
+                      r='56'
+                      fill='none'
+                      className='stroke-muted'
+                      strokeWidth='12'
+                    />
                     <circle
                       cx='64'
                       cy='64'
@@ -672,7 +750,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Assigned To</CardTitle>
+              <CardTitle className='text-lg font-semibold'>
+                Assigned To
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {lead?.assignedTo ? (
@@ -681,8 +761,12 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className='font-medium text-foreground'>User #{lead.assignedTo}</p>
-                    <p className='text-sm text-muted-foreground'>Assigned user</p>
+                    <p className='font-medium text-foreground'>
+                      User #{lead.assignedTo}
+                    </p>
+                    <p className='text-sm text-muted-foreground'>
+                      Assigned user
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -695,44 +779,80 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
 
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Information</CardTitle>
+              <CardTitle className='text-lg font-semibold'>
+                Information
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Lead ID</span>
-                <span className='font-mono text-sm text-foreground'>#{lead?.id}</span>
+                <span className='font-mono text-sm text-foreground'>
+                  #{lead?.id}
+                </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Created Date</span>
-                <span className='text-sm text-foreground'>{formatDate(lead?.createdAt)}</span>
+                <span className='text-sm text-muted-foreground'>
+                  Created Date
+                </span>
+                <span className='text-sm text-foreground'>
+                  {formatDate(lead?.createdAt)}
+                </span>
               </div>
               <Separator />
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Updated</span>
-                <span className='text-sm text-foreground'>{formatDate(lead?.updatedAt)}</span>
+                <span className='text-sm text-foreground'>
+                  {formatDate(lead?.updatedAt)}
+                </span>
               </div>
             </CardContent>
           </Card>
 
           <Card className='border-none shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Quick Actions</CardTitle>
+              <CardTitle className='text-lg font-semibold'>
+                Quick Actions
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-2'>
-              <Button className='w-full justify-start' variant='outline' disabled>
+              <Button
+                className='w-full justify-start'
+                variant='outline'
+                disabled
+              >
                 <Mail className='mr-2 h-4 w-4 text-blue-600' />
                 Send Email
               </Button>
-              <Button className='w-full justify-start' variant='outline' disabled>
+              <Button
+                className='w-full justify-start'
+                variant='outline'
+                disabled
+              >
                 <Phone className='mr-2 h-4 w-4 text-green-600' />
                 Make Call
               </Button>
-              <Button className='w-full justify-start' variant='outline' disabled>
+              <Button
+                className='w-full justify-start'
+                variant='outline'
+                disabled={!linkedAccountId}
+                title={
+                  linkedAccountId
+                    ? undefined
+                    : 'Convert this lead to an account before requesting a meeting'
+                }
+                onClick={() =>
+                  linkedAccountId && setShowMeetingRequestDialog(true)
+                }
+              >
                 <Calendar className='mr-2 h-4 w-4 text-purple-600' />
-                Schedule Meeting
+                Request meeting
               </Button>
-              <Button className='w-full justify-start' variant='outline' disabled>
+              <Button
+                className='w-full justify-start'
+                variant='outline'
+                disabled
+              >
                 <Activity className='mr-2 h-4 w-4 text-orange-600' />
                 Log Activity
               </Button>
@@ -755,11 +875,15 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
           <DialogHeader>
             <DialogTitle>Confirm Lead Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete lead &quot;{lead?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete lead &quot;{lead?.name}&quot;?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setShowDeleteDialog(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setShowDeleteDialog(false)}
+            >
               Cancel
             </Button>
             <Button variant='destructive' onClick={handleDelete}>
@@ -769,15 +893,33 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         </DialogContent>
       </Dialog>
 
+      {linkedAccountId && (
+        <RequestMeetingDialog
+          open={showMeetingRequestDialog}
+          onOpenChange={setShowMeetingRequestDialog}
+          accountId={linkedAccountId}
+          accountName={lead?.company || lead?.name}
+        />
+      )}
+
       <Dialog open={showQualifyDialog} onOpenChange={setShowQualifyDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Qualify lead</DialogTitle>
-            <DialogDescription>Add qualification notes for this lead.</DialogDescription>
+            <DialogDescription>
+              Add qualification notes for this lead.
+            </DialogDescription>
           </DialogHeader>
-          <Textarea rows={4} value={qualifyNotes} onChange={(e) => setQualifyNotes(e.target.value)} />
+          <Textarea
+            rows={4}
+            value={qualifyNotes}
+            onChange={(e) => setQualifyNotes(e.target.value)}
+          />
           <DialogFooter>
-            <Button variant='outline' onClick={() => setShowQualifyDialog(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setShowQualifyDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleQualify} disabled={!qualifyNotes.trim()}>
@@ -787,18 +929,33 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showDisqualifyDialog} onOpenChange={setShowDisqualifyDialog}>
+      <Dialog
+        open={showDisqualifyDialog}
+        onOpenChange={setShowDisqualifyDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Disqualify lead</DialogTitle>
-            <DialogDescription>Add disqualification notes for this lead.</DialogDescription>
+            <DialogDescription>
+              Add disqualification notes for this lead.
+            </DialogDescription>
           </DialogHeader>
-          <Textarea rows={4} value={disqualifyNotes} onChange={(e) => setDisqualifyNotes(e.target.value)} />
+          <Textarea
+            rows={4}
+            value={disqualifyNotes}
+            onChange={(e) => setDisqualifyNotes(e.target.value)}
+          />
           <DialogFooter>
-            <Button variant='outline' onClick={() => setShowDisqualifyDialog(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setShowDisqualifyDialog(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleDisqualify} disabled={!disqualifyNotes.trim()}>
+            <Button
+              onClick={handleDisqualify}
+              disabled={!disqualifyNotes.trim()}
+            >
               Disqualify
             </Button>
           </DialogFooter>
@@ -809,7 +966,9 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         <DialogContent className='w-[95vw] max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Convert lead</DialogTitle>
-            <DialogDescription>Create account/opportunity from this lead.</DialogDescription>
+            <DialogDescription>
+              Create account/opportunity from this lead.
+            </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
@@ -819,7 +978,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                   id='accountName'
                   value={convertForm.accountName}
                   onChange={(e) =>
-                    setConvertForm((prev) => ({ ...prev, accountName: e.target.value }))
+                    setConvertForm((prev) => ({
+                      ...prev,
+                      accountName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -829,7 +991,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                   id='existingAccountId'
                   value={convertForm.existingAccountId}
                   onChange={(e) =>
-                    setConvertForm((prev) => ({ ...prev, existingAccountId: e.target.value }))
+                    setConvertForm((prev) => ({
+                      ...prev,
+                      existingAccountId: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -839,7 +1004,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                   id='opportunityName'
                   value={convertForm.opportunityName}
                   onChange={(e) =>
-                    setConvertForm((prev) => ({ ...prev, opportunityName: e.target.value }))
+                    setConvertForm((prev) => ({
+                      ...prev,
+                      opportunityName: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -850,7 +1018,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                   type='number'
                   value={convertForm.opportunityAmount}
                   onChange={(e) =>
-                    setConvertForm((prev) => ({ ...prev, opportunityAmount: e.target.value }))
+                    setConvertForm((prev) => ({
+                      ...prev,
+                      opportunityAmount: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -862,7 +1033,10 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 rows={3}
                 value={convertForm.accountNotes}
                 onChange={(e) =>
-                  setConvertForm((prev) => ({ ...prev, accountNotes: e.target.value }))
+                  setConvertForm((prev) => ({
+                    ...prev,
+                    accountNotes: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -873,13 +1047,19 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
                 rows={3}
                 value={convertForm.opportunityNotes}
                 onChange={(e) =>
-                  setConvertForm((prev) => ({ ...prev, opportunityNotes: e.target.value }))
+                  setConvertForm((prev) => ({
+                    ...prev,
+                    opportunityNotes: e.target.value,
+                  }))
                 }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant='outline' onClick={() => setShowConvertDialog(false)}>
+            <Button
+              variant='outline'
+              onClick={() => setShowConvertDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleConvert}>Convert</Button>

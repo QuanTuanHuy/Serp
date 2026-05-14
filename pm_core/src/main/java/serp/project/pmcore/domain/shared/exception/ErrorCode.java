@@ -41,6 +41,10 @@ public enum ErrorCode {
     CATEGORY_NAME_ALREADY_EXISTS("Project category with this name already exists", HttpStatus.CONFLICT),
     CATEGORY_IN_USE("Cannot delete category that has projects assigned", HttpStatus.BAD_REQUEST),
 
+    // Component errors
+    COMPONENT_NOT_FOUND("Project component not found", HttpStatus.NOT_FOUND),
+    COMPONENT_NAME_ALREADY_EXISTS("Project component with this name already exists in this project", HttpStatus.CONFLICT),
+
     // Blueprint errors
     BLUEPRINT_NOT_FOUND("Project blueprint not found", HttpStatus.NOT_FOUND),
     BLUEPRINT_IS_SYSTEM("Cannot modify system blueprint", HttpStatus.BAD_REQUEST),

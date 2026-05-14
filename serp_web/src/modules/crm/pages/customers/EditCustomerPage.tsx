@@ -7,10 +7,7 @@ import { Button, Card, CardContent } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
 import { AccountForm } from '../../components/forms';
-import {
-  useGetAccountQuery,
-  useUpdateAccountMutation,
-} from '../../api/crmApi';
+import { useGetAccountQuery, useUpdateAccountMutation } from '../../api/crmApi';
 import type { CreateAccountRequest, UpdateAccountRequest } from '../../types';
 
 interface EditCustomerPageProps {
@@ -51,11 +48,11 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
         <Card className='border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'>
           <CardContent className='p-6 text-center'>
             <h3 className='text-lg font-semibold text-red-900 dark:text-red-100 mb-2'>
-               Account Not Found
+              Account Not Found
             </h3>
             <p className='text-red-600 dark:text-red-400 mb-4'>
-               The account you're trying to edit doesn't exist or has been
-               deleted.
+              The account you're trying to edit doesn't exist or has been
+              deleted.
             </p>
             <Button variant='outline' onClick={onCancel}>
               Go Back
@@ -75,9 +72,7 @@ export const EditCustomerPage: React.FC<EditCustomerPageProps> = ({
             ← Back
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-foreground'>
-              Edit Account
-            </h1>
+            <h1 className='text-2xl font-bold text-foreground'>Edit Account</h1>
             <p className='text-muted-foreground'>
               Update {account?.name}'s information
             </p>

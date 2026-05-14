@@ -61,6 +61,9 @@ public class CreateLeadRequest {
     @Size(max = 100, message = "Country must not exceed 100 characters")
     private String country;
 
+    @Size(max = 50, message = "Territory code must not exceed 50 characters")
+    private String territoryCode;
+
     private LeadSource leadSource;
 
     private Long assignedTo;

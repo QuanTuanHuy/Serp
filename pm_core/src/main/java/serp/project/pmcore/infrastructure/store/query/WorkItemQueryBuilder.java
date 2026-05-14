@@ -37,7 +37,7 @@ public class WorkItemQueryBuilder {
 
     private static final Set<String> ALLOWED_SORT_COLUMNS = Set.of(
             "id", "key", "summary", "status_id", "priority_id", "assignee_id",
-            "reporter_id", "issue_type_id", "due_date", "created_at",
+            "reporter_id", "issue_type_id", "start_date", "due_date", "created_at",
             "updated_at", "rank", "issue_no", "resolution_id", "parent_id"
     );
 
@@ -48,7 +48,7 @@ public class WorkItemQueryBuilder {
             w.issue_no, w.key, w.summary, w.description,
             w.workflow_step_id, w.status_id, w.priority_id, w.resolution_id,
             w.assignee_id, w.reporter_id, w.parent_id,
-            w.security_level_id, w.due_date, w.rank,
+            w.security_level_id, w.start_date, w.due_date, w.rank,
             w.time_original_estimate, w.time_remaining_estimate, w.time_spent,
             w.created_at, w.updated_at, w.created_by, w.updated_by""";
 
@@ -57,7 +57,10 @@ public class WorkItemQueryBuilder {
             it.name AS issue_type_name, it.icon_url AS issue_type_icon_url,
             it.hierarchy_level AS issue_type_hierarchy_level,
             pr.name AS priority_name, pr.icon_url AS priority_icon_url,
-            pr.color AS priority_color, pr.sequence AS priority_sequence""";
+            pr.color AS priority_color, pr.sequence AS priority_sequence,
+            st.status_key AS status_key, st.name AS status_name,
+            st.icon_url AS status_icon_url,
+            sc.key AS status_category_key, sc.name AS status_category_name""";
 
     private static final String BASE_FROM = "\nFROM work_items w";
 
@@ -81,6 +84,10 @@ public class WorkItemQueryBuilder {
                     "w.issue_type_id", "it.id", "it.tenant_id = w.tenant_id");
             base.appendLeftJoin(joins, "priorities", "pr",
                     "w.priority_id", "pr.id", "pr.tenant_id = w.tenant_id");
+            base.appendLeftJoin(joins, "statuses", "st",
+                    "w.status_id", "st.id", "st.tenant_id = w.tenant_id");
+            base.appendLeftJoin(joins, "status_categories", "sc",
+                    "st.category_id", "sc.id", "sc.tenant_id = w.tenant_id");
         }
 
         base.appendScalar(where, params, "w.project_id", "projectId", FilterOperator.EQ, f.getProjectId());

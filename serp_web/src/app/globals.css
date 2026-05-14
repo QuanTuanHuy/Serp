@@ -191,3 +191,21 @@
     max-width: 1536px;
   }
 }
+
+/* Leaflet popup custom styles for route stop tooltips */
+.route-stop-tooltip .leaflet-popup-content-wrapper {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.route-stop-tooltip .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+  line-height: normal;
+}
+
+.route-stop-tooltip .leaflet-popup-tip {
+  background: white;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.1);
+}

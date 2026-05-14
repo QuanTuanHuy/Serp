@@ -64,6 +64,7 @@ public class WorkflowService implements IWorkflowService {
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
     private final IScreenPort screenPort;
+    private final WorkflowDraftVersionCloner workflowDraftVersionCloner;
     private final WorkflowDraftValidator workflowDraftValidator;
     private final IStatusService statusService;
 
@@ -113,6 +114,31 @@ public class WorkflowService implements IWorkflowService {
     }
 
     @Override
+    public WorkflowEntity updateWorkflow(Long workflowId,
+                                         String name,
+                                         String description,
+                                         Long tenantId,
+                                         Long userId) {
+        WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
+        workflow.setName(TextNormalizationUtils.normalizeRequiredText(name, "name", WORKFLOW_NAME_MAX_LENGTH));
+        workflow.setDescription(TextNormalizationUtils.normalizeOptionalText(
+                description,
+                "description",
+                WORKFLOW_DESCRIPTION_MAX_LENGTH
+        ));
+
+        if (workflow.getDraftVersionId() == null) {
+            log.info("Forking draft version from published version: workflowId={}", workflowId);
+            forkDraftVersionFromPublished(workflow, tenantId, userId);
+        }
+
+        long now = System.currentTimeMillis();
+        workflow.applyUpdate(userId, now);
+        workflowPort.updateWorkflow(workflow);
+        return workflow;
+    }
+
+    @Override
     public WorkflowEntity getVisibleWorkflowById(Long workflowId, Long tenantId) {
         return workflowPort.getWorkflowByIdIncludingSystem(workflowId, tenantId)
                 .orElseThrow(() -> {
@@ -141,12 +167,14 @@ public class WorkflowService implements IWorkflowService {
         boolean duplicateStatus = existingSteps.stream()
                 .anyMatch(step -> statusId.equals(step.getStatusId()));
         if (duplicateStatus) {
+            log.error("Duplicate status found: statusId={}, workflowId={}", statusId, workflowId);
             throw new BusinessRuleViolationException(DomainErrorCode.WORKFLOW_STEP_DUPLICATE_STATUS);
         }
 
         if (Boolean.TRUE.equals(isInitial)) {
             boolean hasInitialStep = existingSteps.stream().anyMatch(step -> Boolean.TRUE.equals(step.getIsInitial()));
             if (hasInitialStep) {
+                log.error("Multiple initial steps found: workflowId={}", workflowId);
                 throw new BusinessRuleViolationException(DomainErrorCode.WORKFLOW_MULTIPLE_INITIAL_STEPS);
             }
         }
@@ -311,14 +339,16 @@ public class WorkflowService implements IWorkflowService {
                                                                   Long fromStepId,
                                                                   Long tenantId) {
         WorkflowEntity workflow = getEditableWorkflow(workflowId, tenantId);
-        Long draftVersionId = requireDraftVersionId(workflow);
-        if (fromStepId == null) {
-            return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(draftVersionId, tenantId);
+        Long publishedVersionId = workflow.getCurrentPublishedVersionId();
+        if (publishedVersionId == null) {
+            return List.of();
         }
-
-        List<WorkflowStepEntity> draftSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(draftVersionId, tenantId);
-        requireStepInDraft(draftSteps, fromStepId);
-        return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(draftVersionId, fromStepId, tenantId);
+        if (fromStepId == null) {
+            return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionId(publishedVersionId, tenantId);
+        }
+        List<WorkflowStepEntity> publishedSteps = workflowStepPort.getWorkflowStepsByWorkflowVersionId(publishedVersionId, tenantId);
+        requireStepInPublished(publishedSteps, fromStepId);
+        return workflowTransitionPort.getWorkflowTransitionsByWorkflowVersionIdAndFromStepId(publishedVersionId, fromStepId, tenantId);
     }
 
     @Override
@@ -333,6 +363,7 @@ public class WorkflowService implements IWorkflowService {
         Long draftVersionId = requireDraftVersionId(workflow);
         WorkflowValidationResult validationResult = workflowDraftValidator.validateDraft(draftVersionId, tenantId);
         if (!validationResult.isValid()) {
+            log.error("Workflow validation failed: workflowId={}, errors={}", workflowId, validationResult.errors());
             throw DomainValidationException.workflowValidation(
                     validationResult.errors().stream()
                             .map(error -> error.ruleKey() + ": " + error.message())
@@ -347,24 +378,23 @@ public class WorkflowService implements IWorkflowService {
                 && !Objects.equals(workflow.getCurrentPublishedVersionId(), draftVersionId)) {
             WorkflowVersionEntity currentPublishedVersion = workflowVersionPort
                     .getWorkflowVersionById(workflow.getCurrentPublishedVersionId(), tenantId)
-                    .orElseThrow(() -> new DomainValidationException(
+                    .orElseThrow(() -> {
+                        log.error("Current published workflow version not found: id={}", workflow.getCurrentPublishedVersionId());
+                        return new DomainValidationException(
                             DomainErrorCode.WORKFLOW_NOT_ACTIVE,
                             "Current published workflow version not found: id=" + workflow.getCurrentPublishedVersionId()
-                    ));
-            currentPublishedVersion.setVersionState(WorkflowVersionState.ARCHIVED);
+                        );
+                    });
+            currentPublishedVersion.archive();
             currentPublishedVersion.applyUpdate(userId, now);
             workflowVersionPort.updateWorkflowVersion(currentPublishedVersion);
         }
 
-        draftVersion.setVersionState(WorkflowVersionState.PUBLISHED);
-        draftVersion.setPublishedAt(now);
-        draftVersion.setPublishedBy(userId);
+        draftVersion.publish(userId, now);
         draftVersion.applyUpdate(userId, now);
         workflowVersionPort.updateWorkflowVersion(draftVersion);
 
-        workflow.setCurrentPublishedVersionId(draftVersion.getId());
-        workflow.setDraftVersionId(null);
-        workflow.setLifecycleState(WorkflowLifecycleState.ACTIVE);
+        workflow.publish(draftVersion.getId());
         workflow.applyUpdate(userId, now);
         workflowPort.updateWorkflow(workflow);
         return workflow;
@@ -464,6 +494,7 @@ public class WorkflowService implements IWorkflowService {
 
     private Long requireDraftVersionId(WorkflowEntity workflow) {
         if (workflow.getDraftVersionId() == null) {
+            log.error("Workflow has no editable draft version: id={}", workflow.getId());
             throw new BusinessRuleViolationException(
                     DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
                     "Workflow has no editable draft version: id=" + workflow.getId()
@@ -474,17 +505,68 @@ public class WorkflowService implements IWorkflowService {
 
     private WorkflowVersionEntity requireDraftWorkflowVersion(Long draftVersionId, Long tenantId) {
         WorkflowVersionEntity draftVersion = workflowVersionPort.getWorkflowVersionById(draftVersionId, tenantId)
-                .orElseThrow(() -> new BusinessRuleViolationException(
+                .orElseThrow(() -> {
+                    log.error("Workflow draft version not found: id={}", draftVersionId);
+                    return new BusinessRuleViolationException(
                         DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
                         "Workflow draft version not found: id=" + draftVersionId
-                ));
+                    );
+                });
         if (!WorkflowVersionState.DRAFT.equals(draftVersion.getVersionState())) {
+            log.error("Workflow draft version is not editable: id={}", draftVersionId);
             throw new BusinessRuleViolationException(
                     DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
                     "Workflow draft version is not editable: id=" + draftVersionId
             );
         }
         return draftVersion;
+    }
+
+    private void forkDraftVersionFromPublished(WorkflowEntity workflow, Long tenantId, Long userId) {
+        if (workflow.getCurrentPublishedVersionId() == null) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_DRAFT_NOT_FOUND,
+                    "Workflow has no editable draft or published version to fork: id=" + workflow.getId()
+            );
+        }
+
+        WorkflowVersionEntity sourcePublishedVersion = workflowVersionPort
+                .getWorkflowVersionById(workflow.getCurrentPublishedVersionId(), tenantId)
+                .orElseThrow(() -> new BusinessRuleViolationException(
+                        DomainErrorCode.WORKFLOW_NOT_ACTIVE,
+                        "Published workflow version not found: id=" + workflow.getCurrentPublishedVersionId()
+                ));
+        if (!WorkflowVersionState.PUBLISHED.equals(sourcePublishedVersion.getVersionState())) {
+            throw new BusinessRuleViolationException(
+                    DomainErrorCode.WORKFLOW_NOT_ACTIVE,
+                    "Workflow current version is not published: workflowId=" + workflow.getId()
+                            + ", versionId=" + sourcePublishedVersion.getId()
+            );
+        }
+
+        long now = System.currentTimeMillis();
+        WorkflowVersionEntity draftVersion = WorkflowVersionEntity.builder()
+                .tenantId(tenantId)
+                .workflowId(workflow.getId())
+                .versionNo(resolveNextWorkflowVersionNo(workflow.getId(), tenantId))
+                .versionState(WorkflowVersionState.DRAFT)
+                .baseVersionId(sourcePublishedVersion.getId())
+                .publishedAt(null)
+                .publishedBy(null)
+                .build();
+        draftVersion.applyCreate(userId, now);
+        WorkflowVersionEntity createdDraftVersion = workflowVersionPort.createWorkflowVersion(draftVersion);
+        workflowDraftVersionCloner.cloneVersionTree(sourcePublishedVersion.getId(), createdDraftVersion.getId(), tenantId, userId);
+        workflow.setDraftVersionId(createdDraftVersion.getId());
+    }
+
+    private Integer resolveNextWorkflowVersionNo(Long workflowId, Long tenantId) {
+        return workflowVersionPort.getWorkflowVersionsByWorkflowIdIncludingSystem(workflowId, tenantId)
+                .stream()
+                .map(WorkflowVersionEntity::getVersionNo)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
     }
 
     private void cleanupTransitionsForStep(Long workflowVersionId,
@@ -516,6 +598,19 @@ public class WorkflowService implements IWorkflowService {
                 .filter(step -> Objects.equals(step.getId(), stepId))
                 .findFirst()
                 .orElseThrow(() -> ResourceNotFoundException.workflowStepById(stepId));
+    }
+
+    private WorkflowStepEntity requireStepInPublished(List<WorkflowStepEntity> publishedSteps, Long stepId) {
+        return publishedSteps.stream()
+                .filter(step -> Objects.equals(step.getId(), stepId))
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.error("[WorkflowService] Workflow step not found: id={}", stepId);
+                    return new DomainValidationException(
+                        DomainErrorCode.WORKFLOW_STEP_NOT_FOUND,
+                        "Workflow step not found: id=" + stepId
+                    );
+                });
     }
 
     private void validateTransitionScreen(Long screenId, Long tenantId) {

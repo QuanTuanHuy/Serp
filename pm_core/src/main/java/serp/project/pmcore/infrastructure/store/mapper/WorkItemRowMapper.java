@@ -35,6 +35,7 @@ public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkIt
                 .parentId(getNullableLong(rs, "parent_id"))
                 .securityLevelId(getNullableLong(rs, "security_level_id"))
                 .resolutionId(getNullableLong(rs, "resolution_id"))
+                .startDate(hasColumn(rs, "start_date") ? toEpochMilli(rs.getTimestamp("start_date")) : null)
                 .dueDate(toEpochMilli(rs.getTimestamp("due_date")))
                 .rank(rs.getString("rank"))
                 .timeOriginalEstimate(getNullableLong(rs, "time_original_estimate"))
@@ -56,6 +57,13 @@ public class WorkItemRowMapper extends BaseRowMapper implements RowMapper<WorkIt
                     .priorityIconUrl(rs.getString("priority_icon_url"))
                     .priorityColor(rs.getString("priority_color"))
                     .prioritySequence(getNullableInt(rs, "priority_sequence"));
+        }
+        if (hasColumn(rs, "status_name")) {
+            builder.statusKey(rs.getString("status_key"))
+                    .statusName(rs.getString("status_name"))
+                    .statusIconUrl(rs.getString("status_icon_url"))
+                    .statusCategoryKey(rs.getString("status_category_key"))
+                    .statusCategoryName(rs.getString("status_category_name"));
         }
 
         return builder.build();

@@ -41,6 +41,7 @@ public class LeadMapper extends BaseMapper {
                         model.getAddressState(),
                         model.getAddressZipCode(),
                         model.getAddressCountry()))
+                .territoryCode(model.getTerritoryCode())
                 .leadSource(stringToEnum(model.getLeadSource(), LeadSource.class))
                 .leadStatus(stringToEnum(model.getLeadStatus(), LeadStatus.class))
                 .assignedTo(model.getAssignedTo())
@@ -78,6 +79,7 @@ public class LeadMapper extends BaseMapper {
                 .addressState(entity.getAddress() != null ? entity.getAddress().getState() : null)
                 .addressZipCode(entity.getAddress() != null ? entity.getAddress().getZipCode() : null)
                 .addressCountry(entity.getAddress() != null ? entity.getAddress().getCountry() : null)
+                .territoryCode(entity.getTerritoryCode())
                 .leadSource(enumToString(entity.getLeadSource()))
                 .leadStatus(enumToString(entity.getLeadStatus()))
                 .assignedTo(entity.getAssignedTo())

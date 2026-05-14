@@ -6,6 +6,13 @@
 package serp.project.pmcore.domain.workitem.port.read;
 
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
+import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
@@ -35,4 +42,14 @@ public interface IWorkItemReadPort {
     Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId);
 
     List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId);
+
+    List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId);
+
+    PageResult<WorkItemTimelineItemProjection> listTimelineWorkItems(Long tenantId, WorkItemTimelineCriteria criteria);
+
+    List<WorkItemTimelineDependencyProjection> listTimelineDependencies(Long tenantId, Long projectId, List<Long> workItemIds);
+
+    List<WorkItemBoardStatusProjection> listBoardStatuses(Long tenantId, WorkItemBoardCriteria criteria);
+
+    List<WorkItemBoardItemProjection> listBoardWorkItems(Long tenantId, WorkItemBoardCriteria criteria);
 }

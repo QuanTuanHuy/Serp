@@ -20,7 +20,7 @@ public interface ITeamService {
 
     Optional<TeamEntity> getTeamById(Long id, Long tenantId);
     Pair<List<TeamEntity>, Long> getAllTeams(Long tenantId, PageRequest pageRequest);
-    Pair<List<TeamEntity>, Long> getTeamsByLeader(Long leaderId, Long tenantId, PageRequest pageRequest);
+    Pair<List<TeamEntity>, Long> getTeamsByManager(Long managerUserId, Long tenantId, PageRequest pageRequest);
 
     boolean isTeamNameExists(String name, Long tenantId);
 

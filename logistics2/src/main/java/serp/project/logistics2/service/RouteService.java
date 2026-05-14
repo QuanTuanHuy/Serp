@@ -74,7 +74,7 @@ public class RouteService {
         Map<String, VehicleEntity> vehicleMap = vehicleEntities.stream()
                 .collect(Collectors.toMap(VehicleEntity::getId, v -> v));
 
-        vehicleShipperEntities.forEach(vehicleShipper -> {vehicleShipper.setVehicle(vehicleMap.get(vehicleShipper.getId()));});
+        vehicleShipperEntities.forEach(vehicleShipper -> {vehicleShipper.setVehicle(vehicleMap.get(vehicleShipper.getVehicleId()));});
         Map<String, VehicleShipperEntity> vehicleShipperMap = vehicleShipperEntities.stream()
                 .collect(Collectors.toMap(VehicleShipperEntity::getId, vs -> vs));
         routePage.getContent().forEach(route -> route.setVehicleShipper(vehicleShipperMap.get(route.getVehicleShipperId())));

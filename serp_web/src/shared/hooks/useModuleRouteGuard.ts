@@ -16,7 +16,13 @@ import {
   isSameModuleCode,
   normalizeMenuPathForModule,
   normalizePath,
+  toCanonicalModuleCode,
 } from '@/shared/utils';
+
+const LOGISTICS2_ROUTE_ALIASES: Record<string, string> = {
+  '/logistics2/next-route': '/logistics2/routes',
+  '/logistics2/my-routes': '/logistics2/routes',
+};
 
 interface RouteGuardResult {
   hasAccess: boolean;
@@ -57,10 +63,15 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
     () => getModuleRootPath(moduleCode),
     [moduleCode]
   );
-  const currentPath = useMemo(
-    () => normalizeMenuPathForModule(pathname, moduleCode),
-    [pathname, moduleCode]
-  );
+  const currentPath = useMemo(() => {
+    const normalizedPath = normalizeMenuPathForModule(pathname, moduleCode);
+
+    if (toCanonicalModuleCode(moduleCode) !== 'LOGISTICS2') {
+      return normalizedPath;
+    }
+
+    return LOGISTICS2_ROUTE_ALIASES[normalizedPath] || normalizedPath;
+  }, [pathname, moduleCode]);
 
   const { data: userModules, isLoading: modulesLoading } =
     useGetMyModulesQuery();

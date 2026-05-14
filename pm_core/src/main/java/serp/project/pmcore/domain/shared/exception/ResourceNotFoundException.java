@@ -80,6 +80,11 @@ public class ResourceNotFoundException extends DomainException {
                 "Priority scheme not found: id=" + id);
     }
 
+    public static ResourceNotFoundException workflowScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
+                "Workflow scheme not found: id=" + id);
+    }
+
     public static ResourceNotFoundException status(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.STATUS_NOT_FOUND,
                 "Status not found: id=" + id);

@@ -44,4 +44,6 @@ public interface AccountRepository extends JpaRepository<AccountModel, Long>, Jp
     long countByTenantId(Long tenantId);
 
     long countByTenantIdAndActiveStatus(Long tenantId, String activeStatus);
+
+    List<AccountModel> findByTenantIdAndIdIn(Long tenantId, List<Long> ids);
 }

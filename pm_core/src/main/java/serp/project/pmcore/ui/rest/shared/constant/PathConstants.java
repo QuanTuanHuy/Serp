@@ -7,11 +7,15 @@ public class PathConstants {
     public static final String API_BASE_PATH = "/api/v1";
 
     public static final String PROJECTS = API_BASE_PATH + "/projects";
+    public static final String PROJECT_COMPONENTS = PROJECTS + "/{projectId}/components";
     public static final String PROJECT_CATEGORIES = API_BASE_PATH + "/project-categories";
     public static final String PROJECT_BLUEPRINTS = API_BASE_PATH + "/project-blueprints";
     public static final String WORKITEMS = API_BASE_PATH + "/projects/{projectId}/work-items";
+    public static final String TIMELINE_WORK_ITEMS = PROJECTS + "/{projectId}/timeline/work-items";
+    public static final String ISSUE_LINKS = WORKITEMS + "/{workItemId}/links";
     public static final String WORKLOGS = WORKITEMS + "/{workItemId}/worklogs";
     public static final String PROJECT_ROLE_ACTORS = PROJECTS + "/{projectId}/roles/{roleId}/actors";
+    public static final String ISSUE_LINK_TYPES = API_BASE_PATH + "/issue-link-types";
     public static final String ISSUE_TYPES = API_BASE_PATH + "/issue-types";
     public static final String ISSUE_TYPE_SCHEMES = API_BASE_PATH + "/issue-type-schemes";
     public static final String PRIORITIES = API_BASE_PATH + "/priorities";
@@ -19,6 +23,7 @@ public class PathConstants {
     public static final String STATUS_CATEGORIES = API_BASE_PATH + "/status-categories";
     public static final String STATUSES = API_BASE_PATH + "/statuses";
     public static final String WORKFLOWS = API_BASE_PATH + "/workflows";
+    public static final String WORKFLOW_SCHEMES = API_BASE_PATH + "/workflow-schemes";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }

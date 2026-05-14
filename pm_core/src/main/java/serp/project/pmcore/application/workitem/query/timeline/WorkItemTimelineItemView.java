@@ -1,0 +1,80 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
+package serp.project.pmcore.application.workitem.query.timeline;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record WorkItemTimelineItemView(
+        Long id,
+        Long projectId,
+        Long parentId,
+        String key,
+        String summary,
+        Long assigneeId,
+        Long startDate,
+        Long dueDate,
+        boolean isUnscheduled,
+        boolean hasChildren,
+        String rank,
+        IssueTypeSummaryView issueType,
+        StatusSummaryView status,
+        PrioritySummaryView priority
+) {
+
+    public static WorkItemTimelineItemView from(WorkItemTimelineItemProjection projection) {
+        return new WorkItemTimelineItemView(
+                projection.id(),
+                projection.projectId(),
+                projection.parentId(),
+                projection.key(),
+                projection.summary(),
+                projection.assigneeId(),
+                projection.startDate(),
+                projection.dueDate(),
+                projection.unscheduled(),
+                projection.hasChildren(),
+                projection.rank(),
+                new IssueTypeSummaryView(
+                        projection.issueTypeId(),
+                        projection.issueTypeName(),
+                        projection.issueTypeIconUrl(),
+                        projection.issueTypeHierarchyLevel()
+                ),
+                new StatusSummaryView(
+                        projection.statusId(),
+                        projection.statusName()
+                ),
+                new PrioritySummaryView(
+                        projection.priorityId(),
+                        projection.priorityName(),
+                        projection.priorityColor()
+                )
+        );
+    }
+
+    public record IssueTypeSummaryView(
+            Long id,
+            String name,
+            String iconUrl,
+            Integer hierarchyLevel
+    ) {
+    }
+
+    public record StatusSummaryView(
+            Long id,
+            String name
+    ) {
+    }
+
+    public record PrioritySummaryView(
+            Long id,
+            String name,
+            String color
+    ) {
+    }
+}

@@ -39,5 +39,7 @@ public interface ITeamMemberPort {
 
     List<TeamMemberEntity> findAllByTeamId(Long teamId, Long tenantId);
 
+    List<TeamMemberEntity> findActiveMembersByTeamIdAndRoles(Long teamId, List<String> roles, Long tenantId);
+
     void deleteAllByTeamId(Long teamId, Long tenantId);
 }

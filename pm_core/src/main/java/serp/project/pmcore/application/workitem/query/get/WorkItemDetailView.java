@@ -32,6 +32,7 @@ public record WorkItemDetailView(
         Long parentId,
         Long securityLevelId,
 
+        Long startDate,
         Long dueDate,
         String rank,
 
@@ -64,6 +65,7 @@ public record WorkItemDetailView(
                 .resolutionId(workItem.getResolutionId())
                 .parentId(workItem.getParentId())
                 .securityLevelId(workItem.getSecurityLevelId())
+                .startDate(instantToEpochMilli(workItem.getStartDate()))
                 .dueDate(instantToEpochMilli(workItem.getDueDate()))
                 .rank(workItem.getRank())
                 .timeOriginalEstimate(workItem.getTimeOriginalEstimate())

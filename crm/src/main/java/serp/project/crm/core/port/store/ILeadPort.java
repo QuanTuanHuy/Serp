@@ -29,6 +29,8 @@ public interface ILeadPort {
 
     Pair<List<LeadEntity>, Long> findByAssignedTo(Long assignedTo, Long tenantId, PageRequest pageRequest);
 
+    List<LeadEntity> findAllByAssignedTo(Long assignedTo, Long tenantId);
+
     Pair<List<LeadEntity>, Long> findByLeadSource(LeadSource leadSource, Long tenantId, PageRequest pageRequest);
 
     Pair<List<LeadEntity>, Long> findByLeadStatus(LeadStatus leadStatus, Long tenantId, PageRequest pageRequest);
@@ -46,4 +48,6 @@ public interface ILeadPort {
     List<LeadEntity> findByExpectedCloseDateBetween(Long startDate, Long endDate, Long tenantId);
 
     Pair<List<LeadEntity>, Long> filter(LeadFilterRequest filter, PageRequest pageRequest, Long tenantId);
+
+    List<LeadEntity> findByIds(List<Long> ids, Long tenantId);
 }

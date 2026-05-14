@@ -28,6 +28,8 @@ public class UpdateWorkItemRequest {
     private boolean priorityIdProvided;
     private Long assigneeId;
     private boolean assigneeIdProvided;
+    private Long startDate;
+    private boolean startDateProvided;
     private Long dueDate;
     private boolean dueDateProvided;
     private Long timeOriginalEstimate;
@@ -55,6 +57,11 @@ public class UpdateWorkItemRequest {
     public void setAssigneeId(Long assigneeId) {
         this.assigneeId = assigneeId;
         this.assigneeIdProvided = true;
+    }
+
+    public void setStartDate(Long startDate) {
+        this.startDate = startDate;
+        this.startDateProvided = true;
     }
 
     public void setDueDate(Long dueDate) {
@@ -91,6 +98,9 @@ public class UpdateWorkItemRequest {
         }
         if (assigneeIdProvided) {
             systemFields.put(WorkItemFieldConstants.ASSIGNEE_ID, assigneeId);
+        }
+        if (startDateProvided) {
+            systemFields.put(WorkItemFieldConstants.START_DATE, startDate);
         }
         if (dueDateProvided) {
             systemFields.put(WorkItemFieldConstants.DUE_DATE, dueDate);

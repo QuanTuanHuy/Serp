@@ -2,10 +2,13 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useAppSelector } from '@/shared/hooks';
 import {
   Button,
   Input,
@@ -31,7 +34,11 @@ import type {
 } from '../../types';
 
 const opportunitySchema = z.object({
-  name: z.string().trim().min(1, 'Opportunity name is required.').max(255, 'Name is too long.'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Opportunity name is required.')
+    .max(255, 'Name is too long.'),
   accountId: z.string().trim().min(1, 'Account is required.'),
   leadId: z.string().trim().optional(),
   stage: z.enum([
@@ -42,11 +49,19 @@ const opportunitySchema = z.object({
     'CLOSED_WON',
     'CLOSED_LOST',
   ]),
-  estimatedValue: z.number().min(0, 'Estimated value must be greater than or equal to 0.'),
+  estimatedValue: z
+    .number()
+    .min(0, 'Estimated value must be greater than or equal to 0.'),
   expectedCloseDate: z.string().min(1, 'Expected close date is required.'),
   assignedTo: z.string().trim().optional(),
-  description: z.string().max(1000, 'Description must not exceed 1000 characters.').optional(),
-  notes: z.string().max(1000, 'Notes must not exceed 1000 characters.').optional(),
+  description: z
+    .string()
+    .max(1000, 'Description must not exceed 1000 characters.')
+    .optional(),
+  notes: z
+    .string()
+    .max(1000, 'Notes must not exceed 1000 characters.')
+    .optional(),
 });
 
 type OpportunityFormData = z.infer<typeof opportunitySchema>;
@@ -73,6 +88,27 @@ const defaultValues: OpportunityFormData = {
   notes: '',
 };
 
+const formatExpectedCloseDateForInput = (iso: string | undefined): string => {
+  if (!iso?.trim()) return '';
+  return iso.includes('T') ? iso.split('T')[0]! : iso.slice(0, 10);
+};
+
+const opportunityToFormValues = (
+  opportunity: Opportunity
+): OpportunityFormData => ({
+  name: opportunity.name,
+  accountId: opportunity.accountId || opportunity.customerId || '',
+  leadId: opportunity.leadId || '',
+  stage: opportunity.stage,
+  estimatedValue: opportunity.estimatedValue ?? opportunity.value ?? 0,
+  expectedCloseDate: formatExpectedCloseDateForInput(
+    opportunity.expectedCloseDate
+  ),
+  assignedTo: opportunity.assignedTo || '',
+  description: opportunity.description || '',
+  notes: opportunity.notes || '',
+});
+
 export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   opportunity,
   onSubmit,
@@ -81,6 +117,24 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   className,
 }) => {
   const isEditing = !!opportunity;
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: orgUsersResponse, isLoading: isOrgUsersLoading } =
+    useGetOrganizationUsersQuery(
+      {
+        organizationId: organizationId as number,
+        page: 0,
+        pageSize: 100,
+        status: 'ACTIVE',
+      },
+      { skip: !organizationId }
+    );
+  const orgUsers = orgUsersResponse?.data?.items ?? [];
+
+  const formatOrgUserLabel = (u: (typeof orgUsers)[number]) => {
+    const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+    return name || u.email || `User #${u.id}`;
+  };
+
   const { data: accountsResponse, isLoading: isAccountsLoading } =
     useGetAccountsQuery({
       filters: {},
@@ -101,27 +155,32 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors, isSubmitting },
     setValue,
   } = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunitySchema),
-    defaultValues: opportunity
-      ? {
-          name: opportunity.name,
-          accountId: opportunity.accountId || opportunity.customerId || '',
-          leadId: opportunity.leadId || '',
-          stage: opportunity.stage,
-          estimatedValue: opportunity.estimatedValue ?? opportunity.value ?? 0,
-          expectedCloseDate: opportunity.expectedCloseDate.split('T')[0],
-          assignedTo: opportunity.assignedTo || '',
-          description: opportunity.description || '',
-          notes: opportunity.notes || '',
-        }
-      : defaultValues,
+    defaultValues,
   });
+
+  useEffect(() => {
+    if (opportunity) {
+      reset(opportunityToFormValues(opportunity));
+    } else {
+      reset(defaultValues);
+    }
+  }, [opportunity?.id, opportunity?.updatedAt, reset]);
 
   const watchedStage = watch('stage');
   const estimatedValue = watch('estimatedValue') || 0;
+  const assignedToValue = watch('assignedTo')?.trim() ?? '';
+  const showOrphanAssignee =
+    Boolean(assignedToValue) &&
+    !orgUsers.some((u) => String(u.id) === assignedToValue);
+  const orphanAssigneeLabel =
+    opportunity?.assignedTo === assignedToValue && opportunity.assignedToName
+      ? opportunity.assignedToName
+      : `User #${assignedToValue}`;
 
   const stageProbability: Record<OpportunityStage, number> = {
     PROSPECTING: 10,
@@ -171,7 +230,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 disabled={isLoading}
               />
               {errors.name && (
-                <p className='text-sm text-destructive'>{errors.name.message}</p>
+                <p className='text-sm text-destructive'>
+                  {errors.name.message}
+                </p>
               )}
             </div>
 
@@ -188,7 +249,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                   >
                     <SelectValue
                       placeholder={
-                        isAccountsLoading ? 'Loading accounts...' : 'Select account'
+                        isAccountsLoading
+                          ? 'Loading accounts...'
+                          : 'Select account'
                       }
                     />
                   </SelectTrigger>
@@ -217,7 +280,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                   <SelectTrigger>
                     <SelectValue
                       placeholder={
-                        isLeadsLoading ? 'Loading leads...' : 'Select lead (optional)'
+                        isLeadsLoading
+                          ? 'Loading leads...'
+                          : 'Select lead (optional)'
                       }
                     />
                   </SelectTrigger>
@@ -262,12 +327,42 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
 
               <div className='space-y-2'>
                 <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Input
-                  id='assignedTo'
-                  {...register('assignedTo')}
-                  placeholder='Optional assignee user ID'
-                  disabled={isLoading}
-                />
+                <Select
+                  disabled={isLoading || isOrgUsersLoading || !organizationId}
+                  value={assignedToValue ? assignedToValue : '_none'}
+                  onValueChange={(v) =>
+                    setValue('assignedTo', v === '_none' ? '' : v, {
+                      shouldValidate: true,
+                    })
+                  }
+                >
+                  <SelectTrigger id='assignedTo'>
+                    <SelectValue
+                      placeholder={
+                        isOrgUsersLoading ? 'Loading users…' : 'Unassigned'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent position='popper' className='max-h-60'>
+                    <SelectItem value='_none'>Unassigned</SelectItem>
+                    {showOrphanAssignee && (
+                      <SelectItem value={assignedToValue}>
+                        {orphanAssigneeLabel}
+                      </SelectItem>
+                    )}
+                    {orgUsers.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {formatOrgUserLabel(u)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!organizationId && (
+                  <p className='text-xs text-muted-foreground'>
+                    Your profile does not include an organization yet; assignees
+                    cannot be loaded.
+                  </p>
+                )}
               </div>
 
               <div className='space-y-2'>
@@ -350,7 +445,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                 disabled={isLoading}
               />
               {errors.notes && (
-                <p className='text-sm text-destructive'>{errors.notes.message}</p>
+                <p className='text-sm text-destructive'>
+                  {errors.notes.message}
+                </p>
               )}
             </div>
           </div>

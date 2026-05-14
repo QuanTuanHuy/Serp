@@ -39,6 +39,11 @@ public class AccountDtoMapper {
                 .address(address)
                 .taxId(request.getTaxId())
                 .creditLimit(request.getCreditLimit())
+                .tier(request.getTier())
+                .preferredTimeSlots(request.getPreferredTimeSlots())
+                .preferredDays(request.getPreferredDays())
+                .language(request.getLanguage())
+                .timezone(request.getTimezone())
                 .notes(request.getNotes())
                 .build();
     }
@@ -70,6 +75,11 @@ public class AccountDtoMapper {
                 .email(request.getEmail())
                 .address(address)
                 .taxId(request.getTaxId())
+                .tier(request.getTier())
+                .preferredTimeSlots(request.getPreferredTimeSlots())
+                .preferredDays(request.getPreferredDays())
+                .language(request.getLanguage())
+                .timezone(request.getTimezone())
                 .notes(request.getNotes())
                 .build();
     }
@@ -103,6 +113,11 @@ public class AccountDtoMapper {
                 .creditLimit(entity.getCreditLimit())
                 .activeStatus(entity.getActiveStatus())
                 .accountType(entity.getAccountType())
+                .tier(entity.getTier())
+                .preferredTimeSlots(entity.getPreferredTimeSlots())
+                .preferredDays(entity.getPreferredDays())
+                .language(entity.getLanguage())
+                .timezone(entity.getTimezone())
                 .totalRevenue(entity.getTotalRevenue())
                 .totalOpportunities(entity.getTotalOpportunities())
                 .wonOpportunities(entity.getWonOpportunities())

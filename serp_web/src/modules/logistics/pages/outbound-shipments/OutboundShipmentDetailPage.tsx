@@ -52,6 +52,7 @@ import {
   useGetOrderQuery,
   useGetOutboundShipmentQuery,
   useGetProductsQuery,
+  useGetSaleOrderQuery,
   useReadyToExportOutboundShipmentMutation,
   useUpdateItemInOutboundShipmentMutation,
 } from '../../api/logisticsApi';
@@ -150,9 +151,12 @@ export const OutboundShipmentDetailPage: React.FC<
   const [deleteItem, { isLoading: isDeleteItemLoading }] =
     useDeleteItemFromOutboundShipmentMutation();
 
-  const { data: orderResponse } = useGetOrderQuery(shipment?.orderId || '', {
-    skip: !shipment?.orderId,
-  });
+  const { data: orderResponse } = useGetSaleOrderQuery(
+    shipment?.orderId || '',
+    {
+      skip: !shipment?.orderId,
+    }
+  );
 
   const { data: facilityResponse } = useGetFacilityQuery(
     shipment?.facilityId || '',
@@ -294,7 +298,7 @@ export const OutboundShipmentDetailPage: React.FC<
     const detail = detailMap.get(selectedDetailId);
 
     if (!detail) {
-      toast.error('Vui lòng chọn dòng tồn kho');
+      toast.error('Vui lòng chọn mặt hàng');
       return;
     }
 
@@ -527,7 +531,11 @@ export const OutboundShipmentDetailPage: React.FC<
                             {productMap.get(item.productId) || item.productId}
                           </p>
                           <p className='text-sm text-muted-foreground'>
-                            Số lượng: {item.quantity}
+                            Lô: {detail?.lotId || 'N/A'} • Số lượng:{' '}
+                            {item.quantity} • Số lượng tối đa:{' '}
+                            {detail
+                              ? detail.maxQuantity + item.quantity
+                              : 'N/A'}
                           </p>
                         </div>
 
@@ -614,25 +622,25 @@ export const OutboundShipmentDetailPage: React.FC<
           <DialogHeader>
             <DialogTitle>Thêm mặt hàng</DialogTitle>
             <DialogDescription>
-              Chọn dòng tồn kho đã allocate từ đơn hàng để thêm vào phiếu xuất.
+              Chọn mặt hàng còn tồn từ đơn hàng để thêm vào phiếu xuất.
             </DialogDescription>
           </DialogHeader>
 
           <div className='space-y-4 py-2'>
             <div className='space-y-2'>
-              <Label>Dòng tồn kho</Label>
+              <Label>Mặt hàng</Label>
               <select
                 value={selectedDetailId}
                 onChange={(event) => setSelectedDetailId(event.target.value)}
                 className='w-full rounded-md border bg-background px-3 py-2 text-sm'
               >
-                <option value=''>Chọn dòng tồn kho</option>
+                <option value=''>Chọn mặt hàng</option>
                 {detailOptions.map((option) => (
                   <option
                     key={option.inventoryItemDetailId}
                     value={option.inventoryItemDetailId}
                   >
-                    {option.productName} | Lot {option.lotId} | Có thể xuất:{' '}
+                    {option.productName} | Lô: {option.lotId} | Có thể xuất:{' '}
                     {option.maxQuantity}
                   </option>
                 ))}
@@ -650,6 +658,10 @@ export const OutboundShipmentDetailPage: React.FC<
                   setAddQuantity(Number(event.target.value) || 1)
                 }
               />
+              <p className='text-xs text-muted-foreground'>
+                Số lượng tối đa:{' '}
+                {detailMap.get(selectedDetailId)?.maxQuantity || 0}
+              </p>
             </div>
           </div>
 
@@ -694,6 +706,14 @@ export const OutboundShipmentDetailPage: React.FC<
                 setEditQuantity(Number(event.target.value) || 1)
               }
             />
+            <p className='text-xs text-muted-foreground'>
+              Số lượng tối đa:{' '}
+              {selectedItem
+                ? selectedItem.quantity +
+                  (detailMap.get(selectedItem.inventoryItemDetailId)
+                    ?.maxQuantity || 0)
+                : 0}
+            </p>
           </div>
 
           <DialogFooter>

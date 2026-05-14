@@ -2,4 +2,5 @@
 
 export { ActivityListPage } from './ActivityListPage';
 export { ActivityDetailPage } from './ActivityDetailPage';
+export { EditActivityPage } from './EditActivityPage';
 export { default } from './ActivityListPage';

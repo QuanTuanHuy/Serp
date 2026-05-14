@@ -4,6 +4,7 @@ export { CustomerForm } from './CustomerForm';
 export { CustomerForm as AccountForm } from './CustomerForm';
 export { LeadForm } from './LeadForm';
 export { OpportunityForm } from './OpportunityForm';
+export { ActivityForm } from './ActivityForm';
 
 // Re-export types for convenience
 export type {

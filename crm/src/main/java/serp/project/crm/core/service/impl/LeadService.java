@@ -21,9 +21,13 @@ import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.service.ILeadScoringService;
 import serp.project.crm.core.service.ILeadService;
+import serp.project.crm.core.service.INotificationPublisher;
+import serp.project.crm.core.service.ITeamMemberService;
+import serp.project.crm.core.service.ITeamRoutingService;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -33,6 +37,9 @@ public class LeadService implements ILeadService {
 
     private final ILeadPort leadPort;
     private final ILeadScoringService leadScoringService;
+    private final ITeamRoutingService teamRoutingService;
+    private final ITeamMemberService teamMemberService;
+    private final INotificationPublisher notificationPublisher;
 
     @Transactional
     public LeadEntity createLead(LeadEntity lead, Long tenantId) {
@@ -45,6 +52,7 @@ public class LeadService implements ILeadService {
 
         lead.setTenantId(tenantId);
         lead.setDefaults();
+        applyAutoAssignment(lead, tenantId);
         if (lead.getLeadScore() == null) {
             lead.setLeadScore(leadScoringService.calculateSmartScore(lead));
         }
@@ -52,6 +60,7 @@ public class LeadService implements ILeadService {
         LeadEntity saved = leadPort.save(lead);
 
         publishLeadCreatedEvent(saved);
+        publishLeadAssignmentNotificationIfChanged(saved, tenantId, null);
 
         return saved;
     }
@@ -60,6 +69,7 @@ public class LeadService implements ILeadService {
     public LeadEntity updateLead(Long id, LeadEntity updates, Long tenantId) {
         LeadEntity existing = leadPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+        Long previousAssignedTo = existing.getAssignedTo();
         if (existing.getLeadStatus() == LeadStatus.CONVERTED) {
             throw new AppException("Cannot update converted lead");
         }
@@ -74,6 +84,7 @@ public class LeadService implements ILeadService {
         } catch (IllegalStateException e) {
             throw new AppException(e.getMessage());
         }
+        applyAutoAssignment(existing, tenantId);
         if (updates.getLeadScore() == null && (updates.getLeadSource() != null || updates.getIndustry() != null ||
                 updates.getCompanySize() != null || updates.getEstimatedValue() != null)) {
             existing.setLeadScore(leadScoringService.calculateSmartScore(existing));
@@ -81,6 +92,41 @@ public class LeadService implements ILeadService {
 
         LeadEntity updated = leadPort.save(existing);
 
+        publishLeadUpdatedEvent(updated);
+        publishLeadAssignmentNotificationIfChanged(updated, tenantId, previousAssignedTo);
+
+        return updated;
+    }
+
+    @Transactional
+    public LeadEntity updateLeadStatus(Long leadId, LeadStatus fromStatus, LeadStatus toStatus, String notes,
+            Long updatedBy, Long tenantId) {
+        LeadEntity lead = leadPort.findById(leadId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.LEAD_NOT_FOUND));
+
+        if (toStatus == LeadStatus.QUALIFIED) {
+            throw new AppException("Use qualify endpoint to move lead to QUALIFIED");
+        }
+        if (toStatus == LeadStatus.DISQUALIFIED) {
+            throw new AppException("Use disqualify endpoint to move lead to DISQUALIFIED");
+        }
+        if (toStatus == LeadStatus.CONVERTED) {
+            throw new AppException("Use convert endpoint to move lead to CONVERTED");
+        }
+
+        LeadStatus currentStatus = lead.getLeadStatus() != null ? lead.getLeadStatus() : LeadStatus.NEW;
+        if (fromStatus != null && fromStatus != currentStatus) {
+            throw new AppException("Lead status changed by another action. Please refresh and try again.",
+                    Constants.HttpStatusCode.CONFLICT);
+        }
+
+        try {
+            lead.updateStatus(toStatus, updatedBy, notes);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+
+        LeadEntity updated = leadPort.save(lead);
         publishLeadUpdatedEvent(updated);
 
         return updated;
@@ -163,12 +209,18 @@ public class LeadService implements ILeadService {
             throw new AppException("Cannot assign converted or disqualified lead");
         }
 
-        // TODO: Validate user exists in account service
+        if (assignedTo != null) {
+            teamMemberService.getTeamMemberByUserId(assignedTo, tenantId)
+                    .filter(member -> member.getStatus() != null && member.getStatus().name().equals("ACTIVE"))
+                    .orElseThrow(() -> new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND));
+        }
 
+        Long previousAssignedTo = lead.getAssignedTo();
         lead.assignTo(assignedTo, assignedBy);
         LeadEntity updated = leadPort.save(lead);
 
         publishLeadUpdatedEvent(updated);
+        publishLeadAssignmentNotificationIfChanged(updated, tenantId, previousAssignedTo);
 
         return updated;
     }
@@ -247,5 +299,25 @@ public class LeadService implements ILeadService {
 
     private void publishLeadDeletedEvent(LeadEntity lead) {
         log.debug("Event: Lead deleted - ID: {}, Topic: {}", lead.getId(), Constants.KafkaTopic.LEAD);
+    }
+
+    private void applyAutoAssignment(LeadEntity lead, Long tenantId) {
+        if (lead.getAssignedTo() != null) {
+            return;
+        }
+
+        teamRoutingService.routeLeadAssignee(lead.getTerritoryCode(), tenantId)
+                .ifPresent(lead::setAssignedTo);
+    }
+
+    private void publishLeadAssignmentNotificationIfChanged(LeadEntity updated, Long tenantId,
+            Long previousAssignedTo) {
+        if (updated.getAssignedTo() == null) {
+            return;
+        }
+        if (Objects.equals(previousAssignedTo, updated.getAssignedTo())) {
+            return;
+        }
+        notificationPublisher.publishLeadAssigned(updated, tenantId, previousAssignedTo);
     }
 }

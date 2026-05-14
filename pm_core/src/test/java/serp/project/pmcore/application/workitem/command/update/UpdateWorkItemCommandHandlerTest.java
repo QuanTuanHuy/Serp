@@ -269,6 +269,62 @@ class UpdateWorkItemCommandHandlerTest {
     }
 
     @Test
+    void handleShouldRejectInvalidScheduleRange() {
+        UpdateWorkItemCommand command = new UpdateWorkItemCommand(
+                PROJECT_ID,
+                WORK_ITEM_ID,
+                new UpdateWorkItemData(Map.of(
+                        WorkItemFieldConstants.START_DATE, 2_000L,
+                        WorkItemFieldConstants.DUE_DATE, 1_000L
+                ), Map.of()),
+                TENANT_ID,
+                USER_ID,
+                Set.of()
+        );
+        ProjectEntity project = project(false);
+        WorkItemEntity workItem = workItem(ISSUE_TYPE_ID, "Old summary", 77L);
+        ProjectPermissionEvaluationContext actorContext = ProjectPermissionEvaluationContext.builder()
+                .userId(USER_ID)
+                .groupKeys(Set.of())
+                .reporterUserId(workItem.getReporterId())
+                .assigneeUserId(workItem.getAssigneeId())
+                .build();
+
+        when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
+        when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), workItem.getReporterId(), workItem.getAssigneeId()))
+                .thenReturn(actorContext);
+        when(updateWorkItemFieldRulesResolver.resolveEditFieldRules(project, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(new WorkItemFieldRules(
+                        Map.of(
+                                WorkItemFieldConstants.START_DATE, new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.START_DATE, false, false, true),
+                                WorkItemFieldConstants.DUE_DATE, new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.DUE_DATE, false, false, true)
+                        ),
+                        Map.of()
+                ));
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getPriorityId());
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getSecurityLevelId());
+        when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .typeKey("task")
+                .name("Task")
+                .build()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(WorkItemCustomFieldMutationPlan.empty());
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> handler.handle(command)
+        );
+
+        assertEquals(DomainErrorCode.WORK_ITEM_SCHEDULE_INVALID, exception.getErrorCode());
+        verify(workItemAuthorizationSupportService).checkScheduleIssuesPermission(ProjectPermissionSubject.from(project), actorContext);
+        verify(outboxEventService, never()).saveEvent(any());
+    }
+
+    @Test
     void handleShouldRejectFieldNotWritableOnEditScreen() {
         UpdateWorkItemCommand command = new UpdateWorkItemCommand(
                 PROJECT_ID,
@@ -328,6 +384,7 @@ class UpdateWorkItemCommandHandlerTest {
                 .reporterId(70L)
                 .parentId(null)
                 .securityLevelId(null)
+                .startDate(1_000L)
                 .dueDate(null)
                 .rank("0|hzzzzz:")
                 .timeOriginalEstimate(3600L)

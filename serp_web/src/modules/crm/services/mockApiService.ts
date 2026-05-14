@@ -297,7 +297,8 @@ export const leadApi = {
         ...opportunityData,
         accountId: opportunityData.accountId || customer.id,
         stage: opportunityData.stage || 'PROSPECTING',
-        estimatedValue: opportunityData.estimatedValue ?? opportunityData.value ?? 0,
+        estimatedValue:
+          opportunityData.estimatedValue ?? opportunityData.value ?? 0,
         value: opportunityData.value ?? opportunityData.estimatedValue ?? 0,
         probability: 10,
         isActive: true,
@@ -473,16 +474,38 @@ export const activityApi = {
       throw createErrorResponse('Failed to create activity', 'CREATE_ERROR');
     }
 
-    if (!data.subject || !data.relatedTo) {
-      throw createErrorResponse(
-        'Subject and related entity are required',
-        'VALIDATION_ERROR'
-      );
+    if (!data.subject) {
+      throw createErrorResponse('Subject is required', 'VALIDATION_ERROR');
     }
 
     const activity = activityService.create({
-      ...data,
-      assignedToName: getUserNameById(data.assignedTo),
+      type: data.activityType,
+      status: data.status || 'PLANNED',
+      subject: data.subject,
+      description: data.description,
+      scheduledDate: data.activityDate
+        ? new Date(data.activityDate).toISOString()
+        : undefined,
+      duration: data.durationMinutes,
+      priority: data.priority || 'MEDIUM',
+      assignedTo: data.assignedTo ? String(data.assignedTo) : '',
+      assignedToName: getUserNameById(
+        data.assignedTo ? String(data.assignedTo) : ''
+      ),
+      relatedTo: {
+        type: data.accountId
+          ? 'CUSTOMER'
+          : data.leadId
+            ? 'LEAD'
+            : 'OPPORTUNITY',
+        id: String(data.accountId || data.leadId || data.opportunityId || ''),
+        name: data.subject,
+      },
+      location: data.location,
+      outcome: data.outcome,
+      tags: [],
+      customFields: { notes: data.notes },
+      isActive: data.status !== 'CANCELLED',
     });
     return createApiResponse(activity);
   },
@@ -497,7 +520,20 @@ export const activityApi = {
       throw createErrorResponse('Failed to update activity', 'UPDATE_ERROR');
     }
 
-    const activity = activityService.update(id, data);
+    const activity = activityService.update(id, {
+      subject: data.subject,
+      description: data.description,
+      status: data.status,
+      scheduledDate: data.activityDate
+        ? new Date(data.activityDate).toISOString()
+        : undefined,
+      duration: data.durationMinutes,
+      priority: data.priority,
+      assignedTo: data.assignedTo ? String(data.assignedTo) : undefined,
+      location: data.location,
+      outcome: data.outcome,
+      customFields: { notes: data.notes },
+    });
     if (!activity) {
       throw createErrorResponse('Activity not found', 'NOT_FOUND');
     }

@@ -14,10 +14,13 @@ import org.springframework.util.StringUtils;
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
+import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.entity.ActivityEntity;
 import serp.project.crm.core.domain.enums.ActivityOutcome;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
+import serp.project.crm.core.domain.enums.TaskPriority;
+import serp.project.crm.core.domain.enums.TeamMemberStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.store.IActivityPort;
 import serp.project.crm.core.port.store.IContactPort;
@@ -26,10 +29,15 @@ import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.port.store.IOpportunityPort;
 import serp.project.crm.core.port.store.ITeamMemberPort;
 import serp.project.crm.core.service.IActivityService;
+import serp.project.crm.core.service.INotificationPublisher;
+import serp.project.crm.core.service.IRepTimeBlockService;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +52,8 @@ public class ActivityService implements IActivityService {
     private final IOpportunityPort opportunityPort;
     private final IAccountPort AccountPort;
     private final ITeamMemberPort teamMemberPort;
+    private final IRepTimeBlockService repTimeBlockService;
+    private final INotificationPublisher notificationPublisher;
 
     private final IContactPort contactPort;
 
@@ -60,6 +70,7 @@ public class ActivityService implements IActivityService {
         validateBusinessRules(activity, tenantId);
 
         ActivityEntity saved = activityPort.save(activity);
+        syncRepTimeBlock(saved, tenantId);
 
         publishActivityCreatedEvent(saved);
 
@@ -83,6 +94,7 @@ public class ActivityService implements IActivityService {
         validateBusinessRules(existing, tenantId);
 
         ActivityEntity updated = activityPort.save(existing);
+        syncRepTimeBlock(updated, tenantId);
 
         publishActivityUpdatedEvent(updated);
 
@@ -166,17 +178,14 @@ public class ActivityService implements IActivityService {
     @Override
     @Transactional(readOnly = true)
     public List<ActivityEntity> getUpcomingActivities(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
-        // Implement later
-        List<ActivityEntity> allUpcoming = activityPort.findUpcomingActivities(tenantId);
+        if (startDate == null || endDate == null || startDate.isAfter(endDate)) {
+            throw new AppException(ErrorMessage.INVALID_DATE_RANGE);
+        }
 
-        Long startTimestamp = startDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
-        Long endTimestamp = endDate.atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
+        Long startTimestamp = startDate.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        Long endTimestamp = endDate.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
 
-        return allUpcoming.stream()
-                .filter(activity -> activity.getDueDate() != null
-                        && activity.getDueDate() >= startTimestamp
-                        && activity.getDueDate() <= endTimestamp)
-                .toList();
+        return activityPort.findUpcomingActivities(tenantId, startTimestamp, endTimestamp);
     }
 
     @Override
@@ -201,6 +210,7 @@ public class ActivityService implements IActivityService {
         }
 
         ActivityEntity completed = activityPort.save(activity);
+        syncRepTimeBlock(completed, tenantId);
 
         publishActivityCompletedEvent(completed);
 
@@ -224,10 +234,32 @@ public class ActivityService implements IActivityService {
         activity.markAsCancelled(userId);
 
         ActivityEntity cancelled = activityPort.save(activity);
+        syncRepTimeBlock(cancelled, tenantId);
 
         publishActivityCancelledEvent(cancelled);
 
         return cancelled;
+    }
+
+    @Override
+    @Transactional
+    public ActivityEntity rescheduleActivity(Long id, Long dueDate, Long reminderDate, Long userId, Long tenantId) {
+        ActivityEntity activity = activityPort.findById(id, tenantId)
+                .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
+
+        try {
+            activity.reschedule(dueDate, userId);
+        } catch (IllegalStateException e) {
+            throw new AppException(e.getMessage());
+        }
+        activity.setReminderDate(reminderDate);
+        validateBusinessRules(activity, tenantId);
+
+        ActivityEntity rescheduled = activityPort.save(activity);
+        syncRepTimeBlock(rescheduled, tenantId);
+        publishActivityUpdatedEvent(rescheduled);
+
+        return rescheduled;
     }
 
     @Override
@@ -237,6 +269,7 @@ public class ActivityService implements IActivityService {
                 .orElseThrow(() -> new AppException(ErrorMessage.ACTIVITY_NOT_FOUND));
 
         activityPort.deleteById(id, tenantId);
+        repTimeBlockService.removeByActivityId(id, tenantId);
 
         publishActivityDeletedEvent(activity);
 
@@ -260,6 +293,133 @@ public class ActivityService implements IActivityService {
                 && contactPort.findById(activity.getContactId(), tenantId).isEmpty()) {
             throw new AppException(ErrorMessage.CONTACT_NOT_FOUND);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Pair<List<ActivityEntity>, Long> filterActivities(ActivityFilterRequest filterRequest, Long tenantId) {
+        return activityPort.filter(filterRequest, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getActivityStats(Long tenantId) {
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("total", activityPort.countByTenantId(tenantId));
+        stats.put("overdue", (long) activityPort.findOverdueActivities(tenantId).size());
+        stats.put("upcoming", (long) activityPort.findUpcomingActivities(tenantId).size());
+
+        for (ActivityStatus status : ActivityStatus.values()) {
+            stats.put("status_" + status.name().toLowerCase(), activityPort.countByStatus(status, tenantId));
+        }
+        for (ActivityType type : ActivityType.values()) {
+            stats.put("type_" + type.name().toLowerCase(), activityPort.countByActivityType(type, tenantId));
+        }
+        for (TaskPriority priority : TaskPriority.values()) {
+            stats.put("priority_" + priority.name().toLowerCase(), activityPort.countByPriority(priority, tenantId));
+        }
+        return stats;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkCompleteActivities(Set<Long> activityIds, Long userId, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                if (activity.isCompleted() || activity.isCancelled()) {
+                    failed++;
+                    continue;
+                }
+                activity.markAsCompleted(null, null, userId);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkCancelActivities(Set<Long> activityIds, Long userId, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                if (activity.isCompleted() || activity.isCancelled()) {
+                    failed++;
+                    continue;
+                }
+                activity.markAsCancelled(userId);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkDeleteActivities(Set<Long> activityIds, Long tenantId) {
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                repTimeBlockService.removeByActivityId(activity.getId(), tenantId);
+                activityPort.deleteById(activity.getId(), tenantId);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Integer> bulkReassignActivities(Set<Long> activityIds, Long newAssigneeId, Long userId,
+            Long tenantId) {
+        if (newAssigneeId == null) {
+            throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
+        }
+        Map<String, Integer> result = new HashMap<>();
+        int success = 0;
+        int failed = 0;
+        List<ActivityEntity> activities = activityPort.findByIds(activityIds, tenantId);
+        for (ActivityEntity activity : activities) {
+            try {
+                activity.setAssignedTo(newAssigneeId);
+                activity.setUpdatedBy(userId);
+                validateAssignedUser(activity, tenantId);
+                ActivityEntity saved = activityPort.save(activity);
+                syncRepTimeBlock(saved, tenantId);
+                success++;
+            } catch (Exception e) {
+                failed++;
+            }
+        }
+        result.put("success", success);
+        result.put("failed", failed);
+        return result;
     }
 
     private void applyTypeDefaults(ActivityEntity activity) {
@@ -324,7 +484,8 @@ public class ActivityService implements IActivityService {
     }
 
     private void validateAssignedUser(ActivityEntity activity, Long tenantId) {
-        if (activity.getAssignedTo() != null && teamMemberPort.findByUserId(activity.getAssignedTo(), tenantId).isEmpty()) {
+        if (activity.getAssignedTo() != null && teamMemberPort.findByUserId(activity.getAssignedTo(), tenantId)
+                .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus())).isEmpty()) {
             throw new AppException(ErrorMessage.TEAM_MEMBER_NOT_FOUND);
         }
     }
@@ -358,18 +519,26 @@ public class ActivityService implements IActivityService {
 
     private void publishActivityCreatedEvent(ActivityEntity activity) {
         log.debug("Event: Activity created - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingAssigned(activity, activity.getTenantId());
     }
 
     private void publishActivityUpdatedEvent(ActivityEntity activity) {
         log.debug("Event: Activity updated - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingUpdated(activity, activity.getTenantId());
     }
 
     private void publishActivityCompletedEvent(ActivityEntity activity) {
         log.debug("Event: Activity completed - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingCompleted(activity, activity.getTenantId());
     }
 
     private void publishActivityCancelledEvent(ActivityEntity activity) {
         log.debug("Event: Activity cancelled - ID: {}, Topic: {}", activity.getId(), Constants.KafkaTopic.ACTIVITY);
+        notificationPublisher.publishMeetingCancelled(activity, activity.getTenantId());
+    }
+
+    private void syncRepTimeBlock(ActivityEntity activity, Long tenantId) {
+        repTimeBlockService.syncFromActivity(activity, tenantId);
     }
 
     private void publishActivityDeletedEvent(ActivityEntity activity) {

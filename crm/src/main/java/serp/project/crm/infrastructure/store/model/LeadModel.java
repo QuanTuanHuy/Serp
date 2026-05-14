@@ -70,6 +70,9 @@ public class LeadModel extends BaseModel {
     @Column(name = "address_country", length = 100)
     private String addressCountry;
 
+    @Column(name = "territory_code", length = 50)
+    private String territoryCode;
+
     @Column(name = "lead_source", nullable = false, length = 50)
     private String leadSource;
 

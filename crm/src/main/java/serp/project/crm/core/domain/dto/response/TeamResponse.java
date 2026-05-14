@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.crm.core.domain.enums.TeamStatus;
 
 import java.util.List;
 
@@ -23,8 +24,11 @@ public class TeamResponse {
     private Long id;
     private String name;
     private String description;
-    private Long leaderId;
+    private Long managerUserId;
     private String notes;
+    private TeamStatus status;
+    private TeamMemberResponse manager;
+    private Long memberCount;
     
     private List<TeamMemberResponse> members;
     
