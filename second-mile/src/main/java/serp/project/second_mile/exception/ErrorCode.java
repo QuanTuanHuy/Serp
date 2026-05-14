@@ -12,6 +12,10 @@ public enum ErrorCode {
     HUB_CODE_EXISTED(1002, "error.1002", HttpStatus.CONFLICT),
     HUB_POST_OFFICE_CODE_INVALID(1003, "error.1003", HttpStatus.BAD_REQUEST),
 
+    // Vehicle errors (11xx)
+    VEHICLE_NOT_FOUND(1101, "error.1101", HttpStatus.NOT_FOUND),
+    VEHICLE_LICENSE_PLATE_EXISTED(1102, "error.1102", HttpStatus.CONFLICT),
+
     RATE_LIMIT_EXCEEDED(9429, "error.9429", HttpStatus.TOO_MANY_REQUESTS),
 
     STORAGE_CONFIGURATION_INVALID(9430, "error.9430", HttpStatus.INTERNAL_SERVER_ERROR),
