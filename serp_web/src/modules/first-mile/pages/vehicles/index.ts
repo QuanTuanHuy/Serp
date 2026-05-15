@@ -3,4 +3,5 @@
  * Description: Part of Serp Project - Vehicle pages exports
  */
 
-export * from './VehicleListPage';
+export * from './first-mile';
+export * from './second-mile';

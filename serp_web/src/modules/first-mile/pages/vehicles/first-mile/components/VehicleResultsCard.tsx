@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import { Eye, Loader2, Pencil, Trash2 } from 'lucide-react';
-import type { FirstMilePaginatedData, Vehicle } from '../../../types';
+import type { FirstMilePaginatedData, Vehicle } from '../../../../types';
 import {
   buildPostOfficeLabel,
   formatOptionalNumber,

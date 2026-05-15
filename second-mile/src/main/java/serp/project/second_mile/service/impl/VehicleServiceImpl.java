@@ -18,6 +18,9 @@ import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.CreateVehicleRequest;
 import serp.project.second_mile.dto.request.UpdateVehicleRequest;
 import serp.project.second_mile.dto.request.VehicleFilterRequest;
+import serp.project.second_mile.dto.request.VehicleImportDTO;
+import serp.project.second_mile.dto.response.ImportHistoryResponse;
+import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.dto.response.VehicleResponse;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
@@ -27,6 +30,7 @@ import serp.project.second_mile.mapper.VehicleMapper;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.VehicleSpecification;
 import serp.project.second_mile.service.FileStorageService;
+import serp.project.second_mile.service.VehicleImportExcelService;
 import serp.project.second_mile.service.VehicleService;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
@@ -42,6 +46,7 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleRepository vehicleRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final FileStorageService fileStorageService;
+    private final VehicleImportExcelService vehicleImportExcelService;
 
     @Override
     @Transactional(readOnly = true)
@@ -161,6 +166,25 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = getVehicleOrThrow(id);
         validateTenantAccess(vehicle);
         vehicleRepository.delete(vehicle);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportTemplate() {
+        return vehicleImportExcelService.exportTemplate();
+    }
+
+    @Override
+    public ValidateImportFileDTO<VehicleImportDTO> validateImportFile(MultipartFile file) {
+        Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
+        return vehicleImportExcelService.validateImportFile(file, tenantId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ImportHistoryResponse importVehiclesAsync(MultipartFile file) {
+        Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
+        return vehicleImportExcelService.importVehiclesAsync(file, tenantId);
     }
 
     private Vehicle getVehicleOrThrow(Long id) {
