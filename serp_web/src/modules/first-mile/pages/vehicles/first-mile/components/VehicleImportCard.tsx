@@ -18,7 +18,7 @@ import type {
   ImportHistory,
   ValidateImportFileResponse,
   VehicleImportItem,
-} from '../../../types';
+} from '../../../../types';
 import { IMPORT_PREVIEW_LIMIT } from '../vehiclePageModels';
 
 interface VehicleImportCardProps {

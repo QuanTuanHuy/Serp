@@ -21,14 +21,14 @@ import {
   useLazyExportVehicleTemplateQuery,
   useUpdateVehicleMutation,
   useValidateVehicleImportMutation,
-} from '../../api';
+} from '../../../api';
 import type {
   ImportHistory,
   PostOfficeStaff,
   ValidateImportFileResponse,
   Vehicle,
   VehicleImportItem,
-} from '../../types';
+} from '../../../types';
 import {
   VehicleAccessScopeCard,
   VehicleDetailDialog,

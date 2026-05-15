@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/shared/components/ui';
 import { Loader2, Pencil } from 'lucide-react';
-import type { Vehicle } from '../../../types';
+import type { Vehicle } from '../../../../types';
 import {
   buildPostOfficeLabel,
   formatDateTime,

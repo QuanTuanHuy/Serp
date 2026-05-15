@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
-import type { VehicleStatus, VehicleType } from '../../../types';
+import type { VehicleStatus, VehicleType } from '../../../../types';
 import {
   VEHICLE_STATUS_OPTIONS,
   VEHICLE_TYPE_OPTIONS,

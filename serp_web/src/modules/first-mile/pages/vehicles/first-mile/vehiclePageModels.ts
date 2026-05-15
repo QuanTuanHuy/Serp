@@ -8,7 +8,7 @@ import type {
   Vehicle,
   VehicleStatus,
   VehicleType,
-} from '../../types';
+} from '../../../types';
 
 export const PAGE_SIZE = 20;
 export const IMPORT_PREVIEW_LIMIT = 5;

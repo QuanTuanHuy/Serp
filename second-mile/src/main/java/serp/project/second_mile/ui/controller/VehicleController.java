@@ -7,6 +7,10 @@ package serp.project.second_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +27,9 @@ import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.CreateVehicleRequest;
 import serp.project.second_mile.dto.request.UpdateVehicleRequest;
 import serp.project.second_mile.dto.request.VehicleFilterRequest;
+import serp.project.second_mile.dto.request.VehicleImportDTO;
+import serp.project.second_mile.dto.response.ImportHistoryResponse;
+import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.dto.response.VehicleResponse;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.enums.VehicleType;
@@ -32,6 +39,7 @@ import serp.project.second_mile.service.VehicleService;
 @RestController
 @RequestMapping("/api/v1/vehicles")
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleController {
     private final VehicleService vehicleService;
     private final MessageService messageService;
@@ -68,6 +76,34 @@ public class VehicleController {
                 .message(messageService.getMessage("success.vehicles.detail"))
                 .result(vehicleService.getVehicleById(id))
                 .build();
+    }
+
+    @GetMapping("/template")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ResponseEntity<byte[]> exportTemplate() {
+        log.info("REST request to export Vehicle Template Excel");
+
+        byte[] excelData = vehicleService.exportTemplate();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=vehicle_template.xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelData);
+    }
+
+    @PostMapping("/validate")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ValidateImportFileDTO<VehicleImportDTO> validateFile(@RequestParam("file") MultipartFile file) {
+        log.info("REST request to validate Vehicle import file");
+        return vehicleService.validateImportFile(file);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ImportHistoryResponse importFile(@RequestParam("file") MultipartFile file) {
+        log.info("REST request to import Vehicle file");
+        return vehicleService.importVehiclesAsync(file);
     }
 
     @PostMapping

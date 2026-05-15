@@ -249,6 +249,67 @@ export interface VehicleImportItem {
   source_rows?: number[];
 }
 
+export type SecondMileVehicleStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+
+export type SecondMileVehicleType = 'TRUCK' | 'VAN';
+
+export interface SecondMileVehicle {
+  id: number;
+  licensePlate: string;
+  vehicleType: SecondMileVehicleType;
+  maxWeight: number;
+  maxVolume: number;
+  maxBags: number;
+  imageUrl?: string;
+  hubId: number;
+  assignedStaffId?: number;
+  status: SecondMileVehicleStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface SecondMileVehicleListFilters {
+  keyword?: string;
+  licensePlate?: string;
+  vehicleType?: SecondMileVehicleType;
+  hubId?: number;
+  assignedStaffId?: number;
+  status?: SecondMileVehicleStatus;
+}
+
+export interface SecondMileCreateVehicleRequest {
+  license_plate: string;
+  vehicle_type: SecondMileVehicleType;
+  max_weight: number;
+  max_volume: number;
+  max_bags: number;
+  hub_id: number;
+  assigned_staff_id?: number;
+  status: SecondMileVehicleStatus;
+  image_url?: string;
+}
+
+export type SecondMileUpdateVehicleRequest = SecondMileCreateVehicleRequest;
+
+export interface SecondMileVehicleImportItem {
+  license_plate?: string;
+  max_bags?: number;
+  max_weight?: number;
+  max_volume?: number;
+  hub_id?: number;
+  hub_code?: string;
+  hub_name?: string;
+  assigned_staff_id?: number;
+  driver_code?: string;
+  driver_name?: string;
+  vehicle_type?: SecondMileVehicleType;
+  status?: SecondMileVehicleStatus;
+  source_rows?: number[];
+}
+
 export type FirstMileOrderStatus =
   | 'CREATED'
   | 'ASSIGNED_TO_PICKUP'
