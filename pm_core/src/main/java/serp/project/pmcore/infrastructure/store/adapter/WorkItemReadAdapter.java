@@ -69,6 +69,14 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> listActiveByWorkItemIds(Long tenantId, List<Long> workItemIds) {
+        if (workItemIds == null || workItemIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemMapper.toEntities(workItemRepository.findAllByTenantIdAndIdIn(tenantId, workItemIds));
+    }
+
+    @Override
     public List<WorkItemEntity> getWorkItemsByIssueTypeId(Long issueTypeId, Long tenantId) {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndIssueTypeId(tenantId, issueTypeId)

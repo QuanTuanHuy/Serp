@@ -3,14 +3,13 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.issuelink.entity;
+package serp.project.pmcore.domain.optimization.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.shared.entity.BaseEntity;
 
 @Getter
@@ -18,12 +17,13 @@ import serp.project.pmcore.domain.shared.entity.BaseEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class IssueLinkTypeEntity extends BaseEntity {
+public class OptimizationRunWarningEntity extends BaseEntity {
     private Long tenantId;
-    private String name;
-    private String outwardDescription;
-    private String inwardDescription;
-    private IssueLinkDependencyBehavior dependencyBehavior;
-    private Boolean isSystem;
+    private Long runId;
+    private Long workItemId;
+    private String severity;
+    private String code;
+    private String message;
+    private String detailsJson;
     private Long deletedAt;
 }
