@@ -82,6 +82,9 @@ public class OptimizationRunReviewAssembler {
                 .assignmentReasons(parseStringList(item.getAssignmentReasonsJson()))
                 .scheduleReasons(parseStringList(item.getScheduleReasonsJson()))
                 .violations(parseStringList(item.getViolationsJson()))
+                .appliedAt(item.getAppliedAt())
+                .assignmentSkippedReason(item.getAssignmentSkippedReason())
+                .scheduleSkippedReason(item.getScheduleSkippedReason())
                 .build();
     }
 

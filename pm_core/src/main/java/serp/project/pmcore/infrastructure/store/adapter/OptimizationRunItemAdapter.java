@@ -28,6 +28,11 @@ public class OptimizationRunItemAdapter implements IOptimizationRunItemPort {
     }
 
     @Override
+    public OptimizationRunItemEntity save(OptimizationRunItemEntity item) {
+        return optimizationRunItemMapper.toEntity(optimizationRunItemRepository.save(optimizationRunItemMapper.toModel(item)));
+    }
+
+    @Override
     public List<OptimizationRunItemEntity> listByRunId(Long tenantId, Long runId) {
         return optimizationRunItemMapper.toEntities(optimizationRunItemRepository.findAllByTenantIdAndRunId(tenantId, runId));
     }

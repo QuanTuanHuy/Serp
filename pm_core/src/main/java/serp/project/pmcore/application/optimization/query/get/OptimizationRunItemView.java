@@ -44,4 +44,7 @@ public class OptimizationRunItemView {
     private List<String> assignmentReasons;
     private List<String> scheduleReasons;
     private List<String> violations;
+    private Long appliedAt;
+    private String assignmentSkippedReason;
+    private String scheduleSkippedReason;
 }

@@ -12,5 +12,7 @@ import java.util.List;
 public interface IOptimizationRunItemPort {
     List<OptimizationRunItemEntity> saveAll(List<OptimizationRunItemEntity> items);
 
+    OptimizationRunItemEntity save(OptimizationRunItemEntity item);
+
     List<OptimizationRunItemEntity> listByRunId(Long tenantId, Long runId);
 }
