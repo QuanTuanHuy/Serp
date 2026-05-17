@@ -2314,7 +2314,7 @@ Verification:
 
 ### Sprint 12 - Skill Fit In Optimization Model
 
-Status: planned.
+Status: implemented in backend.
 
 Goal:
 1. Load skill requirements and user skill profiles during optimization model build.

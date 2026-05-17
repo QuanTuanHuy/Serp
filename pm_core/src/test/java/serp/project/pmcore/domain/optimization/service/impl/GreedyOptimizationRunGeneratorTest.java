@@ -176,7 +176,7 @@ class GreedyOptimizationRunGeneratorTest {
                 new OptimizationDuration(workItem.getId(), HOUR, OptimizationConfidence.HIGH, "TEST"),
                 new OptimizationPriorityScore(workItem.getId(), 1D, false),
                 List.of(new OptimizationCandidateAssignee(workItem.getId(), candidateId, 1D,
-                        candidateId.equals(workItem.getAssigneeId()), false, false, false, false)),
+                        candidateId.equals(workItem.getAssigneeId()), false, false, false, false, null)),
                 false,
                 false
         );

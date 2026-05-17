@@ -13,6 +13,7 @@ public record OptimizationCandidateAssignee(
         boolean componentLead,
         boolean projectLead,
         boolean reporter,
-        boolean projectMember
+        boolean projectMember,
+        OptimizationCandidateSkillFit skillFit
 ) {
 }

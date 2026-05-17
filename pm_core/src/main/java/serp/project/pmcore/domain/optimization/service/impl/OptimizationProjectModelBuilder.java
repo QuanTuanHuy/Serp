@@ -19,12 +19,15 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateAssignee;
+import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkill;
+import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyGraph;
 import serp.project.pmcore.domain.optimization.model.OptimizationDuration;
 import serp.project.pmcore.domain.optimization.model.OptimizationPriorityScore;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationSkillRequirement;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
@@ -37,6 +40,12 @@ import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectComponentPort;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectMemberService;
+import serp.project.pmcore.domain.skill.entity.UserSkillEntity;
+import serp.project.pmcore.domain.skill.entity.WorkItemSkillEntity;
+import serp.project.pmcore.domain.skill.enums.SkillProficiency;
+import serp.project.pmcore.domain.skill.enums.SkillRequirementType;
+import serp.project.pmcore.domain.skill.port.IUserSkillReadPort;
+import serp.project.pmcore.domain.skill.port.IWorkItemSkillReadPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -69,6 +78,8 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     private final IWorkItemComponentReadPort workItemComponentReadPort;
     private final IProjectMemberService projectMemberService;
     private final IResourceCapacityPort resourceCapacityPort;
+    private final IWorkItemSkillReadPort workItemSkillReadPort;
+    private final IUserSkillReadPort userSkillReadPort;
 
     @Override
     public OptimizationProjectModel build(OptimizationBuilderInput input) {
@@ -90,7 +101,8 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         Map<Long, OptimizationDuration> durations = resolveDurations(selected, warnings);
         Set<Long> criticalPathIds = resolveCriticalPath(graph, durations);
         Map<Long, OptimizationPriorityScore> scores = resolvePriorityScores(selected, graph, durations, warnings);
-        Map<Long, List<OptimizationCandidateAssignee>> candidates = resolveCandidates(input.tenantId(), selected, project, warnings);
+        Map<Long, List<OptimizationCandidateAssignee>> candidates = attachSkillFit(input.tenantId(), selected,
+                resolveCandidates(input.tenantId(), selected, project, warnings), warnings);
         // Assemble work items sorted by priority
         List<OptimizationWorkItem> workItems = selected.stream()
                 .map(item -> new OptimizationWorkItem(
@@ -119,8 +131,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                     null, "Fallback capacity used", OptimizationConstants.FALLBACK_CAPACITY_DETAILS));
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CALENDAR,
                     null, "Calendar data is unavailable", null));
-            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.SKILL_DATA_UNAVAILABLE,
-                    null, "Skill data is unavailable", null));
         }
         // Resolve earliest start times based on external dependency planned ends
         Map<Long, Long> earliestStarts = resolveExternalEarliestStarts(input.tenantId(), graph.externalEdges(), warnings);
@@ -308,7 +318,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             List<OptimizationCandidateAssignee> candidates = flagsById.entrySet().stream()
                     .map(entry -> new OptimizationCandidateAssignee(item.getId(), entry.getKey(), baseCost(entry.getValue()),
                             entry.getValue().currentAssignee, entry.getValue().componentLead, entry.getValue().projectLead,
-                            entry.getValue().reporter, entry.getValue().projectMember))
+                            entry.getValue().reporter, entry.getValue().projectMember, null))
                     .sorted(Comparator.comparingDouble(OptimizationCandidateAssignee::baseCost)
                             .thenComparing(OptimizationCandidateAssignee::candidateId))
                     .toList();
@@ -318,6 +328,140 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             result.put(item.getId(), candidates);
         }
         return result;
+    }
+
+    private Map<Long, List<OptimizationCandidateAssignee>> attachSkillFit(Long tenantId,
+                                                                          List<WorkItemEntity> items,
+                                                                          Map<Long, List<OptimizationCandidateAssignee>> candidates,
+                                                                          List<OptimizationConstraintViolation> warnings) {
+        List<Long> workItemIds = idsOf(items);
+        Map<Long, List<OptimizationSkillRequirement>> requirementsByWorkItemId = workItemSkillReadPort
+                .listActiveByWorkItemIds(tenantId, workItemIds)
+                .stream()
+                .map(this::toSkillRequirement)
+                .collect(Collectors.groupingBy(OptimizationSkillRequirement::workItemId));
+        Set<Long> candidateIds = candidates.values().stream()
+                .flatMap(Collection::stream)
+                .map(OptimizationCandidateAssignee::candidateId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, Map<Long, OptimizationCandidateSkill>> skillsByCandidateId = userSkillReadPort
+                .listActiveByUserIds(tenantId, candidateIds.stream().toList())
+                .stream()
+                .map(this::toCandidateSkill)
+                .collect(Collectors.groupingBy(OptimizationCandidateSkill::candidateId,
+                        Collectors.toMap(OptimizationCandidateSkill::skillId, skill -> skill, (left, right) -> left)));
+
+        Map<Long, List<OptimizationCandidateAssignee>> result = new HashMap<>();
+        for (WorkItemEntity item : items) {
+            List<OptimizationSkillRequirement> requirements = requirementsByWorkItemId.getOrDefault(item.getId(), List.of())
+                    .stream()
+                    .sorted(Comparator.comparing(OptimizationSkillRequirement::skillId))
+                    .toList();
+            if (requirements.isEmpty()) {
+                warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.WORK_ITEM_SKILL_DATA_MISSING,
+                        item.getId(), "Work item skill requirements are missing", null));
+            }
+            List<OptimizationCandidateAssignee> enriched = candidates.getOrDefault(item.getId(), List.of()).stream()
+                    .map(candidate -> withSkillFit(candidate, requirements, skillsByCandidateId, warnings))
+                    .toList();
+            result.put(item.getId(), enriched);
+        }
+        return result;
+    }
+
+    private OptimizationCandidateAssignee withSkillFit(OptimizationCandidateAssignee candidate,
+                                                       List<OptimizationSkillRequirement> requirements,
+                                                       Map<Long, Map<Long, OptimizationCandidateSkill>> skillsByCandidateId,
+                                                       List<OptimizationConstraintViolation> warnings) {
+        Map<Long, OptimizationCandidateSkill> candidateSkills = skillsByCandidateId.getOrDefault(candidate.candidateId(), Map.of());
+        if (!requirements.isEmpty() && candidateSkills.isEmpty()) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.CANDIDATE_SKILL_DATA_MISSING,
+                    candidate.workItemId(), "Candidate skill profile is missing", String.valueOf(candidate.candidateId())));
+        }
+        OptimizationCandidateSkillFit fit = buildSkillFit(candidate.workItemId(), candidate.candidateId(), requirements, candidateSkills);
+        if (!fit.missingRequiredSkillIds().isEmpty()) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.REQUIRED_SKILL_MISSING,
+                    candidate.workItemId(), "Candidate missing required skill", fit.missingRequiredSkillIds().toString()));
+        }
+        if ((!fit.missingRequiredSkillIds().isEmpty() && fit.matchedRequiredSkillCount() > 0)
+                || (!fit.missingPreferredSkillIds().isEmpty() && fit.matchedPreferredSkillCount() > 0)) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.PARTIAL_SKILL_MATCH,
+                    candidate.workItemId(), "Candidate has partial skill match", String.valueOf(candidate.candidateId())));
+        }
+        if (fit.confidence() == OptimizationConfidence.LOW) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.LOW_CONFIDENCE_SKILL_DATA,
+                    candidate.workItemId(), "Skill fit confidence is low", String.valueOf(candidate.candidateId())));
+        }
+        return new OptimizationCandidateAssignee(candidate.workItemId(), candidate.candidateId(), candidate.baseCost(),
+                candidate.currentAssignee(), candidate.componentLead(), candidate.projectLead(), candidate.reporter(),
+                candidate.projectMember(), fit);
+    }
+
+    private OptimizationCandidateSkillFit buildSkillFit(Long workItemId,
+                                                        Long candidateId,
+                                                        List<OptimizationSkillRequirement> requirements,
+                                                        Map<Long, OptimizationCandidateSkill> candidateSkills) {
+        if (requirements.isEmpty()) {
+            return OptimizationCandidateSkillFit.neutral(workItemId, candidateId);
+        }
+        List<Long> matchedSkillIds = new ArrayList<>();
+        List<Long> missingRequiredSkillIds = new ArrayList<>();
+        List<Long> missingPreferredSkillIds = new ArrayList<>();
+        int totalRequired = 0;
+        int totalPreferred = 0;
+        int matchedRequired = 0;
+        int matchedPreferred = 0;
+        double proficiencyScore = 0D;
+        for (OptimizationSkillRequirement requirement : requirements) {
+            boolean required = requirement.requirementType() == SkillRequirementType.REQUIRED;
+            if (required) {
+                totalRequired++;
+            } else {
+                totalPreferred++;
+            }
+            OptimizationCandidateSkill skill = candidateSkills.get(requirement.skillId());
+            boolean matched = skill != null && meetsProficiency(skill.proficiency(), requirement.minProficiency());
+            if (matched) {
+                matchedSkillIds.add(requirement.skillId());
+                proficiencyScore += proficiencyScore(skill.proficiency()) * Math.max(1, Optional.ofNullable(requirement.weight()).orElse(1));
+                if (required) {
+                    matchedRequired++;
+                } else {
+                    matchedPreferred++;
+                }
+            } else if (required) {
+                missingRequiredSkillIds.add(requirement.skillId());
+            } else {
+                missingPreferredSkillIds.add(requirement.skillId());
+            }
+        }
+        OptimizationConfidence confidence = candidateSkills.isEmpty() ? OptimizationConfidence.LOW
+                : (missingRequiredSkillIds.isEmpty() && missingPreferredSkillIds.isEmpty() ? OptimizationConfidence.HIGH : OptimizationConfidence.MEDIUM);
+        return new OptimizationCandidateSkillFit(workItemId, candidateId, matchedRequired, totalRequired,
+                matchedPreferred, totalPreferred, coverage(matchedRequired, totalRequired), coverage(matchedPreferred, totalPreferred),
+                proficiencyScore, missingRequiredSkillIds.stream().sorted().toList(), missingPreferredSkillIds.stream().sorted().toList(),
+                matchedSkillIds.stream().sorted().toList(), confidence);
+    }
+
+    private OptimizationSkillRequirement toSkillRequirement(WorkItemSkillEntity entity) {
+        return new OptimizationSkillRequirement(entity.getWorkItemId(), entity.getSkillId(), entity.getRequirementType(),
+                entity.getMinProficiency(), entity.getWeight());
+    }
+
+    private OptimizationCandidateSkill toCandidateSkill(UserSkillEntity entity) {
+        return new OptimizationCandidateSkill(entity.getUserId(), entity.getSkillId(), entity.getProficiency(), entity.getConfidence());
+    }
+
+    private boolean meetsProficiency(SkillProficiency actual, SkillProficiency required) {
+        return actual != null && required != null && actual.ordinal() >= required.ordinal();
+    }
+
+    private double proficiencyScore(SkillProficiency proficiency) {
+        return proficiency == null ? 0D : proficiency.ordinal() + 1D;
+    }
+
+    private double coverage(int matched, int total) {
+        return total == 0 ? 100D : (matched * 100D) / total;
     }
 
     private Map<Long, List<Long>> resolveComponentLeads(Long tenantId, Long projectId, List<WorkItemEntity> items) {
