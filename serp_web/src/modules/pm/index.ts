@@ -8,5 +8,6 @@ export { PMAuthGuard } from './components/PMAuthGuard';
 export { CreateWorkItemDialog } from './components/work-items';
 export { PMDashboardPage } from './pages/PMDashboardPage';
 export { PMMyWorkPage } from './pages/PMMyWorkPage';
+export { PMProjectCalendarPage } from './pages/PMProjectCalendarPage';
 export { PMProjectsPage } from './pages/PMProjectsPage';
 export { PMSettingsPage } from './pages/PMSettingsPage';

@@ -146,6 +146,8 @@ public class GlobalExceptionHandler {
                  PRIORITY_SCHEME_NAME_ALREADY_EXISTS,
                  PRIORITY_SCHEME_IN_USE,
                  PRIORITY_SCHEME_BOUND_TO_PROJECT,
+                 RESOLUTION_IS_SYSTEM,
+                 RESOLUTION_IN_USE,
                  STATUS_KEY_ALREADY_EXISTS,
                  STATUS_IN_USE_BY_WORKFLOW,
                  STATUS_IN_USE_BY_WORK_ITEMS,

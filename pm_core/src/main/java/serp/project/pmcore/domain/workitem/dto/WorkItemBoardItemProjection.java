@@ -16,6 +16,8 @@ public record WorkItemBoardItemProjection(
         String summary,
         String description,
         Long assigneeId,
+        String assigneeName,
+        String assigneeAvatarUrl,
         Long reporterId,
         Long startDate,
         Long dueDate,

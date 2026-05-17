@@ -16,13 +16,13 @@ export function PMWorkItemBoardEmpty({
   description,
 }: PMWorkItemBoardEmptyProps) {
   return (
-    <Card className='border-dashed'>
-      <CardContent className='flex min-h-[22rem] flex-col items-center justify-center px-6 text-center'>
-        <div className='mb-4 rounded-2xl bg-muted p-4 text-muted-foreground'>
+    <Card className='rounded-2xl border-dashed border-border/70 bg-muted/10 shadow-sm'>
+      <CardContent className='flex min-h-[18rem] flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[22rem]'>
+        <div className='mb-4 rounded-2xl border border-border/60 bg-background/80 p-4 text-muted-foreground'>
           <Columns3 className='h-8 w-8' />
         </div>
         <h2 className='text-lg font-semibold text-foreground'>{title}</h2>
-        <p className='mt-2 max-w-md text-sm text-muted-foreground'>
+        <p className='mt-2 max-w-md text-sm leading-6 text-muted-foreground'>
           {description}
         </p>
       </CardContent>

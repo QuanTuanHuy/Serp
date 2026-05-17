@@ -25,9 +25,13 @@ public interface IWorkItemReadPort {
 
     List<WorkItemEntity> getWorkItemsByProjectId(Long projectId, Long tenantId);
 
+    List<WorkItemEntity> listActiveByWorkItemIds(Long tenantId, List<Long> workItemIds);
+
     List<WorkItemEntity> getWorkItemsByIssueTypeId(Long issueTypeId, Long tenantId);
 
     List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId);
+
+    List<WorkItemEntity> getWorkItemsByResolutionId(Long resolutionId, Long tenantId);
 
     boolean existsActiveWorkItemByStatusId(Long statusId, Long tenantId);
 

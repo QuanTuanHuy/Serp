@@ -33,6 +33,10 @@ public interface IProjectRoleActorPort {
                                    Long updatedBy);
 
     List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndRoleId(Long projectId,
-                                                                          Long projectRoleId,
-                                                                          Long tenantId);
+                                                                           Long projectRoleId,
+                                                                           Long tenantId);
+
+    List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndSubjectType(Long projectId,
+                                                                                String subjectType,
+                                                                                Long tenantId);
 }

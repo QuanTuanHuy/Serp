@@ -34,8 +34,12 @@ public interface IProjectRoleActorRepository extends JpaRepository<ProjectRoleAc
     );
 
     List<ProjectRoleActorModel> findAllByProjectIdAndProjectRoleIdAndTenantId(Long projectId,
-                                                                               Long projectRoleId,
-                                                                               Long tenantId);
+                                                                                Long projectRoleId,
+                                                                                Long tenantId);
+
+    List<ProjectRoleActorModel> findAllByTenantIdAndProjectIdAndSubjectType(Long tenantId,
+                                                                             Long projectId,
+                                                                             String subjectType);
 
     @Modifying
     @Query("""
