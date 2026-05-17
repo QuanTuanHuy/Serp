@@ -1651,7 +1651,7 @@ Tests cover calendar contract, workload subtraction, fallback, privacy, and dete
 
 ## Phase 8 - Skill-Aware Assignment
 
-Status: planned.
+Status: implemented in backend.
 
 This phase stores skill data in `pm_core` and uses it to rank candidate assignees for selected work items. Skill matching improves assignment quality but does not replace permissions, capacity, dependency, or review/apply rules.
 
