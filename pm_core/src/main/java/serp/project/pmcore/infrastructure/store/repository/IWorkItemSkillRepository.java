@@ -14,4 +14,6 @@ import java.util.List;
 @Repository
 public interface IWorkItemSkillRepository extends JpaRepository<WorkItemSkillModel, Long> {
     List<WorkItemSkillModel> findAllByTenantIdAndWorkItemIdIn(Long tenantId, List<Long> workItemIds);
+
+    List<WorkItemSkillModel> findAllByTenantIdAndProjectIdAndWorkItemId(Long tenantId, Long projectId, Long workItemId);
 }

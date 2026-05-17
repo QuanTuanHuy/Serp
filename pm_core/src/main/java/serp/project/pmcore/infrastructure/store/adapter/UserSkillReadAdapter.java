@@ -8,7 +8,7 @@ package serp.project.pmcore.infrastructure.store.adapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.skill.entity.UserSkillEntity;
-import serp.project.pmcore.domain.skill.port.IUserSkillReadPort;
+import serp.project.pmcore.domain.skill.port.read.IUserSkillReadPort;
 import serp.project.pmcore.infrastructure.store.mapper.UserSkillMapper;
 import serp.project.pmcore.infrastructure.store.repository.IUserSkillRepository;
 
@@ -19,6 +19,11 @@ import java.util.List;
 public class UserSkillReadAdapter implements IUserSkillReadPort {
     private final IUserSkillRepository userSkillRepository;
     private final UserSkillMapper userSkillMapper;
+
+    @Override
+    public List<UserSkillEntity> listActive(Long tenantId, Long userId) {
+        return userSkillMapper.toEntities(userSkillRepository.findAllByTenantIdAndUserId(tenantId, userId));
+    }
 
     @Override
     public List<UserSkillEntity> listActiveByUserIds(Long tenantId, List<Long> userIds) {

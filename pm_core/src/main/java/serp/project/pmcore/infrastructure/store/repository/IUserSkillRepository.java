@@ -14,4 +14,6 @@ import java.util.List;
 @Repository
 public interface IUserSkillRepository extends JpaRepository<UserSkillModel, Long> {
     List<UserSkillModel> findAllByTenantIdAndUserIdIn(Long tenantId, List<Long> userIds);
+
+    List<UserSkillModel> findAllByTenantIdAndUserId(Long tenantId, Long userId);
 }

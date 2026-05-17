@@ -2378,7 +2378,7 @@ Verification:
 
 ### Sprint 14 - Skill Review Contract
 
-Status: planned.
+Status: implemented in backend.
 
 Goal:
 1. Expose skill fit and skill warnings in optimization review payload.
@@ -2409,7 +2409,7 @@ Verification:
 
 ### Sprint 15 - Skill Management APIs
 
-Status: planned.
+Status: implemented in backend.
 
 Goal:
 1. Provide backend APIs to manage skill catalog, work item skill requirements, and user skill profiles owned by `pm_core`.

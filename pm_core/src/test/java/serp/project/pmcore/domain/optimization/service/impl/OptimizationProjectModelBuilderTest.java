@@ -37,8 +37,8 @@ import serp.project.pmcore.domain.skill.entity.WorkItemSkillEntity;
 import serp.project.pmcore.domain.skill.enums.SkillProficiency;
 import serp.project.pmcore.domain.skill.enums.SkillRequirementType;
 import serp.project.pmcore.domain.skill.enums.SkillSource;
-import serp.project.pmcore.domain.skill.port.IUserSkillReadPort;
-import serp.project.pmcore.domain.skill.port.IWorkItemSkillReadPort;
+import serp.project.pmcore.domain.skill.port.read.IUserSkillReadPort;
+import serp.project.pmcore.domain.skill.port.read.IWorkItemSkillReadPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
