@@ -6,14 +6,15 @@
 package serp.project.pmcore.infrastructure.optimization.adapter;
 
 import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.CapacityWorkloadBucket;
+import serp.project.pmcore.domain.optimization.model.CalendarCapacityResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
+import serp.project.pmcore.domain.optimization.port.IResourceCalendarPort;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemPlanMapper;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
@@ -21,15 +22,12 @@ import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
-import java.time.DayOfWeek;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,13 +38,16 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
     private final IWorkItemPlanRepository workItemPlanRepository;
     private final IWorkItemRepository workItemRepository;
     private final WorkItemPlanMapper workItemPlanMapper;
+    private final IResourceCalendarPort resourceCalendarPort;
 
     public FallbackResourceCapacityAdapter(IWorkItemPlanRepository workItemPlanRepository,
                                            IWorkItemRepository workItemRepository,
-                                           WorkItemPlanMapper workItemPlanMapper) {
+                                           WorkItemPlanMapper workItemPlanMapper,
+                                           IResourceCalendarPort resourceCalendarPort) {
         this.workItemPlanRepository = workItemPlanRepository;
         this.workItemRepository = workItemRepository;
         this.workItemPlanMapper = workItemPlanMapper;
+        this.resourceCalendarPort = resourceCalendarPort;
     }
 
     @Override
@@ -54,7 +55,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                                                        List<Long> userIds,
                                                        Long planningStart,
                                                        Long planningEnd) {
-        return buildFallbackSlots(userIds, planningStart, planningEnd);
+        return resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd).slots();
     }
 
     @Override
@@ -64,11 +65,12 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                                                     Long planningStart,
                                                     Long planningEnd,
                                                     List<Long> excludedWorkItemIds) {
-        List<ResourceCapacitySlot> fallbackSlots = buildFallbackSlots(userIds, planningStart, planningEnd);
-        if (fallbackSlots.isEmpty()) {
+        CalendarCapacityResult calendar = resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd);
+        List<ResourceCapacitySlot> calendarSlots = calendar.slots();
+        if (calendarSlots.isEmpty()) {
             return new CapacityResolutionResult(List.of(), CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
-                    CapacityCoverageStatus.MISSING, CapacityCoverageStatus.NOT_REQUIRED, List.of(), null,
-                    System.currentTimeMillis(), 0L, 0L, 0L, List.of(), List.of());
+                    calendar.coverageStatus(), CapacityCoverageStatus.NOT_REQUIRED, calendar.fallbackUserIds(), calendar.fetchedAt(),
+                    System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
 
         List<Long> safeExcludedIds = excludedWorkItemIds == null || excludedWorkItemIds.isEmpty()
@@ -82,9 +84,9 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 safeExcludedIds
         );
         if (planModels.isEmpty()) {
-            return new CapacityResolutionResult(fallbackSlots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
-                    CapacityCoverageStatus.MISSING, CapacityCoverageStatus.FULL, new ArrayList<>(new LinkedHashSet<>(userIds)),
-                    null, System.currentTimeMillis(), 0L, 0L, 0L, List.of(), List.of());
+            return new CapacityResolutionResult(calendarSlots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+                    calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(), calendar.fetchedAt(),
+                    System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
         Map<Long, WorkItemModel> workItemsById = workItemRepository.findAllByTenantIdAndIdIn(
                         tenantId,
@@ -97,8 +99,8 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
 
         Map<BucketKey, BucketAccumulator> bucketAccumulators = new HashMap<>();
         List<ResourceCapacitySlot> netSlots = new ArrayList<>();
-        List<OptimizationConstraintViolation> warnings = new ArrayList<>();
-        for (ResourceCapacitySlot slot : fallbackSlots) {
+        List<OptimizationConstraintViolation> warnings = new ArrayList<>(calendar.warnings());
+        for (ResourceCapacitySlot slot : calendarSlots) {
             long sameProject = 0L;
             long crossProject = 0L;
             for (WorkItemPlanModel plan : planModels) {
@@ -144,30 +146,9 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         long crossProjectMillis = buckets.stream().mapToLong(CapacityWorkloadBucket::crossProjectReservedMillis).sum();
         return new CapacityResolutionResult(netSlots,
                 sameProjectMillis + crossProjectMillis > 0 ? CapacitySourceMode.FALLBACK_WITH_WORKLOAD : CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
-                CapacityCoverageStatus.MISSING, CapacityCoverageStatus.FULL, new ArrayList<>(new LinkedHashSet<>(userIds)),
-                null, System.currentTimeMillis(), sameProjectMillis + crossProjectMillis, sameProjectMillis, crossProjectMillis, buckets, warnings);
-    }
-
-    private List<ResourceCapacitySlot> buildFallbackSlots(List<Long> userIds, Long planningStart, Long planningEnd) {
-        if (userIds == null || userIds.isEmpty() || planningStart == null || planningEnd == null) {
-            return List.of();
-        }
-        List<ResourceCapacitySlot> slots = new ArrayList<>();
-        List<Long> uniqueUserIds = new ArrayList<>(new LinkedHashSet<>(userIds));
-        LocalDate start = Instant.ofEpochMilli(planningStart).atZone(ZoneOffset.UTC).toLocalDate();
-        LocalDate end = Instant.ofEpochMilli(planningEnd).atZone(ZoneOffset.UTC).toLocalDate();
-        for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
-            DayOfWeek dow = day.getDayOfWeek();
-            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                continue;
-            }
-            long slotStart = day.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli();
-            long slotEnd = slotStart + OptimizationConstants.DAY_MILLIS;
-            for (Long userId : uniqueUserIds) {
-                slots.add(new ResourceCapacitySlot(userId, slotStart, slotEnd, OptimizationConstants.DAILY_CAPACITY_MILLIS));
-            }
-        }
-        return slots;
+                calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(),
+                calendar.fetchedAt(), System.currentTimeMillis(), sameProjectMillis + crossProjectMillis,
+                sameProjectMillis, crossProjectMillis, buckets, warnings);
     }
 
     private long overlapMillis(Long startA, Long endA, Long startB, Long endB) {

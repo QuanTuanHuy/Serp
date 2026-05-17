@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
+import serp.project.pmcore.domain.optimization.model.CapacityWorkloadBucket;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateAssignee;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
@@ -90,11 +91,33 @@ class GreedyOptimizationRunGeneratorTest {
         assertTrue(result.scheduleSuggestions().isEmpty());
     }
 
+    @Test
+    void generateShouldAddCapacitySourceReasonsToScheduleSuggestions() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, 100L)), graphWithoutDependencies(List.of(10L)),
+                capacityResolutionWithWorkload());
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        List<String> reasons = result.scheduleSuggestions().get(10L).reasons();
+        assertTrue(reasons.contains("Fallback calendar capacity used for assignee"));
+        assertTrue(reasons.contains("Existing work_item_plans workload deducted before scheduling"));
+        assertEquals(CapacitySourceMode.FALLBACK_WITH_WORKLOAD.name(), result.summary().getCapacitySourceMode());
+        assertEquals(2 * HOUR, result.summary().getCrossProjectDeductedMillis());
+    }
+
     private OptimizationBuilderInput input(boolean allowReassignment, boolean allowSchedule, OptimizationMode mode) {
         return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END, allowReassignment, allowSchedule, mode);
     }
 
     private OptimizationProjectModel model(List<OptimizationWorkItem> items, OptimizationDependencyGraph graph) {
+        return model(items, graph, capacityResolution());
+    }
+
+    private OptimizationProjectModel model(List<OptimizationWorkItem> items,
+                                           OptimizationDependencyGraph graph,
+                                           CapacityResolutionResult capacityResolution) {
         return new OptimizationProjectModel(
                 1L,
                 100L,
@@ -105,7 +128,7 @@ class GreedyOptimizationRunGeneratorTest {
                 items,
                 List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
                         new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)),
-                capacityResolution(),
+                capacityResolution,
                 List.of(),
                 Map.of()
         );
@@ -125,6 +148,23 @@ class GreedyOptimizationRunGeneratorTest {
                 0L,
                 0L,
                 List.of(),
+                List.of()
+        );
+    }
+
+    private CapacityResolutionResult capacityResolutionWithWorkload() {
+        return new CapacityResolutionResult(
+                List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 6 * HOUR)),
+                CapacitySourceMode.FALLBACK_WITH_WORKLOAD,
+                CapacityCoverageStatus.MISSING,
+                CapacityCoverageStatus.FULL,
+                List.of(100L),
+                null,
+                START,
+                2 * HOUR,
+                0L,
+                2 * HOUR,
+                List.of(new CapacityWorkloadBucket(100L, START, START + 86_400_000L, 0L, 2 * HOUR, 2 * HOUR)),
                 List.of()
         );
     }

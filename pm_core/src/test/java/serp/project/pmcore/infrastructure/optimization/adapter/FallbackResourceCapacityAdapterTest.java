@@ -96,7 +96,8 @@ class FallbackResourceCapacityAdapterTest {
     }
 
     private FallbackResourceCapacityAdapter adapter() {
-        return new FallbackResourceCapacityAdapter(workItemPlanRepository, workItemRepository, workItemPlanMapper);
+        return new FallbackResourceCapacityAdapter(workItemPlanRepository, workItemRepository, workItemPlanMapper,
+                new FallbackResourceCalendarAdapter());
     }
 
     private WorkItemPlanModel plan(Long workItemId, Long start, Long end) {

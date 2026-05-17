@@ -252,6 +252,7 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
             List<OptimizationConstraintViolation> violations = new ArrayList<>();
             List<String> reasons = new ArrayList<>();
             reasons.add("Scheduled at earliest available assignee capacity");
+            reasons.addAll(capacityReasons(projectModel, assigneeId));
             if (earliestStart > projectModel.planningStart()) {
                 reasons.add("Start delayed by dependency or prior capacity usage");
             }
@@ -287,6 +288,22 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
             markSuccessorsReady(workItemId, projectModel, remainingPredecessors, ready);
         }
         return schedules;
+    }
+
+    private List<String> capacityReasons(OptimizationProjectModel projectModel, Long assigneeId) {
+        List<String> reasons = new ArrayList<>();
+        var resolution = projectModel.capacityResolution();
+        if (resolution.fallbackUserIds().contains(assigneeId)) {
+            reasons.add("Fallback calendar capacity used for assignee");
+        }
+        long deductedMillis = resolution.workloadBuckets().stream()
+                .filter(bucket -> Objects.equals(bucket.assigneeId(), assigneeId))
+                .mapToLong(bucket -> bucket.totalReservedMillis() == null ? 0L : bucket.totalReservedMillis())
+                .sum();
+        if (deductedMillis > 0) {
+            reasons.add("Existing work_item_plans workload deducted before scheduling");
+        }
+        return reasons;
     }
 
     private Queue<Long> readyQueue(OptimizationProjectModel projectModel, Map<Long, OptimizationWorkItem> itemById) {
