@@ -48,7 +48,7 @@ MVP includes:
 - Current calendar implementation is fallback 8h weekday UTC slots only.
 - Cross-project and same-project outside-scope workload are derived from active `work_item_plans` in `pm_core` and subtracted from fallback capacity.
 - Capacity source metadata is stored in optimization summary and exposed by review payload.
-- Skill data does not exist yet and is deferred to a later phase after calendar and workload integration.
+- Skill data does not exist yet. Future implementation will store `skills`, `work_item_skills`, and `user_skills` inside `pm_core`.
 
 ## Non-Negotiable Rules
 
@@ -782,7 +782,6 @@ Deferred sources:
 ```text
 historical expertise
 team calendar
-skills matching
 external/shared workload outside pm_core
 ```
 
@@ -1650,6 +1649,326 @@ Apply does not recompute external capacity.
 Tests cover calendar contract, workload subtraction, fallback, privacy, and deterministic scheduling.
 ```
 
+## Phase 8 - Skill-Aware Assignment
+
+Status: planned.
+
+This phase stores skill data in `pm_core` and uses it to rank candidate assignees for selected work items. Skill matching improves assignment quality but does not replace permissions, capacity, dependency, or review/apply rules.
+
+### Product Goal
+
+```text
+1. Let project managers define skills required or preferred by a work item.
+2. Let pm_core store user skill profiles for assignment optimization.
+3. Prefer candidates whose skills match work item needs.
+4. Explain skill fit and missing skills in review payload.
+5. Keep generation snapshot-based and apply-later.
+```
+
+### Data Ownership
+
+```text
+pm_core owns skills.
+pm_core owns work_item_skills.
+pm_core owns user_skills.
+No external HR/account skill source is required for initial implementation.
+```
+
+### Non-Negotiable Skill Rules
+
+```text
+1. Do not infer skills from summary, description, labels, comments, or component names.
+2. Only explicit work_item_skills and user_skills affect ranking.
+3. Missing skill data must not block optimization generation.
+4. ASSIGNABLE_USER permission remains the eligibility gate for project member candidates.
+5. Skill matching changes ranking cost, not tenant/project membership rules.
+6. Apply must not recompute skill fit.
+7. Review payload must not expose unrelated user skills outside selected work item requirements.
+```
+
+### Skill Data Model
+
+Add tables:
+
+```text
+skills
+work_item_skills
+user_skills
+```
+
+`skills` fields:
+
+```text
+id
+tenant_id
+code
+name
+description
+active
+created_at
+created_by
+updated_at
+updated_by
+deleted_at
+```
+
+`work_item_skills` fields:
+
+```text
+id
+tenant_id
+project_id
+work_item_id
+skill_id
+requirement_type
+min_proficiency
+weight
+source
+created_at
+created_by
+updated_at
+updated_by
+deleted_at
+```
+
+`user_skills` fields:
+
+```text
+id
+tenant_id
+user_id
+skill_id
+proficiency
+confidence
+source
+verified_at
+created_at
+created_by
+updated_at
+updated_by
+deleted_at
+```
+
+Enums:
+
+```text
+SkillRequirementType
+  REQUIRED
+  PREFERRED
+
+SkillProficiency
+  NOVICE
+  WORKING
+  PROFICIENT
+  EXPERT
+
+SkillSource
+  MANUAL
+  IMPORT
+  HR_PROFILE
+  INTEGRATION
+```
+
+Indexes:
+
+```text
+skills: unique active (tenant_id, code) where deleted_at is null
+work_item_skills: unique active (tenant_id, work_item_id, skill_id) where deleted_at is null
+work_item_skills: index (tenant_id, project_id, work_item_id)
+user_skills: unique active (tenant_id, user_id, skill_id) where deleted_at is null
+user_skills: index (tenant_id, skill_id, proficiency)
+```
+
+### Domain Models And Ports
+
+Domain entities:
+
+```text
+SkillEntity
+WorkItemSkillEntity
+UserSkillEntity
+```
+
+Optimization models:
+
+```text
+OptimizationSkillRequirement
+OptimizationCandidateSkill
+OptimizationCandidateSkillFit
+```
+
+Read ports:
+
+```text
+ISkillReadPort
+  listActiveByIds(Long tenantId, List<Long> skillIds)
+
+IWorkItemSkillReadPort
+  listActiveByWorkItemIds(Long tenantId, List<Long> workItemIds)
+
+IUserSkillReadPort
+  listActiveByUserIds(Long tenantId, List<Long> userIds)
+```
+
+### Skill Fit Model
+
+`OptimizationCandidateSkillFit` should contain:
+
+```text
+workItemId
+candidateId
+matchedRequiredSkillCount
+totalRequiredSkillCount
+matchedPreferredSkillCount
+totalPreferredSkillCount
+requiredCoveragePercent
+preferredCoveragePercent
+proficiencyScore
+missingRequiredSkillIds
+missingPreferredSkillIds
+matchedSkillIds
+confidence
+```
+
+Attach skill fit to `OptimizationCandidateAssignee` so assignment algorithm can rank candidates without side-channel lookup.
+
+### Model Builder Flow Update
+
+```text
+1. Resolve candidates as current implementation does.
+2. Collect selected workItemIds.
+3. Collect candidate userIds.
+4. Load work_item_skills by selected work item ids.
+5. Load user_skills by candidate user ids.
+6. Build skill fit per workItemId + candidateId.
+7. Attach skill fit to candidate assignees.
+8. Add structured warnings for missing or partial skill data.
+```
+
+### Skill-Aware Ranking
+
+Add skill factors to candidate cost:
+
+```text
+baseCost
+- requiredSkillMatchBonus
+- preferredSkillMatchBonus
+- proficiencyBonus
++ missingRequiredSkillPenalty
++ missingPreferredSkillPenalty
++ lowConfidenceSkillPenalty
++ existing reassignment/capacity penalties
+```
+
+Initial cost constants:
+
+```text
+REQUIRED_SKILL_MATCH_BONUS = 25
+PREFERRED_SKILL_MATCH_BONUS = 8
+EXPERT_PROFICIENCY_BONUS = 6
+PROFICIENT_PROFICIENCY_BONUS = 4
+WORKING_PROFICIENCY_BONUS = 2
+MISSING_REQUIRED_SKILL_PENALTY = 40
+MISSING_PREFERRED_SKILL_PENALTY = 6
+LOW_CONFIDENCE_SKILL_PENALTY = 5
+```
+
+Ranking behavior:
+
+```text
+1. Required skill match can outweigh project member fallback and component lead bonus.
+2. Current assignee retention still matters in MINIMAL_REASSIGNMENT.
+3. Capacity overload remains a heavy penalty.
+4. Candidate with missing required skills remains eligible by default but receives strong penalty.
+5. If every candidate misses required skills, choose least-bad candidate and explain gap.
+6. Deterministic tie-breaker remains effectiveCost, candidateId, workItemId.
+```
+
+### Assignment Reasons
+
+Examples:
+
+```text
+Candidate matches 2/2 required skills.
+Candidate matches 1/3 preferred skills.
+Candidate has EXPERT proficiency in backend-java.
+Candidate missing required skill kubernetes.
+Skill data missing for candidate; ranking confidence is low.
+```
+
+### Review Payload Additions
+
+Per item:
+
+```text
+candidateSkillFit
+  suggestedAssigneeId
+  requiredCoveragePercent
+  preferredCoveragePercent
+  matchedRequiredSkills
+  missingRequiredSkills
+  matchedPreferredSkills
+  missingPreferredSkills
+  proficiencySummary
+  confidence
+```
+
+Skill item shape:
+
+```text
+skillId
+skillCode
+skillName
+requiredProficiency
+candidateProficiency
+requirementType
+matched
+```
+
+Summary additions:
+
+```text
+itemsWithSkillRequirements
+itemsMissingSkillRequirements
+candidatesWithSkillProfiles
+candidatesMissingSkillProfiles
+requiredSkillMismatchCount
+skillRankingConfidence
+```
+
+Privacy rule:
+
+```text
+Show only skill fit related to selected work item requirements.
+Do not expose full user skill profile for unrelated skills.
+Do not expose skills for users outside generated candidates.
+```
+
+### New Warning Codes
+
+```text
+WORK_ITEM_SKILL_DATA_MISSING
+CANDIDATE_SKILL_DATA_MISSING
+REQUIRED_SKILL_MISSING
+PARTIAL_SKILL_MATCH
+LOW_CONFIDENCE_SKILL_DATA
+```
+
+### Definition Of Done
+
+```text
+skills, work_item_skills, and user_skills tables exist and validate.
+Skill domain entities, persistence models, repositories, mappers, and read ports exist.
+OptimizationProjectModelBuilder loads work item skill requirements and user skills.
+OptimizationCandidateAssignee carries skill fit.
+GreedyOptimizationRunGenerator uses skill fit in candidate cost.
+Assignment reasons explain skill matches and gaps.
+Review payload exposes skill fit without leaking unrelated user skills.
+Missing skill data produces warnings but does not block generation.
+Apply remains snapshot-based and does not recompute skill fit.
+Tests cover skill fit, ranking, warnings, privacy, and determinism.
+```
+
 ## Alternative Flows
 
 ### AF-1 Dependency Cycle Exists
@@ -1961,6 +2280,180 @@ Remaining work:
 4. Add UI consumption of summary capacity metadata.
 ```
 
+### Sprint 11 - Skill Data Foundation
+
+Status: planned.
+
+Goal:
+1. Store canonical skills, work item skill requirements, and user skill profiles inside `pm_core`.
+
+Scope:
+1. Add Flyway migration for `skills`, `work_item_skills`, and `user_skills`.
+2. Add enums `SkillRequirementType`, `SkillProficiency`, and `SkillSource`.
+3. Add domain entities, persistence models, repositories, mappers, and ports.
+4. Add read ports `ISkillReadPort`, `IWorkItemSkillReadPort`, and `IUserSkillReadPort`.
+5. Keep all reads and writes tenant-scoped and soft-delete aware.
+6. Add minimal management service/command handlers only if needed to seed test data.
+
+Out of scope:
+1. No optimizer ranking changes.
+2. No UI skill management.
+3. No text/label/component-name skill inference.
+4. No external skill service integration.
+
+Definition of Done:
+1. Migrations compile with JPA validate.
+2. Active skill queries work by tenant.
+3. Duplicate active `skills.code`, `work_item_skills`, and `user_skills` are prevented.
+4. Soft-deleted skill rows are excluded.
+5. Tests cover tenant scope, soft delete, uniqueness, and mapper conversion.
+
+Verification:
+1. `./mvnw.cmd -Dtest='*Skill*Test' test`
+2. `./mvnw.cmd clean compile`
+
+### Sprint 12 - Skill Fit In Optimization Model
+
+Status: planned.
+
+Goal:
+1. Load skill requirements and user skill profiles during optimization model build.
+2. Attach deterministic skill fit to each candidate assignee.
+
+Scope:
+1. Add `OptimizationSkillRequirement`, `OptimizationCandidateSkill`, and `OptimizationCandidateSkillFit` models.
+2. Extend `OptimizationCandidateAssignee` with nullable or neutral `skillFit`.
+3. Extend `OptimizationProjectModelBuilder` to load `work_item_skills` for selected items.
+4. Extend `OptimizationProjectModelBuilder` to load `user_skills` for generated candidate ids.
+5. Calculate skill fit for every work item + candidate pair.
+6. Emit `WORK_ITEM_SKILL_DATA_MISSING`, `CANDIDATE_SKILL_DATA_MISSING`, `PARTIAL_SKILL_MATCH`, and `LOW_CONFIDENCE_SKILL_DATA` warnings where applicable.
+
+Out of scope:
+1. No cost/ranking changes yet.
+2. No review payload changes yet.
+3. No hard rejection for missing required skills.
+
+Definition of Done:
+1. Model builder returns candidates with skill fit.
+2. No skill data produces neutral fit and warning, not generation failure.
+3. Full, partial, and missing skill matches are represented explicitly.
+4. Skill fit ordering and percentages are deterministic.
+5. Tests cover full match, partial match, missing required skill, missing candidate profile, and no work item skill requirements.
+
+Verification:
+1. `./mvnw.cmd -Dtest=OptimizationProjectModelBuilderTest test`
+2. `./mvnw.cmd -Dtest='*Skill*Test' test`
+
+### Sprint 13 - Skill-Aware Assignment Ranking
+
+Status: planned.
+
+Goal:
+1. Use candidate skill fit to improve assignment suggestions.
+2. Explain skill-based ranking decisions in assignment reasons.
+
+Scope:
+1. Add skill cost constants to `OptimizationConstants`.
+2. Update `GreedyOptimizationRunGenerator.candidateCost` to apply skill bonuses and penalties.
+3. Keep required skill missing as strong penalty, not hard rejection.
+4. Add assignment reasons for required matches, preferred matches, proficiency, missing required skills, and low confidence skill data.
+5. Preserve capacity, overload, reassignment, and `MINIMAL_REASSIGNMENT` behavior.
+6. Add `REQUIRED_SKILL_MISSING` warning when selected candidate lacks required skill.
+
+Out of scope:
+1. No CP-SAT/solver-based skill assignment.
+2. No team-level skill balancing.
+3. No skill learning from past work.
+
+Definition of Done:
+1. Skill match can change chosen assignee when capacity and role costs are otherwise close.
+2. Overload and no-reassignment constraints still behave correctly.
+3. Assignment reasons include skill match/gap details.
+4. Deterministic tie-breaker remains effectiveCost, candidateId, workItemId.
+5. Tests cover skill match beats project member fallback, missing required skill penalty, capacity beats skill bonus, and minimal reassignment behavior.
+
+Verification:
+1. `./mvnw.cmd -Dtest=GreedyOptimizationRunGeneratorTest test`
+2. `./mvnw.cmd -Dtest='*Optimization*Test' test`
+
+### Sprint 14 - Skill Review Contract
+
+Status: planned.
+
+Goal:
+1. Expose skill fit and skill warnings in optimization review payload.
+2. Keep unrelated user skills private.
+
+Scope:
+1. Extend `OptimizationRunSummary` with skill ranking summary fields.
+2. Persist skill fit details in `assignment_reasons_json` and/or structured summary JSON.
+3. Extend `OptimizationRunItemView` with selected candidate skill fit if needed by UI.
+4. Expose matched/missing required and preferred skills for selected work item requirements only.
+5. Add privacy tests to ensure unrelated user skills are not exposed.
+
+Out of scope:
+1. No UI implementation in `pm_core`.
+2. No full user skill profile endpoint in optimization review.
+3. No external skill visibility rules beyond tenant scoping and candidate-only exposure.
+
+Definition of Done:
+1. GET optimization run returns skill fit summary for generated suggestions.
+2. Review payload explains why skill fit affected assignment.
+3. Review payload never exposes unrelated user skills or non-candidate user skills.
+4. Apply still uses persisted suggestion snapshot and does not recompute skill fit.
+5. Tests cover payload shape, warnings, summary metrics, and privacy.
+
+Verification:
+1. `./mvnw.cmd -Dtest=GetOptimizationRunQueryHandlerTest test`
+2. `./mvnw.cmd -Dtest='*Optimization*Test,*Skill*Test' test`
+
+### Sprint 15 - Skill Management APIs
+
+Status: planned.
+
+Goal:
+1. Provide backend APIs to manage skill catalog, work item skill requirements, and user skill profiles owned by `pm_core`.
+
+Scope:
+1. Add skill catalog create/update/list/archive APIs.
+2. Add work item skill requirement list/replace APIs under project work item routes.
+3. Add user skill profile list/replace APIs for tenant users.
+4. Validate skill ids are active and tenant-scoped.
+5. Validate proficiency and requirement type transitions.
+6. Keep API responses in `GeneralResponse<?>` through `ResponseUtils`.
+
+Proposed APIs:
+
+```http
+GET /api/v1/skills
+POST /api/v1/skills
+PATCH /api/v1/skills/{skillId}
+DELETE /api/v1/skills/{skillId}
+
+GET /api/v1/projects/{projectId}/work-items/{workItemId}/skills
+PUT /api/v1/projects/{projectId}/work-items/{workItemId}/skills
+
+GET /api/v1/users/{userId}/skills
+PUT /api/v1/users/{userId}/skills
+```
+
+Out of scope:
+1. No frontend UI in this backend sprint.
+2. No automatic skill inference.
+3. No external HR/account skill synchronization.
+4. No historical expertise calculation.
+
+Definition of Done:
+1. Skill catalog APIs are tenant-scoped and soft-delete aware.
+2. Work item skill requirement APIs validate project/work item ownership.
+3. User skill profile APIs validate tenant scope and active skills.
+4. Replace operations are transactional.
+5. Tests cover validation, tenant isolation, soft delete, and duplicate handling.
+
+Verification:
+1. `./mvnw.cmd -Dtest='*Skill*ControllerTest,*Skill*CommandHandlerTest,*Skill*QueryHandlerTest' test`
+2. `./mvnw.cmd clean compile`
+
 ### Future Sprint Template
 
 Use this format when adding new sprint sections:
@@ -1993,7 +2486,7 @@ Verification:
 2. Richer review payload fields for per-item capacity/workload reasons.
 3. Privacy regression tests for cross-project workload aggregation.
 4. Real calendar provider integration when authoritative source exists.
-5. Skill data model and ranking integration when authoritative skill source exists.
+5. Skill data foundation and skill-aware assignment ranking in pm_core.
 6. Deadline-safe and fastest-delivery modes.
 ```
 
@@ -2034,6 +2527,17 @@ Capacity resolver falls back per assignee when calendar source is missing
 Capacity resolver reports partial calendar/workload coverage
 Scheduler uses net usable capacity after workload subtraction
 Cross-project workload review output is aggregate-only
+Skill read ports return tenant-scoped active skill data
+Skill fit full required match
+Skill fit partial required match
+Skill fit preferred-only match
+Candidate missing user skill profile
+Work item missing skill requirements
+Required skill penalty beats component lead bonus
+Required skill match beats project member fallback
+Minimal reassignment keeps current assignee when skill delta is small
+Overload penalty still beats skill bonus when capacity is unavailable
+Skill fit deterministic ordering with equal scores
 ```
 
 Handler/query tests:
@@ -2048,12 +2552,16 @@ Partial apply marks skipped items
 Get run returns capacity source and coverage metadata
 Get run returns only aggregated cross-project workload impact
 Generate run persists calendar/workload fetchedAt metadata
+Generate run persists skill fit reasons and warnings
+Get run returns skill fit summary without unrelated user skills
+Skill management APIs enforce tenant scope and soft delete
 ```
 
 Validation commands:
 
 ```bash
 ./mvnw.cmd -Dtest='*Optimization*Test' test
+./mvnw.cmd -Dtest='*Skill*Test' test
 ./mvnw.cmd clean compile
 ```
 
@@ -2068,6 +2576,8 @@ Validation commands:
 - Initial cross-project workload integration uses active `work_item_plans` in `pm_core`; external/shared planning store integration can follow when workload spans services.
 - Calendar integration requires a future authoritative source for working hours, holidays, leave, and exceptions.
 - Cross-project workload data must stay aggregate-only in optimization review payload.
-- Skill data does not exist yet; do not implement text/label skill heuristics in Sprint 6.
+- Skill data is planned as pm_core-owned `skills`, `work_item_skills`, and `user_skills`; do not implement text/label/component-name skill heuristics.
+- Skill profile data may become stale; optimization generation must snapshot skill fit and apply must not recompute it.
+- User skill profile visibility must stay limited to selected work item requirements and generated candidates in optimization review.
 - Workload data may be sensitive; apply/review permission model must be revisited after MVP.
 - Whole-project optimization remains out of MVP because results are slower, noisier, and harder to review.
