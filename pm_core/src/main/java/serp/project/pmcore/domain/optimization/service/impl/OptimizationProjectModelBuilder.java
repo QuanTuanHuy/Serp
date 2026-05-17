@@ -13,6 +13,7 @@ import serp.project.pmcore.domain.issuelink.entity.IssueLinkTypeEntity;
 import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkPort;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkTypePort;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
@@ -26,17 +27,19 @@ import serp.project.pmcore.domain.optimization.model.OptimizationPriorityScore;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
+import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
+import serp.project.pmcore.domain.optimization.port.IProjectMemberCandidatePort;
+import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
+import serp.project.pmcore.domain.optimization.port.IWorkItemComponentReadPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectComponentPort;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
-import java.time.DayOfWeek;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,17 +60,15 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OptimizationProjectModelBuilder implements IOptimizationProjectModelBuilder {
-    // Time constants in milliseconds for duration calculations
-    private static final long HOUR_MILLIS = 3_600_000L;
-    private static final long DAY_MILLIS = 86_400_000L;
-    // Standard daily working capacity: 8 hours per day
-    private static final long DAILY_CAPACITY_MILLIS = 8 * HOUR_MILLIS;
-
     private final IProjectReadPort projectReadPort;
     private final IWorkItemReadPort workItemReadPort;
     private final IWorkItemPlanPort workItemPlanPort;
     private final IIssueLinkPort issueLinkPort;
     private final IIssueLinkTypePort issueLinkTypePort;
+    private final IProjectComponentPort projectComponentPort;
+    private final IWorkItemComponentReadPort workItemComponentReadPort;
+    private final IProjectMemberCandidatePort projectMemberCandidatePort;
+    private final IResourceCapacityPort resourceCapacityPort;
 
     @Override
     public OptimizationProjectModel build(OptimizationBuilderInput input) {
@@ -89,7 +90,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         Map<Long, OptimizationDuration> durations = resolveDurations(selected, warnings);
         Set<Long> criticalPathIds = resolveCriticalPath(graph, durations);
         Map<Long, OptimizationPriorityScore> scores = resolvePriorityScores(selected, graph, durations, warnings);
-        Map<Long, List<OptimizationCandidateAssignee>> candidates = resolveCandidates(selected, project, warnings);
+        Map<Long, List<OptimizationCandidateAssignee>> candidates = resolveCandidates(input.tenantId(), selected, project, warnings);
         // Assemble work items sorted by priority
         List<OptimizationWorkItem> workItems = selected.stream()
                 .map(item -> new OptimizationWorkItem(
@@ -103,10 +104,24 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 .sorted(workItemComparator())
                 .toList();
         // Build daily capacity slots for all unique candidate assignees
-        List<ResourceCapacitySlot> capacitySlots = buildCapacitySlots(input, candidates.values().stream()
+        List<Long> candidateIds = candidates.values().stream()
                 .flatMap(Collection::stream)
                 .map(OptimizationCandidateAssignee::candidateId)
-                .collect(Collectors.toCollection(LinkedHashSet::new)));
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                .stream()
+                .toList();
+        List<ResourceCapacitySlot> capacitySlots = resourceCapacityPort.getCapacitySlots(
+                input.tenantId(), candidateIds, input.planningStart(), input.planningEnd());
+        if (!candidateIds.isEmpty()) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.LOW_CONFIDENCE_CAPACITY,
+                    null, "Fallback capacity used", OptimizationConstants.FALLBACK_CAPACITY_DETAILS));
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CALENDAR,
+                    null, "Calendar data is unavailable", null));
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CROSS_PROJECT_WORKLOAD,
+                    null, "Cross-project workload data is unavailable", null));
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.SKILL_DATA_UNAVAILABLE,
+                    null, "Skill data is unavailable", null));
+        }
         // Resolve earliest start times based on external dependency planned ends
         Map<Long, Long> earliestStarts = resolveExternalEarliestStarts(input.tenantId(), graph.externalEdges(), warnings);
         log.info("Built optimization project model: tenantId={}, projectId={}, items={}, internalDependencies={}, externalDependencies={}, warnings={}",
@@ -189,7 +204,12 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             } else {
                 // Use hierarchy-level-based default and warn about low confidence
                 long fallback = defaultDuration(item.getIssueTypeHierarchyLevel());
-                result.put(item.getId(), new OptimizationDuration(item.getId(), fallback, OptimizationConfidence.LOW, "DEFAULT"));
+                result.put(item.getId(), new OptimizationDuration(
+                        item.getId(),
+                        fallback,
+                        OptimizationConfidence.LOW,
+                        OptimizationConstants.DURATION_SOURCE_DEFAULT
+                ));
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_ESTIMATE, item.getId(), "Work item missing estimate", null));
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.DEFAULT_DURATION_USED, item.getId(), "Default duration used", String.valueOf(fallback)));
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.LOW_CONFIDENCE_DURATION, item.getId(), "Duration confidence is low", null));
@@ -237,13 +257,21 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         for (WorkItemEntity item : items) {
             // Priority factor: inverse of sequence (lower sequence = higher priority), default 0.5 if missing
             boolean neutralPriority = item.getPrioritySequence() == null;
-            double priorityFactor = neutralPriority ? 0.5D : 1D / Math.max(1, item.getPrioritySequence());
+            double priorityFactor = neutralPriority
+                    ? OptimizationConstants.PRIORITY_NEUTRAL_FACTOR
+                    : 1D / Math.max(1, item.getPrioritySequence());
             // Due date factor: closer deadlines increase score, normalized against 14-day window
-            double dueFactor = item.getDueDate() == null ? 0D : Math.max(0D, 1D - ((double) (item.getDueDate() - System.currentTimeMillis()) / (14D * DAY_MILLIS)));
+            double dueFactor = item.getDueDate() == null
+                    ? 0D
+                    : Math.max(0D, 1D - ((double) (item.getDueDate() - System.currentTimeMillis())
+                    / (OptimizationConstants.DUE_DATE_WINDOW_DAYS * OptimizationConstants.DAY_MILLIS)));
             // Blocker factor: each blocked successor adds 0.25 to the score
-            double blockerFactor = outgoing.getOrDefault(item.getId(), 0) * 0.25D;
+            double blockerFactor = outgoing.getOrDefault(item.getId(), 0)
+                    * OptimizationConstants.BLOCKER_FACTOR_PER_SUCCESSOR;
             // Penalty for items using default duration estimates (low confidence)
-            double estimatePenalty = "DEFAULT".equals(durations.get(item.getId()).source()) ? -0.2D : 0D;
+            double estimatePenalty = OptimizationConstants.DURATION_SOURCE_DEFAULT.equals(durations.get(item.getId()).source())
+                    ? OptimizationConstants.DEFAULT_ESTIMATE_PENALTY
+                    : 0D;
             double score = priorityFactor + dueFactor + blockerFactor + estimatePenalty;
             if (neutralPriority) {
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.NEUTRAL_PRIORITY_USED, item.getId(), "Priority sequence missing", null));
@@ -253,20 +281,34 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         return result;
     }
 
-    private Map<Long, List<OptimizationCandidateAssignee>> resolveCandidates(List<WorkItemEntity> items,
+    private Map<Long, List<OptimizationCandidateAssignee>> resolveCandidates(Long tenantId,
+                                                                             List<WorkItemEntity> items,
                                                                              ProjectEntity project,
                                                                              List<OptimizationConstraintViolation> warnings) {
         Map<Long, List<OptimizationCandidateAssignee>> result = new HashMap<>();
+        Map<Long, List<Long>> componentLeadsByWorkItemId = resolveComponentLeads(tenantId, project.getId(), items);
+        List<Long> assignableProjectMembers = projectMemberCandidatePort.listAssignableMembers(project);
+        if (assignableProjectMembers.isEmpty()) {
+            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.NO_PROJECT_MEMBER_POOL,
+                    null, "No assignable project member pool", null));
+        }
         for (WorkItemEntity item : items) {
-            // Collect potential assignees: current assignee, project lead, reporter
+            // Collect potential assignees: high-signal fields, component leads, assignable project members.
             Map<Long, CandidateFlags> flagsById = new LinkedHashMap<>();
             addCandidate(flagsById, item.getAssigneeId(), flags -> flags.currentAssignee = true);
+            for (Long componentLeadId : componentLeadsByWorkItemId.getOrDefault(item.getId(), List.of())) {
+                addCandidate(flagsById, componentLeadId, flags -> flags.componentLead = true);
+            }
             addCandidate(flagsById, project.getLeadUserId(), flags -> flags.projectLead = true);
             addCandidate(flagsById, item.getReporterId(), flags -> flags.reporter = true);
+            for (Long memberId : assignableProjectMembers) {
+                addCandidate(flagsById, memberId, flags -> flags.projectMember = true);
+            }
             // Sort by base cost (lower is preferred) then by candidate ID for determinism
             List<OptimizationCandidateAssignee> candidates = flagsById.entrySet().stream()
                     .map(entry -> new OptimizationCandidateAssignee(item.getId(), entry.getKey(), baseCost(entry.getValue()),
-                            entry.getValue().currentAssignee, entry.getValue().componentLead, entry.getValue().projectLead, entry.getValue().reporter))
+                            entry.getValue().currentAssignee, entry.getValue().componentLead, entry.getValue().projectLead,
+                            entry.getValue().reporter, entry.getValue().projectMember))
                     .sorted(Comparator.comparingDouble(OptimizationCandidateAssignee::baseCost)
                             .thenComparing(OptimizationCandidateAssignee::candidateId))
                     .toList();
@@ -278,26 +320,24 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         return result;
     }
 
-    private List<ResourceCapacitySlot> buildCapacitySlots(OptimizationBuilderInput input, Set<Long> assigneeIds) {
-        if (assigneeIds.isEmpty()) {
-            return List.of();
+    private Map<Long, List<Long>> resolveComponentLeads(Long tenantId, Long projectId, List<WorkItemEntity> items) {
+        List<WorkItemComponentLink> links = workItemComponentReadPort.listActiveByWorkItemIds(tenantId, idsOf(items));
+        if (links.isEmpty()) {
+            return Map.of();
         }
-        List<ResourceCapacitySlot> slots = new ArrayList<>();
-        LocalDate start = Instant.ofEpochMilli(input.planningStart()).atZone(ZoneOffset.UTC).toLocalDate();
-        LocalDate end = Instant.ofEpochMilli(input.planningEnd()).atZone(ZoneOffset.UTC).toLocalDate();
-        // Create one slot per weekday per assignee with standard 8-hour daily capacity
-        for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
-            DayOfWeek dow = day.getDayOfWeek();
-            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                continue;
-            }
-            long slotStart = day.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli();
-            long slotEnd = slotStart + DAY_MILLIS;
-            for (Long assigneeId : assigneeIds) {
-                slots.add(new ResourceCapacitySlot(assigneeId, slotStart, slotEnd, DAILY_CAPACITY_MILLIS));
+        Map<Long, ProjectComponentEntity> componentsById = projectComponentPort
+                .getComponentsByIds(links.stream().map(WorkItemComponentLink::componentId).distinct().toList(), projectId, tenantId)
+                .stream()
+                .collect(Collectors.toMap(ProjectComponentEntity::getId, component -> component, (left, right) -> left));
+        Map<Long, List<Long>> result = new HashMap<>();
+        for (WorkItemComponentLink link : links) {
+            ProjectComponentEntity component = componentsById.get(link.componentId());
+            if (component != null && component.getLeadUserId() != null) {
+                result.computeIfAbsent(link.workItemId(), id -> new ArrayList<>()).add(component.getLeadUserId());
             }
         }
-        return slots;
+        result.replaceAll((id, leads) -> leads.stream().distinct().sorted().toList());
+        return result;
     }
 
     private Map<Long, Long> resolveExternalEarliestStarts(Long tenantId,
@@ -416,12 +456,12 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     private long defaultDuration(Integer hierarchyLevel) {
         // Sub-tasks get 2h, epics get 3d, stories/tasks get 1d as default estimates
         if (hierarchyLevel != null && hierarchyLevel < 0) {
-            return 2 * HOUR_MILLIS;
+            return OptimizationConstants.DEFAULT_DURATION_SUBTASK_HOURS * OptimizationConstants.HOUR_MILLIS;
         }
         if (hierarchyLevel != null && hierarchyLevel > 0) {
-            return 3 * DAY_MILLIS;
+            return OptimizationConstants.DEFAULT_DURATION_EPIC_DAYS * OptimizationConstants.DAY_MILLIS;
         }
-        return DAY_MILLIS;
+        return OptimizationConstants.DAY_MILLIS;
     }
 
     private boolean isDone(WorkItemEntity item) {
@@ -439,18 +479,21 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
 
     private double baseCost(CandidateFlags flags) {
         // Lower cost = more preferred assignee; discounts applied for existing roles
-        double cost = 10D;
+        double cost = OptimizationConstants.BASE_ASSIGNMENT_COST;
         if (flags.currentAssignee) {
-            cost -= 3D;
+            cost -= OptimizationConstants.CURRENT_ASSIGNEE_DISCOUNT;
         }
         if (flags.componentLead) {
-            cost -= 2D;
+            cost -= OptimizationConstants.COMPONENT_LEAD_DISCOUNT;
         }
         if (flags.projectLead) {
-            cost -= 1D;
+            cost -= OptimizationConstants.PROJECT_LEAD_DISCOUNT;
         }
         if (flags.reporter) {
-            cost -= 0.5D;
+            cost -= OptimizationConstants.REPORTER_DISCOUNT;
+        }
+        if (flags.projectMember) {
+            cost -= OptimizationConstants.PROJECT_MEMBER_DISCOUNT;
         }
         return cost;
     }
@@ -463,5 +506,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         private boolean componentLead;
         private boolean projectLead;
         private boolean reporter;
+        private boolean projectMember;
     }
 }

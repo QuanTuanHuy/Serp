@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.optimization.service.impl;
 
 import org.springframework.stereotype.Service;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
@@ -38,9 +39,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator {
-    // Number of milliseconds in one hour, used for overload cost calculation
-    private static final long HOUR_MILLIS = 3_600_000L;
-
     @Override
     public OptimizationGenerationResult generate(OptimizationProjectModel projectModel, OptimizationBuilderInput input) {
         // Carry forward any pre-existing warnings from the project model
@@ -163,15 +161,18 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
         double cost = candidate.baseCost();
         // Add reassignment penalty: higher in MINIMAL_REASSIGNMENT mode to discourage changing assignees
         if (!Objects.equals(candidate.candidateId(), item.workItem().getAssigneeId())) {
-            cost += input.mode() == OptimizationMode.MINIMAL_REASSIGNMENT ? 8D : 2D;
+            cost += input.mode() == OptimizationMode.MINIMAL_REASSIGNMENT
+                    ? OptimizationConstants.MINIMAL_REASSIGNMENT_PENALTY
+                    : OptimizationConstants.STANDARD_REASSIGNMENT_PENALTY;
         }
         // Bonus for keeping current assignee in MINIMAL_REASSIGNMENT mode
         if (candidate.currentAssignee() && input.mode() == OptimizationMode.MINIMAL_REASSIGNMENT) {
-            cost -= 5D;
+            cost -= OptimizationConstants.MINIMAL_REASSIGNMENT_CURRENT_ASSIGNEE_BONUS;
         }
         // Heavy penalty for overloading: fixed cost plus proportional cost based on overload hours
         if (overload > 0) {
-            cost += 25D + ((double) overload / HOUR_MILLIS);
+            cost += OptimizationConstants.OVERLOAD_BASE_PENALTY
+                    + ((double) overload / OptimizationConstants.HOUR_MILLIS);
         }
         return new CandidateCost(candidate, cost, overload > 0);
     }

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
@@ -46,8 +47,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class GenerateOptimizationRunCommandHandler
         implements ICommandHandler<GenerateOptimizationRunCommand, OptimizationRunReviewView> {
-    private static final String DEFAULT_SCOPE = "SELECTED_WORK_ITEMS";
-
     private final IOptimizationProjectModelBuilder optimizationProjectModelBuilder;
     private final IOptimizationRunGenerator optimizationRunGenerator;
     private final IOptimizationRunPort optimizationRunPort;
@@ -141,8 +140,10 @@ public class GenerateOptimizationRunCommandHandler
                     .scheduleDecision(schedule == null ? OptimizationDecision.ACCEPTED : OptimizationDecision.PENDING)
                     .assignmentApplyStatus(OptimizationApplyStatus.NOT_APPLIED)
                     .scheduleApplyStatus(OptimizationApplyStatus.NOT_APPLIED)
-                    .score(BigDecimal.valueOf(item.priorityScore().score()).setScale(6, RoundingMode.HALF_UP))
-                    .cost(BigDecimal.valueOf(assignment == null ? 0D : assignment.cost()).setScale(6, RoundingMode.HALF_UP))
+                    .score(BigDecimal.valueOf(item.priorityScore().score())
+                            .setScale(OptimizationConstants.SCORE_DECIMAL_SCALE, RoundingMode.HALF_UP))
+                    .cost(BigDecimal.valueOf(assignment == null ? 0D : assignment.cost())
+                            .setScale(OptimizationConstants.SCORE_DECIMAL_SCALE, RoundingMode.HALF_UP))
                     .confidence(schedule == null ? item.duration().confidence().name() : schedule.confidence().name())
                     .assignmentReasonsJson(jsonUtils.toJson(assignment == null ? List.of() : assignment.reasons()))
                     .scheduleReasonsJson(jsonUtils.toJson(schedule == null ? List.of() : schedule.reasons()))
@@ -189,7 +190,7 @@ public class GenerateOptimizationRunCommandHandler
     }
 
     private String normalizeScope(String scope) {
-        return scope == null || scope.isBlank() ? DEFAULT_SCOPE : scope;
+        return scope == null || scope.isBlank() ? OptimizationConstants.DEFAULT_SCOPE : scope;
     }
 
     private void validate(GenerateOptimizationRunCommand command) {
@@ -212,8 +213,10 @@ public class GenerateOptimizationRunCommandHandler
         if (command.selectedWorkItemIds().isEmpty()) {
             throw new IllegalArgumentException("selectedWorkItemIds is required");
         }
-        if (command.selectedWorkItemIds().size() > 50) {
-            throw new IllegalArgumentException("selectedWorkItemIds must not exceed 50 items");
+        if (command.selectedWorkItemIds().size() > OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS) {
+            throw new IllegalArgumentException(
+                    "selectedWorkItemIds must not exceed " + OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS + " items"
+            );
         }
         if (new LinkedHashSet<>(command.selectedWorkItemIds()).size() != command.selectedWorkItemIds().size()) {
             throw new IllegalArgumentException("selectedWorkItemIds must not contain duplicates");

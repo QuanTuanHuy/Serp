@@ -1,6 +1,7 @@
 # PM Core Optimization Plan
 
 Date: 2026-05-12
+Last reviewed: 2026-05-17
 Scope: selected-work-item planning assistant for assignment, schedule, dependency, capacity, and risk suggestions.
 
 ## Objective
@@ -31,10 +32,18 @@ MVP includes:
 
 - `WorkItemEntity` already has `tenantId`, `projectId`, `assigneeId`, `reporterId`, `parentId`, `prioritySequence`, `statusCategoryKey`, `resolutionId`, `startDate`, `dueDate`, `rank`, `timeOriginalEstimate`, and `timeRemainingEstimate`.
 - `IssueLinkEntity` stores `sourceId`, `targetId`, and `linkTypeId`.
-- `IssueLinkTypeEntity` currently has `name`, `outwardDescription`, `inwardDescription`, and `isSystem`, but no machine-readable dependency semantics.
+- `IssueLinkTypeEntity` now has machine-readable `dependencyBehavior`.
 - `ProjectEntity` has `leadUserId`.
 - `ProjectComponentEntity` has `leadUserId` and `assigneeType`.
-- Existing ports provide tenant-scoped reads for projects, work items, issue links, issue link types, and components, but optimization may need extra list/batch methods.
+- `work_item_plans`, `optimization_runs`, `optimization_run_items`, and `optimization_run_warnings` are implemented by migration `V21__add_optimization_foundation.sql`.
+- Backend API endpoints for generate, get review, update item decision, apply, and discard are implemented in `OptimizationRunController`.
+- Domain generation is implemented by `OptimizationProjectModelBuilder` and `GreedyOptimizationRunGenerator`.
+- Review/apply flow is implemented by `UpdateOptimizationRunItemDecisionCommandHandler` and `ApplyOptimizationRunCommandHandler`.
+- Existing candidate sources are current assignee, project lead, and reporter. Component lead flag exists in the model but component leads are not loaded into the builder yet.
+- Work item component relation is stored in `work_item_components` through `WorkItemComponentModel`.
+- Project member pool can be derived from `ProjectRoleActorEntity` rows where `subjectType = USER`.
+- Assignable project members must be determined through `ASSIGNABLE_USER` permission evaluation.
+- Calendar, cross-project workload, and skill data do not exist in `pm_core` yet.
 
 ## Non-Negotiable Rules
 
@@ -753,22 +762,50 @@ Sequence normalization must be explicit in code. If priority order cannot be con
 
 ### Candidate Assignee Resolver
 
-MVP sources:
+Implemented sources:
 
 ```text
 current assignee
-component lead
 project lead
 reporter
 ```
 
-MVP excludes:
+Sprint 6 sources:
+
+```text
+component lead
+active project role actors with USER subject
+members with ASSIGNABLE_USER permission
+```
+
+Current exclusions:
 
 ```text
 historical expertise
 team calendar
 skills matching
 multi-project workload
+```
+
+Current implementation notes:
+
+```text
+OptimizationCandidateAssignee has componentLead flag and cost bonus support.
+OptimizationProjectModelBuilder does not load project components yet, so componentLead is never set.
+Override assignee validation only accepts generated candidates.
+Until project member source exists, override choices are limited to current assignee, project lead, and reporter.
+```
+
+Next resolver target:
+
+```text
+1. Load work item component links from work_item_components.
+2. Load project components and add component lead as high-signal candidate.
+3. Load active project role actors where subjectType = USER.
+4. Evaluate ASSIGNABLE_USER for each user in the selected project.
+5. Add assignable project members as lower-priority fallback candidates.
+6. Keep current assignee, project lead, and reporter as high-signal candidates when valid.
+7. Keep deterministic sorting by effectiveCost, candidateId, workItemId.
 ```
 
 If no candidate exists:
@@ -893,6 +930,17 @@ No work item or planning row changes during generation.
 
 ## Phase 4 - Review, Override, Apply
 
+Status: implemented in backend.
+
+Implemented files:
+
+```text
+ui/rest/optimization/OptimizationRunController.java
+application/optimization/command/update/UpdateOptimizationRunItemDecisionCommandHandler.java
+application/optimization/command/apply/ApplyOptimizationRunCommandHandler.java
+application/optimization/command/discard/DiscardOptimizationRunCommandHandler.java
+```
+
 ### Review/Override
 
 User can update item decisions before apply:
@@ -984,6 +1032,171 @@ POST apply updates assignment and planning rows only for accepted selected items
 Apply is tenant-scoped and transaction-safe.
 Stale items are skipped, not silently overwritten.
 Run status reflects actual result.
+```
+
+Remaining backend gaps after Phase 4:
+
+```text
+Component lead candidate source is modeled but not loaded.
+Project member pool is not used as candidate source.
+ASSIGNABLE_USER eligibility is not used for assignment ranking or override validation.
+Skill matching is not used for candidate ranking.
+Capacity uses fixed 8h weekday slots only.
+Cross-project workload is not subtracted from capacity.
+```
+
+## Phase 6 - Resource Intelligence
+
+Status: planned next backend phase.
+
+Sprint 6 scope is constrained to data available in `pm_core`. It improves candidate quality and creates extension seams for future resource data without pretending calendar, workload, or skill integrations exist today.
+
+### Goals
+
+```text
+1. Expand candidate source beyond current assignee, project lead, and reporter.
+2. Add component lead and active project member candidate sources.
+3. Use ASSIGNABLE_USER permission as assignment eligibility gate for project members.
+4. Keep role actor data as member source, not as assignability rule by itself.
+5. Keep fixed 8h weekday capacity, but isolate it behind a capacity provider seam.
+6. Emit unavailable-data warnings for missing calendar, workload, and skill sources where relevant.
+```
+
+### Candidate Sources
+
+Sprint 6 candidate source priority:
+
+```text
+1. Current assignee.
+2. Component lead.
+3. Project lead.
+4. Reporter.
+5. Active project role actors with USER subject.
+6. Project members passing ASSIGNABLE_USER permission.
+```
+
+Eligibility rules:
+
+```text
+tenant scoped user
+active project role actor with subjectType = USER
+ASSIGNABLE_USER permission for selected project
+current assignee/project lead/reporter may appear as high-signal candidates even when not role-actor sourced
+skill match is not evaluated in Sprint 6 because skill data does not exist
+```
+
+Ranking factors:
+
+```text
+current assignee retention bonus
+component lead bonus
+project lead bonus
+reporter small bonus
+assignable project member bonus
+capacity availability
+reassignment penalty
+overload penalty
+```
+
+Component lead resolution:
+
+```text
+1. Load selected work item ids.
+2. Load active work_item_components rows by tenantId + workItemId.
+3. Load linked ProjectComponentEntity rows by component ids, projectId, and tenantId.
+4. For each selected work item, add component.leadUserId as component lead candidate when present.
+5. Merge duplicate candidates and keep all source flags.
+```
+
+Project member resolution:
+
+```text
+1. Load ProjectRoleActorEntity rows by projectId and tenantId.
+2. Keep rows where subjectType = USER.
+3. Parse subjectId to userId.
+4. Evaluate ASSIGNABLE_USER for each user in project context.
+5. Add only assignable users as project member fallback candidates.
+6. If role actors cannot be loaded, emit NO_PROJECT_MEMBER_POOL warning and continue with high-signal candidates.
+```
+
+### Required Sprint 6 Ports
+
+Add domain ports or extend existing ports. Infrastructure must use existing `pm_core` data only.
+
+```text
+IWorkItemComponentReadPort
+listActiveByWorkItemIds(Long tenantId, List<Long> workItemIds)
+
+IProjectMemberCandidatePort
+listAssignableMembers(Long tenantId, Long projectId)
+
+IResourceCapacityPort
+getCapacitySlots(Long tenantId, List<Long> userIds, Long planningStart, Long planningEnd)
+```
+
+Defer these ports until real data source exists:
+
+```text
+IResourceCalendarPort
+
+IResourceWorkloadPort
+
+IResourceSkillPort
+```
+
+### Calendar And Cross-Project Workload
+
+Current schedule uses fallback capacity:
+
+```text
+8h Monday-Friday
+0h Saturday-Sunday
+UTC day slots
+```
+
+Sprint 6 behavior:
+
+```text
+1. Move default capacity generation behind IResourceCapacityPort.
+2. Keep default 8h weekday UTC slots as only concrete provider.
+3. Emit LOW_CONFIDENCE_CAPACITY or MISSING_CALENDAR warning to make fallback visible.
+4. Emit MISSING_CROSS_PROJECT_WORKLOAD warning when schedule quality depends on workload data.
+5. Do not subtract cross-project workload in Sprint 6 because data source does not exist.
+6. Keep deterministic slot ordering.
+```
+
+### Skill Matching
+
+Skill matching is out of Sprint 6 implementation because skill data does not exist in `pm_core`.
+
+```text
+Sprint 6 behavior:
+1. Do not infer skills from labels or text.
+2. Do not add skill cost factors.
+3. Emit SKILL_DATA_UNAVAILABLE only if API/review output needs to explain absence of skill ranking.
+4. Keep candidate model extensible for future skill flags or reasons.
+```
+
+Later skill rule:
+
+```text
+Missing skill data must not block assignment.
+Known skill match reduces candidate cost.
+Known skill mismatch increases candidate cost only when enough candidates exist.
+```
+
+### Definition Of Done
+
+```text
+Component lead candidates are loaded and tested.
+Active USER role actors passing ASSIGNABLE_USER are included as candidates.
+Generated candidate list contains source/reason data for review UI.
+Override assignee validation accepts generated assignable project members.
+Default 8h weekday capacity is provided through IResourceCapacityPort.
+Fallback capacity warning is emitted.
+Missing calendar/workload/skill data is explicit and does not block generation.
+Candidate resolver tests cover component leads, role actors, ASSIGNABLE_USER gating, duplicates, and deterministic ordering.
+Scheduler tests cover fallback capacity provider behavior.
 ```
 
 ## Alternative Flows
@@ -1124,11 +1337,19 @@ STALE_ITEM
 PERMISSION_DENIED
 INVALID_OVERRIDE
 LOCKED_PLAN
+NEUTRAL_PRIORITY_USED
+LOW_CONFIDENCE_CAPACITY
+MISSING_CALENDAR
+MISSING_CROSS_PROJECT_WORKLOAD
+NO_PROJECT_MEMBER_POOL
+SKILL_DATA_UNAVAILABLE
 ```
 
 ## Implementation Order
 
 ### Sprint 1 - Schema And Contracts
+
+Status: implemented.
 
 ```text
 1. Add IssueLinkDependencyBehavior.
@@ -1139,6 +1360,8 @@ LOCKED_PLAN
 ```
 
 ### Sprint 2 - Model Builder
+
+Status: implemented with candidate-source limitations.
 
 ```text
 1. Add optimization domain models.
@@ -1153,6 +1376,8 @@ LOCKED_PLAN
 
 ### Sprint 3 - Generate Run
 
+Status: implemented in backend.
+
 ```text
 1. Add GenerateOptimizationRunCommand.
 2. Add greedy assignment optimizer.
@@ -1162,6 +1387,8 @@ LOCKED_PLAN
 ```
 
 ### Sprint 4 - Review And Apply
+
+Status: implemented in backend.
 
 ```text
 1. Add update item decision command.
@@ -1174,6 +1401,8 @@ LOCKED_PLAN
 
 ### Sprint 5 - UI Integration
 
+Status: not implemented in this backend service.
+
 ```text
 1. Add Optimize selected entry point.
 2. Add generate form.
@@ -1182,14 +1411,27 @@ LOCKED_PLAN
 5. Add apply selected flow.
 ```
 
+### Sprint 6 - Resource Intelligence
+
+Status: planned next backend phase.
+
+```text
+1. Add work item component read port/adapter for work_item_components.
+2. Load component leads into candidate resolver.
+3. Add project member candidate port/adapter backed by ProjectRoleActorEntity USER subjects.
+4. Gate project member candidates with ASSIGNABLE_USER permission.
+5. Update override validation to accept generated assignable project member candidates.
+6. Add capacity provider seam that returns current 8h weekday UTC fallback slots.
+7. Emit missing calendar, workload, and skill warnings without adding fake integrations.
+8. Update optimization tests for candidate sources, assignability, deterministic ordering, and fallback capacity.
+```
+
 ### Later - Advanced Optimization
 
 ```text
 1. Add deadline-safe and fastest-delivery modes.
 2. Add resource leveling local search.
-3. Add calendar/capacity provider from DB.
-4. Add project member/role based assignability.
-5. Add async deep optimizer with solver fallback.
+3. Add async deep optimizer with solver fallback.
 ```
 
 ## Test Strategy
@@ -1206,6 +1448,11 @@ Candidate resolver duplicate and no-candidate cases
 Greedy assignment respects allowReassignment
 Serial scheduler respects hard dependencies
 Apply skips stale items
+Candidate resolver includes component leads and project members
+Candidate resolver gates project members by ASSIGNABLE_USER
+Candidate resolver merges duplicate source flags deterministically
+Scheduler uses fallback capacity provider
+Warnings emitted for missing calendar, workload, and skill data when applicable
 ```
 
 Handler/query tests:
@@ -1228,10 +1475,14 @@ Validation commands:
 
 ## Risks And Open Notes
 
-- Default 8h/day capacity ignores holidays, PTO, and part-time schedules.
-- Candidate sources are weak until project member/role actor integration exists.
+- Default 8h/day capacity is current implementation and ignores holidays, PTO, and part-time schedules.
+- Candidate sources are weak until component lead and assignable project member integration exists.
+- Component lead cost support exists, but component leads are not loaded into current model builder.
+- Project member source should come from `ProjectRoleActorEntity` USER subjects, then be gated by `ASSIGNABLE_USER`.
 - Dependency behavior migration must preserve existing `Blocks`, `Clones`, and `Relates` rows.
 - Selected items may omit external blockers; model builder should warn when links point outside selected scope.
-- Schedule quality is limited without real calendars and cross-project workload.
+- Schedule quality remains limited without real calendars and cross-project workload.
+- Cross-project workload requires integration outside `pm_core` or a future shared planning store.
+- Skill data does not exist yet; do not implement text/label skill heuristics in Sprint 6.
 - Workload data may be sensitive; apply/review permission model must be revisited after MVP.
 - Whole-project optimization remains out of MVP because results are slower, noisier, and harder to review.

@@ -19,8 +19,15 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
+import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
+import serp.project.pmcore.domain.optimization.port.IProjectMemberCandidatePort;
+import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
+import serp.project.pmcore.domain.optimization.port.IWorkItemComponentReadPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
+import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectComponentPort;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
@@ -53,6 +60,18 @@ class OptimizationProjectModelBuilderTest {
     @Mock
     private IIssueLinkTypePort issueLinkTypePort;
 
+    @Mock
+    private IProjectComponentPort projectComponentPort;
+
+    @Mock
+    private IWorkItemComponentReadPort workItemComponentReadPort;
+
+    @Mock
+    private IProjectMemberCandidatePort projectMemberCandidatePort;
+
+    @Mock
+    private IResourceCapacityPort resourceCapacityPort;
+
     @InjectMocks
     private OptimizationProjectModelBuilder builder;
 
@@ -64,6 +83,7 @@ class OptimizationProjectModelBuilderTest {
         when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of(link(10L, 20L)));
         when(issueLinkPort.listByWorkItemId(1L, 20L)).thenReturn(List.of(link(10L, 20L)));
+        stubResourcePorts(List.of(10L, 20L), List.of(100L));
 
         OptimizationProjectModel model = builder.build(input(List.of(10L, 20L)));
 
@@ -81,6 +101,7 @@ class OptimizationProjectModelBuilderTest {
         when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of(link(10L, 20L), link(20L, 10L)));
         when(issueLinkPort.listByWorkItemId(1L, 20L)).thenReturn(List.of(link(10L, 20L), link(20L, 10L)));
+        stubResourcePorts(List.of(10L, 20L), List.of(100L));
 
         OptimizationProjectModel model = builder.build(input(List.of(10L, 20L)));
 
@@ -95,6 +116,7 @@ class OptimizationProjectModelBuilderTest {
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
         when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
+        stubResourcePorts(List.of(10L), List.of(100L));
 
         OptimizationProjectModel model = builder.build(input(List.of(10L)));
 
@@ -112,6 +134,7 @@ class OptimizationProjectModelBuilderTest {
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
         when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
+        stubResourcePorts(List.of(10L), List.of(100L));
 
         OptimizationProjectModel model = builder.build(input(List.of(10L)));
 
@@ -119,6 +142,41 @@ class OptimizationProjectModelBuilderTest {
                 .map(candidate -> candidate.candidateId())
                 .toList());
         assertFalse(model.capacitySlots().isEmpty());
+    }
+
+    @Test
+    void buildShouldIncludeComponentLeadAndAssignableProjectMembers() {
+        stubProject();
+        WorkItemEntity item = item(10L);
+        item.setAssigneeId(300L);
+        item.setReporterId(200L);
+        when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
+        when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
+        when(workItemComponentReadPort.listActiveByWorkItemIds(eq(1L), anyList()))
+                .thenReturn(List.of(new WorkItemComponentLink(10L, 50L)));
+        when(projectComponentPort.getComponentsByIds(anyList(), eq(100L), eq(1L)))
+                .thenReturn(List.of(ProjectComponentEntity.builder()
+                        .id(50L)
+                        .tenantId(1L)
+                        .projectId(100L)
+                        .leadUserId(400L)
+                        .build()));
+        when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class)))
+                .thenReturn(List.of(500L));
+        when(resourceCapacityPort.getCapacitySlots(eq(1L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L)))
+                .thenReturn(List.of(new ResourceCapacitySlot(400L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L)));
+
+        OptimizationProjectModel model = builder.build(input(List.of(10L)));
+
+        assertEquals(List.of(300L, 400L, 100L, 200L, 500L), model.workItems().get(0).candidateAssignees().stream()
+                .map(candidate -> candidate.candidateId())
+                .toList());
+        assertTrue(model.workItems().get(0).candidateAssignees().stream()
+                .anyMatch(candidate -> candidate.candidateId().equals(400L) && candidate.componentLead()));
+        assertTrue(model.workItems().get(0).candidateAssignees().stream()
+                .anyMatch(candidate -> candidate.candidateId().equals(500L) && candidate.projectMember()));
     }
 
     private void stubProject() {
@@ -132,6 +190,13 @@ class OptimizationProjectModelBuilderTest {
     private OptimizationBuilderInput input(List<Long> ids) {
         return new OptimizationBuilderInput(1L, 100L, ids, 1_714_876_800_000L, 1_715_481_600_000L,
                 true, true, OptimizationMode.BALANCED_WORKLOAD);
+    }
+
+    private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {
+        when(workItemComponentReadPort.listActiveByWorkItemIds(eq(1L), eq(workItemIds))).thenReturn(List.of());
+        when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class))).thenReturn(memberIds);
+        when(resourceCapacityPort.getCapacitySlots(eq(1L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L)))
+                .thenReturn(List.of(new ResourceCapacitySlot(100L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L)));
     }
 
     private WorkItemEntity item(Long id) {

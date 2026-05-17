@@ -14,6 +14,7 @@ import serp.project.pmcore.application.optimization.query.get.OptimizationRunRev
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
@@ -389,8 +390,10 @@ public class ApplyOptimizationRunCommandHandler
         if (command.workItemIds().isEmpty()) {
             throw new IllegalArgumentException("workItemIds is required");
         }
-        if (command.workItemIds().size() > 50) {
-            throw new IllegalArgumentException("workItemIds must not exceed 50 items");
+        if (command.workItemIds().size() > OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS) {
+            throw new IllegalArgumentException(
+                    "workItemIds must not exceed " + OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS + " items"
+            );
         }
         if (new LinkedHashSet<>(command.workItemIds()).size() != command.workItemIds().size()) {
             throw new IllegalArgumentException("workItemIds must not contain duplicates");

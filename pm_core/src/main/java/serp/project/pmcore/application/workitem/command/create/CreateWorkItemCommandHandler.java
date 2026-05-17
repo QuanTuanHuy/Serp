@@ -39,7 +39,6 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.domain.workitem.validator.WorkItemScheduleValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
-import java.util.List;
 import java.util.Map;
 
 @Service

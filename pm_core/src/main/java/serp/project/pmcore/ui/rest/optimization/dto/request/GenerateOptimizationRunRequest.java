@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.List;
 @AllArgsConstructor
 public class GenerateOptimizationRunRequest {
     @Builder.Default
-    private String scope = "SELECTED_WORK_ITEMS";
+    private String scope = OptimizationConstants.DEFAULT_SCOPE;
 
     @NotNull(message = "Optimization mode is required")
     private OptimizationMode mode;
@@ -42,7 +43,12 @@ public class GenerateOptimizationRunRequest {
     private Boolean allowScheduleChanges;
 
     @NotEmpty(message = "Selected work item ids are required")
-    @Size(max = 50, message = "Selected work item ids must not exceed 50 items")
+    @Size(
+            max = OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS,
+            message = "Selected work item ids must not exceed "
+                    + OptimizationConstants.MAX_SELECTED_WORK_ITEM_IDS
+                    + " items"
+    )
     private List<@NotNull @Positive Long> selectedWorkItemIds;
 
     @AssertTrue(message = "Planning start must be before planning end")

@@ -43,7 +43,18 @@ public interface IWorkItemComponentRepository extends JpaRepository<WorkItemComp
             ORDER BY COALESCE(wc.sequence, 2147483647), c.id
             """)
     List<ProjectComponentModel> findActiveComponentsByWorkItemId(@Param("workItemId") Long workItemId,
-                                                                 @Param("tenantId") Long tenantId);
+                                                                  @Param("tenantId") Long tenantId);
+
+    @Query("""
+            SELECT wc
+            FROM WorkItemComponentModel wc
+            WHERE wc.tenantId = :tenantId
+              AND wc.workItemId IN :workItemIds
+              AND wc.deletedAt IS NULL
+            ORDER BY wc.workItemId, COALESCE(wc.sequence, 2147483647), wc.componentId
+            """)
+    List<WorkItemComponentModel> findActiveLinksByTenantIdAndWorkItemIdIn(@Param("tenantId") Long tenantId,
+                                                                          @Param("workItemIds") Collection<Long> workItemIds);
 
     @Modifying
     @Query("""
