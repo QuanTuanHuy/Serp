@@ -29,6 +29,7 @@ import {
   useGetPmWorkItemByIdQuery,
   useSearchPmWorkItemsQuery,
 } from '../../../api';
+import { PMWorkItemDetailDialog } from '../detail';
 import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
 import { PMWorkItemListFilters } from './PMWorkItemListFilters';
 import {
@@ -266,13 +267,24 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
           />
         </div>
       ) : (
-        <PMWorkItemListTable
-          items={items}
-          loading={searchQuery.isLoading}
-          selectedIssueId={selectedIssueId}
-          totalItems={totalItems}
-          onSelect={selectIssue}
-        />
+        <>
+          <PMWorkItemListTable
+            items={items}
+            loading={searchQuery.isLoading}
+            selectedIssueId={selectedIssueId}
+            totalItems={totalItems}
+            onSelect={selectIssue}
+          />
+          <PMWorkItemDetailDialog
+            projectId={projectId}
+            workItemId={selectedIssueId}
+            open={Boolean(selectedIssueId)}
+            fallbackItem={selectedItem}
+            onOpenChange={(open) => {
+              if (!open) updateUrl({ issueId: undefined });
+            }}
+          />
+        </>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { PMWorkItemBoardCard } from './PMWorkItemBoardCard';
 
 interface PMWorkItemBoardColumnProps {
   column: PMWorkItemBoardColumnApi;
+  onSelectWorkItem: (workItemId: number) => void;
 }
 
 function getStatusCategoryAccent(key?: string | null): string {
@@ -25,7 +26,10 @@ function getStatusCategoryAccent(key?: string | null): string {
   }
 }
 
-export function PMWorkItemBoardColumn({ column }: PMWorkItemBoardColumnProps) {
+export function PMWorkItemBoardColumn({
+  column,
+  onSelectWorkItem,
+}: PMWorkItemBoardColumnProps) {
   return (
     <section className='flex max-h-[calc(100vh-15.5rem)] min-h-[28rem] w-[19.5rem] shrink-0 flex-col rounded-2xl border border-border/60 bg-muted/20 shadow-sm'>
       <div className='sticky top-0 z-10 rounded-t-2xl border-b border-border/60 bg-background/92 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85'>
@@ -62,7 +66,11 @@ export function PMWorkItemBoardColumn({ column }: PMWorkItemBoardColumnProps) {
       <div className='min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3 pt-2'>
         {column.items.length > 0 ? (
           column.items.map((item) => (
-            <PMWorkItemBoardCard key={item.id} item={item} />
+            <PMWorkItemBoardCard
+              key={item.id}
+              item={item}
+              onSelect={onSelectWorkItem}
+            />
           ))
         ) : (
           <div className='flex h-28 items-center justify-center rounded-xl border border-dashed border-border/70 bg-background/70 px-4 text-center text-sm text-muted-foreground'>

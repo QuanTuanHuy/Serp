@@ -23,6 +23,7 @@ import type { PMWorkItemBoardCardApi } from '../../../types/api';
 
 interface PMWorkItemBoardCardProps {
   item: PMWorkItemBoardCardApi;
+  onSelect: (workItemId: number) => void;
 }
 
 function formatBoardDate(value?: string | number | null): string | null {
@@ -73,14 +74,28 @@ function getInitials(name?: string | null): string {
     .join('');
 }
 
-export function PMWorkItemBoardCard({ item }: PMWorkItemBoardCardProps) {
+export function PMWorkItemBoardCard({
+  item,
+  onSelect,
+}: PMWorkItemBoardCardProps) {
   const dueDate = formatBoardDate(item.dueDate);
   const dueDateState = getDueDateState(item.dueDate);
   const priorityColor = item.priority?.color || undefined;
   const assigneeLabel = item.assigneeName || getAssigneeLabel(item.assigneeId);
 
   return (
-    <Card className='group border-border/70 bg-background shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md'>
+    <Card
+      role='button'
+      tabIndex={0}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(item.id);
+        }
+      }}
+      className='group cursor-pointer border-border/70 bg-background shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+    >
       <CardContent className='space-y-3 p-3'>
         <div className='flex items-start justify-between gap-3'>
           <div className='flex min-w-0 items-center gap-2'>

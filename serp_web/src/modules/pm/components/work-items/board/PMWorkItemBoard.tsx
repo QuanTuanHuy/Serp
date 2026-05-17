@@ -24,6 +24,7 @@ import {
   Button,
 } from '@/shared/components/ui';
 import { useGetPmWorkItemBoardQuery } from '../../../api';
+import { PMWorkItemDetailDialog } from '../detail';
 import { PMWorkItemBoardColumn } from './PMWorkItemBoardColumn';
 import { PMWorkItemBoardEmpty } from './PMWorkItemBoardEmpty';
 import { PMWorkItemBoardFilters } from './PMWorkItemBoardFilters';
@@ -46,6 +47,7 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const assigneeIds = parseNumberList(searchParams.get('assigneeIds'));
   const issueTypeIds = parseNumberList(searchParams.get('issueTypeIds'));
   const priorityIds = parseNumberList(searchParams.get('priorityIds'));
+  const selectedIssueId = Number(searchParams.get('issueId')) || undefined;
   const [keyword, setKeyword] = useState(searchKeyword);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const deferredKeyword = useDeferredValue(keyword.trim());
@@ -138,6 +140,14 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
     [assigneeIds.length, issueTypeIds.length, priorityIds.length]
   );
 
+  const selectedItem = useMemo(
+    () =>
+      board?.columns
+        .flatMap((column) => column.items)
+        .find((item) => item.id === selectedIssueId),
+    [board?.columns, selectedIssueId]
+  );
+
   const updateFilter = (updates: Record<string, string | undefined>) => {
     updateUrl(updates);
   };
@@ -152,6 +162,14 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
 
   const removeFilter = (key: string) => {
     updateFilter({ [key]: undefined });
+  };
+
+  const selectWorkItem = (workItemId: number) => {
+    updateUrl({ issueId: String(workItemId) });
+  };
+
+  const closeWorkItem = () => {
+    updateUrl({ issueId: undefined });
   };
 
   return (
@@ -229,7 +247,11 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
         <div className='rounded-2xl border border-border/60 bg-muted/10 p-2 shadow-sm sm:p-3'>
           <div className='flex gap-4 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin]'>
             {board?.columns.map((column) => (
-              <PMWorkItemBoardColumn key={column.statusId} column={column} />
+              <PMWorkItemBoardColumn
+                key={column.statusId}
+                column={column}
+                onSelectWorkItem={selectWorkItem}
+              />
             ))}
           </div>
           {!hasCards ? (
@@ -242,6 +264,16 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
           ) : null}
         </div>
       ) : null}
+
+      <PMWorkItemDetailDialog
+        projectId={projectId}
+        workItemId={selectedIssueId}
+        open={Boolean(selectedIssueId)}
+        fallbackItem={selectedItem}
+        onOpenChange={(open) => {
+          if (!open) closeWorkItem();
+        }}
+      />
     </div>
   );
 }
