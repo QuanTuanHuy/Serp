@@ -28,4 +28,16 @@ public class AsyncConfig {
         executor.initialize();
         return new DelegatingSecurityContextAsyncTaskExecutor(executor);
     }
+
+    @Bean(name = "vehicleImportTaskExecutor")
+    public Executor vehicleImportTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("vehicle-import-");
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(200);
+        executor.setWaitForTasksToCompleteOnShutdown(false);
+        executor.initialize();
+        return new DelegatingSecurityContextAsyncTaskExecutor(executor);
+    }
 }

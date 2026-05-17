@@ -37,6 +37,7 @@ jobs:
       routing: ${{ steps.changes.outputs.routing }}
       notification: ${{ steps.changes.outputs.notification }}
       discuss-service: ${{ steps.changes.outputs.discuss-service }}
+      payment-service: ${{ steps.changes.outputs.payment-service }}
       pm-core: ${{ steps.changes.outputs.pm-core }}
     steps:
       - name: Download changes artifact
@@ -66,6 +67,7 @@ jobs:
           echo "routing=$(jq -r '."routing"' changes.json)" >> $GITHUB_OUTPUT
           echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
           echo "discuss-service=$(jq -r '."discuss-service"' changes.json)" >> $GITHUB_OUTPUT
+          echo "payment-service=$(jq -r '."payment-service"' changes.json)" >> $GITHUB_OUTPUT
           echo "pm-core=$(jq -r '."pm-core"' changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
@@ -391,6 +393,25 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-payment-service:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.payment-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Payment Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_payment_service
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
   notify-deployment:
     needs: check-changes
     if: always()
@@ -415,3 +436,4 @@ jobs:
           echo "- Logistics: ${{ needs.check-changes.outputs.logistics }}" >> $GITHUB_STEP_SUMMARY
           echo "- Sales: ${{ needs.check-changes.outputs.sales }}" >> $GITHUB_STEP_SUMMARY
           echo "- Routing: ${{ needs.check-changes.outputs.routing }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Payment: ${{ needs.check-changes.outputs.payment-service }}" >> $GITHUB_STEP_SUMMARY

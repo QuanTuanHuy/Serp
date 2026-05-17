@@ -570,6 +570,7 @@ class WorkflowServiceTest {
                 .id(WORKFLOW_ID)
                 .tenantId(TENANT_ID)
                 .draftVersionId(DRAFT_VERSION_ID)
+                .currentPublishedVersionId(DRAFT_VERSION_ID)
                 .build();
         WorkflowStepEntity step = WorkflowStepEntity.builder()
                 .id(600L)

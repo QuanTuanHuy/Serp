@@ -45,6 +45,11 @@ import type {
   UpdatePostOfficeRequest,
   UpdateProductTypeRequest,
   ValidateImportFileResponse,
+  SecondMileCreateVehicleRequest,
+  SecondMileUpdateVehicleRequest,
+  SecondMileVehicle,
+  SecondMileVehicleImportItem,
+  SecondMileVehicleListFilters,
   Vehicle,
   VehicleImportItem,
   UpdateVehicleRequest,
@@ -240,6 +245,135 @@ export const firstMileApi = api.injectEndpoints({
       },
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: unwrapFirstMileResult<Hub>,
+    }),
+
+    getSecondMileVehicles: builder.query<
+      FirstMilePaginatedData<SecondMileVehicle>,
+      { page?: number; size?: number } & SecondMileVehicleListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        licensePlate,
+        vehicleType,
+        hubId,
+        assignedStaffId,
+        status,
+      }) => ({
+        url: '/vehicles',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(licensePlate ? { license_plate: licensePlate } : {}),
+          ...(vehicleType ? { vehicle_type: vehicleType } : {}),
+          ...(hubId !== undefined ? { hub_id: hubId } : {}),
+          ...(assignedStaffId !== undefined
+            ? { assigned_staff_id: assignedStaffId }
+            : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<SecondMileVehicle>,
+    }),
+
+    getSecondMileVehicleById: builder.query<SecondMileVehicle, number>({
+      query: (id) => ({
+        url: `/vehicles/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+    }),
+
+    createSecondMileVehicle: builder.mutation<
+      SecondMileVehicle,
+      SecondMileCreateVehicleRequest
+    >({
+      query: (body) => ({
+        url: '/vehicles',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+    }),
+
+    updateSecondMileVehicle: builder.mutation<
+      SecondMileVehicle,
+      { id: number; body: SecondMileUpdateVehicleRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/vehicles/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+    }),
+
+    deleteSecondMileVehicle: builder.mutation<string, number>({
+      query: (id) => ({
+        url: `/vehicles/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: { message?: string }) =>
+        response?.message || 'Deleted successfully',
+    }),
+
+    uploadSecondMileVehicleImage: builder.mutation<
+      SecondMileVehicle,
+      { id: number; file: File }
+    >({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/vehicles/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+    }),
+
+    exportSecondMileVehicleTemplate: builder.query<Blob, void>({
+      query: () => ({
+        url: '/vehicles/template',
+        method: 'GET',
+        responseHandler: (response) => response.blob(),
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+    }),
+
+    validateSecondMileVehicleImport: builder.mutation<
+      ValidateImportFileResponse<SecondMileVehicleImportItem>,
+      FormData
+    >({
+      query: (formData) => ({
+        url: '/vehicles/validate',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: unknown) =>
+        response as ValidateImportFileResponse<SecondMileVehicleImportItem>,
+    }),
+
+    importSecondMileVehicles: builder.mutation<ImportHistory, FormData>({
+      query: (formData) => ({
+        url: '/vehicles/import',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: unknown) =>
+        normalizeSecondMileHubImportHistory(response),
     }),
 
     getPostOffices: builder.query<
@@ -895,6 +1029,15 @@ export const {
   useUpdateHubMutation,
   useDeleteHubMutation,
   useUploadHubImageMutation,
+  useGetSecondMileVehiclesQuery,
+  useGetSecondMileVehicleByIdQuery,
+  useCreateSecondMileVehicleMutation,
+  useUpdateSecondMileVehicleMutation,
+  useDeleteSecondMileVehicleMutation,
+  useUploadSecondMileVehicleImageMutation,
+  useLazyExportSecondMileVehicleTemplateQuery,
+  useValidateSecondMileVehicleImportMutation,
+  useImportSecondMileVehiclesMutation,
   useGetPostOfficesQuery,
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,

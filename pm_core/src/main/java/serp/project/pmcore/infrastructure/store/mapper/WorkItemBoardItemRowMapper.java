@@ -25,6 +25,8 @@ public class WorkItemBoardItemRowMapper extends BaseRowMapper implements RowMapp
                 .summary(rs.getString("summary"))
                 .description(rs.getString("description"))
                 .assigneeId(getNullableLong(rs, "assignee_id"))
+                .assigneeName(rs.getString("assignee_name"))
+                .assigneeAvatarUrl(rs.getString("assignee_avatar_url"))
                 .reporterId(getNullableLong(rs, "reporter_id"))
                 .startDate(toEpochMilli(rs.getTimestamp("start_date")))
                 .dueDate(toEpochMilli(rs.getTimestamp("due_date")))

@@ -19,6 +19,7 @@ export {
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
   useGetPmStatusesQuery,
+  useGetPmWorkItemTimelineQuery,
   useSearchPmWorkItemsQuery,
 } from './workItemApi';
 export type {
@@ -27,6 +28,7 @@ export type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
   PMGetWorkItemBoardParams,
+  PMGetWorkItemTimelineParams,
   PMIssueTypeApi,
   PMListProjectsParams,
   PMPriorityApi,
@@ -42,4 +44,10 @@ export type {
   PMWorkItemCreateMetaResponse,
   PMWorkItemDetailApi,
   PMWorkItemSearchApi,
+  PMWorkItemTimelineDependencyApi,
+  PMWorkItemTimelineIssueTypeApi,
+  PMWorkItemTimelineItemApi,
+  PMWorkItemTimelinePriorityApi,
+  PMWorkItemTimelineResponse,
+  PMWorkItemTimelineStatusApi,
 } from '../types/api';

@@ -69,6 +69,14 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemEntity> listActiveByWorkItemIds(Long tenantId, List<Long> workItemIds) {
+        if (workItemIds == null || workItemIds.isEmpty()) {
+            return List.of();
+        }
+        return workItemMapper.toEntities(workItemRepository.findAllByTenantIdAndIdIn(tenantId, workItemIds));
+    }
+
+    @Override
     public List<WorkItemEntity> getWorkItemsByIssueTypeId(Long issueTypeId, Long tenantId) {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndIssueTypeId(tenantId, issueTypeId)
@@ -79,6 +87,13 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     public List<WorkItemEntity> getWorkItemsByPriorityId(Long priorityId, Long tenantId) {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndPriorityId(tenantId, priorityId)
+        );
+    }
+
+    @Override
+    public List<WorkItemEntity> getWorkItemsByResolutionId(Long resolutionId, Long tenantId) {
+        return workItemMapper.toEntities(
+                workItemRepository.findAllByTenantIdAndResolutionId(tenantId, resolutionId)
         );
     }
 
@@ -323,6 +338,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                     w.summary,
                     w.description,
                     w.assignee_id,
+                    CAST(NULL AS VARCHAR) AS assignee_name,
+                    CAST(NULL AS VARCHAR) AS assignee_avatar_url,
                     w.reporter_id,
                     w.start_date,
                     w.due_date,

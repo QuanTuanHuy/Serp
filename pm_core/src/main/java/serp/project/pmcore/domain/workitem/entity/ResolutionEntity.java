@@ -23,4 +23,5 @@ public class ResolutionEntity extends BaseEntity {
     private String description;
     private Integer sequence;
     private Boolean isSystem;
+    private Long deletedAt;
 }

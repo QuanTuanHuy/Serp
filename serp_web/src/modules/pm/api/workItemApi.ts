@@ -13,6 +13,7 @@ import type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
   PMGetWorkItemBoardParams,
+  PMGetWorkItemTimelineParams,
   PMIssueTypeApi,
   PMPriorityApi,
   PMProjectScopedListParams,
@@ -21,6 +22,7 @@ import type {
   PMWorkItemBoardResponse,
   PMWorkItemCreateMetaResponse,
   PMWorkItemDetailApi,
+  PMWorkItemTimelineResponse,
   PMWorkItemSearchApi,
 } from '../types/api';
 
@@ -242,6 +244,49 @@ export const pmWorkItemApi = api.injectEndpoints({
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMWorkItemBoardResponse>(),
     }),
+
+    getPmWorkItemTimeline: builder.query<
+      PMWorkItemTimelineResponse,
+      { projectId: number; params?: PMGetWorkItemTimelineParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/timeline/work-items`,
+        method: 'GET',
+        params: {
+          ...(typeof params?.viewportStart === 'number'
+            ? { viewportStart: params.viewportStart }
+            : {}),
+          ...(typeof params?.viewportEnd === 'number'
+            ? { viewportEnd: params.viewportEnd }
+            : {}),
+          ...(typeof params?.includeUnscheduled === 'boolean'
+            ? { includeUnscheduled: params.includeUnscheduled }
+            : {}),
+          ...(typeof params?.includeDependencies === 'boolean'
+            ? { includeDependencies: params.includeDependencies }
+            : {}),
+          ...(typeof params?.parentId === 'number'
+            ? { parentId: params.parentId }
+            : {}),
+          ...(typeof params?.depth === 'number' ? { depth: params.depth } : {}),
+          ...(params?.statusIds?.length ? { statusIds: params.statusIds } : {}),
+          ...(params?.assigneeIds?.length
+            ? { assigneeIds: params.assigneeIds }
+            : {}),
+          ...(params?.issueTypeIds?.length
+            ? { issueTypeIds: params.issueTypeIds }
+            : {}),
+          ...(params?.priorityIds?.length
+            ? { priorityIds: params.priorityIds }
+            : {}),
+          ...(params?.keyword ? { keyword: params.keyword } : {}),
+          page: params?.page ?? 0,
+          pageSize: params?.pageSize ?? 200,
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemTimelineResponse>(),
+    }),
   }),
   overrideExisting: false,
 });
@@ -254,5 +299,6 @@ export const {
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
   useGetPmStatusesQuery,
+  useGetPmWorkItemTimelineQuery,
   useSearchPmWorkItemsQuery,
 } = pmWorkItemApi;
