@@ -15,16 +15,20 @@ import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemChildProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemLinkProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectComponentMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardItemRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardStatusRowMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemChildRowMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemLinkRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineDependencyRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineItemRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
@@ -54,6 +58,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     private final WorkItemTimelineDependencyRowMapper timelineDependencyRowMapper;
     private final WorkItemBoardStatusRowMapper boardStatusRowMapper;
     private final WorkItemBoardItemRowMapper boardItemRowMapper;
+    private final WorkItemChildRowMapper childRowMapper;
+    private final WorkItemLinkRowMapper linkRowMapper;
 
     @Override
     public Optional<WorkItemEntity> getWorkItemById(Long id, Long tenantId) {
@@ -148,6 +154,47 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
+    public List<WorkItemChildProjection> listChildrenByParentId(Long projectId, Long parentId, Long tenantId) {
+        String sql = """
+                SELECT
+                    child.id,
+                    child.project_id,
+                    child.parent_id,
+                    child.key,
+                    child.summary,
+                    child.assignee_id,
+                    it.id AS issue_type_id,
+                    it.name AS issue_type_name,
+                    it.icon_url AS issue_type_icon_url,
+                    it.hierarchy_level AS issue_type_hierarchy_level,
+                    s.id AS status_id,
+                    s.status_key,
+                    s.name AS status_name,
+                    p.id AS priority_id,
+                    p.name AS priority_name,
+                    p.color AS priority_color,
+                    child.rank
+                FROM work_items child
+                LEFT JOIN issue_types it ON child.issue_type_id = it.id
+                    AND it.deleted_at IS NULL
+                LEFT JOIN statuses s ON child.status_id = s.id
+                    AND s.deleted_at IS NULL
+                LEFT JOIN priorities p ON child.priority_id = p.id
+                    AND p.deleted_at IS NULL
+                WHERE child.tenant_id = :tenantId
+                  AND child.project_id = :projectId
+                  AND child.parent_id = :parentId
+                  AND child.deleted_at IS NULL
+                ORDER BY child.rank ASC NULLS LAST, child.id ASC
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", projectId)
+                .addValue("parentId", parentId);
+        return jdbcTemplate.query(sql, params, childRowMapper);
+    }
+
+    @Override
     public long countActiveChildrenByParentId(Long projectId, Long parentId, Long tenantId) {
         return workItemRepository.countByTenantIdAndProjectIdAndParentId(tenantId, projectId, parentId);
     }
@@ -171,6 +218,51 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                 .addValue("workItemId", workItemId);
         Long total = jdbcTemplate.queryForObject(sql, params, Long.class);
         return total != null ? total : 0L;
+    }
+
+    @Override
+    public List<WorkItemLinkProjection> listLinksByWorkItemId(Long workItemId, Long tenantId) {
+        String sql = """
+                SELECT
+                    il.id,
+                    il.source_id,
+                    il.target_id,
+                    il.link_type_id,
+                    ilt.name AS link_type_name,
+                    ilt.outward_desc,
+                    ilt.inward_desc,
+                    related.id AS related_work_item_id,
+                    related.project_id AS related_project_id,
+                    related.key AS related_work_item_key,
+                    related.summary AS related_work_item_summary,
+                    s.id AS related_status_id,
+                    s.status_key AS related_status_key,
+                    s.name AS related_status_name,
+                    p.id AS related_priority_id,
+                    p.name AS related_priority_name,
+                    p.color AS related_priority_color
+                FROM issue_links il
+                JOIN issue_link_types ilt ON il.link_type_id = ilt.id
+                    AND ilt.deleted_at IS NULL
+                JOIN work_items related ON related.id = CASE
+                        WHEN il.source_id = :workItemId THEN il.target_id
+                        ELSE il.source_id
+                    END
+                    AND related.tenant_id = il.tenant_id
+                    AND related.deleted_at IS NULL
+                LEFT JOIN statuses s ON related.status_id = s.id
+                    AND s.deleted_at IS NULL
+                LEFT JOIN priorities p ON related.priority_id = p.id
+                    AND p.deleted_at IS NULL
+                WHERE il.tenant_id = :tenantId
+                  AND il.deleted_at IS NULL
+                  AND (il.source_id = :workItemId OR il.target_id = :workItemId)
+                ORDER BY il.id DESC
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("workItemId", workItemId);
+        return jdbcTemplate.query(sql, params, linkRowMapper);
     }
 
     @Override

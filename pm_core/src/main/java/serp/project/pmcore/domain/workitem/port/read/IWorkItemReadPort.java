@@ -13,8 +13,10 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemChildProjection;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemLinkProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.List;
@@ -47,11 +49,15 @@ public interface IWorkItemReadPort {
 
     List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId);
 
+    List<WorkItemChildProjection> listChildrenByParentId(Long projectId, Long parentId, Long tenantId);
+
     long countActiveChildrenByParentId(Long projectId, Long parentId, Long tenantId);
 
     long countDoneChildrenByParentId(Long projectId, Long parentId, Long tenantId);
 
     long countActiveLinksByWorkItemId(Long workItemId, Long tenantId);
+
+    List<WorkItemLinkProjection> listLinksByWorkItemId(Long workItemId, Long tenantId);
 
     List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId);
 

@@ -33,6 +33,9 @@ import serp.project.pmcore.application.workitem.command.transition.TransitionWor
 import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQuery;
 import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQueryHandler;
 import serp.project.pmcore.application.workitem.query.board.WorkItemBoardView;
+import serp.project.pmcore.application.workitem.query.children.ListWorkItemChildrenQuery;
+import serp.project.pmcore.application.workitem.query.children.ListWorkItemChildrenQueryHandler;
+import serp.project.pmcore.application.workitem.query.children.WorkItemChildView;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQuery;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQueryHandler;
 import serp.project.pmcore.application.workitem.query.createmeta.GetWorkItemCreateMetaQuery;
@@ -42,6 +45,9 @@ import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQuery;
 import serp.project.pmcore.application.workitem.query.get.GetWorkItemByIdQueryHandler;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.application.workitem.query.get.WorkItemDetailView;
+import serp.project.pmcore.application.workitem.query.links.ListWorkItemLinksQuery;
+import serp.project.pmcore.application.workitem.query.links.ListWorkItemLinksQueryHandler;
+import serp.project.pmcore.application.workitem.query.links.WorkItemLinkView;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQuery;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQueryHandler;
 import serp.project.pmcore.application.workitem.query.search.WorkItemSearchView;
@@ -83,6 +89,8 @@ public class WorkItemController {
     private final ListWorkItemBoardQueryHandler listWorkItemBoardQueryHandler;
     private final GetWorkItemCreateMetaQueryHandler getWorkItemCreateMetaQueryHandler;
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
+    private final ListWorkItemChildrenQueryHandler listWorkItemChildrenQueryHandler;
+    private final ListWorkItemLinksQueryHandler listWorkItemLinksQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
 
     @GetMapping
@@ -327,6 +335,48 @@ public class WorkItemController {
 
         List<WorkItemComponentView> result = listWorkItemComponentsQueryHandler.handle(
                 new ListWorkItemComponentsQuery(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/children")
+    public ResponseEntity<GeneralResponse<List<WorkItemChildView>>> listWorkItemChildren(
+            @PathVariable Long projectId,
+            @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        List<WorkItemChildView> result = listWorkItemChildrenQueryHandler.handle(
+                new ListWorkItemChildrenQuery(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/links")
+    public ResponseEntity<GeneralResponse<List<WorkItemLinkView>>> listWorkItemLinks(
+            @PathVariable Long projectId,
+            @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        List<WorkItemLinkView> result = listWorkItemLinksQueryHandler.handle(
+                new ListWorkItemLinksQuery(
                         projectId,
                         id,
                         tenantId,
