@@ -39,11 +39,16 @@ MVP includes:
 - Backend API endpoints for generate, get review, update item decision, apply, and discard are implemented in `OptimizationRunController`.
 - Domain generation is implemented by `OptimizationProjectModelBuilder` and `GreedyOptimizationRunGenerator`.
 - Review/apply flow is implemented by `UpdateOptimizationRunItemDecisionCommandHandler` and `ApplyOptimizationRunCommandHandler`.
-- Existing candidate sources are current assignee, project lead, and reporter. Component lead flag exists in the model but component leads are not loaded into the builder yet.
+- Existing candidate sources are current assignee, component lead, project lead, reporter, and assignable project members.
 - Work item component relation is stored in `work_item_components` through `WorkItemComponentModel`.
-- Project member pool can be derived from `ProjectRoleActorEntity` rows where `subjectType = USER`.
-- Assignable project members must be determined through `ASSIGNABLE_USER` permission evaluation.
-- Calendar, cross-project workload, and skill data do not exist in `pm_core` yet.
+- Project member pool is derived from `ProjectRoleActorEntity` rows where `subjectType = USER`.
+- Assignable project members are gated by `ASSIGNABLE_USER` permission through `ProjectMemberService`.
+- Component leads are loaded through `IWorkItemComponentReadPort` and `IProjectComponentPort`.
+- Fallback resource capacity seam exists through `IResourceCapacityPort` and `IResourceCalendarPort`.
+- Current calendar implementation is fallback 8h weekday UTC slots only.
+- Cross-project and same-project outside-scope workload are derived from active `work_item_plans` in `pm_core` and subtracted from fallback capacity.
+- Capacity source metadata is stored in optimization summary and exposed by review payload.
+- Skill data does not exist yet and is deferred to a later phase after calendar and workload integration.
 
 ## Non-Negotiable Rules
 
@@ -766,37 +771,31 @@ Implemented sources:
 
 ```text
 current assignee
+component lead
 project lead
 reporter
+active project role actors with USER subject and ASSIGNABLE_USER permission
 ```
 
-Sprint 6 sources:
-
-```text
-component lead
-active project role actors with USER subject
-members with ASSIGNABLE_USER permission
-```
-
-Current exclusions:
+Deferred sources:
 
 ```text
 historical expertise
 team calendar
 skills matching
-multi-project workload
+external/shared workload outside pm_core
 ```
 
 Current implementation notes:
 
 ```text
-OptimizationCandidateAssignee has componentLead flag and cost bonus support.
-OptimizationProjectModelBuilder does not load project components yet, so componentLead is never set.
-Override assignee validation only accepts generated candidates.
-Until project member source exists, override choices are limited to current assignee, project lead, and reporter.
+OptimizationCandidateAssignee has currentAssignee, componentLead, projectLead, reporter, and projectMember flags.
+OptimizationProjectModelBuilder loads work_item_components and project components for component leads.
+ProjectMemberService loads USER role actors and gates them with ASSIGNABLE_USER.
+Override assignee validation accepts generated candidates, including assignable project member candidates.
 ```
 
-Next resolver target:
+Resolver behavior:
 
 ```text
 1. Load work item component links from work_item_components.
@@ -1034,22 +1033,35 @@ Stale items are skipped, not silently overwritten.
 Run status reflects actual result.
 ```
 
-Remaining backend gaps after Phase 4:
+Backend gaps after Phase 4 that were closed in later sprints:
 
 ```text
-Component lead candidate source is modeled but not loaded.
-Project member pool is not used as candidate source.
-ASSIGNABLE_USER eligibility is not used for assignment ranking or override validation.
-Skill matching is not used for candidate ranking.
-Capacity uses fixed 8h weekday slots only.
-Cross-project workload is not subtracted from capacity.
+Component lead candidate source is loaded in Sprint 6.
+Project member pool is used as candidate source in Sprint 6.
+ASSIGNABLE_USER eligibility is used for project member candidates in Sprint 6.
+Capacity seam and fallback calendar provider were added in Sprint 6/9.
+Cross-project workload is subtracted from capacity in Sprint 8/10.
+Skill matching remains deferred because skill data does not exist yet.
 ```
 
 ## Phase 6 - Resource Intelligence
 
-Status: planned next backend phase.
+Status: implemented in backend.
 
 Sprint 6 scope is constrained to data available in `pm_core`. It improves candidate quality and creates extension seams for future resource data without pretending calendar, workload, or skill integrations exist today.
+
+Implemented files:
+
+```text
+domain/optimization/service/impl/OptimizationProjectModelBuilder.java
+domain/project/service/impl/ProjectMemberService.java
+domain/optimization/port/IWorkItemComponentReadPort.java
+infrastructure/store/adapter/WorkItemComponentReadAdapter.java
+domain/optimization/port/IResourceCapacityPort.java
+domain/optimization/port/IResourceCalendarPort.java
+infrastructure/optimization/adapter/FallbackResourceCapacityAdapter.java
+infrastructure/optimization/adapter/FallbackResourceCalendarAdapter.java
+```
 
 ### Goals
 
@@ -1154,14 +1166,14 @@ Current schedule uses fallback capacity:
 UTC day slots
 ```
 
-Sprint 6 behavior:
+Implemented behavior:
 
 ```text
 1. Move default capacity generation behind IResourceCapacityPort.
 2. Keep default 8h weekday UTC slots as only concrete provider.
-3. Emit LOW_CONFIDENCE_CAPACITY or MISSING_CALENDAR warning to make fallback visible.
-4. Emit MISSING_CROSS_PROJECT_WORKLOAD warning when schedule quality depends on workload data.
-5. Do not subtract cross-project workload in Sprint 6 because data source does not exist.
+3. Keep fallback calendar generation behind IResourceCalendarPort.
+4. Emit LOW_CONFIDENCE_CAPACITY and MISSING_CALENDAR warnings to make fallback visible.
+5. Subtract same-project outside-scope and cross-project workload from active work_item_plans.
 6. Keep deterministic slot ordering.
 ```
 
@@ -1197,6 +1209,445 @@ Fallback capacity warning is emitted.
 Missing calendar/workload/skill data is explicit and does not block generation.
 Candidate resolver tests cover component leads, role actors, ASSIGNABLE_USER gating, duplicates, and deterministic ordering.
 Scheduler tests cover fallback capacity provider behavior.
+```
+
+## Phase 7 - Real Calendar And Cross-Project Workload Integration
+
+Status: partially implemented.
+
+Implemented:
+
+```text
+1. Capacity source modes and coverage statuses exist.
+2. Fallback calendar provider contract exists through IResourceCalendarPort.
+3. Capacity resolver subtracts active work_item_plans for same-project outside-scope and cross-project workload.
+4. Capacity source metadata is persisted in summary_json through OptimizationRunSummary.
+5. Review payload exposes summary metadata through OptimizationRunReviewView.summary.
+6. Aggregated workload buckets exist through CapacityWorkloadBucket.
+```
+
+Not implemented:
+
+```text
+1. Authoritative real calendar source for working hours, holidays, leave, and exceptions.
+2. Partial/failed external calendar provider behavior beyond fallback.
+3. External/shared workload source outside pm_core.
+4. Hourly real-calendar slot normalization.
+5. Dedicated UI rendering for capacity source metadata.
+```
+
+This phase improves schedule quality by replacing fallback-only scheduling with net usable capacity. Net usable capacity subtracts committed workload from available calendar capacity when data exists.
+
+Skill data remains out of this phase and will be handled later.
+
+### Product Goal
+
+```text
+1. Give project managers schedule suggestions that reflect real working availability when calendar data exists.
+2. Avoid planning selected work into already committed work_item_plans outside the selected scope.
+3. Make cross-project workload impact visible without exposing sensitive project details.
+4. Keep optimization as review-first suggestion, not automatic resource commitment.
+5. Preserve deterministic generation for the same input snapshot.
+```
+
+### User Value
+
+Before:
+
+```text
+Schedule suggestions assume 8h Monday-Friday capacity and ignore real absence or other planned project commitments.
+```
+
+After:
+
+```text
+Schedule suggestions use real calendar capacity when available, subtract planned workload from work_item_plans, and clearly show coverage or fallback gaps.
+```
+
+### Product Scope
+
+In scope:
+
+```text
+calendar integration contract for a future authoritative source
+working-hour, holiday, leave, and exception normalization when source exists
+cross-project planned workload from active work_item_plans in pm_core
+same-project workload outside selected scope
+aggregated workload impact in review payload
+capacity coverage and fallback visibility in review payload
+run-level snapshot metadata for calendar and workload source freshness
+```
+
+Out of scope:
+
+```text
+skill matching
+ML duration prediction
+CP-SAT or OR-Tools optimization
+automatic rescheduling of other projects
+whole-organization capacity planning
+automatic conflict resolution across projects
+calendar write-back
+external meeting scheduling
+showing cross-project work item or project details in review payload
+```
+
+### Product Flow
+
+```text
+1. User selects work items and clicks Optimize selected.
+2. Backend resolves candidate assignees.
+3. Backend resolves resource availability for candidate assignees.
+4. Calendar source provides working/non-working intervals when a source exists; otherwise fallback calendar is used.
+5. Workload source loads committed work_item_plans outside selected scope.
+6. Capacity resolver subtracts committed workload from calendar capacity.
+7. Optimizer schedules selected items into net usable capacity.
+8. Review screen shows schedule suggestions, calendar coverage, workload coverage, fallback count, and aggregated workload impact.
+9. User accepts, rejects, or overrides suggestions.
+10. Apply still updates only selected accepted items.
+```
+
+### Review Screen Additions
+
+Summary tab should show:
+
+```text
+Capacity source
+Calendar coverage status
+Workload coverage status
+Fallback assignee count
+Aggregated workload hours deducted
+Same-project outside-scope workload hours deducted
+Cross-project workload hours deducted
+Calendar source timestamp nullable
+Workload source timestamp
+Schedule confidence
+```
+
+Schedule tab should show per item:
+
+```text
+Assignee calendar coverage
+Capacity source used
+Aggregated workload considered
+Fallback warnings if any
+```
+
+Risks tab should show:
+
+```text
+Missing calendar data
+Partial calendar coverage
+Missing workload data
+Partial workload coverage
+Calendar source unavailable
+Workload source failure
+Cross-project capacity conflict
+```
+
+Review payload privacy rule:
+
+```text
+Always aggregate cross-project workload details.
+Do not expose other project ids, project names, issue ids, issue keys, or issue titles in optimization review payload.
+Show only workload totals by assignee and time bucket.
+```
+
+### Architecture Goal
+
+The optimizer domain must consume normalized net capacity, not calendar or workload source details.
+
+```text
+calendar data + work_item_plans workload -> capacity resolver -> ResourceCapacitySlot list -> scheduler
+```
+
+Domain scheduler remains pure:
+
+```text
+Input:
+ResourceCapacitySlot list
+OptimizationWorkItem list
+Dependency graph
+Assignments
+Planning horizon
+
+Output:
+Assignment suggestions
+Schedule suggestions
+Warnings
+Summary
+```
+
+Infrastructure/application resolves source-specific details.
+
+### Capacity Semantics
+
+`IResourceCapacityPort` should represent net usable capacity for optimization.
+
+```text
+net usable capacity = working calendar capacity - committed workload reservations
+```
+
+The scheduler must not subtract workload itself. It should only consume available slots returned by the capacity port.
+
+Current fallback provider remains valid as degradation path:
+
+```text
+FALLBACK_WEEKDAY_8H_UTC
+8h Monday-Friday
+0h Saturday-Sunday
+UTC day slots
+```
+
+Future source modes:
+
+```text
+REAL_CALENDAR_WITH_WORKLOAD
+REAL_CALENDAR_ONLY
+FALLBACK_WITH_WORKLOAD
+FALLBACK_WEEKDAY_8H_UTC
+```
+
+### Proposed Capacity Resolution Model
+
+Add or represent equivalent metadata in `summary_json`:
+
+```text
+CapacityResolutionResult
+  slots
+  sourceMode
+  calendarCoverageStatus
+  workloadCoverageStatus
+  fallbackUserIds
+  calendarFetchedAt nullable
+  workloadFetchedAt
+  deductedWorkloadMillis
+  sameProjectOutsideScopeDeductedMillis
+  crossProjectDeductedMillis
+  warnings
+```
+
+Coverage statuses:
+
+```text
+FULL
+PARTIAL
+MISSING
+FAILED
+NOT_REQUIRED
+```
+
+### Calendar Integration Design
+
+No authoritative calendar service exists yet. Phase implementation must keep calendar integration behind a provider contract and use fallback calendar until a source is available.
+
+Future calendar source must normalize into working intervals before scheduling.
+
+Required calendar concepts:
+
+```text
+userId
+timezone
+working intervals
+holiday intervals
+leave/PTO intervals
+calendar exception intervals
+source fetchedAt
+source version nullable
+```
+
+Normalization rules:
+
+```text
+1. Convert source intervals to UTC epoch millis.
+2. Keep source timezone in metadata for diagnostics.
+3. Split into deterministic capacity slots.
+4. Remove holidays and non-working intervals.
+5. Reduce capacity for full-day or partial-day leave.
+6. Keep capacity non-negative.
+7. Sort by assigneeId, slotStart, slotEnd.
+```
+
+Recommended granularity:
+
+```text
+Phase 7A: daily slots while only fallback calendar exists.
+Phase 7B: hourly slots when real working-hour or partial-day leave source exists.
+```
+
+### Cross-Project Workload Design
+
+Initial authoritative workload source is active `work_item_plans` in `pm_core`.
+
+Reason:
+
+```text
+work_item_plans already represent planned commitment.
+They are tenant-scoped.
+They support cross-project queries inside pm_core when projects share the same service database.
+They are more deterministic than inferring workload from assigned-but-unplanned items.
+```
+
+Workload included:
+
+```text
+active work_item_plans
+same tenant
+assignee exists on linked work item
+planned range overlaps optimization planning range
+work item is not done
+work item is outside selected optimization scope
+same project outside selected scope
+other projects in same tenant
+```
+
+Workload excluded:
+
+```text
+selected work items in current optimization run
+assigned items without active plan in initial implementation
+external meetings or non-project work until a calendar/workload source exists
+```
+
+Required query shape:
+
+```text
+listActivePlansByAssigneeIdsAndRange(
+  tenantId,
+  assigneeIds,
+  planningStart,
+  planningEnd,
+  excludedWorkItemIds
+)
+```
+
+Subtraction rules:
+
+```text
+1. Convert each active plan into reserved intervals by assignee.
+2. Intersect reserved intervals with working capacity slots.
+3. Subtract overlapping reserved millis from slot capacity.
+4. Do not allow slot capacity below zero.
+5. Track deducted millis by assignee and source scope only.
+6. Use source scope values SAME_PROJECT_OUTSIDE_SCOPE and CROSS_PROJECT.
+7. Emit warning when reservations exceed calendar capacity.
+```
+
+Aggregated review output:
+
+```text
+assigneeId
+timeBucketStart
+timeBucketEnd
+sameProjectOutsideScopeReservedMillis
+crossProjectReservedMillis
+totalReservedMillis
+```
+
+Do not include source project/work item identity in review output.
+
+### Snapshot And Apply Rules
+
+Generation must snapshot capacity source metadata.
+
+```text
+calendarFetchedAt nullable
+workloadFetchedAt
+capacitySourceMode
+coverage status
+fallback users
+deducted workload summary
+```
+
+Apply must not recompute capacity.
+
+Reason:
+
+```text
+User applies reviewed suggestions.
+Recomputing external workload during apply could produce unreviewed behavior.
+Stale work item and plan checks remain the apply safety mechanism.
+```
+
+If calendar/workload changes after generation:
+
+```text
+Run remains a snapshot.
+Review can display stale source warning if detected later.
+User should regenerate for latest capacity.
+```
+
+### Failure And Fallback Policy
+
+Use per-assignee fallback, not whole-run failure.
+
+```text
+1. If real calendar exists and workload exists: use real net capacity.
+2. If real calendar exists but workload fails: use calendar-only capacity and emit PARTIAL_WORKLOAD_COVERAGE.
+3. If real calendar is missing but workload exists: use fallback calendar minus workload and emit MISSING_CALENDAR.
+4. If both calendar and workload fail: use fallback 8h weekday capacity and emit LOW_CONFIDENCE_CAPACITY.
+5. Never silently ignore missing source data.
+```
+
+Run confidence:
+
+```text
+HIGH: full calendar and workload coverage for all scheduled assignees.
+MEDIUM: partial fallback or partial workload coverage.
+LOW: fallback calendar for most scheduled assignees or workload unavailable.
+```
+
+### New Warning Codes
+
+Add when implementation starts:
+
+```text
+PARTIAL_CALENDAR_COVERAGE
+PARTIAL_WORKLOAD_COVERAGE
+CALENDAR_SOURCE_FAILED
+WORKLOAD_SOURCE_FAILED
+CAPACITY_RESERVATION_EXCEEDS_AVAILABILITY
+CROSS_PROJECT_CAPACITY_CONFLICT
+```
+
+Keep existing warning codes:
+
+```text
+LOW_CONFIDENCE_CAPACITY
+MISSING_CALENDAR
+MISSING_CROSS_PROJECT_WORKLOAD
+OVER_CAPACITY
+LATE_RISK
+```
+
+### Security And Privacy
+
+Workload data may reveal other project commitments. Review payload must always aggregate cross-project workload details.
+
+Review payload rules:
+
+```text
+1. Show aggregated reserved workload by assignee and time bucket.
+2. Do not expose other project names, project ids, issue ids, issue keys, or issue titles.
+3. Do not make cross-project detail visibility depend on read permission in this phase; aggregate always.
+4. Keep apply permission unchanged; apply can only mutate selected accepted items.
+5. Tenant scoping is mandatory for all calendar and workload reads.
+```
+
+### Definition Of Done
+
+```text
+Calendar provider contract exists and fallback remains active while no authoritative source exists.
+Cross-project active work_item_plans are subtracted from candidate capacity.
+Same-project outside-scope active work_item_plans are subtracted from candidate capacity.
+Fallback capacity remains available per assignee when calendar source data is missing.
+Review payload shows capacity source, calendar coverage, workload coverage, fallback users, and aggregated workload deductions.
+Review payload never exposes cross-project project/work item identity.
+Warnings are explicit for missing, partial, or failed source data.
+Scheduler consumes net usable capacity and remains deterministic.
+Generation persists source metadata in summary_json.
+Apply does not recompute external capacity.
+Tests cover calendar contract, workload subtraction, fallback, privacy, and deterministic scheduling.
 ```
 
 ## Alternative Flows
@@ -1343,6 +1794,12 @@ MISSING_CALENDAR
 MISSING_CROSS_PROJECT_WORKLOAD
 NO_PROJECT_MEMBER_POOL
 SKILL_DATA_UNAVAILABLE
+PARTIAL_CALENDAR_COVERAGE
+PARTIAL_WORKLOAD_COVERAGE
+CALENDAR_SOURCE_FAILED
+WORKLOAD_SOURCE_FAILED
+CAPACITY_RESERVATION_EXCEEDS_AVAILABILITY
+CROSS_PROJECT_CAPACITY_CONFLICT
 ```
 
 ## Implementation Order
@@ -1361,7 +1818,7 @@ Status: implemented.
 
 ### Sprint 2 - Model Builder
 
-Status: implemented with candidate-source limitations.
+Status: implemented.
 
 ```text
 1. Add optimization domain models.
@@ -1413,7 +1870,7 @@ Status: not implemented in this backend service.
 
 ### Sprint 6 - Resource Intelligence
 
-Status: planned next backend phase.
+Status: implemented in backend.
 
 ```text
 1. Add work item component read port/adapter for work_item_components.
@@ -1424,6 +1881,120 @@ Status: planned next backend phase.
 6. Add capacity provider seam that returns current 8h weekday UTC fallback slots.
 7. Emit missing calendar, workload, and skill warnings without adding fake integrations.
 8. Update optimization tests for candidate sources, assignability, deterministic ordering, and fallback capacity.
+```
+
+### Sprint 7 - Capacity Source Metadata And Review Contract
+
+Status: implemented in backend.
+
+```text
+1. Define capacity source modes and coverage statuses.
+2. Extend optimization summary JSON with capacity source metadata.
+3. Expose capacity source, calendar coverage, workload coverage, fallback users, and schedule confidence in GET review payload.
+4. Keep fallback weekday provider as current concrete calendar implementation because no authoritative calendar source exists yet.
+5. Add aggregated workload summary shape for review payload.
+6. Do not expose cross-project project/work item identity.
+7. Remove skill-data work from this sprint; skill matching is a later phase.
+8. Add tests for summary metadata, review payload, and aggregate-only privacy behavior.
+```
+
+### Sprint 8 - Cross-Project Workload From pm_core Plans
+
+Status: implemented in backend.
+
+```text
+1. Add read query for active work_item_plans by assignee ids and planning range.
+2. Load linked work items to determine assignee, project, done state, and tenant scope.
+3. Exclude selected work item ids from workload subtraction.
+4. Include same-project outside-scope plans and other-project plans in same tenant.
+5. Convert overlapping plans into reserved capacity intervals.
+6. Subtract reserved intervals from fallback capacity slots.
+7. Track deducted workload millis by assignee and source scope only.
+8. Emit PARTIAL_WORKLOAD_COVERAGE or CROSS_PROJECT_CAPACITY_CONFLICT warnings when needed.
+9. Add tests for overlap, exclusion, done items, aggregate review output, and deterministic subtraction.
+```
+
+### Sprint 9 - Calendar Provider Contract
+
+Status: implemented as fallback provider contract.
+
+```text
+1. Define calendar provider contract for future working hours, holidays, leave, and exceptions.
+2. Keep fallback weekday provider as implementation until an authoritative calendar source exists.
+3. Add calendar coverage metadata and per-assignee fallback tracking.
+4. Normalize provider output to UTC capacity slots.
+5. Support daily fallback slots now and allow hourly slots when real source exists.
+6. Emit MISSING_CALENDAR or PARTIAL_CALENDAR_COVERAGE warnings when needed.
+7. Add tests for fallback contract, timezone normalization contract, missing calendar behavior, and deterministic ordering.
+```
+
+### Sprint 10 - Integrated Net Capacity Scheduling
+
+Status: partially implemented.
+
+```text
+1. Route scheduler through net usable capacity from IResourceCapacityPort.
+2. Ensure workload subtraction happens before schedule generation.
+3. Add schedule reasons explaining fallback calendar and work_item_plans workload deductions.
+4. Persist source fetchedAt and coverage metadata in summary_json.
+5. Keep apply snapshot-based and do not recompute capacity during apply.
+6. Add end-to-end generate/review tests for fallback calendar plus cross-project workload.
+7. Add privacy tests to ensure review payload stays aggregate-only for cross-project workload.
+```
+
+Implemented subset:
+
+```text
+1. Scheduler receives net usable capacity from IResourceCapacityPort.
+2. Workload subtraction happens before schedule generation in FallbackResourceCapacityAdapter.
+3. Source fetchedAt and coverage metadata are persisted in summary_json.
+4. Apply remains snapshot-based and does not recompute capacity.
+5. Tests cover fallback calendar plus workload subtraction behavior.
+```
+
+Remaining work:
+
+```text
+1. Add richer schedule reasons explaining workload deductions per item.
+2. Add end-to-end generate/review tests for cross-project workload metadata.
+3. Add privacy tests focused on aggregate-only cross-project review output.
+4. Add UI consumption of summary capacity metadata.
+```
+
+### Future Sprint Template
+
+Use this format when adding new sprint sections:
+
+```text
+### Sprint N - <Name>
+
+Status: planned | in progress | implemented in backend | implemented in UI | partially implemented | deferred.
+
+Goal:
+1. <business or technical outcome>
+
+Scope:
+1. <concrete code/data/API work>
+
+Out of scope:
+1. <explicit exclusions>
+
+Definition of Done:
+1. <observable completion criteria>
+
+Verification:
+1. <focused test/compile command>
+```
+
+### Next Backlog Candidates
+
+```text
+1. UI integration for Optimize selected and review/apply workflow in serp_web.
+2. Richer review payload fields for per-item capacity/workload reasons.
+3. Privacy regression tests for cross-project workload aggregation.
+4. Real calendar provider integration when authoritative source exists.
+5. Skill data model and ranking integration when authoritative skill source exists.
+6. Deadline-safe and fastest-delivery modes.
 ```
 
 ### Later - Advanced Optimization
@@ -1453,6 +2024,16 @@ Candidate resolver gates project members by ASSIGNABLE_USER
 Candidate resolver merges duplicate source flags deterministically
 Scheduler uses fallback capacity provider
 Warnings emitted for missing calendar, workload, and skill data when applicable
+Calendar provider contract produces deterministic fallback capacity slots
+Calendar coverage metadata is emitted when no authoritative source exists
+Workload subtraction excludes selected work items
+Workload subtraction includes same-project outside-scope plans
+Workload subtraction includes other-project active plans in same tenant
+Workload subtraction ignores done or deleted planned work
+Capacity resolver falls back per assignee when calendar source is missing
+Capacity resolver reports partial calendar/workload coverage
+Scheduler uses net usable capacity after workload subtraction
+Cross-project workload review output is aggregate-only
 ```
 
 Handler/query tests:
@@ -1464,6 +2045,9 @@ Patch item decision persists override
 Apply assignment updates assignee only for accepted items
 Apply schedule upserts work_item_plans only for accepted items
 Partial apply marks skipped items
+Get run returns capacity source and coverage metadata
+Get run returns only aggregated cross-project workload impact
+Generate run persists calendar/workload fetchedAt metadata
 ```
 
 Validation commands:
@@ -1475,14 +2059,15 @@ Validation commands:
 
 ## Risks And Open Notes
 
-- Default 8h/day capacity is current implementation and ignores holidays, PTO, and part-time schedules.
-- Candidate sources are weak until component lead and assignable project member integration exists.
-- Component lead cost support exists, but component leads are not loaded into current model builder.
-- Project member source should come from `ProjectRoleActorEntity` USER subjects, then be gated by `ASSIGNABLE_USER`.
+- Default 8h/day capacity is current fallback implementation and ignores holidays, PTO, and part-time schedules until an authoritative calendar source exists.
+- Candidate sources now include component lead and assignable project members, but no skill/history matching exists yet.
+- Project member source comes from `ProjectRoleActorEntity` USER subjects and is gated by `ASSIGNABLE_USER`.
 - Dependency behavior migration must preserve existing `Blocks`, `Clones`, and `Relates` rows.
 - Selected items may omit external blockers; model builder should warn when links point outside selected scope.
-- Schedule quality remains limited without real calendars and cross-project workload.
-- Cross-project workload requires integration outside `pm_core` or a future shared planning store.
+- Schedule quality depends on calendar and workload source coverage; fallback capacity remains low confidence.
+- Initial cross-project workload integration uses active `work_item_plans` in `pm_core`; external/shared planning store integration can follow when workload spans services.
+- Calendar integration requires a future authoritative source for working hours, holidays, leave, and exceptions.
+- Cross-project workload data must stay aggregate-only in optimization review payload.
 - Skill data does not exist yet; do not implement text/label skill heuristics in Sprint 6.
 - Workload data may be sensitive; apply/review permission model must be revisited after MVP.
 - Whole-project optimization remains out of MVP because results are slower, noisier, and harder to review.
