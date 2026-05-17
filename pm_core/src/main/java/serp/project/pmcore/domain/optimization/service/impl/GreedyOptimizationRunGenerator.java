@@ -534,7 +534,82 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
                 .sameProjectOutsideScopeDeductedMillis(projectModel.capacityResolution().sameProjectOutsideScopeDeductedMillis())
                 .crossProjectDeductedMillis(projectModel.capacityResolution().crossProjectDeductedMillis())
                 .workloadBuckets(projectModel.capacityResolution().workloadBuckets())
+                .itemsWithSkillRequirements(itemsWithSkillRequirements(projectModel))
+                .itemsMissingSkillRequirements(itemsMissingSkillRequirements(projectModel))
+                .candidatesWithSkillProfiles(candidatesWithSkillProfiles(projectModel))
+                .candidatesMissingSkillProfiles(candidatesMissingSkillProfiles(projectModel))
+                .requiredSkillMismatchCount(requiredSkillMismatchCount(projectModel, assignments))
+                .skillRankingConfidence(skillRankingConfidence(projectModel))
+                .selectedCandidateSkillFits(selectedCandidateSkillFits(projectModel, assignments))
                 .build();
+    }
+
+    private int itemsWithSkillRequirements(OptimizationProjectModel projectModel) {
+        return (int) projectModel.workItems().stream()
+                .filter(item -> item.candidateAssignees().stream()
+                        .map(OptimizationCandidateAssignee::skillFit)
+                        .filter(Objects::nonNull)
+                        .anyMatch(fit -> fit.totalRequiredSkillCount() > 0 || fit.totalPreferredSkillCount() > 0))
+                .count();
+    }
+
+    private int itemsMissingSkillRequirements(OptimizationProjectModel projectModel) {
+        return projectModel.workItems().size() - itemsWithSkillRequirements(projectModel);
+    }
+
+    private int candidatesWithSkillProfiles(OptimizationProjectModel projectModel) {
+        return (int) projectModel.workItems().stream()
+                .flatMap(item -> item.candidateAssignees().stream())
+                .map(OptimizationCandidateAssignee::skillFit)
+                .filter(Objects::nonNull)
+                .filter(fit -> fit.confidence() != OptimizationConfidence.LOW || !fit.matchedSkillIds().isEmpty())
+                .count();
+    }
+
+    private int candidatesMissingSkillProfiles(OptimizationProjectModel projectModel) {
+        return (int) projectModel.workItems().stream()
+                .flatMap(item -> item.candidateAssignees().stream())
+                .map(OptimizationCandidateAssignee::skillFit)
+                .filter(Objects::nonNull)
+                .filter(fit -> (fit.totalRequiredSkillCount() > 0 || fit.totalPreferredSkillCount() > 0)
+                        && fit.confidence() == OptimizationConfidence.LOW
+                        && fit.matchedSkillIds().isEmpty())
+                .count();
+    }
+
+    private int requiredSkillMismatchCount(OptimizationProjectModel projectModel,
+                                           Map<Long, OptimizationAssignmentSuggestion> assignments) {
+        return (int) selectedCandidateSkillFits(projectModel, assignments).stream()
+                .filter(fit -> !fit.missingRequiredSkillIds().isEmpty())
+                .count();
+    }
+
+    private String skillRankingConfidence(OptimizationProjectModel projectModel) {
+        if (candidatesMissingSkillProfiles(projectModel) > 0) {
+            return OptimizationConfidence.LOW.name();
+        }
+        return itemsWithSkillRequirements(projectModel) == 0
+                ? OptimizationConfidence.LOW.name()
+                : OptimizationConfidence.HIGH.name();
+    }
+
+    private List<OptimizationCandidateSkillFit> selectedCandidateSkillFits(OptimizationProjectModel projectModel,
+                                                                           Map<Long, OptimizationAssignmentSuggestion> assignments) {
+        List<OptimizationCandidateSkillFit> fits = new ArrayList<>();
+        for (OptimizationWorkItem item : projectModel.workItems()) {
+            OptimizationAssignmentSuggestion assignment = assignments.get(item.workItem().getId());
+            if (assignment == null || assignment.suggestedAssigneeId() == null) {
+                continue;
+            }
+            item.candidateAssignees().stream()
+                    .filter(candidate -> Objects.equals(candidate.candidateId(), assignment.suggestedAssigneeId()))
+                    .map(OptimizationCandidateAssignee::skillFit)
+                    .filter(Objects::nonNull)
+                    .filter(fit -> fit.totalRequiredSkillCount() > 0 || fit.totalPreferredSkillCount() > 0)
+                    .findFirst()
+                    .ifPresent(fits::add);
+        }
+        return fits;
     }
 
     private int lateItemsBefore(OptimizationProjectModel projectModel) {

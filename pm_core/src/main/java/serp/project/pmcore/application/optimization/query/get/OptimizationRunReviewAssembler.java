@@ -11,11 +11,15 @@ import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
+import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunSummary;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -28,6 +32,8 @@ public class OptimizationRunReviewAssembler {
     public OptimizationRunReviewView toView(OptimizationRunEntity run,
                                             List<OptimizationRunItemEntity> items,
                                             List<OptimizationRunWarningEntity> warnings) {
+        OptimizationRunSummary summary = parseSummary(run.getSummaryJson());
+        Map<Long, OptimizationCandidateSkillFit> skillFitByWorkItemId = selectedSkillFitByWorkItemId(summary);
         return OptimizationRunReviewView.builder()
                 .id(run.getId())
                 .tenantId(run.getTenantId())
@@ -40,14 +46,14 @@ public class OptimizationRunReviewAssembler {
                 .allowReassignment(run.getAllowReassignment())
                 .allowScheduleChanges(run.getAllowScheduleChanges())
                 .selectedWorkItemCount(run.getSelectedWorkItemCount())
-                .summary(parseSummary(run.getSummaryJson()))
+                .summary(summary)
                 .createdAt(run.getCreatedAt())
                 .createdBy(run.getCreatedBy())
                 .updatedAt(run.getUpdatedAt())
                 .updatedBy(run.getUpdatedBy())
                 .items(items.stream()
                         .sorted(Comparator.comparing(OptimizationRunItemEntity::getWorkItemId))
-                        .map(this::toItemView)
+                        .map(item -> toItemView(item, skillFitByWorkItemId.get(item.getWorkItemId())))
                         .toList())
                 .warnings(warnings.stream()
                         .sorted(Comparator.comparing(OptimizationRunWarningEntity::getId, Comparator.nullsLast(Long::compareTo)))
@@ -56,7 +62,7 @@ public class OptimizationRunReviewAssembler {
                 .build();
     }
 
-    private OptimizationRunItemView toItemView(OptimizationRunItemEntity item) {
+    private OptimizationRunItemView toItemView(OptimizationRunItemEntity item, OptimizationCandidateSkillFit skillFit) {
         return OptimizationRunItemView.builder()
                 .id(item.getId())
                 .workItemId(item.getWorkItemId())
@@ -79,12 +85,38 @@ public class OptimizationRunReviewAssembler {
                 .score(item.getScore())
                 .cost(item.getCost())
                 .confidence(item.getConfidence())
+                .candidateSkillFit(toSkillFitView(skillFit))
                 .assignmentReasons(parseStringList(item.getAssignmentReasonsJson()))
                 .scheduleReasons(parseStringList(item.getScheduleReasonsJson()))
                 .violations(parseStringList(item.getViolationsJson()))
                 .appliedAt(item.getAppliedAt())
                 .assignmentSkippedReason(item.getAssignmentSkippedReason())
                 .scheduleSkippedReason(item.getScheduleSkippedReason())
+                .build();
+    }
+
+    private Map<Long, OptimizationCandidateSkillFit> selectedSkillFitByWorkItemId(OptimizationRunSummary summary) {
+        if (summary == null || summary.getSelectedCandidateSkillFits() == null) {
+            return Map.of();
+        }
+        return summary.getSelectedCandidateSkillFits().stream()
+                .collect(Collectors.toMap(OptimizationCandidateSkillFit::workItemId, Function.identity(), (left, right) -> left));
+    }
+
+    private OptimizationCandidateSkillFitView toSkillFitView(OptimizationCandidateSkillFit skillFit) {
+        if (skillFit == null) {
+            return null;
+        }
+        return OptimizationCandidateSkillFitView.builder()
+                .suggestedAssigneeId(skillFit.candidateId())
+                .requiredCoveragePercent(skillFit.requiredCoveragePercent())
+                .preferredCoveragePercent(skillFit.preferredCoveragePercent())
+                .matchedRequiredSkills(skillFit.matchedRequiredSkillIds())
+                .missingRequiredSkills(skillFit.missingRequiredSkillIds())
+                .matchedPreferredSkills(skillFit.matchedPreferredSkillIds())
+                .missingPreferredSkills(skillFit.missingPreferredSkillIds())
+                .proficiencySummary("score=" + skillFit.proficiencyScore())
+                .confidence(skillFit.confidence().name())
                 .build();
     }
 

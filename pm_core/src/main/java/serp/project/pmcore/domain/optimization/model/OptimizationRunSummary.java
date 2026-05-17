@@ -40,4 +40,11 @@ public class OptimizationRunSummary {
     private Long sameProjectOutsideScopeDeductedMillis;
     private Long crossProjectDeductedMillis;
     private List<CapacityWorkloadBucket> workloadBuckets;
+    private Integer itemsWithSkillRequirements;
+    private Integer itemsMissingSkillRequirements;
+    private Integer candidatesWithSkillProfiles;
+    private Integer candidatesMissingSkillProfiles;
+    private Integer requiredSkillMismatchCount;
+    private String skillRankingConfidence;
+    private List<OptimizationCandidateSkillFit> selectedCandidateSkillFits;
 }

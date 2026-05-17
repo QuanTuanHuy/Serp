@@ -41,6 +41,7 @@ public class OptimizationRunItemView {
     private BigDecimal score;
     private BigDecimal cost;
     private String confidence;
+    private OptimizationCandidateSkillFitView candidateSkillFit;
     private List<String> assignmentReasons;
     private List<String> scheduleReasons;
     private List<String> violations;

@@ -405,6 +405,8 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             return OptimizationCandidateSkillFit.neutral(workItemId, candidateId);
         }
         List<Long> matchedSkillIds = new ArrayList<>();
+        List<Long> matchedRequiredSkillIds = new ArrayList<>();
+        List<Long> matchedPreferredSkillIds = new ArrayList<>();
         List<Long> missingRequiredSkillIds = new ArrayList<>();
         List<Long> missingPreferredSkillIds = new ArrayList<>();
         int totalRequired = 0;
@@ -426,8 +428,10 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 proficiencyScore += proficiencyScore(skill.proficiency()) * Math.max(1, Optional.ofNullable(requirement.weight()).orElse(1));
                 if (required) {
                     matchedRequired++;
+                    matchedRequiredSkillIds.add(requirement.skillId());
                 } else {
                     matchedPreferred++;
+                    matchedPreferredSkillIds.add(requirement.skillId());
                 }
             } else if (required) {
                 missingRequiredSkillIds.add(requirement.skillId());
@@ -440,7 +444,8 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         return new OptimizationCandidateSkillFit(workItemId, candidateId, matchedRequired, totalRequired,
                 matchedPreferred, totalPreferred, coverage(matchedRequired, totalRequired), coverage(matchedPreferred, totalPreferred),
                 proficiencyScore, missingRequiredSkillIds.stream().sorted().toList(), missingPreferredSkillIds.stream().sorted().toList(),
-                matchedSkillIds.stream().sorted().toList(), confidence);
+                matchedSkillIds.stream().sorted().toList(), matchedRequiredSkillIds.stream().sorted().toList(),
+                matchedPreferredSkillIds.stream().sorted().toList(), confidence);
     }
 
     private OptimizationSkillRequirement toSkillRequirement(WorkItemSkillEntity entity) {
