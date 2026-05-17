@@ -20,6 +20,7 @@ import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.workitem.port.read.IWorkItemCommentReadPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
@@ -35,6 +36,7 @@ import java.util.stream.Stream;
 public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByIdQuery, WorkItemDetailView> {
 
     private final IWorkItemReadPort workItemReadPort;
+    private final IWorkItemCommentReadPort workItemCommentReadPort;
 
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService permissionEvaluationService;
@@ -74,6 +76,9 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         WorkItemDetailView.LinkStatsView linkStats = new WorkItemDetailView.LinkStatsView(
                 workItemReadPort.countActiveLinksByWorkItemId(workItem.getId(), query.tenantId())
         );
+        WorkItemDetailView.CommentStatsView commentStats = new WorkItemDetailView.CommentStatsView(
+                workItemCommentReadPort.countByWorkItemId(workItem.getId(), query.tenantId())
+        );
 
         return WorkItemDetailView.from(
                 workItem,
@@ -81,7 +86,8 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
                 userSummaryOrId(users, workItem.getReporterId()),
                 components,
                 subtaskStats,
-                linkStats
+                linkStats,
+                commentStats
         );
     }
 

@@ -144,4 +144,9 @@ public class ResourceNotFoundException extends DomainException {
         return new ResourceNotFoundException(DomainErrorCode.ISSUE_LINK_NOT_FOUND,
                 "Issue link not found: id=" + id);
     }
+
+    public static ResourceNotFoundException workItemComment(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORK_ITEM_COMMENT_NOT_FOUND,
+                "Work item comment not found: id=" + id);
+    }
 }

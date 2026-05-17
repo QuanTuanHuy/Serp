@@ -52,6 +52,7 @@ public record WorkItemDetailView(
         List<WorkItemComponentView> components,
         SubtaskStatsView subtaskStats,
         LinkStatsView linkStats,
+        CommentStatsView commentStats,
 
         Long createdAt,
         Long createdBy,
@@ -62,9 +63,10 @@ public record WorkItemDetailView(
     public static WorkItemDetailView from(WorkItemDetailProjection workItem,
                                           UserSummaryView assignee,
                                           UserSummaryView reporter,
-                                          List<WorkItemComponentView> components,
-                                          SubtaskStatsView subtaskStats,
-                                          LinkStatsView linkStats) {
+                                           List<WorkItemComponentView> components,
+                                           SubtaskStatsView subtaskStats,
+                                           LinkStatsView linkStats,
+                                           CommentStatsView commentStats) {
 
         return WorkItemDetailView.builder()
                 .id(workItem.getId())
@@ -111,6 +113,7 @@ public record WorkItemDetailView(
                 .components(components == null || components.isEmpty() ? null : components)
                 .subtaskStats(subtaskStats)
                 .linkStats(linkStats)
+                .commentStats(commentStats)
 
                 .createdAt(instantToEpochMilli(workItem.getCreatedAt()))
                 .createdBy(workItem.getCreatedBy())
@@ -180,6 +183,12 @@ public record WorkItemDetailView(
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record LinkStatsView(
+            long total
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CommentStatsView(
             long total
     ) {
     }

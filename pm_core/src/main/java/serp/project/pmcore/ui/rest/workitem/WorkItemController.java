@@ -14,6 +14,12 @@ import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.assign.AssignWorkItemResult;
+import serp.project.pmcore.application.workitem.command.comment.CreateWorkItemCommentCommand;
+import serp.project.pmcore.application.workitem.command.comment.CreateWorkItemCommentCommandHandler;
+import serp.project.pmcore.application.workitem.command.comment.DeleteWorkItemCommentCommand;
+import serp.project.pmcore.application.workitem.command.comment.DeleteWorkItemCommentCommandHandler;
+import serp.project.pmcore.application.workitem.command.comment.UpdateWorkItemCommentCommand;
+import serp.project.pmcore.application.workitem.command.comment.UpdateWorkItemCommentCommandHandler;
 import serp.project.pmcore.application.workitem.command.component.ManageWorkItemComponentsCommand;
 import serp.project.pmcore.application.workitem.command.component.ManageWorkItemComponentsCommandHandler;
 import serp.project.pmcore.application.workitem.command.component.RemoveWorkItemComponentCommand;
@@ -36,6 +42,9 @@ import serp.project.pmcore.application.workitem.query.board.WorkItemBoardView;
 import serp.project.pmcore.application.workitem.query.children.ListWorkItemChildrenQuery;
 import serp.project.pmcore.application.workitem.query.children.ListWorkItemChildrenQueryHandler;
 import serp.project.pmcore.application.workitem.query.children.WorkItemChildView;
+import serp.project.pmcore.application.workitem.query.comment.ListWorkItemCommentsQuery;
+import serp.project.pmcore.application.workitem.query.comment.ListWorkItemCommentsQueryHandler;
+import serp.project.pmcore.application.workitem.query.comment.WorkItemCommentView;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQuery;
 import serp.project.pmcore.application.workitem.query.component.ListWorkItemComponentsQueryHandler;
 import serp.project.pmcore.application.workitem.query.createmeta.GetWorkItemCreateMetaQuery;
@@ -61,10 +70,12 @@ import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import serp.project.pmcore.ui.rest.workitem.dto.request.AssignWorkItemRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemCommentRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.CreateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.ManageWorkItemComponentsRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.PatchWorkItemScheduleRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemCommentRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
@@ -84,6 +95,9 @@ public class WorkItemController {
     private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
     private final ManageWorkItemComponentsCommandHandler manageWorkItemComponentsCommandHandler;
     private final RemoveWorkItemComponentCommandHandler removeWorkItemComponentCommandHandler;
+    private final CreateWorkItemCommentCommandHandler createWorkItemCommentCommandHandler;
+    private final UpdateWorkItemCommentCommandHandler updateWorkItemCommentCommandHandler;
+    private final DeleteWorkItemCommentCommandHandler deleteWorkItemCommentCommandHandler;
 
     private final SearchWorkItemsQueryHandler searchWorkItemsQueryHandler;
     private final ListWorkItemBoardQueryHandler listWorkItemBoardQueryHandler;
@@ -91,6 +105,7 @@ public class WorkItemController {
     private final GetWorkItemByIdQueryHandler getWorkItemByIdQueryHandler;
     private final ListWorkItemChildrenQueryHandler listWorkItemChildrenQueryHandler;
     private final ListWorkItemLinksQueryHandler listWorkItemLinksQueryHandler;
+    private final ListWorkItemCommentsQueryHandler listWorkItemCommentsQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
 
     @GetMapping
@@ -385,6 +400,94 @@ public class WorkItemController {
                 )
         );
         return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<GeneralResponse<PageView<WorkItemCommentView>>> listWorkItemComments(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        PageView<WorkItemCommentView> result = listWorkItemCommentsQueryHandler.handle(new ListWorkItemCommentsQuery(
+                projectId,
+                id,
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
+                page,
+                size
+        ));
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<GeneralResponse<WorkItemCommentView>> createWorkItemComment(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @Valid @RequestBody CreateWorkItemCommentRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        WorkItemCommentView result = createWorkItemCommentCommandHandler.handle(new CreateWorkItemCommentCommand(
+                projectId,
+                id,
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
+                request.getBody()
+        ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(result));
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<GeneralResponse<WorkItemCommentView>> updateWorkItemComment(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @PathVariable Long commentId,
+            @Valid @RequestBody UpdateWorkItemCommentRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        WorkItemCommentView result = updateWorkItemCommentCommandHandler.handle(new UpdateWorkItemCommentCommand(
+                projectId,
+                id,
+                commentId,
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
+                request.getBody()
+        ));
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<GeneralResponse<Void>> deleteWorkItemComment(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @PathVariable Long commentId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        deleteWorkItemCommentCommandHandler.handle(new DeleteWorkItemCommentCommand(
+                projectId,
+                id,
+                commentId,
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups()
+        ));
+        return ResponseEntity.ok(responseUtils.success(null));
     }
 
     @DeleteMapping("/{id}/components/{componentId}")
