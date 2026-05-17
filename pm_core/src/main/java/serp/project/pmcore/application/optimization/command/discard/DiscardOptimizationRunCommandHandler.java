@@ -10,16 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
+import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
-import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
-import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 
-import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -30,23 +28,23 @@ public class DiscardOptimizationRunCommandHandler
     private final IOptimizationRunPort optimizationRunPort;
     private final IOptimizationRunItemPort optimizationRunItemPort;
     private final IOptimizationRunWarningPort optimizationRunWarningPort;
+    private final OptimizationRunGuard optimizationRunGuard;
     private final OptimizationRunReviewAssembler optimizationRunReviewAssembler;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OptimizationRunReviewView handle(DiscardOptimizationRunCommand command) {
         validate(command);
-        OptimizationRunEntity run = optimizationRunPort.getById(command.tenantId(), command.runId())
-                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                        "Optimization run not found: id=" + command.runId()));
-        if (!Objects.equals(run.getProjectId(), command.projectId())) {
-            throw new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                    "Optimization run not found for project: runId=" + command.runId() + ", projectId=" + command.projectId());
-        }
-        Set<OptimizationRunStatus> discardableStatuses = Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED);
-        if (!discardableStatuses.contains(run.getStatus())) {
-            throw new IllegalArgumentException("Optimization run cannot be discarded in status " + run.getStatus());
-        }
+        OptimizationRunEntity run = optimizationRunGuard.requireRunInProject(
+                command.tenantId(),
+                command.projectId(),
+                command.runId()
+        );
+        optimizationRunGuard.ensureStatus(
+                run,
+                Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED),
+                "discarded"
+        );
         long now = System.currentTimeMillis();
         run.setStatus(OptimizationRunStatus.DISCARDED);
         run.setDiscardedAt(now);

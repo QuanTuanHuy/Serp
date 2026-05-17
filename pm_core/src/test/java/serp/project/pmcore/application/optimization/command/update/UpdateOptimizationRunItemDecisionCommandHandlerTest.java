@@ -13,18 +13,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
+import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
-import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,7 +39,7 @@ class UpdateOptimizationRunItemDecisionCommandHandlerTest {
     private static final Long WORK_ITEM_ID = 30L;
 
     @Mock
-    private IOptimizationRunPort optimizationRunPort;
+    private OptimizationRunGuard optimizationRunGuard;
     @Mock
     private IOptimizationRunItemPort optimizationRunItemPort;
     @Mock
@@ -57,7 +56,7 @@ class UpdateOptimizationRunItemDecisionCommandHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new UpdateOptimizationRunItemDecisionCommandHandler(
-                optimizationRunPort,
+                optimizationRunGuard,
                 optimizationRunItemPort,
                 optimizationRunWarningPort,
                 optimizationProjectModelBuilder,
@@ -71,7 +70,7 @@ class UpdateOptimizationRunItemDecisionCommandHandlerTest {
         OptimizationRunEntity run = run();
         OptimizationRunItemEntity item = runItem();
         OptimizationRunReviewView view = OptimizationRunReviewView.builder().id(RUN_ID).build();
-        when(optimizationRunPort.getById(TENANT_ID, RUN_ID)).thenReturn(Optional.of(run));
+        when(optimizationRunGuard.requireRunInProject(TENANT_ID, PROJECT_ID, RUN_ID)).thenReturn(run);
         when(optimizationRunItemPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of(item));
         when(optimizationRunWarningPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of());
         when(optimizationRunReviewAssembler.toView(any(), any(), any())).thenReturn(view);

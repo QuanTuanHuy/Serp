@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
+import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
@@ -22,10 +23,9 @@ import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
-import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
-import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.kernel.utils.JsonUtils;
@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 public class UpdateOptimizationRunItemDecisionCommandHandler
         implements ICommandHandler<UpdateOptimizationRunItemDecisionCommand, OptimizationRunReviewView> {
 
-    private final IOptimizationRunPort optimizationRunPort;
+    private final OptimizationRunGuard optimizationRunGuard;
     private final IOptimizationRunItemPort optimizationRunItemPort;
     private final IOptimizationRunWarningPort optimizationRunWarningPort;
     private final IOptimizationProjectModelBuilder optimizationProjectModelBuilder;
@@ -53,8 +53,16 @@ public class UpdateOptimizationRunItemDecisionCommandHandler
     @Transactional(rollbackFor = Exception.class, noRollbackFor = IllegalArgumentException.class)
     public OptimizationRunReviewView handle(UpdateOptimizationRunItemDecisionCommand command) {
         validate(command);
-        OptimizationRunEntity run = loadRun(command.tenantId(), command.projectId(), command.runId());
-        ensureRunCanBeUpdated(run);
+        OptimizationRunEntity run = optimizationRunGuard.requireRunInProject(
+                command.tenantId(),
+                command.projectId(),
+                command.runId()
+        );
+        optimizationRunGuard.ensureStatus(
+                run,
+                Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED),
+                "updated"
+        );
 
         List<OptimizationRunItemEntity> items = optimizationRunItemPort.listByRunId(command.tenantId(), command.runId());
         OptimizationRunItemEntity item = items.stream()
@@ -214,24 +222,6 @@ public class UpdateOptimizationRunItemDecisionCommandHandler
     private boolean needsModelValidation(UpdateOptimizationRunItemDecisionCommand command) {
         return command.assignmentDecision() == OptimizationDecision.OVERRIDDEN
                 || command.scheduleDecision() == OptimizationDecision.OVERRIDDEN;
-    }
-
-    private OptimizationRunEntity loadRun(Long tenantId, Long projectId, Long runId) {
-        OptimizationRunEntity run = optimizationRunPort.getById(tenantId, runId)
-                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                        "Optimization run not found: id=" + runId));
-        if (!Objects.equals(run.getProjectId(), projectId)) {
-            throw new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                    "Optimization run not found for project: runId=" + runId + ", projectId=" + projectId);
-        }
-        return run;
-    }
-
-    private void ensureRunCanBeUpdated(OptimizationRunEntity run) {
-        Set<OptimizationRunStatus> mutableStatuses = Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED);
-        if (!mutableStatuses.contains(run.getStatus())) {
-            throw new IllegalArgumentException("Optimization run cannot be updated in status " + run.getStatus());
-        }
     }
 
     private void rejectInvalidOverride(UpdateOptimizationRunItemDecisionCommand command, String message) {

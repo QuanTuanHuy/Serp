@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
+import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
@@ -74,6 +75,7 @@ public class ApplyOptimizationRunCommandHandler
     private final IProjectService projectService;
     private final IWorkItemAuthorizationSupportService workItemAuthorizationSupportService;
     private final IIssueSecurityService issueSecurityService;
+    private final OptimizationRunGuard optimizationRunGuard;
     private final OptimizationRunReviewAssembler optimizationRunReviewAssembler;
     private final JsonUtils jsonUtils;
 
@@ -81,8 +83,16 @@ public class ApplyOptimizationRunCommandHandler
     @Transactional(rollbackFor = Exception.class)
     public OptimizationRunReviewView handle(ApplyOptimizationRunCommand command) {
         validate(command);
-        OptimizationRunEntity run = loadRun(command.tenantId(), command.projectId(), command.runId());
-        ensureRunCanBeApplied(run);
+        OptimizationRunEntity run = optimizationRunGuard.requireRunInProject(
+                command.tenantId(),
+                command.projectId(),
+                command.runId()
+        );
+        optimizationRunGuard.ensureStatus(
+                run,
+                Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED),
+                "applied"
+        );
         ProjectEntity project = projectService.getProjectById(command.projectId(), command.tenantId());
         if (Boolean.TRUE.equals(project.getIsArchived())) {
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
@@ -348,24 +358,6 @@ public class ApplyOptimizationRunCommandHandler
                     "Optimization run item not found: runId=" + command.runId() + ", workItemId=" + workItemId);
         }
         return item;
-    }
-
-    private OptimizationRunEntity loadRun(Long tenantId, Long projectId, Long runId) {
-        OptimizationRunEntity run = optimizationRunPort.getById(tenantId, runId)
-                .orElseThrow(() -> new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                        "Optimization run not found: id=" + runId));
-        if (!Objects.equals(run.getProjectId(), projectId)) {
-            throw new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
-                    "Optimization run not found for project: runId=" + runId + ", projectId=" + projectId);
-        }
-        return run;
-    }
-
-    private void ensureRunCanBeApplied(OptimizationRunEntity run) {
-        Set<OptimizationRunStatus> allowedStatuses = Set.of(OptimizationRunStatus.GENERATED, OptimizationRunStatus.PARTIALLY_APPLIED);
-        if (!allowedStatuses.contains(run.getStatus())) {
-            throw new IllegalArgumentException("Optimization run cannot be applied in status " + run.getStatus());
-        }
     }
 
     private void validate(ApplyOptimizationRunCommand command) {

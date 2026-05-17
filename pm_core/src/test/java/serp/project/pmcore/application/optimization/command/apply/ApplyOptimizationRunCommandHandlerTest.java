@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
+import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
@@ -35,7 +36,6 @@ import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +72,8 @@ class ApplyOptimizationRunCommandHandlerTest {
     @Mock
     private IIssueSecurityService issueSecurityService;
     @Mock
+    private OptimizationRunGuard optimizationRunGuard;
+    @Mock
     private OptimizationRunReviewAssembler optimizationRunReviewAssembler;
     @Mock
     private JsonUtils jsonUtils;
@@ -90,6 +92,7 @@ class ApplyOptimizationRunCommandHandlerTest {
                 projectService,
                 workItemAuthorizationSupportService,
                 issueSecurityService,
+                optimizationRunGuard,
                 optimizationRunReviewAssembler,
                 jsonUtils
         );
@@ -156,7 +159,7 @@ class ApplyOptimizationRunCommandHandlerTest {
                             OptimizationRunItemEntity item,
                             ProjectEntity project,
                             WorkItemEntity workItem) {
-        when(optimizationRunPort.getById(TENANT_ID, RUN_ID)).thenReturn(Optional.of(run));
+        when(optimizationRunGuard.requireRunInProject(TENANT_ID, PROJECT_ID, RUN_ID)).thenReturn(run);
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
         when(optimizationRunItemPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of(item));
         when(workItemReadPort.listActiveByWorkItemIds(TENANT_ID, List.of(WORK_ITEM_ID))).thenReturn(List.of(workItem));
