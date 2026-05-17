@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -28,4 +30,14 @@ public class OptimizationRunSummary {
     private Integer overloadedAssigneeCountAfter;
     private Integer warningsCount;
     private String confidenceLevel;
+    private String capacitySourceMode;
+    private String calendarCoverageStatus;
+    private String workloadCoverageStatus;
+    private List<Long> fallbackUserIds;
+    private Long calendarFetchedAt;
+    private Long workloadFetchedAt;
+    private Long deductedWorkloadMillis;
+    private Long sameProjectOutsideScopeDeductedMillis;
+    private Long crossProjectDeductedMillis;
+    private List<CapacityWorkloadBucket> workloadBuckets;
 }

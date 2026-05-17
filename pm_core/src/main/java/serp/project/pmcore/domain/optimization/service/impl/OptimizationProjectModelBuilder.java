@@ -110,15 +110,15 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 .collect(Collectors.toCollection(LinkedHashSet::new))
                 .stream()
                 .toList();
-        List<ResourceCapacitySlot> capacitySlots = resourceCapacityPort.getCapacitySlots(
-                input.tenantId(), candidateIds, input.planningStart(), input.planningEnd());
+        var capacityResolution = resourceCapacityPort.resolveCapacity(input.tenantId(), input.projectId(), candidateIds,
+                input.planningStart(), input.planningEnd(), input.selectedWorkItemIds());
+        List<ResourceCapacitySlot> capacitySlots = capacityResolution.slots();
+        warnings.addAll(capacityResolution.warnings());
         if (!candidateIds.isEmpty()) {
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.LOW_CONFIDENCE_CAPACITY,
                     null, "Fallback capacity used", OptimizationConstants.FALLBACK_CAPACITY_DETAILS));
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CALENDAR,
                     null, "Calendar data is unavailable", null));
-            warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CROSS_PROJECT_WORKLOAD,
-                    null, "Cross-project workload data is unavailable", null));
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.SKILL_DATA_UNAVAILABLE,
                     null, "Skill data is unavailable", null));
         }
@@ -127,7 +127,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         log.info("Built optimization project model: tenantId={}, projectId={}, items={}, internalDependencies={}, externalDependencies={}, warnings={}",
                 input.tenantId(), input.projectId(), workItems.size(), graph.internalEdges().size(), graph.externalEdges().size(), warnings.size());
         return new OptimizationProjectModel(input.tenantId(), input.projectId(), project, input.planningStart(), input.planningEnd(),
-                graph, workItems, capacitySlots, warnings, earliestStarts);
+                graph, workItems, capacitySlots, capacityResolution, warnings, earliestStarts);
     }
 
     private List<WorkItemEntity> loadSelectedWorkItems(OptimizationBuilderInput input) {

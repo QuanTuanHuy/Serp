@@ -19,6 +19,7 @@ public record OptimizationProjectModel(
         OptimizationDependencyGraph dependencyGraph,
         List<OptimizationWorkItem> workItems,
         List<ResourceCapacitySlot> capacitySlots,
+        CapacityResolutionResult capacityResolution,
         List<OptimizationConstraintViolation> warnings,
         Map<Long, Long> earliestStartByWorkItemId
 ) {

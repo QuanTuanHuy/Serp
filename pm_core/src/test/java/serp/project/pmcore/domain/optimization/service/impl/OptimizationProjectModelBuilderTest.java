@@ -15,8 +15,11 @@ import serp.project.pmcore.domain.issuelink.entity.IssueLinkTypeEntity;
 import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkPort;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkTypePort;
+import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
+import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
+import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
@@ -165,8 +168,8 @@ class OptimizationProjectModelBuilderTest {
                         .build()));
         when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class)))
                 .thenReturn(List.of(500L));
-        when(resourceCapacityPort.getCapacitySlots(eq(1L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L)))
-                .thenReturn(List.of(new ResourceCapacitySlot(400L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L)));
+        when(resourceCapacityPort.resolveCapacity(eq(1L), eq(100L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L), anyList()))
+                .thenReturn(capacityResolution(List.of(new ResourceCapacitySlot(400L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L))));
 
         OptimizationProjectModel model = builder.build(input(List.of(10L)));
 
@@ -195,8 +198,14 @@ class OptimizationProjectModelBuilderTest {
     private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {
         when(workItemComponentReadPort.listActiveByWorkItemIds(eq(1L), eq(workItemIds))).thenReturn(List.of());
         when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class))).thenReturn(memberIds);
-        when(resourceCapacityPort.getCapacitySlots(eq(1L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L)))
-                .thenReturn(List.of(new ResourceCapacitySlot(100L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L)));
+        when(resourceCapacityPort.resolveCapacity(eq(1L), eq(100L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L), anyList()))
+                .thenReturn(capacityResolution(List.of(new ResourceCapacitySlot(100L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L))));
+    }
+
+    private CapacityResolutionResult capacityResolution(List<ResourceCapacitySlot> slots) {
+        return new CapacityResolutionResult(slots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+                CapacityCoverageStatus.MISSING, CapacityCoverageStatus.NOT_REQUIRED, List.of(100L), null,
+                1_714_876_800_000L, 0L, 0L, 0L, List.of(), List.of());
     }
 
     private WorkItemEntity item(Long id) {

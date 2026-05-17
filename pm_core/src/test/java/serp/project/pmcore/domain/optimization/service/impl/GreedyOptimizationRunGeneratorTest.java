@@ -6,8 +6,11 @@
 package serp.project.pmcore.domain.optimization.service.impl;
 
 import org.junit.jupiter.api.Test;
+import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
+import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateAssignee;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
@@ -102,8 +105,27 @@ class GreedyOptimizationRunGeneratorTest {
                 items,
                 List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
                         new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)),
+                capacityResolution(),
                 List.of(),
                 Map.of()
+        );
+    }
+
+    private CapacityResolutionResult capacityResolution() {
+        return new CapacityResolutionResult(
+                List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
+                        new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)),
+                CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+                CapacityCoverageStatus.MISSING,
+                CapacityCoverageStatus.NOT_REQUIRED,
+                List.of(100L, 200L),
+                null,
+                START,
+                0L,
+                0L,
+                0L,
+                List.of(),
+                List.of()
         );
     }
 

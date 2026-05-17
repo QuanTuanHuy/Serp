@@ -450,6 +450,16 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
                 .overloadedAssigneeCountAfter(overloadedAssigneeCount(projectModel, schedules))
                 .warningsCount(warnings.size())
                 .confidenceLevel(confidenceLevel(warnings))
+                .capacitySourceMode(projectModel.capacityResolution().sourceMode().name())
+                .calendarCoverageStatus(projectModel.capacityResolution().calendarCoverageStatus().name())
+                .workloadCoverageStatus(projectModel.capacityResolution().workloadCoverageStatus().name())
+                .fallbackUserIds(projectModel.capacityResolution().fallbackUserIds())
+                .calendarFetchedAt(projectModel.capacityResolution().calendarFetchedAt())
+                .workloadFetchedAt(projectModel.capacityResolution().workloadFetchedAt())
+                .deductedWorkloadMillis(projectModel.capacityResolution().deductedWorkloadMillis())
+                .sameProjectOutsideScopeDeductedMillis(projectModel.capacityResolution().sameProjectOutsideScopeDeductedMillis())
+                .crossProjectDeductedMillis(projectModel.capacityResolution().crossProjectDeductedMillis())
+                .workloadBuckets(projectModel.capacityResolution().workloadBuckets())
                 .build();
     }
 
