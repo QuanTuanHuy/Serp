@@ -9,7 +9,7 @@ import type {
   PickupOptimizationResponse,
   PickupShift,
   PostOffice,
-} from '../../../types';
+} from '../../../../types';
 
 export type DispatcherAccessScope =
   | 'ADMIN_ALL'

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
-import type { PickupShift } from '../../../types';
+import type { PickupShift } from '../../../../types';
 import type {
   DispatchOptimizationEffortOption,
   DispatchOptimizationGoalOption,

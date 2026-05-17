@@ -32,7 +32,7 @@ import {
   useGetPostOfficesQuery,
   useManualAssignPickupOrdersMutation,
   useOptimizePickupPlanMutation,
-} from '../../api';
+} from '../../../api';
 import type {
   AutoAssignPickupPlanRequest,
   FirstMileOrderDetail,
@@ -44,7 +44,7 @@ import type {
   PickupShift,
   PostOffice,
   PostOfficeStaff,
-} from '../../types';
+} from '../../../types';
 
 const POST_OFFICE_PAGE_SIZE = 200;
 const ORDER_PAGE_SIZE = 50;
