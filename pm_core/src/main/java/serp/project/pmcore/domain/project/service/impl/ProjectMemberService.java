@@ -3,28 +3,28 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.optimization.adapter;
+package serp.project.pmcore.domain.project.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import serp.project.pmcore.domain.optimization.port.IProjectMemberCandidatePort;
+import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.port.IProjectRoleActorPort;
+import serp.project.pmcore.domain.project.service.IProjectMemberService;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
-import serp.project.pmcore.infrastructure.store.repository.IProjectRoleActorRepository;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-@Component
+@Service
 @RequiredArgsConstructor
-public class ProjectMemberCandidateAdapter implements IProjectMemberCandidatePort {
+public class ProjectMemberService implements IProjectMemberService {
 
-    private final IProjectRoleActorRepository projectRoleActorRepository;
+    private final IProjectRoleActorPort projectRoleActorPort;
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
 
     @Override
@@ -33,11 +33,11 @@ public class ProjectMemberCandidateAdapter implements IProjectMemberCandidatePor
             return List.of();
         }
         ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
-        return projectRoleActorRepository
-                .findAllByTenantIdAndProjectIdAndSubjectType(
-                        project.getTenantId(),
+        return projectRoleActorPort
+                .getProjectRoleActorsByProjectIdAndSubjectType(
                         project.getId(),
-                        ProjectRoleActorSubjectType.USER.name())
+                        ProjectRoleActorSubjectType.USER.name(),
+                        project.getTenantId())
                 .stream()
                 .map(actor -> parseUserId(actor.getSubjectId()))
                 .filter(Objects::nonNull)

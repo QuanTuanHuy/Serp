@@ -17,7 +17,10 @@ public class OptimizationConstants {
     public static final int SCORE_DECIMAL_SCALE = 6;
     public static final String DEFAULT_SCOPE = "SELECTED_WORK_ITEMS";
 
+    public static final String TIME_REMAINING_ESTIMATE = "TIME_REMAINING_ESTIMATE";
+    public static final String TIME_ORIGINAL_ESTIMATE = "TIME_ORIGINAL_ESTIMATE";
     public static final String DURATION_SOURCE_DEFAULT = "DEFAULT";
+    public static final String STATUS_CATEGORY_DONE = "DONE";
     public static final double PRIORITY_NEUTRAL_FACTOR = 0.5D;
     public static final double DUE_DATE_WINDOW_DAYS = 14D;
     public static final double BLOCKER_FACTOR_PER_SUCCESSOR = 0.25D;

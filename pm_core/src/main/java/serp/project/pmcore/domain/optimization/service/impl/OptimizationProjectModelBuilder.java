@@ -28,7 +28,6 @@ import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
-import serp.project.pmcore.domain.optimization.port.IProjectMemberCandidatePort;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemComponentReadPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
@@ -37,6 +36,7 @@ import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectComponentPort;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
+import serp.project.pmcore.domain.project.service.IProjectMemberService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -67,7 +67,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     private final IIssueLinkTypePort issueLinkTypePort;
     private final IProjectComponentPort projectComponentPort;
     private final IWorkItemComponentReadPort workItemComponentReadPort;
-    private final IProjectMemberCandidatePort projectMemberCandidatePort;
+    private final IProjectMemberService projectMemberService;
     private final IResourceCapacityPort resourceCapacityPort;
 
     @Override
@@ -198,9 +198,9 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         for (WorkItemEntity item : items) {
             // Prefer remaining estimate (highest confidence), fall back to original estimate, then default
             if (positive(item.getTimeRemainingEstimate())) {
-                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeRemainingEstimate(), OptimizationConfidence.HIGH, "TIME_REMAINING_ESTIMATE"));
+                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeRemainingEstimate(), OptimizationConfidence.HIGH, OptimizationConstants.TIME_REMAINING_ESTIMATE));
             } else if (positive(item.getTimeOriginalEstimate())) {
-                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeOriginalEstimate(), OptimizationConfidence.MEDIUM, "TIME_ORIGINAL_ESTIMATE"));
+                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeOriginalEstimate(), OptimizationConfidence.MEDIUM, OptimizationConstants.TIME_ORIGINAL_ESTIMATE));
             } else {
                 // Use hierarchy-level-based default and warn about low confidence
                 long fallback = defaultDuration(item.getIssueTypeHierarchyLevel());
@@ -287,7 +287,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                                                                              List<OptimizationConstraintViolation> warnings) {
         Map<Long, List<OptimizationCandidateAssignee>> result = new HashMap<>();
         Map<Long, List<Long>> componentLeadsByWorkItemId = resolveComponentLeads(tenantId, project.getId(), items);
-        List<Long> assignableProjectMembers = projectMemberCandidatePort.listAssignableMembers(project);
+        List<Long> assignableProjectMembers = projectMemberService.listAssignableMembers(project);
         if (assignableProjectMembers.isEmpty()) {
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.NO_PROJECT_MEMBER_POOL,
                     null, "No assignable project member pool", null));
@@ -465,7 +465,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private boolean isDone(WorkItemEntity item) {
-        return item.getResolutionId() != null || "DONE".equalsIgnoreCase(item.getStatusCategoryKey());
+        return item.getResolutionId() != null || OptimizationConstants.STATUS_CATEGORY_DONE.equalsIgnoreCase(item.getStatusCategoryKey());
     }
 
     private void addCandidate(Map<Long, CandidateFlags> flagsById, Long candidateId, java.util.function.Consumer<CandidateFlags> marker) {

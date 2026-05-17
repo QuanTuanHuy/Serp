@@ -24,7 +24,6 @@ import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
-import serp.project.pmcore.domain.optimization.port.IProjectMemberCandidatePort;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemComponentReadPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
@@ -32,6 +31,7 @@ import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectComponentPort;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
+import serp.project.pmcore.domain.project.service.IProjectMemberService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -70,7 +70,7 @@ class OptimizationProjectModelBuilderTest {
     private IWorkItemComponentReadPort workItemComponentReadPort;
 
     @Mock
-    private IProjectMemberCandidatePort projectMemberCandidatePort;
+    private IProjectMemberService projectMemberService;
 
     @Mock
     private IResourceCapacityPort resourceCapacityPort;
@@ -166,7 +166,7 @@ class OptimizationProjectModelBuilderTest {
                         .projectId(100L)
                         .leadUserId(400L)
                         .build()));
-        when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class)))
+        when(projectMemberService.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class)))
                 .thenReturn(List.of(500L));
         when(resourceCapacityPort.resolveCapacity(eq(1L), eq(100L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L), anyList()))
                 .thenReturn(capacityResolution(List.of(new ResourceCapacitySlot(400L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L))));
@@ -197,7 +197,7 @@ class OptimizationProjectModelBuilderTest {
 
     private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {
         when(workItemComponentReadPort.listActiveByWorkItemIds(eq(1L), eq(workItemIds))).thenReturn(List.of());
-        when(projectMemberCandidatePort.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class))).thenReturn(memberIds);
+        when(projectMemberService.listAssignableMembers(org.mockito.ArgumentMatchers.any(ProjectEntity.class))).thenReturn(memberIds);
         when(resourceCapacityPort.resolveCapacity(eq(1L), eq(100L), anyList(), eq(1_714_876_800_000L), eq(1_715_481_600_000L), anyList()))
                 .thenReturn(capacityResolution(List.of(new ResourceCapacitySlot(100L, 1_714_876_800_000L, 1_714_963_200_000L, 28_800_000L))));
     }
