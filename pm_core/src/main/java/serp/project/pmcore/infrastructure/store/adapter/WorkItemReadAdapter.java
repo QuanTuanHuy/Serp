@@ -136,8 +136,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     }
 
     @Override
-    public Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId) {
-        return workItemRepository.findWorkItemDetailById(id, tenantId);
+    public Optional<WorkItemDetailProjection> getWorkItemDetailById(Long projectId, Long id, Long tenantId) {
+        return workItemRepository.findWorkItemDetailById(projectId, id, tenantId);
     }
 
     @Override
@@ -145,6 +145,32 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
         return workItemMapper.toEntities(
                 workItemRepository.findAllByTenantIdAndParentId(tenantId, parentId)
         );
+    }
+
+    @Override
+    public long countActiveChildrenByParentId(Long projectId, Long parentId, Long tenantId) {
+        return workItemRepository.countByTenantIdAndProjectIdAndParentId(tenantId, projectId, parentId);
+    }
+
+    @Override
+    public long countDoneChildrenByParentId(Long projectId, Long parentId, Long tenantId) {
+        return workItemRepository.countDoneChildrenByParentId(projectId, parentId, tenantId);
+    }
+
+    @Override
+    public long countActiveLinksByWorkItemId(Long workItemId, Long tenantId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM issue_links il
+                WHERE il.tenant_id = :tenantId
+                  AND il.deleted_at IS NULL
+                  AND (il.source_id = :workItemId OR il.target_id = :workItemId)
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("workItemId", workItemId);
+        Long total = jdbcTemplate.queryForObject(sql, params, Long.class);
+        return total != null ? total : 0L;
     }
 
     @Override

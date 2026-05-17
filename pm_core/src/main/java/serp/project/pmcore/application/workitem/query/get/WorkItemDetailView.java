@@ -7,9 +7,11 @@ package serp.project.pmcore.application.workitem.query.get;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
+import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
 import java.time.Instant;
+import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder
@@ -46,6 +48,10 @@ public record WorkItemDetailView(
         WorkflowStepSummaryView workflowStep,
         StatusSummaryView status,
         PrioritySummaryView priority,
+        ParentSummaryView parent,
+        List<WorkItemComponentView> components,
+        SubtaskStatsView subtaskStats,
+        LinkStatsView linkStats,
 
         Long createdAt,
         Long createdBy,
@@ -53,7 +59,12 @@ public record WorkItemDetailView(
         Long updatedBy
 ) {
 
-    public static WorkItemDetailView from(WorkItemDetailProjection workItem) {
+    public static WorkItemDetailView from(WorkItemDetailProjection workItem,
+                                          UserSummaryView assignee,
+                                          UserSummaryView reporter,
+                                          List<WorkItemComponentView> components,
+                                          SubtaskStatsView subtaskStats,
+                                          LinkStatsView linkStats) {
 
         return WorkItemDetailView.builder()
                 .id(workItem.getId())
@@ -73,18 +84,33 @@ public record WorkItemDetailView(
                 .timeSpent(workItem.getTimeSpent())
 
                 .issueType(workItem.getIssueTypeId() != null ?
-                        new WorkItemDetailView.IssueTypeSummaryView(workItem.getIssueTypeId(), workItem.getIssueTypeName()) : null)
+                        new WorkItemDetailView.IssueTypeSummaryView(
+                                workItem.getIssueTypeId(),
+                                workItem.getIssueTypeName(),
+                                workItem.getIssueTypeIconUrl(),
+                                workItem.getIssueTypeHierarchyLevel()
+                        ) : null)
                 .priority(workItem.getPriorityId() != null ?
                         new WorkItemDetailView.PrioritySummaryView(workItem.getPriorityId(), workItem.getPriorityName(), workItem.getPriorityColor()) : null)
                 .status(workItem.getStatusId() != null ?
-                        new WorkItemDetailView.StatusSummaryView(workItem.getStatusId(), workItem.getStatusName()) : null)
+                        new WorkItemDetailView.StatusSummaryView(
+                                workItem.getStatusId(),
+                                workItem.getStatusName(),
+                                workItem.getStatusKey()
+                        ) : null)
                 .workflowStep(workItem.getWorkflowStepId() != null ?
                         new WorkItemDetailView.WorkflowStepSummaryView(workItem.getWorkflowStepId(), workItem.getWorkflowStepName()) : null)
-
-                .assignee(workItem.getAssigneeId() != null ?
-                        new WorkItemDetailView.UserSummaryView(workItem.getAssigneeId(), null) : null)
-                .reporter(workItem.getReporterId() != null ?
-                        new WorkItemDetailView.UserSummaryView(workItem.getReporterId(), null) : null)
+                .assignee(assignee)
+                .reporter(reporter)
+                .parent(workItem.getParentId() != null ?
+                        new WorkItemDetailView.ParentSummaryView(
+                                workItem.getParentId(),
+                                workItem.getParentKey(),
+                                workItem.getParentSummary()
+                        ) : null)
+                .components(components == null || components.isEmpty() ? null : components)
+                .subtaskStats(subtaskStats)
+                .linkStats(linkStats)
 
                 .createdAt(instantToEpochMilli(workItem.getCreatedAt()))
                 .createdBy(workItem.getCreatedBy())
@@ -100,14 +126,17 @@ public record WorkItemDetailView(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record IssueTypeSummaryView(
             Long id,
-            String name
+            String name,
+            String iconUrl,
+            Integer hierarchyLevel
     ) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record UserSummaryView(
             Long id,
-            String displayName
+            String displayName,
+            String avatarUrl
     ) {
     }
 
@@ -121,7 +150,8 @@ public record WorkItemDetailView(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record StatusSummaryView(
             Long id,
-            String name
+            String name,
+            String key
     ) {
     }
 
@@ -130,6 +160,27 @@ public record WorkItemDetailView(
             Long id,
             String name,
             String color
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ParentSummaryView(
+            Long id,
+            String key,
+            String summary
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record SubtaskStatsView(
+            long total,
+            long done
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record LinkStatsView(
+            long total
     ) {
     }
 }

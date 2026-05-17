@@ -43,9 +43,15 @@ public interface IWorkItemReadPort {
 
     PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria);
 
-    Optional<WorkItemDetailProjection> getWorkItemDetailById(Long id, Long tenantId);
+    Optional<WorkItemDetailProjection> getWorkItemDetailById(Long projectId, Long id, Long tenantId);
 
     List<WorkItemEntity> getActiveChildrenByParentId(Long parentId, Long tenantId);
+
+    long countActiveChildrenByParentId(Long projectId, Long parentId, Long tenantId);
+
+    long countDoneChildrenByParentId(Long projectId, Long parentId, Long tenantId);
+
+    long countActiveLinksByWorkItemId(Long workItemId, Long tenantId);
 
     List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId);
 

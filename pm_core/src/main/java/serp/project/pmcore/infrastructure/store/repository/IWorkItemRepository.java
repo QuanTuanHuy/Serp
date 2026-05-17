@@ -45,6 +45,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndParentId(Long tenantId, Long parentId);
 
+    long countByTenantIdAndProjectIdAndParentId(Long tenantId, Long projectId, Long parentId);
+
     Optional<WorkItemModel> findFirstByTenantIdAndProjectIdOrderByRankDescIdDesc(Long tenantId, Long projectId);
 
     @Modifying
@@ -61,6 +63,8 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
                 w.description AS description,
                 w.resolution_id AS resolutionId,
                 w.parent_id AS parentId,
+                parent.key AS parentKey,
+                parent.summary AS parentSummary,
                 w.security_level_id AS securityLevelId,
                 w.start_date AS startDate,
                 w.due_date AS dueDate,
@@ -76,22 +80,45 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
                 w.reporter_id AS reporterId,
                 it.id AS issueTypeId,
                 it.name AS issueTypeName,
+                it.icon_url AS issueTypeIconUrl,
+                it.hierarchy_level AS issueTypeHierarchyLevel,
                 p.id AS priorityId,
                 p.name AS priorityName,
                 p.color AS priorityColor,
                 s.id AS statusId,
+                s.status_key AS statusKey,
                 s.name AS statusName,
                 ws.id AS workflowStepId,
                 ws.name AS workflowStepName
             FROM work_items w
+            LEFT JOIN work_items parent ON w.parent_id = parent.id
+                AND parent.tenant_id = w.tenant_id
+                AND parent.deleted_at IS NULL
             LEFT JOIN issue_types it ON w.issue_type_id = it.id
             LEFT JOIN priorities p ON w.priority_id = p.id
             LEFT JOIN statuses s ON w.status_id = s.id
             LEFT JOIN workflow_steps ws ON w.workflow_step_id = ws.id
             WHERE w.id = :workItemId
+                AND w.project_id = :projectId
                 AND w.tenant_id = :tenantId
                 AND w.deleted_at IS NULL
            """, nativeQuery = true)
-    Optional<WorkItemDetailProjection> findWorkItemDetailById(@Param("workItemId") Long workItemId,
-                                                              @Param("tenantId") Long tenantId);
+    Optional<WorkItemDetailProjection> findWorkItemDetailById(@Param("projectId") Long projectId,
+                                                               @Param("workItemId") Long workItemId,
+                                                               @Param("tenantId") Long tenantId);
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM work_items child
+            JOIN statuses s ON child.status_id = s.id
+            JOIN status_categories sc ON s.category_id = sc.id
+            WHERE child.parent_id = :parentId
+                AND child.project_id = :projectId
+                AND child.tenant_id = :tenantId
+                AND child.deleted_at IS NULL
+                AND LOWER(sc.key) = 'done'
+           """, nativeQuery = true)
+    long countDoneChildrenByParentId(@Param("projectId") Long projectId,
+                                     @Param("parentId") Long parentId,
+                                     @Param("tenantId") Long tenantId);
 }
