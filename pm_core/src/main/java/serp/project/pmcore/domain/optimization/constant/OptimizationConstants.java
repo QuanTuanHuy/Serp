@@ -40,4 +40,11 @@ public class OptimizationConstants {
     public static final double STANDARD_REASSIGNMENT_PENALTY = 2D;
     public static final double MINIMAL_REASSIGNMENT_CURRENT_ASSIGNEE_BONUS = 5D;
     public static final double OVERLOAD_BASE_PENALTY = 25D;
+
+    public static final double REQUIRED_SKILL_MATCH_BONUS = 25D;
+    public static final double PREFERRED_SKILL_MATCH_BONUS = 8D;
+    public static final double PROFICIENCY_SCORE_BONUS_MULTIPLIER = 1D;
+    public static final double MISSING_REQUIRED_SKILL_PENALTY = 40D;
+    public static final double MISSING_PREFERRED_SKILL_PENALTY = 6D;
+    public static final double LOW_CONFIDENCE_SKILL_PENALTY = 5D;
 }

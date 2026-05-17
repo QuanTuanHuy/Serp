@@ -2346,7 +2346,7 @@ Verification:
 
 ### Sprint 13 - Skill-Aware Assignment Ranking
 
-Status: planned.
+Status: implemented in backend.
 
 Goal:
 1. Use candidate skill fit to improve assignment suggestions.

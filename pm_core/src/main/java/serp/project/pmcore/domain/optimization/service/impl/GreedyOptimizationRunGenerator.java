@@ -14,6 +14,7 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateAssignee;
+import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.OptimizationGenerationResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
@@ -134,6 +135,7 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
         if (chosen.candidate().reporter()) {
             reasons.add("Reporter is an eligible candidate");
         }
+        addSkillReasons(workItem, chosen.candidate().skillFit(), reasons, warnings, violations);
         // If all candidates are overloaded, record a warning but still pick the least-bad option
         if (everyCandidateOverloaded) {
             OptimizationConstraintViolation violation = new OptimizationConstraintViolation(
@@ -174,7 +176,62 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
             cost += OptimizationConstants.OVERLOAD_BASE_PENALTY
                     + ((double) overload / OptimizationConstants.HOUR_MILLIS);
         }
+        cost += skillCost(candidate.skillFit());
         return new CandidateCost(candidate, cost, overload > 0);
+    }
+
+    private double skillCost(OptimizationCandidateSkillFit skillFit) {
+        if (skillFit == null) {
+            return 0D;
+        }
+        double cost = 0D;
+        cost -= skillFit.matchedRequiredSkillCount() * OptimizationConstants.REQUIRED_SKILL_MATCH_BONUS;
+        cost -= skillFit.matchedPreferredSkillCount() * OptimizationConstants.PREFERRED_SKILL_MATCH_BONUS;
+        cost -= skillFit.proficiencyScore() * OptimizationConstants.PROFICIENCY_SCORE_BONUS_MULTIPLIER;
+        cost += skillFit.missingRequiredSkillIds().size() * OptimizationConstants.MISSING_REQUIRED_SKILL_PENALTY;
+        cost += skillFit.missingPreferredSkillIds().size() * OptimizationConstants.MISSING_PREFERRED_SKILL_PENALTY;
+        if (skillFit.confidence() == OptimizationConfidence.LOW) {
+            cost += OptimizationConstants.LOW_CONFIDENCE_SKILL_PENALTY;
+        }
+        return cost;
+    }
+
+    private void addSkillReasons(WorkItemEntity workItem,
+                                 OptimizationCandidateSkillFit skillFit,
+                                 List<String> reasons,
+                                 List<OptimizationConstraintViolation> warnings,
+                                 List<OptimizationConstraintViolation> violations) {
+        if (skillFit == null || (skillFit.totalRequiredSkillCount() == 0 && skillFit.totalPreferredSkillCount() == 0)) {
+            return;
+        }
+        if (skillFit.totalRequiredSkillCount() > 0) {
+            reasons.add("Candidate matches " + skillFit.matchedRequiredSkillCount() + "/"
+                    + skillFit.totalRequiredSkillCount() + " required skills");
+        }
+        if (skillFit.totalPreferredSkillCount() > 0) {
+            reasons.add("Candidate matches " + skillFit.matchedPreferredSkillCount() + "/"
+                    + skillFit.totalPreferredSkillCount() + " preferred skills");
+        }
+        if (!skillFit.missingRequiredSkillIds().isEmpty()) {
+            OptimizationConstraintViolation violation = new OptimizationConstraintViolation(
+                    OptimizationWarningCode.REQUIRED_SKILL_MISSING,
+                    workItem.getId(),
+                    "Selected assignee is missing required skills",
+                    "skillIds=" + skillFit.missingRequiredSkillIds()
+            );
+            warnings.add(violation);
+            violations.add(violation);
+            reasons.add("Candidate missing required skills " + skillFit.missingRequiredSkillIds());
+        }
+        if (!skillFit.missingPreferredSkillIds().isEmpty()) {
+            reasons.add("Candidate missing preferred skills " + skillFit.missingPreferredSkillIds());
+        }
+        if (skillFit.proficiencyScore() > 0D) {
+            reasons.add("Candidate skill proficiency score " + skillFit.proficiencyScore());
+        }
+        if (skillFit.confidence() == OptimizationConfidence.LOW) {
+            reasons.add("Skill data confidence is low");
+        }
     }
 
     private OptimizationAssignmentSuggestion keepCurrentAssignment(OptimizationWorkItem item, String reason) {

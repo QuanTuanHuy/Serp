@@ -10,10 +10,12 @@ import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.CapacityWorkloadBucket;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateAssignee;
+import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyGraph;
 import serp.project.pmcore.domain.optimization.model.OptimizationDuration;
@@ -107,6 +109,64 @@ class GreedyOptimizationRunGeneratorTest {
         assertEquals(2 * HOUR, result.summary().getCrossProjectDeductedMillis());
     }
 
+    @Test
+    void generateShouldUseRequiredSkillMatchToBeatProjectMemberFallback() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
+                candidate(item, 100L, 1D, true, null),
+                candidate(item, 200L, 1D, false, fullRequiredFit(item.getId(), 200L))
+        ))), graphWithoutDependencies(List.of(10L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+        assertTrue(result.assignmentSuggestions().get(10L).reasons().contains("Candidate matches 1/1 required skills"));
+    }
+
+    @Test
+    void generateShouldPenalizeMissingRequiredSkillButKeepCandidateEligible() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
+                candidate(item, 200L, 1D, false, missingRequiredFit(item.getId(), 200L))
+        ))), graphWithoutDependencies(List.of(10L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+        assertTrue(result.assignmentSuggestions().get(10L).violations().stream()
+                .anyMatch(violation -> violation.code() == OptimizationWarningCode.REQUIRED_SKILL_MISSING));
+    }
+
+    @Test
+    void generateShouldLetCapacityPenaltyBeatSkillBonus() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(longOptimizationItem(item, List.of(
+                candidate(item, 100L, 1D, true, null),
+                candidate(item, 200L, 1D, false, fullRequiredFit(item.getId(), 200L))
+        ))), graphWithoutDependencies(List.of(10L)), capacityForAssignees(40 * HOUR, 0L));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+    }
+
+    @Test
+    void generateShouldKeepCurrentAssigneeInMinimalReassignmentWhenSkillDeltaIsSmall() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
+                candidate(item, 100L, 1D, true, fullPreferredFit(item.getId(), 100L)),
+                candidate(item, 200L, 1D, false, fullPreferredFit(item.getId(), 200L))
+        ))), graphWithoutDependencies(List.of(10L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.MINIMAL_REASSIGNMENT));
+
+        assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+    }
+
     private OptimizationBuilderInput input(boolean allowReassignment, boolean allowSchedule, OptimizationMode mode) {
         return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END, allowReassignment, allowSchedule, mode);
     }
@@ -126,8 +186,7 @@ class GreedyOptimizationRunGeneratorTest {
                 END,
                 graph,
                 items,
-                List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
-                        new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)),
+                capacityResolution.slots(),
                 capacityResolution,
                 List.of(),
                 Map.of()
@@ -169,17 +228,80 @@ class GreedyOptimizationRunGeneratorTest {
         );
     }
 
+    private CapacityResolutionResult capacityForAssignees(long firstCapacity, long secondCapacity) {
+        return new CapacityResolutionResult(
+                List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, firstCapacity),
+                        new ResourceCapacitySlot(200L, START, START + 86_400_000L, secondCapacity)),
+                CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+                CapacityCoverageStatus.MISSING,
+                CapacityCoverageStatus.NOT_REQUIRED,
+                List.of(100L, 200L),
+                null,
+                START,
+                0L,
+                0L,
+                0L,
+                List.of(),
+                List.of()
+        );
+    }
+
     private OptimizationWorkItem optimizationItem(WorkItemEntity workItem, Long candidateId) {
+        return optimizationItem(workItem, List.of(candidate(workItem, candidateId, 1D,
+                candidateId.equals(workItem.getAssigneeId()), null)));
+    }
+
+    private OptimizationWorkItem optimizationItem(WorkItemEntity workItem, List<OptimizationCandidateAssignee> candidates) {
         return new OptimizationWorkItem(
                 workItem,
                 null,
                 new OptimizationDuration(workItem.getId(), HOUR, OptimizationConfidence.HIGH, "TEST"),
                 new OptimizationPriorityScore(workItem.getId(), 1D, false),
-                List.of(new OptimizationCandidateAssignee(workItem.getId(), candidateId, 1D,
-                        candidateId.equals(workItem.getAssigneeId()), false, false, false, false, null)),
+                candidates,
                 false,
                 false
         );
+    }
+
+    private OptimizationWorkItem longOptimizationItem(WorkItemEntity workItem, List<OptimizationCandidateAssignee> candidates) {
+        return new OptimizationWorkItem(
+                workItem,
+                null,
+                new OptimizationDuration(workItem.getId(), 60 * HOUR, OptimizationConfidence.HIGH, "TEST"),
+                new OptimizationPriorityScore(workItem.getId(), 1D, false),
+                candidates,
+                false,
+                false
+        );
+    }
+
+    private OptimizationCandidateAssignee candidate(WorkItemEntity workItem,
+                                                    Long candidateId,
+                                                    double baseCost,
+                                                    boolean currentAssignee,
+                                                    OptimizationCandidateSkillFit skillFit) {
+        return new OptimizationCandidateAssignee(workItem.getId(), candidateId, baseCost,
+                currentAssignee, false, false, false, !currentAssignee, skillFit);
+    }
+
+    private OptimizationCandidateSkillFit fullRequiredFit(Long workItemId, Long candidateId) {
+        return new OptimizationCandidateSkillFit(workItemId, candidateId, 1, 1, 0, 0, 100D, 100D,
+                4D, List.of(), List.of(), List.of(501L), OptimizationConfidence.HIGH);
+    }
+
+    private OptimizationCandidateSkillFit missingRequiredFit(Long workItemId, Long candidateId) {
+        return new OptimizationCandidateSkillFit(workItemId, candidateId, 0, 1, 0, 0, 0D, 100D,
+                0D, List.of(501L), List.of(), List.of(), OptimizationConfidence.MEDIUM);
+    }
+
+    private OptimizationCandidateSkillFit partialPreferredFit(Long workItemId, Long candidateId) {
+        return new OptimizationCandidateSkillFit(workItemId, candidateId, 0, 0, 1, 2, 100D, 50D,
+                1D, List.of(), List.of(602L), List.of(601L), OptimizationConfidence.MEDIUM);
+    }
+
+    private OptimizationCandidateSkillFit fullPreferredFit(Long workItemId, Long candidateId) {
+        return new OptimizationCandidateSkillFit(workItemId, candidateId, 0, 0, 2, 2, 100D, 100D,
+                2D, List.of(), List.of(), List.of(601L, 602L), OptimizationConfidence.HIGH);
     }
 
     private WorkItemEntity workItem(Long id, Long assigneeId, Long dueDate) {
