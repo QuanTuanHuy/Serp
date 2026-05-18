@@ -50,6 +50,10 @@ import type {
   SecondMileVehicle,
   SecondMileVehicleImportItem,
   SecondMileVehicleListFilters,
+  SecondMileRoute,
+  SecondMileRouteListFilters,
+  SecondMileCreateRouteRequest,
+  SecondMileUpdateRouteRequest,
   Vehicle,
   VehicleImportItem,
   UpdateVehicleRequest,
@@ -374,6 +378,90 @@ export const firstMileApi = api.injectEndpoints({
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: unknown) =>
         normalizeSecondMileHubImportHistory(response),
+    }),
+
+    getSecondMileRoutes: builder.query<
+      FirstMilePaginatedData<SecondMileRoute>,
+      { page?: number; size?: number } & SecondMileRouteListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        routeCode,
+        originHubId,
+        destinationType,
+        destinationHubId,
+        destinationPostOfficeCode,
+        vehicleId,
+        status,
+      }) => ({
+        url: '/routes',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(routeCode ? { route_code: routeCode } : {}),
+          ...(originHubId !== undefined ? { origin_hub_id: originHubId } : {}),
+          ...(destinationType ? { destination_type: destinationType } : {}),
+          ...(destinationHubId !== undefined
+            ? { destination_hub_id: destinationHubId }
+            : {}),
+          ...(destinationPostOfficeCode
+            ? { destination_post_office_code: destinationPostOfficeCode }
+            : {}),
+          ...(vehicleId !== undefined ? { vehicle_id: vehicleId } : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<SecondMileRoute>,
+    }),
+
+    getSecondMileRouteById: builder.query<SecondMileRoute, number>({
+      query: (id) => ({
+        url: `/routes/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+    }),
+
+    createSecondMileRoute: builder.mutation<
+      SecondMileRoute,
+      SecondMileCreateRouteRequest
+    >({
+      query: (body) => ({
+        url: '/routes',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+    }),
+
+    updateSecondMileRoute: builder.mutation<
+      SecondMileRoute,
+      { id: number; body: SecondMileUpdateRouteRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/routes/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+    }),
+
+    deleteSecondMileRoute: builder.mutation<string, number>({
+      query: (id) => ({
+        url: `/routes/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: { message?: string }) =>
+        response?.message || 'Deleted successfully',
     }),
 
     getPostOffices: builder.query<
@@ -1038,6 +1126,11 @@ export const {
   useLazyExportSecondMileVehicleTemplateQuery,
   useValidateSecondMileVehicleImportMutation,
   useImportSecondMileVehiclesMutation,
+  useGetSecondMileRoutesQuery,
+  useGetSecondMileRouteByIdQuery,
+  useCreateSecondMileRouteMutation,
+  useUpdateSecondMileRouteMutation,
+  useDeleteSecondMileRouteMutation,
   useGetPostOfficesQuery,
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,

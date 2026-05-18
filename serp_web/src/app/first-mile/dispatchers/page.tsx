@@ -1,10 +1,10 @@
 /**
- * Author: GitHub Copilot
- * Description: Part of Serp Project - First-mile dispatchers route page
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - Dispatchers scope redirect
  */
 
-import { DispatchersPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
-export default function FirstMileDispatchersRoutePage() {
-  return <DispatchersPage />;
+export default function FirstMileDispatchersScopePage() {
+  redirect('/first-mile/dispatchers/first-mile');
 }
