@@ -269,7 +269,7 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
         </div>
       </div>
 
-      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+      <div className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
         {[
           { label: 'Total Requests', value: stats?.totalRequests ?? 0 },
           {
@@ -278,10 +278,7 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
             highlight: (stats?.totalRejectedRequests ?? 0) > 0,
           },
           { label: 'Trucks Used', value: routes.length },
-          {
-            label: 'Total Travel Time',
-            value: stats ? `${(stats.totalDistance / 3600).toFixed(1)} h` : '-',
-          },
+
         ].map(({ label, value, highlight }) => (
           <Card key={label} className='gap-1 py-3'>
             <CardContent className='px-4 py-0'>

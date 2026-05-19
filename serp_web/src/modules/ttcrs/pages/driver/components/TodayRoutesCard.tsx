@@ -9,7 +9,8 @@ import {
   CardTitle,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import type { TransportPlanListItem, TransportPlanStatus } from '../types';
+import type { TransportPlanListItem, TransportPlanStatus } from '../../../types';
+import { useRouter } from 'next/navigation';
 
 interface TodayRoutesCardProps {
   plans: TransportPlanListItem[];
@@ -41,7 +42,7 @@ function formatTime(dt: string | null): string {
 export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
   const todayPlans = plans.filter((p) => isToday(p.startTime));
   const hasExecuting = todayPlans.some((p) => p.status === 'EXECUTING');
-
+  const router = useRouter();
   return (
     <Card
       className={cn(
@@ -77,6 +78,7 @@ export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
               <div
                 key={plan.id}
                 className='flex items-center gap-3 rounded-lg border bg-white px-4 py-2.5 shadow-sm dark:bg-gray-900'
+                onClick={() => router.push(`/ttcrs/driver/routes/${plan.id}`)}
               >
                 <Truck className='h-4 w-4 flex-shrink-0 text-muted-foreground' />
                 <span className='font-mono text-sm font-semibold'>

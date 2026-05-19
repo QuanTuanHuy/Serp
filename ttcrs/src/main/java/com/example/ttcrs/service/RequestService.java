@@ -252,7 +252,7 @@ public class RequestService {
 
     /**
      * Lấy danh sách Request có phân trang cho Customer.
-     * Lọc theo tenantId + created_by = userId từ JWT.
+     * Lọc theo tenantId + customer_id = userId từ JWT.
      */
     public PageResponse<RequestResponseDTO> getCustomerRequests(RequestFilterDTO filter) {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -262,7 +262,7 @@ public class RequestService {
 
         Specification<RequestEntity> spec = Specification
                 .where(RequestSpecs.withTenantId(tenantId))
-                .and(RequestSpecs.withCreatedBy(userId))
+                .and(RequestSpecs.withCustomerId(userId))
                 .and(RequestSpecs.withStatuses(filter.getStatuses()))
                 .and(RequestSpecs.withType(filter.getType()))
                 .and(RequestSpecs.withSrcLocationCode(filter.getSrcLocationCode()))
@@ -278,7 +278,7 @@ public class RequestService {
 
     /**
      * Lấy chi tiết một Request theo ID (dành cho Customer).
-     * Kiểm tra tenantId + created_by = userId để đảm bảo chỉ thấy request của mình.
+     * Kiểm tra tenantId + customer_id = userId để đảm bảo chỉ thấy request của mình.
      */
     public RequestResponseDTO getCustomerRequestById(Long id) {
         Long tenantId = authUtils.getCurrentTenantId()
@@ -289,7 +289,7 @@ public class RequestService {
         RequestEntity entity = requestRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
 
-        if (!entity.getTenantId().equals(tenantId) || !userId.equals(entity.getCreatedBy())) {
+        if (!entity.getTenantId().equals(tenantId) || !userId.equals(entity.getCustomerId())) {
             throw new IllegalArgumentException("Request not found: " + id);
         }
 

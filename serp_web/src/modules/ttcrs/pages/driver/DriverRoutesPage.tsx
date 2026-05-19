@@ -32,7 +32,7 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetMyTransportPlansQuery } from '../../api/ttcrsApi';
-import { TodayRoutesCard } from '../../components/TodayRoutesCard';
+import { TodayRoutesCard } from './components/TodayRoutesCard';
 import { ExecutingRouteBanner } from './components/ExecutingRouteBanner';
 import type { TransportPlanListItem, TransportPlanStatus } from '../../types';
 

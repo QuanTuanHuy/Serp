@@ -473,7 +473,7 @@ export function TransportRouteDetailPage({ planId }: Props) {
                     </TableCell>
                     <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
                       {stop.requestId != null ? (
-                        <span className="flex items-center justify-end gap-1">
+                        <span className="flex items-center justify-end gap-1" onClick={() => router.push(`/ttcrs/dispatcher/requests/${stop.requestId}`)}>
                           #{stop.requestId}
                           <ChevronRight className="h-3 w-3" />
                         </span>

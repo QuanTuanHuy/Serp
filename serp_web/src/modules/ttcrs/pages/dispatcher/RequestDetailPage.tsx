@@ -554,7 +554,7 @@ export function RequestDetailPage({ requestId }: Props) {
               </Label>
             </div>
 
-            {/* Reason / note */}
+            {/* Reason / note
             {(isPending || reason) && (
               <div className="space-y-1.5">
                 <Label htmlFor="rd-reason">Reason / Note</Label>
@@ -568,7 +568,7 @@ export function RequestDetailPage({ requestId }: Props) {
                   className={!isPending ? 'bg-muted/40' : ''}
                 />
               </div>
-            )}
+            )} */}
 
             <Separator />
 
