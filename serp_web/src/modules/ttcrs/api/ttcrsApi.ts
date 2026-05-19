@@ -489,6 +489,19 @@ export const ttcrsApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
     }),
 
+    // POST /ttcrs/api/v1/dispatcher/manual-routes
+    createManualRoute: builder.mutation<
+      TtcrsApiResponse<TransportPlanSavedItem[]>,
+      SaveTransportPlanPayload
+    >({
+      query: (body) => ({ url: '/dispatcher/manual-routes', method: 'POST', body }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [
+        { type: 'ttcrs/Request', id: 'LIST' },
+        { type: 'ttcrs/Request', id: 'TRANSPORT_PLANS' },
+      ],
+    }),
+
     // -------------------------------------------------------------------------
     // Driver execution actions
     // -------------------------------------------------------------------------
@@ -604,6 +617,7 @@ export const {
   useSaveTransportPlansMutation,
   useGetTransportPlansQuery,
   useGetTransportPlanDetailQuery,
+  useCreateManualRouteMutation,
   useGetMyTransportPlansQuery,
   useGetMyTransportPlanDetailQuery,
   useStartRouteMutation,

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -152,6 +153,43 @@ public class TransportPlanService {
         }
 
         return results;
+    }
+
+    /**
+     * Saves manual routes and updates all linked requests to PLANNED.
+     *
+     * <p>Unlike the auto-plan flow, manual route creation starts from PENDING requests,
+     * therefore request status transition is done after successful plan persistence.
+     */
+    @Transactional
+    public List<TransportPlanResponseDTO> saveManualRoute(SaveTransportPlanDTO dto) {
+        Long tenantId = requireTenantId();
+        List<Long> requestIds = extractRequestIds(dto);
+        if (requestIds.isEmpty()) {
+            throw new IllegalArgumentException("Manual route must include at least one request stop");
+        }
+
+        List<RequestEntity> requests = requestRepository.findAllById(requestIds);
+        if (requests.size() != requestIds.size()) {
+            throw new IllegalArgumentException("Some requests were not found");
+        }
+
+        List<RequestEntity> invalid = requests.stream()
+                .filter(r -> !tenantId.equals(r.getTenantId()) || r.getStatus() != RequestStatus.PENDING)
+                .toList();
+        if (!invalid.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Some requests are not in PENDING status or do not belong to this tenant: "
+                            + invalid.stream().map(r -> r.getId().toString()).toList());
+        }
+
+        List<TransportPlanResponseDTO> savedPlans = savePlans(dto);
+
+        // savePlans() has already linked transportPlanId, here we complete manual-flow status transition.
+        requests.forEach(r -> r.setStatus(RequestStatus.PLANNED));
+        requestRepository.saveAll(requests);
+
+        return savedPlans;
     }
 
     @Transactional(readOnly = true)
@@ -544,5 +582,15 @@ public class TransportPlanService {
                 yield StopAction.DEPOT_START;
             }
         };
+    }
+
+    private List<Long> extractRequestIds(SaveTransportPlanDTO dto) {
+        return dto.getPlans().stream()
+                .flatMap(plan -> plan.getStops().stream())
+                .map(SaveTransportPlanDTO.StopDTO::getRequestId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                .stream()
+                .toList();
     }
 }

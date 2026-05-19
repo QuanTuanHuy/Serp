@@ -448,6 +448,15 @@ export function DispatcherDashboardPage() {
             Create Transport Plan
           </Button>
           <Button
+            id='dispatcher-create-manual-route-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => router.push('/ttcrs/dispatcher/routes/manual/create')}
+          >
+            <Route className='h-4 w-4' />
+            Create Manual Route
+          </Button>
+          <Button
             id='dispatcher-create-request-btn'
             variant='outline'
             size='sm'
