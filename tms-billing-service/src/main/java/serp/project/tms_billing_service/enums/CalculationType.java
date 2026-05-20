@@ -5,8 +5,9 @@ Description: Part of Serp Project
 
 package serp.project.tms_billing_service.enums;
 
-public enum PhanLoai {
-    CUM_1,
-    CUM_2,
-    CUM_3
+public enum CalculationType {
+    FIXED_PER_ORDER,
+    FIXED_PER_KG,
+    PERCENTAGE,
+    STEP_WEIGHT
 }

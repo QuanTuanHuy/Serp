@@ -5,8 +5,7 @@ Description: Part of Serp Project
 
 package serp.project.tms_billing_service.enums;
 
-public enum PhanLoai {
-    CUM_1,
-    CUM_2,
-    CUM_3
+public enum DeliveryService {
+    HOA_TOC,
+    TIEU_CHUAN
 }
