@@ -5,15 +5,6 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import {
-  ArrowUpRight,
-  Archive,
-  Copy,
-  MoreHorizontal,
-  PencilLine,
-  Trash2,
-} from 'lucide-react';
 import {
   Avatar,
   AvatarFallback,
@@ -24,12 +15,24 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Progress,
   TableCell,
   TableRow,
-  Progress,
 } from '@/shared/components/ui';
+import {
+  Archive,
+  ArrowUpRight,
+  MoreHorizontal,
+  PencilLine,
+} from 'lucide-react';
+import { useMemo } from 'react';
 import type { PMProjectListItem } from '../../types/project-list.types';
 import { PMProjectStatusBadge } from './PMProjectStatusBadge';
+import { toast } from 'sonner';
+import {
+  useArchivePmProjectMutation,
+  useUnarchivePmProjectMutation,
+} from '../../api';
 
 interface PMProjectListRowProps {
   project: PMProjectListItem;
@@ -98,6 +101,36 @@ export function PMProjectListRow({
 }: PMProjectListRowProps) {
   const updatedLabel = formatRelativeTime(project.updatedAt);
   const keyGradient = getProjectAccentGradient(project.key, project.status);
+
+  const [archivePmProject, { isLoading: isArchiving }] =
+    useArchivePmProjectMutation();
+  const [unarchivePmProject, { isLoading: isUnarchiving }] =
+    useUnarchivePmProjectMutation();
+
+  const handleArchive = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    const confirmed = window.confirm(
+      `Are you sure you want to archive project "${project.name}"?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await archivePmProject(project.id).unwrap();
+      toast.success(`Project "${project.name}" has been archived.`);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to archive project.');
+    }
+  };
+
+  const handleUnarchive = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await unarchivePmProject(project.id).unwrap();
+      toast.success(`Project "${project.name}" has been unarchived.`);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to unarchive project.');
+    }
+  };
 
   // Generate a deterministic mock completion rate for modern presentation
   const mockProgress = useMemo(() => {
@@ -239,21 +272,26 @@ export function PMProjectListRow({
               Edit project
             </DropdownMenuItem>
             <DropdownMenuSeparator className='border-border/50' />
-            <DropdownMenuItem disabled className='rounded-lg'>
-              <Copy className='mr-2 h-4 w-4 text-muted-foreground' />
-              Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled className='rounded-lg'>
-              <Archive className='mr-2 h-4 w-4 text-muted-foreground' />
-              Archive
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled
-              className='text-destructive hover:text-destructive rounded-lg'
-            >
-              <Trash2 className='mr-2 h-4 w-4' />
-              Delete
-            </DropdownMenuItem>
+            {project.status === 'ARCHIVED' ? (
+              <DropdownMenuItem
+                disabled={isUnarchiving}
+                onClick={handleUnarchive}
+                className='rounded-lg text-emerald-600 focus:text-emerald-600 dark:text-emerald-400 dark:focus:text-emerald-400'
+              >
+                <Archive className='mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400' />
+                Unarchive project
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                disabled={isArchiving}
+                onClick={handleArchive}
+                variant='destructive'
+                className='rounded-lg'
+              >
+                <Archive className='mr-2 h-4 w-4' />
+                Archive project
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

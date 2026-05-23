@@ -94,7 +94,9 @@ export const pmProjectApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMProjectDetailApi>(),
-      providesTags: (result, error, id) => [{ type: 'pm/Project' as const, id }],
+      providesTags: (result, error, id) => [
+        { type: 'pm/Project' as const, id },
+      ],
     }),
 
     createPmProject: builder.mutation<

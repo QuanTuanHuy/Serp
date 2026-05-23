@@ -44,9 +44,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  useGetProjectCategoriesQuery,
-} from '../../api/projectApi';
+import { useGetProjectCategoriesQuery } from '../../api/projectApi';
 import type { PMProjectDetail } from '../../types/project-detail.types';
 import type { PMProjectStatus } from '../../types/project-list.types';
 import {
@@ -112,7 +110,10 @@ export function PMProjectEditForm({
   const targetDate = form.watch('targetDate');
   const status = form.watch('status');
 
-  const { data: categoriesResponse } = useGetProjectCategoriesQuery({ page: 0, pageSize: 100 });
+  const { data: categoriesResponse } = useGetProjectCategoriesQuery({
+    page: 0,
+    pageSize: 100,
+  });
   const categoryOptions = useMemo(() => {
     const list = (categoriesResponse?.data?.items || []).map((category) => ({
       id: String(category.id),
@@ -124,7 +125,8 @@ export function PMProjectEditForm({
       if (!exists) {
         list.unshift({
           id: project.category,
-          name: (project as any).categoryName || `Category #${project.category}`,
+          name:
+            (project as any).categoryName || `Category #${project.category}`,
         });
       }
     }

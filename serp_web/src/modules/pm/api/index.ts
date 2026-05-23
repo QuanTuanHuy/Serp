@@ -9,6 +9,8 @@ export {
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
   useGetPmProjectsQuery,
+  useArchivePmProjectMutation,
+  useUnarchivePmProjectMutation,
 } from './projectApi';
 export {
   pmWorkItemApi,
