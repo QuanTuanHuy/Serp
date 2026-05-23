@@ -94,3 +94,51 @@ export interface PMListProjectsParams {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
 }
+
+export interface PMProjectDetailApi {
+  id: number;
+  key: string;
+  name: string;
+  description?: string;
+  url?: string;
+  leadUserId: number;
+  leadUserName?: string;
+  avatarId?: number;
+  projectTypeKey: string;
+  isArchived: boolean;
+  archivedAt?: string;
+  category?: {
+    id: number;
+    name: string;
+    description?: string;
+  } | null;
+  issueTypeSchemeId?: number;
+  workflowSchemeId?: number;
+  fieldConfigSchemeId?: number;
+  issueTypeScreenSchemeId?: number;
+  permissionSchemeId?: number;
+  notificationSchemeId?: number;
+  prioritySchemeId?: number;
+  issueSecuritySchemeId?: number;
+  createdAt?: string;
+  createdBy?: number;
+  updatedAt?: string;
+  updatedBy?: number;
+}
+
+export interface PMUpdateProjectRequest {
+  name?: string;
+  key?: string;
+  description?: string;
+  leadUserId?: number;
+  categoryId?: number;
+  url?: string;
+  avatarId?: number;
+}
+
+export interface PMUpdateProjectResponse {
+  id: number;
+  key: string;
+  name: string;
+  isArchived: boolean;
+}

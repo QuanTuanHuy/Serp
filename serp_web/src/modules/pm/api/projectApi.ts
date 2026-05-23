@@ -16,6 +16,9 @@ import type {
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
   PMProjectSummaryApi,
+  PMProjectDetailApi,
+  PMUpdateProjectRequest,
+  PMUpdateProjectResponse,
 } from '../types/api';
 import { buildProjectListParams } from './queryParams';
 
@@ -72,6 +75,26 @@ export const pmProjectApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createPaginatedTransform<PMProjectSummaryApi>(),
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }: { id: number }) => ({
+                type: 'pm/Project' as const,
+                id,
+              })),
+              { type: 'pm/Project' as const, id: 'LIST' },
+            ]
+          : [{ type: 'pm/Project' as const, id: 'LIST' }],
+    }),
+
+    getPmProjectById: builder.query<PMProjectDetailApi, string>({
+      query: (id) => ({
+        url: `/projects/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectDetailApi>(),
+      providesTags: (result, error, id) => [{ type: 'pm/Project' as const, id }],
     }),
 
     createPmProject: builder.mutation<
@@ -85,6 +108,50 @@ export const pmProjectApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMCreateProjectResponse>(),
+      invalidatesTags: [{ type: 'pm/Project' as const, id: 'LIST' }],
+    }),
+
+    updatePmProject: builder.mutation<
+      PMUpdateProjectResponse,
+      { id: string; body: PMUpdateProjectRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/projects/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMUpdateProjectResponse>(),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'pm/Project' as const, id },
+        { type: 'pm/Project' as const, id: 'LIST' },
+      ],
+    }),
+
+    archivePmProject: builder.mutation<PMUpdateProjectResponse, string>({
+      query: (id) => ({
+        url: `/projects/${id}/archive`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMUpdateProjectResponse>(),
+      invalidatesTags: (result, error, id) => [
+        { type: 'pm/Project' as const, id },
+        { type: 'pm/Project' as const, id: 'LIST' },
+      ],
+    }),
+
+    unarchivePmProject: builder.mutation<PMUpdateProjectResponse, string>({
+      query: (id) => ({
+        url: `/projects/${id}/unarchive`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMUpdateProjectResponse>(),
+      invalidatesTags: (result, error, id) => [
+        { type: 'pm/Project' as const, id },
+        { type: 'pm/Project' as const, id: 'LIST' },
+      ],
     }),
   }),
   overrideExisting: false,
@@ -94,5 +161,9 @@ export const {
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
   useGetPmProjectsQuery,
+  useGetPmProjectByIdQuery,
   useCreatePmProjectMutation,
+  useUpdatePmProjectMutation,
+  useArchivePmProjectMutation,
+  useUnarchivePmProjectMutation,
 } = pmProjectApi;

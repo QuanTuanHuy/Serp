@@ -251,6 +251,7 @@ export const api = createApi({
     'DiscussActivity',
     'Presence',
     // PM tags
+    'pm/Project',
     'pm/WorkItem',
     'pm/WorkItemComments',
     'pm/WorkItemActivities',

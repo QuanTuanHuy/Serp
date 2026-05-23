@@ -5,17 +5,8 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  CalendarDays,
-  FolderKanban,
-  Lock,
-  Shield,
-  TriangleAlert,
-  UserRound,
-} from 'lucide-react';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -41,7 +32,21 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { PM_PROJECT_LIST_MOCKS } from '../../mocks/projectList';
+import { useAppSelector } from '@/shared/hooks';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  CalendarDays,
+  FolderKanban,
+  Lock,
+  Shield,
+  TriangleAlert,
+  UserRound,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import {
+  useGetProjectCategoriesQuery,
+} from '../../api/projectApi';
 import type { PMProjectDetail } from '../../types/project-detail.types';
 import type { PMProjectStatus } from '../../types/project-list.types';
 import {
@@ -107,19 +112,56 @@ export function PMProjectEditForm({
   const targetDate = form.watch('targetDate');
   const status = form.watch('status');
 
-  const categoryOptions = useMemo(
-    () => [...new Set(PM_PROJECT_LIST_MOCKS.map((item) => item.category))],
-    []
-  );
+  const { data: categoriesResponse } = useGetProjectCategoriesQuery({ page: 0, pageSize: 100 });
+  const categoryOptions = useMemo(() => {
+    const list = (categoriesResponse?.data?.items || []).map((category) => ({
+      id: String(category.id),
+      name: category.name,
+    }));
 
-  const leadOptions = useMemo(
-    () =>
-      PM_PROJECT_LIST_MOCKS.map((item) => item.lead).filter(
-        (lead, index, array) =>
-          array.findIndex((candidate) => candidate.id === lead.id) === index
-      ),
-    []
+    if (project.category && project.category !== 'ALL') {
+      const exists = list.some((cat) => cat.id === project.category);
+      if (!exists) {
+        list.unshift({
+          id: project.category,
+          name: (project as any).categoryName || `Category #${project.category}`,
+        });
+      }
+    }
+
+    return list;
+  }, [categoriesResponse, project.category, (project as any).categoryName]);
+
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: usersResponse } = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      status: 'ACTIVE',
+    },
+    {
+      skip: !organizationId,
+    }
   );
+  const leadOptions = useMemo(() => {
+    const list = (usersResponse?.data?.items || []).map((user) => ({
+      id: String(user.id),
+      name:
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.email ||
+        `User #${user.id}`,
+    }));
+
+    if (project.lead && !list.some((lead) => lead.id === project.lead.id)) {
+      list.unshift({
+        id: project.lead.id,
+        name: project.lead.name,
+      });
+    }
+
+    return list;
+  }, [usersResponse, project.lead]);
 
   const selectedLead =
     leadOptions.find((lead) => lead.id === selectedLeadId) || project.lead;
@@ -298,8 +340,8 @@ export function PMProjectEditForm({
                     </FormControl>
                     <SelectContent>
                       {categoryOptions.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
