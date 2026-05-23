@@ -414,6 +414,7 @@ export const {
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemLinksQuery,
   useGetPmWorkItemTransitionsQuery,
+  useLazyGetPmWorkItemTransitionsQuery,
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
   useGetPmStatusesQuery,

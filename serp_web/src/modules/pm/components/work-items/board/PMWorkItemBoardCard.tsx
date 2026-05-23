@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - PM work item board card
  */
 
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   AlertTriangle,
   CalendarDays,
@@ -21,9 +23,13 @@ import {
 import { cn } from '@/shared/utils';
 import type { PMWorkItemBoardCardApi } from '../../../types/api';
 import { formatDate, getInitials } from '../workItemView.utils';
+import { getBoardCardDndId } from './pmWorkItemBoard.utils';
 
 interface PMWorkItemBoardCardProps {
   item: PMWorkItemBoardCardApi;
+  statusId: number;
+  dragDisabled?: boolean;
+  isDragOverlay?: boolean;
   onSelect: (workItemId: number) => void;
 }
 
@@ -61,25 +67,64 @@ function getAssigneeLabel(assigneeId?: number | null): string {
 
 export function PMWorkItemBoardCard({
   item,
+  statusId,
+  dragDisabled = false,
+  isDragOverlay = false,
   onSelect,
 }: PMWorkItemBoardCardProps) {
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({
+    id: getBoardCardDndId(item.id),
+    data: {
+      type: 'work-item',
+      workItemId: item.id,
+      statusId,
+    },
+    disabled: dragDisabled || isDragOverlay,
+  });
   const dueDate = formatBoardDate(item.dueDate);
   const dueDateState = getDueDateState(item.dueDate);
   const priorityColor = item.priority?.color || undefined;
   const assigneeLabel = item.assigneeName || getAssigneeLabel(item.assigneeId);
+  const cardStyle = isDragOverlay
+    ? undefined
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+      };
 
   return (
     <Card
+      ref={isDragOverlay ? undefined : setNodeRef}
+      {...(isDragOverlay ? {} : attributes)}
+      {...(isDragOverlay ? {} : listeners)}
       role='button'
       tabIndex={0}
-      onClick={() => onSelect(item.id)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
+      style={cardStyle}
+      className={cn(
+        'group cursor-pointer border-border/70 bg-background shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        isDragging && 'opacity-50',
+        isDragOverlay && 'w-[18rem] rotate-1 shadow-lg'
+      )}
+      onClick={() => {
+        if (!isDragging) {
           onSelect(item.id);
         }
       }}
-      className='group cursor-pointer border-border/70 bg-background shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!isDragging) {
+            onSelect(item.id);
+          }
+        }
+      }}
     >
       <CardContent className='space-y-3 p-3'>
         <div className='flex items-start justify-between gap-3'>

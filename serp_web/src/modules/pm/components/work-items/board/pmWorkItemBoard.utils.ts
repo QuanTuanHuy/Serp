@@ -13,6 +13,25 @@ export type BoardFilterCriterion = 'assignee' | 'workType' | 'priority';
 
 export { parseNumberList, serializeNumberList };
 
+export type BoardDragData =
+  | {
+      type: 'work-item';
+      workItemId: number;
+      statusId: number;
+    }
+  | {
+      type: 'column';
+      statusId: number;
+    };
+
+export function getBoardCardDndId(workItemId: number): string {
+  return `work-item:${workItemId}`;
+}
+
+export function getBoardColumnDndId(statusId: number): string {
+  return `status-column:${statusId}`;
+}
+
 export function getActiveBoardFilterCount(filters: {
   assigneeIds: number[];
   issueTypeIds: number[];

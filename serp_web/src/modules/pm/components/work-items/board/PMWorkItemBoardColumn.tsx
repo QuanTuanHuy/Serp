@@ -3,13 +3,23 @@
  * Description: Part of Serp Project - PM work item board column
  */
 
+import { useDroppable } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { Badge } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type { PMWorkItemBoardColumnApi } from '../../../types/api';
 import { PMWorkItemBoardCard } from './PMWorkItemBoardCard';
+import {
+  getBoardCardDndId,
+  getBoardColumnDndId,
+} from './pmWorkItemBoard.utils';
 
 interface PMWorkItemBoardColumnProps {
   column: PMWorkItemBoardColumnApi;
+  dragDisabled?: boolean;
   onSelectWorkItem: (workItemId: number) => void;
 }
 
@@ -28,10 +38,27 @@ function getStatusCategoryAccent(key?: string | null): string {
 
 export function PMWorkItemBoardColumn({
   column,
+  dragDisabled = false,
   onSelectWorkItem,
 }: PMWorkItemBoardColumnProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: getBoardColumnDndId(column.statusId),
+    data: {
+      type: 'column',
+      statusId: column.statusId,
+    },
+    disabled: dragDisabled,
+  });
+  const sortableItems = column.items.map((item) => getBoardCardDndId(item.id));
+
   return (
-    <section className='flex max-h-[calc(100vh-15.5rem)] min-h-[28rem] w-[19.5rem] shrink-0 flex-col rounded-2xl border border-border/60 bg-muted/20 shadow-sm'>
+    <section
+      ref={setNodeRef}
+      className={cn(
+        'flex max-h-[calc(100vh-15.5rem)] min-h-[28rem] w-[19.5rem] shrink-0 flex-col rounded-2xl border border-border/60 bg-muted/20 shadow-sm',
+        isOver && 'border-primary/50 bg-primary/5 ring-2 ring-primary/20'
+      )}
+    >
       <div className='sticky top-0 z-10 rounded-t-2xl border-b border-border/60 bg-background/92 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85'>
         <div className='mb-3 h-1 w-full overflow-hidden rounded-full bg-muted/80'>
           <div
@@ -63,21 +90,28 @@ export function PMWorkItemBoardColumn({
         </div>
       </div>
 
-      <div className='min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3 pt-2'>
-        {column.items.length > 0 ? (
-          column.items.map((item) => (
-            <PMWorkItemBoardCard
-              key={item.id}
-              item={item}
-              onSelect={onSelectWorkItem}
-            />
-          ))
-        ) : (
-          <div className='flex h-28 items-center justify-center rounded-xl border border-dashed border-border/70 bg-background/70 px-4 text-center text-sm text-muted-foreground'>
-            No work items in this lane.
-          </div>
-        )}
-      </div>
+      <SortableContext
+        items={sortableItems}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className='min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3 pt-2'>
+          {column.items.length > 0 ? (
+            column.items.map((item) => (
+              <PMWorkItemBoardCard
+                key={item.id}
+                item={item}
+                statusId={column.statusId}
+                dragDisabled={dragDisabled}
+                onSelect={onSelectWorkItem}
+              />
+            ))
+          ) : (
+            <div className='flex h-28 items-center justify-center rounded-xl border border-dashed border-border/70 bg-background/70 px-4 text-center text-sm text-muted-foreground'>
+              No work items in this lane.
+            </div>
+          )}
+        </div>
+      </SortableContext>
     </section>
   );
 }
