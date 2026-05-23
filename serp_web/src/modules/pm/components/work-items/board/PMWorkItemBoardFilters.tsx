@@ -23,7 +23,10 @@ import {
 } from '@/shared/components/ui';
 import { useAppSelector } from '@/shared/hooks';
 import { cn } from '@/shared/utils';
-import { useGetPmIssueTypesQuery, useGetPmPrioritiesQuery } from '../../../api';
+import {
+  useGetPmIssueTypesQuery,
+  useGetPmPrioritiesQuery,
+} from '../../../api/workItemApi';
 import type { BoardFilterCriterion } from './pmWorkItemBoard.utils';
 import { serializeNumberList } from './pmWorkItemBoard.utils';
 

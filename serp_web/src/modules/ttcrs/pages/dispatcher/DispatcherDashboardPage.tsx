@@ -204,7 +204,9 @@ export function DispatcherDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<TtcrsRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<TtcrsRequest | null>(
+    null
+  );
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -488,7 +490,9 @@ export function DispatcherDashboardPage() {
                           filteredItems.every((r) => selectedIds.has(r.id))
                         }
                         onCheckedChange={toggleAll}
-                        disabled={isLoading || isFetching || filteredItems.length === 0}
+                        disabled={
+                          isLoading || isFetching || filteredItems.length === 0
+                        }
                       />
                     </TableHead>
                   )}
@@ -500,48 +504,74 @@ export function DispatcherDashboardPage() {
                     onClick={() => handleSort('id')}
                   >
                     Request ID
-                    <SortIcon field='id' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='id'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('customerId')}
                   >
                     Customer
-                    <SortIcon field='customerId' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='customerId'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('srcLocationCode')}
                   >
                     Origin
-                    <SortIcon field='srcLocationCode' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='srcLocationCode'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('destLocationCode')}
                   >
                     Destination
-                    <SortIcon field='destLocationCode' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='destLocationCode'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('status')}
                   >
                     Status
-                    <SortIcon field='status' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='status'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('type')}
                   >
                     Type
-                    <SortIcon field='type' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='type'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading || isFetching ? (
-                  [...Array(6)].map((_, i) => <SkeletonRow key={i} cols={colCount} />)
+                  [...Array(6)].map((_, i) => (
+                    <SkeletonRow key={i} cols={colCount} />
+                  ))
                 ) : filteredItems.length === 0 ? (
                   <EmptyState tab={activeTab} cols={colCount} />
                 ) : (
@@ -551,15 +581,22 @@ export function DispatcherDashboardPage() {
                       id={`dispatcher-request-row-${req.id}`}
                       className={cn(
                         'cursor-pointer hover:bg-muted/50 transition-colors',
-                        isPlannedTab && selectedIds.has(req.id) && 'bg-amber-50 dark:bg-amber-950/20',
-                        isInProgressTab && selectedIds.has(req.id) && 'bg-blue-50 dark:bg-blue-950/20'
+                        isPlannedTab &&
+                          selectedIds.has(req.id) &&
+                          'bg-amber-50 dark:bg-amber-950/20',
+                        isInProgressTab &&
+                          selectedIds.has(req.id) &&
+                          'bg-blue-50 dark:bg-blue-950/20'
                       )}
                       onClick={() => setSelectedRequest(req)}
                     >
                       {showCheckbox && (
                         <TableCell
                           className='px-4 py-3'
-                          onClick={(e) => { e.stopPropagation(); toggleRow(req.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRow(req.id);
+                          }}
                         >
                           <Checkbox
                             checked={selectedIds.has(req.id)}
@@ -646,9 +683,7 @@ export function DispatcherDashboardPage() {
                 variant='outline'
                 size='icon'
                 className='h-8 w-8'
-                onClick={() =>
-                  setPage((p) => Math.min(totalPages - 1, p + 1))
-                }
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1 || isFetching}
               >
                 <ChevronRight className='h-4 w-4' />

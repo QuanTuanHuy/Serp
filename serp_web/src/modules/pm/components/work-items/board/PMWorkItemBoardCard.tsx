@@ -20,6 +20,7 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type { PMWorkItemBoardCardApi } from '../../../types/api';
+import { formatDate, getInitials } from '../workItemView.utils';
 
 interface PMWorkItemBoardCardProps {
   item: PMWorkItemBoardCardApi;
@@ -27,13 +28,7 @@ interface PMWorkItemBoardCardProps {
 }
 
 function formatBoardDate(value?: string | number | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatDate(value, '', { month: 'short', day: 'numeric' }) || null;
 }
 
 function getDueDateState(
@@ -62,16 +57,6 @@ function getDueDateState(
 
 function getAssigneeLabel(assigneeId?: number | null): string {
   return assigneeId ? `Assignee ${assigneeId}` : 'Unassigned';
-}
-
-function getInitials(name?: string | null): string {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
 }
 
 export function PMWorkItemBoardCard({

@@ -16,7 +16,6 @@ import {
   TriangleAlert,
   UserRound,
 } from 'lucide-react';
-import { z } from 'zod';
 import {
   Alert,
   AlertDescription,
@@ -44,7 +43,6 @@ import {
 } from '@/shared/components/ui';
 import { PM_PROJECT_LIST_MOCKS } from '../../mocks/projectList';
 import type { PMProjectDetail } from '../../types/project-detail.types';
-import type { PMProjectVisibility } from '../../types/project-create.types';
 import type { PMProjectStatus } from '../../types/project-list.types';
 import {
   PM_PROJECT_VISIBILITY_OPTIONS,
@@ -52,6 +50,10 @@ import {
   normalizePMProjectKey,
 } from '../../utils/projectForm';
 import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
+import {
+  editProjectSchema,
+  type PMProjectEditFormValues,
+} from './projectFormSchemas';
 
 const EDITABLE_STATUS_OPTIONS: { value: PMProjectStatus; label: string }[] = [
   { value: 'ACTIVE', label: 'Active' },
@@ -59,50 +61,7 @@ const EDITABLE_STATUS_OPTIONS: { value: PMProjectStatus; label: string }[] = [
   { value: 'ARCHIVED', label: 'Archived' },
 ];
 
-const editProjectSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, 'Project name is required')
-      .max(120, 'Project name is too long'),
-    key: z
-      .string()
-      .trim()
-      .min(2, 'Project key is required')
-      .max(12, 'Project key must be 12 characters or fewer')
-      .regex(
-        /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
-        'Use uppercase letters, numbers, and hyphens only'
-      ),
-    description: z
-      .string()
-      .trim()
-      .max(500, 'Description is too long')
-      .optional()
-      .or(z.literal('')),
-    leadId: z.string().min(1, 'Project lead is required'),
-    category: z.string().min(1, 'Category is required'),
-    visibility: z.enum(['PRIVATE', 'TEAM', 'ORGANIZATION']),
-    startDate: z.string().min(1, 'Start date is required'),
-    targetDate: z.string().min(1, 'Target date is required'),
-    status: z.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']),
-  })
-  .superRefine((value, context) => {
-    if (
-      value.startDate &&
-      value.targetDate &&
-      value.targetDate < value.startDate
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Target date must be on or after the start date.',
-        path: ['targetDate'],
-      });
-    }
-  });
-
-export type PMProjectEditFormValues = z.infer<typeof editProjectSchema>;
+export type { PMProjectEditFormValues };
 
 interface PMProjectEditFormProps {
   project: PMProjectDetail;

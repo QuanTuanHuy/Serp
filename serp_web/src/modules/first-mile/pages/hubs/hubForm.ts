@@ -40,12 +40,14 @@ export const HUB_TYPE_OPTIONS: Array<{ value: HubType; label: string }> = [
   { value: 'LOCAL', label: 'Local' },
 ];
 
-export const HUB_FORM_STATUS_OPTIONS: Array<{ value: HubStatus; label: string }> =
-  [
-    { value: 'ACTIVE', label: 'Active' },
-    { value: 'INACTIVE', label: 'Inactive' },
-    { value: 'MAINTENANCE', label: 'Maintenance' },
-  ];
+export const HUB_FORM_STATUS_OPTIONS: Array<{
+  value: HubStatus;
+  label: string;
+}> = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+];
 
 /** Status filter options (same values as form). */
 export const HUB_STATUS_OPTIONS = HUB_FORM_STATUS_OPTIONS;

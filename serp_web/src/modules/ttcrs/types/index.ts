@@ -263,7 +263,11 @@ export interface SaveTransportPlanPayload {
   plans: SaveTransportPlanItemPayload[];
 }
 
-export type TransportPlanStatus = 'CREATED' | 'EXECUTING' | 'COMPLETED' | 'CANCELLED';
+export type TransportPlanStatus =
+  | 'CREATED'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export type StopAction =
   | 'DEPOT_START'
@@ -316,10 +320,10 @@ export interface TransportPlanDetail {
 export interface ResourceRow {
   id: number;
   kind: ResourceKind;
-  identifier: string;                    // code for vehicles, name for driver
+  identifier: string; // code for vehicles, name for driver
   status: string;
-  size: ResourceContainerSize | null;    // containers only
-  currentLocationCode: string | null;   // null for drivers
+  size: ResourceContainerSize | null; // containers only
+  currentLocationCode: string | null; // null for drivers
 }
 
 // -------------------------------------------------------------------------

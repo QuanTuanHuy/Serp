@@ -167,7 +167,8 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
                       className='rounded-md border p-2 text-xs space-y-1'
                     >
                       <p className='font-medium'>
-                        {(item.code || '-').trim()} — {(item.name || '-').trim()}
+                        {(item.code || '-').trim()} —{' '}
+                        {(item.name || '-').trim()}
                       </p>
                       <p className='text-muted-foreground'>
                         Type: {item.hub_type ?? '-'}
@@ -193,8 +194,8 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
             <p>Status: {lastImportJob.status}</p>
             <p>
               Records: {lastImportJob.success_records} ok /{' '}
-              {lastImportJob.failed_records} failed / {lastImportJob.total_records}{' '}
-              total
+              {lastImportJob.failed_records} failed /{' '}
+              {lastImportJob.total_records} total
             </p>
             {lastImportJob.error_message && (
               <p className='text-destructive'>{lastImportJob.error_message}</p>

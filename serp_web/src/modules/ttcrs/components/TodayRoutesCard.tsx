@@ -1,7 +1,13 @@
 'use client';
 
 import { CalendarCheck, Truck } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui';
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import type { TransportPlanListItem, TransportPlanStatus } from '../types';
 
@@ -10,7 +16,7 @@ interface TodayRoutesCardProps {
 }
 
 const STATUS_BADGE: Record<TransportPlanStatus, string> = {
-  CREATED:   'bg-blue-100 text-blue-700 border-blue-200',
+  CREATED: 'bg-blue-100 text-blue-700 border-blue-200',
   EXECUTING: 'bg-orange-100 text-orange-700 border-orange-200',
   COMPLETED: 'bg-green-100 text-green-700 border-green-200',
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
@@ -62,7 +68,9 @@ export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
 
       <CardContent>
         {todayPlans.length === 0 ? (
-          <p className='text-sm text-muted-foreground'>No routes scheduled for today.</p>
+          <p className='text-sm text-muted-foreground'>
+            No routes scheduled for today.
+          </p>
         ) : (
           <div className='flex flex-wrap gap-3'>
             {todayPlans.map((plan) => (
@@ -71,15 +79,21 @@ export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
                 className='flex items-center gap-3 rounded-lg border bg-white px-4 py-2.5 shadow-sm dark:bg-gray-900'
               >
                 <Truck className='h-4 w-4 flex-shrink-0 text-muted-foreground' />
-                <span className='font-mono text-sm font-semibold'>{plan.truckCode}</span>
-                <Badge className={cn('border text-xs', STATUS_BADGE[plan.status])}>
+                <span className='font-mono text-sm font-semibold'>
+                  {plan.truckCode}
+                </span>
+                <Badge
+                  className={cn('border text-xs', STATUS_BADGE[plan.status])}
+                >
                   {plan.status}
                 </Badge>
                 <span className='text-xs text-muted-foreground tabular-nums'>
                   {formatTime(plan.startTime)}
                   {plan.endTime ? ` → ${formatTime(plan.endTime)}` : ''}
                 </span>
-                <span className='text-xs text-muted-foreground'>{plan.stopCount} stops</span>
+                <span className='text-xs text-muted-foreground'>
+                  {plan.stopCount} stops
+                </span>
               </div>
             ))}
           </div>

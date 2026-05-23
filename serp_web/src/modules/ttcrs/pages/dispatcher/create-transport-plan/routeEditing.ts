@@ -56,7 +56,9 @@ export function isDepotStop(stop: EditableStop): boolean {
   );
 }
 
-export function initEditableRoutes(result: TransportPlanResult): EditableRoute[] {
+export function initEditableRoutes(
+  result: TransportPlanResult
+): EditableRoute[] {
   return (result.truckRoutes ?? []).map((route) => ({
     truckCode: route.truck?.code ?? '',
     depotTruckCode: route.truck?.depotTruckCode ?? '',
@@ -123,7 +125,8 @@ export function generatePlanOutput(
     statistics: {
       totalTrucks: routes.length,
       totalOperationalStops: routes.reduce(
-        (acc, route) => acc + route.stops.filter((stop) => !isDepotStop(stop)).length,
+        (acc, route) =>
+          acc + route.stops.filter((stop) => !isDepotStop(stop)).length,
         0
       ),
       unscheduledCount,

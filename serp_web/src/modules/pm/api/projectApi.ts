@@ -17,6 +17,7 @@ import type {
   PMProjectCategoryApi,
   PMProjectSummaryApi,
 } from '../types/api';
+import { buildProjectListParams } from './queryParams';
 
 export const pmProjectApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -64,28 +65,10 @@ export const pmProjectApi = api.injectEndpoints({
       PaginatedResponse<PMProjectSummaryApi>,
       PMListProjectsParams
     >({
-      query: ({
-        search,
-        categoryId,
-        projectTypeKey,
-        archived,
-        page = 0,
-        pageSize = 10,
-        sortBy,
-        sortDirection,
-      } = {}) => ({
+      query: (params = {}) => ({
         url: '/projects',
         method: 'GET',
-        params: {
-          page,
-          pageSize,
-          ...(search ? { search } : {}),
-          ...(typeof categoryId === 'number' ? { categoryId } : {}),
-          ...(projectTypeKey ? { projectTypeKey } : {}),
-          ...(typeof archived === 'boolean' ? { archived } : {}),
-          ...(sortBy ? { sortBy } : {}),
-          ...(sortDirection ? { sortDirection } : {}),
-        },
+        params: buildProjectListParams(params),
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createPaginatedTransform<PMProjectSummaryApi>(),

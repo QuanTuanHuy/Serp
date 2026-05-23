@@ -49,11 +49,11 @@ const INITIAL_FORM: FormState = {
 };
 
 const LOCATION_TYPES: { value: LocationType; label: string }[] = [
-  { value: 'PORT',            label: 'Port' },
-  { value: 'WAREHOUSE',       label: 'Warehouse' },
+  { value: 'PORT', label: 'Port' },
+  { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'DEPOT_CONTAINER', label: 'Depot – Container' },
-  { value: 'DEPOT_TRUCK',     label: 'Depot – Truck' },
-  { value: 'DEPOT_TRAILER',   label: 'Depot – Trailer' },
+  { value: 'DEPOT_TRUCK', label: 'Depot – Truck' },
+  { value: 'DEPOT_TRAILER', label: 'Depot – Trailer' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,9 @@ export function CreateLocationDialog({
   const formId = useId();
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FormState, string>>
+  >({});
 
   const [createLocation, { isLoading: isCreating }] =
     useCreateDispatcherLocationMutation();
@@ -141,7 +143,12 @@ export function CreateLocationDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-[560px]'>
         <DialogHeader>
           <DialogTitle className='text-xl font-semibold'>
@@ -150,7 +157,6 @@ export function CreateLocationDialog({
         </DialogHeader>
 
         <form id={formId} onSubmit={handleSubmit} className='space-y-5 pt-2'>
-
           {/* Row: Location Code + Type */}
           <div className='grid grid-cols-2 gap-4'>
             {/* Location Code */}
@@ -167,7 +173,9 @@ export function CreateLocationDialog({
                 className={cn(errors.locationCode && 'border-destructive')}
               />
               {errors.locationCode && (
-                <p className='text-xs text-destructive'>{errors.locationCode}</p>
+                <p className='text-xs text-destructive'>
+                  {errors.locationCode}
+                </p>
               )}
             </div>
 
@@ -206,7 +214,8 @@ export function CreateLocationDialog({
               Coordinates <span className='text-destructive'>*</span>
             </Label>
             <p className='text-xs text-muted-foreground'>
-              Click anywhere on the map to place a pin and extract the coordinates.
+              Click anywhere on the map to place a pin and extract the
+              coordinates.
             </p>
             <MapPicker lat={form.lat} lng={form.lng} onPick={handleMapPick} />
             {errors.lat && (

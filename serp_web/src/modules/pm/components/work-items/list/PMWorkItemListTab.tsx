@@ -28,7 +28,7 @@ import {
 import {
   useGetPmWorkItemByIdQuery,
   useSearchPmWorkItemsQuery,
-} from '../../../api';
+} from '../../../api/workItemApi';
 import { PMWorkItemDetailDialog } from '../detail';
 import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
 import { PMWorkItemListFilters } from './PMWorkItemListFilters';

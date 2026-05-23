@@ -5,25 +5,6 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  Search,
-  Filter,
-} from 'lucide-react';
-import {
-  Calendar,
-  momentLocalizer,
-  Views,
-  type View,
-  type EventProps,
-} from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import '../components/projects/project-calendar.css';
 import { getErrorMessage } from '@/lib/store/api';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -37,9 +18,26 @@ import { Input } from '@/shared/components/ui/input';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { cn } from '@/shared/utils';
 import {
-  useGetPmWorkItemTimelineQuery,
-  type PMWorkItemTimelineItemApi,
-} from '../api';
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Search,
+} from 'lucide-react';
+import moment from 'moment';
+import { useParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Calendar,
+  momentLocalizer,
+  Views,
+  type EventProps,
+  type View,
+} from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { useGetPmWorkItemTimelineQuery } from '../api/workItemApi';
+import '../components/projects/project-calendar.css';
+import type { PMWorkItemTimelineItemApi } from '../types/api';
 
 const localizer = momentLocalizer(moment);
 const DEFAULT_PAGE_SIZE = 200;
@@ -119,7 +117,9 @@ function CalendarEventCard({ event }: EventProps<PMProjectCalendarEvent>) {
           </Badge>
         ) : null}
       </div>
-      <div className='line-clamp-2 text-muted-foreground'>{resource.summary}</div>
+      <div className='line-clamp-2 text-muted-foreground'>
+        {resource.summary}
+      </div>
     </div>
   );
 }
@@ -134,7 +134,8 @@ export function PMProjectCalendarPage() {
   const [keyword, setKeyword] = useState('');
 
   const viewport = useMemo(() => {
-    const rangeUnit = view === Views.MONTH ? 'month' : view === Views.DAY ? 'day' : 'week';
+    const rangeUnit =
+      view === Views.MONTH ? 'month' : view === Views.DAY ? 'day' : 'week';
     const start = moment(date).startOf(rangeUnit);
     const end = moment(date).endOf(rangeUnit);
 
@@ -170,7 +171,10 @@ export function PMProjectCalendarPage() {
   );
 
   const calendarEvents = useMemo(
-    () => (response?.items || []).filter((item) => !item.isUnscheduled).map(mapTimelineItemToEvent),
+    () =>
+      (response?.items || [])
+        .filter((item) => !item.isUnscheduled)
+        .map(mapTimelineItemToEvent),
     [response]
   );
 
@@ -185,19 +189,26 @@ export function PMProjectCalendarPage() {
 
   const activeDateLabel = useMemo(() => {
     if (view === Views.MONTH) return moment(date).format('MMMM YYYY');
-    if (view === Views.WEEK) return moment(date).format('[Week of] MMM D, YYYY');
+    if (view === Views.WEEK)
+      return moment(date).format('[Week of] MMM D, YYYY');
     return moment(date).format('ddd, MMM D, YYYY');
   }, [date, view]);
 
   const eventStyleGetter = (event: PMProjectCalendarEvent) => ({
-    className: cn('overflow-hidden border-transparent text-foreground',
-      event.resource.isUnscheduled && 'opacity-80'),
+    className: cn(
+      'overflow-hidden border-transparent text-foreground',
+      event.resource.isUnscheduled && 'opacity-80'
+    ),
     style: {
       backgroundColor: 'transparent',
     },
   });
 
-  const emptyState = !isLoading && !isFetching && calendarEvents.length === 0 && unscheduledItems.length === 0;
+  const emptyState =
+    !isLoading &&
+    !isFetching &&
+    calendarEvents.length === 0 &&
+    unscheduledItems.length === 0;
 
   return (
     <div className='space-y-4'>
@@ -210,25 +221,66 @@ export function PMProjectCalendarPage() {
             <div>
               <h1 className='text-3xl font-bold tracking-tight'>Calendar</h1>
               <p className='text-sm text-muted-foreground'>
-                Track scheduled work, scan unscheduled items, and move tasks by date.
+                Track scheduled work, scan unscheduled items, and move tasks by
+                date.
               </p>
             </div>
           </div>
           <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-            <span className='font-medium text-foreground'>{activeDateLabel}</span>
+            <span className='font-medium text-foreground'>
+              {activeDateLabel}
+            </span>
             <span>•</span>
             <span>{response?.totalItems ?? 0} items</span>
           </div>
         </div>
 
         <div className='flex flex-wrap items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={() => setDate(new Date())}>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setDate(new Date())}
+          >
             Today
           </Button>
-          <Button variant='outline' size='sm' onClick={() => setDate(moment(date).subtract(1, view === Views.MONTH ? 'month' : view === Views.WEEK ? 'week' : 'day').toDate())}>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() =>
+              setDate(
+                moment(date)
+                  .subtract(
+                    1,
+                    view === Views.MONTH
+                      ? 'month'
+                      : view === Views.WEEK
+                        ? 'week'
+                        : 'day'
+                  )
+                  .toDate()
+              )
+            }
+          >
             <ChevronLeft className='h-4 w-4' />
           </Button>
-          <Button variant='outline' size='sm' onClick={() => setDate(moment(date).add(1, view === Views.MONTH ? 'month' : view === Views.WEEK ? 'week' : 'day').toDate())}>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() =>
+              setDate(
+                moment(date)
+                  .add(
+                    1,
+                    view === Views.MONTH
+                      ? 'month'
+                      : view === Views.WEEK
+                        ? 'week'
+                        : 'day'
+                  )
+                  .toDate()
+              )
+            }
+          >
             <ChevronRight className='h-4 w-4' />
           </Button>
           <div className='flex items-center gap-1 rounded-md border bg-background p-1'>
@@ -340,9 +392,15 @@ export function PMProjectCalendarPage() {
                         <Badge variant='secondary'>Unscheduled</Badge>
                       </div>
                       <div className='mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground'>
-                        {item.status?.name ? <span>{item.status.name}</span> : null}
-                        {item.priority?.name ? <span>• {item.priority.name}</span> : null}
-                        {item.issueType?.name ? <span>• {item.issueType.name}</span> : null}
+                        {item.status?.name ? (
+                          <span>{item.status.name}</span>
+                        ) : null}
+                        {item.priority?.name ? (
+                          <span>• {item.priority.name}</span>
+                        ) : null}
+                        {item.issueType?.name ? (
+                          <span>• {item.issueType.name}</span>
+                        ) : null}
                       </div>
                     </div>
                   ))

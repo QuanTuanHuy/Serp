@@ -161,15 +161,25 @@ export const ttcrsApi = api.injectEndpoints({
     // -------------------------------------------------------------------------
     // GET /ttcrs/api/v1/dispatcher/resources/containers
     // -------------------------------------------------------------------------
-    getDispatcherContainers: builder.query<TtcrsApiResponse<ContainerItem[]>, void>({
+    getDispatcherContainers: builder.query<
+      TtcrsApiResponse<ContainerItem[]>,
+      void
+    >({
       query: () => ({ url: '/dispatcher/resources/containers', method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
       providesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
     }),
 
     // POST /ttcrs/api/v1/dispatcher/resources/containers
-    createDispatcherContainer: builder.mutation<TtcrsApiResponse<ContainerItem>, CreateContainerPayload>({
-      query: (body) => ({ url: '/dispatcher/resources/containers', method: 'POST', body }),
+    createDispatcherContainer: builder.mutation<
+      TtcrsApiResponse<ContainerItem>,
+      CreateContainerPayload
+    >({
+      query: (body) => ({
+        url: '/dispatcher/resources/containers',
+        method: 'POST',
+        body,
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
     }),
@@ -184,8 +194,15 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     // POST /ttcrs/api/v1/dispatcher/resources/trucks
-    createDispatcherTruck: builder.mutation<TtcrsApiResponse<TruckItem>, CreateTruckPayload>({
-      query: (body) => ({ url: '/dispatcher/resources/trucks', method: 'POST', body }),
+    createDispatcherTruck: builder.mutation<
+      TtcrsApiResponse<TruckItem>,
+      CreateTruckPayload
+    >({
+      query: (body) => ({
+        url: '/dispatcher/resources/trucks',
+        method: 'POST',
+        body,
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
     }),
@@ -193,15 +210,24 @@ export const ttcrsApi = api.injectEndpoints({
     // -------------------------------------------------------------------------
     // GET /ttcrs/api/v1/dispatcher/resources/trailers
     // -------------------------------------------------------------------------
-    getDispatcherTrailers: builder.query<TtcrsApiResponse<TrailerItem[]>, void>({
-      query: () => ({ url: '/dispatcher/resources/trailers', method: 'GET' }),
-      extraOptions: { service: 'ttcrs' },
-      providesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
-    }),
+    getDispatcherTrailers: builder.query<TtcrsApiResponse<TrailerItem[]>, void>(
+      {
+        query: () => ({ url: '/dispatcher/resources/trailers', method: 'GET' }),
+        extraOptions: { service: 'ttcrs' },
+        providesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
+      }
+    ),
 
     // POST /ttcrs/api/v1/dispatcher/resources/trailers
-    createDispatcherTrailer: builder.mutation<TtcrsApiResponse<TrailerItem>, CreateTrailerPayload>({
-      query: (body) => ({ url: '/dispatcher/resources/trailers', method: 'POST', body }),
+    createDispatcherTrailer: builder.mutation<
+      TtcrsApiResponse<TrailerItem>,
+      CreateTrailerPayload
+    >({
+      query: (body) => ({
+        url: '/dispatcher/resources/trailers',
+        method: 'POST',
+        body,
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
     }),
@@ -274,7 +300,10 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     deleteDispatcherContainer: builder.mutation<void, number>({
-      query: (id) => ({ url: `/dispatcher/resources/containers/${id}`, method: 'DELETE' }),
+      query: (id) => ({
+        url: `/dispatcher/resources/containers/${id}`,
+        method: 'DELETE',
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'CONTAINERS' }],
     }),
@@ -296,7 +325,10 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     deleteDispatcherTruck: builder.mutation<void, number>({
-      query: (id) => ({ url: `/dispatcher/resources/trucks/${id}`, method: 'DELETE' }),
+      query: (id) => ({
+        url: `/dispatcher/resources/trucks/${id}`,
+        method: 'DELETE',
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRUCKS' }],
     }),
@@ -318,7 +350,10 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     deleteDispatcherTrailer: builder.mutation<void, number>({
-      query: (id) => ({ url: `/dispatcher/resources/trailers/${id}`, method: 'DELETE' }),
+      query: (id) => ({
+        url: `/dispatcher/resources/trailers/${id}`,
+        method: 'DELETE',
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Resource', id: 'TRAILERS' }],
     }),
@@ -341,31 +376,50 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     // GET /ttcrs/api/v1/driver/transport-plans
-    getMyTransportPlans: builder.query<TtcrsApiResponse<TransportPlanListItem[]>, void>({
+    getMyTransportPlans: builder.query<
+      TtcrsApiResponse<TransportPlanListItem[]>,
+      void
+    >({
       query: () => ({ url: '/driver/transport-plans', method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
       providesTags: [{ type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' }],
     }),
 
     // GET /ttcrs/api/v1/driver/transport-plans/{id}
-    getMyTransportPlanDetail: builder.query<TtcrsApiResponse<TransportPlanDetail>, number>({
+    getMyTransportPlanDetail: builder.query<
+      TtcrsApiResponse<TransportPlanDetail>,
+      number
+    >({
       query: (id) => ({ url: `/driver/transport-plans/${id}`, method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
-      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` }],
+      providesTags: (_, __, id) => [
+        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+      ],
     }),
 
     // GET /ttcrs/api/v1/dispatcher/transport-plans
-    getTransportPlans: builder.query<TtcrsApiResponse<TransportPlanListItem[]>, void>({
+    getTransportPlans: builder.query<
+      TtcrsApiResponse<TransportPlanListItem[]>,
+      void
+    >({
       query: () => ({ url: '/dispatcher/transport-plans', method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
       providesTags: [{ type: 'ttcrs/Request', id: 'TRANSPORT_PLANS' }],
     }),
 
     // GET /ttcrs/api/v1/dispatcher/transport-plans/{id}
-    getTransportPlanDetail: builder.query<TtcrsApiResponse<TransportPlanDetail>, number>({
-      query: (id) => ({ url: `/dispatcher/transport-plans/${id}`, method: 'GET' }),
+    getTransportPlanDetail: builder.query<
+      TtcrsApiResponse<TransportPlanDetail>,
+      number
+    >({
+      query: (id) => ({
+        url: `/dispatcher/transport-plans/${id}`,
+        method: 'GET',
+      }),
       extraOptions: { service: 'ttcrs' },
-      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` }],
+      providesTags: (_, __, id) => [
+        { type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` },
+      ],
     }),
 
     // POST /ttcrs/api/v1/dispatcher/transport-plans
@@ -373,7 +427,11 @@ export const ttcrsApi = api.injectEndpoints({
       TtcrsApiResponse<TransportPlanSavedItem[]>,
       SaveTransportPlanPayload
     >({
-      query: (body) => ({ url: '/dispatcher/transport-plans', method: 'POST', body }),
+      query: (body) => ({
+        url: '/dispatcher/transport-plans',
+        method: 'POST',
+        body,
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
     }),

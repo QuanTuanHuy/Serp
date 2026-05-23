@@ -11,7 +11,10 @@ import { FolderKanban, Plus } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button } from '@/shared/components/ui';
-import { useGetPmProjectsQuery, useGetProjectCategoriesQuery } from '../api';
+import {
+  useGetPmProjectsQuery,
+  useGetProjectCategoriesQuery,
+} from '../api/projectApi';
 import type { PMProjectSummaryApi } from '../types/api';
 import type {
   PMProjectListItem,

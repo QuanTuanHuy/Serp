@@ -26,13 +26,15 @@ export interface RoutePolylineData {
 }
 
 const LEAFLET_CSS_ID = 'leaflet-css';
-const LEAFLET_JS_ID  = 'leaflet-js';
+const LEAFLET_JS_ID = 'leaflet-js';
 const DEFAULT_CENTER: [number, number] = [10.8231, 106.6297]; // Ho Chi Minh City
 const DEFAULT_ZOOM = 10;
 const OSRM_DEBOUNCE_MS = 200;
 const osrmCache = new Map<string, [number, number][]>();
 
-async function fetchOsrmRoute(coords: [number, number][]): Promise<[number, number][] | null> {
+async function fetchOsrmRoute(
+  coords: [number, number][]
+): Promise<[number, number][] | null> {
   if (coords.length < 2) return null;
 
   const key = JSON.stringify(coords);
@@ -63,14 +65,14 @@ interface RouteMapPanelProps {
 }
 
 export function RouteMapPanel({ routes }: RouteMapPanelProps) {
-  const containerRef   = useRef<HTMLDivElement>(null);
-  const mapRef         = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
   const routeGroupsRef = useRef<any[]>([]);
   const [leafletReady, setLeafletReady] = useState(false);
 
-  const [roadGeometries, setRoadGeometries] = useState<Map<number, [number, number][]>>(
-    new Map()
-  );
+  const [roadGeometries, setRoadGeometries] = useState<
+    Map<number, [number, number][]>
+  >(new Map());
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -83,22 +85,26 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
 
     if (!document.getElementById(LEAFLET_CSS_ID)) {
       const link = document.createElement('link');
-      link.id   = LEAFLET_CSS_ID;
-      link.rel  = 'stylesheet';
+      link.id = LEAFLET_CSS_ID;
+      link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
     }
 
     if (!document.getElementById(LEAFLET_JS_ID)) {
-      const script    = document.createElement('script');
-      script.id       = LEAFLET_JS_ID;
-      script.src      = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload   = () => setLeafletReady(true);
-      script.onerror  = () => console.error('[RouteMapPanel] Failed to load Leaflet');
+      const script = document.createElement('script');
+      script.id = LEAFLET_JS_ID;
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => setLeafletReady(true);
+      script.onerror = () =>
+        console.error('[RouteMapPanel] Failed to load Leaflet');
       document.head.appendChild(script);
     } else {
       const interval = setInterval(() => {
-        if (window.L) { clearInterval(interval); setLeafletReady(true); }
+        if (window.L) {
+          clearInterval(interval);
+          setLeafletReady(true);
+        }
       }, 100);
       return () => clearInterval(interval);
     }
@@ -111,12 +117,17 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
 
     delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
     L.Icon.Default.mergeOptions({
-      iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     });
 
-    const map = L.map(containerRef.current).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    const map = L.map(containerRef.current).setView(
+      DEFAULT_CENTER,
+      DEFAULT_ZOOM
+    );
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
         '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
@@ -127,7 +138,7 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
 
     return () => {
       map.remove();
-      mapRef.current         = null;
+      mapRef.current = null;
       routeGroupsRef.current = [];
     };
   }, [leafletReady]);
@@ -160,7 +171,7 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
   useEffect(() => {
     if (!leafletReady || !mapRef.current) return;
 
-    const L   = window.L;
+    const L = window.L;
     const map = mapRef.current;
 
     routeGroupsRef.current.forEach((g) => g.remove());
@@ -176,26 +187,26 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
       const roadCoords = roadGeometries.get(index);
       if (roadCoords) {
         L.polyline(roadCoords, {
-          color:   route.color,
-          weight:  4,
+          color: route.color,
+          weight: 4,
           opacity: 0.85,
         }).addTo(group);
       }
 
       route.stops.forEach((stop) => {
         L.circleMarker([stop.lat, stop.lng], {
-          radius:      stop.isDepot ? 5 : 8,
-          color:       route.color,
-          fillColor:   stop.isDepot ? '#ffffff' : route.color,
+          radius: stop.isDepot ? 5 : 8,
+          color: route.color,
+          fillColor: stop.isDepot ? '#ffffff' : route.color,
           fillOpacity: stop.isDepot ? 0.9 : 1,
-          weight:      2,
+          weight: 2,
         })
           .bindPopup(
             `<div style="font-size:12px;line-height:1.5">
               <span style="font-family:monospace;font-weight:700">${stop.locationCode}</span><br>
               <span style="color:#888">${stop.action}</span>
               <br><span style="font-weight:600;color:${route.color}">${route.truckCode}</span>
-            </div>`,
+            </div>`
           )
           .addTo(group);
       });
@@ -205,7 +216,10 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
     });
 
     if (allCoords.length >= 2) {
-      map.fitBounds(L.latLngBounds(allCoords), { padding: [30, 30], maxZoom: 14 });
+      map.fitBounds(L.latLngBounds(allCoords), {
+        padding: [30, 30],
+        maxZoom: 14,
+      });
     } else if (allCoords.length === 1) {
       map.setView(allCoords[0], 13);
     }
@@ -224,7 +238,8 @@ export function RouteMapPanel({ routes }: RouteMapPanelProps) {
         <div className='pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-muted/60 rounded-lg'>
           <MapPin className='h-8 w-8 text-muted-foreground/50' />
           <span className='text-xs text-muted-foreground'>
-            No geocoded locations — add GPS coordinates to your locations to see routes here
+            No geocoded locations — add GPS coordinates to your locations to see
+            routes here
           </span>
         </div>
       )}

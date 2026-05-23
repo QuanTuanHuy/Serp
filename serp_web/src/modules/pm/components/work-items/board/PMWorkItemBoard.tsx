@@ -23,7 +23,7 @@ import {
   Badge,
   Button,
 } from '@/shared/components/ui';
-import { useGetPmWorkItemBoardQuery } from '../../../api';
+import { useGetPmWorkItemBoardQuery } from '../../../api/workItemApi';
 import { PMWorkItemDetailDialog } from '../detail';
 import { PMWorkItemBoardColumn } from './PMWorkItemBoardColumn';
 import { PMWorkItemBoardEmpty } from './PMWorkItemBoardEmpty';

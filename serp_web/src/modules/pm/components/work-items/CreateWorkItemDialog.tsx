@@ -5,15 +5,13 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, PlusSquare } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { getErrorMessage } from '@/lib/store/api';
 import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import { useAppSelector } from '@/shared/hooks';
 import {
   Alert,
@@ -41,100 +39,20 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
+import { Combobox } from '@/shared/components/ui/combobox';
+import { useCreatePmWorkItemMutation } from '../../api/workItemApi';
 import {
-  useCreatePmWorkItemMutation,
-  useGetPmProjectsQuery,
-  useGetPmWorkItemCreateMetaQuery,
-  useSearchPmWorkItemsQuery,
-} from '../../api';
-import type {
-  PMCreateWorkItemRequest,
-  PMProjectSummaryApi,
-  PMWorkItemCustomField,
-  PMWorkItemSearchApi,
-} from '../../types/api';
-
-const createWorkItemSchema = z.object({
-  projectId: z.string().min(1, 'Project is required'),
-  issueTypeId: z.string().min(1, 'Issue type is required'),
-  summary: z
-    .string()
-    .trim()
-    .min(1, 'Summary is required')
-    .max(512, 'Summary must be 512 characters or fewer'),
-  description: z.string().optional().or(z.literal('')),
-  priorityId: z.string().optional().or(z.literal('')),
-  assigneeId: z.string().optional().or(z.literal('')),
-  parentId: z.string().optional().or(z.literal('')),
-  dueDate: z.string().optional().or(z.literal('')),
-  timeOriginalEstimate: z.string().optional().or(z.literal('')),
-  securityLevelId: z.string().optional().or(z.literal('')),
-});
-
-type CreateWorkItemFormValues = z.infer<typeof createWorkItemSchema>;
+  buildCreateWorkItemRequest,
+  createWorkItemSchema,
+  getCreateWorkItemDefaultValues,
+  type CreateWorkItemFormValues,
+} from './createWorkItemForm';
+import { useCreateWorkItemOptions } from './useCreateWorkItemOptions';
 
 interface CreateWorkItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialProjectId?: number;
-}
-
-function mapProjectToComboboxItem(
-  project: PMProjectSummaryApi
-): ComboboxItem & { archived: boolean } {
-  return {
-    value: String(project.id),
-    label: `${project.name} (${project.key})`,
-    archived: project.isArchived,
-  };
-}
-
-function mapWorkItemToComboboxItem(item: PMWorkItemSearchApi): ComboboxItem {
-  return {
-    value: String(item.id),
-    label: `${item.key} - ${item.summary}`,
-  };
-}
-
-function buildCreateRequest(
-  values: CreateWorkItemFormValues,
-  customFields: PMWorkItemCustomField[]
-): PMCreateWorkItemRequest {
-  const customFieldPayload: Record<string, unknown> = {};
-
-  customFields.forEach((field) => {
-    if (field.defaultValues.length === 1) {
-      customFieldPayload[field.fieldKey] = field.defaultValues[0].value;
-      return;
-    }
-
-    if (field.defaultValues.length > 1) {
-      customFieldPayload[field.fieldKey] = field.defaultValues.map(
-        (defaultValue) => defaultValue.value
-      );
-    }
-  });
-
-  return {
-    issueTypeId: Number(values.issueTypeId),
-    summary: values.summary.trim(),
-    description: values.description?.trim() || undefined,
-    priorityId: values.priorityId ? Number(values.priorityId) : undefined,
-    assigneeId: values.assigneeId ? Number(values.assigneeId) : undefined,
-    parentId: values.parentId ? Number(values.parentId) : undefined,
-    dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
-    timeOriginalEstimate: values.timeOriginalEstimate
-      ? Number(values.timeOriginalEstimate)
-      : undefined,
-    securityLevelId: values.securityLevelId
-      ? Number(values.securityLevelId)
-      : undefined,
-    customFields:
-      Object.keys(customFieldPayload).length > 0
-        ? customFieldPayload
-        : undefined,
-  };
 }
 
 export function CreateWorkItemDialog({
@@ -149,18 +67,7 @@ export function CreateWorkItemDialog({
 
   const form = useForm<CreateWorkItemFormValues>({
     resolver: zodResolver(createWorkItemSchema),
-    defaultValues: {
-      projectId: initialProjectId ? String(initialProjectId) : '',
-      issueTypeId: '',
-      summary: '',
-      description: '',
-      priorityId: '',
-      assigneeId: '',
-      parentId: '',
-      dueDate: '',
-      timeOriginalEstimate: '',
-      securityLevelId: '',
-    },
+    defaultValues: getCreateWorkItemDefaultValues(initialProjectId),
   });
 
   const selectedProjectId = form.watch('projectId');
@@ -168,105 +75,29 @@ export function CreateWorkItemDialog({
 
   useEffect(() => {
     if (open) {
-      form.reset({
-        projectId: initialProjectId ? String(initialProjectId) : '',
-        issueTypeId: '',
-        summary: '',
-        description: '',
-        priorityId: '',
-        assigneeId: '',
-        parentId: '',
-        dueDate: '',
-        timeOriginalEstimate: '',
-        securityLevelId: '',
-      });
+      form.reset(getCreateWorkItemDefaultValues(initialProjectId));
       setProjectSearch('');
       setParentSearch('');
     }
   }, [form, initialProjectId, open]);
 
-  const { data: projectResponse, isLoading: isProjectLoading } =
-    useGetPmProjectsQuery({
-      page: 0,
-      pageSize: 50,
-      search: projectSearch.trim() || undefined,
-      sortBy: 'updatedAt',
-      sortDirection: 'desc',
-    });
-
-  const projectItems = useMemo(
-    () => (projectResponse?.data.items || []).map(mapProjectToComboboxItem),
-    [projectResponse]
-  );
-
-  const { data: meta, isFetching: isMetaFetching } =
-    useGetPmWorkItemCreateMetaQuery(
-      {
-        projectId: Number(selectedProjectId),
-        issueTypeId: selectedIssueTypeId
-          ? Number(selectedIssueTypeId)
-          : undefined,
-      },
-      {
-        skip: !selectedProjectId,
-      }
-    );
-
-  const { data: usersResponse, isLoading: isUserLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId || !open }
-    );
-
-  const assigneeOptions = useMemo(
-    () =>
-      [...(usersResponse?.data.items || [])]
-        .sort((left, right) => {
-          const leftName =
-            `${left.firstName || ''} ${left.lastName || ''}`.trim();
-          const rightName =
-            `${right.firstName || ''} ${right.lastName || ''}`.trim();
-          return leftName.localeCompare(rightName);
-        })
-        .map((user) => ({
-          id: String(user.id),
-          label:
-            `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-            user.email ||
-            `User #${user.id}`,
-        })),
-    [usersResponse]
-  );
-
-  const { data: parentResponse, isFetching: isParentFetching } =
-    useSearchPmWorkItemsQuery(
-      {
-        projectId: Number(selectedProjectId),
-        params: {
-          keyword: parentSearch.trim() || undefined,
-          page: 0,
-          pageSize: 20,
-          sortField: 'updatedAt',
-          sortDirection: 'DESC',
-        },
-      },
-      {
-        skip: !selectedProjectId,
-      }
-    );
-
-  const parentItems = useMemo(
-    () =>
-      (parentResponse?.data.items || [])
-        .filter((item) => String(item.issueTypeId) !== selectedIssueTypeId)
-        .map(mapWorkItemToComboboxItem),
-    [parentResponse, selectedIssueTypeId]
-  );
+  const {
+    assigneeOptions,
+    isMetaFetching,
+    isParentFetching,
+    isProjectLoading,
+    isUserLoading,
+    meta,
+    parentItems,
+    projectItems,
+  } = useCreateWorkItemOptions({
+    open,
+    organizationId,
+    projectSearch,
+    parentSearch,
+    selectedProjectId,
+    selectedIssueTypeId,
+  });
 
   useEffect(() => {
     if (!meta) {
@@ -322,7 +153,7 @@ export function CreateWorkItemDialog({
     try {
       const created = await createPmWorkItem({
         projectId: Number(values.projectId),
-        body: buildCreateRequest(values, meta.customFields),
+        body: buildCreateWorkItemRequest(values, meta.customFields),
       }).unwrap();
 
       toast.success(`Work item ${created.key} created successfully.`);

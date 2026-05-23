@@ -109,7 +109,10 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
     const map = new Map<string, { lat: number; lng: number }>();
     (locationsData?.data ?? []).forEach((location) => {
       if (location.lat != null && location.lng != null) {
-        map.set(location.locationCode, { lat: location.lat, lng: location.lng });
+        map.set(location.locationCode, {
+          lat: location.lat,
+          lng: location.lng,
+        });
       }
     });
     return map;
@@ -136,13 +139,19 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
       return {
         truckCode: route.truckCode || `Truck ${index + 1}`,
         color: ROUTE_COLORS[index % ROUTE_COLORS.length],
-        coords: stopsWithCoords.map((stop) => [stop.lat, stop.lng] as [number, number]),
+        coords: stopsWithCoords.map(
+          (stop) => [stop.lat, stop.lng] as [number, number]
+        ),
         stops: stopsWithCoords,
       };
     });
   }, [routes, locationGeoMap]);
 
-  const handleMoveStop = (fromRouteIdx: number, stopIdx: number, toRouteIdx: number) => {
+  const handleMoveStop = (
+    fromRouteIdx: number,
+    stopIdx: number,
+    toRouteIdx: number
+  ) => {
     setRoutes((prev) => {
       const next = prev.map((route) => ({ ...route, stops: [...route.stops] }));
       const [stop] = next[fromRouteIdx].stops.splice(stopIdx, 1);
@@ -192,7 +201,8 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
     });
   };
 
-  const [saveTransportPlans, { isLoading: isSaving }] = useSaveTransportPlansMutation();
+  const [saveTransportPlans, { isLoading: isSaving }] =
+    useSaveTransportPlansMutation();
 
   const handleFinish = async () => {
     const allErrors = validations.flatMap((v) => v.errors);
@@ -245,7 +255,9 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
             className='bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50'
             onClick={handleFinish}
             disabled={!allValid || isSaving}
-            title={!allValid ? 'Fix validation errors before finishing' : undefined}
+            title={
+              !allValid ? 'Fix validation errors before finishing' : undefined
+            }
           >
             {isSaving ? (
               <Loader2 className='mr-1 h-4 w-4 animate-spin' />
@@ -292,11 +304,13 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
           <AlertCircle className='mt-0.5 h-5 w-5 shrink-0 text-amber-600' />
           <div>
             <p className='text-sm font-semibold text-amber-700 dark:text-amber-400'>
-              {totalUnscheduled} unscheduled request{totalUnscheduled > 1 ? 's' : ''}
+              {totalUnscheduled} unscheduled request
+              {totalUnscheduled > 1 ? 's' : ''}
             </p>
             <p className='mt-0.5 text-xs text-muted-foreground'>
-              These could not be scheduled by the algorithm. Redistribute stops between routes to
-              accommodate them, or go back and add more resources.
+              These could not be scheduled by the algorithm. Redistribute stops
+              between routes to accommodate them, or go back and add more
+              resources.
             </p>
           </div>
         </div>
@@ -307,13 +321,17 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
           {routes.length === 0 ? (
             <div className='flex flex-col items-center justify-center gap-3 py-20'>
               <Route className='h-12 w-12 text-muted-foreground/40' />
-              <p className='text-sm text-muted-foreground'>No routes were generated.</p>
+              <p className='text-sm text-muted-foreground'>
+                No routes were generated.
+              </p>
             </div>
           ) : (
             <div className='flex gap-4' style={{ width: 'max-content' }}>
               {routes.map((route, routeIdx) => {
                 const validation = validations[routeIdx];
-                const nonDepotCount = route.stops.filter((stop) => !isDepotStop(stop)).length;
+                const nonDepotCount = route.stops.filter(
+                  (stop) => !isDepotStop(stop)
+                ).length;
                 const nonDepotIndices = route.stops
                   .map((stop, index) => ({ stop, index }))
                   .filter(({ stop }) => !isDepotStop(stop))
@@ -332,7 +350,10 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                     >
                       <div className='flex items-center justify-between gap-2'>
                         <div className='flex min-w-0 items-center gap-2'>
-                          <Truck className='h-4 w-4 shrink-0' style={{ color: routeColor }} />
+                          <Truck
+                            className='h-4 w-4 shrink-0'
+                            style={{ color: routeColor }}
+                          />
                           <span className='truncate font-mono text-sm font-semibold'>
                             {route.truckCode || `Truck ${routeIdx + 1}`}
                           </span>
@@ -358,7 +379,9 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                         <User className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
                         <Select
                           value={route.driverId ? String(route.driverId) : ''}
-                          onValueChange={(val) => handleAssignDriver(routeIdx, val)}
+                          onValueChange={(val) =>
+                            handleAssignDriver(routeIdx, val)
+                          }
                         >
                           <SelectTrigger className='h-7 flex-1 text-xs'>
                             <SelectValue placeholder='Assign driver...' />
@@ -387,10 +410,12 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                         ) : (
                           route.stops.map((stop, stopIdx) => {
                             const depot = isDepotStop(stop);
-                            const posInNonDepot = nonDepotIndices.indexOf(stopIdx);
+                            const posInNonDepot =
+                              nonDepotIndices.indexOf(stopIdx);
                             const canMoveUp = !depot && posInNonDepot > 0;
                             const canMoveDown =
-                              !depot && posInNonDepot < nonDepotIndices.length - 1;
+                              !depot &&
+                              posInNonDepot < nonDepotIndices.length - 1;
 
                             return (
                               <div
@@ -514,7 +539,8 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
                       </div>
                     </CardContent>
 
-                    {(validation.errors.length > 0 || validation.warnings.length > 0) && (
+                    {(validation.errors.length > 0 ||
+                      validation.warnings.length > 0) && (
                       <div className='shrink-0 space-y-0.5 border-t bg-muted/10 px-3 py-2'>
                         {validation.errors.map((error, index) => (
                           <p
