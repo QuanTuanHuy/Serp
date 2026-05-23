@@ -55,7 +55,7 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
                         WorkItemBoardItemProjection::statusId,
                         Collectors.mapping(
                                 item -> WorkItemBoardCardView.from(
-                                        applyAssigneeSummary(item, assigneeSummaryMap.get(item.assigneeId()))
+                                        applyAssigneeSummary(item, item.assigneeId() == null ? null : assigneeSummaryMap.get(item.assigneeId()))
                                 ),
                                 Collectors.toList()
                         )
