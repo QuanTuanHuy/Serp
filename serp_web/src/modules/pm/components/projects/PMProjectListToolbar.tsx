@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Search, X } from 'lucide-react';
+import { Search, X, SlidersHorizontal } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -15,6 +15,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Tabs,
+  TabsList,
+  TabsTrigger,
 } from '@/shared/components/ui';
 import type { PMProjectSort } from '../../types/project-list.types';
 
@@ -58,22 +61,26 @@ export function PMProjectListToolbar({
   totalCount,
 }: PMProjectListToolbarProps) {
   return (
-    <div className='space-y-4 rounded-2xl border bg-card p-4 shadow-sm'>
-      <div className='flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between'>
-        <div className='relative w-full xl:max-w-sm'>
+    <div className='flex flex-col gap-4 rounded-2xl border border-border/80 bg-card/60 p-4 shadow-sm backdrop-blur-md xl:flex-row xl:items-center xl:justify-between'>
+      {/* Left: Search & Info */}
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 flex-1'>
+        <div className='relative w-full sm:max-w-xs'>
           <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder='Search projects, keys, leads...'
-            className='pl-9'
+            className='pl-9 h-10 bg-background/50 border-border/70 focus-visible:ring-primary/30'
             aria-label='Search projects'
           />
         </div>
 
-        <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-          <Badge variant='outline' className='rounded-full px-3 py-1'>
-            Software projects only
+        <div className='flex items-center gap-2.5 text-xs text-muted-foreground'>
+          <Badge
+            variant='outline'
+            className='rounded-full px-2.5 py-0.5 border-border/50 text-[10px] uppercase tracking-wide bg-background/40'
+          >
+            Software
           </Badge>
           <span>
             Showing{' '}
@@ -84,68 +91,81 @@ export function PMProjectListToolbar({
         </div>
       </div>
 
-      <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_220px_220px_auto]'>
-        <Select
-          value={categoryFilter}
-          onValueChange={(value) =>
-            onCategoryFilterChange(value as PMProjectCategoryFilter)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder='Category' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='ALL'>All categories</SelectItem>
-            {categoryOptions.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
+      {/* Right: Filters & Clear */}
+      <div className='flex flex-wrap items-center gap-3'>
+        {/* Status Segmented Tabs */}
+        <Tabs
           value={statusFilter}
           onValueChange={(value) =>
             onStatusFilterChange(value as PMProjectStatusFilter)
           }
+          className='w-auto'
         >
-          <SelectTrigger>
-            <SelectValue placeholder='Status' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='ALL'>All statuses</SelectItem>
-            <SelectItem value='ACTIVE'>Active</SelectItem>
-            <SelectItem value='ARCHIVED'>Archived</SelectItem>
-          </SelectContent>
-        </Select>
+          <TabsList className='h-10 bg-muted/40 border border-border/60 p-1'>
+            <TabsTrigger value='ALL' className='px-3.5 text-xs h-8'>
+              All
+            </TabsTrigger>
+            <TabsTrigger value='ACTIVE' className='px-3.5 text-xs h-8'>
+              Active
+            </TabsTrigger>
+            <TabsTrigger value='ARCHIVED' className='px-3.5 text-xs h-8'>
+              Archived
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        <Select
-          value={sortBy}
-          onValueChange={(value) => onSortByChange(value as PMProjectSort)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder='Sort by' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='recentlyUpdated'>Recently updated</SelectItem>
-            <SelectItem value='name'>Name</SelectItem>
-            <SelectItem value='createdDate'>Created date</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Category Dropdown */}
+        <div className='w-[180px]'>
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) =>
+              onCategoryFilterChange(value as PMProjectCategoryFilter)
+            }
+          >
+            <SelectTrigger className='h-10 bg-background/50 border-border/70 focus:ring-primary/30'>
+              <SelectValue placeholder='Category' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='ALL'>All categories</SelectItem>
+              {categoryOptions.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className='flex items-center justify-end lg:justify-start'>
+        {/* Sort By Dropdown */}
+        <div className='w-[180px]'>
+          <Select
+            value={sortBy}
+            onValueChange={(value) => onSortByChange(value as PMProjectSort)}
+          >
+            <SelectTrigger className='h-10 bg-background/50 border-border/70 focus:ring-primary/30'>
+              <SelectValue placeholder='Sort by' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='recentlyUpdated'>Recently updated</SelectItem>
+              <SelectItem value='name'>Name</SelectItem>
+              <SelectItem value='createdDate'>Created date</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Clear Filters */}
+        {hasActiveFilters && (
           <Button
             type='button'
             variant='ghost'
-            className='w-full lg:w-auto'
+            size='icon'
             onClick={onClearFilters}
-            disabled={!hasActiveFilters}
+            className='h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl'
+            title='Clear filters'
           >
-            <X className='mr-2 h-4 w-4' />
-            Clear filters
+            <X className='h-4 w-4' />
           </Button>
-        </div>
+        )}
       </div>
     </div>
   );
