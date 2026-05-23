@@ -37,7 +37,7 @@ export function serializeNumberList(values: number[]): string | undefined {
   return values.length ? values.join(',') : undefined;
 }
 
-export function formatDate(value?: number | null): string {
+export function formatDate(value?: number | string | null): string {
   if (!value) return 'No date';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'No date';

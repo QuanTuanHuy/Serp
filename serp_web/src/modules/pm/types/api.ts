@@ -377,11 +377,14 @@ export interface PMSearchWorkItemsParams {
 export interface PMWorkItemDetailIssueTypeApi {
   id: number;
   name: string;
+  iconUrl?: string | null;
+  hierarchyLevel?: number | null;
 }
 
 export interface PMWorkItemDetailUserApi {
   id: number;
   displayName?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface PMWorkItemDetailWorkflowStepApi {
@@ -398,6 +401,26 @@ export interface PMWorkItemDetailPriorityApi {
   id: number;
   name: string;
   color?: string | null;
+}
+
+export interface PMWorkItemDetailParentApi {
+  id: number;
+  key: string;
+  summary: string;
+}
+
+export interface PMWorkItemComponentApi {
+  id: number;
+  name: string;
+  description?: string | null;
+}
+
+export interface PMWorkItemCountStatsApi {
+  total: number;
+}
+
+export interface PMWorkItemSubtaskStatsApi extends PMWorkItemCountStatsApi {
+  done: number;
 }
 
 export interface PMWorkItemDetailApi {
@@ -428,10 +451,101 @@ export interface PMWorkItemDetailApi {
   workflowStep?: PMWorkItemDetailWorkflowStepApi | null;
   status?: PMWorkItemDetailStatusApi | null;
   priority?: PMWorkItemDetailPriorityApi | null;
-  createdAt?: number;
+  parent?: PMWorkItemDetailParentApi | null;
+  components?: PMWorkItemComponentApi[] | null;
+  subtaskStats?: PMWorkItemSubtaskStatsApi | null;
+  linkStats?: PMWorkItemCountStatsApi | null;
+  commentStats?: PMWorkItemCountStatsApi | null;
+  createdAt?: number | string;
   createdBy?: number;
-  updatedAt?: number;
+  updatedAt?: number | string;
   updatedBy?: number;
+}
+
+export interface PMWorkItemChildApi {
+  id: number;
+  projectId: number;
+  parentId?: number | null;
+  key: string;
+  summary: string;
+  issueType?: PMWorkItemDetailIssueTypeApi | null;
+  status?: PMWorkItemDetailStatusApi | null;
+  priority?: PMWorkItemDetailPriorityApi | null;
+  assignee?: PMWorkItemDetailUserApi | null;
+}
+
+export interface PMWorkItemLinkTypeApi {
+  id: number;
+  name: string;
+  description?: string | null;
+}
+
+export interface PMWorkItemLinkTargetApi {
+  id: number;
+  projectId?: number | null;
+  key: string;
+  summary: string;
+  status?: PMWorkItemDetailStatusApi | null;
+  priority?: PMWorkItemDetailPriorityApi | null;
+}
+
+export interface PMWorkItemLinkApi {
+  id: number;
+  direction: 'OUTWARD' | 'INWARD' | string;
+  linkType?: PMWorkItemLinkTypeApi | null;
+  workItem?: PMWorkItemLinkTargetApi | null;
+}
+
+export interface PMWorkItemCommentApi {
+  id: number;
+  body: string;
+  author?: PMWorkItemDetailUserApi | null;
+  createdAt?: number | string;
+  updatedAt?: number | string;
+  edited: boolean;
+}
+
+export interface PMWorkItemActivityApi {
+  id: string;
+  type: 'COMMENT' | 'HISTORY' | string;
+  actor?: PMWorkItemDetailUserApi | null;
+  body?: string | null;
+  fieldKey?: string | null;
+  fieldName?: string | null;
+  fromValue?: string | null;
+  toValue?: string | null;
+  createdAt?: number | string;
+}
+
+export interface PMUpdateWorkItemRequest {
+  summary?: string | null;
+  description?: string | null;
+  priorityId?: number | null;
+  assigneeId?: number | null;
+  startDate?: number | null;
+  dueDate?: number | null;
+  timeOriginalEstimate?: number | null;
+  timeRemainingEstimate?: number | null;
+  securityLevelId?: number | null;
+  customFields?: Record<string, unknown>;
+}
+
+export interface PMUpdateWorkItemResponse {
+  id: number;
+  projectId: number;
+  key: string;
+  summary: string;
+  description?: string | null;
+  statusId?: number | null;
+  priorityId?: number | null;
+  assigneeId?: number | null;
+  startDate?: number | null;
+  dueDate?: number | null;
+  timeOriginalEstimate?: number | null;
+  timeRemainingEstimate?: number | null;
+  changedFields: string[];
+  updatedAt?: number | string;
+  updatedBy?: number | null;
 }
 
 export interface PMWorkItemBoardIssueTypeApi {

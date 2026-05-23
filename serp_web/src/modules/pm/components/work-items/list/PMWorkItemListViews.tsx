@@ -51,9 +51,9 @@ interface PMWorkItemDetailPanelProps {
   priorityName?: string;
   assigneeName?: string;
   reporterName?: string;
-  dueDate?: number | null;
-  createdAt?: number | null;
-  updatedAt?: number | null;
+  dueDate?: number | string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
   isFetching?: boolean;
   loading?: boolean;
   errorMessage?: string;
