@@ -108,7 +108,7 @@ export function WorkItemListSummaryEditor({
     return (
       <button
         type='button'
-        className='group flex min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-muted'
+        className='group flex w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-muted'
         onClick={() => {
           setDraft(item.summary);
           setEditing(true);
@@ -123,12 +123,12 @@ export function WorkItemListSummaryEditor({
   }
 
   return (
-    <div className='flex min-w-72 items-center gap-1.5'>
+    <div className='flex w-full min-w-0 items-center gap-1.5'>
       <Input
         autoFocus
         value={draft}
         disabled={disabled}
-        className='h-8 min-w-60'
+        className='h-8 min-w-0 flex-1'
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
       />
@@ -213,7 +213,7 @@ export function WorkItemListComboboxEditor({
     return (
       <button
         type='button'
-        className='group inline-flex min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-muted'
+        className='group inline-flex max-w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-muted'
         onClick={() => {
           setDraft(value ?? undefined);
           setEditing(true);
@@ -226,7 +226,7 @@ export function WorkItemListComboboxEditor({
   }
 
   return (
-    <div className='min-w-48 space-y-1.5'>
+    <div className='w-full min-w-0 space-y-1.5'>
       <Combobox
         value={draft}
         onChange={setDraft}
@@ -235,7 +235,7 @@ export function WorkItemListComboboxEditor({
         emptyText='No options found'
         loading={loading}
         disabled={disabled || loading}
-        className='h-8'
+        className='h-8 min-w-0'
       />
       <InlineActions
         disabled={disabled || loading}
@@ -279,7 +279,7 @@ export function WorkItemListDateEditor({
     return (
       <button
         type='button'
-        className='group inline-flex max-w-36 items-center gap-1.5 rounded px-1 py-0.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground'
+        className='group inline-flex max-w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground'
         onClick={() => {
           setDraft(toDateInputValue(value));
           setEditing(true);
@@ -293,13 +293,13 @@ export function WorkItemListDateEditor({
   }
 
   return (
-    <div className='min-w-40 space-y-1.5'>
+    <div className='w-full min-w-0 space-y-1.5'>
       <Input
         autoFocus
         type='date'
         value={draft}
         disabled={disabled}
-        className='h-8'
+        className='h-8 min-w-0'
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {

@@ -177,7 +177,7 @@ export function PMWorkItemListTable({
                       <Checkbox aria-label={`Select ${item.key}`} />
                     </InlineEditorShell>
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
                     <div className='flex min-w-0 items-center gap-2'>
                       <PMIssueTypeIcon item={item} />
                       <button
@@ -196,8 +196,8 @@ export function PMWorkItemListTable({
                       </InlineEditorShell>
                     </div>
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
-                    <InlineEditorShell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
                       <WorkItemListComboboxEditor
                         value={item.assigneeId}
                         currentLabel={item.assigneeName}
@@ -212,11 +212,11 @@ export function PMWorkItemListTable({
                       />
                     </InlineEditorShell>
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
                     <PMUserCell item={item} kind='reporter' compact />
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
-                    <InlineEditorShell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
                       <WorkItemListComboboxEditor
                         value={item.priorityId}
                         currentLabel={item.priorityName}
@@ -231,8 +231,8 @@ export function PMWorkItemListTable({
                       />
                     </InlineEditorShell>
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
-                    <InlineEditorShell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
                       <WorkItemListStatusEditor
                         item={item}
                         loading={isTransitioning}
@@ -253,8 +253,8 @@ export function PMWorkItemListTable({
                   <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>
                     {formatDate(item.updatedAt)}
                   </TableCell>
-                  <TableCell className='border-r px-3 py-1.5'>
-                    <InlineEditorShell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
                       <WorkItemListDateEditor
                         value={item.dueDate}
                         disabled={isUpdating}
@@ -454,7 +454,7 @@ function PMIssueTypeIcon({ item }: { item: PMWorkItemSearchApi }) {
 
 function PMUserValue({ item }: { item: PMWorkItemSearchApi }) {
   return (
-    <span className='inline-flex min-w-0 items-center gap-2 text-sm'>
+    <span className='inline-flex max-w-full min-w-0 items-center gap-2 text-sm'>
       <Avatar className='h-5 w-5'>
         {item.assigneeAvatarUrl ? (
           <AvatarImage src={item.assigneeAvatarUrl} alt='' />
@@ -467,7 +467,7 @@ function PMUserValue({ item }: { item: PMWorkItemSearchApi }) {
           )}
         </AvatarFallback>
       </Avatar>
-      <span className='max-w-28 truncate'>
+      <span className='min-w-0 flex-1 truncate'>
         {item.assigneeName ?? 'Unassigned'}
       </span>
     </span>
@@ -540,12 +540,12 @@ function PMUserCell({
 
 function PMPriorityCell({ item }: { item: PMWorkItemSearchApi }) {
   return (
-    <span className='inline-flex items-center gap-1.5 text-sm text-muted-foreground'>
+    <span className='inline-flex max-w-full min-w-0 items-center gap-1.5 text-sm text-muted-foreground'>
       <Flag
         className='h-3.5 w-3.5 shrink-0'
         style={item.priorityColor ? { color: item.priorityColor } : undefined}
       />
-      <span className='truncate'>{item.priorityName ?? 'None'}</span>
+      <span className='min-w-0 truncate'>{item.priorityName ?? 'None'}</span>
     </span>
   );
 }
