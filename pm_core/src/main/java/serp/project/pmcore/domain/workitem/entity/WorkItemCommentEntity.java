@@ -5,22 +5,22 @@
 
 package serp.project.pmcore.domain.workitem.entity;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.shared.entity.BaseEntity;
 
 @Getter
 @Setter
-@Builder
-public class WorkItemCommentEntity {
-    private Long id;
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+public class WorkItemCommentEntity extends BaseEntity {
     private Long tenantId;
     private Long workItemId;
     private Long authorId;
     private String body;
-    private Long createdAt;
-    private Long createdBy;
-    private Long updatedAt;
-    private Long updatedBy;
     private Long deletedAt;
 }
