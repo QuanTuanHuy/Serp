@@ -15,12 +15,17 @@ import type {
   PMListProjectsParams,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
+  PMProjectSummaryDashboardApi,
   PMProjectSummaryApi,
   PMProjectDetailApi,
+  PMProjectSummaryFilterParams,
   PMUpdateProjectRequest,
   PMUpdateProjectResponse,
 } from '../types/api';
-import { buildProjectListParams } from './queryParams';
+import {
+  buildProjectListParams,
+  buildProjectSummaryParams,
+} from './queryParams';
 
 export const pmProjectApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -99,6 +104,22 @@ export const pmProjectApi = api.injectEndpoints({
       ],
     }),
 
+    getPmProjectSummary: builder.query<
+      PMProjectSummaryDashboardApi,
+      { projectId: number; params?: PMProjectSummaryFilterParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/summary`,
+        method: 'GET',
+        params: buildProjectSummaryParams(params),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectSummaryDashboardApi>(),
+      providesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/ProjectSummary' as const, id: projectId },
+      ],
+    }),
+
     createPmProject: builder.mutation<
       PMCreateProjectResponse,
       PMCreateProjectRequest
@@ -164,6 +185,7 @@ export const {
   useGetProjectCategoriesQuery,
   useGetPmProjectsQuery,
   useGetPmProjectByIdQuery,
+  useGetPmProjectSummaryQuery,
   useCreatePmProjectMutation,
   useUpdatePmProjectMutation,
   useArchivePmProjectMutation,

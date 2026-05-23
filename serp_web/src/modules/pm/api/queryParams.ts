@@ -7,6 +7,7 @@ import type {
   PMGetWorkItemBoardParams,
   PMGetWorkItemTimelineParams,
   PMListProjectsParams,
+  PMProjectSummaryFilterParams,
   PMProjectScopedListParams,
   PMSearchWorkItemsParams,
 } from '../types/api';
@@ -125,5 +126,25 @@ export function buildWorkItemTimelineParams(
     ...optionalString('keyword', params?.keyword),
     page: params?.page ?? 0,
     pageSize: params?.pageSize ?? 200,
+  };
+}
+
+export function buildProjectSummaryParams(
+  params?: PMProjectSummaryFilterParams
+): QueryParams {
+  return {
+    ...optionalNumberList('assigneeIds', params?.assigneeIds),
+    ...optionalNumberList('priorityIds', params?.priorityIds),
+    ...optionalNumberList('statusIds', params?.statusIds),
+    ...optionalNumberList('issueTypeIds', params?.issueTypeIds),
+    ...optionalNumber('parentId', params?.parentId),
+    ...optionalNumber('createdFrom', params?.createdFrom),
+    ...optionalNumber('createdTo', params?.createdTo),
+    ...optionalNumber('updatedFrom', params?.updatedFrom),
+    ...optionalNumber('updatedTo', params?.updatedTo),
+    ...optionalNumber('dueDateFrom', params?.dueDateFrom),
+    ...optionalNumber('dueDateTo', params?.dueDateTo),
+    activityPage: params?.activityPage ?? 0,
+    activitySize: params?.activitySize ?? 20,
   };
 }

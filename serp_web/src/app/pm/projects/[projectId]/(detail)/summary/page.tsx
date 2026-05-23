@@ -3,21 +3,16 @@
  * Description: Part of Serp Project - PM project summary page
  */
 
+import { PMProjectSummaryPage as PMProjectSummaryModulePage } from '@/modules/pm/pages/PMProjectSummaryPage';
+
 interface PMProjectSummaryPageProps {
   params: Promise<{ projectId: string }>;
 }
 
-export default async function PMProjectSummaryPage({
+export default async function PMProjectSummaryRoutePage({
   params,
 }: PMProjectSummaryPageProps) {
   const { projectId } = await params;
 
-  return (
-    <div className='rounded-lg border bg-card p-8 text-card-foreground shadow-sm'>
-      <p className='text-muted-foreground'>
-        Project summary view for{' '}
-        <span className='font-medium'>{projectId}</span> will appear here.
-      </p>
-    </div>
-  );
+  return <PMProjectSummaryModulePage projectId={projectId} />;
 }

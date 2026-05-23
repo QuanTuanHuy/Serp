@@ -142,3 +142,99 @@ export interface PMUpdateProjectResponse {
   name: string;
   isArchived: boolean;
 }
+
+export interface PMProjectSummaryFilterParams {
+  assigneeIds?: number[];
+  priorityIds?: number[];
+  statusIds?: number[];
+  issueTypeIds?: number[];
+  parentId?: number;
+  createdFrom?: number;
+  createdTo?: number;
+  updatedFrom?: number;
+  updatedTo?: number;
+  dueDateFrom?: number;
+  dueDateTo?: number;
+  activityPage?: number;
+  activitySize?: number;
+}
+
+export interface PMProjectSummaryMetricsApi {
+  completedLast7Days: number;
+  updatedLast7Days: number;
+  createdLast7Days: number;
+  dueSoonNext7Days: number;
+}
+
+export interface PMProjectSummaryBreakdownItemApi {
+  id: number;
+  key?: string | null;
+  name: string;
+  iconUrl?: string | null;
+  color?: string | null;
+  sequence?: number | null;
+  categoryKey?: string | null;
+  categoryName?: string | null;
+  count: number;
+}
+
+export interface PMProjectSummaryStatusOverviewApi {
+  total: number;
+  items: PMProjectSummaryBreakdownItemApi[];
+}
+
+export interface PMProjectSummaryUserApi {
+  id: number;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface PMProjectSummaryParentOptionApi {
+  id: number;
+  key: string;
+  summary: string;
+}
+
+export interface PMProjectSummaryActivityApi {
+  id: string;
+  type: 'COMMENT' | 'HISTORY' | string;
+  actor?: PMProjectSummaryUserApi | null;
+  workItemId: number;
+  workItemKey: string;
+  workItemSummary: string;
+  statusId?: number | null;
+  statusKey?: string | null;
+  statusName?: string | null;
+  body?: string | null;
+  fieldKey?: string | null;
+  fieldName?: string | null;
+  fromValue?: string | null;
+  toValue?: string | null;
+  createdAt?: number | string | null;
+}
+
+export interface PMProjectSummaryActivityPageApi {
+  items: PMProjectSummaryActivityApi[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export interface PMProjectSummaryFilterOptionsApi {
+  assignees: PMProjectSummaryUserApi[];
+  parents: PMProjectSummaryParentOptionApi[];
+  priorities: PMProjectSummaryBreakdownItemApi[];
+  statuses: PMProjectSummaryBreakdownItemApi[];
+  issueTypes: PMProjectSummaryBreakdownItemApi[];
+}
+
+export interface PMProjectSummaryDashboardApi {
+  projectId: number;
+  metrics: PMProjectSummaryMetricsApi;
+  statusOverview: PMProjectSummaryStatusOverviewApi;
+  priorityBreakdown: PMProjectSummaryBreakdownItemApi[];
+  workTypeBreakdown: PMProjectSummaryBreakdownItemApi[];
+  recentActivity: PMProjectSummaryActivityPageApi;
+  filterOptions: PMProjectSummaryFilterOptionsApi;
+}

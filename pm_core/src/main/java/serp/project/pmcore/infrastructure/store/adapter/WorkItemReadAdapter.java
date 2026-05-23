@@ -12,6 +12,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryActivityProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryBreakdownProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryMetricsProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryParentOptionProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
@@ -567,6 +572,454 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
         sql.append("\nORDER BY w.status_id ASC, w.rank ASC NULLS LAST, w.id ASC");
 
         return jdbcTemplate.query(sql.toString(), params, boardItemRowMapper);
+    }
+
+    @Override
+    public ProjectSummaryMetricsProjection getProjectSummaryMetrics(Long tenantId,
+                                                                    ProjectSummaryCriteria criteria,
+                                                                    Long now,
+                                                                    Long sevenDaysAgo,
+                                                                    Long sevenDaysAhead) {
+        MapSqlParameterSource params = buildProjectSummaryParams(tenantId, criteria)
+                .addValue("now", toTimestamp(now))
+                .addValue("sevenDaysAgo", toTimestamp(sevenDaysAgo))
+                .addValue("sevenDaysAhead", toTimestamp(sevenDaysAhead));
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE sc.key = 'done'
+                          AND w.updated_at >= :sevenDaysAgo
+                          AND w.updated_at <= :now
+                    ) AS completed_last_7_days,
+                    COUNT(*) FILTER (
+                        WHERE w.updated_at >= :sevenDaysAgo
+                          AND w.updated_at <= :now
+                    ) AS updated_last_7_days,
+                    COUNT(*) FILTER (
+                        WHERE w.created_at >= :sevenDaysAgo
+                          AND w.created_at <= :now
+                    ) AS created_last_7_days,
+                    COUNT(*) FILTER (
+                        WHERE w.due_date >= :now
+                          AND w.due_date <= :sevenDaysAhead
+                          AND w.resolution_id IS NULL
+                          AND COALESCE(sc.key, '') <> 'done'
+                    ) AS due_soon_next_7_days
+                FROM work_items w
+                LEFT JOIN statuses st ON st.id = w.status_id
+                    AND st.tenant_id = w.tenant_id
+                    AND st.deleted_at IS NULL
+                LEFT JOIN status_categories sc ON sc.id = st.category_id
+                    AND sc.tenant_id = w.tenant_id
+                    AND sc.deleted_at IS NULL
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+        appendProjectSummaryFilters(sql, params, criteria, "w");
+
+        return jdbcTemplate.queryForObject(sql.toString(), params, (rs, rowNum) -> new ProjectSummaryMetricsProjection(
+                rs.getLong("completed_last_7_days"),
+                rs.getLong("updated_last_7_days"),
+                rs.getLong("created_last_7_days"),
+                rs.getLong("due_soon_next_7_days")
+        ));
+    }
+
+    @Override
+    public List<ProjectSummaryBreakdownProjection> listProjectSummaryStatuses(Long tenantId, ProjectSummaryCriteria criteria) {
+        MapSqlParameterSource params = buildProjectSummaryParams(tenantId, criteria);
+        StringBuilder filteredWhere = new StringBuilder("""
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+        appendProjectSummaryFilters(filteredWhere, params, criteria, "w");
+
+        String sql = """
+                WITH scheme_workflows AS (
+                    SELECT scheme.default_workflow_id AS workflow_id
+                    FROM projects p
+                    JOIN workflow_schemes scheme
+                      ON scheme.id = p.workflow_scheme_id
+                     AND scheme.tenant_id = p.tenant_id
+                     AND scheme.deleted_at IS NULL
+                    WHERE p.tenant_id = :tenantId
+                      AND p.id = :projectId
+                      AND p.deleted_at IS NULL
+                      AND scheme.default_workflow_id IS NOT NULL
+                    UNION
+                    SELECT scheme_item.workflow_id
+                    FROM projects p
+                    JOIN workflow_schemes scheme
+                      ON scheme.id = p.workflow_scheme_id
+                     AND scheme.tenant_id = p.tenant_id
+                     AND scheme.deleted_at IS NULL
+                    JOIN workflow_scheme_items scheme_item
+                      ON scheme_item.scheme_id = scheme.id
+                     AND scheme_item.tenant_id = p.tenant_id
+                     AND scheme_item.deleted_at IS NULL
+                    WHERE p.tenant_id = :tenantId
+                      AND p.id = :projectId
+                      AND p.deleted_at IS NULL
+                ),
+                status_options AS (
+                    SELECT
+                        st.id,
+                        st.status_key,
+                        st.name,
+                        st.icon_url,
+                        sc.key AS category_key,
+                        sc.name AS category_name,
+                        MIN(step.step_order) AS sequence
+                    FROM scheme_workflows scheme_workflow
+                    JOIN workflows wf ON wf.id = scheme_workflow.workflow_id
+                     AND wf.tenant_id = :tenantId
+                     AND wf.deleted_at IS NULL
+                    JOIN workflow_versions wv ON wv.id = wf.current_published_version_id
+                     AND wv.tenant_id = :tenantId
+                     AND wv.deleted_at IS NULL
+                    JOIN workflow_steps step ON step.workflow_version_id = wv.id
+                     AND step.tenant_id = :tenantId
+                     AND step.deleted_at IS NULL
+                    JOIN statuses st ON st.id = step.status_id
+                     AND st.tenant_id = :tenantId
+                     AND st.deleted_at IS NULL
+                    LEFT JOIN status_categories sc ON sc.id = st.category_id
+                     AND sc.tenant_id = :tenantId
+                     AND sc.deleted_at IS NULL
+                    GROUP BY st.id, st.status_key, st.name, st.icon_url, sc.key, sc.name
+                ),
+                filtered_counts AS (
+                    SELECT w.status_id, COUNT(*) AS item_count
+                    FROM work_items w
+                    %s
+                    GROUP BY w.status_id
+                )
+                SELECT
+                    option.id,
+                    option.status_key AS item_key,
+                    option.name,
+                    option.icon_url,
+                    CAST(NULL AS VARCHAR) AS color,
+                    option.sequence,
+                    option.category_key,
+                    option.category_name,
+                    COALESCE(counts.item_count, 0) AS item_count
+                FROM status_options option
+                LEFT JOIN filtered_counts counts ON counts.status_id = option.id
+                ORDER BY option.sequence ASC NULLS LAST, option.id ASC
+                """.formatted(filteredWhere);
+
+        return jdbcTemplate.query(sql, params, this::mapProjectSummaryBreakdown);
+    }
+
+    @Override
+    public List<ProjectSummaryBreakdownProjection> listProjectSummaryPriorities(Long tenantId, ProjectSummaryCriteria criteria) {
+        MapSqlParameterSource params = buildProjectSummaryParams(tenantId, criteria);
+        StringBuilder filteredWhere = new StringBuilder("""
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+        appendProjectSummaryFilters(filteredWhere, params, criteria, "w");
+
+        String sql = """
+                WITH filtered_counts AS (
+                    SELECT w.priority_id, COUNT(*) AS item_count
+                    FROM work_items w
+                    %s
+                    GROUP BY w.priority_id
+                )
+                SELECT
+                    pr.id,
+                    pr.priority_key AS item_key,
+                    pr.name,
+                    pr.icon_url,
+                    pr.color,
+                    COALESCE(psi.sequence, pr.sequence) AS sequence,
+                    CAST(NULL AS VARCHAR) AS category_key,
+                    CAST(NULL AS VARCHAR) AS category_name,
+                    COALESCE(counts.item_count, 0) AS item_count
+                FROM projects project
+                JOIN priority_scheme_items psi ON psi.scheme_id = project.priority_scheme_id
+                 AND psi.tenant_id = project.tenant_id
+                 AND psi.deleted_at IS NULL
+                JOIN priorities pr ON pr.id = psi.priority_id
+                 AND pr.tenant_id = project.tenant_id
+                 AND pr.deleted_at IS NULL
+                LEFT JOIN filtered_counts counts ON counts.priority_id = pr.id
+                WHERE project.tenant_id = :tenantId
+                  AND project.id = :projectId
+                  AND project.deleted_at IS NULL
+                ORDER BY COALESCE(psi.sequence, pr.sequence) ASC NULLS LAST, pr.id ASC
+                """.formatted(filteredWhere);
+
+        return jdbcTemplate.query(sql, params, this::mapProjectSummaryBreakdown);
+    }
+
+    @Override
+    public List<ProjectSummaryBreakdownProjection> listProjectSummaryIssueTypes(Long tenantId, ProjectSummaryCriteria criteria) {
+        MapSqlParameterSource params = buildProjectSummaryParams(tenantId, criteria);
+        StringBuilder filteredWhere = new StringBuilder("""
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+        appendProjectSummaryFilters(filteredWhere, params, criteria, "w");
+
+        String sql = """
+                WITH filtered_counts AS (
+                    SELECT w.issue_type_id, COUNT(*) AS item_count
+                    FROM work_items w
+                    %s
+                    GROUP BY w.issue_type_id
+                )
+                SELECT
+                    it.id,
+                    it.type_key AS item_key,
+                    it.name,
+                    it.icon_url,
+                    CAST(NULL AS VARCHAR) AS color,
+                    COALESCE(itsi.sequence, it.hierarchy_level) AS sequence,
+                    CAST(NULL AS VARCHAR) AS category_key,
+                    CAST(NULL AS VARCHAR) AS category_name,
+                    COALESCE(counts.item_count, 0) AS item_count
+                FROM projects project
+                JOIN issue_type_scheme_items itsi ON itsi.scheme_id = project.issue_type_scheme_id
+                 AND itsi.tenant_id = project.tenant_id
+                 AND itsi.deleted_at IS NULL
+                JOIN issue_types it ON it.id = itsi.issue_type_id
+                 AND it.tenant_id = project.tenant_id
+                 AND it.deleted_at IS NULL
+                LEFT JOIN filtered_counts counts ON counts.issue_type_id = it.id
+                WHERE project.tenant_id = :tenantId
+                  AND project.id = :projectId
+                  AND project.deleted_at IS NULL
+                ORDER BY COALESCE(itsi.sequence, it.hierarchy_level) ASC NULLS LAST, it.id ASC
+                """.formatted(filteredWhere);
+
+        return jdbcTemplate.query(sql, params, this::mapProjectSummaryBreakdown);
+    }
+
+    @Override
+    public PageResult<ProjectSummaryActivityProjection> listProjectSummaryActivities(Long tenantId, ProjectSummaryCriteria criteria) {
+        MapSqlParameterSource params = buildProjectSummaryParams(tenantId, criteria)
+                .addValue("limit", criteria.getActivitySize())
+                .addValue("offset", criteria.getActivityPage() * criteria.getActivitySize());
+        StringBuilder filteredWhere = new StringBuilder("""
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.deleted_at IS NULL
+                """);
+        appendProjectSummaryFilters(filteredWhere, params, criteria, "w");
+
+        String activitySql = """
+                WITH filtered_items AS (
+                    SELECT
+                        w.id,
+                        w.key,
+                        w.summary,
+                        st.id AS status_id,
+                        st.status_key,
+                        st.name AS status_name
+                    FROM work_items w
+                    LEFT JOIN statuses st ON st.id = w.status_id
+                     AND st.tenant_id = w.tenant_id
+                     AND st.deleted_at IS NULL
+                    %s
+                ),
+                activity AS (
+                    SELECT
+                        CONCAT('comment-', c.id) AS activity_id,
+                        'COMMENT' AS activity_type,
+                        c.id AS sort_id,
+                        c.author_id AS actor_id,
+                        item.id AS work_item_id,
+                        item.key AS work_item_key,
+                        item.summary AS work_item_summary,
+                        item.status_id,
+                        item.status_key,
+                        item.status_name,
+                        c.body,
+                        CAST(NULL AS VARCHAR) AS field_key,
+                        CAST(NULL AS VARCHAR) AS field_name,
+                        CAST(NULL AS VARCHAR) AS from_value,
+                        CAST(NULL AS VARCHAR) AS to_value,
+                        c.created_at
+                    FROM filtered_items item
+                    JOIN work_item_comments c ON c.work_item_id = item.id
+                     AND c.tenant_id = :tenantId
+                     AND c.deleted_at IS NULL
+                    UNION ALL
+                    SELECT
+                        CONCAT('history-', h.id) AS activity_id,
+                        'HISTORY' AS activity_type,
+                        h.id AS sort_id,
+                        h.actor_id,
+                        item.id AS work_item_id,
+                        item.key AS work_item_key,
+                        item.summary AS work_item_summary,
+                        item.status_id,
+                        item.status_key,
+                        item.status_name,
+                        CAST(NULL AS TEXT) AS body,
+                        h.field_key,
+                        h.field_name,
+                        h.from_display_value AS from_value,
+                        h.to_display_value AS to_value,
+                        h.created_at
+                    FROM filtered_items item
+                    JOIN work_item_history h ON h.work_item_id = item.id
+                     AND h.tenant_id = :tenantId
+                     AND h.deleted_at IS NULL
+                )
+                """.formatted(filteredWhere);
+        String dataSql = activitySql + """
+                SELECT *
+                FROM activity
+                ORDER BY created_at DESC NULLS LAST, sort_id DESC
+                LIMIT :limit OFFSET :offset
+                """;
+        String countSql = activitySql + """
+                SELECT COUNT(*)
+                FROM activity
+                """;
+
+        List<ProjectSummaryActivityProjection> items = jdbcTemplate.query(dataSql, params, (rs, rowNum) -> new ProjectSummaryActivityProjection(
+                rs.getString("activity_id"),
+                rs.getString("activity_type"),
+                getNullableLong(rs, "actor_id"),
+                getNullableLong(rs, "work_item_id"),
+                rs.getString("work_item_key"),
+                rs.getString("work_item_summary"),
+                getNullableLong(rs, "status_id"),
+                rs.getString("status_key"),
+                rs.getString("status_name"),
+                rs.getString("body"),
+                rs.getString("field_key"),
+                rs.getString("field_name"),
+                rs.getString("from_value"),
+                rs.getString("to_value"),
+                toEpochMilli(rs.getTimestamp("created_at"))
+        ));
+        Long total = jdbcTemplate.queryForObject(countSql, params, Long.class);
+        return new PageResult<>(items, total != null ? total : 0L);
+    }
+
+    @Override
+    public List<Long> listProjectSummaryAssigneeIds(Long tenantId, Long projectId) {
+        String sql = """
+                SELECT DISTINCT w.assignee_id
+                FROM work_items w
+                WHERE w.tenant_id = :tenantId
+                  AND w.project_id = :projectId
+                  AND w.assignee_id IS NOT NULL
+                  AND w.deleted_at IS NULL
+                ORDER BY w.assignee_id ASC
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", projectId);
+        return jdbcTemplate.queryForList(sql, params, Long.class);
+    }
+
+    @Override
+    public List<ProjectSummaryParentOptionProjection> listProjectSummaryParentOptions(Long tenantId, Long projectId) {
+        String sql = """
+                SELECT DISTINCT parent.id, parent.key, parent.summary
+                FROM work_items child
+                JOIN work_items parent ON parent.id = child.parent_id
+                 AND parent.tenant_id = child.tenant_id
+                 AND parent.project_id = child.project_id
+                 AND parent.deleted_at IS NULL
+                WHERE child.tenant_id = :tenantId
+                  AND child.project_id = :projectId
+                  AND child.parent_id IS NOT NULL
+                  AND child.deleted_at IS NULL
+                ORDER BY parent.key ASC
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", projectId);
+        return jdbcTemplate.query(sql, params, (rs, rowNum) -> new ProjectSummaryParentOptionProjection(
+                getNullableLong(rs, "id"),
+                rs.getString("key"),
+                rs.getString("summary")
+        ));
+    }
+
+    private MapSqlParameterSource buildProjectSummaryParams(Long tenantId, ProjectSummaryCriteria criteria) {
+        return new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", criteria.getProjectId());
+    }
+
+    private void appendProjectSummaryFilters(StringBuilder whereSql,
+                                             MapSqlParameterSource params,
+                                             ProjectSummaryCriteria criteria,
+                                             String alias) {
+        appendInFilter(whereSql, params, alias + ".status_id", "summaryStatusIds", criteria.getStatusIds());
+        appendInFilter(whereSql, params, alias + ".assignee_id", "summaryAssigneeIds", criteria.getAssigneeIds());
+        appendInFilter(whereSql, params, alias + ".issue_type_id", "summaryIssueTypeIds", criteria.getIssueTypeIds());
+        appendInFilter(whereSql, params, alias + ".priority_id", "summaryPriorityIds", criteria.getPriorityIds());
+        if (criteria.getParentId() != null) {
+            params.addValue("summaryParentId", criteria.getParentId());
+            whereSql.append("\n  AND ").append(alias).append(".parent_id = :summaryParentId");
+        }
+        appendTimestampRange(whereSql, params, alias + ".created_at", "summaryCreated",
+                criteria.getCreatedFrom(), criteria.getCreatedTo());
+        appendTimestampRange(whereSql, params, alias + ".updated_at", "summaryUpdated",
+                criteria.getUpdatedFrom(), criteria.getUpdatedTo());
+        appendTimestampRange(whereSql, params, alias + ".due_date", "summaryDueDate",
+                criteria.getDueDateFrom(), criteria.getDueDateTo());
+    }
+
+    private void appendTimestampRange(StringBuilder whereSql,
+                                      MapSqlParameterSource params,
+                                      String column,
+                                      String paramPrefix,
+                                      Long from,
+                                      Long to) {
+        Timestamp fromTimestamp = toTimestamp(from);
+        Timestamp toTimestamp = toTimestamp(to);
+        if (fromTimestamp != null) {
+            params.addValue(paramPrefix + "From", fromTimestamp);
+            whereSql.append("\n  AND ").append(column).append(" >= :").append(paramPrefix).append("From");
+        }
+        if (toTimestamp != null) {
+            params.addValue(paramPrefix + "To", toTimestamp);
+            whereSql.append("\n  AND ").append(column).append(" <= :").append(paramPrefix).append("To");
+        }
+    }
+
+    private ProjectSummaryBreakdownProjection mapProjectSummaryBreakdown(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
+        return new ProjectSummaryBreakdownProjection(
+                getNullableLong(rs, "id"),
+                rs.getString("item_key"),
+                rs.getString("name"),
+                rs.getString("icon_url"),
+                rs.getString("color"),
+                getNullableInt(rs, "sequence"),
+                rs.getString("category_key"),
+                rs.getString("category_name"),
+                rs.getLong("item_count")
+        );
+    }
+
+    private Long getNullableLong(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
+    }
+
+    private Integer getNullableInt(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
+        int value = rs.getInt(column);
+        return rs.wasNull() ? null : value;
+    }
+
+    private Long toEpochMilli(Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.getTime();
     }
 
     private String buildTimelineScopedCte(WorkItemTimelineCriteria criteria, MapSqlParameterSource params) {

@@ -7,6 +7,11 @@ package serp.project.pmcore.domain.workitem.port.read;
 
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryActivityProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryBreakdownProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryMetricsProjection;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryParentOptionProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
@@ -75,4 +80,22 @@ public interface IWorkItemReadPort {
     List<WorkItemBoardStatusProjection> listBoardStatuses(Long tenantId, WorkItemBoardCriteria criteria);
 
     List<WorkItemBoardItemProjection> listBoardWorkItems(Long tenantId, WorkItemBoardCriteria criteria);
+
+    ProjectSummaryMetricsProjection getProjectSummaryMetrics(Long tenantId,
+                                                             ProjectSummaryCriteria criteria,
+                                                             Long now,
+                                                             Long sevenDaysAgo,
+                                                             Long sevenDaysAhead);
+
+    List<ProjectSummaryBreakdownProjection> listProjectSummaryStatuses(Long tenantId, ProjectSummaryCriteria criteria);
+
+    List<ProjectSummaryBreakdownProjection> listProjectSummaryPriorities(Long tenantId, ProjectSummaryCriteria criteria);
+
+    List<ProjectSummaryBreakdownProjection> listProjectSummaryIssueTypes(Long tenantId, ProjectSummaryCriteria criteria);
+
+    PageResult<ProjectSummaryActivityProjection> listProjectSummaryActivities(Long tenantId, ProjectSummaryCriteria criteria);
+
+    List<Long> listProjectSummaryAssigneeIds(Long tenantId, Long projectId);
+
+    List<ProjectSummaryParentOptionProjection> listProjectSummaryParentOptions(Long tenantId, Long projectId);
 }
