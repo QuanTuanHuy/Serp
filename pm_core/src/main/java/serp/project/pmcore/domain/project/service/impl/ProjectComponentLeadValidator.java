@@ -10,14 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ProjectComponentLeadValidator {
 
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     public void validateLeadUserExists(Long userId) {
         if (userId == null) {
@@ -25,7 +25,7 @@ public class ProjectComponentLeadValidator {
         }
 
         try {
-            var profile = userProfileClient.getUserProfileById(userId);
+            var profile = userService.getUserById(userId);
             if (profile == null) {
                 log.error("User profile not found: userId={}", userId);
                 throw ResourceNotFoundException.user(userId);

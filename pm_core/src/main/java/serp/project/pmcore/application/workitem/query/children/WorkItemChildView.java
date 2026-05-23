@@ -6,6 +6,7 @@
 package serp.project.pmcore.application.workitem.query.children;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.workitem.dto.WorkItemChildProjection;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -58,8 +59,5 @@ public record WorkItemChildView(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record PrioritySummary(Long id, String name, String color) {
     }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record UserSummary(Long id, String displayName, String avatarUrl) {
-    }
 }
+

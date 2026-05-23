@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.priority.port.IPriorityPort;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemHistoryEntity;
 import serp.project.pmcore.domain.workitem.port.IStatusPort;
@@ -33,7 +33,7 @@ public class WorkItemHistoryRecorder {
     private final IWorkItemHistoryWritePort historyWritePort;
     private final IPriorityPort priorityPort;
     private final IStatusPort statusPort;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     public void recordChanges(Long tenantId,
                               Long workItemId,
@@ -123,7 +123,7 @@ public class WorkItemHistoryRecorder {
             return null;
         }
         try {
-            UserProfileDto profile = userProfileClient.getUserProfileById(userId);
+            UserProfileDto profile = userService.getUserById(userId);
             if (profile == null) {
                 return String.valueOf(userId);
             }

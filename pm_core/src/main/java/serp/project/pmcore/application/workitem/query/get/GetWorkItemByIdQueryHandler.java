@@ -3,12 +3,18 @@
  * Description: Part of Serp Project
  */
 
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+
 package serp.project.pmcore.application.workitem.query.get;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
@@ -19,7 +25,7 @@ import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemCommentReadPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
@@ -40,7 +46,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
 
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService permissionEvaluationService;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     @Override
     @Transactional(readOnly = true)
@@ -63,7 +69,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
                     return ResourceNotFoundException.workItem(query.workItemId());
                 });
 
-        Map<Long, WorkItemDetailView.UserSummaryView> users = resolveUserSummaries(workItem);
+        Map<Long, UserSummary> users = resolveUserSummaries(workItem);
         List<WorkItemComponentView> components = workItemReadPort
                 .getActiveComponentsByWorkItemId(workItem.getId(), query.tenantId())
                 .stream()
@@ -91,7 +97,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         );
     }
 
-    private Map<Long, WorkItemDetailView.UserSummaryView> resolveUserSummaries(WorkItemDetailProjection workItem) {
+    private Map<Long, UserSummary> resolveUserSummaries(WorkItemDetailProjection workItem) {
         List<Long> userIds = Stream.of(workItem.getAssigneeId(), workItem.getReporterId())
                 .filter(Objects::nonNull)
                 .distinct()
@@ -100,12 +106,12 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
             return Map.of();
         }
         try {
-            return userProfileClient.getUserProfilesByIds(userIds).stream()
+            return userService.getUserProfilesByIds(userIds).stream()
                     .filter(Objects::nonNull)
                     .filter(profile -> profile.getId() != null)
                     .collect(Collectors.toMap(
                             UserProfileDto::getId,
-                            this::toUserSummary,
+                            UserSummary::from,
                             (left, right) -> left
                     ));
         } catch (Exception e) {
@@ -114,20 +120,12 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         }
     }
 
-    private WorkItemDetailView.UserSummaryView toUserSummary(UserProfileDto profile) {
-        String displayName = profile.getFullName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = profile.getEmail();
-        }
-        return new WorkItemDetailView.UserSummaryView(profile.getId(), displayName, profile.getAvatarUrl());
-    }
-
-    private static WorkItemDetailView.UserSummaryView userSummaryOrId(Map<Long, WorkItemDetailView.UserSummaryView> map,
+    private static UserSummary userSummaryOrId(Map<Long, UserSummary> map,
                                                                       Long key) {
         if (key == null) {
             return null;
         }
-        return map.getOrDefault(key, new WorkItemDetailView.UserSummaryView(key, null, null));
+        return map.getOrDefault(key, UserSummary.missing(key));
     }
 
 }

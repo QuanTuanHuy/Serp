@@ -6,13 +6,14 @@
 package serp.project.pmcore.application.workitem.query.activity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.workitem.dto.WorkItemActivityProjection;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record WorkItemActivityView(
         String id,
         String type,
-        UserSummaryView actor,
+        UserSummary actor,
         String body,
         String fieldKey,
         String fieldName,
@@ -20,7 +21,7 @@ public record WorkItemActivityView(
         String toValue,
         Long createdAt
 ) {
-    public static WorkItemActivityView from(WorkItemActivityProjection projection, UserSummaryView actor) {
+    public static WorkItemActivityView from(WorkItemActivityProjection projection, UserSummary actor) {
         return new WorkItemActivityView(
                 projection.id(),
                 projection.type(),
@@ -33,7 +34,5 @@ public record WorkItemActivityView(
                 projection.createdAt()
         );
     }
-
-    public record UserSummaryView(Long id, String displayName, String avatarUrl) {
-    }
 }
+

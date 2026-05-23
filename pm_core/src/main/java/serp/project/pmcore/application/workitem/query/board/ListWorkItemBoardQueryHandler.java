@@ -8,6 +8,7 @@ package serp.project.pmcore.application.workitem.query.board;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -16,7 +17,7 @@ import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationSe
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
@@ -34,7 +35,7 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
     private final IWorkItemReadPort workItemReadPort;
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     @Override
     @Transactional(readOnly = true)
@@ -48,7 +49,7 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
 
         List<WorkItemBoardStatusProjection> statuses = workItemReadPort.listBoardStatuses(query.tenantId(), query.criteria());
         List<WorkItemBoardItemProjection> boardItems = workItemReadPort.listBoardWorkItems(query.tenantId(), query.criteria());
-        Map<Long, UserSummaryView> assigneeSummaryMap = resolveAssigneeSummaries(boardItems);
+        Map<Long, UserSummary> assigneeSummaryMap = resolveAssigneeSummaries(boardItems);
         Map<Long, List<WorkItemBoardCardView>> itemsByStatusId = boardItems.stream()
                 .collect(Collectors.groupingBy(
                         WorkItemBoardItemProjection::statusId,
@@ -70,7 +71,7 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
         return new WorkItemBoardView(query.criteria().getProjectId(), columns);
     }
 
-    private Map<Long, UserSummaryView> resolveAssigneeSummaries(List<WorkItemBoardItemProjection> items) {
+    private Map<Long, UserSummary> resolveAssigneeSummaries(List<WorkItemBoardItemProjection> items) {
         List<Long> userIds = items.stream()
                 .map(WorkItemBoardItemProjection::assigneeId)
                 .filter(Objects::nonNull)
@@ -80,25 +81,17 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
             return Map.of();
         }
 
-        return userProfileClient.getUserProfilesByIds(userIds).stream()
+        return userService.getUserProfilesByIds(userIds).stream()
                 .filter(Objects::nonNull)
                 .filter(profile -> profile.getId() != null)
                 .collect(Collectors.toMap(
                         UserProfileDto::getId,
-                        this::toUserSummary,
+                        UserSummary::from,
                         (left, right) -> left
                 ));
     }
 
-    private UserSummaryView toUserSummary(UserProfileDto profile) {
-        String displayName = profile.getFullName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = profile.getEmail();
-        }
-        return new UserSummaryView(profile.getId(), displayName, profile.getAvatarUrl());
-    }
-
-    private WorkItemBoardItemProjection applyAssigneeSummary(WorkItemBoardItemProjection item, UserSummaryView assignee) {
+    private WorkItemBoardItemProjection applyAssigneeSummary(WorkItemBoardItemProjection item, UserSummary assignee) {
         return new WorkItemBoardItemProjection(
                 item.id(),
                 item.projectId(),
@@ -125,13 +118,6 @@ public class ListWorkItemBoardQueryHandler implements IQueryHandler<ListWorkItem
                 item.priorityIconUrl(),
                 item.priorityColor()
         );
-    }
-
-    private record UserSummaryView(
-            Long id,
-            String displayName,
-            String avatarUrl
-    ) {
     }
 
     private ProjectPermissionEvaluationContext buildEvaluationContext(Long userId, Set<String> groupKeys) {

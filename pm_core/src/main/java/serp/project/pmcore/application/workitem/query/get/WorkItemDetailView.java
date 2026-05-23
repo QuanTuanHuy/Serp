@@ -1,12 +1,16 @@
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
  */
 
 package serp.project.pmcore.application.workitem.query.get;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 
@@ -43,8 +47,8 @@ public record WorkItemDetailView(
         Long timeSpent,
 
         IssueTypeSummaryView issueType,
-        UserSummaryView assignee,
-        UserSummaryView reporter,
+        UserSummary assignee,
+        UserSummary reporter,
         WorkflowStepSummaryView workflowStep,
         StatusSummaryView status,
         PrioritySummaryView priority,
@@ -61,8 +65,8 @@ public record WorkItemDetailView(
 ) {
 
     public static WorkItemDetailView from(WorkItemDetailProjection workItem,
-                                          UserSummaryView assignee,
-                                          UserSummaryView reporter,
+                                          UserSummary assignee,
+                                          UserSummary reporter,
                                            List<WorkItemComponentView> components,
                                            SubtaskStatsView subtaskStats,
                                            LinkStatsView linkStats,
@@ -132,14 +136,6 @@ public record WorkItemDetailView(
             String name,
             String iconUrl,
             Integer hierarchyLevel
-    ) {
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record UserSummaryView(
-            Long id,
-            String displayName,
-            String avatarUrl
     ) {
     }
 

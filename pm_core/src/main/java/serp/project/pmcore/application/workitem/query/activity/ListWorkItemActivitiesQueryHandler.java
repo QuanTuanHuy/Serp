@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workitem.support.WorkItemComponentAccessHelper;
@@ -16,7 +17,7 @@ import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.dto.WorkItemActivityProjection;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -34,7 +35,7 @@ public class ListWorkItemActivitiesQueryHandler implements IQueryHandler<ListWor
 
     private final WorkItemComponentAccessHelper accessHelper;
     private final IWorkItemReadPort workItemReadPort;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,7 +52,7 @@ public class ListWorkItemActivitiesQueryHandler implements IQueryHandler<ListWor
                 page,
                 size
         );
-        Map<Long, WorkItemActivityView.UserSummaryView> users = resolveUsers(result);
+        Map<Long, UserSummary> users = resolveUsers(result);
         int totalPages = size == 0 ? 0 : (int) Math.ceil((double) result.total() / size);
         return new PageView<>(
                 result.items().stream()
@@ -72,7 +73,7 @@ public class ListWorkItemActivitiesQueryHandler implements IQueryHandler<ListWor
         return normalized;
     }
 
-    private Map<Long, WorkItemActivityView.UserSummaryView> resolveUsers(PageResult<WorkItemActivityProjection> result) {
+    private Map<Long, UserSummary> resolveUsers(PageResult<WorkItemActivityProjection> result) {
         var userIds = result.items().stream()
                 .map(WorkItemActivityProjection::actorId)
                 .filter(Objects::nonNull)
@@ -82,25 +83,17 @@ public class ListWorkItemActivitiesQueryHandler implements IQueryHandler<ListWor
             return Map.of();
         }
         try {
-            return userProfileClient.getUserProfilesByIds(userIds).stream()
+            return userService.getUserProfilesByIds(userIds).stream()
                     .filter(Objects::nonNull)
                     .filter(profile -> profile.getId() != null)
-                    .collect(Collectors.toMap(UserProfileDto::getId, this::toUserSummary, (left, right) -> left));
+                    .collect(Collectors.toMap(UserProfileDto::getId, UserSummary::from, (left, right) -> left));
         } catch (Exception ex) {
             log.warn("[ListWorkItemActivitiesQueryHandler] Failed to resolve user profiles: {}", ex.getMessage());
             return Map.of();
         }
     }
 
-    private WorkItemActivityView.UserSummaryView toUserSummary(UserProfileDto profile) {
-        String displayName = profile.getFullName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = profile.getEmail();
-        }
-        return new WorkItemActivityView.UserSummaryView(profile.getId(), displayName, profile.getAvatarUrl());
-    }
-
-    private WorkItemActivityView.UserSummaryView userOrId(Map<Long, WorkItemActivityView.UserSummaryView> users, Long userId) {
-        return userId == null ? null : users.getOrDefault(userId, new WorkItemActivityView.UserSummaryView(userId, null, null));
+    private UserSummary userOrId(Map<Long, UserSummary> users, Long userId) {
+        return userId == null ? null : users.getOrDefault(userId, UserSummary.missing(userId));
     }
 }

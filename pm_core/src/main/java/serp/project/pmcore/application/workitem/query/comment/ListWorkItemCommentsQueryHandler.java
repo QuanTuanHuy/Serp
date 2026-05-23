@@ -12,11 +12,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workitem.support.WorkItemComponentAccessHelper;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemCommentEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemCommentReadPort;
 
@@ -31,7 +32,7 @@ public class ListWorkItemCommentsQueryHandler implements IQueryHandler<ListWorkI
 
     private final WorkItemComponentAccessHelper accessHelper;
     private final IWorkItemCommentReadPort commentReadPort;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     @Override
     @Transactional(readOnly = true)
@@ -43,7 +44,7 @@ public class ListWorkItemCommentsQueryHandler implements IQueryHandler<ListWorkI
                 Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))
         );
         Page<WorkItemCommentEntity> page = commentReadPort.listByWorkItemId(query.workItemId(), query.tenantId(), pageRequest);
-        Map<Long, WorkItemCommentView.UserSummaryView> users = resolveUsers(page);
+        Map<Long, UserSummary> users = resolveUsers(page);
         return new PageView<>(
                 page.getContent().stream()
                         .map(comment -> WorkItemCommentView.from(comment, userOrId(users, comment.getAuthorId())))
@@ -55,7 +56,7 @@ public class ListWorkItemCommentsQueryHandler implements IQueryHandler<ListWorkI
         );
     }
 
-    private Map<Long, WorkItemCommentView.UserSummaryView> resolveUsers(Page<WorkItemCommentEntity> page) {
+    private Map<Long, UserSummary> resolveUsers(Page<WorkItemCommentEntity> page) {
         var userIds = page.getContent().stream()
                 .map(WorkItemCommentEntity::getAuthorId)
                 .filter(Objects::nonNull)
@@ -65,25 +66,17 @@ public class ListWorkItemCommentsQueryHandler implements IQueryHandler<ListWorkI
             return Map.of();
         }
         try {
-            return userProfileClient.getUserProfilesByIds(userIds).stream()
+            return userService.getUserProfilesByIds(userIds).stream()
                     .filter(Objects::nonNull)
                     .filter(profile -> profile.getId() != null)
-                    .collect(Collectors.toMap(UserProfileDto::getId, this::toUserSummary, (left, right) -> left));
+                    .collect(Collectors.toMap(UserProfileDto::getId, UserSummary::from, (left, right) -> left));
         } catch (Exception e) {
             log.warn("[ListWorkItemCommentsQueryHandler] Failed to resolve user profiles: {}", e.getMessage());
             return Map.of();
         }
     }
 
-    private WorkItemCommentView.UserSummaryView toUserSummary(UserProfileDto profile) {
-        String displayName = profile.getFullName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = profile.getEmail();
-        }
-        return new WorkItemCommentView.UserSummaryView(profile.getId(), displayName, profile.getAvatarUrl());
-    }
-
-    private WorkItemCommentView.UserSummaryView userOrId(Map<Long, WorkItemCommentView.UserSummaryView> users, Long userId) {
-        return userId == null ? null : users.getOrDefault(userId, new WorkItemCommentView.UserSummaryView(userId, null, null));
+    private UserSummary userOrId(Map<Long, UserSummary> users, Long userId) {
+        return userId == null ? null : users.getOrDefault(userId, UserSummary.missing(userId));
     }
 }

@@ -8,6 +8,7 @@ package serp.project.pmcore.application.workitem.command.comment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.query.comment.WorkItemCommentView;
 import serp.project.pmcore.application.workitem.support.WorkItemComponentAccessHelper;
@@ -41,7 +42,7 @@ public class CreateWorkItemCommentCommandHandler implements ICommandHandler<Crea
                 .updatedAt(now)
                 .updatedBy(command.userId())
                 .build());
-        return WorkItemCommentView.from(saved, new WorkItemCommentView.UserSummaryView(command.userId(), null, null));
+        return WorkItemCommentView.from(saved, UserSummary.missing(command.userId()));
     }
 
     private String normalizeBody(String body) {

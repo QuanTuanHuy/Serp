@@ -8,6 +8,7 @@ package serp.project.pmcore.application.workitem.command.comment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.query.comment.WorkItemCommentView;
 import serp.project.pmcore.application.workitem.support.WorkItemComponentAccessHelper;
@@ -51,7 +52,7 @@ public class UpdateWorkItemCommentCommandHandler implements ICommandHandler<Upda
         comment.setUpdatedAt(Instant.now().toEpochMilli());
         comment.setUpdatedBy(command.userId());
         WorkItemCommentEntity saved = commentWritePort.save(comment);
-        return WorkItemCommentView.from(saved, new WorkItemCommentView.UserSummaryView(command.userId(), null, null));
+        return WorkItemCommentView.from(saved, UserSummary.missing(command.userId()));
     }
 
     private void ensureSameWorkItem(WorkItemCommentEntity comment, Long workItemId) {
