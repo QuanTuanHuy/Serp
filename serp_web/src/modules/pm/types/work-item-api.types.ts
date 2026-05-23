@@ -303,6 +303,7 @@ export interface PMWorkItemDetailWorkflowStepApi {
 export interface PMWorkItemDetailStatusApi {
   id: number;
   name: string;
+  key?: string | null;
 }
 
 export interface PMWorkItemDetailPriorityApi {
@@ -454,6 +455,58 @@ export interface PMUpdateWorkItemResponse {
   changedFields: string[];
   updatedAt?: number | string;
   updatedBy?: number | null;
+}
+
+export interface PMWorkItemTransitionStatusApi {
+  id: number;
+  key?: string | null;
+  name: string;
+  iconUrl?: string | null;
+}
+
+export interface PMWorkItemTransitionStatusCategoryApi {
+  id: number;
+  key?: string | null;
+  name: string;
+}
+
+export interface PMWorkItemTransitionApi {
+  id: number;
+  name: string;
+  fromStepId: number;
+  toStepId: number;
+  screenId?: number | null;
+  sequence?: number | null;
+  targetStatus: PMWorkItemTransitionStatusApi;
+  targetStatusCategory?: PMWorkItemTransitionStatusCategoryApi | null;
+}
+
+export interface PMTransitionWorkItemStatusRequest {
+  transitionId: number;
+  resolutionId?: number | null;
+  fields?: Record<string, unknown>;
+}
+
+export interface PMTransitionWorkItemStatusResponse {
+  id: number;
+  projectId: number;
+  key: string;
+  summary: string;
+  description?: string | null;
+  workflowStepId?: number | null;
+  statusId?: number | null;
+  assigneeId?: number | null;
+  resolutionId?: number | null;
+  securityLevelId?: number | null;
+  dueDate?: number | null;
+  timeOriginalEstimate?: number | null;
+  transitionId: number;
+  transitionName: string;
+  fromStepId?: number | null;
+  toStepId?: number | null;
+  changedFields: string[];
+  transitionedAt?: number | string;
+  transitionedBy?: number | null;
 }
 
 export interface PMWorkItemBoardIssueTypeApi {

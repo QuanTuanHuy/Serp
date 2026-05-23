@@ -19,6 +19,7 @@ export type WorkItemDetailModel = {
   key: string;
   summary: string;
   description?: string | null;
+  statusId?: number | null;
   statusName?: string | null;
   issueTypeId?: number | null;
   issueTypeName?: string | null;

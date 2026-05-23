@@ -25,6 +25,7 @@ export function toDetailModel(
     key: data?.key ?? fallbackItem?.key ?? (workItemId ? `#${workItemId}` : ''),
     summary: data?.summary ?? fallbackItem?.summary ?? 'Work item',
     description: data?.description ?? fallbackItem?.description,
+    statusId: data?.status?.id ?? data?.statusId ?? searchItem?.statusId,
     statusName: data?.status?.name ?? searchItem?.statusName,
     issueTypeId:
       data?.issueType?.id ??

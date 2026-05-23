@@ -38,6 +38,12 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -50,7 +56,9 @@ import {
   useGetPmWorkItemChildrenQuery,
   useGetPmWorkItemCommentsQuery,
   useGetPmWorkItemCreateMetaQuery,
+  useGetPmWorkItemTransitionsQuery,
   useGetPmWorkItemLinksQuery,
+  useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemMutation,
 } from '../../../api/workItemApi';
 import type {
@@ -381,6 +389,8 @@ function PMWorkItemDetailSidebar({
 }) {
   const organizationId = useAppSelector(selectOrganizationId);
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
+  const [transitionWorkItem, transitionState] =
+    useTransitionPmWorkItemStatusMutation();
 
   const { data: usersResponse, isLoading: isUserLoading } =
     useGetOrganizationUsersQuery(
@@ -400,6 +410,12 @@ function PMWorkItemDetailSidebar({
         issueTypeId: item.issueTypeId ?? undefined,
       },
       { skip: !workItemId || !item.issueTypeId }
+    );
+
+  const { data: transitions = [], isFetching: isTransitionsFetching } =
+    useGetPmWorkItemTransitionsQuery(
+      { projectId, workItemId: workItemId ?? 0 },
+      { skip: !workItemId }
     );
 
   const userItems = usersResponse?.data.items;
@@ -457,18 +473,69 @@ function PMWorkItemDetailSidebar({
     }
   };
 
+  const handleTransition = async (transitionId: number) => {
+    if (!workItemId) return;
+
+    try {
+      await transitionWorkItem({
+        projectId,
+        workItemId,
+        body: { transitionId },
+      }).unwrap();
+      toast.success('Work item status updated.');
+    } catch (error) {
+      toast.error('Failed to update status', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const isStatusUpdating =
+    transitionState.isLoading || isTransitionsFetching || !workItemId;
+
   return (
     <aside className='min-h-0 overflow-y-auto border-t bg-muted/10 p-4 lg:border-l lg:border-t-0 lg:p-5'>
       <div className='mb-3 flex items-center gap-2'>
-        <Button
-          variant='secondary'
-          size='sm'
-          className='gap-1 font-semibold'
-          disabled
-        >
-          {item.statusName ?? 'To Do'}
-          <ChevronDown className='h-4 w-4' />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant='secondary'
+              size='sm'
+              className='gap-1 font-semibold'
+              disabled={isStatusUpdating}
+            >
+              {transitionState.isLoading ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : null}
+              {item.statusName ?? 'To Do'}
+              <ChevronDown className='h-4 w-4' />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='start' className='w-56'>
+            <DropdownMenuLabel>Move to</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {transitions.length ? (
+              transitions.map((transition) => (
+                <DropdownMenuItem
+                  key={transition.id}
+                  className='flex items-center justify-between gap-3'
+                  onSelect={() => handleTransition(transition.id)}
+                >
+                  <span className='min-w-0 truncate'>
+                    {transition.targetStatus?.name ?? transition.name}
+                  </span>
+                  <span className='shrink-0 text-xs text-muted-foreground'>
+                    {transition.name}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>
+                No transitions available
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant='outline' size='icon' className='h-8 w-8' disabled>
           <Zap className='h-4 w-4' />
         </Button>

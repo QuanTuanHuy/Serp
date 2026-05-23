@@ -19,6 +19,8 @@ import type {
   PMProjectScopedListParams,
   PMSearchWorkItemsParams,
   PMStatusApi,
+  PMTransitionWorkItemStatusRequest,
+  PMTransitionWorkItemStatusResponse,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,
   PMWorkItemActivityApi,
@@ -29,6 +31,7 @@ import type {
   PMWorkItemDetailApi,
   PMWorkItemLinkApi,
   PMWorkItemTimelineResponse,
+  PMWorkItemTransitionApi,
   PMWorkItemSearchApi,
 } from '../types/api';
 import {
@@ -122,6 +125,44 @@ export const pmWorkItemApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMUpdateWorkItemResponse>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItem', id: 'LIST' },
+        { type: 'pm/WorkItemActivities', id: workItemId },
+      ],
+    }),
+
+    getPmWorkItemTransitions: builder.query<
+      PMWorkItemTransitionApi[],
+      { projectId: number; workItemId: number }
+    >({
+      query: ({ projectId, workItemId }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/transitions`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemTransitionApi[]>(),
+      providesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+      ],
+    }),
+
+    transitionPmWorkItemStatus: builder.mutation<
+      PMTransitionWorkItemStatusResponse,
+      {
+        projectId: number;
+        workItemId: number;
+        body: PMTransitionWorkItemStatusRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/transitions`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMTransitionWorkItemStatusResponse>(),
       invalidatesTags: (_result, _error, { workItemId }) => [
         { type: 'pm/WorkItem', id: workItemId },
         { type: 'pm/WorkItem', id: 'LIST' },
@@ -372,11 +413,13 @@ export const {
   useGetPmWorkItemCommentsQuery,
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemLinksQuery,
+  useGetPmWorkItemTransitionsQuery,
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
   useGetPmStatusesQuery,
   useGetPmWorkItemTimelineQuery,
   useSearchPmWorkItemsQuery,
+  useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemCommentMutation,
   useUpdatePmWorkItemMutation,
 } = pmWorkItemApi;

@@ -60,6 +60,9 @@ import serp.project.pmcore.application.workitem.query.get.WorkItemDetailView;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQuery;
 import serp.project.pmcore.application.workitem.query.search.SearchWorkItemsQueryHandler;
 import serp.project.pmcore.application.workitem.query.search.WorkItemSearchView;
+import serp.project.pmcore.application.workitem.query.transition.ListWorkItemTransitionsQuery;
+import serp.project.pmcore.application.workitem.query.transition.ListWorkItemTransitionsQueryHandler;
+import serp.project.pmcore.application.workitem.query.transition.WorkItemTransitionView;
 import serp.project.pmcore.domain.shared.pagination.SortSpec;
 import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
@@ -107,6 +110,7 @@ public class WorkItemController {
     private final ListWorkItemCommentsQueryHandler listWorkItemCommentsQueryHandler;
     private final ListWorkItemActivitiesQueryHandler listWorkItemActivitiesQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
+    private final ListWorkItemTransitionsQueryHandler listWorkItemTransitionsQueryHandler;
 
     @GetMapping
     public ResponseEntity<GeneralResponse<PageView<WorkItemSearchView>>> searchWorkItems(
@@ -426,6 +430,27 @@ public class WorkItemController {
                         page,
                         size,
                         type
+                )
+        );
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/transitions")
+    public ResponseEntity<GeneralResponse<List<WorkItemTransitionView>>> listWorkItemTransitions(
+            @PathVariable Long projectId,
+            @PathVariable Long id) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        List<WorkItemTransitionView> result = listWorkItemTransitionsQueryHandler.handle(
+                new ListWorkItemTransitionsQuery(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
                 )
         );
         return ResponseEntity.ok(responseUtils.success(result));
