@@ -36,6 +36,9 @@ import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemRes
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusCommand;
 import serp.project.pmcore.application.workitem.command.transition.TransitionWorkItemStatusResult;
+import serp.project.pmcore.application.workitem.query.activity.ListWorkItemActivitiesQuery;
+import serp.project.pmcore.application.workitem.query.activity.ListWorkItemActivitiesQueryHandler;
+import serp.project.pmcore.application.workitem.query.activity.WorkItemActivityView;
 import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQuery;
 import serp.project.pmcore.application.workitem.query.board.ListWorkItemBoardQueryHandler;
 import serp.project.pmcore.application.workitem.query.board.WorkItemBoardView;
@@ -106,6 +109,7 @@ public class WorkItemController {
     private final ListWorkItemChildrenQueryHandler listWorkItemChildrenQueryHandler;
     private final ListWorkItemLinksQueryHandler listWorkItemLinksQueryHandler;
     private final ListWorkItemCommentsQueryHandler listWorkItemCommentsQueryHandler;
+    private final ListWorkItemActivitiesQueryHandler listWorkItemActivitiesQueryHandler;
     private final ListWorkItemComponentsQueryHandler listWorkItemComponentsQueryHandler;
 
     @GetMapping
@@ -232,7 +236,7 @@ public class WorkItemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<GeneralResponse<UpdateWorkItemResult>> updateWorkItem(@PathVariable Long projectId,
                                                                                 @PathVariable Long id,
                                                                                 @Valid @RequestBody UpdateWorkItemRequest request) {
@@ -422,6 +426,33 @@ public class WorkItemController {
                 page,
                 size
         ));
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @GetMapping("/{id}/activities")
+    public ResponseEntity<GeneralResponse<PageView<WorkItemActivityView>>> listWorkItemActivities(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "ALL") String type) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        PageView<WorkItemActivityView> result = listWorkItemActivitiesQueryHandler.handle(
+                new ListWorkItemActivitiesQuery(
+                        projectId,
+                        id,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups(),
+                        page,
+                        size,
+                        type
+                )
+        );
         return ResponseEntity.ok(responseUtils.success(result));
     }
 

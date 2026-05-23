@@ -10,6 +10,7 @@ import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemActivityProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
@@ -58,6 +59,12 @@ public interface IWorkItemReadPort {
     long countActiveLinksByWorkItemId(Long workItemId, Long tenantId);
 
     List<WorkItemLinkProjection> listLinksByWorkItemId(Long workItemId, Long tenantId);
+
+    PageResult<WorkItemActivityProjection> listWorkItemActivities(Long workItemId,
+                                                                  Long tenantId,
+                                                                  String type,
+                                                                  int page,
+                                                                  int size);
 
     List<ProjectComponentEntity> getActiveComponentsByWorkItemId(Long workItemId, Long tenantId);
 

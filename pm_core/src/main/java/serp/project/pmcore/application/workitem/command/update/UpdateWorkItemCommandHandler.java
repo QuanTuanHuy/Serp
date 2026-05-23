@@ -15,6 +15,7 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldWriteValidator;
+import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.issuesecurity.dto.IssueSecurityAccessContext;
@@ -70,6 +71,7 @@ public class UpdateWorkItemCommandHandler
     private final IIssueTypePort issueTypePort;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
+    private final WorkItemHistoryRecorder workItemHistoryRecorder;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -154,6 +156,14 @@ public class UpdateWorkItemCommandHandler
         workItemCustomFieldMutationService.applyPlan(updatedWorkItem.getId(), tenantId, userId, customFieldPlan);
 
         List<String> changedFields = buildChangedFields(originalSnapshot, updatedWorkItem, customFieldPlan.changedFieldKeys());
+        workItemHistoryRecorder.recordChanges(
+                tenantId,
+                updatedWorkItem.getId(),
+                userId,
+                originalSnapshot,
+                snapshotTrackedFields(updatedWorkItem),
+                changedFields
+        );
         persistUpdatedOutboxEvent(updatedWorkItem, changedFields, tenantId);
 
         log.info("Updated work item id={} projectId={} changedFields={}",
@@ -250,6 +260,10 @@ public class UpdateWorkItemCommandHandler
                 data.hasSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)
                         ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE))
                         : workItem.getTimeOriginalEstimate());
+        effectiveSystemValues.put(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE,
+                data.hasSystemField(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE)
+                        ? WorkItemFieldValueUtils.asNullableNonNegativeLong(data.getSystemField(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE))
+                        : workItem.getTimeRemainingEstimate());
         effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID,
                 data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)
                         ? resolvedSecurityLevelId
@@ -290,7 +304,7 @@ public class UpdateWorkItemCommandHandler
         return value instanceof String text && text.isBlank();
     }
 
-    private Map<String, Object> snapshotTrackedFields(WorkItemEntity workItem) {
+    private Map<String, Object >snapshotTrackedFields(WorkItemEntity workItem) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put(WorkItemFieldConstants.SUMMARY, workItem.getSummary());
         snapshot.put(WorkItemFieldConstants.DESCRIPTION, workItem.getDescription());
@@ -299,6 +313,7 @@ public class UpdateWorkItemCommandHandler
         snapshot.put(WorkItemFieldConstants.START_DATE, workItem.getStartDate());
         snapshot.put(WorkItemFieldConstants.DUE_DATE, workItem.getDueDate());
         snapshot.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, workItem.getTimeOriginalEstimate());
+        snapshot.put(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE, workItem.getTimeRemainingEstimate());
         snapshot.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, workItem.getSecurityLevelId());
         return snapshot;
     }
@@ -330,6 +345,10 @@ public class UpdateWorkItemCommandHandler
             workItem.setTimeOriginalEstimate(WorkItemFieldValueUtils.asNullableNonNegativeLong(
                     data.getSystemField(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE)));
         }
+        if (data.hasSystemField(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE)) {
+            workItem.setTimeRemainingEstimate(WorkItemFieldValueUtils.asNullableNonNegativeLong(
+                    data.getSystemField(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE)));
+        }
         if (data.hasSystemField(WorkItemFieldConstants.SECURITY_LEVEL_ID)) {
             workItem.setSecurityLevelId(resolvedSecurityLevelId);
         }
@@ -346,6 +365,7 @@ public class UpdateWorkItemCommandHandler
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.START_DATE, updatedWorkItem.getStartDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.DUE_DATE, updatedWorkItem.getDueDate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, updatedWorkItem.getTimeOriginalEstimate());
+        addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.TIME_REMAINING_ESTIMATE, updatedWorkItem.getTimeRemainingEstimate());
         addIfChanged(changedFields, originalSnapshot, WorkItemFieldConstants.SECURITY_LEVEL_ID, updatedWorkItem.getSecurityLevelId());
 
         if (changedCustomFields != null && !changedCustomFields.isEmpty()) {

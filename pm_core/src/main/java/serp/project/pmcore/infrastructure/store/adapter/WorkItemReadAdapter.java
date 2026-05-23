@@ -19,12 +19,14 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemChildProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemActivityProjection;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemLinkProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectComponentMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemActivityRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardItemRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardStatusRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemChildRowMapper;
@@ -60,6 +62,7 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     private final WorkItemBoardItemRowMapper boardItemRowMapper;
     private final WorkItemChildRowMapper childRowMapper;
     private final WorkItemLinkRowMapper linkRowMapper;
+    private final WorkItemActivityRowMapper activityRowMapper;
 
     @Override
     public Optional<WorkItemEntity> getWorkItemById(Long id, Long tenantId) {
@@ -263,6 +266,71 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                 .addValue("tenantId", tenantId)
                 .addValue("workItemId", workItemId);
         return jdbcTemplate.query(sql, params, linkRowMapper);
+    }
+
+    @Override
+    public PageResult<WorkItemActivityProjection> listWorkItemActivities(
+            Long workItemId,
+            Long tenantId,
+            String type,
+            int page,
+            int size) {
+        String normalizedType = type == null || type.isBlank() ? "ALL" : type.trim().toUpperCase();
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+
+        String activitySql = """
+                FROM (
+                    SELECT
+                        CONCAT('comment-', c.id) AS activity_id,
+                        'COMMENT' AS activity_type,
+                        c.id AS sort_id,
+                        c.author_id AS actor_id,
+                        c.body,
+                        CAST(NULL AS VARCHAR) AS field_key,
+                        CAST(NULL AS VARCHAR) AS field_name,
+                        CAST(NULL AS VARCHAR) AS from_value,
+                        CAST(NULL AS VARCHAR) AS to_value,
+                        c.created_at
+                    FROM work_item_comments c
+                    WHERE c.tenant_id = :tenantId
+                      AND c.work_item_id = :workItemId
+                      AND c.deleted_at IS NULL
+                    UNION ALL
+                    SELECT
+                        CONCAT('history-', h.id) AS activity_id,
+                        'HISTORY' AS activity_type,
+                        h.id AS sort_id,
+                        h.actor_id,
+                        CAST(NULL AS TEXT) AS body,
+                        h.field_key,
+                        h.field_name,
+                        h.from_display_value AS from_value,
+                        h.to_display_value AS to_value,
+                        h.created_at
+                    FROM work_item_history h
+                    WHERE h.tenant_id = :tenantId
+                      AND h.work_item_id = :workItemId
+                      AND h.deleted_at IS NULL
+                ) activity
+                WHERE (:activityType = 'ALL' OR activity.activity_type = :activityType)
+                """;
+        String dataSql = "SELECT * " + activitySql + """
+                ORDER BY created_at DESC NULLS LAST, sort_id DESC
+                LIMIT :limit OFFSET :offset
+                """;
+        String countSql = "SELECT COUNT(*) " + activitySql;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("workItemId", workItemId)
+                .addValue("activityType", normalizedType)
+                .addValue("limit", safeSize)
+                .addValue("offset", safePage * safeSize);
+
+        var items = jdbcTemplate.query(dataSql, params, activityRowMapper);
+        Long total = jdbcTemplate.queryForObject(countSql, params, Long.class);
+        return new PageResult<>(items, total != null ? total : 0L);
     }
 
     @Override

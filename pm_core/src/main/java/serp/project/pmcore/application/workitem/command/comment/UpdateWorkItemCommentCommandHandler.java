@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
 import serp.project.pmcore.application.workitem.query.comment.WorkItemCommentView;
 import serp.project.pmcore.application.workitem.support.WorkItemComponentAccessHelper;
+import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
+import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
@@ -27,17 +29,24 @@ import java.util.Objects;
 public class UpdateWorkItemCommentCommandHandler implements ICommandHandler<UpdateWorkItemCommentCommand, WorkItemCommentView> {
 
     private final WorkItemComponentAccessHelper accessHelper;
+    private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
     private final IWorkItemCommentReadPort commentReadPort;
     private final IWorkItemCommentWritePort commentWritePort;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WorkItemCommentView handle(UpdateWorkItemCommentCommand command) {
-        accessHelper.requireEditableWorkItem(command.projectId(), command.workItemId(), command.tenantId(), command.userId(), command.groupKeys());
+        WorkItemComponentAccessHelper.Context context = accessHelper.requireEditableWorkItem(
+                command.projectId(),
+                command.workItemId(),
+                command.tenantId(),
+                command.userId(),
+                command.groupKeys()
+        );
         WorkItemCommentEntity comment = commentReadPort.findById(command.commentId(), command.tenantId())
                 .orElseThrow(() -> ResourceNotFoundException.workItemComment(command.commentId()));
         ensureSameWorkItem(comment, command.workItemId());
-        ensureAuthor(comment, command.userId());
+        ensureAuthorOrProjectAdmin(comment, command.userId(), context);
         comment.setBody(normalizeBody(command.body()));
         comment.setUpdatedAt(Instant.now().toEpochMilli());
         comment.setUpdatedBy(command.userId());
@@ -51,8 +60,15 @@ public class UpdateWorkItemCommentCommandHandler implements ICommandHandler<Upda
         }
     }
 
-    private void ensureAuthor(WorkItemCommentEntity comment, Long userId) {
-        if (!Objects.equals(comment.getAuthorId(), userId)) {
+    private void ensureAuthorOrProjectAdmin(WorkItemCommentEntity comment,
+                                            Long userId,
+                                            WorkItemComponentAccessHelper.Context context) {
+        boolean projectAdmin = projectPermissionEvaluationService.hasPermission(
+                context.permissionSubject(),
+                context.actorContext(),
+                ProjectPermissionKeys.ADMINISTER_PROJECTS
+        );
+        if (!Objects.equals(comment.getAuthorId(), userId) && !projectAdmin) {
             throw new AccessDeniedException(DomainErrorCode.WORK_ITEM_COMMENT_NOT_OWNER);
         }
     }
