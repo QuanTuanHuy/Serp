@@ -16,15 +16,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import serp.project.pmcore.application.issuelink.IssueLinkListItemView;
 import serp.project.pmcore.application.issuelink.IssueLinkView;
 import serp.project.pmcore.application.issuelink.command.create.CreateIssueLinkCommand;
 import serp.project.pmcore.application.issuelink.command.create.CreateIssueLinkCommandHandler;
 import serp.project.pmcore.application.issuelink.command.delete.DeleteIssueLinkCommand;
 import serp.project.pmcore.application.issuelink.command.delete.DeleteIssueLinkCommandHandler;
 import serp.project.pmcore.application.issuelink.command.delete.DeleteIssueLinkResult;
-import serp.project.pmcore.application.issuelink.query.list.ListIssueLinksQuery;
-import serp.project.pmcore.application.issuelink.query.list.ListIssueLinksQueryHandler;
+import serp.project.pmcore.application.workitem.query.links.ListWorkItemLinksQuery;
+import serp.project.pmcore.application.workitem.query.links.ListWorkItemLinksQueryHandler;
+import serp.project.pmcore.application.workitem.query.links.WorkItemLinkView;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
@@ -44,7 +44,7 @@ public class IssueLinkController {
     private final ResponseUtils responseUtils;
     private final CreateIssueLinkCommandHandler createIssueLinkCommandHandler;
     private final DeleteIssueLinkCommandHandler deleteIssueLinkCommandHandler;
-    private final ListIssueLinksQueryHandler listIssueLinksQueryHandler;
+    private final ListWorkItemLinksQueryHandler listWorkItemLinksQueryHandler;
 
     @PostMapping
     public ResponseEntity<GeneralResponse<IssueLinkView>> createIssueLink(
@@ -80,10 +80,10 @@ public class IssueLinkController {
     }
 
     @GetMapping
-    public ResponseEntity<GeneralResponse<List<IssueLinkListItemView>>> listIssueLinks(
+    public ResponseEntity<GeneralResponse<List<WorkItemLinkView>>> listIssueLinks(
             @PathVariable Long projectId,
             @PathVariable Long workItemId) {
-        List<IssueLinkListItemView> response = listIssueLinksQueryHandler.handle(new ListIssueLinksQuery(
+        List<WorkItemLinkView> response = listWorkItemLinksQueryHandler.handle(new ListWorkItemLinksQuery(
                 projectId,
                 workItemId,
                 requireCurrentTenantId(),
