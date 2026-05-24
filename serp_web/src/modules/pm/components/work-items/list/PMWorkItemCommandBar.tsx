@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import {
   Badge,
@@ -26,22 +27,26 @@ interface PMWorkItemCommandBarProps {
   keyword: string;
   view: WorkItemListViewMode;
   activeFilterCount: number;
+  selectedCount: number;
   isRefreshing: boolean;
   onKeywordChange: (value: string) => void;
   onViewChange: (nextView: WorkItemListViewMode) => void;
   onRefresh: () => void;
   onFilterClick: () => void;
+  onOptimizeSelected: () => void;
 }
 
 export function PMWorkItemCommandBar({
   keyword,
   view,
   activeFilterCount,
+  selectedCount,
   isRefreshing,
   onKeywordChange,
   onViewChange,
   onRefresh,
   onFilterClick,
+  onOptimizeSelected,
 }: PMWorkItemCommandBarProps) {
   return (
     <Card className='shadow-sm'>
@@ -53,7 +58,7 @@ export function PMWorkItemCommandBar({
                 Project work items
               </p>
               <p className='mt-1 truncate text-sm text-muted-foreground'>
-                Browse and manage issues in current project.
+                Browse and manage work items in current project.
               </p>
             </div>
             {activeFilterCount > 0 ? (
@@ -94,6 +99,21 @@ export function PMWorkItemCommandBar({
                 Detail view
               </Button>
             </div>
+
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onOptimizeSelected}
+              disabled={selectedCount === 0}
+            >
+              <Sparkles className='mr-2 h-4 w-4' />
+              Optimize selected
+              {selectedCount > 0 ? (
+                <Badge variant='secondary' className='ml-2 h-5 px-1.5 text-xs'>
+                  {selectedCount}
+                </Badge>
+              ) : null}
+            </Button>
 
             <Button type='button' variant='outline' onClick={onFilterClick}>
               <SlidersHorizontal className='mr-2 h-4 w-4' />

@@ -78,6 +78,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const componentIds = parseNumberList(searchParams.get('componentIds'));
   const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<number[]>([]);
   const deferredKeyword = useDeferredValue(keyword.trim());
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
   const [transitionWorkItem, transitionState] =
@@ -105,7 +106,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
 
   const items = searchQuery.data?.data.items ?? [];
   const totalItems = searchQuery.data?.data.totalItems ?? 0;
-
+  const visibleItemIds = useMemo(() => items.map((item) => item.id), [items]);
   const { data: usersResponse, isLoading: isUsersLoading } =
     useGetOrganizationUsersQuery(
       {
@@ -245,6 +246,37 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
     updateFilter({ [key]: undefined });
   };
 
+  useEffect(() => {
+    setSelectedWorkItemIds((current) =>
+      current.filter((itemId) => visibleItemIds.includes(itemId))
+    );
+  }, [visibleItemIds]);
+
+  const toggleSelectedWorkItem = (workItemId: number) => {
+    setSelectedWorkItemIds((current) =>
+      current.includes(workItemId)
+        ? current.filter((value) => value !== workItemId)
+        : [...current, workItemId]
+    );
+  };
+
+  const toggleAllVisibleWorkItems = (checked: boolean) => {
+    setSelectedWorkItemIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleItemIds]));
+      }
+
+      return current.filter((itemId) => !visibleItemIds.includes(itemId));
+    });
+  };
+
+  const optimizeSelectedWorkItems = () => {
+    if (!selectedWorkItemIds.length) return;
+    router.push(
+      `/pm/projects/${projectId}/optimization?selected=${selectedWorkItemIds.join(',')}`
+    );
+  };
+
   const updateListWorkItem = useCallback(
     async (item: PMWorkItemSearchApi, body: PMUpdateWorkItemRequest) => {
       try {
@@ -330,11 +362,13 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
         keyword={keyword}
         view={view}
         activeFilterCount={activeFilterCount}
+        selectedCount={selectedWorkItemIds.length}
         isRefreshing={searchQuery.isFetching}
         onKeywordChange={setKeyword}
         onViewChange={setView}
         onRefresh={() => searchQuery.refetch()}
         onFilterClick={() => setFiltersOpen(true)}
+        onOptimizeSelected={optimizeSelectedWorkItems}
       />
 
       {activeFilterChips.length > 0 ? (
@@ -413,6 +447,9 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
             selectedIssueId={selectedIssueId}
             totalItems={totalItems}
             onSelect={selectIssue}
+            selectedIds={selectedWorkItemIds}
+            onToggleSelect={toggleSelectedWorkItem}
+            onToggleSelectAll={toggleAllVisibleWorkItems}
             assigneeOptions={assigneeOptions}
             priorityOptions={priorityOptions}
             isAssigneeLoading={isUsersLoading}

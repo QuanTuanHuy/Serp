@@ -5,7 +5,7 @@
 
 'use client';
 
-import { RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { RefreshCw, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Badge, Button, Input } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 
@@ -14,11 +14,13 @@ interface PMWorkItemBoardToolbarProps {
   columnCount: number;
   totalItems: number;
   activeFilterCount: number;
+  visibleItemCount: number;
   isLoading: boolean;
   isRefreshing: boolean;
   onKeywordChange: (value: string) => void;
   onFilterClick: () => void;
   onRefresh: () => void;
+  onOptimizeView: () => void;
 }
 
 export function PMWorkItemBoardToolbar({
@@ -26,11 +28,13 @@ export function PMWorkItemBoardToolbar({
   columnCount,
   totalItems,
   activeFilterCount,
+  visibleItemCount,
   isLoading,
   isRefreshing,
   onKeywordChange,
   onFilterClick,
   onRefresh,
+  onOptimizeView,
 }: PMWorkItemBoardToolbarProps) {
   const summary = isLoading
     ? 'Loading board...'
@@ -67,6 +71,19 @@ export function PMWorkItemBoardToolbar({
                 {activeFilterCount}
               </Badge>
             ) : null}
+          </Button>
+
+          <Button
+            type='button'
+            variant='outline'
+            onClick={onOptimizeView}
+            disabled={visibleItemCount === 0}
+          >
+            <Sparkles className='mr-2 h-4 w-4' />
+            Optimize view
+            <Badge variant='secondary' className='ml-2 h-5 px-1.5 text-xs'>
+              {visibleItemCount}
+            </Badge>
           </Button>
 
           <Button

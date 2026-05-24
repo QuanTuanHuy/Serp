@@ -259,6 +259,7 @@ export const api = createApi({
     'pm/WorkItemActivities',
     'pm/WorkItemChildren',
     'pm/WorkItemLinks',
+    'pm/OptimizationRun',
     // TTCRS tags
     'ttcrs/Request',
     'ttcrs/Location',

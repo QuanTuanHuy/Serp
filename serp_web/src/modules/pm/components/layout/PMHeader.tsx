@@ -24,8 +24,11 @@ import { CreateWorkItemDialog } from '../work-items';
 function titleFromPath(pathname: string): string {
   if (pathname.startsWith('/pm/dashboard')) return 'Dashboard';
   if (pathname.startsWith('/pm/my-work')) return 'My work';
-  if (pathname.startsWith('/pm/projects')) return 'Projects';
   if (pathname.startsWith('/pm/settings')) return 'Settings';
+  if (pathname.includes('/optimization-runs/')) return 'Optimization run';
+  if (pathname.includes('/optimization')) return 'Optimization';
+  if (pathname.includes('/settings')) return 'Project settings';
+  if (pathname.startsWith('/pm/projects')) return 'Projects';
   return 'Project Management';
 }
 
@@ -54,7 +57,6 @@ export function PMHeader({ className }: PMHeaderProps) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Reserved for PM-wide search once APIs exist.
     if (!searchQuery.trim()) return;
   };
 
@@ -91,7 +93,7 @@ export function PMHeader({ className }: PMHeaderProps) {
           />
           <Input
             type='search'
-            placeholder='Search by name or key…'
+            placeholder='Search by name or key...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className='border-muted-foreground/20 bg-muted/40 pl-9'

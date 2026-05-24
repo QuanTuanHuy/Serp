@@ -168,6 +168,10 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const columnCount = board?.columns.length ?? 0;
   const totalItems =
     board?.columns.reduce((total, column) => total + column.total, 0) ?? 0;
+  const visibleItemIds = useMemo(
+    () => board?.columns.flatMap((column) => column.items.map((item) => item.id)) ?? [],
+    [board?.columns]
+  );
   const activeFilterCount = getActiveBoardFilterCount({
     assigneeIds,
     issueTypeIds,
@@ -294,6 +298,13 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
     updateUrl({ issueId: undefined });
   };
 
+  const optimizeVisibleItems = () => {
+    if (!visibleItemIds.length) return;
+    router.push(
+      `/pm/projects/${projectId}/optimization?selected=${visibleItemIds.join(',')}`
+    );
+  };
+
   return (
     <div className='space-y-4 pb-2'>
       <PMWorkItemBoardFilters
@@ -312,11 +323,13 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
         columnCount={columnCount}
         totalItems={totalItems}
         activeFilterCount={activeFilterCount}
+        visibleItemCount={visibleItemIds.length}
         isLoading={isLoading}
         isRefreshing={isFetching}
         onKeywordChange={setKeyword}
         onFilterClick={() => setFiltersOpen(true)}
         onRefresh={() => refetch()}
+        onOptimizeView={optimizeVisibleItems}
       />
 
       {activeFilterChips.length > 0 ? (

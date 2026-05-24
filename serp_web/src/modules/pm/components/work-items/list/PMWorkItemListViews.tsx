@@ -63,6 +63,9 @@ interface WorkItemListProps {
   selectedIssueId?: number;
   totalItems: number;
   onSelect: (issueId: number) => void;
+  selectedIds?: number[];
+  onToggleSelect?: (issueId: number) => void;
+  onToggleSelectAll?: (checked: boolean) => void;
 }
 
 interface WorkItemListTableProps extends WorkItemListProps {
@@ -118,6 +121,9 @@ export function PMWorkItemListTable({
   selectedIssueId,
   totalItems,
   onSelect,
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
   assigneeOptions,
   priorityOptions,
   isAssigneeLoading,
@@ -131,6 +137,14 @@ export function PMWorkItemListTable({
   onLoadTransitions,
   onUpdateStatus,
 }: WorkItemListTableProps) {
+  const visibleSelectedCount = items.filter((item) =>
+    selectedIds.includes(item.id)
+  ).length;
+  const allVisibleSelected =
+    items.length > 0 && visibleSelectedCount === items.length;
+  const someVisibleSelected =
+    visibleSelectedCount > 0 && visibleSelectedCount < items.length;
+
   return (
     <div className='overflow-hidden rounded-md border bg-background'>
       <div className='flex h-9 items-center justify-between border-b bg-muted/30 px-3 text-xs text-muted-foreground'>
@@ -145,7 +159,19 @@ export function PMWorkItemListTable({
             <TableHeader className='sticky top-0 z-10 bg-muted/50'>
               <TableRow className='hover:bg-transparent'>
                 <TableHead className='w-10 border-r px-3'>
-                  <Checkbox aria-label='Select all work items' />
+                  <Checkbox
+                    aria-label='Select all work items'
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? 'indeterminate'
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      onToggleSelectAll?.(checked === true)
+                    }
+                  />
                 </TableHead>
                 <TableHead className='w-[410px] border-r px-3'>Work</TableHead>
                 <TableHead className='w-44 border-r px-3'>Assignee</TableHead>
@@ -174,7 +200,12 @@ export function PMWorkItemListTable({
                 >
                   <TableCell className='border-r px-3 py-1.5'>
                     <InlineEditorShell>
-                      <Checkbox aria-label={`Select ${item.key}`} />
+                      <Checkbox
+                        aria-label={`Select ${item.key}`}
+                        checked={selectedIds.includes(item.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        onCheckedChange={() => onToggleSelect?.(item.id)}
+                      />
                     </InlineEditorShell>
                   </TableCell>
                   <TableCell className='overflow-hidden border-r px-3 py-1.5'>
