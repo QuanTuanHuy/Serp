@@ -214,10 +214,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<Hub>,
     }),
 
-    updateHub: builder.mutation<
-      Hub,
-      { id: number; body: UpdateHubRequest }
-    >({
+    updateHub: builder.mutation<Hub, { id: number; body: UpdateHubRequest }>({
       query: ({ id, body }) => ({
         url: `/hubs/${id}`,
         method: 'PUT',

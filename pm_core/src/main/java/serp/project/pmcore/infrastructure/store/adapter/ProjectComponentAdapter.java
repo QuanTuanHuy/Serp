@@ -20,7 +20,9 @@ import serp.project.pmcore.infrastructure.store.model.ProjectComponentModel;
 import serp.project.pmcore.infrastructure.store.repository.IProjectComponentRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -76,6 +78,19 @@ public class ProjectComponentAdapter implements IProjectComponentPort {
         );
         List<ProjectComponentEntity> entities = projectComponentMapper.toEntities(result.getContent());
         return new PageResult<>(entities, result.getTotalElements());
+    }
+
+    @Override
+    public Map<Long, Long> countActiveIssuesByComponentIds(Long projectId, Long tenantId, List<Long> componentIds) {
+        if (componentIds == null || componentIds.isEmpty()) {
+            return Map.of();
+        }
+        return projectComponentRepository.countActiveIssuesByComponentIds(projectId, tenantId, componentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        IProjectComponentRepository.ComponentIssueCountProjection::getComponentId,
+                        projection -> projection.getIssueCount() == null ? 0L : projection.getIssueCount()
+                ));
     }
 
     @Override

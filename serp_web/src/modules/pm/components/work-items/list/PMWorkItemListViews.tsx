@@ -5,7 +5,15 @@
 
 'use client';
 
-import { AlertCircle, Flag, RefreshCw, UserRound } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckSquare,
+  Flag,
+  MoreHorizontal,
+  RefreshCw,
+  UserRound,
+  Zap,
+} from 'lucide-react';
 import {
   Alert,
   AlertDescription,
@@ -14,10 +22,16 @@ import {
   AvatarFallback,
   AvatarImage,
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Skeleton,
   Table,
   TableBody,
@@ -26,8 +40,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui';
+import type { ComboboxItem } from '@/shared/components/ui/combobox';
 import { cn } from '@/shared/utils';
 import type { PMWorkItemSearchApi } from '../../../types/api';
+import {
+  InlineEditorShell,
+  WorkItemListComboboxEditor,
+  WorkItemListDateEditor,
+  WorkItemListStatusEditor,
+  WorkItemListSummaryEditor,
+  type WorkItemListTransitionLoader,
+} from './PMWorkItemListInlineEditors';
 import {
   formatDate,
   getInitials,
@@ -40,6 +63,39 @@ interface WorkItemListProps {
   selectedIssueId?: number;
   totalItems: number;
   onSelect: (issueId: number) => void;
+  selectedIds?: number[];
+  onToggleSelect?: (issueId: number) => void;
+  onToggleSelectAll?: (checked: boolean) => void;
+}
+
+interface WorkItemListTableProps extends WorkItemListProps {
+  assigneeOptions: ComboboxItem[];
+  priorityOptions: ComboboxItem[];
+  isAssigneeLoading: boolean;
+  isPriorityLoading: boolean;
+  isUpdating: boolean;
+  isTransitioning: boolean;
+  onUpdateSummary: (
+    item: PMWorkItemSearchApi,
+    summary: string
+  ) => Promise<void>;
+  onUpdateAssignee: (
+    item: PMWorkItemSearchApi,
+    assigneeId: number | null
+  ) => Promise<void>;
+  onUpdatePriority: (
+    item: PMWorkItemSearchApi,
+    priorityId: number | null
+  ) => Promise<void>;
+  onUpdateDueDate: (
+    item: PMWorkItemSearchApi,
+    dueDate: number | null
+  ) => Promise<void>;
+  onLoadTransitions: WorkItemListTransitionLoader;
+  onUpdateStatus: (
+    item: PMWorkItemSearchApi,
+    transitionId: number
+  ) => Promise<void>;
 }
 
 interface PMWorkItemDetailPanelProps {
@@ -51,9 +107,9 @@ interface PMWorkItemDetailPanelProps {
   priorityName?: string;
   assigneeName?: string;
   reporterName?: string;
-  dueDate?: number | null;
-  createdAt?: number | null;
-  updatedAt?: number | null;
+  dueDate?: number | string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
   isFetching?: boolean;
   loading?: boolean;
   errorMessage?: string;
@@ -65,85 +121,190 @@ export function PMWorkItemListTable({
   selectedIssueId,
   totalItems,
   onSelect,
-}: WorkItemListProps) {
+  selectedIds = [],
+  onToggleSelect,
+  onToggleSelectAll,
+  assigneeOptions,
+  priorityOptions,
+  isAssigneeLoading,
+  isPriorityLoading,
+  isUpdating,
+  isTransitioning,
+  onUpdateSummary,
+  onUpdateAssignee,
+  onUpdatePriority,
+  onUpdateDueDate,
+  onLoadTransitions,
+  onUpdateStatus,
+}: WorkItemListTableProps) {
+  const visibleSelectedCount = items.filter((item) =>
+    selectedIds.includes(item.id)
+  ).length;
+  const allVisibleSelected =
+    items.length > 0 && visibleSelectedCount === items.length;
+  const someVisibleSelected =
+    visibleSelectedCount > 0 && visibleSelectedCount < items.length;
+
   return (
-    <Card className='overflow-hidden shadow-sm'>
-      <CardHeader className='border-b px-4 py-2.5'>
-        <CardTitle className='text-sm font-medium text-muted-foreground'>
-          {totalItems} work items
-        </CardTitle>
-      </CardHeader>
-      <CardContent className='p-0'>
-        {loading ? <PMWorkItemListSkeleton /> : null}
-        {!loading && items.length === 0 ? <PMWorkItemListEmpty /> : null}
-        {!loading && items.length > 0 ? (
-          <div className='overflow-x-auto'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Work</TableHead>
-                  <TableHead className='w-32'>Status</TableHead>
-                  <TableHead className='w-36'>Assignee</TableHead>
-                  <TableHead className='w-36'>Reporter</TableHead>
-                  <TableHead className='w-28'>Priority</TableHead>
-                  <TableHead className='w-28'>Created</TableHead>
-                  <TableHead className='w-28'>Due</TableHead>
-                  <TableHead className='w-28'>Updated</TableHead>
+    <div className='overflow-hidden rounded-md border bg-background'>
+      <div className='flex h-9 items-center justify-between border-b bg-muted/30 px-3 text-xs text-muted-foreground'>
+        <span className='font-medium'>{totalItems} work items</span>
+        <span>Sorted by rank</span>
+      </div>
+      {loading ? <PMWorkItemListSkeleton /> : null}
+      {!loading && items.length === 0 ? <PMWorkItemListEmpty /> : null}
+      {!loading && items.length > 0 ? (
+        <div className='overflow-x-auto'>
+          <Table className='min-w-[1500px] table-fixed'>
+            <TableHeader className='sticky top-0 z-10 bg-muted/50'>
+              <TableRow className='hover:bg-transparent'>
+                <TableHead className='w-10 border-r px-3'>
+                  <Checkbox
+                    aria-label='Select all work items'
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? 'indeterminate'
+                          : false
+                    }
+                    onCheckedChange={(checked) =>
+                      onToggleSelectAll?.(checked === true)
+                    }
+                  />
+                </TableHead>
+                <TableHead className='w-[410px] border-r px-3'>Work</TableHead>
+                <TableHead className='w-44 border-r px-3'>Assignee</TableHead>
+                <TableHead className='w-44 border-r px-3'>Reporter</TableHead>
+                <TableHead className='w-36 border-r px-3'>Priority</TableHead>
+                <TableHead className='w-40 border-r px-3'>Status</TableHead>
+                <TableHead className='w-32 border-r px-3'>Resolution</TableHead>
+                <TableHead className='w-44 border-r px-3'>Created</TableHead>
+                <TableHead className='w-44 border-r px-3'>Updated</TableHead>
+                <TableHead className='w-36 border-r px-3'>Due date</TableHead>
+                <TableHead className='w-12 px-2 text-center'>
+                  <MoreHorizontal className='mx-auto h-4 w-4 text-muted-foreground' />
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow
+                  key={item.id}
+                  onClick={() => onSelect(item.id)}
+                  className={cn(
+                    'h-10 cursor-pointer hover:bg-muted/40',
+                    selectedIssueId === item.id &&
+                      'bg-primary/5 hover:bg-primary/10'
+                  )}
+                >
+                  <TableCell className='border-r px-3 py-1.5'>
+                    <InlineEditorShell>
+                      <Checkbox
+                        aria-label={`Select ${item.key}`}
+                        checked={selectedIds.includes(item.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        onCheckedChange={() => onToggleSelect?.(item.id)}
+                      />
+                    </InlineEditorShell>
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <div className='flex min-w-0 items-center gap-2'>
+                      <PMIssueTypeIcon item={item} />
+                      <button
+                        type='button'
+                        className='shrink-0 text-sm font-medium text-primary hover:underline'
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {item.key}
+                      </button>
+                      <InlineEditorShell className='min-w-0 flex-1'>
+                        <WorkItemListSummaryEditor
+                          item={item}
+                          disabled={isUpdating}
+                          onSave={onUpdateSummary}
+                        />
+                      </InlineEditorShell>
+                    </div>
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
+                      <WorkItemListComboboxEditor
+                        value={item.assigneeId}
+                        currentLabel={item.assigneeName}
+                        display={<PMUserValue item={item} />}
+                        options={assigneeOptions}
+                        placeholder='Unassigned'
+                        loading={isAssigneeLoading}
+                        disabled={isUpdating}
+                        onSave={(assigneeId) =>
+                          onUpdateAssignee(item, assigneeId)
+                        }
+                      />
+                    </InlineEditorShell>
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <PMUserCell item={item} kind='reporter' compact />
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
+                      <WorkItemListComboboxEditor
+                        value={item.priorityId}
+                        currentLabel={item.priorityName}
+                        display={<PMPriorityCell item={item} />}
+                        options={priorityOptions}
+                        placeholder='None'
+                        loading={isPriorityLoading}
+                        disabled={isUpdating}
+                        onSave={(priorityId) =>
+                          onUpdatePriority(item, priorityId)
+                        }
+                      />
+                    </InlineEditorShell>
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
+                      <WorkItemListStatusEditor
+                        item={item}
+                        loading={isTransitioning}
+                        disabled={isUpdating}
+                        onLoadTransitions={onLoadTransitions}
+                        onSave={onUpdateStatus}
+                      />
+                    </InlineEditorShell>
+                  </TableCell>
+                  <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>
+                    {item.resolutionId
+                      ? `Resolution ${item.resolutionId}`
+                      : 'Unresolved'}
+                  </TableCell>
+                  <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>
+                    {formatDate(item.createdAt)}
+                  </TableCell>
+                  <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>
+                    {formatDate(item.updatedAt)}
+                  </TableCell>
+                  <TableCell className='overflow-hidden border-r px-3 py-1.5'>
+                    <InlineEditorShell className='min-w-0'>
+                      <WorkItemListDateEditor
+                        value={item.dueDate}
+                        disabled={isUpdating}
+                        onSave={(dueDate) => onUpdateDueDate(item, dueDate)}
+                      />
+                    </InlineEditorShell>
+                  </TableCell>
+                  <TableCell className='px-2 py-1.5'>
+                    <InlineEditorShell>
+                      <WorkItemRowActions onOpen={() => onSelect(item.id)} />
+                    </InlineEditorShell>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    onClick={() => onSelect(item.id)}
-                    className={cn(
-                      'cursor-pointer transition-colors hover:bg-muted/60',
-                      selectedIssueId === item.id &&
-                        'border-l-2 border-l-primary bg-primary/5'
-                    )}
-                  >
-                    <TableCell className='align-top'>
-                      <div className='min-w-64 max-w-3xl'>
-                        <p className='text-xs font-semibold uppercase tracking-wide text-primary'>
-                          {item.key}
-                        </p>
-                        <p className='line-clamp-1 font-medium leading-5'>
-                          {item.summary}
-                        </p>
-                        <p className='mt-0.5 text-xs text-muted-foreground'>
-                          {getWorkItemLabel(item)}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className='align-top'>
-                      <PMStatusBadge item={item} />
-                    </TableCell>
-                    <TableCell className='align-top'>
-                      <PMUserCell item={item} />
-                    </TableCell>
-                    <TableCell className='align-top'>
-                      <PMUserCell item={item} kind='reporter' />
-                    </TableCell>
-                    <TableCell className='align-top'>
-                      <PMPriorityCell item={item} />
-                    </TableCell>
-                    <TableCell className='align-top text-sm text-muted-foreground'>
-                      {formatDate(item.createdAt)}
-                    </TableCell>
-                    <TableCell className='align-top text-sm text-muted-foreground'>
-                      {formatDate(item.dueDate)}
-                    </TableCell>
-                    <TableCell className='align-top text-sm text-muted-foreground'>
-                      {formatDate(item.updatedAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,6 +474,61 @@ function PMStatusBadge({ item }: { item: PMWorkItemSearchApi }) {
   );
 }
 
+function PMIssueTypeIcon({ item }: { item: PMWorkItemSearchApi }) {
+  return (
+    <CheckSquare
+      className='h-4 w-4 shrink-0 text-blue-500'
+      aria-label={item.issueTypeName ?? 'Work item'}
+    />
+  );
+}
+
+function PMUserValue({ item }: { item: PMWorkItemSearchApi }) {
+  return (
+    <span className='inline-flex max-w-full min-w-0 items-center gap-2 text-sm'>
+      <Avatar className='h-5 w-5'>
+        {item.assigneeAvatarUrl ? (
+          <AvatarImage src={item.assigneeAvatarUrl} alt='' />
+        ) : null}
+        <AvatarFallback className='text-[10px]'>
+          {item.assigneeName ? (
+            getInitials(item.assigneeName)
+          ) : (
+            <UserRound className='h-3 w-3' />
+          )}
+        </AvatarFallback>
+      </Avatar>
+      <span className='min-w-0 flex-1 truncate'>
+        {item.assigneeName ?? 'Unassigned'}
+      </span>
+    </span>
+  );
+}
+
+function WorkItemRowActions({ onOpen }: { onOpen: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='h-7 w-7'
+          aria-label='Work item actions'
+        >
+          <MoreHorizontal className='h-4 w-4' />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem onSelect={() => onOpen()}>
+          <Zap className='h-4 w-4' />
+          Open details
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function PMUserCell({
   item,
   compact = false,
@@ -355,12 +571,12 @@ function PMUserCell({
 
 function PMPriorityCell({ item }: { item: PMWorkItemSearchApi }) {
   return (
-    <span className='inline-flex items-center gap-1.5 text-sm text-muted-foreground'>
+    <span className='inline-flex max-w-full min-w-0 items-center gap-1.5 text-sm text-muted-foreground'>
       <Flag
         className='h-3.5 w-3.5 shrink-0'
         style={item.priorityColor ? { color: item.priorityColor } : undefined}
       />
-      <span className='truncate'>{item.priorityName ?? 'None'}</span>
+      <span className='min-w-0 truncate'>{item.priorityName ?? 'None'}</span>
     </span>
   );
 }

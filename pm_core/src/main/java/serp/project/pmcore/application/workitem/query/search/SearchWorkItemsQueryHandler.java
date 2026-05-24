@@ -2,12 +2,17 @@
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
  */
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
 
 package serp.project.pmcore.application.workitem.query.search;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageViews;
 import serp.project.pmcore.application.shared.pagination.PageView;
@@ -20,7 +25,7 @@ import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
@@ -39,7 +44,7 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
     private final IWorkItemReadPort workItemReadPort;
     private final IProjectReadPort projectReadPort;
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     @Override
     @Transactional(readOnly = true)
@@ -55,7 +60,7 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
         );
 
         PageResult<WorkItemEntity> workItems = workItemReadPort.searchWorkItems(query.tenantId(), criteria);
-        Map<Long, WorkItemSearchView.UserSummary> userSummaryMap = resolveUserSummaries(workItems.items());
+        Map<Long, UserSummary> userSummaryMap = resolveUserSummaries(workItems.items());
         PageResult<WorkItemSearchView> result = workItems.map(workItem -> WorkItemSearchView.from(
                 workItem,
                 nullableMapGet(userSummaryMap, workItem.getAssigneeId()),
@@ -65,7 +70,7 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
         return PageViews.from(result, criteria);
     }
 
-    private Map<Long, WorkItemSearchView.UserSummary> resolveUserSummaries(List<WorkItemEntity> workItems) {
+    private Map<Long, UserSummary> resolveUserSummaries(List<WorkItemEntity> workItems) {
         List<Long> userIds = workItems.stream()
                 .flatMap(workItem -> Stream.of(workItem.getAssigneeId(), workItem.getReporterId()))
                 .filter(Objects::nonNull)
@@ -74,25 +79,17 @@ public class SearchWorkItemsQueryHandler implements IQueryHandler<SearchWorkItem
         if (userIds.isEmpty()) {
             return Map.of();
         }
-        return userProfileClient.getUserProfilesByIds(userIds).stream()
+        return userService.getUserProfilesByIds(userIds).stream()
                 .filter(Objects::nonNull)
                 .filter(profile -> profile.getId() != null)
                 .collect(Collectors.toMap(
                         UserProfileDto::getId,
-                        this::toUserSummary,
+                        UserSummary::from,
                         (left, right) -> left
                 ));
     }
 
-    private WorkItemSearchView.UserSummary toUserSummary(UserProfileDto profile) {
-        String displayName = profile.getFullName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = profile.getEmail();
-        }
-        return new WorkItemSearchView.UserSummary(profile.getId(), displayName, profile.getAvatarUrl());
-    }
-
-    private static WorkItemSearchView.UserSummary nullableMapGet(Map<Long, WorkItemSearchView.UserSummary> map, Long key) {
+    private static UserSummary nullableMapGet(Map<Long, UserSummary> map, Long key) {
         return key == null ? null : map.get(key);
     }
 

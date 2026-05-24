@@ -46,6 +46,30 @@ public interface IProjectComponentRepository extends JpaRepository<ProjectCompon
                                                    @Param("search") String search,
                                                    Pageable pageable);
 
+    @Query(value = """
+            SELECT c.id AS componentId,
+                   COUNT(wi.id) AS issueCount
+            FROM project_components c
+            LEFT JOIN work_item_components wic
+              ON wic.component_id = c.id
+             AND wic.tenant_id = :tenantId
+             AND wic.deleted_at IS NULL
+            LEFT JOIN work_items wi
+              ON wi.id = wic.work_item_id
+             AND wi.tenant_id = :tenantId
+             AND wi.project_id = :projectId
+             AND wi.deleted_at IS NULL
+            WHERE c.tenant_id = :tenantId
+              AND c.project_id = :projectId
+              AND c.deleted_at IS NULL
+              AND c.id IN (:componentIds)
+            GROUP BY c.id
+            """, nativeQuery = true)
+    List<ComponentIssueCountProjection> countActiveIssuesByComponentIds(
+            @Param("projectId") Long projectId,
+            @Param("tenantId") Long tenantId,
+            @Param("componentIds") List<Long> componentIds);
+
     boolean existsByProjectIdAndTenantIdAndName(Long projectId, Long tenantId, String name);
 
     @Modifying
@@ -55,4 +79,10 @@ public interface IProjectComponentRepository extends JpaRepository<ProjectCompon
                AND component_id = :componentId
             """, nativeQuery = true)
     void deleteWorkItemLinks(@Param("componentId") Long componentId, @Param("tenantId") Long tenantId);
+
+    interface ComponentIssueCountProjection {
+        Long getComponentId();
+
+        Long getIssueCount();
+    }
 }

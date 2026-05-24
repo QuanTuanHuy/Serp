@@ -34,6 +34,8 @@ public class UpdateWorkItemRequest {
     private boolean dueDateProvided;
     private Long timeOriginalEstimate;
     private boolean timeOriginalEstimateProvided;
+    private Long timeRemainingEstimate;
+    private boolean timeRemainingEstimateProvided;
     private Long securityLevelId;
     private boolean securityLevelIdProvided;
     private Map<String, Object> customFields = Map.of();
@@ -74,6 +76,11 @@ public class UpdateWorkItemRequest {
         this.timeOriginalEstimateProvided = true;
     }
 
+    public void setTimeRemainingEstimate(Long timeRemainingEstimate) {
+        this.timeRemainingEstimate = timeRemainingEstimate;
+        this.timeRemainingEstimateProvided = true;
+    }
+
     public void setSecurityLevelId(Long securityLevelId) {
         this.securityLevelId = securityLevelId;
         this.securityLevelIdProvided = true;
@@ -107,6 +114,9 @@ public class UpdateWorkItemRequest {
         }
         if (timeOriginalEstimateProvided) {
             systemFields.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, timeOriginalEstimate);
+        }
+        if (timeRemainingEstimateProvided) {
+            systemFields.put(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE, timeRemainingEstimate);
         }
         if (securityLevelIdProvided) {
             systemFields.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, securityLevelId);

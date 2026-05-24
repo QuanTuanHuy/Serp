@@ -67,23 +67,26 @@ const KIND_TABS: { label: string; value: ResourceKind | 'ALL' }[] = [
 
 const KIND_CLASS: Record<ResourceKind, string> = {
   CONTAINER: 'bg-blue-500 hover:bg-blue-500/90 text-white border-transparent',
-  TRUCK:     'bg-green-500 hover:bg-green-500/90 text-white border-transparent',
-  TRAILER:   'bg-amber-500 hover:bg-amber-500/90 text-white border-transparent',
-  DRIVER:    'bg-purple-500 hover:bg-purple-500/90 text-white border-transparent',
+  TRUCK: 'bg-green-500 hover:bg-green-500/90 text-white border-transparent',
+  TRAILER: 'bg-amber-500 hover:bg-amber-500/90 text-white border-transparent',
+  DRIVER: 'bg-purple-500 hover:bg-purple-500/90 text-white border-transparent',
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  AVAILABLE:   'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-  IN_USE:      'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  MAINTENANCE: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
-  OFF:         'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+  AVAILABLE:
+    'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+  IN_USE:
+    'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+  MAINTENANCE:
+    'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+  OFF: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
 };
 
 const STATUS_DOT: Record<string, string> = {
-  AVAILABLE:   'bg-green-500',
-  IN_USE:      'bg-blue-500',
+  AVAILABLE: 'bg-green-500',
+  IN_USE: 'bg-blue-500',
   MAINTENANCE: 'bg-amber-500',
-  OFF:         'bg-red-500',
+  OFF: 'bg-red-500',
 };
 
 const SIZE_LABEL: Record<ResourceContainerSize, string> = {
@@ -91,7 +94,12 @@ const SIZE_LABEL: Record<ResourceContainerSize, string> = {
   FORTY: '40 ft',
 };
 
-type SortField = 'identifier' | 'kind' | 'size' | 'status' | 'currentLocationCode';
+type SortField =
+  | 'identifier'
+  | 'kind'
+  | 'size'
+  | 'status'
+  | 'currentLocationCode';
 
 // -------------------------------------------------------------------------
 // Helpers
@@ -151,7 +159,12 @@ function KindBadge({ kind }: { kind: ResourceKind }) {
     DRIVER: 'Driver',
   };
   return (
-    <Badge className={cn('rounded px-2 py-0.5 text-xs font-bold tracking-wide', KIND_CLASS[kind])}>
+    <Badge
+      className={cn(
+        'rounded px-2 py-0.5 text-xs font-bold tracking-wide',
+        KIND_CLASS[kind]
+      )}
+    >
       {labels[kind]}
     </Badge>
   );
@@ -160,8 +173,18 @@ function KindBadge({ kind }: { kind: ResourceKind }) {
 function StatusBadge({ status }: { status: string }) {
   const label = status.replace('_', ' ');
   return (
-    <Badge className={cn('gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', STATUS_CLASS[status] ?? '')}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[status] ?? 'bg-gray-400')} />
+    <Badge
+      className={cn(
+        'gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+        STATUS_CLASS[status] ?? ''
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          STATUS_DOT[status] ?? 'bg-gray-400'
+        )}
+      />
       {label}
     </Badge>
   );
@@ -203,7 +226,9 @@ function EmptyState({ colSpan }: { colSpan: number }) {
       <TableCell colSpan={colSpan}>
         <div className='flex flex-col items-center justify-center gap-3 py-16 text-center'>
           <Package2 className='h-12 w-12 text-muted-foreground/40' />
-          <p className='text-sm font-medium text-muted-foreground'>No resources found</p>
+          <p className='text-sm font-medium text-muted-foreground'>
+            No resources found
+          </p>
           <p className='text-xs text-muted-foreground/70'>
             Create your first resource using the button above.
           </p>
@@ -226,11 +251,41 @@ interface TableConfig {
 
 function getTableConfig(tab: ResourceKind | 'ALL'): TableConfig {
   switch (tab) {
-    case 'CONTAINER': return { showKind: false, showSize: true,  showLocation: true,  identifierLabel: 'Code' };
-    case 'TRUCK':     return { showKind: false, showSize: false, showLocation: true,  identifierLabel: 'Code' };
-    case 'TRAILER':   return { showKind: false, showSize: false, showLocation: true,  identifierLabel: 'Code' };
-    case 'DRIVER':    return { showKind: false, showSize: false, showLocation: false, identifierLabel: 'Name' };
-    default:          return { showKind: true,  showSize: true,  showLocation: true,  identifierLabel: 'Code / Name' };
+    case 'CONTAINER':
+      return {
+        showKind: false,
+        showSize: true,
+        showLocation: true,
+        identifierLabel: 'Code',
+      };
+    case 'TRUCK':
+      return {
+        showKind: false,
+        showSize: false,
+        showLocation: true,
+        identifierLabel: 'Code',
+      };
+    case 'TRAILER':
+      return {
+        showKind: false,
+        showSize: false,
+        showLocation: true,
+        identifierLabel: 'Code',
+      };
+    case 'DRIVER':
+      return {
+        showKind: false,
+        showSize: false,
+        showLocation: false,
+        identifierLabel: 'Name',
+      };
+    default:
+      return {
+        showKind: true,
+        showSize: true,
+        showLocation: true,
+        identifierLabel: 'Code / Name',
+      };
   }
 }
 
@@ -248,20 +303,36 @@ export function ResourcesPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedResource, setSelectedResource] = useState<ResourceRow | null>(null);
+  const [selectedResource, setSelectedResource] = useState<ResourceRow | null>(
+    null
+  );
 
   const skip = !isDispatcher;
-  const { data: containersData, isLoading: loadingContainers, isError: errorContainers } =
-    useGetDispatcherContainersQuery(undefined, { skip });
-  const { data: trucksData, isLoading: loadingTrucks, isError: errorTrucks } =
-    useGetDispatcherTrucksQuery(undefined, { skip });
-  const { data: trailersData, isLoading: loadingTrailers, isError: errorTrailers } =
-    useGetDispatcherTrailersQuery(undefined, { skip });
-  const { data: driversData, isLoading: loadingDrivers, isError: errorDrivers } =
-    useGetDispatcherDriversQuery(undefined, { skip });
+  const {
+    data: containersData,
+    isLoading: loadingContainers,
+    isError: errorContainers,
+  } = useGetDispatcherContainersQuery(undefined, { skip });
+  const {
+    data: trucksData,
+    isLoading: loadingTrucks,
+    isError: errorTrucks,
+  } = useGetDispatcherTrucksQuery(undefined, { skip });
+  const {
+    data: trailersData,
+    isLoading: loadingTrailers,
+    isError: errorTrailers,
+  } = useGetDispatcherTrailersQuery(undefined, { skip });
+  const {
+    data: driversData,
+    isLoading: loadingDrivers,
+    isError: errorDrivers,
+  } = useGetDispatcherDriversQuery(undefined, { skip });
 
-  const isLoading = loadingContainers || loadingTrucks || loadingTrailers || loadingDrivers;
-  const isError = errorContainers || errorTrucks || errorTrailers || errorDrivers;
+  const isLoading =
+    loadingContainers || loadingTrucks || loadingTrailers || loadingDrivers;
+  const isError =
+    errorContainers || errorTrucks || errorTrailers || errorDrivers;
 
   const allRows = useMemo(
     () =>
@@ -302,7 +373,10 @@ export function ResourcesPage() {
 
   const totalElements = filteredRows.length;
   const totalPages = Math.ceil(totalElements / PAGE_SIZE);
-  const pagedRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pagedRows = filteredRows.slice(
+    page * PAGE_SIZE,
+    (page + 1) * PAGE_SIZE
+  );
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as ResourceKind | 'ALL');
@@ -338,7 +412,12 @@ export function ResourcesPage() {
   }
 
   const cfg = getTableConfig(activeTab);
-  const colCount = 2 + (cfg.showKind ? 1 : 0) + (cfg.showSize ? 1 : 0) + 1 + (cfg.showLocation ? 1 : 0);
+  const colCount =
+    2 +
+    (cfg.showKind ? 1 : 0) +
+    (cfg.showSize ? 1 : 0) +
+    1 +
+    (cfg.showLocation ? 1 : 0);
 
   const sortableHeadClass =
     'cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors';
@@ -347,7 +426,9 @@ export function ResourcesPage() {
     <div className='flex min-h-screen flex-col bg-background px-12 py-6'>
       {/* ---- Page heading ---- */}
       <div className='mb-6 flex flex-col gap-1'>
-        <h1 className='text-2xl font-bold tracking-tight text-foreground'>Resources</h1>
+        <h1 className='text-2xl font-bold tracking-tight text-foreground'>
+          Resources
+        </h1>
         <p className='text-sm text-muted-foreground'>
           Manage containers, trucks, trailers, and drivers
         </p>
@@ -419,7 +500,11 @@ export function ResourcesPage() {
                     onClick={() => handleSort('identifier')}
                   >
                     {cfg.identifierLabel}
-                    <SortIcon field='identifier' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='identifier'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   {cfg.showKind && (
                     <TableHead
@@ -427,7 +512,11 @@ export function ResourcesPage() {
                       onClick={() => handleSort('kind')}
                     >
                       Kind
-                      <SortIcon field='kind' sortBy={sortBy} sortDirection={sortDirection} />
+                      <SortIcon
+                        field='kind'
+                        sortBy={sortBy}
+                        sortDirection={sortDirection}
+                      />
                     </TableHead>
                   )}
                   {cfg.showSize && (
@@ -436,7 +525,11 @@ export function ResourcesPage() {
                       onClick={() => handleSort('size')}
                     >
                       Size
-                      <SortIcon field='size' sortBy={sortBy} sortDirection={sortDirection} />
+                      <SortIcon
+                        field='size'
+                        sortBy={sortBy}
+                        sortDirection={sortDirection}
+                      />
                     </TableHead>
                   )}
                   <TableHead
@@ -444,7 +537,11 @@ export function ResourcesPage() {
                     onClick={() => handleSort('status')}
                   >
                     Status
-                    <SortIcon field='status' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='status'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   {cfg.showLocation && (
                     <TableHead
@@ -452,14 +549,20 @@ export function ResourcesPage() {
                       onClick={() => handleSort('currentLocationCode')}
                     >
                       Current Location
-                      <SortIcon field='currentLocationCode' sortBy={sortBy} sortDirection={sortDirection} />
+                      <SortIcon
+                        field='currentLocationCode'
+                        sortBy={sortBy}
+                        sortDirection={sortDirection}
+                      />
                     </TableHead>
                   )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  [...Array(6)].map((_, i) => <SkeletonRow key={i} cols={colCount} />)
+                  [...Array(6)].map((_, i) => (
+                    <SkeletonRow key={i} cols={colCount} />
+                  ))
                 ) : pagedRows.length === 0 ? (
                   <EmptyState colSpan={colCount} />
                 ) : (
@@ -483,7 +586,9 @@ export function ResourcesPage() {
                       )}
                       {cfg.showSize && (
                         <TableCell className='px-4 py-3 text-foreground'>
-                          {row.size ? SIZE_LABEL[row.size] ?? row.size : (
+                          {row.size ? (
+                            (SIZE_LABEL[row.size] ?? row.size)
+                          ) : (
                             <span className='text-muted-foreground'>—</span>
                           )}
                         </TableCell>

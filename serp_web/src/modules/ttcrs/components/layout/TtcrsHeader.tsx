@@ -25,18 +25,21 @@ import { NotificationButton } from '@/modules/notifications';
 // ---------------------------------------------------------------------------
 
 const SEGMENT_LABELS: Record<string, string> = {
-  ttcrs:      'TTCRS',
+  ttcrs: 'TTCRS',
   dispatcher: 'Dispatcher',
-  locations:  'Locations',
-  requests:   'Requests',
-  trucks:     'Trucks',
-  trailers:   'Trailers',
-  drivers:    'Drivers',
-  plans:      'Transport Plans',
+  locations: 'Locations',
+  requests: 'Requests',
+  trucks: 'Trucks',
+  trailers: 'Trailers',
+  drivers: 'Drivers',
+  plans: 'Transport Plans',
 };
 
 function humanise(segment: string): string {
-  return SEGMENT_LABELS[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1);
+  return (
+    SEGMENT_LABELS[segment] ??
+    segment.charAt(0).toUpperCase() + segment.slice(1)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -52,8 +55,8 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
   className,
   scrollContainerRef,
 }) => {
-  const router    = useRouter();
-  const pathname  = usePathname();
+  const router = useRouter();
+  const pathname = usePathname();
   const { logout } = useAuth();
   const { getDisplayName, user } = useUser();
 
@@ -63,7 +66,11 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
   // ── Hide-on-scroll ───────────────────────────────────────────────────────
   useEffect(() => {
     const container = scrollContainerRef?.current ?? null;
-    let last = container ? container.scrollTop : typeof window !== 'undefined' ? window.scrollY : 0;
+    let last = container
+      ? container.scrollTop
+      : typeof window !== 'undefined'
+        ? window.scrollY
+        : 0;
     let ticking = false;
     const THRESHOLD = 8;
 
@@ -82,7 +89,9 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
     };
 
     const el: HTMLElement | Window = container ?? window;
-    el.addEventListener('scroll', onScroll, { passive: true } as EventListenerOptions);
+    el.addEventListener('scroll', onScroll, {
+      passive: true,
+    } as EventListenerOptions);
     return () => el.removeEventListener('scroll', onScroll as EventListener);
   }, [scrollContainerRef]);
 
@@ -91,8 +100,8 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
     .split('/')
     .filter(Boolean)
     .map((segment, index, arr) => ({
-      name:   humanise(segment),
-      href:   '/' + arr.slice(0, index + 1).join('/'),
+      name: humanise(segment),
+      href: '/' + arr.slice(0, index + 1).join('/'),
       isLast: index === arr.length - 1,
     }));
 
@@ -122,9 +131,7 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
         <nav className='flex items-center space-x-2 text-sm'>
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={crumb.href}>
-              {index > 0 && (
-                <span className='text-muted-foreground'>/</span>
-              )}
+              {index > 0 && <span className='text-muted-foreground'>/</span>}
               {crumb.isLast ? (
                 <span className='font-medium'>{crumb.name}</span>
               ) : (

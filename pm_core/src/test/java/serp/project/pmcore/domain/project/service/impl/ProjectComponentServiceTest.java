@@ -22,6 +22,7 @@ import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -144,10 +145,13 @@ class ProjectComponentServiceTest {
         PageResult<ProjectComponentEntity> expected = new PageResult<>(List.of(existingComponent()), 1L);
         when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(activeProject());
         when(projectComponentPort.listComponents(PROJECT_ID, TENANT_ID, criteria)).thenReturn(expected);
+        when(projectComponentPort.countActiveIssuesByComponentIds(PROJECT_ID, TENANT_ID, List.of(COMPONENT_ID)))
+                .thenReturn(Map.of(COMPONENT_ID, 5L));
 
         PageResult<ProjectComponentEntity> result = service.listComponents(PROJECT_ID, TENANT_ID, criteria);
 
         assertSame(expected, result);
+        assertEquals(5L, result.items().getFirst().getIssueCount());
     }
 
     @Test

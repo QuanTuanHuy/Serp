@@ -28,7 +28,7 @@ import {
   useGetPmPrioritiesQuery,
   useGetPmStatusesQuery,
   useSearchPmWorkItemsQuery,
-} from '../../../api';
+} from '../../../api/workItemApi';
 import type { FilterCriterion } from './pmWorkItemList.utils';
 import { serializeNumberList } from './pmWorkItemList.utils';
 

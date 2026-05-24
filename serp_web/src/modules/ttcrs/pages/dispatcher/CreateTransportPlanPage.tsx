@@ -23,8 +23,12 @@ export function CreateTransportPlanPage() {
   const isDispatcher = user?.roles?.includes('TTCRS_DISPATCHER') ?? false;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedRequestIds, setSelectedRequestIds] = useState<Set<number>>(new Set());
-  const [planResult, setPlanResult] = useState<TransportPlanResult | null>(null);
+  const [selectedRequestIds, setSelectedRequestIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [planResult, setPlanResult] = useState<TransportPlanResult | null>(
+    null
+  );
 
   const [updateStatus, { isLoading: isUpdating }] =
     useUpdateDispatcherRequestsStatusMutation();
@@ -110,7 +114,8 @@ export function CreateTransportPlanPage() {
           Create Transport Plan
         </h1>
         <p className='text-sm text-muted-foreground'>
-          Select pending requests and assign resources to create truck routes for a transport plan.
+          Select pending requests and assign resources to create truck routes
+          for a transport plan.
         </p>
       </div>
 

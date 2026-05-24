@@ -35,10 +35,19 @@ export const TtcrsSidebarProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem(STORAGE_KEY, String(value));
 
   const toggleSidebar = () =>
-    setIsCollapsed((prev) => { persist(!prev); return !prev; });
+    setIsCollapsed((prev) => {
+      persist(!prev);
+      return !prev;
+    });
 
-  const collapseSidebar = () => { setIsCollapsed(true);  persist(true);  };
-  const expandSidebar   = () => { setIsCollapsed(false); persist(false); };
+  const collapseSidebar = () => {
+    setIsCollapsed(true);
+    persist(true);
+  };
+  const expandSidebar = () => {
+    setIsCollapsed(false);
+    persist(false);
+  };
 
   return (
     <TtcrsSidebarContext.Provider

@@ -49,13 +49,18 @@ const STATUS_TABS: { label: string; value: TransportPlanStatus | 'ALL' }[] = [
 ];
 
 const STATUS_BADGE: Record<TransportPlanStatus, string> = {
-  CREATED:   'bg-blue-100 text-blue-700 border-blue-200',
+  CREATED: 'bg-blue-100 text-blue-700 border-blue-200',
   EXECUTING: 'bg-orange-100 text-orange-700 border-orange-200',
   COMPLETED: 'bg-green-100 text-green-700 border-green-200',
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
 };
 
-type SortField = 'truckCode' | 'status' | 'startTime' | 'stopCount' | 'createdStamp';
+type SortField =
+  | 'truckCode'
+  | 'status'
+  | 'startTime'
+  | 'stopCount'
+  | 'createdStamp';
 
 // -------------------------------------------------------------------------
 // Helpers
@@ -74,41 +79,54 @@ export function DriverRoutesPage() {
   const user = useAppSelector(selectUserProfile);
   const isDriver = user?.roles?.includes('TTCRS_DRIVER') ?? false;
 
-  const [statusTab, setStatusTab] = useState<TransportPlanStatus | 'ALL'>('ALL');
-  const [sortBy, setSortBy]       = useState<SortField>('startTime');
-  const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('desc');
-  const [page, setPage]           = useState(0);
+  const [statusTab, setStatusTab] = useState<TransportPlanStatus | 'ALL'>(
+    'ALL'
+  );
+  const [sortBy, setSortBy] = useState<SortField>('startTime');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(0);
 
   const { data, isLoading, isError } = useGetMyTransportPlansQuery();
   const plans = data?.data ?? [];
 
   const filtered = useMemo(() => {
     let result: TransportPlanListItem[] = plans;
-    if (statusTab !== 'ALL') result = result.filter((p) => p.status === statusTab);
+    if (statusTab !== 'ALL')
+      result = result.filter((p) => p.status === statusTab);
     result = [...result].sort((a, b) => {
       let cmp = 0;
-      if (sortBy === 'truckCode')    cmp = (a.truckCode ?? '').localeCompare(b.truckCode ?? '');
-      if (sortBy === 'status')       cmp = a.status.localeCompare(b.status);
-      if (sortBy === 'startTime')    cmp = (a.startTime ?? '').localeCompare(b.startTime ?? '');
-      if (sortBy === 'stopCount')    cmp = a.stopCount - b.stopCount;
-      if (sortBy === 'createdStamp') cmp = (a.createdStamp ?? '').localeCompare(b.createdStamp ?? '');
+      if (sortBy === 'truckCode')
+        cmp = (a.truckCode ?? '').localeCompare(b.truckCode ?? '');
+      if (sortBy === 'status') cmp = a.status.localeCompare(b.status);
+      if (sortBy === 'startTime')
+        cmp = (a.startTime ?? '').localeCompare(b.startTime ?? '');
+      if (sortBy === 'stopCount') cmp = a.stopCount - b.stopCount;
+      if (sortBy === 'createdStamp')
+        cmp = (a.createdStamp ?? '').localeCompare(b.createdStamp ?? '');
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
   }, [plans, statusTab, sortBy, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else { setSortBy(field); setSortDir('asc'); }
+    else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
     setPage(0);
   };
 
   const SortIcon = ({ field }: { field: SortField }) =>
     sortBy === field ? (
-      sortDir === 'asc' ? <ArrowUp className='ml-1 h-3 w-3' /> : <ArrowDown className='ml-1 h-3 w-3' />
+      sortDir === 'asc' ? (
+        <ArrowUp className='ml-1 h-3 w-3' />
+      ) : (
+        <ArrowDown className='ml-1 h-3 w-3' />
+      )
     ) : (
       <ArrowUpDown className='ml-1 h-3 w-3 opacity-40' />
     );
@@ -189,19 +207,30 @@ export function DriverRoutesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className='w-8 text-center text-muted-foreground'>#</TableHead>
+                  <TableHead className='w-8 text-center text-muted-foreground'>
+                    #
+                  </TableHead>
                   <TableHead>
-                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('truckCode')}>
+                    <button
+                      className='flex items-center text-xs font-medium uppercase'
+                      onClick={() => toggleSort('truckCode')}
+                    >
                       Truck <SortIcon field='truckCode' />
                     </button>
                   </TableHead>
                   <TableHead>
-                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('status')}>
+                    <button
+                      className='flex items-center text-xs font-medium uppercase'
+                      onClick={() => toggleSort('status')}
+                    >
                       Status <SortIcon field='status' />
                     </button>
                   </TableHead>
                   <TableHead>
-                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('startTime')}>
+                    <button
+                      className='flex items-center text-xs font-medium uppercase'
+                      onClick={() => toggleSort('startTime')}
+                    >
                       Start Time <SortIcon field='startTime' />
                     </button>
                   </TableHead>
@@ -211,12 +240,18 @@ export function DriverRoutesPage() {
                     </div>
                   </TableHead>
                   <TableHead>
-                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('stopCount')}>
+                    <button
+                      className='flex items-center text-xs font-medium uppercase'
+                      onClick={() => toggleSort('stopCount')}
+                    >
                       Stops <SortIcon field='stopCount' />
                     </button>
                   </TableHead>
                   <TableHead>
-                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('createdStamp')}>
+                    <button
+                      className='flex items-center text-xs font-medium uppercase'
+                      onClick={() => toggleSort('createdStamp')}
+                    >
                       Created At <SortIcon field='createdStamp' />
                     </button>
                   </TableHead>
@@ -228,15 +263,28 @@ export function DriverRoutesPage() {
                     <TableCell className='text-center text-xs text-muted-foreground'>
                       {page * PAGE_SIZE + idx + 1}
                     </TableCell>
-                    <TableCell className='font-mono text-sm font-medium'>{plan.truckCode}</TableCell>
+                    <TableCell className='font-mono text-sm font-medium'>
+                      {plan.truckCode}
+                    </TableCell>
                     <TableCell>
-                      <Badge className={cn('border text-xs', STATUS_BADGE[plan.status])}>
+                      <Badge
+                        className={cn(
+                          'border text-xs',
+                          STATUS_BADGE[plan.status]
+                        )}
+                      >
                         {plan.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.startTime)}</TableCell>
-                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.endTime)}</TableCell>
-                    <TableCell className='text-sm tabular-nums'>{plan.stopCount}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>
+                      {formatDateTime(plan.startTime)}
+                    </TableCell>
+                    <TableCell className='text-sm tabular-nums'>
+                      {formatDateTime(plan.endTime)}
+                    </TableCell>
+                    <TableCell className='text-sm tabular-nums'>
+                      {plan.stopCount}
+                    </TableCell>
                     <TableCell className='text-sm tabular-nums text-muted-foreground'>
                       {formatDateTime(plan.createdStamp)}
                     </TableCell>
@@ -252,7 +300,9 @@ export function DriverRoutesPage() {
       {filtered.length > PAGE_SIZE && (
         <div className='flex items-center justify-between text-sm text-muted-foreground'>
           <span>
-            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+            {page * PAGE_SIZE + 1}–
+            {Math.min((page + 1) * PAGE_SIZE, filtered.length)} of{' '}
+            {filtered.length}
           </span>
           <div className='flex items-center gap-1'>
             <Button
@@ -264,7 +314,9 @@ export function DriverRoutesPage() {
             >
               <ChevronLeft className='h-4 w-4' />
             </Button>
-            <span className='px-2'>{page + 1} / {totalPages}</span>
+            <span className='px-2'>
+              {page + 1} / {totalPages}
+            </span>
             <Button
               variant='outline'
               size='icon'

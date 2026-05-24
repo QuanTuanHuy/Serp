@@ -11,7 +11,10 @@ import { FolderKanban, Plus } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button } from '@/shared/components/ui';
-import { useGetPmProjectsQuery, useGetProjectCategoriesQuery } from '../api';
+import {
+  useGetPmProjectsQuery,
+  useGetProjectCategoriesQuery,
+} from '../api/projectApi';
 import type { PMProjectSummaryApi } from '../types/api';
 import type {
   PMProjectListItem,
@@ -172,38 +175,31 @@ export function PMProjectsPage() {
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
-        <div className='space-y-3'>
+      <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-border/40 pb-5'>
+        <div className='space-y-1.5'>
           <div className='flex items-center gap-3'>
-            <div className='flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
+            <div className='flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary/15 to-violet-500/15 border border-primary/20 text-primary shadow-sm shadow-primary/5'>
               <FolderKanban className='h-5 w-5' />
             </div>
             <div>
-              <h1 className='text-3xl font-bold tracking-tight'>Projects</h1>
-              <p className='text-sm text-muted-foreground'>
+              <h1 className='text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent'>
+                Projects
+              </h1>
+              <p className='text-xs text-muted-foreground mt-0.5'>
                 Manage company software projects across teams, workflows, and
                 delivery lanes.
               </p>
             </div>
-          </div>
-
-          <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>
-            <span>
-              <span className='font-semibold text-foreground'>
-                {totalProjectsCount}
-              </span>{' '}
-              total projects
-            </span>
           </div>
         </div>
 
         <Button
           type='button'
           size='lg'
-          className='shadow-sm'
+          className='shadow-md hover:shadow-primary/15 transition-all hover:scale-[1.02] active:scale-[0.98] duration-200 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 h-11'
           onClick={() => router.push('/pm/projects/create')}
         >
-          <Plus className='mr-2 h-4 w-4' />
+          <Plus className='mr-2 h-4.5 w-4.5 stroke-[2.5]' />
           Create project
         </Button>
       </div>

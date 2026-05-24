@@ -86,14 +86,24 @@ export function CreateResourceDialog({
 }: CreateResourceDialogProps) {
   const formId = useId();
 
-  const [form, setForm] = useState<FormState>({ ...INITIAL_FORM, kind: defaultKind });
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [form, setForm] = useState<FormState>({
+    ...INITIAL_FORM,
+    kind: defaultKind,
+  });
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FormState, string>>
+  >({});
 
-  const [createContainer, { isLoading: creatingContainer }] = useCreateDispatcherContainerMutation();
-  const [createTruck,     { isLoading: creatingTruck     }] = useCreateDispatcherTruckMutation();
-  const [createTrailer,   { isLoading: creatingTrailer   }] = useCreateDispatcherTrailerMutation();
+  const [createContainer, { isLoading: creatingContainer }] =
+    useCreateDispatcherContainerMutation();
+  const [createTruck, { isLoading: creatingTruck }] =
+    useCreateDispatcherTruckMutation();
+  const [createTrailer, { isLoading: creatingTrailer }] =
+    useCreateDispatcherTrailerMutation();
 
-  const { data: locationsData } = useGetDispatcherLocationsQuery(undefined, { skip: !open });
+  const { data: locationsData } = useGetDispatcherLocationsQuery(undefined, {
+    skip: !open,
+  });
   const locationCodes = locationsData?.data?.map((l) => l.locationCode) ?? [];
 
   const isCreating = creatingContainer || creatingTruck || creatingTrailer;
@@ -121,9 +131,11 @@ export function CreateResourceDialog({
     const next: Partial<Record<keyof FormState, string>> = {};
 
     if (!form.code.trim()) next.code = 'Code is required';
-    else if (form.code.length > 50) next.code = 'Code must not exceed 50 characters';
+    else if (form.code.length > 50)
+      next.code = 'Code must not exceed 50 characters';
 
-    if (!form.currentLocationCode) next.currentLocationCode = 'Current location is required';
+    if (!form.currentLocationCode)
+      next.currentLocationCode = 'Current location is required';
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -168,13 +180,21 @@ export function CreateResourceDialog({
     }
   }
 
-  const currentKindLabel = KIND_TABS.find((t) => t.value === form.kind)?.label ?? '';
+  const currentKindLabel =
+    KIND_TABS.find((t) => t.value === form.kind)?.label ?? '';
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className='sm:max-w-[480px]'>
         <DialogHeader>
-          <DialogTitle className='text-xl font-semibold'>Create New Resource</DialogTitle>
+          <DialogTitle className='text-xl font-semibold'>
+            Create New Resource
+          </DialogTitle>
         </DialogHeader>
 
         {/* Kind selector */}
@@ -209,14 +229,16 @@ export function CreateResourceDialog({
                 form.kind === 'CONTAINER'
                   ? 'e.g. CONT-001'
                   : form.kind === 'TRUCK'
-                  ? 'e.g. TRK-001'
-                  : 'e.g. TRL-001'
+                    ? 'e.g. TRK-001'
+                    : 'e.g. TRL-001'
               }
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
               className={cn(errors.code && 'border-destructive')}
             />
-            {errors.code && <p className='text-xs text-destructive'>{errors.code}</p>}
+            {errors.code && (
+              <p className='text-xs text-destructive'>{errors.code}</p>
+            )}
           </div>
 
           {/* Size — containers only */}
@@ -252,7 +274,10 @@ export function CreateResourceDialog({
             >
               <SelectTrigger
                 id={`${formId}-loc`}
-                className={cn('w-full', errors.currentLocationCode && 'border-destructive')}
+                className={cn(
+                  'w-full',
+                  errors.currentLocationCode && 'border-destructive'
+                )}
               >
                 <SelectValue placeholder='Select a location' />
               </SelectTrigger>
@@ -271,7 +296,9 @@ export function CreateResourceDialog({
               </SelectContent>
             </Select>
             {errors.currentLocationCode && (
-              <p className='text-xs text-destructive'>{errors.currentLocationCode}</p>
+              <p className='text-xs text-destructive'>
+                {errors.currentLocationCode}
+              </p>
             )}
           </div>
         </form>

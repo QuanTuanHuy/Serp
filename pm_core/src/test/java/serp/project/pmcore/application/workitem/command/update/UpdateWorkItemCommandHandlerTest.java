@@ -16,6 +16,7 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldWriteValidator;
+import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
@@ -83,6 +84,8 @@ class UpdateWorkItemCommandHandlerTest {
     private IOutboxEventService outboxEventService;
     @Mock
     private JsonUtils jsonUtils;
+    @Mock
+    private WorkItemHistoryRecorder workItemHistoryRecorder;
 
     private UpdateWorkItemCommandHandler handler;
 
@@ -101,7 +104,8 @@ class UpdateWorkItemCommandHandlerTest {
                 workItemCustomFieldMutationService,
                 issueTypePort,
                 outboxEventService,
-                jsonUtils
+                jsonUtils,
+                workItemHistoryRecorder
         );
     }
 
@@ -160,6 +164,7 @@ class UpdateWorkItemCommandHandlerTest {
         ArgumentCaptor<OutboxEventEntity> outboxCaptor = ArgumentCaptor.forClass(OutboxEventEntity.class);
         verify(outboxEventService).saveEvent(outboxCaptor.capture());
         assertEquals(EventConstants.WorkItem.EventType.WORK_ITEM_UPDATED, outboxCaptor.getValue().getEventType());
+        verify(workItemHistoryRecorder).recordChanges(eq(TENANT_ID), eq(WORK_ITEM_ID), eq(USER_ID), any(), any(), eq(List.of(WorkItemFieldConstants.SUMMARY)));
     }
 
     @Test

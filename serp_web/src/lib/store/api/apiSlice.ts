@@ -250,6 +250,16 @@ export const api = createApi({
     'Message',
     'DiscussActivity',
     'Presence',
+    // PM tags
+    'pm/Project',
+    'pm/ProjectComponent',
+    'pm/ProjectSummary',
+    'pm/WorkItem',
+    'pm/WorkItemComments',
+    'pm/WorkItemActivities',
+    'pm/WorkItemChildren',
+    'pm/WorkItemLinks',
+    'pm/OptimizationRun',
     // TTCRS tags
     'ttcrs/Request',
     'ttcrs/Location',

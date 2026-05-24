@@ -16,7 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui';
-import { getPMProjectDetailMockById } from '../mocks/projectDetail';
+import {
+  useGetPmProjectByIdQuery,
+  useUpdatePmProjectMutation,
+  useArchivePmProjectMutation,
+  useUnarchivePmProjectMutation,
+} from '../api/projectApi';
+import type { PMProjectDetail } from '../types/project-detail.types';
 import {
   PMProjectEditForm,
   type PMProjectEditFormValues,
@@ -30,10 +36,48 @@ export function PMProjectEditPage({ projectId }: PMProjectEditPageProps) {
   const router = useRouter();
   const [isDirty, setIsDirty] = useState(false);
 
-  const project = useMemo(
-    () => getPMProjectDetailMockById(projectId),
-    [projectId]
-  );
+  const {
+    data: projectResponse,
+    isLoading: isProjectLoading,
+    error: projectError,
+  } = useGetPmProjectByIdQuery(projectId);
+
+  const [updatePmProject] = useUpdatePmProjectMutation();
+  const [archivePmProject] = useArchivePmProjectMutation();
+  const [unarchivePmProject] = useUnarchivePmProjectMutation();
+
+  const mappedProject = useMemo(() => {
+    if (!projectResponse) {
+      return null;
+    }
+
+    const mapped: PMProjectDetail & { categoryName?: string } = {
+      id: String(projectResponse.id),
+      name: projectResponse.name,
+      key: projectResponse.key,
+      description: projectResponse.description || '',
+      category: projectResponse.category
+        ? String(projectResponse.category.id)
+        : 'ALL',
+      categoryName: projectResponse.category?.name || 'Uncategorized',
+      status: projectResponse.isArchived ? 'ARCHIVED' : 'ACTIVE',
+      lead: {
+        id: String(projectResponse.leadUserId),
+        name:
+          projectResponse.leadUserName || `User #${projectResponse.leadUserId}`,
+      },
+      visibility: 'ORGANIZATION',
+      startDate: new Date(projectResponse.createdAt || Date.now())
+        .toISOString()
+        .split('T')[0],
+      targetDate: new Date(projectResponse.updatedAt || Date.now())
+        .toISOString()
+        .split('T')[0],
+      updatedAt: projectResponse.updatedAt || new Date().toISOString(),
+      createdAt: projectResponse.createdAt || new Date().toISOString(),
+    };
+    return mapped;
+  }, [projectResponse]);
 
   const navigateWithDirtyCheck = (href: string) => {
     if (
@@ -47,22 +91,61 @@ export function PMProjectEditPage({ projectId }: PMProjectEditPageProps) {
   };
 
   const handleSave = async (values: PMProjectEditFormValues) => {
-    toast.success(`Saved changes for ${values.name}.`);
-    router.push(`/pm/projects/${projectId}/summary`);
+    try {
+      await updatePmProject({
+        id: projectId,
+        body: {
+          name: values.name,
+          key: values.key,
+          description: values.description,
+          leadUserId: Number(values.leadId),
+          categoryId:
+            values.category === 'ALL' ? undefined : Number(values.category),
+        },
+      }).unwrap();
+
+      const isCurrentlyArchived = projectResponse?.isArchived || false;
+      const targetArchivedState = values.status === 'ARCHIVED';
+
+      if (targetArchivedState && !isCurrentlyArchived) {
+        await archivePmProject(projectId).unwrap();
+      } else if (!targetArchivedState && isCurrentlyArchived) {
+        await unarchivePmProject(projectId).unwrap();
+      }
+
+      toast.success(`Saved changes for ${values.name}.`);
+      router.push(`/pm/projects/${projectId}/summary`);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save changes.');
+    }
   };
 
-  if (!project) {
+  if (isProjectLoading) {
     return (
-      <Card>
+      <Card className='border border-border/70 bg-card/60 shadow-sm'>
+        <CardContent className='py-16 text-center text-muted-foreground'>
+          Loading project details...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (projectError || !mappedProject) {
+    return (
+      <Card className='border border-border/70 bg-card/60 shadow-sm'>
         <CardHeader>
           <CardTitle>Project not found</CardTitle>
         </CardHeader>
         <CardContent className='space-y-4'>
           <p className='text-sm text-muted-foreground'>
             The project <span className='font-medium'>{projectId}</span> is not
-            available in the current PM mock adapter.
+            available or failed to load.
           </p>
-          <Button type='button' onClick={() => router.push('/pm/projects')}>
+          <Button
+            type='button'
+            onClick={() => router.push('/pm/projects')}
+            className='rounded-xl'
+          >
             Back to projects
           </Button>
         </CardContent>
@@ -98,7 +181,7 @@ export function PMProjectEditPage({ projectId }: PMProjectEditPageProps) {
                 Update metadata, ownership, schedule, and guarded project-level
                 settings for{' '}
                 <span className='font-medium text-foreground'>
-                  {project.name}
+                  {mappedProject.name}
                 </span>
                 .
               </p>
@@ -108,7 +191,7 @@ export function PMProjectEditPage({ projectId }: PMProjectEditPageProps) {
       </div>
 
       <PMProjectEditForm
-        project={project}
+        project={mappedProject}
         onSubmit={handleSave}
         onCancel={() =>
           navigateWithDirtyCheck(`/pm/projects/${projectId}/summary`)

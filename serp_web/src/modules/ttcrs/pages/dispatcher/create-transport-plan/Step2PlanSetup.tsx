@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, CheckSquare, Container, Loader2, Package, Truck } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckSquare,
+  Container,
+  Loader2,
+  Package,
+  Truck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, TableCell } from '@/shared/components/ui';
 import {
@@ -34,27 +41,52 @@ export function Step2PlanSetup({
   isBackLoading,
   onPlanCreated,
 }: Step2Props) {
-  const [truckReturnDepots, setTruckReturnDepots] = useState<Record<number, string[]>>({});
-  const [trailerReturnDepots, setTrailerReturnDepots] = useState<Record<number, string[]>>({});
-  const [containerReturnDepots, setContainerReturnDepots] = useState<Record<number, string[]>>({});
+  const [truckReturnDepots, setTruckReturnDepots] = useState<
+    Record<number, string[]>
+  >({});
+  const [trailerReturnDepots, setTrailerReturnDepots] = useState<
+    Record<number, string[]>
+  >({});
+  const [containerReturnDepots, setContainerReturnDepots] = useState<
+    Record<number, string[]>
+  >({});
 
-  const [selectedTruckIds, setSelectedTruckIds] = useState<Set<number>>(new Set());
-  const [selectedTrailerIds, setSelectedTrailerIds] = useState<Set<number>>(new Set());
-  const [selectedContainerIds, setSelectedContainerIds] = useState<Set<number>>(new Set());
+  const [selectedTruckIds, setSelectedTruckIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [selectedTrailerIds, setSelectedTrailerIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [selectedContainerIds, setSelectedContainerIds] = useState<Set<number>>(
+    new Set()
+  );
 
-  const { data: locationsData, isLoading: isLocationsLoading } = useGetDispatcherLocationsQuery();
-  const { data: trucksData, isLoading: isTrucksLoading } = useGetDispatcherTrucksQuery();
-  const { data: trailersData, isLoading: isTrailersLoading } = useGetDispatcherTrailersQuery();
-  const { data: containersData, isLoading: isContainersLoading } = useGetDispatcherContainersQuery();
+  const { data: locationsData, isLoading: isLocationsLoading } =
+    useGetDispatcherLocationsQuery();
+  const { data: trucksData, isLoading: isTrucksLoading } =
+    useGetDispatcherTrucksQuery();
+  const { data: trailersData, isLoading: isTrailersLoading } =
+    useGetDispatcherTrailersQuery();
+  const { data: containersData, isLoading: isContainersLoading } =
+    useGetDispatcherContainersQuery();
 
   const [createTransportPlan, { isLoading: isCreating }] =
     useCreateDispatcherTransportPlanMutation();
 
   const locations: LocationItem[] = locationsData?.data ?? [];
 
-  const trucks = useMemo(() => sortByStatus(trucksData?.data ?? []), [trucksData]);
-  const trailers = useMemo(() => sortByStatus(trailersData?.data ?? []), [trailersData]);
-  const containers = useMemo(() => sortByStatus(containersData?.data ?? []), [containersData]);
+  const trucks = useMemo(
+    () => sortByStatus(trucksData?.data ?? []),
+    [trucksData]
+  );
+  const trailers = useMemo(
+    () => sortByStatus(trailersData?.data ?? []),
+    [trailersData]
+  );
+  const containers = useMemo(
+    () => sortByStatus(containersData?.data ?? []),
+    [containersData]
+  );
 
   const truckDepotLocations = useMemo(
     () => locations.filter((location) => location.type === 'DEPOT_TRUCK'),
@@ -85,7 +117,9 @@ export function Step2PlanSetup({
     if (isAdding) {
       setTruckReturnDepots((prev) => ({
         ...prev,
-        [truck.id]: prev[truck.id] ?? (truck.currentLocationCode ? [truck.currentLocationCode] : []),
+        [truck.id]:
+          prev[truck.id] ??
+          (truck.currentLocationCode ? [truck.currentLocationCode] : []),
       }));
     }
   };
@@ -107,7 +141,8 @@ export function Step2PlanSetup({
       setTrailerReturnDepots((prev) => ({
         ...prev,
         [trailer.id]:
-          prev[trailer.id] ?? (trailer.currentLocationCode ? [trailer.currentLocationCode] : []),
+          prev[trailer.id] ??
+          (trailer.currentLocationCode ? [trailer.currentLocationCode] : []),
       }));
     }
   };
@@ -129,7 +164,10 @@ export function Step2PlanSetup({
       setContainerReturnDepots((prev) => ({
         ...prev,
         [container.id]:
-          prev[container.id] ?? (container.currentLocationCode ? [container.currentLocationCode] : []),
+          prev[container.id] ??
+          (container.currentLocationCode
+            ? [container.currentLocationCode]
+            : []),
       }));
     }
   };
@@ -232,8 +270,9 @@ export function Step2PlanSetup({
     <div className='flex flex-col gap-6'>
       <div className='flex items-center justify-between'>
         <p className='text-sm text-muted-foreground'>
-          {selectedRequestIds.size} request{selectedRequestIds.size > 1 ? 's' : ''} selected -
-          {' '}select resources and configure return depots per row.
+          {selectedRequestIds.size} request
+          {selectedRequestIds.size > 1 ? 's' : ''} selected - select resources
+          and configure return depots per row.
         </p>
         <div className='flex items-center gap-2'>
           <Button

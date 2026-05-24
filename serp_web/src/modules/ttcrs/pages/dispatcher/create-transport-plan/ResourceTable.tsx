@@ -43,7 +43,8 @@ export function ResourceTable<T extends { id: number }>({
   headers,
   depotColumn,
 }: ResourceTableProps<T>) {
-  const allSelected = items.length > 0 && items.every((item) => selectedIds.has(item.id));
+  const allSelected =
+    items.length > 0 && items.every((item) => selectedIds.has(item.id));
 
   const toggleAll = () => {
     if (allSelected) {
@@ -97,7 +98,9 @@ export function ResourceTable<T extends { id: number }>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              [...Array(3)].map((_, index) => <SkeletonRow key={index} cols={totalHeaders + 1} />)
+              [...Array(3)].map((_, index) => (
+                <SkeletonRow key={index} cols={totalHeaders + 1} />
+              ))
             ) : items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={totalHeaders + 1}>
@@ -112,18 +115,23 @@ export function ResourceTable<T extends { id: number }>({
                   key={item.id}
                   className={cn(
                     'cursor-pointer',
-                    selectedIds.has(item.id) && 'bg-orange-50 dark:bg-orange-950/20'
+                    selectedIds.has(item.id) &&
+                      'bg-orange-50 dark:bg-orange-950/20'
                   )}
                   onClick={() => onToggle(item)}
                 >
-                  <TableCell className='px-3 py-2' onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    className='px-3 py-2'
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={selectedIds.has(item.id)}
                       onCheckedChange={() => onToggle(item)}
                     />
                   </TableCell>
                   {renderRow(item)}
-                  {depotColumn && depotColumn.renderCell(item, selectedIds.has(item.id))}
+                  {depotColumn &&
+                    depotColumn.renderCell(item, selectedIds.has(item.id))}
                 </TableRow>
               ))
             )}

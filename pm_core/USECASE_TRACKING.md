@@ -190,7 +190,7 @@
 |------------|------|--------|-------------------|
 | UC-PM-176 | Create Issue Link | ✅ Implemented | `CreateIssueLinkCommandHandler` |
 | UC-PM-177 | Delete Issue Link | ✅ Implemented | `DeleteIssueLinkCommandHandler` |
-| UC-PM-178 | List Issue Links | ✅ Implemented | `ListIssueLinksQueryHandler` |
+| UC-PM-178 | List Issue Links | ✅ Implemented | `ListWorkItemLinksQueryHandler` |
 
 ### ✅ Worklog (5/5 implemented)
 

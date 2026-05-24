@@ -124,6 +124,7 @@ class ProjectComponentHandlersTest {
         assertEquals(USER_ID, contextCaptor.getValue().getUserId());
         assertEquals(Set.of("dev-team"), contextCaptor.getValue().getGroupKeys());
         assertEquals("Backend", result.name());
+        assertEquals(4L, result.issueCount());
     }
 
     @Test
@@ -149,6 +150,7 @@ class ProjectComponentHandlersTest {
         );
         verify(projectComponentService).updateComponent(eq(COMPONENT_ID), eq(PROJECT_ID), any(), eq(TENANT_ID), eq(USER_ID));
         assertEquals("Frontend", result.name());
+        assertEquals(4L, result.issueCount());
     }
 
     @Test
@@ -225,6 +227,7 @@ class ProjectComponentHandlersTest {
         );
         assertEquals(1, result.items().size());
         assertEquals(2L, result.totalItems());
+        assertEquals(4L, result.items().getFirst().issueCount());
     }
 
     private ProjectEntity project() {
@@ -242,6 +245,7 @@ class ProjectComponentHandlersTest {
                 .name(name)
                 .description(name + " component")
                 .assigneeType("PROJECT_DEFAULT")
+                .issueCount(4L)
                 .updatedBy(USER_ID)
                 .build();
     }

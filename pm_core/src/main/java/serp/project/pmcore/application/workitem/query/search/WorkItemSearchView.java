@@ -6,6 +6,7 @@
 package serp.project.pmcore.application.workitem.query.search;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -98,12 +99,5 @@ public record WorkItemSearchView(
                 reporter != null ? reporter.displayName() : null,
                 reporter != null ? reporter.avatarUrl() : null
         );
-    }
-
-    public record UserSummary(
-            Long id,
-            String displayName,
-            String avatarUrl
-    ) {
     }
 }

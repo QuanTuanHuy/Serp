@@ -30,7 +30,11 @@ export function ReturnDepotCell({
   onRemove,
 }: ReturnDepotCellProps) {
   if (!isSelected) {
-    return <TableCell className='px-3 py-2 text-xs text-muted-foreground'>-</TableCell>;
+    return (
+      <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
+        -
+      </TableCell>
+    );
   }
 
   const remaining = availableDepots.filter(
@@ -71,7 +75,10 @@ export function ReturnDepotCell({
                 Add
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='start' className='max-h-48 overflow-y-auto'>
+            <DropdownMenuContent
+              align='start'
+              className='max-h-48 overflow-y-auto'
+            >
               {remaining.map((depot) => (
                 <DropdownMenuItem
                   key={depot.locationCode}
@@ -86,7 +93,9 @@ export function ReturnDepotCell({
         )}
 
         {depotCodes.length === 0 && remaining.length === 0 && (
-          <span className='text-xs italic text-muted-foreground'>No depots available</span>
+          <span className='text-xs italic text-muted-foreground'>
+            No depots available
+          </span>
         )}
       </div>
     </TableCell>

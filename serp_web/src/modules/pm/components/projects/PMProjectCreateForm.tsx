@@ -9,7 +9,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarDays, FolderKanban, Shield, UserRound } from 'lucide-react';
-import { z } from 'zod';
 import {
   Alert,
   AlertDescription,
@@ -39,7 +38,6 @@ import type {
   PMProjectBlueprintOption,
   PMProjectCreateCategoryOption,
   PMProjectCreateLeadOption,
-  PMProjectVisibility,
 } from '../../types/project-create.types';
 import {
   PM_PROJECT_VISIBILITY_OPTIONS,
@@ -49,56 +47,12 @@ import {
 } from '../../utils/projectForm';
 import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
 import { PMProjectTemplatePicker } from './PMProjectTemplatePicker';
+import {
+  createProjectSchema,
+  type PMProjectCreateFormValues,
+} from './projectFormSchemas';
 
-const createProjectSchema = z
-  .object({
-    templateType: z
-      .enum(['BLANK', 'KANBAN', 'SCRUM'])
-      .nullable()
-      .refine((value) => value !== null, {
-        message: 'Choose one of the available templates.',
-      }),
-    name: z
-      .string()
-      .trim()
-      .min(1, 'Project name is required')
-      .max(120, 'Project name is too long'),
-    key: z
-      .string()
-      .trim()
-      .min(2, 'Project key is required')
-      .max(10, 'Project key must be 10 characters or fewer')
-      .regex(
-        /^[A-Z][A-Z0-9]{1,9}$/,
-        'Use 2-10 uppercase letters or numbers, starting with a letter'
-      ),
-    description: z
-      .string()
-      .trim()
-      .max(500, 'Description is too long')
-      .optional()
-      .or(z.literal('')),
-    leadId: z.string().min(1, 'Project lead is required'),
-    categoryId: z.string().optional().or(z.literal('')),
-    visibility: z.enum(['PRIVATE', 'TEAM', 'ORGANIZATION']),
-    startDate: z.string().optional().or(z.literal('')),
-    targetDate: z.string().optional().or(z.literal('')),
-  })
-  .superRefine((value, context) => {
-    if (
-      value.startDate &&
-      value.targetDate &&
-      value.targetDate < value.startDate
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Target date must be on or after the start date.',
-        path: ['targetDate'],
-      });
-    }
-  });
-
-export type PMProjectCreateFormValues = z.infer<typeof createProjectSchema>;
+export type { PMProjectCreateFormValues };
 
 interface PMProjectCreateFormProps {
   templateOptions: PMProjectBlueprintOption[];

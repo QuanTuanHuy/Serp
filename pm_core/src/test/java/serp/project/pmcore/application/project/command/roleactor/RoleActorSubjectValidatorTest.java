@@ -15,7 +15,7 @@ import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,13 +27,13 @@ import static org.mockito.Mockito.when;
 class RoleActorSubjectValidatorTest {
 
     @Mock
-    private IUserProfileClient userProfileClient;
+    private IUserService userService;
 
     private RoleActorSubjectValidator validator;
 
     @BeforeEach
     void setUp() {
-        validator = new RoleActorSubjectValidator(userProfileClient);
+        validator = new RoleActorSubjectValidator(userService);
     }
 
     @Test
@@ -77,7 +77,7 @@ class RoleActorSubjectValidatorTest {
 
     @Test
     void validateSubjectExistsForAddShouldRejectMissingUser() {
-        when(userProfileClient.getUserProfileById(eq(99L)))
+        when(userService.getUserById(eq(99L)))
                 .thenThrow(new AppException(ErrorCode.NOT_FOUND));
 
         assertThrows(
