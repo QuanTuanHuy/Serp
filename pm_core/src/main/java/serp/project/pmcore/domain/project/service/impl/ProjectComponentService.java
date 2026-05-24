@@ -65,18 +65,22 @@ public class ProjectComponentService implements IProjectComponentService {
         component.setDeletedAt(null);
         component.applyCreate(userId, System.currentTimeMillis());
 
-        return projectComponentPort.createComponent(component);
+        ProjectComponentEntity created = projectComponentPort.createComponent(component);
+        created.setIssueCount(0L);
+        return created;
     }
 
     @Override
     public ProjectComponentEntity getComponentById(Long componentId, Long projectId, Long tenantId) {
         ensureProjectExists(projectId, tenantId);
-        return projectComponentPort.getComponentById(componentId, projectId, tenantId)
+        ProjectComponentEntity component = projectComponentPort.getComponentById(componentId, projectId, tenantId)
                 .orElseThrow(() -> {
                     log.warn("Project component not found: componentId={}, projectId={}, tenantId={}",
                             componentId, projectId, tenantId);
                     return ResourceNotFoundException.component(componentId);
                 });
+        enrichIssueCounts(projectId, tenantId, java.util.List.of(component));
+        return component;
     }
 
     @Override
@@ -111,7 +115,9 @@ public class ProjectComponentService implements IProjectComponentService {
                                                              Long tenantId,
                                                              ProjectComponentListCriteria criteria) {
         ensureProjectExists(projectId, tenantId);
-        return projectComponentPort.listComponents(projectId, tenantId, criteria);
+        PageResult<ProjectComponentEntity> result = projectComponentPort.listComponents(projectId, tenantId, criteria);
+        enrichIssueCounts(projectId, tenantId, result.items());
+        return result;
     }
 
     @Override
@@ -148,6 +154,7 @@ public class ProjectComponentService implements IProjectComponentService {
 
         existing.applyUpdate(userId, System.currentTimeMillis());
         projectComponentPort.updateComponent(existing);
+        enrichIssueCounts(projectId, tenantId, java.util.List.of(existing));
         return existing;
     }
 
@@ -161,7 +168,36 @@ public class ProjectComponentService implements IProjectComponentService {
         existing.applyUpdate(userId, now);
         projectComponentPort.updateComponent(existing);
         projectComponentPort.deleteComponentLinks(componentId, tenantId);
+        existing.setIssueCount(0L);
         return existing;
+    }
+
+    private void enrichIssueCounts(Long projectId, Long tenantId, java.util.List<ProjectComponentEntity> components) {
+        if (components == null || components.isEmpty()) {
+            return;
+        }
+        java.util.List<Long> componentIds = components.stream()
+                .map(ProjectComponentEntity::getId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (componentIds.isEmpty()) {
+            components.forEach(component -> component.setIssueCount(0L));
+            return;
+        }
+
+        Map<Long, Long> counts = projectComponentPort.countActiveIssuesByComponentIds(
+                projectId,
+                tenantId,
+                componentIds
+        );
+        if (counts == null) {
+            counts = Map.of();
+        }
+        Map<Long, Long> issueCounts = counts;
+        components.forEach(component -> component.setIssueCount(
+                issueCounts.getOrDefault(component.getId(), 0L)
+        ));
     }
 
     private void ensureAtLeastOneMutableField(ProjectComponentUpdateData data) {

@@ -75,6 +75,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const statusIds = parseNumberList(searchParams.get('statusIds'));
   const priorityIds = parseNumberList(searchParams.get('priorityIds'));
   const reporterIds = parseNumberList(searchParams.get('reporterIds'));
+  const componentIds = parseNumberList(searchParams.get('componentIds'));
   const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const deferredKeyword = useDeferredValue(keyword.trim());
@@ -93,6 +94,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
       statusIds,
       priorityIds,
       reporterIds,
+      componentIds,
       enriched: true,
       page: 0,
       pageSize: 50,
@@ -203,6 +205,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
       statusIds: undefined,
       priorityIds: undefined,
       reporterIds: undefined,
+      componentIds: undefined,
     });
   };
 
@@ -213,6 +216,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
     statusIds,
     priorityIds,
     reporterIds,
+    componentIds,
   });
 
   const activeFilterChips = [
@@ -231,6 +235,9 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
       : null,
     reporterIds.length
       ? { key: 'reporterIds', label: `Reporter: ${reporterIds.length}` }
+      : null,
+    componentIds.length
+      ? { key: 'componentIds', label: `Component: ${componentIds.length}` }
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string }>;
 

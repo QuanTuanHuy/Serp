@@ -12,13 +12,18 @@ import type { PaginatedResponse } from '@/lib/store/api/types';
 import type {
   PMCreateProjectRequest,
   PMCreateProjectResponse,
+  PMCreateProjectComponentRequest,
+  PMDeleteProjectComponentResponse,
   PMListProjectsParams,
+  PMListProjectComponentsParams,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
+  PMProjectComponentApi,
   PMProjectSummaryDashboardApi,
   PMProjectSummaryApi,
   PMProjectDetailApi,
   PMProjectSummaryFilterParams,
+  PMUpdateProjectComponentRequest,
   PMUpdateProjectRequest,
   PMUpdateProjectResponse,
 } from '../types/api';
@@ -120,6 +125,37 @@ export const pmProjectApi = api.injectEndpoints({
       ],
     }),
 
+    getPmProjectComponents: builder.query<
+      PaginatedResponse<PMProjectComponentApi>,
+      { projectId: number; params?: PMListProjectComponentsParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/components`,
+        method: 'GET',
+        params: {
+          page: params?.page ?? 0,
+          pageSize: params?.pageSize ?? 50,
+          ...(params?.search ? { search: params.search } : {}),
+          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
+          ...(params?.sortDirection
+            ? { sortDirection: params.sortDirection }
+            : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMProjectComponentApi>(),
+      providesTags: (result, _error, { projectId }) =>
+        result?.data.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'pm/ProjectComponent' as const,
+                id,
+              })),
+              { type: 'pm/ProjectComponent' as const, id: projectId },
+            ]
+          : [{ type: 'pm/ProjectComponent' as const, id: projectId }],
+    }),
+
     createPmProject: builder.mutation<
       PMCreateProjectResponse,
       PMCreateProjectRequest
@@ -132,6 +168,22 @@ export const pmProjectApi = api.injectEndpoints({
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMCreateProjectResponse>(),
       invalidatesTags: [{ type: 'pm/Project' as const, id: 'LIST' }],
+    }),
+
+    createPmProjectComponent: builder.mutation<
+      PMProjectComponentApi,
+      { projectId: number; body: PMCreateProjectComponentRequest }
+    >({
+      query: ({ projectId, body }) => ({
+        url: `/projects/${projectId}/components`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectComponentApi>(),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/ProjectComponent' as const, id: projectId },
+      ],
     }),
 
     updatePmProject: builder.mutation<
@@ -148,6 +200,44 @@ export const pmProjectApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'pm/Project' as const, id },
         { type: 'pm/Project' as const, id: 'LIST' },
+      ],
+    }),
+
+    updatePmProjectComponent: builder.mutation<
+      PMProjectComponentApi,
+      {
+        projectId: number;
+        componentId: number;
+        body: PMUpdateProjectComponentRequest;
+      }
+    >({
+      query: ({ projectId, componentId, body }) => ({
+        url: `/projects/${projectId}/components/${componentId}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectComponentApi>(),
+      invalidatesTags: (_result, _error, { projectId, componentId }) => [
+        { type: 'pm/ProjectComponent' as const, id: componentId },
+        { type: 'pm/ProjectComponent' as const, id: projectId },
+      ],
+    }),
+
+    deletePmProjectComponent: builder.mutation<
+      PMDeleteProjectComponentResponse,
+      { projectId: number; componentId: number }
+    >({
+      query: ({ projectId, componentId }) => ({
+        url: `/projects/${projectId}/components/${componentId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMDeleteProjectComponentResponse>(),
+      invalidatesTags: (_result, _error, { projectId, componentId }) => [
+        { type: 'pm/ProjectComponent' as const, id: componentId },
+        { type: 'pm/ProjectComponent' as const, id: projectId },
       ],
     }),
 
@@ -186,8 +276,12 @@ export const {
   useGetPmProjectsQuery,
   useGetPmProjectByIdQuery,
   useGetPmProjectSummaryQuery,
+  useGetPmProjectComponentsQuery,
   useCreatePmProjectMutation,
+  useCreatePmProjectComponentMutation,
   useUpdatePmProjectMutation,
+  useUpdatePmProjectComponentMutation,
+  useDeletePmProjectComponentMutation,
   useArchivePmProjectMutation,
   useUnarchivePmProjectMutation,
 } = pmProjectApi;

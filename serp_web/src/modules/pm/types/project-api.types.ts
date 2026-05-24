@@ -30,6 +30,56 @@ export interface PMProjectCategoryApi {
   updatedBy?: number;
 }
 
+export type PMProjectComponentAssigneeType =
+  | 'PROJECT_DEFAULT'
+  | 'COMPONENT_LEAD'
+  | 'PROJECT_LEAD'
+  | 'UNASSIGNED';
+
+export interface PMProjectComponentApi {
+  id: number;
+  tenantId: number;
+  projectId: number;
+  name: string;
+  description?: string | null;
+  leadUserId?: number | null;
+  assigneeType: PMProjectComponentAssigneeType | string;
+  issueCount: number;
+  createdAt?: number | string | null;
+  createdBy?: number | null;
+  updatedAt?: number | string | null;
+  updatedBy?: number | null;
+}
+
+export interface PMListProjectComponentsParams {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+export interface PMCreateProjectComponentRequest {
+  name: string;
+  description?: string;
+  leadUserId?: number | null;
+  assigneeType?: PMProjectComponentAssigneeType;
+}
+
+export interface PMUpdateProjectComponentRequest {
+  name?: string;
+  description?: string | null;
+  leadUserId?: number | null;
+  assigneeType?: PMProjectComponentAssigneeType;
+}
+
+export interface PMDeleteProjectComponentResponse {
+  componentId: number;
+  deleted: boolean;
+  deletedAt?: number | null;
+  deletedBy?: number | null;
+}
+
 export interface PMCreateProjectRequest {
   name: string;
   key: string;

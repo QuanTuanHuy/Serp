@@ -46,6 +46,7 @@ export function getActiveFilterCount(filters: {
   statusIds: number[];
   priorityIds: number[];
   reporterIds: number[];
+  componentIds: number[];
 }): number {
   return countActiveFilters([
     filters.parentId,
@@ -54,5 +55,6 @@ export function getActiveFilterCount(filters: {
     filters.statusIds.length,
     filters.priorityIds.length,
     filters.reporterIds.length,
+    filters.componentIds.length,
   ]);
 }

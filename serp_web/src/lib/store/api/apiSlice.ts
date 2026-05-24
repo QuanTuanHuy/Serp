@@ -252,6 +252,7 @@ export const api = createApi({
     'Presence',
     // PM tags
     'pm/Project',
+    'pm/ProjectComponent',
     'pm/ProjectSummary',
     'pm/WorkItem',
     'pm/WorkItemComments',

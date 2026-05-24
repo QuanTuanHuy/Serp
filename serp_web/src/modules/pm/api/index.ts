@@ -5,12 +5,16 @@
 
 export {
   pmProjectApi,
+  useCreatePmProjectComponentMutation,
   useCreatePmProjectMutation,
+  useDeletePmProjectComponentMutation,
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
+  useGetPmProjectComponentsQuery,
   useGetPmProjectsQuery,
   useArchivePmProjectMutation,
   useUnarchivePmProjectMutation,
+  useUpdatePmProjectComponentMutation,
 } from './projectApi';
 export {
   pmWorkItemApi,
@@ -34,20 +38,25 @@ export {
 } from './workItemApi';
 export type {
   PMCreateProjectRequest,
+  PMCreateProjectComponentRequest,
   PMCreateProjectResponse,
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
   PMGetWorkItemBoardParams,
   PMGetWorkItemTimelineParams,
   PMIssueTypeApi,
+  PMListProjectComponentsParams,
   PMListProjectsParams,
   PMPriorityApi,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
+  PMProjectComponentApi,
+  PMProjectComponentAssigneeType,
   PMProjectScopedListParams,
   PMProjectSummaryApi,
   PMSearchWorkItemsParams,
   PMStatusApi,
+  PMUpdateProjectComponentRequest,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,
   PMWorkItemActivityApi,

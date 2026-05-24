@@ -24,5 +24,6 @@ public class ProjectComponentEntity extends BaseEntity {
     private String description;
     private Long leadUserId;
     private String assigneeType;
+    private Long issueCount;
     private Long deletedAt;
 }
