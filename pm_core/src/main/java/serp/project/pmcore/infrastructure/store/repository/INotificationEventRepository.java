@@ -19,4 +19,13 @@ public interface INotificationEventRepository extends JpaRepository<Notification
 
     @Query("SELECT e FROM NotificationEventModel e WHERE e.id = :id AND (e.tenantId = :tenantId OR e.tenantId = 0)")
     Optional<NotificationEventModel> findByIdAndTenantIdOrSystemTenant(@Param("id") Long id, @Param("tenantId") Long tenantId);
+
+    @Query("""
+            SELECT e FROM NotificationEventModel e
+            WHERE LOWER(e.eventKey) = LOWER(:eventKey)
+            AND (e.tenantId = :tenantId OR e.tenantId = 0)
+            ORDER BY CASE WHEN e.tenantId = :tenantId THEN 0 ELSE 1 END
+            """)
+    java.util.List<NotificationEventModel> findByEventKeyAndTenantIdOrSystemTenant(@Param("eventKey") String eventKey,
+                                                                                   @Param("tenantId") Long tenantId);
 }
