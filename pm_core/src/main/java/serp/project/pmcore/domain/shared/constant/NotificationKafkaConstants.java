@@ -15,7 +15,7 @@ public final class NotificationKafkaConstants {
 
     public static final String EVENT_NOTIFICATION_CREATE_REQUESTED = "notification.create.requested";
 
-    public static final String DEFAULT_CATEGORY = "PTM";
+    public static final String DEFAULT_CATEGORY = "PM";
     public static final String DEFAULT_TYPE = "INFO";
     public static final String DEFAULT_PRIORITY = "MEDIUM";
     public static final String DEFAULT_DELIVERY_CHANNEL = "IN_APP";
