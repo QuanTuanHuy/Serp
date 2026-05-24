@@ -3,18 +3,33 @@
  * Description: Part of Serp Project - PM work item board helpers
  */
 
+import {
+  countActiveFilters,
+  parseNumberList,
+  serializeNumberList,
+} from '../workItemView.utils';
+
 export type BoardFilterCriterion = 'assignee' | 'workType' | 'priority';
 
-export function parseNumberList(value: string | null): number[] {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((part) => Number(part))
-    .filter((item) => Number.isFinite(item));
+export { parseNumberList, serializeNumberList };
+
+export type BoardDragData =
+  | {
+      type: 'work-item';
+      workItemId: number;
+      statusId: number;
+    }
+  | {
+      type: 'column';
+      statusId: number;
+    };
+
+export function getBoardCardDndId(workItemId: number): string {
+  return `work-item:${workItemId}`;
 }
 
-export function serializeNumberList(values: number[]): string | undefined {
-  return values.length ? values.join(',') : undefined;
+export function getBoardColumnDndId(statusId: number): string {
+  return `status-column:${statusId}`;
 }
 
 export function getActiveBoardFilterCount(filters: {
@@ -22,9 +37,9 @@ export function getActiveBoardFilterCount(filters: {
   issueTypeIds: number[];
   priorityIds: number[];
 }): number {
-  return [
+  return countActiveFilters([
     filters.assigneeIds.length,
     filters.issueTypeIds.length,
     filters.priorityIds.length,
-  ].reduce((total, item) => total + item, 0);
+  ]);
 }

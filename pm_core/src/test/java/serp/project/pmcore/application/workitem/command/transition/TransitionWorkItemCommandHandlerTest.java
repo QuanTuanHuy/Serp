@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.workitem.command.transition.internal.ResolvedTransitionExecution;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
+import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
@@ -91,6 +92,8 @@ class TransitionWorkItemCommandHandlerTest {
     private JsonUtils jsonUtils;
     @Mock
     private TransitionWorkItemStatusValidator transitionWorkItemStatusValidator;
+    @Mock
+    private WorkItemHistoryRecorder workItemHistoryRecorder;
 
     private TransitionWorkItemCommandHandler handler;
 
@@ -109,7 +112,8 @@ class TransitionWorkItemCommandHandlerTest {
                 workItemCustomFieldValuePort,
                 outboxEventService,
                 jsonUtils,
-                transitionWorkItemStatusValidator
+                transitionWorkItemStatusValidator,
+                workItemHistoryRecorder
         );
     }
 
@@ -192,6 +196,14 @@ class TransitionWorkItemCommandHandlerTest {
         assertEquals(EventConstants.WorkItem.EventType.WORK_ITEM_STATUS_CHANGED, outboxEvent.getEventType());
         assertEquals(WORK_ITEM_ID, outboxEvent.getAggregateId());
         assertEquals(String.valueOf(PROJECT_ID), outboxEvent.getPartitionKey());
+        verify(workItemHistoryRecorder).recordChanges(
+                eq(TENANT_ID),
+                eq(WORK_ITEM_ID),
+                eq(USER_ID),
+                any(),
+                any(),
+                eq(List.of("resolution_id", "workflow_step_id", "status_id"))
+        );
     }
 
     @Test

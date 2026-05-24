@@ -116,7 +116,7 @@ export function MapPicker({ lat, lng, onPick, readonly }: MapPickerProps) {
 
     const map = L.map(containerRef.current).setView(
       hasInitialPin ? [initLat, initLng] : DEFAULT_CENTER,
-      hasInitialPin ? 13 : DEFAULT_ZOOM,
+      hasInitialPin ? 13 : DEFAULT_ZOOM
     );
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

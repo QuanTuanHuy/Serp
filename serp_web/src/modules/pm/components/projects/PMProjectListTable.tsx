@@ -54,11 +54,11 @@ export function PMProjectListTable({
   const rangeEnd = projects.length === 0 ? 0 : rangeStart + projects.length - 1;
 
   return (
-    <Card className='overflow-hidden rounded-2xl shadow-sm'>
+    <Card className='overflow-hidden rounded-2xl border border-border/80 bg-card/40 backdrop-blur-md shadow-sm'>
       <CardContent className='p-0'>
         <Table>
-          <TableHeader className='bg-muted/40'>
-            <TableRow className='hover:bg-muted/40'>
+          <TableHeader className='bg-muted/30 border-b border-border/60'>
+            <TableRow className='hover:bg-transparent border-b border-border/60'>
               <TableHead className='h-12 px-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground'>
                 Project Name
               </TableHead>
@@ -120,7 +120,7 @@ export function PMProjectListTable({
           </TableBody>
         </Table>
 
-        <div className='flex flex-col gap-3 border-t bg-background px-6 py-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between'>
+        <div className='flex flex-col gap-3 border-t border-border/60 bg-muted/20 px-6 py-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between'>
           <div>
             {isLoading
               ? 'Loading project results'
@@ -140,8 +140,9 @@ export function PMProjectListTable({
                 size='sm'
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage <= 1}
+                className='h-8 bg-background/50 border-border/60 hover:bg-muted/70 text-xs font-semibold rounded-lg'
               >
-                <ChevronLeft className='mr-1 h-4 w-4' />
+                <ChevronLeft className='mr-1 h-3.5 w-3.5' />
                 Previous
               </Button>
               <Button
@@ -150,9 +151,10 @@ export function PMProjectListTable({
                 size='sm'
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
+                className='h-8 bg-background/50 border-border/60 hover:bg-muted/70 text-xs font-semibold rounded-lg'
               >
                 Next
-                <ChevronRight className='ml-1 h-4 w-4' />
+                <ChevronRight className='ml-1 h-3.5 w-3.5' />
               </Button>
             </div>
           </div>

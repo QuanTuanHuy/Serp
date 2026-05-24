@@ -10,6 +10,7 @@ import serp.project.pmcore.domain.project.query.ProjectComponentListCriteria;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface IProjectComponentPort {
@@ -20,6 +21,8 @@ public interface IProjectComponentPort {
     List<ProjectComponentEntity> getComponentsByIds(List<Long> componentIds, Long projectId, Long tenantId);
 
     PageResult<ProjectComponentEntity> listComponents(Long projectId, Long tenantId, ProjectComponentListCriteria criteria);
+
+    Map<Long, Long> countActiveIssuesByComponentIds(Long projectId, Long tenantId, List<Long> componentIds);
 
     void updateComponent(ProjectComponentEntity component);
 

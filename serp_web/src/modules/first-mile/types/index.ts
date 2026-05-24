@@ -310,6 +310,61 @@ export interface SecondMileVehicleImportItem {
   source_rows?: number[];
 }
 
+export type SecondMileRouteDestinationType = 'HUB' | 'POST_OFFICE';
+
+export type SecondMileRouteStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface SecondMileRoute {
+  id: number;
+  routeCode: string;
+  routeName: string;
+  originHubId: number;
+  destinationType: SecondMileRouteDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  vehicleId?: number;
+  estimatedDistanceKm?: number;
+  estimatedDurationMinutes?: number;
+  fixedDepartureTime?: string;
+  status: SecondMileRouteStatus;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface SecondMileRouteListFilters {
+  keyword?: string;
+  routeCode?: string;
+  originHubId?: number;
+  destinationType?: SecondMileRouteDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  vehicleId?: number;
+  status?: SecondMileRouteStatus;
+}
+
+export interface SecondMileCreateRouteRequest {
+  route_code: string;
+  route_name: string;
+  origin_hub_id: number;
+  destination_type: SecondMileRouteDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  vehicle_id?: number;
+  estimated_distance_km?: number;
+  estimated_duration_minutes?: number;
+  fixed_departure_time?: string;
+  status?: SecondMileRouteStatus;
+  note?: string;
+}
+
+export type SecondMileUpdateRouteRequest = SecondMileCreateRouteRequest & {
+  status: SecondMileRouteStatus;
+};
+
 export type FirstMileOrderStatus =
   | 'CREATED'
   | 'ASSIGNED_TO_PICKUP'

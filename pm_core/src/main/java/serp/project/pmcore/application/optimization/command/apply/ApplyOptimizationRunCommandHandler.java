@@ -354,6 +354,7 @@ public class ApplyOptimizationRunCommandHandler
                                                      Long workItemId) {
         OptimizationRunItemEntity item = itemsByWorkItemId.get(workItemId);
         if (item == null) {
+            log.error("Optimization run item not found for runId={} workItemId={}", command.runId(), workItemId);
             throw new ResourceNotFoundException(DomainErrorCode.NOT_FOUND,
                     "Optimization run item not found: runId=" + command.runId() + ", workItemId=" + workItemId);
         }

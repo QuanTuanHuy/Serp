@@ -5,18 +5,8 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  CalendarDays,
-  FolderKanban,
-  Lock,
-  Shield,
-  TriangleAlert,
-  UserRound,
-} from 'lucide-react';
-import { z } from 'zod';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -42,9 +32,20 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { PM_PROJECT_LIST_MOCKS } from '../../mocks/projectList';
+import { useAppSelector } from '@/shared/hooks';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  CalendarDays,
+  FolderKanban,
+  Lock,
+  Shield,
+  TriangleAlert,
+  UserRound,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useGetProjectCategoriesQuery } from '../../api/projectApi';
 import type { PMProjectDetail } from '../../types/project-detail.types';
-import type { PMProjectVisibility } from '../../types/project-create.types';
 import type { PMProjectStatus } from '../../types/project-list.types';
 import {
   PM_PROJECT_VISIBILITY_OPTIONS,
@@ -52,6 +53,10 @@ import {
   normalizePMProjectKey,
 } from '../../utils/projectForm';
 import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
+import {
+  editProjectSchema,
+  type PMProjectEditFormValues,
+} from './projectFormSchemas';
 
 const EDITABLE_STATUS_OPTIONS: { value: PMProjectStatus; label: string }[] = [
   { value: 'ACTIVE', label: 'Active' },
@@ -59,50 +64,7 @@ const EDITABLE_STATUS_OPTIONS: { value: PMProjectStatus; label: string }[] = [
   { value: 'ARCHIVED', label: 'Archived' },
 ];
 
-const editProjectSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, 'Project name is required')
-      .max(120, 'Project name is too long'),
-    key: z
-      .string()
-      .trim()
-      .min(2, 'Project key is required')
-      .max(12, 'Project key must be 12 characters or fewer')
-      .regex(
-        /^[A-Z0-9]+(?:-[A-Z0-9]+)*$/,
-        'Use uppercase letters, numbers, and hyphens only'
-      ),
-    description: z
-      .string()
-      .trim()
-      .max(500, 'Description is too long')
-      .optional()
-      .or(z.literal('')),
-    leadId: z.string().min(1, 'Project lead is required'),
-    category: z.string().min(1, 'Category is required'),
-    visibility: z.enum(['PRIVATE', 'TEAM', 'ORGANIZATION']),
-    startDate: z.string().min(1, 'Start date is required'),
-    targetDate: z.string().min(1, 'Target date is required'),
-    status: z.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']),
-  })
-  .superRefine((value, context) => {
-    if (
-      value.startDate &&
-      value.targetDate &&
-      value.targetDate < value.startDate
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Target date must be on or after the start date.',
-        path: ['targetDate'],
-      });
-    }
-  });
-
-export type PMProjectEditFormValues = z.infer<typeof editProjectSchema>;
+export type { PMProjectEditFormValues };
 
 interface PMProjectEditFormProps {
   project: PMProjectDetail;
@@ -148,19 +110,60 @@ export function PMProjectEditForm({
   const targetDate = form.watch('targetDate');
   const status = form.watch('status');
 
-  const categoryOptions = useMemo(
-    () => [...new Set(PM_PROJECT_LIST_MOCKS.map((item) => item.category))],
-    []
-  );
+  const { data: categoriesResponse } = useGetProjectCategoriesQuery({
+    page: 0,
+    pageSize: 100,
+  });
+  const categoryOptions = useMemo(() => {
+    const list = (categoriesResponse?.data?.items || []).map((category) => ({
+      id: String(category.id),
+      name: category.name,
+    }));
 
-  const leadOptions = useMemo(
-    () =>
-      PM_PROJECT_LIST_MOCKS.map((item) => item.lead).filter(
-        (lead, index, array) =>
-          array.findIndex((candidate) => candidate.id === lead.id) === index
-      ),
-    []
+    if (project.category && project.category !== 'ALL') {
+      const exists = list.some((cat) => cat.id === project.category);
+      if (!exists) {
+        list.unshift({
+          id: project.category,
+          name:
+            (project as any).categoryName || `Category #${project.category}`,
+        });
+      }
+    }
+
+    return list;
+  }, [categoriesResponse, project.category, (project as any).categoryName]);
+
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: usersResponse } = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      status: 'ACTIVE',
+    },
+    {
+      skip: !organizationId,
+    }
   );
+  const leadOptions = useMemo(() => {
+    const list = (usersResponse?.data?.items || []).map((user) => ({
+      id: String(user.id),
+      name:
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.email ||
+        `User #${user.id}`,
+    }));
+
+    if (project.lead && !list.some((lead) => lead.id === project.lead.id)) {
+      list.unshift({
+        id: project.lead.id,
+        name: project.lead.name,
+      });
+    }
+
+    return list;
+  }, [usersResponse, project.lead]);
 
   const selectedLead =
     leadOptions.find((lead) => lead.id === selectedLeadId) || project.lead;
@@ -339,8 +342,8 @@ export function PMProjectEditForm({
                     </FormControl>
                     <SelectContent>
                       {categoryOptions.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

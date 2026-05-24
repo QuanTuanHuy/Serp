@@ -18,7 +18,7 @@ import {
   useCreatePmProjectMutation,
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
-} from '../api';
+} from '../api/projectApi';
 import {
   PMProjectCreateForm,
   type PMProjectCreateFormValues,

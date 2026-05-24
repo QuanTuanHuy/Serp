@@ -16,7 +16,7 @@ import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectCategoryService;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 import java.util.List;
 import java.util.Set;
@@ -36,7 +36,7 @@ class ListProjectsQueryHandlerTest {
     private IProjectReadPort projectReadPort;
 
     @Mock
-    private IUserProfileClient userProfileClient;
+    private IUserService userService;
     
     @Mock
     private IProjectCategoryService projectCategoryService;
@@ -45,7 +45,7 @@ class ListProjectsQueryHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ListProjectsQueryHandler(projectReadPort, userProfileClient, projectCategoryService);
+        handler = new ListProjectsQueryHandler(projectReadPort, userService, projectCategoryService);
     }
 
     @Test

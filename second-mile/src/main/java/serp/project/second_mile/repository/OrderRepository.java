@@ -14,4 +14,6 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
     Optional<Order> findByOrderCodeAndTenantId(String orderCode, Long tenantId);
+
+    Optional<Order> findByOrderCodeIgnoreCaseAndTenantId(String orderCode, Long tenantId);
 }

@@ -54,19 +54,22 @@ const TYPE_TABS: { label: string; value: LocationType | 'ALL' }[] = [
 ];
 
 const TYPE_CLASS: Record<LocationType, string> = {
-  PORT:            'bg-blue-500 hover:bg-blue-500/90 text-white border-transparent',
-  WAREHOUSE:       'bg-green-500 hover:bg-green-500/90 text-white border-transparent',
-  DEPOT_CONTAINER: 'bg-amber-500 hover:bg-amber-500/90 text-white border-transparent',
-  DEPOT_TRUCK:     'bg-purple-500 hover:bg-purple-500/90 text-white border-transparent',
-  DEPOT_TRAILER:   'bg-rose-500 hover:bg-rose-500/90 text-white border-transparent',
+  PORT: 'bg-blue-500 hover:bg-blue-500/90 text-white border-transparent',
+  WAREHOUSE: 'bg-green-500 hover:bg-green-500/90 text-white border-transparent',
+  DEPOT_CONTAINER:
+    'bg-amber-500 hover:bg-amber-500/90 text-white border-transparent',
+  DEPOT_TRUCK:
+    'bg-purple-500 hover:bg-purple-500/90 text-white border-transparent',
+  DEPOT_TRAILER:
+    'bg-rose-500 hover:bg-rose-500/90 text-white border-transparent',
 };
 
 const TYPE_LABEL: Record<LocationType, string> = {
-  PORT:            'Port',
-  WAREHOUSE:       'Warehouse',
+  PORT: 'Port',
+  WAREHOUSE: 'Warehouse',
   DEPOT_CONTAINER: 'Depot – Container',
-  DEPOT_TRUCK:     'Depot – Truck',
-  DEPOT_TRAILER:   'Depot – Trailer',
+  DEPOT_TRUCK: 'Depot – Truck',
+  DEPOT_TRAILER: 'Depot – Trailer',
 };
 
 type SortableLocationField = 'locationCode' | 'type' | 'lat' | 'lng';
@@ -146,8 +149,12 @@ export function LocationsPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(null);
-  const [activeTypeTab, setActiveTypeTab] = useState<LocationType | 'ALL'>('ALL');
+  const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(
+    null
+  );
+  const [activeTypeTab, setActiveTypeTab] = useState<LocationType | 'ALL'>(
+    'ALL'
+  );
   const [sortBy, setSortBy] = useState<SortableLocationField>('locationCode');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(0);
@@ -301,28 +308,44 @@ export function LocationsPage() {
                     onClick={() => handleSort('locationCode')}
                   >
                     Location Code
-                    <SortIcon field='locationCode' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='locationCode'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('type')}
                   >
                     Type
-                    <SortIcon field='type' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='type'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('lat')}
                   >
                     Latitude
-                    <SortIcon field='lat' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='lat'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                   <TableHead
                     className={sortableHeadClass}
                     onClick={() => handleSort('lng')}
                   >
                     Longitude
-                    <SortIcon field='lng' sortBy={sortBy} sortDirection={sortDirection} />
+                    <SortIcon
+                      field='lng'
+                      sortBy={sortBy}
+                      sortDirection={sortDirection}
+                    />
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -352,12 +375,16 @@ export function LocationsPage() {
                         <TypeBadge type={loc.type} />
                       </TableCell>
                       <TableCell className='px-4 py-3 font-mono text-sm text-foreground'>
-                        {loc.lat !== null ? loc.lat : (
+                        {loc.lat !== null ? (
+                          loc.lat
+                        ) : (
                           <span className='text-muted-foreground'>—</span>
                         )}
                       </TableCell>
                       <TableCell className='px-4 py-3 font-mono text-sm text-foreground'>
-                        {loc.lng !== null ? loc.lng : (
+                        {loc.lng !== null ? (
+                          loc.lng
+                        ) : (
                           <span className='text-muted-foreground'>—</span>
                         )}
                       </TableCell>

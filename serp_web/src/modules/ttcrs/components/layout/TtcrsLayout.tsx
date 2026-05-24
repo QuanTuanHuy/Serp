@@ -7,7 +7,10 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
-import { TtcrsSidebarProvider, useTtcrsSidebar } from '../../contexts/TtcrsSidebarContext';
+import {
+  TtcrsSidebarProvider,
+  useTtcrsSidebar,
+} from '../../contexts/TtcrsSidebarContext';
 import { TtcrsSidebar } from './TtcrsSidebar';
 import { TtcrsHeader } from './TtcrsHeader';
 
@@ -34,9 +37,7 @@ const TtcrsLayoutContent: React.FC<TtcrsLayoutProps> = ({ children }) => {
       >
         <TtcrsHeader scrollContainerRef={containerRef} />
 
-        <main className='flex-1'>
-          {children}
-        </main>
+        <main className='flex-1'>{children}</main>
       </div>
     </div>
   );

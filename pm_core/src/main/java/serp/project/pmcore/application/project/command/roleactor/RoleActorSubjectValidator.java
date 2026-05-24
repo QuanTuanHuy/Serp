@@ -14,7 +14,7 @@ import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 import java.util.Locale;
 
@@ -23,7 +23,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class RoleActorSubjectValidator {
 
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
 
     public ProjectRoleActorSubjectType validateAndNormalizeSubjectType(String rawSubjectType) {
         if (rawSubjectType == null || rawSubjectType.isBlank()) {
@@ -88,7 +88,7 @@ public class RoleActorSubjectValidator {
         log.info("Validating user existence: userId={}", userId);
 
         try {
-            var profile = userProfileClient.getUserProfileById(userId);
+            var profile = userService.getUserById(userId);
             if (profile == null) {
                 throw ResourceNotFoundException.user(userId);
             }

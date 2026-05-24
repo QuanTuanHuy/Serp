@@ -71,12 +71,37 @@ const INITIAL_FORM: FormState = {
 // Time window fields required for each request type
 const TIME_WINDOW_FIELDS: Record<
   RequestType,
-  { earlyAtSrc: boolean; lateAtSrc: boolean; earlyAtDest: boolean; lateAtDest: boolean }
+  {
+    earlyAtSrc: boolean;
+    lateAtSrc: boolean;
+    earlyAtDest: boolean;
+    lateAtDest: boolean;
+  }
 > = {
-  OF: { earlyAtSrc: true,  lateAtSrc: false, earlyAtDest: false, lateAtDest: true  },
-  IF: { earlyAtSrc: true,  lateAtSrc: true,  earlyAtDest: true,  lateAtDest: true  },
-  OE: { earlyAtSrc: true,  lateAtSrc: true,  earlyAtDest: true,  lateAtDest: true  },
-  IE: { earlyAtSrc: false, lateAtSrc: false,  earlyAtDest: false, lateAtDest: true  },
+  OF: {
+    earlyAtSrc: true,
+    lateAtSrc: false,
+    earlyAtDest: false,
+    lateAtDest: true,
+  },
+  IF: {
+    earlyAtSrc: true,
+    lateAtSrc: true,
+    earlyAtDest: true,
+    lateAtDest: true,
+  },
+  OE: {
+    earlyAtSrc: true,
+    lateAtSrc: true,
+    earlyAtDest: true,
+    lateAtDest: true,
+  },
+  IE: {
+    earlyAtSrc: false,
+    lateAtSrc: false,
+    earlyAtDest: false,
+    lateAtDest: true,
+  },
 };
 
 const REQUEST_TYPES: { value: RequestType; label: string }[] = [
@@ -100,7 +125,9 @@ export function CreateRequestDialog({
   const organizationId = user?.organizationId;
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FormState, string>>
+  >({});
 
   // Fetch locations for dropdowns
   const { data: locationsData, isLoading: locationsLoading } =
@@ -142,10 +169,17 @@ export function CreateRequestDialog({
 
     if (!form.customerId) next.customerId = 'Please select a customer';
     if (!form.type) next.type = 'Please select a request type';
-    if (!form.srcLocationCode) next.srcLocationCode = 'Please select a source location';
-    if (!form.destLocationCode) next.destLocationCode = 'Please select a destination location';
-    if (form.srcLocationCode && form.destLocationCode && form.srcLocationCode === form.destLocationCode) {
-      next.destLocationCode = 'Destination location must be different from source location';
+    if (!form.srcLocationCode)
+      next.srcLocationCode = 'Please select a source location';
+    if (!form.destLocationCode)
+      next.destLocationCode = 'Please select a destination location';
+    if (
+      form.srcLocationCode &&
+      form.destLocationCode &&
+      form.srcLocationCode === form.destLocationCode
+    ) {
+      next.destLocationCode =
+        'Destination location must be different from source location';
     }
 
     const qty = parseInt(form.quantity, 10);
@@ -168,8 +202,9 @@ export function CreateRequestDialog({
     e.preventDefault();
     if (!validate()) return;
 
-    const timeFields =
-      form.type ? TIME_WINDOW_FIELDS[form.type as RequestType] : undefined;
+    const timeFields = form.type
+      ? TIME_WINDOW_FIELDS[form.type as RequestType]
+      : undefined;
 
     const payload: CreateRequestPayload = {
       customerId: parseInt(form.customerId, 10),
@@ -179,10 +214,14 @@ export function CreateRequestDialog({
       quantity: parseInt(form.quantity, 10),
       weight: form.weight ? parseFloat(form.weight) : null,
       dropTrailerRequired: form.dropTrailerRequired,
-      earlyAtSrc: timeFields?.earlyAtSrc && form.earlyAtSrc ? form.earlyAtSrc : null,
-      lateAtSrc:  timeFields?.lateAtSrc  && form.lateAtSrc  ? form.lateAtSrc  : null,
-      earlyAtDest: timeFields?.earlyAtDest && form.earlyAtDest ? form.earlyAtDest : null,
-      lateAtDest:  timeFields?.lateAtDest  && form.lateAtDest  ? form.lateAtDest  : null,
+      earlyAtSrc:
+        timeFields?.earlyAtSrc && form.earlyAtSrc ? form.earlyAtSrc : null,
+      lateAtSrc:
+        timeFields?.lateAtSrc && form.lateAtSrc ? form.lateAtSrc : null,
+      earlyAtDest:
+        timeFields?.earlyAtDest && form.earlyAtDest ? form.earlyAtDest : null,
+      lateAtDest:
+        timeFields?.lateAtDest && form.lateAtDest ? form.lateAtDest : null,
     };
 
     try {
@@ -196,28 +235,33 @@ export function CreateRequestDialog({
     }
   }
 
-  const selectedTypeFields =
-    form.type ? TIME_WINDOW_FIELDS[form.type as RequestType] : null;
+  const selectedTypeFields = form.type
+    ? TIME_WINDOW_FIELDS[form.type as RequestType]
+    : null;
 
   const isLoading = locationsLoading || usersLoading;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-[600px]'>
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
+          <DialogTitle className='text-xl font-semibold'>
             Create New Request
           </DialogTitle>
         </DialogHeader>
 
-        <form id={formId} onSubmit={handleSubmit} className="space-y-5 pt-2">
-
+        <form id={formId} onSubmit={handleSubmit} className='space-y-5 pt-2'>
           {/* Row 1: Customer + Quantity */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className='grid grid-cols-2 gap-4'>
             {/* Customer */}
-            <div className="min-w-0 space-y-1.5">
+            <div className='min-w-0 space-y-1.5'>
               <Label htmlFor={`${formId}-customer`}>
-                Customer <span className="text-destructive">*</span>
+                Customer <span className='text-destructive'>*</span>
               </Label>
               <Select
                 value={form.customerId}
@@ -232,13 +276,13 @@ export function CreateRequestDialog({
                   )}
                 >
                   <SelectValue
-                    className="truncate"
+                    className='truncate'
                     placeholder={usersLoading ? 'Loading…' : 'Select customer'}
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.length === 0 && !usersLoading && (
-                    <SelectItem value="__none__" disabled>
+                    <SelectItem value='__none__' disabled>
                       No customers found
                     </SelectItem>
                   )}
@@ -250,45 +294,42 @@ export function CreateRequestDialog({
                 </SelectContent>
               </Select>
               {errors.customerId && (
-                <p className="text-xs text-destructive">{errors.customerId}</p>
+                <p className='text-xs text-destructive'>{errors.customerId}</p>
               )}
             </div>
 
             {/* Quantity */}
-            <div className="min-w-0 space-y-1.5">
+            <div className='min-w-0 space-y-1.5'>
               <Label htmlFor={`${formId}-quantity`}>
-                Quantity <span className="text-destructive">*</span>
+                Quantity <span className='text-destructive'>*</span>
               </Label>
               <Input
                 id={`${formId}-quantity`}
-                type="number"
+                type='number'
                 min={1}
                 max={100}
                 value={form.quantity}
                 onChange={(e) => set('quantity', e.target.value)}
                 className={cn(errors.quantity && 'border-destructive')}
-                placeholder="1"
+                placeholder='1'
               />
               {errors.quantity && (
-                <p className="text-xs text-destructive">{errors.quantity}</p>
+                <p className='text-xs text-destructive'>{errors.quantity}</p>
               )}
             </div>
           </div>
 
           {/* Row 2: Type */}
-          <div className="space-y-1.5">
+          <div className='space-y-1.5'>
             <Label htmlFor={`${formId}-type`}>
-              Request Type <span className="text-destructive">*</span>
+              Request Type <span className='text-destructive'>*</span>
             </Label>
-            <Select
-              value={form.type}
-              onValueChange={(v) => set('type', v)}
-            >
+            <Select value={form.type} onValueChange={(v) => set('type', v)}>
               <SelectTrigger
                 id={`${formId}-type`}
                 className={cn('w-full', errors.type && 'border-destructive')}
               >
-                <SelectValue placeholder="Select request type" />
+                <SelectValue placeholder='Select request type' />
               </SelectTrigger>
               <SelectContent>
                 {REQUEST_TYPES.map((t) => (
@@ -299,16 +340,16 @@ export function CreateRequestDialog({
               </SelectContent>
             </Select>
             {errors.type && (
-              <p className="text-xs text-destructive">{errors.type}</p>
+              <p className='text-xs text-destructive'>{errors.type}</p>
             )}
           </div>
 
           {/* Row 3: Origin + Destination */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className='grid grid-cols-2 gap-4'>
             {/* Origin */}
-            <div className="min-w-0 space-y-1.5">
+            <div className='min-w-0 space-y-1.5'>
               <Label htmlFor={`${formId}-src`}>
-                Origin <span className="text-destructive">*</span>
+                Origin <span className='text-destructive'>*</span>
               </Label>
               <Select
                 value={form.srcLocationCode}
@@ -322,13 +363,17 @@ export function CreateRequestDialog({
                     errors.srcLocationCode && 'border-destructive'
                   )}
                 >
-                  <SelectValue placeholder={locationsLoading ? 'Loading…' : 'Select origin'} />
+                  <SelectValue
+                    placeholder={
+                      locationsLoading ? 'Loading…' : 'Select origin'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.locationCode}>
                       {loc.locationCode}
-                      <span className="ml-1.5 text-xs text-muted-foreground">
+                      <span className='ml-1.5 text-xs text-muted-foreground'>
                         ({loc.type})
                       </span>
                     </SelectItem>
@@ -336,14 +381,16 @@ export function CreateRequestDialog({
                 </SelectContent>
               </Select>
               {errors.srcLocationCode && (
-                <p className="text-xs text-destructive">{errors.srcLocationCode}</p>
+                <p className='text-xs text-destructive'>
+                  {errors.srcLocationCode}
+                </p>
               )}
             </div>
 
             {/* Destination */}
-            <div className="min-w-0 space-y-1.5">
+            <div className='min-w-0 space-y-1.5'>
               <Label htmlFor={`${formId}-dest`}>
-                Destination <span className="text-destructive">*</span>
+                Destination <span className='text-destructive'>*</span>
               </Label>
               <Select
                 value={form.destLocationCode}
@@ -357,13 +404,17 @@ export function CreateRequestDialog({
                     errors.destLocationCode && 'border-destructive'
                   )}
                 >
-                  <SelectValue placeholder={locationsLoading ? 'Loading…' : 'Select destination'} />
+                  <SelectValue
+                    placeholder={
+                      locationsLoading ? 'Loading…' : 'Select destination'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.locationCode}>
                       {loc.locationCode}
-                      <span className="ml-1.5 text-xs text-muted-foreground">
+                      <span className='ml-1.5 text-xs text-muted-foreground'>
                         ({loc.type})
                       </span>
                     </SelectItem>
@@ -371,65 +422,67 @@ export function CreateRequestDialog({
                 </SelectContent>
               </Select>
               {errors.destLocationCode && (
-                <p className="text-xs text-destructive">{errors.destLocationCode}</p>
+                <p className='text-xs text-destructive'>
+                  {errors.destLocationCode}
+                </p>
               )}
             </div>
           </div>
 
           {/* Time window — conditional on type */}
           {selectedTypeFields && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className='rounded-lg border border-border bg-muted/30 p-4 space-y-3'>
+              <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
                 Time Window
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className='grid grid-cols-2 gap-4'>
                 {selectedTypeFields.earlyAtSrc && (
-                  <div className="space-y-1.5">
+                  <div className='space-y-1.5'>
                     <Label htmlFor={`${formId}-earlyAtSrc`}>
                       Earliest at Origin
                     </Label>
                     <Input
                       id={`${formId}-earlyAtSrc`}
-                      type="datetime-local"
+                      type='datetime-local'
                       value={form.earlyAtSrc}
                       onChange={(e) => set('earlyAtSrc', e.target.value)}
                     />
                   </div>
                 )}
                 {selectedTypeFields.lateAtSrc && (
-                  <div className="space-y-1.5">
+                  <div className='space-y-1.5'>
                     <Label htmlFor={`${formId}-lateAtSrc`}>
                       Latest at Origin
                     </Label>
                     <Input
                       id={`${formId}-lateAtSrc`}
-                      type="datetime-local"
+                      type='datetime-local'
                       value={form.lateAtSrc}
                       onChange={(e) => set('lateAtSrc', e.target.value)}
                     />
                   </div>
                 )}
                 {selectedTypeFields.earlyAtDest && (
-                  <div className="space-y-1.5">
+                  <div className='space-y-1.5'>
                     <Label htmlFor={`${formId}-earlyAtDest`}>
                       Earliest at Destination
                     </Label>
                     <Input
                       id={`${formId}-earlyAtDest`}
-                      type="datetime-local"
+                      type='datetime-local'
                       value={form.earlyAtDest}
                       onChange={(e) => set('earlyAtDest', e.target.value)}
                     />
                   </div>
                 )}
                 {selectedTypeFields.lateAtDest && (
-                  <div className="space-y-1.5">
+                  <div className='space-y-1.5'>
                     <Label htmlFor={`${formId}-lateAtDest`}>
                       Latest at Destination
                     </Label>
                     <Input
                       id={`${formId}-lateAtDest`}
-                      type="datetime-local"
+                      type='datetime-local'
                       value={form.lateAtDest}
                       onChange={(e) => set('lateAtDest', e.target.value)}
                     />
@@ -440,25 +493,25 @@ export function CreateRequestDialog({
           )}
 
           {/* Row: Weight + Drop trailer */}
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <div className="space-y-1.5">
+          <div className='grid grid-cols-2 gap-4 items-end'>
+            <div className='space-y-1.5'>
               <Label htmlFor={`${formId}-weight`}>Weight (tons)</Label>
               <Input
                 id={`${formId}-weight`}
-                type="number"
+                type='number'
                 min={0}
-                step="0.01"
-                placeholder="Optional"
+                step='0.01'
+                placeholder='Optional'
                 value={form.weight}
                 onChange={(e) => set('weight', e.target.value)}
                 className={cn(errors.weight && 'border-destructive')}
               />
               {errors.weight && (
-                <p className="text-xs text-destructive">{errors.weight}</p>
+                <p className='text-xs text-destructive'>{errors.weight}</p>
               )}
             </div>
 
-            <div className="flex items-center gap-2 pb-2">
+            <div className='flex items-center gap-2 pb-2'>
               <Checkbox
                 id={`${formId}-drop-trailer`}
                 checked={form.dropTrailerRequired}
@@ -468,7 +521,7 @@ export function CreateRequestDialog({
               />
               <Label
                 htmlFor={`${formId}-drop-trailer`}
-                className="cursor-pointer select-none text-sm font-normal"
+                className='cursor-pointer select-none text-sm font-normal'
               >
                 Need to Detach Trailer
               </Label>
@@ -476,23 +529,23 @@ export function CreateRequestDialog({
           </div>
         </form>
 
-        <DialogFooter className="gap-2 pt-2">
+        <DialogFooter className='gap-2 pt-2'>
           <Button
-            id="create-request-cancel-btn"
-            type="button"
-            variant="outline"
+            id='create-request-cancel-btn'
+            type='button'
+            variant='outline'
             onClick={onClose}
             disabled={isCreating}
           >
             Cancel
           </Button>
           <Button
-            id="create-request-submit-btn"
-            type="submit"
+            id='create-request-submit-btn'
+            type='submit'
             form={formId}
             disabled={isCreating}
           >
-            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isCreating && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             Create Request
           </Button>
         </DialogFooter>

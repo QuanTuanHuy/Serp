@@ -15,7 +15,10 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -25,10 +28,21 @@ import {
   Card,
   CardContent,
 } from '@/shared/components/ui';
+import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { useAppSelector } from '@/shared/hooks';
 import {
+  useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemByIdQuery,
+  useLazyGetPmWorkItemTransitionsQuery,
   useSearchPmWorkItemsQuery,
-} from '../../../api';
+  useTransitionPmWorkItemStatusMutation,
+  useUpdatePmWorkItemMutation,
+} from '../../../api/workItemApi';
+import type {
+  PMUpdateWorkItemRequest,
+  PMWorkItemSearchApi,
+} from '../../../types/api';
+import { PMWorkItemDetailDialog } from '../detail';
 import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
 import { PMWorkItemListFilters } from './PMWorkItemListFilters';
 import {
@@ -52,6 +66,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const organizationId = useAppSelector(selectOrganizationId);
   const view = parseViewMode(searchParams.get('view'));
   const selectedIssueId = parseIssueId(searchParams.get('issueId'));
   const parentId = parseIssueId(searchParams.get('parentId'));
@@ -60,9 +75,15 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const statusIds = parseNumberList(searchParams.get('statusIds'));
   const priorityIds = parseNumberList(searchParams.get('priorityIds'));
   const reporterIds = parseNumberList(searchParams.get('reporterIds'));
+  const componentIds = parseNumberList(searchParams.get('componentIds'));
   const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<number[]>([]);
   const deferredKeyword = useDeferredValue(keyword.trim());
+  const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
+  const [transitionWorkItem, transitionState] =
+    useTransitionPmWorkItemStatusMutation();
+  const [loadTransitions] = useLazyGetPmWorkItemTransitionsQuery();
 
   const searchQuery = useSearchPmWorkItemsQuery({
     projectId,
@@ -74,6 +95,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
       statusIds,
       priorityIds,
       reporterIds,
+      componentIds,
       enriched: true,
       page: 0,
       pageSize: 50,
@@ -84,6 +106,41 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
 
   const items = searchQuery.data?.data.items ?? [];
   const totalItems = searchQuery.data?.data.totalItems ?? 0;
+  const visibleItemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const { data: usersResponse, isLoading: isUsersLoading } =
+    useGetOrganizationUsersQuery(
+      {
+        organizationId: organizationId as number,
+        page: 0,
+        pageSize: 100,
+        status: 'ACTIVE',
+      },
+      { skip: !organizationId }
+    );
+
+  const { data: meta, isFetching: isMetaFetching } =
+    useGetPmWorkItemCreateMetaQuery({ projectId });
+
+  const assigneeOptions = useMemo<ComboboxItem[]>(() => {
+    return [...(usersResponse?.data.items || [])]
+      .map((user) => {
+        const label =
+          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+          user.email ||
+          `User #${user.id}`;
+        return { value: user.id, label };
+      })
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [usersResponse]);
+
+  const priorityOptions = useMemo<ComboboxItem[]>(
+    () =>
+      (meta?.priorities || []).map((priority) => ({
+        value: priority.id,
+        label: priority.name,
+      })),
+    [meta?.priorities]
+  );
 
   const selectedItem = useMemo(
     () => items.find((item) => item.id === selectedIssueId),
@@ -149,6 +206,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
       statusIds: undefined,
       priorityIds: undefined,
       reporterIds: undefined,
+      componentIds: undefined,
     });
   };
 
@@ -159,6 +217,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
     statusIds,
     priorityIds,
     reporterIds,
+    componentIds,
   });
 
   const activeFilterChips = [
@@ -178,11 +237,124 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
     reporterIds.length
       ? { key: 'reporterIds', label: `Reporter: ${reporterIds.length}` }
       : null,
+    componentIds.length
+      ? { key: 'componentIds', label: `Component: ${componentIds.length}` }
+      : null,
   ].filter(Boolean) as Array<{ key: string; label: string }>;
 
   const removeFilter = (key: string) => {
     updateFilter({ [key]: undefined });
   };
+
+  useEffect(() => {
+    setSelectedWorkItemIds((current) =>
+      current.filter((itemId) => visibleItemIds.includes(itemId))
+    );
+  }, [visibleItemIds]);
+
+  const toggleSelectedWorkItem = (workItemId: number) => {
+    setSelectedWorkItemIds((current) =>
+      current.includes(workItemId)
+        ? current.filter((value) => value !== workItemId)
+        : [...current, workItemId]
+    );
+  };
+
+  const toggleAllVisibleWorkItems = (checked: boolean) => {
+    setSelectedWorkItemIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleItemIds]));
+      }
+
+      return current.filter((itemId) => !visibleItemIds.includes(itemId));
+    });
+  };
+
+  const optimizeSelectedWorkItems = () => {
+    if (!selectedWorkItemIds.length) return;
+    router.push(
+      `/pm/projects/${projectId}/optimization?selected=${selectedWorkItemIds.join(',')}`
+    );
+  };
+
+  const updateListWorkItem = useCallback(
+    async (item: PMWorkItemSearchApi, body: PMUpdateWorkItemRequest) => {
+      try {
+        await updateWorkItem({
+          projectId,
+          workItemId: item.id,
+          body,
+        }).unwrap();
+        toast.success(`${item.key} updated.`);
+      } catch (error) {
+        toast.error('Failed to update work item', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [projectId, updateWorkItem]
+  );
+
+  const updateSummary = useCallback(
+    (item: PMWorkItemSearchApi, summary: string) =>
+      updateListWorkItem(item, { summary }),
+    [updateListWorkItem]
+  );
+
+  const updateAssignee = useCallback(
+    (item: PMWorkItemSearchApi, assigneeId: number | null) =>
+      updateListWorkItem(item, { assigneeId }),
+    [updateListWorkItem]
+  );
+
+  const updatePriority = useCallback(
+    (item: PMWorkItemSearchApi, priorityId: number | null) =>
+      updateListWorkItem(item, { priorityId }),
+    [updateListWorkItem]
+  );
+
+  const updateDueDate = useCallback(
+    (item: PMWorkItemSearchApi, dueDate: number | null) =>
+      updateListWorkItem(item, { dueDate }),
+    [updateListWorkItem]
+  );
+
+  const fetchTransitions = useCallback(
+    async (item: PMWorkItemSearchApi) => {
+      try {
+        return await loadTransitions({
+          projectId,
+          workItemId: item.id,
+        }).unwrap();
+      } catch (error) {
+        toast.error('Failed to load transitions', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [loadTransitions, projectId]
+  );
+
+  const updateStatus = useCallback(
+    async (item: PMWorkItemSearchApi, transitionId: number) => {
+      try {
+        await transitionWorkItem({
+          projectId,
+          workItemId: item.id,
+          body: { transitionId },
+        }).unwrap();
+        toast.success(`${item.key} status updated.`);
+      } catch (error) {
+        toast.error('Failed to update status', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [projectId, transitionWorkItem]
+  );
 
   return (
     <div className='space-y-4'>
@@ -190,11 +362,13 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
         keyword={keyword}
         view={view}
         activeFilterCount={activeFilterCount}
+        selectedCount={selectedWorkItemIds.length}
         isRefreshing={searchQuery.isFetching}
         onKeywordChange={setKeyword}
         onViewChange={setView}
         onRefresh={() => searchQuery.refetch()}
         onFilterClick={() => setFiltersOpen(true)}
+        onOptimizeSelected={optimizeSelectedWorkItems}
       />
 
       {activeFilterChips.length > 0 ? (
@@ -266,13 +440,39 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
           />
         </div>
       ) : (
-        <PMWorkItemListTable
-          items={items}
-          loading={searchQuery.isLoading}
-          selectedIssueId={selectedIssueId}
-          totalItems={totalItems}
-          onSelect={selectIssue}
-        />
+        <>
+          <PMWorkItemListTable
+            items={items}
+            loading={searchQuery.isLoading}
+            selectedIssueId={selectedIssueId}
+            totalItems={totalItems}
+            onSelect={selectIssue}
+            selectedIds={selectedWorkItemIds}
+            onToggleSelect={toggleSelectedWorkItem}
+            onToggleSelectAll={toggleAllVisibleWorkItems}
+            assigneeOptions={assigneeOptions}
+            priorityOptions={priorityOptions}
+            isAssigneeLoading={isUsersLoading}
+            isPriorityLoading={isMetaFetching}
+            isUpdating={updateState.isLoading}
+            isTransitioning={transitionState.isLoading}
+            onUpdateSummary={updateSummary}
+            onUpdateAssignee={updateAssignee}
+            onUpdatePriority={updatePriority}
+            onUpdateDueDate={updateDueDate}
+            onLoadTransitions={fetchTransitions}
+            onUpdateStatus={updateStatus}
+          />
+          <PMWorkItemDetailDialog
+            projectId={projectId}
+            workItemId={selectedIssueId}
+            open={Boolean(selectedIssueId)}
+            fallbackItem={selectedItem}
+            onOpenChange={(open) => {
+              if (!open) updateUrl({ issueId: undefined });
+            }}
+          />
+        </>
       )}
     </div>
   );

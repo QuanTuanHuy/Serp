@@ -46,12 +46,24 @@ const TABS: TabItem[] = [
     label: 'Components',
     href: (projectId) => `/pm/projects/${projectId}/components`,
   },
+  {
+    key: 'optimization',
+    label: 'Optimization',
+    href: (projectId) => `/pm/projects/${projectId}/optimization`,
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    href: (projectId) => `/pm/projects/${projectId}/settings`,
+  },
 ];
 
 function getActiveTabKey(pathname: string): string {
+  if (pathname.includes('/optimization-runs/')) return 'optimization';
   const parts = pathname.split('/').filter(Boolean);
   const maybeKey = parts[parts.length - 1] || 'summary';
   if (TABS.some((t) => t.key === maybeKey)) return maybeKey;
+  if (pathname.includes('/optimization')) return 'optimization';
   return 'summary';
 }
 

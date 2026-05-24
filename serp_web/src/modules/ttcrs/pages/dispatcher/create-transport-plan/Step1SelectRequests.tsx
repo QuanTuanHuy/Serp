@@ -46,13 +46,14 @@ export function Step1SelectRequests({
   const router = useRouter();
   const [page, setPage] = useState(0);
 
-  const { data, isLoading, isError, isFetching } = useGetDispatcherRequestsQuery({
-    statuses: ['PENDING'],
-    page,
-    size: PAGE_SIZE,
-    sortBy: 'id',
-    sortDirection: 'desc',
-  });
+  const { data, isLoading, isError, isFetching } =
+    useGetDispatcherRequestsQuery({
+      statuses: ['PENDING'],
+      page,
+      size: PAGE_SIZE,
+      sortBy: 'id',
+      sortDirection: 'desc',
+    });
 
   const items: TtcrsRequest[] = data?.data?.items ?? [];
   const totalPages = data?.data?.totalPages ?? 0;
@@ -135,7 +136,9 @@ export function Step1SelectRequests({
               </TableHeader>
               <TableBody>
                 {isLoading || isFetching ? (
-                  [...Array(6)].map((_, index) => <SkeletonRow key={index} cols={6} />)
+                  [...Array(6)].map((_, index) => (
+                    <SkeletonRow key={index} cols={6} />
+                  ))
                 ) : items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6}>
@@ -145,7 +148,8 @@ export function Step1SelectRequests({
                           No pending requests found
                         </p>
                         <p className='text-xs text-muted-foreground/70'>
-                          All transport requests are either planned, in progress, or completed.
+                          All transport requests are either planned, in
+                          progress, or completed.
                         </p>
                       </div>
                     </TableCell>
@@ -156,11 +160,15 @@ export function Step1SelectRequests({
                       key={request.id}
                       className={cn(
                         'cursor-pointer',
-                        selectedIds.has(request.id) && 'bg-orange-50 dark:bg-orange-950/20'
+                        selectedIds.has(request.id) &&
+                          'bg-orange-50 dark:bg-orange-950/20'
                       )}
                       onClick={() => onToggle(request.id)}
                     >
-                      <TableCell className='px-4 py-3' onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        className='px-4 py-3'
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Checkbox
                           checked={selectedIds.has(request.id)}
                           onCheckedChange={() => onToggle(request.id)}
@@ -172,13 +180,17 @@ export function Step1SelectRequests({
                       <TableCell className='px-4 py-3'>
                         <div className='flex items-center gap-1.5'>
                           <MapPin className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-                          <span className='text-foreground'>{request.srcLocationCode}</span>
+                          <span className='text-foreground'>
+                            {request.srcLocationCode}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className='px-4 py-3'>
                         <div className='flex items-center gap-1.5'>
                           <MapPin className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-                          <span className='text-foreground'>{request.destLocationCode}</span>
+                          <span className='text-foreground'>
+                            {request.destLocationCode}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className='px-4 py-3'>
@@ -226,7 +238,9 @@ export function Step1SelectRequests({
                 variant='outline'
                 size='icon'
                 className='h-8 w-8'
-                onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                onClick={() =>
+                  setPage((prev) => Math.min(totalPages - 1, prev + 1))
+                }
                 disabled={page >= totalPages - 1 || isFetching}
               >
                 <ChevronRight className='h-4 w-4' />

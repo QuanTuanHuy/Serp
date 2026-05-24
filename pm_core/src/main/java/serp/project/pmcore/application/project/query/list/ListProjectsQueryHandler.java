@@ -24,14 +24,14 @@ import serp.project.pmcore.domain.project.query.ProjectListCriteria;
 import serp.project.pmcore.domain.project.service.IProjectCategoryService;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 @Service
 @RequiredArgsConstructor
 public class ListProjectsQueryHandler implements IQueryHandler<ListProjectsQuery, PageView<ProjectSummaryView>> {
 
     private final IProjectReadPort projectReadPort;
-    private final IUserProfileClient userProfileClient;
+    private final IUserService userService;
     private final IProjectCategoryService projectCategoryService;
 
     @Override
@@ -88,9 +88,9 @@ public class ListProjectsQueryHandler implements IQueryHandler<ListProjectsQuery
         if (leadUserIds == null || leadUserIds.isEmpty()) {
             return Map.of();
         }
-        List<UserProfileDto> leadUserProfiles = userProfileClient.getUserProfilesByIds(leadUserIds);
+        List<UserProfileDto> leadUserProfiles = userService.getUserProfilesByIds(leadUserIds);
         return leadUserProfiles.stream()
-                .collect(Collectors.toMap(UserProfileDto::getId, UserProfileDto::getFullName));
+                .collect(Collectors.toMap(UserProfileDto::getId, UserProfileDto::getFullName, (left, right) -> left));
     }
 
     private static String nullableMapGet(Map<Long, String> map, Long key) {

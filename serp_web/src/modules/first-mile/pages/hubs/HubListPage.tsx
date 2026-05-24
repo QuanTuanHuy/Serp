@@ -112,7 +112,11 @@ export function HubListPage() {
   );
   const [currentPage, setCurrentPage] = React.useState(0);
 
-  const { data: hubsData, isFetching, refetch } = useGetHubsQuery({
+  const {
+    data: hubsData,
+    isFetching,
+    refetch,
+  } = useGetHubsQuery({
     page: currentPage,
     size: PAGE_SIZE,
     keyword: searchKeyword || undefined,
@@ -126,19 +130,21 @@ export function HubListPage() {
 
   const [managePostOfficesHub, setManagePostOfficesHub] =
     React.useState<Hub | null>(null);
-  const [postOfficeDialogOpen, setPostOfficeDialogOpen] =
-    React.useState(false);
+  const [postOfficeDialogOpen, setPostOfficeDialogOpen] = React.useState(false);
   const [postOfficePageNumber, setPostOfficePageNumber] = React.useState(0);
 
-  const { data: hubPostOfficeData, isFetching: isFetchingHubPostOffices, refetch: refetchHubPostOffices } =
-    useGetHubPostOfficesQuery(
-      {
-        hubId: managePostOfficesHub?.id || 0,
-        page: postOfficePageNumber,
-        size: 20,
-      },
-      { skip: !managePostOfficesHub }
-    );
+  const {
+    data: hubPostOfficeData,
+    isFetching: isFetchingHubPostOffices,
+    refetch: refetchHubPostOffices,
+  } = useGetHubPostOfficesQuery(
+    {
+      hubId: managePostOfficesHub?.id || 0,
+      page: postOfficePageNumber,
+      size: 20,
+    },
+    { skip: !managePostOfficesHub }
+  );
 
   const hubPostOffices = hubPostOfficeData?.items || [];
   const hasNextPostOffice = hubPostOfficeData?.hasNext || false;
@@ -177,16 +183,15 @@ export function HubListPage() {
   const [selectedImportFile, setSelectedImportFile] =
     React.useState<File | null>(null);
   const [importFileInputKey, setImportFileInputKey] = React.useState(0);
-  const [validateImportResult, setValidateImportResult] = React.useState<
-    ValidateImportFileResponse<HubImportItem> | null
-  >(null);
+  const [validateImportResult, setValidateImportResult] =
+    React.useState<ValidateImportFileResponse<HubImportItem> | null>(null);
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
 
   const imageInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [imageUploadHubId, setImageUploadHubId] = React.useState<
-    number | null
-  >(null);
+  const [imageUploadHubId, setImageUploadHubId] = React.useState<number | null>(
+    null
+  );
 
   const { data: provincesData } = useGetProvincesQuery({
     page: 0,
@@ -225,11 +230,7 @@ export function HubListPage() {
       } as Ward);
     }
     return options;
-  }, [
-    selectedFormProvinceCode,
-    selectedFormWardCode,
-    wardsForFormData,
-  ]);
+  }, [selectedFormProvinceCode, selectedFormWardCode, wardsForFormData]);
 
   const getProvinceLabel = React.useCallback(
     (provinceCode?: string) => {
@@ -253,8 +254,7 @@ export function HubListPage() {
     useLazyExportHubTemplateQuery();
   const [validateHubImport, { isLoading: isValidatingImport }] =
     useValidateHubImportMutation();
-  const [importHubs, { isLoading: isImportingHubs }] =
-    useImportHubsMutation();
+  const [importHubs, { isLoading: isImportingHubs }] = useImportHubsMutation();
 
   const updateFormField = React.useCallback(
     <K extends keyof HubFormState>(field: K, value: HubFormState[K]) => {
@@ -678,7 +678,9 @@ export function HubListPage() {
                       {hub.addressDetail && (
                         <div className='flex items-start gap-2 text-sm text-muted-foreground'>
                           <MapPin className='h-4 w-4 mt-0.5 shrink-0' />
-                          <span className='line-clamp-2'>{hub.addressDetail}</span>
+                          <span className='line-clamp-2'>
+                            {hub.addressDetail}
+                          </span>
                         </div>
                       )}
                       {hub.dailyCapacity !== undefined && (
@@ -915,7 +917,9 @@ export function HubListPage() {
                     className='flex items-center justify-between p-3 border rounded-lg'
                   >
                     <div>
-                      <div className='font-medium'>{mapping.postOfficeCode}</div>
+                      <div className='font-medium'>
+                        {mapping.postOfficeCode}
+                      </div>
                       <div className='text-xs text-muted-foreground'>
                         Assigned:{' '}
                         {mapping.createdAt

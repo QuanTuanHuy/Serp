@@ -19,7 +19,7 @@ import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.shared.port.client.IUserProfileClient;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
@@ -48,7 +48,7 @@ class SearchWorkItemsQueryHandlerTest {
     @Mock
     private IProjectPermissionEvaluationService projectPermissionEvaluationService;
     @Mock
-    private IUserProfileClient userProfileClient;
+    private IUserService userService;
 
     private SearchWorkItemsQueryHandler handler;
 
@@ -58,7 +58,7 @@ class SearchWorkItemsQueryHandlerTest {
                 workItemReadPort,
                 projectReadPort,
                 projectPermissionEvaluationService,
-                userProfileClient
+                userService
         );
     }
 
@@ -109,7 +109,7 @@ class SearchWorkItemsQueryHandlerTest {
                         .updatedAt(201L)
                         .build()
         ), 5L));
-        when(userProfileClient.getUserProfilesByIds(List.of(501L, 502L))).thenReturn(List.of(
+        when(userService.getUserProfilesByIds(List.of(501L, 502L))).thenReturn(List.of(
                 UserProfileDto.builder()
                         .id(501L)
                         .firstName("Alex")
@@ -133,7 +133,7 @@ class SearchWorkItemsQueryHandlerTest {
                 ArgumentCaptor.forClass(ProjectPermissionEvaluationContext.class);
         verify(projectPermissionEvaluationService).checkPermission(any(ProjectPermissionSubject.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
         verify(workItemReadPort).searchWorkItems(TENANT_ID, criteria);
-        verify(userProfileClient).getUserProfilesByIds(List.of(501L, 502L));
+        verify(userService).getUserProfilesByIds(List.of(501L, 502L));
 
         ProjectPermissionEvaluationContext context = contextCaptor.getValue();
         assertEquals(USER_ID, context.getUserId());

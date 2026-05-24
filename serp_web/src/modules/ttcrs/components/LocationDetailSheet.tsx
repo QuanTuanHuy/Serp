@@ -34,34 +34,38 @@ import {
   useDeleteDispatcherLocationMutation,
 } from '../api/ttcrsApi';
 import { MapPicker } from './MapPicker';
-import type { LocationItem, LocationType, UpdateLocationPayload } from '../types';
+import type {
+  LocationItem,
+  LocationType,
+  UpdateLocationPayload,
+} from '../types';
 
 // -------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------
 
 const LOCATION_TYPES: { value: LocationType; label: string }[] = [
-  { value: 'PORT',            label: 'Port' },
-  { value: 'WAREHOUSE',       label: 'Warehouse' },
+  { value: 'PORT', label: 'Port' },
+  { value: 'WAREHOUSE', label: 'Warehouse' },
   { value: 'DEPOT_CONTAINER', label: 'Depot – Container' },
-  { value: 'DEPOT_TRUCK',     label: 'Depot – Truck' },
-  { value: 'DEPOT_TRAILER',   label: 'Depot – Trailer' },
+  { value: 'DEPOT_TRUCK', label: 'Depot – Truck' },
+  { value: 'DEPOT_TRAILER', label: 'Depot – Trailer' },
 ];
 
 const TYPE_CLASS: Record<LocationType, string> = {
-  PORT:            'bg-blue-500 text-white border-transparent',
-  WAREHOUSE:       'bg-green-500 text-white border-transparent',
+  PORT: 'bg-blue-500 text-white border-transparent',
+  WAREHOUSE: 'bg-green-500 text-white border-transparent',
   DEPOT_CONTAINER: 'bg-amber-500 text-white border-transparent',
-  DEPOT_TRUCK:     'bg-purple-500 text-white border-transparent',
-  DEPOT_TRAILER:   'bg-rose-500 text-white border-transparent',
+  DEPOT_TRUCK: 'bg-purple-500 text-white border-transparent',
+  DEPOT_TRAILER: 'bg-rose-500 text-white border-transparent',
 };
 
 const TYPE_LABEL: Record<LocationType, string> = {
-  PORT:            'Port',
-  WAREHOUSE:       'Warehouse',
+  PORT: 'Port',
+  WAREHOUSE: 'Warehouse',
   DEPOT_CONTAINER: 'Depot – Container',
-  DEPOT_TRUCK:     'Depot – Truck',
-  DEPOT_TRAILER:   'Depot – Trailer',
+  DEPOT_TRUCK: 'Depot – Truck',
+  DEPOT_TRAILER: 'Depot – Trailer',
 };
 
 // -------------------------------------------------------------------------
@@ -78,14 +82,20 @@ interface LocationDetailSheetProps {
 // Component
 // -------------------------------------------------------------------------
 
-export function LocationDetailSheet({ location, open, onClose }: LocationDetailSheetProps) {
+export function LocationDetailSheet({
+  location,
+  open,
+  onClose,
+}: LocationDetailSheetProps) {
   const [type, setType] = useState<LocationType | ''>('');
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const [updateLocation, { isLoading: isSaving }] = useUpdateDispatcherLocationMutation();
-  const [deleteLocation, { isLoading: isDeleting }] = useDeleteDispatcherLocationMutation();
+  const [updateLocation, { isLoading: isSaving }] =
+    useUpdateDispatcherLocationMutation();
+  const [deleteLocation, { isLoading: isDeleting }] =
+    useDeleteDispatcherLocationMutation();
 
   useEffect(() => {
     if (!location) return;
@@ -101,9 +111,9 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
   async function handleSave() {
     if (!location) return;
     const payload: UpdateLocationPayload = {};
-    if (type)        payload.type = type as LocationType;
-    if (lat != null) payload.lat  = lat;
-    if (lng != null) payload.lng  = lng;
+    if (type) payload.type = type as LocationType;
+    if (lat != null) payload.lat = lat;
+    if (lng != null) payload.lng = lng;
 
     try {
       await updateLocation({ id: location.id, body: payload }).unwrap();
@@ -130,7 +140,12 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
 
   return (
     <>
-      <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <Sheet
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      >
         <SheetContent className='w-full sm:max-w-[560px] overflow-y-auto flex flex-col gap-0 p-0'>
           {/* Header */}
           <SheetHeader className='px-6 py-4 border-b'>
@@ -139,7 +154,12 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
                 <MapPin className='h-4 w-4 text-muted-foreground' />
                 {location.locationCode}
               </SheetTitle>
-              <Badge className={cn('w-fit rounded px-2 py-0.5 text-xs font-bold', TYPE_CLASS[location.type])}>
+              <Badge
+                className={cn(
+                  'w-fit rounded px-2 py-0.5 text-xs font-bold',
+                  TYPE_CLASS[location.type]
+                )}
+              >
                 {TYPE_LABEL[location.type]}
               </Badge>
             </div>
@@ -157,7 +177,8 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
                 className='bg-muted/40 text-muted-foreground'
               />
               <p className='text-xs text-muted-foreground'>
-                Location code cannot be changed as it is used as a reference key.
+                Location code cannot be changed as it is used as a reference
+                key.
               </p>
             </div>
 
@@ -166,13 +187,18 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
             {/* Type */}
             <div className='space-y-1.5'>
               <Label>Type</Label>
-              <Select value={type} onValueChange={(v) => setType(v as LocationType)}>
+              <Select
+                value={type}
+                onValueChange={(v) => setType(v as LocationType)}
+              >
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select type' />
                 </SelectTrigger>
                 <SelectContent>
                   {LOCATION_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -187,7 +213,10 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
               <MapPicker
                 lat={lat}
                 lng={lng}
-                onPick={(newLat, newLng) => { setLat(newLat); setLng(newLng); }}
+                onPick={(newLat, newLng) => {
+                  setLat(newLat);
+                  setLng(newLng);
+                }}
               />
             </div>
 
@@ -226,7 +255,12 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
             </Button>
 
             <div className='flex items-center gap-2'>
-              <Button variant='outline' size='sm' onClick={onClose} disabled={isSaving}>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={onClose}
+                disabled={isSaving}
+              >
                 Close
               </Button>
               <Button size='sm' onClick={handleSave} disabled={isSaving}>
@@ -244,8 +278,8 @@ export function LocationDetailSheet({ location, open, onClose }: LocationDetailS
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this location?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{location.locationCode}</strong> will be permanently removed from the system.
-              This action cannot be undone.
+              <strong>{location.locationCode}</strong> will be permanently
+              removed from the system. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

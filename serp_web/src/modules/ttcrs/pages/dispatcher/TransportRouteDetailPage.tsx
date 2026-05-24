@@ -1,12 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import {
-  AlertCircle,
-  ArrowLeft,
-  ChevronRight,
-  Loader2,
-} from 'lucide-react';
+import { AlertCircle, ArrowLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAppSelector } from '@/shared/hooks';
 import { selectUserProfile } from '@/modules/account/store';
 import { AccessDenied } from '@/modules/account/components';
@@ -34,28 +29,28 @@ import type { StopAction, TransportPlanStatus } from '../../types';
 // -------------------------------------------------------------------------
 
 const STATUS_BADGE: Record<TransportPlanStatus, string> = {
-  CREATED:   'bg-blue-100 text-blue-700 border-blue-200',
+  CREATED: 'bg-blue-100 text-blue-700 border-blue-200',
   EXECUTING: 'bg-orange-100 text-orange-700 border-orange-200',
   COMPLETED: 'bg-green-100 text-green-700 border-green-200',
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
 };
 
 const ACTION_BADGE: Record<StopAction, string> = {
-  DEPOT_START:          'bg-gray-100 text-gray-700 border-gray-200',
-  DEPOT_END:            'bg-gray-100 text-gray-700 border-gray-200',
-  PICKUP_TRAILER:       'bg-purple-100 text-purple-700 border-purple-200',
-  DROP_TRAILER:         'bg-purple-100 text-purple-700 border-purple-200',
-  PICKUP_CONTAINER:     'bg-blue-100 text-blue-700 border-blue-200',
-  DELIVERY_CONTAINER:   'bg-green-100 text-green-700 border-green-200',
+  DEPOT_START: 'bg-gray-100 text-gray-700 border-gray-200',
+  DEPOT_END: 'bg-gray-100 text-gray-700 border-gray-200',
+  PICKUP_TRAILER: 'bg-purple-100 text-purple-700 border-purple-200',
+  DROP_TRAILER: 'bg-purple-100 text-purple-700 border-purple-200',
+  PICKUP_CONTAINER: 'bg-blue-100 text-blue-700 border-blue-200',
+  DELIVERY_CONTAINER: 'bg-green-100 text-green-700 border-green-200',
 };
 
 const ACTION_LABEL: Record<StopAction, string> = {
-  DEPOT_START:          'Depot Start',
-  DEPOT_END:            'Depot End',
-  PICKUP_TRAILER:       'Pickup Trailer',
-  DROP_TRAILER:         'Drop Trailer',
-  PICKUP_CONTAINER:     'Pickup Container',
-  DELIVERY_CONTAINER:   'Delivery Container',
+  DEPOT_START: 'Depot Start',
+  DEPOT_END: 'Depot End',
+  PICKUP_TRAILER: 'Pickup Trailer',
+  DROP_TRAILER: 'Drop Trailer',
+  PICKUP_CONTAINER: 'Pickup Container',
+  DELIVERY_CONTAINER: 'Delivery Container',
 };
 
 // -------------------------------------------------------------------------
@@ -147,7 +142,9 @@ export function TransportRouteDetailPage({ planId }: Props) {
                 <CardTitle className='text-base font-semibold'>
                   Plan #{plan.id}
                 </CardTitle>
-                <Badge className={cn('border text-xs', STATUS_BADGE[plan.status])}>
+                <Badge
+                  className={cn('border text-xs', STATUS_BADGE[plan.status])}
+                >
                   {plan.status}
                 </Badge>
               </div>
@@ -155,27 +152,47 @@ export function TransportRouteDetailPage({ planId }: Props) {
             <CardContent>
               <dl className='grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4'>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>Truck</dt>
-                  <dd className='mt-0.5 font-mono font-medium'>{plan.truckCode ?? '—'}</dd>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    Truck
+                  </dt>
+                  <dd className='mt-0.5 font-mono font-medium'>
+                    {plan.truckCode ?? '—'}
+                  </dd>
                 </div>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>Driver</dt>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    Driver
+                  </dt>
                   <dd className='mt-0.5'>{plan.driverName ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>Start Time</dt>
-                  <dd className='mt-0.5 tabular-nums'>{formatDateTime(plan.startTime)}</dd>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    Start Time
+                  </dt>
+                  <dd className='mt-0.5 tabular-nums'>
+                    {formatDateTime(plan.startTime)}
+                  </dd>
                 </div>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>End Time</dt>
-                  <dd className='mt-0.5 tabular-nums'>{formatDateTime(plan.endTime)}</dd>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    End Time
+                  </dt>
+                  <dd className='mt-0.5 tabular-nums'>
+                    {formatDateTime(plan.endTime)}
+                  </dd>
                 </div>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>Created</dt>
-                  <dd className='mt-0.5 tabular-nums'>{formatDateTime(plan.createdStamp)}</dd>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    Created
+                  </dt>
+                  <dd className='mt-0.5 tabular-nums'>
+                    {formatDateTime(plan.createdStamp)}
+                  </dd>
                 </div>
                 <div>
-                  <dt className='text-xs font-medium uppercase text-muted-foreground'>Total Stops</dt>
+                  <dt className='text-xs font-medium uppercase text-muted-foreground'>
+                    Total Stops
+                  </dt>
                   <dd className='mt-0.5'>{plan.stops.length}</dd>
                 </div>
               </dl>
@@ -205,12 +222,15 @@ export function TransportRouteDetailPage({ planId }: Props) {
                       <TableCell className='text-center text-xs text-muted-foreground'>
                         {stop.sequence}
                       </TableCell>
-                      <TableCell className='font-mono text-sm'>{stop.locationCode}</TableCell>
+                      <TableCell className='font-mono text-sm'>
+                        {stop.locationCode}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           className={cn(
                             'border text-xs',
-                            ACTION_BADGE[stop.action] ?? 'bg-gray-100 text-gray-700 border-gray-200'
+                            ACTION_BADGE[stop.action] ??
+                              'bg-gray-100 text-gray-700 border-gray-200'
                           )}
                         >
                           {ACTION_LABEL[stop.action] ?? stop.action}

@@ -12,15 +12,15 @@ export default function PMPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/pm/dashboard');
+    router.replace('/pm/projects');
   }, [router]);
 
   return (
     <div className='flex h-full items-center justify-center'>
       <div className='text-center'>
-        <div className='text-lg font-semibold'>Loading…</div>
+        <div className='text-lg font-semibold'>Loading...</div>
         <div className='mt-2 text-sm text-muted-foreground'>
-          Redirecting to Project Management
+          Redirecting to Projects
         </div>
       </div>
     </div>
