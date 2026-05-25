@@ -31,6 +31,7 @@ import {
   useCreateRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery,
   useGetRouteByIdQuery,
+  useGetRoutePathQuery,
   useGetSchoolByIdQuery,
   useGetDepotsQuery,
 } from '../api/schoolBusApi';
@@ -102,6 +103,7 @@ export default function SchoolBusRoutePlanningPage() {
     schoolId: '', schoolScheduleId: '',
     serviceDate: new Date().toISOString().slice(0, 10),
     routeDirection: 'OUTBOUND', planningMethod: 'GREEDY', defaultBusCapacity: '30',
+    depotId: '',
   });
 
   const [preview, setPreview] = useState<SchoolBusPlanningPreview | null>(null);
@@ -171,6 +173,13 @@ export default function SchoolBusRoutePlanningPage() {
   );
   const selectedRouteStops = selectedRouteDetailData?.data?.stops ?? [];
 
+  // ── Route path (actual road geometry) ─────────────────────────────────────
+  const { data: selectedRoutePathData } = useGetRoutePathQuery(
+    selectedRouteId ?? 0,
+    { skip: !selectedRouteId }
+  );
+  const selectedRoutePath = selectedRoutePathData?.data ?? null;
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
     if (!form.schoolId || !form.schoolScheduleId || !form.serviceDate) {
@@ -206,16 +215,18 @@ export default function SchoolBusRoutePlanningPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!activeSession) return;
+    if (!form.depotId) { toast.error('Please select a depot before generating routes'); return; }
     try {
       const res = await generateGreedy({
-        id: activeSession.id, body: { defaultBusCapacity: Number(form.defaultBusCapacity) || 30 },
+        id: activeSession.id,
+        body: { defaultBusCapacity: Number(form.defaultBusCapacity) || 30, depotId: Number(form.depotId) },
       }).unwrap();
       setGreedyResult(res.data);
       setFitTarget('all');
       setFitKey((k) => k + 1);
       toast.success(`Generated ${res.data.routes.length} route(s). ${res.data.totalUnassignedStudents} unassigned.`);
     } catch { toast.error('Greedy generation failed'); }
-  }, [activeSession, form.defaultBusCapacity, generateGreedy]);
+  }, [activeSession, form.defaultBusCapacity, form.depotId, generateGreedy]);
 
   const handleCreateManualRoute = useCallback(async (req: CreateRouteInSessionRequest) => {
     if (!activeSession) return;
@@ -349,6 +360,7 @@ export default function SchoolBusRoutePlanningPage() {
                 onPreview={handlePreview} onCreateSession={handleCreateSession}
                 previewing={previewing} creating={creating}
                 sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
+                depots={depots}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
@@ -391,6 +403,7 @@ export default function SchoolBusRoutePlanningPage() {
               school={school}
               pickupPoints={mapPickupPoints}
               selectedRouteStops={selectedRouteStops}
+              selectedRoutePath={selectedRoutePath}
               depots={depots}
               fitTarget={fitTarget}
               fitKey={fitKey}
@@ -430,6 +443,7 @@ export default function SchoolBusRoutePlanningPage() {
               onPreview={handlePreview} onCreateSession={handleCreateSession}
               previewing={previewing} creating={creating}
               sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
+              depots={depots}
             />
             <PlanningSessionPanel
               activeSession={activeSession} sessions={sessions}
@@ -473,6 +487,7 @@ export default function SchoolBusRoutePlanningPage() {
                 school={school}
                 pickupPoints={mapPickupPoints}
                 selectedRouteStops={selectedRouteStops}
+                selectedRoutePath={selectedRoutePath}
                 depots={depots}
                 fitTarget={fitTarget}
                 fitKey={fitKey}

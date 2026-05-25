@@ -17,10 +17,9 @@ import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
-import serp.project.school_bus_service.entity.RequestStudentEntity;
+import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
-import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
@@ -31,7 +30,7 @@ import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.service.ISchoolScheduleService;
-import serp.project.school_bus_service.service.IStudentSubscriptionService;
+import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -42,7 +41,6 @@ import serp.project.school_bus_service.entity.RouteAssignmentEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.SchoolScheduleEntity;
-import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.ShiftType;
 import serp.project.school_bus_service.repository.RoutePlanRepository;
@@ -75,9 +73,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final ISchoolService schoolService;
     private final ISchoolScheduleService schoolScheduleService;
     private final IDepotService depotService;
-    private final IStudentSubscriptionService subscriptionService;
     private final IAttendanceService attendanceService;
-    private final ITransportRequestService transportRequestService;
     private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final IRouteGeometryService routeGeometryService;
@@ -93,9 +89,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             ISchoolService schoolService,
                             ISchoolScheduleService schoolScheduleService,
                             IDepotService depotService,
-                            IStudentSubscriptionService subscriptionService,
                             @Lazy IAttendanceService attendanceService,
-                            ITransportRequestService transportRequestService,
                             IAuditLogService auditLogService,
                             ICodeGeneratorService codeGeneratorService,
                             IRouteGeometryService routeGeometryService,
@@ -110,9 +104,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.schoolService = schoolService;
         this.schoolScheduleService = schoolScheduleService;
         this.depotService = depotService;
-        this.subscriptionService = subscriptionService;
         this.attendanceService = attendanceService;
-        this.transportRequestService = transportRequestService;
         this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.routeGeometryService = routeGeometryService;
@@ -180,29 +172,23 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public RouteAttendanceManifestResponse getAttendanceManifest(Long routeId, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
-        List<RequestStudentEntity> approvedStudents = transportRequestService
-                .findApprovedManifestStudents(route.getSchool().getId(), route.getServiceDate(), tenantId);
-        Map<Long, StudentSubscriptionEntity> manifestStudents = new LinkedHashMap<>();
-        for (StudentSubscriptionEntity subscription : subscriptionService.findEligibleSubscriptions(
-                route.getSchool().getId(), route.getRouteDirection(), route.getServiceDate(), tenantId)) {
-            boolean isApproved = approvedStudents.stream()
-                    .anyMatch(rs -> rs.getStudent().getId().equals(subscription.getStudent().getId()));
-            if (isApproved) {
-                manifestStudents.put(subscription.getStudent().getId(), subscription);
-            }
+        // Use planning-time snapshot — not dynamic eligibility
+        List<RoutePlanStudentEntity> planStudents = routePlanStudentService.findByRoute(routeId);
+        // Deduplicate: one student may have BOARD + DROPOFF entries; pick one representative per student
+        Map<Long, RoutePlanStudentEntity> uniqueStudents = new LinkedHashMap<>();
+        for (RoutePlanStudentEntity ps : planStudents) {
+            uniqueStudents.putIfAbsent(ps.getStudent().getId(), ps);
         }
         Map<Long, AttendanceEntity> latestAttendances = new LinkedHashMap<>();
         for (AttendanceEntity attendance : attendanceService.findAttendancesByRoute(routeId, tenantId)) {
             latestAttendances.putIfAbsent(attendance.getStudent().getId(), attendance);
         }
-
         RouteAttendanceManifestResponse response = new RouteAttendanceManifestResponse();
         response.setRoute(mapper.toRoutePlanResponse(route));
         response.setAssignment(mapper.toRouteAssignmentResponse(
                 routeDispatchService.findAssignmentEntityByRoute(routeId, tenantId).orElse(null)));
-        response.setStudents(manifestStudents.values().stream()
-                .map(subscription -> toManifestItemResponse(route, subscription,
-                        latestAttendances.get(subscription.getStudent().getId())))
+        response.setStudents(uniqueStudents.values().stream()
+                .map(ps -> toManifestItemResponse(ps, latestAttendances.get(ps.getStudent().getId())))
                 .toList());
         return response;
     }
@@ -273,6 +259,9 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         RoutePathResponse result = routeGeometryService.computeAndUpdate(route, stops);
         route.markUpdated(actor(actorId));
         routePlanRepository.save(route);
+        if (route.getPlanningSession() != null) {
+            refreshSessionDistanceStats(route.getPlanningSession().getId(), tenantId);
+        }
         auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "COMPUTE_PATH", "Manual geometry recompute");
         return result;
     }
@@ -411,22 +400,36 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         }
     }
 
-    private RouteAttendanceManifestItemResponse toManifestItemResponse(RoutePlanEntity route,
-            StudentSubscriptionEntity subscription, AttendanceEntity latestAttendance) {
+    private RouteAttendanceManifestItemResponse toManifestItemResponse(RoutePlanStudentEntity planStudent,
+            AttendanceEntity latestAttendance) {
         RouteAttendanceManifestItemResponse response = new RouteAttendanceManifestItemResponse();
-        response.setStudentId(subscription.getStudent().getId());
-        response.setStudentName(subscription.getStudent().getFullName());
-        var point = route.getRouteDirection() == RouteDirection.RETURN
-                ? subscription.getDropoffPoint()
-                : subscription.getPickupPoint();
-        response.setPickupPointId(point == null ? null : point.getId());
-        response.setPickupPointName(point == null ? null : point.getName());
+        response.setStudentId(planStudent.getStudent().getId());
+        response.setStudentName(planStudent.getStudent().getFullName());
+        RouteStopEntity stop = planStudent.getRouteStop();
+        response.setPickupPointId(stop != null && stop.getPickupPoint() != null ? stop.getPickupPoint().getId() : null);
+        response.setPickupPointName(stop != null && stop.getPickupPoint() != null ? stop.getPickupPoint().getName() : null);
         if (latestAttendance != null) {
             response.setLatestAttendanceType(latestAttendance.getAttendanceType().name());
             response.setLatestAttendanceStatus(latestAttendance.getStatus().name());
             response.setLatestRecordedAt(latestAttendance.getRecordedAt());
         }
         return response;
+    }
+
+    private void refreshSessionDistanceStats(Long sessionId, Long tenantId) {
+        List<RoutePlanEntity> routes = routePlanRepository.findByPlanningSessionIdAndTenantId(sessionId, tenantId);
+        double totalDistKm = routes.stream()
+                .mapToDouble(r -> r.getPlannedDistanceKm() != null ? r.getPlannedDistanceKm() : 0.0)
+                .sum();
+        int totalDurMin = routes.stream()
+                .mapToInt(r -> r.getPlannedDurationMin() != null ? r.getPlannedDurationMin() : 0)
+                .sum();
+        planningSessionRepository.findByIdAndTenantIdAndIsDeletedFalse(sessionId, tenantId)
+                .ifPresent(session -> {
+                    session.setTotalDistanceKm(totalDistKm > 0 ? totalDistKm : null);
+                    session.setTotalDurationMin(totalDurMin > 0 ? totalDurMin : null);
+                    planningSessionRepository.save(session);
+                });
     }
 
     private Specification<RoutePlanEntity> spec(Long tenantId, String keyword, String... fields) {
@@ -469,6 +472,11 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         RoutePlanningSessionEntity planningSession = planningSessionRepository
                 .findByIdAndTenantIdAndIsDeletedFalse(sessionId, tenantId)
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "Planning session not found"));
+        if (planningSession.getStatus() == PlanningSessionStatus.PUBLISHED
+                || planningSession.getStatus() == PlanningSessionStatus.CANCELLED) {
+            throw new AppException(AppErrorCode.Session.FROZEN,
+                    messageCommon.getMessage(AppErrorCode.Session.FROZEN, planningSession.getStatus()));
+        }
 
         RoutePlanEntity route = new RoutePlanEntity();
         route.markCreated(tenantId, actor(actorId));

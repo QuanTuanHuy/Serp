@@ -94,6 +94,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
+        requireSessionEditable(route);
 
         List<RouteStopEntity> stops = routeStopRepository
                 .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
@@ -126,6 +127,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     public RouteStopResponse addStop(Long routeId, AddRouteStopRequest request, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
+        requireSessionEditable(route);
 
         PickupPointEntity pickupPoint = pickupPointService.getPickupPoint(request.getPickupPointId(), tenantId);
 
@@ -386,6 +388,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     public void removeStop(Long routeId, Long stopId, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
+        requireSessionEditable(route);
 
         RouteStopEntity stop = routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
@@ -443,9 +446,11 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     public void moveStudent(Long sourceRouteId, MoveStudentRequest request, Long tenantId, Long actorId) {
         RoutePlanEntity sourceRoute = routeService.getRouteEntity(sourceRouteId, tenantId);
         requireEditable(sourceRoute);
+        requireSessionEditable(sourceRoute);
 
         RoutePlanEntity targetRoute = routeService.getRouteEntity(request.getTargetRouteId(), tenantId);
         requireEditable(targetRoute);
+        requireSessionEditable(targetRoute);
 
         // Find the student entries in source route
         List<RoutePlanStudentEntity> sourceEntries = routePlanStudentService
@@ -508,6 +513,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     public void removeStudent(Long routeId, Long studentId, Long subscriptionId, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
+        requireSessionEditable(route);
 
         List<RoutePlanStudentEntity> entries = routePlanStudentService
                 .findByRoute(routeId)
@@ -548,6 +554,16 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                 || route.getStatus() == RouteStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Route.INVALID_STATE,
                     messageCommon.getMessage(AppErrorCode.Route.FIELD_INVALID, "route status", route.getStatus()));
+        }
+    }
+
+    private void requireSessionEditable(RoutePlanEntity route) {
+        RoutePlanningSessionEntity session = route.getPlanningSession();
+        if (session != null
+                && (session.getStatus() == PlanningSessionStatus.PUBLISHED
+                || session.getStatus() == PlanningSessionStatus.CANCELLED)) {
+            throw new AppException(AppErrorCode.RouteStop.SESSION_FROZEN,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_FROZEN, session.getStatus()));
         }
     }
 

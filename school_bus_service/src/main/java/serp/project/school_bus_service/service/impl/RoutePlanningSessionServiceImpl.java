@@ -16,6 +16,7 @@ import serp.project.school_bus_service.dto.response.PlanningSessionResponse;
 import serp.project.school_bus_service.dto.response.RouteQualityResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.entity.PickupPointEntity;
+import serp.project.school_bus_service.entity.DepotEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RoutePlanningIssueEntity;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
@@ -41,6 +42,7 @@ import serp.project.school_bus_service.service.algorithm.GreedyRouteBatch;
 import serp.project.school_bus_service.service.algorithm.GreedyStopAssignment;
 import serp.project.school_bus_service.service.algorithm.IGreedyRoutePlanningService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
+import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.domain.IRouteEligibilityService;
 import serp.project.school_bus_service.service.domain.IRouteGeometryService;
 import serp.project.school_bus_service.service.IRoutePlanningIssueService;
@@ -81,6 +83,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     private final IGreedyRoutePlanningService greedyService;
     private final IRouteGeometryService routeGeometryService;
     private final ICodeGeneratorService codeGeneratorService;
+    private final IDepotService depotService;
     private final MessageCommon messageCommon;
 
     public RoutePlanningSessionServiceImpl(RoutePlanningSessionRepository sessionRepository,
@@ -94,6 +97,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                                             IGreedyRoutePlanningService greedyService,
                                             IRouteGeometryService routeGeometryService,
                                             ICodeGeneratorService codeGeneratorService,
+                                            IDepotService depotService,
                                             MessageCommon messageCommon) {
         this.sessionRepository = sessionRepository;
         this.routeService = routeService;
@@ -106,6 +110,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         this.greedyService = greedyService;
         this.routeGeometryService = routeGeometryService;
         this.codeGeneratorService = codeGeneratorService;
+        this.depotService = depotService;
         this.messageCommon = messageCommon;
     }
 
@@ -201,6 +206,13 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                 ? req.getDefaultBusCapacity() : DEFAULT_CAPACITY;
         boolean usingDefault = req.getDefaultBusCapacity() == null || req.getDefaultBusCapacity() <= 0;
 
+        // Resolve depot — required for OUTBOUND (start=DEPOT) and RETURN (end=DEPOT)
+        if (req.getDepotId() == null) {
+            throw new AppException(AppErrorCode.Route.DEPOT_REQUIRED,
+                    messageCommon.getMessage(AppErrorCode.Route.DEPOT_REQUIRED, "depot"));
+        }
+        DepotEntity depot = depotService.getDepot(req.getDepotId(), tenantId);
+
         // Soft-delete all existing routes/stops/students/issues from this session
         softDeleteExistingRoutes(session, tenantId, actorId);
 
@@ -241,6 +253,8 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
             route.setEndLocationType(isOutbound ? RouteLocationType.SCHOOL : RouteLocationType.DEPOT);
             route.setEndSchool(isOutbound ? session.getSchool() : null);
             route.setStartSchool(!isOutbound ? session.getSchool() : null);
+            route.setStartDepot(isOutbound ? depot : null);
+            route.setEndDepot(!isOutbound ? depot : null);
             route.setShiftType(ShiftType.valueOf(
                     session.getSchoolSchedule().getShiftType() != null
                             ? session.getSchoolSchedule().getShiftType().toUpperCase() : "MORNING"));
@@ -300,6 +314,14 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                             "MISSING_COORDINATE", PlanningIssueSeverity.WARNING,
                             "Pickup point '" + pt.getName() + "' has no coordinates — straight-line estimate used"));
                 }
+            }
+            // Capacity overflow: batch exceeds specified bus capacity → BLOCKING issue
+            if (batch.getTotalStudents() > capacity) {
+                routeIssues.add(buildIssue(session, route, null, null, tenantId,
+                        "CAPACITY_OVERFLOW", PlanningIssueSeverity.BLOCKING,
+                        "Route '" + route.getRouteName() + "' requires " + batch.getTotalStudents()
+                                + " seats but the specified capacity is " + capacity
+                                + " — assign a larger bus or split the route manually"));
             }
             if (usingDefault && routeIndex == 2) {
                 sessionIssues.add(buildIssue(session, null, null, null, tenantId,
@@ -422,7 +444,10 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
             throw new AppException(AppErrorCode.Session.NOT_MANUAL,
                     messageCommon.getMessage(AppErrorCode.Session.NOT_MANUAL));
         }
-        return routeService.createRouteInSession(request, sessionId, tenantId, actorId);
+        requireSessionEditable(session);
+        RoutePlanResponse response = routeService.createRouteInSession(request, sessionId, tenantId, actorId);
+        refreshSessionSummary(sessionId, tenantId);
+        return response;
     }
 
     @Override
@@ -461,6 +486,14 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private void requireSessionEditable(RoutePlanningSessionEntity session) {
+        if (session.getStatus() == PlanningSessionStatus.PUBLISHED
+                || session.getStatus() == PlanningSessionStatus.CANCELLED) {
+            throw new AppException(AppErrorCode.Session.FROZEN,
+                    messageCommon.getMessage(AppErrorCode.Session.FROZEN, session.getStatus()));
+        }
+    }
 
     private void softDeleteExistingRoutes(RoutePlanningSessionEntity session, Long tenantId, Long actorId) {
         List<RoutePlanEntity> old = routeService.findRoutesBySession(session.getId(), tenantId);
@@ -568,12 +601,21 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         long planned = routePlanStudentService.countBySession(sessionId);
         long routes = routePlanStudentService.countRoutesBySession(sessionId);
         long stops = routePlanStudentService.countStopsBySession(sessionId);
-        int eligible = session.getTotalEligibleStudents();
+        int eligible = session.getTotalEligibleStudents() != null ? session.getTotalEligibleStudents() : 0;
         long unassigned = Math.max(0, eligible - planned);
+        List<RoutePlanEntity> activeRoutes = routeService.findRoutesBySession(sessionId, tenantId);
+        double totalDistKm = activeRoutes.stream()
+                .mapToDouble(r -> r.getPlannedDistanceKm() != null ? r.getPlannedDistanceKm() : 0.0)
+                .sum();
+        int totalDurMin = activeRoutes.stream()
+                .mapToInt(r -> r.getPlannedDurationMin() != null ? r.getPlannedDurationMin() : 0)
+                .sum();
         session.setTotalPlannedStudents((int) planned);
         session.setTotalUnassignedStudents((int) unassigned);
         session.setTotalRoutes((int) routes);
         session.setTotalStops((int) stops);
+        session.setTotalDistanceKm(totalDistKm > 0 ? totalDistKm : null);
+        session.setTotalDurationMin(totalDurMin > 0 ? totalDurMin : null);
         sessionRepository.save(session);
     }
 

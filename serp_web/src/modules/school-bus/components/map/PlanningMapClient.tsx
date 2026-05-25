@@ -13,7 +13,7 @@ import {
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
-import type { SchoolBusRouteStop } from '../../types';
+import type { SchoolBusRoutePath, SchoolBusRouteStop } from '../../types';
 
 // ── Auto-fit bounds when markers / fitKey change ──────────────────────────────
 
@@ -79,6 +79,8 @@ export interface PlanningMapClientProps {
   pickupPoints?: PlanningPickupPoint[];
   /** Stops of the currently selected route (in order) */
   selectedRouteStops?: SchoolBusRouteStop[];
+  /** Real road geometry returned by GET /routes/{id}/path */
+  selectedRoutePath?: SchoolBusRoutePath | null;
   depots?: PlanningDepot[];
   className?: string;
   isMapExpanded?: boolean;
@@ -100,6 +102,7 @@ export default function PlanningMapClient({
   school,
   pickupPoints = [],
   selectedRouteStops = [],
+  selectedRoutePath,
   depots = [],
   className = 'h-[420px] w-full rounded-[24px]',
   isMapExpanded,
@@ -136,10 +139,20 @@ export default function PlanningMapClient({
     (s) => [s.pickupPointLatitude as number, s.pickupPointLongitude as number]
   );
 
+  // Use actual road geometry when available, fallback to straight-line stop connections
+  const actualPathCoordinates: [number, number][] =
+    selectedRoutePath?.coordinates
+      ?.filter(
+        (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number'
+      )
+      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
+  const resolvedLinePositions =
+    actualPathCoordinates.length >= 2 ? actualPathCoordinates : routeLinePositions;
+
   // Positions passed to FitBounds depend on fitTarget
   const fitPositions: [number, number][] =
-    fitTarget === 'route' && routeLinePositions.length > 0
-      ? routeLinePositions
+    fitTarget === 'route' && resolvedLinePositions.length > 0
+      ? resolvedLinePositions
       : allPositions;
 
   const defaultCenter: [number, number] = [
@@ -231,14 +244,14 @@ export default function PlanningMapClient({
         </Marker>
       ))}
 
-      {/* Route polyline */}
-      {routeLinePositions.length >= 2 && (
+      {/* Route polyline — real road geometry if available, else straight-line fallback */}
+      {resolvedLinePositions.length >= 2 && (
         <Polyline
-          positions={routeLinePositions}
+          positions={resolvedLinePositions}
           color='#0369a1'
           weight={4}
           opacity={0.85}
-          dashArray={undefined}
+          dashArray={actualPathCoordinates.length < 2 ? '8 6' : undefined}
         />
       )}
     </>

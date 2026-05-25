@@ -11,7 +11,7 @@ import {
   useGetActiveSchoolSchedulesQuery,
 } from '../../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../../utils';
-import type { PlanningMethod } from '../../types';
+import type { PlanningMethod, SchoolBusDepot } from '../../types';
 
 export interface ContextFormState {
   schoolId: string;
@@ -20,6 +20,7 @@ export interface ContextFormState {
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod: PlanningMethod;
   defaultBusCapacity: string;
+  depotId: string;
 }
 
 interface PlanningContextPanelProps {
@@ -30,13 +31,14 @@ interface PlanningContextPanelProps {
   previewing: boolean;
   creating: boolean;
   sessionActive: boolean;
+  depots: SchoolBusDepot[];
 }
 
 const fieldLabel = 'block text-xs font-medium text-slate-500 mb-1.5 mt-3 first:mt-0';
 const fieldInput = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100 disabled:bg-slate-50 disabled:text-slate-400';
 
 export function PlanningContextPanel({
-  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive,
+  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive, depots,
 }: PlanningContextPanelProps) {
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const schools = getPageItems(schoolsData?.data);
@@ -91,6 +93,20 @@ export function PlanningContextPanel({
               <input type='number' className={fieldInput} value={form.defaultBusCapacity}
                 onChange={e => onFormChange(f => ({ ...f, defaultBusCapacity: e.target.value }))}
                 min={1} max={100} placeholder='30' />
+
+              <label className={fieldLabel}>Depot (Bus Garage) *</label>
+              <select className={fieldInput} value={form.depotId}
+                onChange={e => onFormChange(f => ({ ...f, depotId: e.target.value }))}>
+                <option value=''>— Select depot —</option>
+                {depots.map(d => (
+                  <option key={d.id} value={String(d.id)}>
+                    {d.name}{d.address ? ` (${d.address})` : ''}
+                  </option>
+                ))}
+              </select>
+              {form.depotId === '' && (
+                <p className='mt-1 text-[11px] text-rose-500'>Depot is required for greedy generation.</p>
+              )}
             </>
           )}
         </div>
