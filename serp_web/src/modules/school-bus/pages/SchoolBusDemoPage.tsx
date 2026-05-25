@@ -21,6 +21,7 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { schoolBusUi } from '../theme';
 import { formatDateTime, getPageItems } from '../utils';
+import { SchoolBusTimeline, mapDemoEventsToTimeline } from '../components/history';
 
 export function SchoolBusDemoPage() {
   const { data: tripsData } = useGetTripsQuery({
@@ -213,22 +214,13 @@ export function SchoolBusDemoPage() {
               </div>
             </div>
 
-            <div className='space-y-2'>
-              <p className='text-sm font-semibold text-slate-950'>Event log</p>
-              {events.length === 0 ? (
-                <p className='text-sm text-slate-500'>No demo events recorded yet.</p>
-              ) : (
-                events.map((event) => (
-                  <div key={event.id} className={schoolBusUi.interactiveCard}>
-                    <div className='flex items-center justify-between gap-3'>
-                      <p className='font-medium'>{event.eventType}</p>
-                      <p className='text-xs text-slate-500'>
-                        {formatDateTime(event.eventTime)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div>
+              <p className='mb-2 text-sm font-semibold text-slate-950'>Nhật ký sự kiện</p>
+              <SchoolBusTimeline
+                events={mapDemoEventsToTimeline(events)}
+                mode='compact'
+                maxHeight='360px'
+              />
             </div>
           </div>
         </SchoolBusSection>

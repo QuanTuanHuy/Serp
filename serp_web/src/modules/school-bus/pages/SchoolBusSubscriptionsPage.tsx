@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CalendarDays, PauseCircle, PlayCircle, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
@@ -26,6 +27,8 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems } from '../utils';
+import { SubscriptionHistoryDialog } from '../components/history';
+import { SubscriptionDetailDialog } from '../components/SubscriptionDetailDialog';
 
 export function SchoolBusSubscriptionsPage() {
   const pagination = useSchoolBusPagination({
@@ -39,6 +42,7 @@ export function SchoolBusSubscriptionsPage() {
   const [pauseSubscription] = usePauseSubscriptionMutation();
   const [stopSubscription] = useStopSubscriptionMutation();
   const subscriptions = getPageItems(data?.data);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const mutate = async (action: 'activate' | 'pause' | 'stop', id: number) => {
     try {
@@ -108,6 +112,7 @@ export function SchoolBusSubscriptionsPage() {
                   <TableHead>Code</TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>School</TableHead>
+                  <TableHead>Schedule</TableHead>
                   <TableHead>Trip option</TableHead>
                   <TableHead>Pickup / dropoff</TableHead>
                   <TableHead>Effective</TableHead>
@@ -117,12 +122,21 @@ export function SchoolBusSubscriptionsPage() {
               </TableHeader>
               <TableBody>
                 {subscriptions.map((subscription) => (
-                  <TableRow key={subscription.id}>
+                  <TableRow
+                    key={subscription.id}
+                    className='cursor-pointer select-none transition-colors hover:bg-rose-50/40'
+                    onDoubleClick={() => setSelectedId(subscription.id)}
+                  >
                     <TableCell className='font-semibold text-rose-700'>
                       {subscription.subscriptionCode}
                     </TableCell>
                     <TableCell>{subscription.studentName}</TableCell>
                     <TableCell>{subscription.schoolName}</TableCell>
+                    <TableCell>
+                      <span className='text-sm text-slate-600'>
+                        {subscription.schoolScheduleName || '-'}
+                      </span>
+                    </TableCell>
                     <TableCell>{subscription.tripOption}</TableCell>
                     <TableCell>
                       {subscription.pickupPointName || '-'} /{' '}
@@ -137,30 +151,40 @@ export function SchoolBusSubscriptionsPage() {
                     </TableCell>
                     <TableCell>
                       <div className='flex justify-end gap-2'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => mutate('activate', subscription.id)}
-                        >
-                          <PlayCircle className='mr-1 h-4 w-4' />
-                          Activate
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => mutate('pause', subscription.id)}
-                        >
-                          <PauseCircle className='mr-1 h-4 w-4' />
-                          Pause
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => mutate('stop', subscription.id)}
-                        >
-                          <StopCircle className='mr-1 h-4 w-4' />
-                          Stop
-                        </Button>
+                        <SubscriptionHistoryDialog
+                          subscriptionId={subscription.id}
+                          subscriptionCode={subscription.subscriptionCode}
+                        />
+                        {subscription.status === 'PAUSED' && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            onClick={() => mutate('activate', subscription.id)}
+                          >
+                            <PlayCircle className='mr-1 h-4 w-4' />
+                            Resume
+                          </Button>
+                        )}
+                        {subscription.status === 'ACTIVE' && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            onClick={() => mutate('pause', subscription.id)}
+                          >
+                            <PauseCircle className='mr-1 h-4 w-4' />
+                            Pause
+                          </Button>
+                        )}
+                        {(subscription.status === 'ACTIVE' || subscription.status === 'PAUSED') && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            onClick={() => mutate('stop', subscription.id)}
+                          >
+                            <StopCircle className='mr-1 h-4 w-4' />
+                            Stop
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -170,6 +194,14 @@ export function SchoolBusSubscriptionsPage() {
           </SchoolBusScrollableTable>
         )}
       </SchoolBusSection>
+
+      {/* Subscription Detail Modal — triggered by double-click */}
+      {selectedId !== null && (
+        <SubscriptionDetailDialog
+          subscriptionId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </SchoolBusPageShell>
   );
 }

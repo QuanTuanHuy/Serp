@@ -11,13 +11,14 @@ import {
   PlayCircle,
   Plus,
   Route,
+  Sparkles,
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
   useCompleteRouteMutation,
   useComputeRoutePathMutation,
-  useGenerateGreedyPlanMutation,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
@@ -44,8 +45,6 @@ export function SchoolBusDispatchPage() {
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetRoutesQuery(pagination.params);
-  const [generateGreedyPlan, { isLoading: planning }] =
-    useGenerateGreedyPlanMutation();
   const [startRoute, { isLoading: starting }] = useStartRouteMutation();
   const [completeRoute, { isLoading: completing }] = useCompleteRouteMutation();
   const [computeRoutePath, { isLoading: computingPath }] =
@@ -94,21 +93,6 @@ export function SchoolBusDispatchPage() {
     }
   }, [prioritizedRoutes, selectedRouteId]);
 
-  const handleGeneratePlan = async (routeId: number) => {
-    try {
-      const response = await generateGreedyPlan(routeId).unwrap();
-      await computeRoutePath(routeId).unwrap();
-      const stopCount = response.data?.length || 0;
-      toast.success(
-        stopCount > 0
-          ? `Generated ${stopCount} planned stops`
-          : response.message || 'Greedy plan generated'
-      );
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to generate greedy plan');
-    }
-  };
-
   const handleComputePath = async () => {
     if (!selectedRouteId) {
       return;
@@ -149,9 +133,9 @@ export function SchoolBusDispatchPage() {
       description='Plan, inspect, and move routes through the core execution lifecycle.'
       actions={
         <Button asChild className='rounded-full'>
-          <Link href='/school-bus/dispatch/new'>
+          <Link href='/school-bus/dispatch/planning'>
             <Plus className='h-4 w-4' />
-            Create route
+            Plan routes
           </Link>
         </Button>
       }
@@ -222,7 +206,7 @@ export function SchoolBusDispatchPage() {
                     </div>
                     <p className='text-sm text-muted-foreground'>
                       {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                      {route.shiftType} -{' '}
+                      {route.schoolScheduleName || '-'} -{' '}
                       {route.routeDirection === 'RETURN' ? 'Chieu ve' : 'Chieu di'}
                     </p>
                     <div className='flex flex-wrap gap-4 text-xs text-muted-foreground'>
@@ -255,13 +239,11 @@ export function SchoolBusDispatchPage() {
                         </Link>
                       </Button>
                     ) : null}
-                    <Button
-                      variant='outline'
-                      className='rounded-full'
-                      disabled={planning}
-                      onClick={() => handleGeneratePlan(route.id)}
-                    >
-                      {planning ? 'Generating...' : 'Generate plan'}
+                    <Button variant='outline' className='rounded-full' asChild>
+                      <Link href='/school-bus/dispatch/planning'>
+                        <Sparkles className='h-4 w-4' />
+                        Plan workspace
+                      </Link>
                     </Button>
                     {['PLANNED', 'ASSIGNED'].includes(route.status) ? (
                       <Button

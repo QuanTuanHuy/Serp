@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import {
   useCreateTransportRequestMutation,
   useGetParentsQuery,
-  useGetPickupPointsQuery,
   useGetSchoolsQuery,
   useGetStudentsQuery,
   useGetTransportRequestByIdQuery,
@@ -41,10 +40,6 @@ export function SchoolBusRequestFormPage({
   const { data: studentsData } = useGetStudentsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'fullName',
-  });
-  const { data: pickupPointsData } = useGetPickupPointsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'name',
   });
   const [createTransportRequest, { isLoading: creating }] =
     useCreateTransportRequestMutation();
@@ -90,7 +85,6 @@ export function SchoolBusRequestFormPage({
         parents={getPageItems(parentsData?.data)}
         schools={getPageItems(schoolsData?.data)}
         students={getPageItems(studentsData?.data)}
-        pickupPoints={getPageItems(pickupPointsData?.data)}
         isLoading={creating || updating}
         submitLabel={isEditMode ? 'Update request' : 'Create request'}
         onCancel={() =>

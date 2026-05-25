@@ -19,7 +19,6 @@ import {
   useCompleteRouteMutation,
   useComputeRoutePathMutation,
   useCreateTripFromRouteMutation,
-  useGenerateGreedyPlanMutation,
   useGetAttendantsQuery,
   useGetBusesQuery,
   useGetDriversQuery,
@@ -67,8 +66,6 @@ export function SchoolBusRouteDetailPage({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'fullName',
   });
-  const [generateGreedyPlan, { isLoading: planning }] =
-    useGenerateGreedyPlanMutation();
   const [computeRoutePath, { isLoading: computingPath }] =
     useComputeRoutePathMutation();
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
@@ -81,19 +78,6 @@ export function SchoolBusRouteDetailPage({
 
   const detail = data?.data;
 
-  const handleGeneratePlan = async () => {
-    try {
-      const response = await generateGreedyPlan(routeId).unwrap();
-      await computeRoutePath(routeId).unwrap();
-      toast.success(
-        response.data.length > 0
-          ? `Generated ${response.data.length} stops`
-          : response.message || 'Greedy plan generated'
-      );
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to generate plan');
-    }
-  };
 
   const handleComputePath = async () => {
     try {
@@ -186,13 +170,11 @@ export function SchoolBusRouteDetailPage({
               <UserCog className='h-4 w-4' />
               Assign
             </Button>
-            <Button
-              variant='outline'
-              className='rounded-full'
-              onClick={handleGeneratePlan}
-            >
-              <Sparkles className='h-4 w-4' />
-              {planning ? 'Generating...' : 'Generate plan'}
+            <Button variant='outline' className='rounded-full' asChild>
+              <Link href='/school-bus/dispatch/planning'>
+                <Sparkles className='h-4 w-4' />
+                Plan workspace
+              </Link>
             </Button>
             <Button
               variant='outline'
@@ -202,7 +184,7 @@ export function SchoolBusRouteDetailPage({
               <MapPinned className='h-4 w-4' />
               {computingPath ? 'Computing...' : 'Compute real path'}
             </Button>
-            {['ASSIGNED', 'PLANNED'].includes(route.status) ? (
+            {route.status === 'ASSIGNED' ? (
               <Button
                 variant='outline'
                 className='rounded-full'
@@ -239,7 +221,7 @@ export function SchoolBusRouteDetailPage({
                 value={route.routeDirection === 'RETURN' ? 'Chieu ve' : 'Chieu di'}
               />
               <InfoCard label='Service date' value={formatDate(route.serviceDate)} />
-              <InfoCard label='Shift type' value={route.shiftType} />
+              <InfoCard label='School schedule' value={route.schoolScheduleName} />
               <InfoCard
                 label='Start'
                 value={`${route.startLocationName} (${route.startLocationType})`}

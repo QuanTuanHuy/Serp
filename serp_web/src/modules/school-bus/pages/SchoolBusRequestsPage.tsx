@@ -56,7 +56,7 @@ export function SchoolBusRequestsPage() {
     React.useState<SchoolBusTransportRequest | null>(null);
 
   const requests = getPageItems(data?.data);
-  const pendingRequests = requests.filter((request) => request.status === 'PENDING');
+  const pendingRequests = requests.filter((request) => request.status === 'SUBMITTED');
   const approvedRequests = requests.filter(
     (request) => request.status === 'APPROVED'
   ).length;
@@ -279,7 +279,7 @@ export function SchoolBusRequestsPage() {
                               <Eye className='h-4 w-4' />
                             </Link>
                           </Button>
-                          {request.status === 'PENDING' ? (
+                          {request.status === 'SUBMITTED' ? (
                             <>
                               <Button size='icon' variant='outline' asChild>
                                 <Link href={`/school-bus/requests/${request.id}/edit`}>

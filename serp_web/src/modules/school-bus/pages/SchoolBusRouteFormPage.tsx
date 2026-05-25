@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  useCreateRouteMutation,
   useGetDepotsQuery,
   useGetRouteByIdQuery,
   useGetSchoolsQuery,
@@ -21,7 +20,6 @@ interface SchoolBusRouteFormPageProps {
 
 export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps) {
   const router = useRouter();
-  const isEditMode = Boolean(routeId);
   const { data: routeData, isLoading: loadingRoute } = useGetRouteByIdQuery(
     routeId as number,
     { skip: !routeId }
@@ -34,14 +32,11 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'name',
   });
-  const [createRoute, { isLoading: creating }] = useCreateRouteMutation();
   const [updateRoute, { isLoading: updating }] = useUpdateRouteMutation();
 
   const handleSubmit = async (values: SchoolBusRouteUpsertRequest) => {
     try {
-      const response = isEditMode
-        ? await updateRoute({ id: routeId as number, body: values }).unwrap()
-        : await createRoute(values).unwrap();
+      const response = await updateRoute({ id: routeId as number, body: values }).unwrap();
       toast.success(response.message || 'Route saved');
       router.push(`/school-bus/dispatch/${response.data.id}`);
     } catch (error: any) {
@@ -49,7 +44,7 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
     }
   };
 
-  if (isEditMode && loadingRoute) {
+  if (loadingRoute) {
     return (
       <SchoolBusPageShell title='Edit route' description='Loading route detail...'>
         <SchoolBusEmptyState
@@ -62,20 +57,16 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
 
   return (
     <SchoolBusPageShell
-      title={isEditMode ? 'Edit route' : 'Create route'}
+      title='Edit route'
       description='Prepare the route shell before generating plans, assigning resources, and running attendance.'
     >
       <RoutePlanForm
         initialData={routeData?.data?.route}
         schools={getPageItems(schoolsData?.data)}
         depots={getPageItems(depotsData?.data)}
-        isLoading={creating || updating}
-        submitLabel={isEditMode ? 'Update route' : 'Create route'}
-        onCancel={() =>
-          router.push(
-            isEditMode ? `/school-bus/dispatch/${routeId}` : '/school-bus/dispatch'
-          )
-        }
+        isLoading={updating}
+        submitLabel='Update route'
+        onCancel={() => router.push(`/school-bus/dispatch/${routeId}`)}
         onSubmit={handleSubmit}
       />
     </SchoolBusPageShell>

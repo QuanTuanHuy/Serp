@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui';
 import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
+  useGetAllActiveSchoolPickupLinksQuery,
   useGetParentsQuery,
   useGetPickupPointsQuery,
   useGetSchoolsQuery,
@@ -62,6 +63,10 @@ export function SchoolBusStudentsPage() {
   const schools = getPageItems(schoolsData?.data);
   const parents = getPageItems(parentsData?.data);
   const pickupPoints = getPageItems(pickupPointsData?.data);
+
+  // Load all active school-pickup links for student form filtering
+  const { data: allLinksData } = useGetAllActiveSchoolPickupLinksQuery();
+  const schoolPickupPoints = allLinksData?.data ?? [];
 
   const uniqueSchools = new Set(
     students.map((student) => student.schoolName).filter(Boolean)
@@ -172,7 +177,8 @@ export function SchoolBusStudentsPage() {
                   <TableHead>Student</TableHead>
                   <TableHead>School</TableHead>
                   <TableHead>Parent</TableHead>
-                  <TableHead>Pickup point</TableHead>
+                  <TableHead>Default pickup</TableHead>
+                  <TableHead>Default drop-off</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className='text-right'>Actions</TableHead>
                 </TableRow>
@@ -184,8 +190,8 @@ export function SchoolBusStudentsPage() {
                       <div>
                         <p className='font-medium'>{student.fullName}</p>
                         <p className='text-xs text-muted-foreground'>
-                          {student.studentCode || 'No code'} -{' '}
-                          {student.grade || 'No grade'}
+                          {student.studentCode || 'No code'} —{' '}
+                          {[student.grade, student.className].filter(Boolean).join(' / ') || 'No grade'}
                         </p>
                       </div>
                     </TableCell>
@@ -199,6 +205,7 @@ export function SchoolBusStudentsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{student.pickupPointName || 'Unassigned'}</TableCell>
+                    <TableCell>{student.defaultDropoffPointName || 'Unassigned'}</TableCell>
                     <TableCell>
                       <SchoolBusStatusBadge
                         status={student.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -246,6 +253,7 @@ export function SchoolBusStudentsPage() {
         schools={schools}
         parents={parents}
         pickupPoints={pickupPoints}
+        schoolPickupPoints={schoolPickupPoints}
         isLoading={creating || updating}
         onSubmit={handleSave}
       />

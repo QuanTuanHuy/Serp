@@ -5,6 +5,17 @@ import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import { latLngBounds } from 'leaflet';
 import { LeafletMapShell } from '@/shared/components/map/LeafletMapShell';
 import { cn } from '@/shared/utils';
+import { useMapExpand } from './MapExpandContext';
+
+// ── Map size invalidator — reacts to expand/collapse ─────────────────────────
+function MapInvalidator({ trigger }: { trigger: number }) {
+  const map = useMap();
+  React.useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 150);
+    return () => clearTimeout(t);
+  }, [map, trigger]);
+  return null;
+}
 import {
   SCHOOL_BUS_MAP_DEFAULT_CENTER,
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
@@ -34,6 +45,7 @@ export default function RouteMapClient({
   routePath,
   className,
 }: RouteMapClientProps) {
+  const { isExpanded, expandKey } = useMapExpand();
   const plottedStops = stops
     .filter(
       (stop) =>
@@ -105,6 +117,11 @@ export default function RouteMapClient({
       ])
     : null;
 
+  // When the workspace is expanded, the map container is flex-1/min-h-0 — use h-full.
+  const leafletClass = isExpanded
+    ? cn('h-full w-full', schoolBusUi.mapFrame)
+    : cn('h-[420px] w-full', schoolBusUi.mapFrame, className);
+
   return (
     <LeafletMapShell
       center={[
@@ -112,8 +129,9 @@ export default function RouteMapClient({
         SCHOOL_BUS_MAP_DEFAULT_CENTER.lng,
       ]}
       zoom={SCHOOL_BUS_MAP_DEFAULT_ZOOM}
-      className={cn('h-[420px] w-full', schoolBusUi.mapFrame, className)}
+      className={leafletClass}
     >
+      <MapInvalidator trigger={expandKey} />
       <RouteViewport coordinates={lineCoordinates} />
 
       {routePath?.estimated && routePath.warning ? (

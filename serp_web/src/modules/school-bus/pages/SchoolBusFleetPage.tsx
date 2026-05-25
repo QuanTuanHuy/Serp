@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Trash2,
   UserRound,
+  Warehouse,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/lib/store';
@@ -17,22 +18,27 @@ import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
 import {
   useCreateAttendantMutation,
   useCreateBusMutation,
+  useCreateDepotMutation,
   useCreateDriverMutation,
   useDeleteAttendantMutation,
   useDeleteBusMutation,
+  useDeleteDepotMutation,
   useDeleteDriverMutation,
   useGetAttendantsQuery,
   useGetBusTypesQuery,
   useGetBusesQuery,
+  useGetDepotsQuery,
   useGetDriversQuery,
   useUpdateAttendantMutation,
   useUpdateBusMutation,
+  useUpdateDepotMutation,
   useUpdateDriverMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import {
   AttendantFormDialog,
   BusFormDialog,
+  DepotFormDialog,
   DriverFormDialog,
 } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -48,9 +54,10 @@ import type {
   SchoolBusAccountUser,
   SchoolBusAttendant,
   SchoolBusBus,
+  SchoolBusDepot,
   SchoolBusDriver,
 } from '../types';
-import { getPageItems } from '../utils';
+import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import {
   Table,
   TableBody,
@@ -64,6 +71,7 @@ type FleetDeleteTarget =
   | { type: 'bus'; entity: SchoolBusBus }
   | { type: 'driver'; entity: SchoolBusDriver }
   | { type: 'attendant'; entity: SchoolBusAttendant }
+  | { type: 'depot'; entity: SchoolBusDepot }
   | null;
 
 export function SchoolBusFleetPage() {
@@ -87,14 +95,22 @@ export function SchoolBusFleetPage() {
     sortBy: 'fullName',
     sortDirection: 'ASC',
   });
+  const depotPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'name',
+    sortDirection: 'ASC',
+  });
   const { data: busesData } = useGetBusesQuery(busPagination.params);
   const { data: driversData } = useGetDriversQuery(driverPagination.params);
   const { data: attendantsData } = useGetAttendantsQuery(
     attendantPagination.params
   );
+  const { data: depotsPageData } = useGetDepotsQuery(depotPagination.params);
   const [busDialogOpen, setBusDialogOpen] = React.useState(false);
   const [driverDialogOpen, setDriverDialogOpen] = React.useState(false);
   const [attendantDialogOpen, setAttendantDialogOpen] = React.useState(false);
+  const [depotDialogOpen, setDepotDialogOpen] = React.useState(false);
   const accountUserDialogOpen = driverDialogOpen || attendantDialogOpen;
   const { data: accountUsersData, isFetching: loadingAccountUsers } =
     useGetSchoolBusModuleUsersQuery(
@@ -124,6 +140,10 @@ export function SchoolBusFleetPage() {
   );
   const { data: busTypesData, isFetching: loadingBusTypes } =
     useGetBusTypesQuery(undefined, { skip: !busDialogOpen });
+  const { data: depotsData } = useGetDepotsQuery(
+    { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' },
+    { skip: !busDialogOpen && !depotDialogOpen }
+  );
   const [createBus, { isLoading: creatingBus }] = useCreateBusMutation();
   const [updateBus, { isLoading: updatingBus }] = useUpdateBusMutation();
   const [deleteBus, { isLoading: deletingBus }] = useDeleteBusMutation();
@@ -136,14 +156,19 @@ export function SchoolBusFleetPage() {
     useUpdateAttendantMutation();
   const [deleteAttendant, { isLoading: deletingAttendant }] =
     useDeleteAttendantMutation();
+  const [createDepot, { isLoading: creatingDepot }] = useCreateDepotMutation();
+  const [updateDepot, { isLoading: updatingDepot }] = useUpdateDepotMutation();
+  const [deleteDepot, { isLoading: deletingDepot }] = useDeleteDepotMutation();
 
   const buses = getPageItems(busesData?.data);
   const drivers = getPageItems(driversData?.data);
   const attendants = getPageItems(attendantsData?.data);
+  const depotsPage = getPageItems(depotsPageData?.data);
   const driverOptions = getPageItems(driverOptionsData?.data);
   const attendantOptions = getPageItems(attendantOptionsData?.data);
   const accountUsers = accountUsersData?.data || [];
   const busTypes = busTypesData?.data || [];
+  const depots = getPageItems(depotsData?.data);
   const activeDrivers = drivers.filter((driver) => driver.isActive !== false).length;
   const activeAttendants = attendants.filter(
     (attendant) => attendant.isActive !== false
@@ -154,6 +179,7 @@ export function SchoolBusFleetPage() {
     React.useState<SchoolBusDriver | null>(null);
   const [editingAttendant, setEditingAttendant] =
     React.useState<SchoolBusAttendant | null>(null);
+  const [editingDepot, setEditingDepot] = React.useState<SchoolBusDepot | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<FleetDeleteTarget>(null);
 
   const driverDialogUsers = React.useMemo(
@@ -215,6 +241,19 @@ export function SchoolBusFleetPage() {
     }
   };
 
+  const handleSaveDepot = async (values: any) => {
+    try {
+      const response = editingDepot
+        ? await updateDepot({ id: editingDepot.id, body: values }).unwrap()
+        : await createDepot(values).unwrap();
+      toast.success(response.message || 'Depot saved');
+      setDepotDialogOpen(false);
+      setEditingDepot(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save depot');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) {
       return;
@@ -227,9 +266,12 @@ export function SchoolBusFleetPage() {
       } else if (deleteTarget.type === 'driver') {
         const response = await deleteDriver(deleteTarget.entity.id).unwrap();
         toast.success(response.message || 'Driver deleted');
-      } else {
+      } else if (deleteTarget.type === 'attendant') {
         const response = await deleteAttendant(deleteTarget.entity.id).unwrap();
         toast.success(response.message || 'Attendant deleted');
+      } else {
+        const response = await deleteDepot(deleteTarget.entity.id).unwrap();
+        toast.success(response.message || 'Depot deleted');
       }
       setDeleteTarget(null);
     } catch (error: any) {
@@ -267,6 +309,7 @@ export function SchoolBusFleetPage() {
                 <TableHead>Plate</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Capacity</TableHead>
+                <TableHead>Home depot</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className='text-right'>Actions</TableHead>
               </TableRow>
@@ -277,6 +320,9 @@ export function SchoolBusFleetPage() {
                   <TableCell className='font-medium'>{bus.plateNumber}</TableCell>
                   <TableCell>{bus.busType || 'Standard'}</TableCell>
                   <TableCell>{bus.capacity}</TableCell>
+                  <TableCell>
+                    <span className='text-sm text-slate-600'>{bus.homeDepotName || 'No depot'}</span>
+                  </TableCell>
                   <TableCell>
                     <SchoolBusStatusBadge status={bus.status} />
                   </TableCell>
@@ -470,6 +516,89 @@ export function SchoolBusFleetPage() {
     </div>
   );
 
+  const depotsTabContent = (
+    <div className='space-y-4'>
+      <div>
+        <h3 className='text-base font-semibold text-slate-950'>
+          Depot directory
+        </h3>
+        <p className='mt-1 text-sm text-slate-500'>
+          Fixed bus yards available as explicit route start or end points.
+        </p>
+      </div>
+      {depotsPage.length === 0 ? (
+        <SchoolBusEmptyState
+          title='No depots registered yet'
+          description='Create depots to model fixed route origins and destinations explicitly.'
+          icon={Warehouse}
+          className='min-h-[220px]'
+        />
+      ) : (
+        <SchoolBusScrollableTable
+          footer={
+            <SchoolBusPaginationBar
+              page={depotsPageData?.data}
+              onPageChange={depotPagination.setPage}
+            />
+          }
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Depot</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className='text-right'>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {depotsPage.map((depot) => (
+                <TableRow key={depot.id}>
+                  <TableCell className='font-medium'>{depot.name}</TableCell>
+                  <TableCell>
+                    <span className='text-xs font-mono text-rose-700'>{depot.code || 'N/A'}</span>
+                  </TableCell>
+                  <TableCell>{depot.address || 'No address'}</TableCell>
+                  <TableCell>{depot.contactPhone || 'No phone'}</TableCell>
+                  <TableCell>
+                    <SchoolBusStatusBadge
+                      status={depot.isActive ? 'ACTIVE' : 'INACTIVE'}
+                    />
+                  </TableCell>
+                  <TableCell className='text-right'>
+                    <div className='flex justify-end gap-2'>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => {
+                          setEditingDepot(depot);
+                          setDepotDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() =>
+                          setDeleteTarget({ type: 'depot', entity: depot })
+                        }
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SchoolBusScrollableTable>
+      )}
+    </div>
+  );
+
   return (
     <>
       <SchoolBusPageShell
@@ -500,6 +629,17 @@ export function SchoolBusFleetPage() {
               Add attendant
             </Button>
             <Button
+              variant='outline'
+              className='rounded-full'
+              onClick={() => {
+                setEditingDepot(null);
+                setDepotDialogOpen(true);
+              }}
+            >
+              <Plus className='h-4 w-4' />
+              Add depot
+            </Button>
+            <Button
               className='rounded-full'
               onClick={() => {
                 setEditingBus(null);
@@ -512,7 +652,7 @@ export function SchoolBusFleetPage() {
           </>
         }
       >
-        <div className='grid gap-4 md:grid-cols-3'>
+        <div className='grid gap-4 md:grid-cols-4'>
           <SchoolBusMetricCard
             label='Buses registered'
             value={buses.length}
@@ -532,6 +672,13 @@ export function SchoolBusFleetPage() {
             value={activeAttendants}
             hint='On-board staff available for student service'
             icon={ShieldCheck}
+            tone='default'
+          />
+          <SchoolBusMetricCard
+            label='Depots'
+            value={depotsPage.length}
+            hint='Fixed route origins or destinations'
+            icon={Warehouse}
             tone='default'
           />
         </div>
@@ -557,6 +704,12 @@ export function SchoolBusFleetPage() {
               count: attendants.length,
               content: attendantsTabContent,
             },
+            {
+              value: 'depots',
+              label: 'Depots',
+              count: depotsPage.length,
+              content: depotsTabContent,
+            },
           ]}
         />
       </SchoolBusPageShell>
@@ -572,6 +725,7 @@ export function SchoolBusFleetPage() {
         initialData={editingBus}
         busTypes={busTypes}
         isLoadingBusTypes={loadingBusTypes}
+        depots={depots}
         isLoading={creatingBus || updatingBus}
         onSubmit={handleSaveBus}
       />
@@ -618,11 +772,26 @@ export function SchoolBusFleetPage() {
             ? 'Delete bus'
             : deleteTarget?.type === 'driver'
               ? 'Delete driver'
-              : 'Delete attendant'
+              : deleteTarget?.type === 'depot'
+                ? 'Delete depot'
+                : 'Delete attendant'
         }
         description='This will soft-delete the selected record from active fleet operations.'
-        isLoading={deletingBus || deletingDriver || deletingAttendant}
+        isLoading={deletingBus || deletingDriver || deletingAttendant || deletingDepot}
         onConfirm={handleDelete}
+      />
+
+      <DepotFormDialog
+        open={depotDialogOpen}
+        onOpenChange={(open) => {
+          setDepotDialogOpen(open);
+          if (!open) {
+            setEditingDepot(null);
+          }
+        }}
+        initialData={editingDepot}
+        isLoading={creatingDepot || updatingDepot}
+        onSubmit={handleSaveDepot}
       />
     </>
   );

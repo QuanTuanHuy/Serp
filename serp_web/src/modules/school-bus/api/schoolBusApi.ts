@@ -31,6 +31,7 @@ import type {
   SchoolBusManualDispatchRequest,
   SchoolBusRoute,
   SchoolBusRouteAssignment,
+  SchoolBusAssignmentHistory,
   SchoolBusRouteAssignmentRequest,
   SchoolBusRouteDetail,
   SchoolBusRoutePath,
@@ -46,9 +47,17 @@ import type {
   SchoolBusTransportRequestDetail,
   SchoolBusTransportRequestHistory,
   SchoolBusTransportRequestUpsertRequest,
+  SchoolBusSubscriptionHistory,
+  SchoolBusSubscriptionPausePeriod,
   SchoolBusTripAttendanceActionRequest,
   SchoolBusTripExecution,
   SchoolBusTripHistory,
+  SchoolBusSchedule,
+  SchoolBusScheduleUpsertRequest,
+  SchoolBusSchoolPickupPoint,
+  SchoolBusSchoolPickupPointUpsertRequest,
+  SchoolBusSchoolPickupPointWindow,
+  SchoolPickupPointWindowUpsertRequest,
 } from '../types';
 
 const transformApiResponse = createApiResponseTransform;
@@ -95,7 +104,7 @@ export const schoolBusApi = api.injectEndpoints({
       SchoolBusListParams | void
     >({
       query: (params) => ({
-        url: '/reports/operations-summary',
+        url: '/dashboard/reports/operations-summary',
         method: 'GET',
         params: params || undefined,
       }),
@@ -107,7 +116,7 @@ export const schoolBusApi = api.injectEndpoints({
       ApiResponse<PagedResponse<SchoolBusTripExecution>>,
       SchoolBusListParams | void
     >({
-      query: (params) => listQuery('/reports/trips', params),
+      query: (params) => listQuery('/dashboard/reports/trips', params),
       extraOptions: { service: 'school-bus' },
       transformResponse:
         transformApiResponse<PagedResponse<SchoolBusTripExecution>>(),
@@ -117,7 +126,7 @@ export const schoolBusApi = api.injectEndpoints({
       ApiResponse<PagedResponse<SchoolBusAttendance>>,
       SchoolBusListParams | void
     >({
-      query: (params) => listQuery('/reports/attendance', params),
+      query: (params) => listQuery('/dashboard/reports/attendance', params),
       extraOptions: { service: 'school-bus' },
       transformResponse:
         transformApiResponse<PagedResponse<SchoolBusAttendance>>(),
@@ -127,14 +136,14 @@ export const schoolBusApi = api.injectEndpoints({
       ApiResponse<PagedResponse<SchoolBusCapacityUtilization>>,
       SchoolBusListParams | void
     >({
-      query: (params) => listQuery('/reports/capacity-utilization', params),
+      query: (params) => listQuery('/dashboard/reports/capacity-utilization', params),
       extraOptions: { service: 'school-bus' },
       transformResponse:
         transformApiResponse<PagedResponse<SchoolBusCapacityUtilization>>(),
       providesTags: [{ type: 'schoolBus/Report', id: 'CAPACITY' }],
     }),
     getBusTypes: builder.query<ApiResponse<SchoolBusBusType[]>, void>({
-      query: () => ({ url: '/bus-types', method: 'GET' }),
+      query: () => ({ url: '/master-data/bus-types', method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusBusType[]>(),
     }),
@@ -764,6 +773,22 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
+    cancelTransportRequest: builder.mutation<
+      ApiResponse<SchoolBusTransportRequest>,
+      number
+    >({
+      query: (id) => ({
+        url: `/transport-requests/${id}/cancel`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTransportRequest>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TransportRequest', id: 'LIST' },
+        { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
+      ],
+    }),
     getTransportRequestHistory: builder.query<
       ApiResponse<SchoolBusTransportRequestHistory[]>,
       number
@@ -790,6 +815,15 @@ export const schoolBusApi = api.injectEndpoints({
         transformApiResponse<PagedResponse<SchoolBusSubscription>>(),
       providesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
     }),
+    getSubscriptionById: builder.query<ApiResponse<SchoolBusSubscription>, number>({
+      query: (id) => ({ url: `/subscriptions/${id}`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscription>(),
+      providesTags: (result, error, id) => [
+        { type: 'schoolBus/TransportRequest', id: `SUB-${id}` },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+      ],
+    }),
     createSubscription: builder.mutation<
       ApiResponse<SchoolBusSubscription>,
       SchoolBusSubscriptionUpsertRequest
@@ -806,19 +840,58 @@ export const schoolBusApi = api.injectEndpoints({
       query: (id) => ({ url: `/subscriptions/${id}/activate`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
-      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+      invalidatesTags: (result, error, id) => [
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+      ],
     }),
     pauseSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}/pause`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
-      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+      invalidatesTags: (result, error, id) => [
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+      ],
     }),
     stopSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}/stop`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
-      invalidatesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
+      invalidatesTags: (result, error, id) => [
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+      ],
+    }),
+    getSubscriptionHistory: builder.query<
+      ApiResponse<SchoolBusSubscriptionHistory[]>,
+      number
+    >({
+      query: (id) => ({
+        url: `/subscriptions/${id}/history`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusSubscriptionHistory[]>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+      ],
+    }),
+    getSubscriptionPausePeriods: builder.query<
+      ApiResponse<SchoolBusSubscriptionPausePeriod[]>,
+      number
+    >({
+      query: (id) => ({
+        url: `/subscriptions/${id}/pause-periods`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusSubscriptionPausePeriod[]>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/TransportRequest', id: `SUB-PAUSE-${id}` },
+      ],
     }),
 
     getRoutes: builder.query<
@@ -873,19 +946,6 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `PATH-${id}` },
       ],
     }),
-    createRoute: builder.mutation<
-      ApiResponse<SchoolBusRoute>,
-      SchoolBusRouteUpsertRequest
-    >({
-      query: (body) => ({ url: '/routes', method: 'POST', body }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusRoute>(),
-      invalidatesTags: [
-        { type: 'schoolBus/Route', id: 'LIST' },
-        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
-        { type: 'schoolBus/Report', id: 'SUMMARY' },
-      ],
-    }),
     updateRoute: builder.mutation<
       ApiResponse<SchoolBusRoute>,
       { id: number; body: SchoolBusRouteUpsertRequest }
@@ -903,26 +963,20 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
-        { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
-    generateGreedyPlan: builder.mutation<
-      ApiResponse<SchoolBusRouteStop[]>,
+    getAssignmentHistory: builder.query<
+      ApiResponse<SchoolBusAssignmentHistory[]>,
       number
     >({
       query: (id) => ({
-        url: `/routes/${id}/generate-greedy-plan`,
-        method: 'POST',
+        url: `/routes/${id}/assignment-history`,
+        method: 'GET',
       }),
       extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusRouteStop[]>(),
-      invalidatesTags: (_result, _error, id) => [
-        { type: 'schoolBus/Route', id: 'LIST' },
-        { type: 'schoolBus/Route', id },
-        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
-        { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
-        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
-        { type: 'schoolBus/Report', id: 'SUMMARY' },
+      transformResponse: transformApiResponse<SchoolBusAssignmentHistory[]>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Route', id: `ASSIGNMENT-HISTORY-${id}` },
       ],
     }),
     assignRoute: builder.mutation<
@@ -941,6 +995,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id },
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
+        { type: 'schoolBus/Route', id: `ASSIGNMENT-HISTORY-${id}` },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -960,6 +1015,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'LIST' },
         { type: 'schoolBus/Route', id },
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+        { type: 'schoolBus/Route', id: `ASSIGNMENT-HISTORY-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
       ],
     }),
@@ -978,6 +1034,74 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id },
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
+      ],
+    }),
+    addRouteStop: builder.mutation<
+      ApiResponse<SchoolBusRouteStop>,
+      { id: number; body: { pickupPointId: number; stopType?: string; estimatedStudentCount?: number } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/routes/${id}/stops`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteStop>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'schoolBus/Route', id },
+        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+      ],
+    }),
+    removeRouteStop: builder.mutation<
+      ApiResponse<void>,
+      { routeId: number; stopId: number }
+    >({
+      query: ({ routeId, stopId }) => ({
+        url: `/routes/${routeId}/stops/${stopId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: (_result, _error, { routeId }) => [
+        { type: 'schoolBus/Route', id: routeId },
+        { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+      ],
+    }),
+    moveRouteStudent: builder.mutation<
+      ApiResponse<void>,
+      { routeId: number; body: { studentId: number; subscriptionId: number; targetRouteId: number } }
+    >({
+      query: ({ routeId, body }) => ({
+        url: `/routes/${routeId}/students/move`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: (_result, _error, { routeId, body }) => [
+        { type: 'schoolBus/Route', id: routeId },
+        { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
+        { type: 'schoolBus/Route', id: body.targetRouteId },
+        { type: 'schoolBus/Route', id: `DETAIL-${body.targetRouteId}` },
+      ],
+    }),
+    removeRouteStudent: builder.mutation<
+      ApiResponse<void>,
+      { routeId: number; studentId: number; subscriptionId: number }
+    >({
+      query: ({ routeId, studentId, subscriptionId }) => ({
+        url: `/routes/${routeId}/students/${studentId}?subscriptionId=${subscriptionId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: (_result, _error, { routeId }) => [
+        { type: 'schoolBus/Route', id: routeId },
+        { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
       ],
     }),
     startRoute: builder.mutation<ApiResponse<SchoolBusRoute>, number>({
@@ -1041,9 +1165,12 @@ export const schoolBusApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusTripExecution>(),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, routePlanId) => [
         { type: 'schoolBus/TripHistory', id: 'LIST' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+        { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id: routePlanId },
+        { type: 'schoolBus/Route', id: `DETAIL-${routePlanId}` },
       ],
     }),
     getTrips: builder.query<
@@ -1254,11 +1381,375 @@ export const schoolBusApi = api.injectEndpoints({
       ApiResponse<PagedResponse<SchoolBusTripHistory>>,
       SchoolBusListParams | void
     >({
-      query: (params) => listQuery('/trip-history', params),
+      query: (params) => listQuery('/attendance/trip-history', params),
       extraOptions: { service: 'school-bus' },
       transformResponse:
         transformApiResponse<PagedResponse<SchoolBusTripHistory>>(),
       providesTags: [{ type: 'schoolBus/TripHistory', id: 'LIST' }],
+    }),
+
+    // ===== School Schedule =====
+    getSchoolSchedules: builder.query<
+      ApiResponse<PagedResponse<SchoolBusSchedule>>,
+      { schoolId: number; page?: number; size?: number }
+    >({
+      query: ({ schoolId, page = 0, size = 20 }) => ({
+        url: '/school-schedules/by-school',
+        method: 'GET',
+        params: { schoolId, page, size },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<PagedResponse<SchoolBusSchedule>>(),
+      providesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }],
+    }),
+    getActiveSchoolSchedules: builder.query<
+      ApiResponse<SchoolBusSchedule[]>,
+      number
+    >({
+      query: (schoolId) => ({
+        url: '/school-schedules/by-school/active',
+        method: 'GET',
+        params: { schoolId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchedule[]>(),
+      providesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
+    }),
+    getSchoolScheduleById: builder.query<
+      ApiResponse<SchoolBusSchedule>,
+      number
+    >({
+      query: (id) => ({
+        url: '/school-schedules',
+        method: 'GET',
+        params: { id },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchedule>(),
+      providesTags: (_result, _error, id) => [{ type: 'schoolBus/School', id: `SCHEDULE-${id}` }],
+    }),
+    createSchoolSchedule: builder.mutation<
+      ApiResponse<SchoolBusSchedule>,
+      { schoolId: number; body: SchoolBusScheduleUpsertRequest }
+    >({
+      query: ({ schoolId, body }) => ({
+        url: '/school-schedules',
+        method: 'POST',
+        params: { schoolId },
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchedule>(),
+      invalidatesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }, { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
+    }),
+    updateSchoolSchedule: builder.mutation<
+      ApiResponse<SchoolBusSchedule>,
+      { id: number; body: SchoolBusScheduleUpsertRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: '/school-schedules',
+        method: 'PATCH',
+        params: { id },
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchedule>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'schoolBus/School', id: 'SCHEDULE_LIST' },
+        { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' },
+        { type: 'schoolBus/School', id: `SCHEDULE-${id}` },
+      ],
+    }),
+    deleteSchoolSchedule: builder.mutation<ApiResponse<void>, number>({
+      query: (id) => ({
+        url: '/school-schedules',
+        method: 'DELETE',
+        params: { id },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }, { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
+    }),
+
+    // ===== School Pickup Points =====
+    getSchoolPickupPoints: builder.query<
+      ApiResponse<PagedResponse<SchoolBusSchoolPickupPoint>>,
+      { schoolId: number; page?: number; size?: number }
+    >({
+      query: ({ schoolId, page = 0, size = 20 }) => ({
+        url: '/school-pickup-points/by-school',
+        method: 'GET',
+        params: { schoolId, page, size },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<PagedResponse<SchoolBusSchoolPickupPoint>>(),
+      providesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }],
+    }),
+    getActiveSchoolPickupPoints: builder.query<
+      ApiResponse<SchoolBusSchoolPickupPoint[]>,
+      number
+    >({
+      query: (schoolId) => ({
+        url: '/school-pickup-points/by-school/active',
+        method: 'GET',
+        params: { schoolId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPoint[]>(),
+      providesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' }],
+    }),
+    getAllActiveSchoolPickupLinks: builder.query<
+      ApiResponse<SchoolBusSchoolPickupPoint[]>,
+      void
+    >({
+      query: () => ({
+        url: '/school-pickup-points/active',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPoint[]>(),
+      providesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ALL_ACTIVE' }],
+    }),
+    linkSchoolPickupPoint: builder.mutation<
+      ApiResponse<SchoolBusSchoolPickupPoint>,
+      { schoolId: number; body: SchoolBusSchoolPickupPointUpsertRequest }
+    >({
+      query: ({ schoolId, body }) => ({
+        url: '/school-pickup-points',
+        method: 'POST',
+        params: { schoolId },
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPoint>(),
+      invalidatesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }, { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' }],
+    }),
+    updateSchoolPickupPoint: builder.mutation<
+      ApiResponse<SchoolBusSchoolPickupPoint>,
+      { id: number; body: SchoolBusSchoolPickupPointUpsertRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: '/school-pickup-points',
+        method: 'PATCH',
+        params: { id },
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPoint>(),
+      invalidatesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }, { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' }],
+    }),
+    unlinkSchoolPickupPoint: builder.mutation<
+      ApiResponse<void>,
+      { schoolId: number; pickupPointId: number }
+    >({
+      query: ({ schoolId, pickupPointId }) => ({
+        url: '/school-pickup-points',
+        method: 'DELETE',
+        params: { schoolId, pickupPointId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }, { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' }],
+    }),
+
+    // ===== School Pickup Point Windows =====
+    getSchoolPickupPointWindows: builder.query<
+      ApiResponse<SchoolBusSchoolPickupPointWindow[]>,
+      number
+    >({
+      query: (sppId) => ({
+        url: '/school-pickup-point-windows',
+        method: 'GET',
+        params: { schoolPickupPointId: sppId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPointWindow[]>(),
+      providesTags: (_r, _e, sppId) => [{ type: 'schoolBus/PickupPoint', id: `WINDOW_${sppId}` }],
+    }),
+    getScheduleWindows: builder.query<
+      ApiResponse<SchoolBusSchoolPickupPointWindow[]>,
+      number
+    >({
+      query: (scheduleId) => ({
+        url: '/school-pickup-point-windows/by-schedule',
+        method: 'GET',
+        params: { schoolScheduleId: scheduleId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPointWindow[]>(),
+      providesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHEDULE_WINDOWS' }],
+    }),
+    createSchoolPickupPointWindow: builder.mutation<
+      ApiResponse<SchoolBusSchoolPickupPointWindow>,
+      SchoolPickupPointWindowUpsertRequest
+    >({
+      query: (body) => ({
+        url: '/school-pickup-point-windows',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPointWindow>(),
+      invalidatesTags: (_r, _e, body) => [
+        { type: 'schoolBus/PickupPoint', id: `WINDOW_${body.schoolPickupPointId}` },
+        { type: 'schoolBus/PickupPoint', id: 'SCHEDULE_WINDOWS' },
+      ],
+    }),
+    updateSchoolPickupPointWindow: builder.mutation<
+      ApiResponse<SchoolBusSchoolPickupPointWindow>,
+      { windowId: number; body: SchoolPickupPointWindowUpsertRequest }
+    >({
+      query: ({ windowId, body }) => ({
+        url: '/school-pickup-point-windows',
+        method: 'PUT',
+        params: { id: windowId },
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolPickupPointWindow>(),
+      invalidatesTags: (_r, _e, { body }) => [
+        { type: 'schoolBus/PickupPoint', id: `WINDOW_${body.schoolPickupPointId}` },
+        { type: 'schoolBus/PickupPoint', id: 'SCHEDULE_WINDOWS' },
+      ],
+    }),
+    deleteSchoolPickupPointWindow: builder.mutation<
+      ApiResponse<void>,
+      number
+    >({
+      query: (windowId) => ({
+        url: '/school-pickup-point-windows',
+        method: 'DELETE',
+        params: { id: windowId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<void>(),
+      invalidatesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }, { type: 'schoolBus/PickupPoint', id: 'SCHEDULE_WINDOWS' }],
+    }),
+
+    // ── Planning Sessions ──────────────────────────────────────────────────
+    previewPlanningDemand: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningPreview>,
+      import('../types').PlanningSessionPreviewRequest
+    >({
+      query: (body) => ({ url: '/route-planning-sessions/preview', method: 'POST', body }),
+      extraOptions: { service: 'school-bus' },
+    }),
+    createPlanningSession: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningSession>,
+      import('../types').PlanningSessionCreateRequest
+    >({
+      query: (body) => ({ url: '/route-planning-sessions', method: 'POST', body }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: [{ type: 'schoolBus/Route', id: 'SESSION_LIST' }],
+    }),
+    getPlanningSessionsQuery: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningSession[]>,
+      void
+    >({
+      query: () => ({ url: '/route-planning-sessions', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (result) => {
+        const sessions = result?.data ?? [];
+        return [
+          { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+          ...sessions.map(s => ({ type: 'schoolBus/Route' as const, id: `SESSION-${s.id}` })),
+        ];
+      },
+    }),
+    getPlanningSession: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningSession>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-${id}` }],
+    }),
+    generateGreedyForSession: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusGreedyGenerateResult>,
+      { id: number; body?: import('../types').GreedyGenerateRequest }
+    >({
+      query: ({ id, body }) => ({ url: `/route-planning-sessions/${id}/generate-greedy`, method: 'POST', body: body ?? {} }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${id}` },
+        { type: 'schoolBus/Route', id: 'LIST' },
+      ],
+    }),
+    publishPlanningSession: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningSession>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/publish`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, id) => [
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${id}` },
+        { type: 'schoolBus/Route', id: 'LIST' },
+      ],
+    }),
+    cancelPlanningSession: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusPlanningSession>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/cancel`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, id) => [
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${id}` },
+        { type: 'schoolBus/Route', id: 'LIST' },
+      ],
+    }),
+    getSessionRoutes: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusRoute[]>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/routes`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-ROUTES-${id}` }],
+    }),
+    createRouteInSession: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusRoute>,
+      { sessionId: number; body: import('../types').CreateRouteInSessionRequest }
+    >({
+      query: ({ sessionId, body }) => ({
+        url: `/route-planning-sessions/${sessionId}/routes`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, { sessionId }) => [
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
+        { type: 'schoolBus/Route', id: 'LIST' },
+      ],
+    }),
+    getSessionEligibleStudents: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusEligibleStudent[]>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/eligible-students`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${id}` }],
+    }),
+    addStudentToStop: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusRoutePlanStudent>,
+      { routeId: number; sessionId: number; body: import('../types').AddStudentToStopRequest }
+    >({
+      query: ({ routeId, body }) => ({
+        url: `/routes/${routeId}/students/assign`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      // Invalidate route detail + session (with ID) so Active Session counters refresh in real-time
+      invalidatesTags: (_result, _error, { routeId, sessionId }) => [
+        { type: 'schoolBus/Route', id: routeId },
+        { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+      ],
     }),
   }),
 });
@@ -1318,22 +1809,30 @@ export const {
   useUpdateTransportRequestMutation,
   useApproveTransportRequestMutation,
   useRejectTransportRequestMutation,
+  useCancelTransportRequestMutation,
   useGetTransportRequestHistoryQuery,
   useGetSubscriptionsQuery,
+  useGetSubscriptionByIdQuery,
   useCreateSubscriptionMutation,
   useActivateSubscriptionMutation,
   usePauseSubscriptionMutation,
   useStopSubscriptionMutation,
+  useGetSubscriptionHistoryQuery,
+  useGetSubscriptionPausePeriodsQuery,
   useGetRoutesQuery,
   useGetRouteByIdQuery,
   useGetRoutePathQuery,
   useGetRouteAttendanceManifestQuery,
-  useCreateRouteMutation,
   useUpdateRouteMutation,
-  useGenerateGreedyPlanMutation,
+  // useGenerateGreedyPlanMutation removed — replaced by useGenerateGreedyForSessionMutation
+  useGetAssignmentHistoryQuery,
   useAssignRouteMutation,
   useManualDispatchRouteMutation,
   useReorderRouteStopsMutation,
+  useAddRouteStopMutation,
+  useRemoveRouteStopMutation,
+  useMoveRouteStudentMutation,
+  useRemoveRouteStudentMutation,
   useStartRouteMutation,
   useCompleteRouteMutation,
   useComputeRoutePathMutation,
@@ -1359,4 +1858,36 @@ export const {
   useCheckInStudentMutation,
   useCheckOutStudentMutation,
   useGetTripHistoryQuery,
+  // School Schedule
+  useGetSchoolSchedulesQuery,
+  useGetActiveSchoolSchedulesQuery,
+  useGetSchoolScheduleByIdQuery,
+  useCreateSchoolScheduleMutation,
+  useUpdateSchoolScheduleMutation,
+  useDeleteSchoolScheduleMutation,
+  // School Pickup Point
+  useGetSchoolPickupPointsQuery,
+  useGetActiveSchoolPickupPointsQuery,
+  useGetAllActiveSchoolPickupLinksQuery,
+  useLinkSchoolPickupPointMutation,
+  useUpdateSchoolPickupPointMutation,
+  useUnlinkSchoolPickupPointMutation,
+  // School Pickup Point Windows
+  useGetSchoolPickupPointWindowsQuery,
+  useGetScheduleWindowsQuery,
+  useCreateSchoolPickupPointWindowMutation,
+  useUpdateSchoolPickupPointWindowMutation,
+  useDeleteSchoolPickupPointWindowMutation,
+  // Planning Sessions
+  usePreviewPlanningDemandMutation,
+  useCreatePlanningSessionMutation,
+  useGetPlanningSessionsQueryQuery,
+  useGetPlanningSessionQuery,
+  useGenerateGreedyForSessionMutation,
+  usePublishPlanningSessionMutation,
+  useCancelPlanningSessionMutation,
+  useGetSessionRoutesQuery,
+  useCreateRouteInSessionMutation,
+  useGetSessionEligibleStudentsQuery,
+  useAddStudentToStopMutation,
 } = schoolBusApi;

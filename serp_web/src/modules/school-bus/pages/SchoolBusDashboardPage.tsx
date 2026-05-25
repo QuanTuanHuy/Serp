@@ -55,7 +55,7 @@ export function SchoolBusDashboardPage() {
   const routes = getPageItems(routeData?.data);
   const attendance = getPageItems(attendanceData?.data);
 
-  const pendingRequests = requests.filter((request) => request.status === 'PENDING');
+  const pendingRequests = requests.filter((request) => request.status === 'SUBMITTED');
   const activeRoutes = routes.filter((route) =>
     ['ASSIGNED', 'IN_PROGRESS', 'PLANNED'].includes(route.status)
   );
@@ -169,9 +169,9 @@ export function SchoolBusDashboardPage() {
                     description: 'Capture a new transport demand record.',
                   },
                   {
-                    href: '/school-bus/dispatch/new',
-                    title: 'Create route',
-                    description: 'Prepare a route shell for planning and assignment.',
+                    href: '/school-bus/dispatch/planning',
+                    title: 'Plan routes',
+                    description: 'Open the session-based route planning workspace.',
                   },
                   {
                     href: '/school-bus/attendance',
@@ -253,7 +253,7 @@ export function SchoolBusDashboardPage() {
                           </p>
                           <p className='text-sm text-muted-foreground'>
                             {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                            {route.shiftType}
+                            {route.schoolScheduleName}
                           </p>
                         </div>
                         <SchoolBusStatusBadge status={route.status} />

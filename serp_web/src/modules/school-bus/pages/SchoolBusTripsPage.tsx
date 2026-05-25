@@ -105,6 +105,7 @@ export function SchoolBusTripsPage() {
                   <TableHead>Trip</TableHead>
                   <TableHead>Route</TableHead>
                   <TableHead>Service</TableHead>
+                  <TableHead>Start → End</TableHead>
                   <TableHead>Assignment</TableHead>
                   <TableHead>Stops</TableHead>
                   <TableHead>Status</TableHead>
@@ -129,6 +130,14 @@ export function SchoolBusTripsPage() {
                       </TableCell>
                       <TableCell>
                         {formatDate(trip.serviceDate)} - {trip.routeDirection}
+                      </TableCell>
+                      <TableCell>
+                        <div className='text-sm'>
+                          <p>{trip.startLocationName || 'N/A'} → {trip.endLocationName || 'N/A'}</p>
+                          <p className='text-xs text-slate-500'>
+                            {trip.startLocationType || ''} → {trip.endLocationType || ''}
+                          </p>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {trip.busPlateNumber || 'No bus'} /{' '}

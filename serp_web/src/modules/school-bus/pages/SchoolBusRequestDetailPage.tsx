@@ -7,9 +7,12 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
   useApproveTransportRequestMutation,
+  useCancelTransportRequestMutation,
   useGetTransportRequestByIdQuery,
+  useGetTransportRequestHistoryQuery,
   useRejectTransportRequestMutation,
 } from '../api/schoolBusApi';
+import { SchoolBusTimeline, mapRequestHistoryToTimeline } from '../components/history';
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -18,6 +21,7 @@ import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { OperationsMap } from '../components/map/OperationsMap';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
+import type { StudentMapMarker } from '../components/map/OperationsMapClient';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
 import {
@@ -41,6 +45,9 @@ export function SchoolBusRequestDetailPage({
     useApproveTransportRequestMutation();
   const [rejectTransportRequest, { isLoading: rejecting }] =
     useRejectTransportRequestMutation();
+  const [cancelTransportRequest] = useCancelTransportRequestMutation();
+  const { data: historyData, isLoading: historyLoading, isError: historyError } =
+    useGetTransportRequestHistoryQuery(requestId);
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const detail = data?.data;
 
@@ -50,6 +57,15 @@ export function SchoolBusRequestDetailPage({
       toast.success(response.message || 'Transport request approved');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to approve transport request');
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      const response = await cancelTransportRequest(requestId).unwrap();
+      toast.success(response.message || 'Transport request cancelled');
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to cancel transport request');
     }
   };
 
@@ -89,7 +105,7 @@ export function SchoolBusRequestDetailPage({
         description='Inspect the full request payload, review the student list, and take approval actions.'
         actions={
           <>
-            {request.status === 'PENDING' ? (
+            {request.status === 'SUBMITTED' ? (
               <Button variant='outline' className='rounded-full' asChild>
                 <Link href={`/school-bus/requests/${request.id}/edit`}>
                   <Pencil className='h-4 w-4' />
@@ -97,7 +113,16 @@ export function SchoolBusRequestDetailPage({
                 </Link>
               </Button>
             ) : null}
-            {request.status === 'PENDING' ? (
+            {request.status === 'SUBMITTED' || request.status === 'DRAFT' ? (
+              <Button
+                variant='outline'
+                className='rounded-full'
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+            ) : null}
+            {request.status === 'SUBMITTED' ? (
               <Button
                 variant='outline'
                 className='rounded-full'
@@ -107,7 +132,7 @@ export function SchoolBusRequestDetailPage({
                 Reject
               </Button>
             ) : null}
-            {request.status === 'PENDING' ? (
+            {request.status === 'SUBMITTED' ? (
               <Button className='rounded-full' onClick={handleApprove}>
                 <CheckCircle2 className='h-4 w-4' />
                 {approving ? 'Approving...' : 'Approve'}
@@ -168,6 +193,19 @@ export function SchoolBusRequestDetailPage({
         </div>
 
         <SchoolBusSection
+          title='Lịch sử yêu cầu'
+          description='Toàn bộ thay đổi trạng thái và ghi chú liên quan đến yêu cầu này.'
+        >
+          <SchoolBusTimeline
+            events={mapRequestHistoryToTimeline(historyData?.data ?? [])}
+            mode='compact'
+            isLoading={historyLoading}
+            isError={historyError}
+            maxHeight='400px'
+          />
+        </SchoolBusSection>
+
+        <SchoolBusSection
           title='Request map'
           description='Dispatcher review context for the school hub and all pickup points included in this request.'
         >
@@ -200,6 +238,30 @@ export function SchoolBusRequestDetailPage({
                     latitude: student.pickupPointLatitude,
                     longitude: student.pickupPointLongitude,
                   }))}
+                studentMarkers={detail.students.reduce<StudentMapMarker[]>((acc, student) => {
+                  if (student.pickupPointId && typeof student.pickupPointLatitude === 'number' && typeof student.pickupPointLongitude === 'number') {
+                    acc.push({
+                      key: `student-pickup-${student.id}`,
+                      studentName: student.studentName,
+                      pointName: student.pickupPointName || 'Pickup',
+                      latitude: student.pickupPointLatitude,
+                      longitude: student.pickupPointLongitude,
+                      role: 'pickup',
+                    });
+                  }
+                  if (student.dropoffPointId && typeof student.dropoffPointLatitude === 'number' && typeof student.dropoffPointLongitude === 'number'
+                      && (student.dropoffPointId !== student.pickupPointId || student.dropoffPointLatitude !== student.pickupPointLatitude)) {
+                    acc.push({
+                      key: `student-dropoff-${student.id}`,
+                      studentName: student.studentName,
+                      pointName: student.dropoffPointName || 'Drop-off',
+                      latitude: student.dropoffPointLatitude,
+                      longitude: student.dropoffPointLongitude,
+                      role: 'dropoff',
+                    });
+                  }
+                  return acc;
+                }, [])}
                 selectedSchoolId={request.schoolId}
                 className='h-full w-full'
               />

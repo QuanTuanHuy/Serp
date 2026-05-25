@@ -8,7 +8,6 @@ import {
   useSidebarContext,
 } from '@/shared/components';
 import { cn } from '@/shared/utils';
-import { SchoolBusHeader } from './SchoolBusHeader';
 import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
 import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
 
@@ -57,7 +56,6 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
           isCollapsed ? 'pl-16' : 'pl-64'
         )}
       >
-        <SchoolBusHeader />
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
             <RouteGuard moduleCode='SCHOOL_BUS'>{children}</RouteGuard>

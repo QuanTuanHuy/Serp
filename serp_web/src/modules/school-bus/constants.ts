@@ -1,6 +1,15 @@
 export const REQUEST_TYPE_OPTIONS = [
-  { value: 'PICKUP', label: 'Pickup' },
-  { value: 'DROPOFF', label: 'Drop-off' },
+  { value: 'NEW_SERVICE', label: 'New service' },
+  { value: 'CHANGE_SERVICE', label: 'Change service' },
+  { value: 'PAUSE_SERVICE', label: 'Pause service' },
+  { value: 'RESUME_SERVICE', label: 'Resume service' },
+  { value: 'STOP_SERVICE', label: 'Stop service' },
+  { value: 'RENEW_SERVICE', label: 'Renew service' },
+] as const;
+
+export const TRIP_OPTION_OPTIONS = [
+  { value: 'MORNING', label: 'Morning (pickup)' },
+  { value: 'AFTERNOON', label: 'Afternoon (drop-off)' },
   { value: 'ROUND_TRIP', label: 'Round trip' },
 ] as const;
 
@@ -24,9 +33,16 @@ export const PROFILE_STATUS_OPTIONS = [
   { value: 'INACTIVE', label: 'Inactive' },
 ] as const;
 
+export const STAFF_STATUS_OPTIONS = [
+  { value: 'AVAILABLE', label: 'Available' },
+  { value: 'ASSIGNED', label: 'Assigned' },
+  { value: 'ON_LEAVE', label: 'On leave' },
+  { value: 'INACTIVE', label: 'Inactive' },
+] as const;
+
 export const BUS_STATUS_OPTIONS = [
   { value: 'AVAILABLE', label: 'Available' },
-  { value: 'IN_SERVICE', label: 'In service' },
+  { value: 'ASSIGNED', label: 'Assigned' },
   { value: 'MAINTENANCE', label: 'Maintenance' },
   { value: 'INACTIVE', label: 'Inactive' },
 ] as const;

@@ -21,7 +21,7 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { BUS_STATUS_OPTIONS, PROFILE_STATUS_OPTIONS } from '../constants';
+import { BUS_STATUS_OPTIONS, PROFILE_STATUS_OPTIONS, STAFF_STATUS_OPTIONS } from '../constants';
 import { schoolBusUi } from '../theme';
 import type {
   SchoolBusAttendant,
@@ -40,9 +40,11 @@ import type {
   SchoolBusPickupPointUpsertRequest,
   SchoolBusSchool,
   SchoolBusSchoolUpsertRequest,
+  SchoolBusSchoolPickupPoint,
   SchoolBusStudent,
   SchoolBusStudentUpsertRequest,
 } from '../types';
+import { SHIFT_TYPE_OPTIONS } from '../constants';
 import { toCoordinateString } from '../utils';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 import { LocationPickerMap } from './map/LocationPickerMap';
@@ -51,20 +53,23 @@ const schoolSchema = z.object({
   name: z.string().min(1, 'School name is required'),
   address: z.string().optional(),
   contactPhone: z.string().optional(),
-  contactEmail: z.string().optional(),
+  contactEmail: z.string().optional().refine(
+    (v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v),
+    { message: 'Invalid email format' }
+  ),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
 const pickupPointSchema = z.object({
-  schoolId: z.coerce.number().min(1, 'School is required'),
   name: z.string().min(1, 'Pickup point name is required'),
   address: z.string().min(1, 'Address is required'),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-  pickupWindowStart: z.string().optional(),
-  pickupWindowEnd: z.string().optional(),
+  zoneCode: z.string().optional(),
+  usageType: z.string().min(1, 'Usage type is required'),
+  pickupInstruction: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -81,8 +86,11 @@ const depotSchema = z.object({
 const parentSchema = z.object({
   userId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
-  phone: z.string().optional(),
-  email: z.string().optional(),
+  phone: z.string().min(1, 'Phone is required'),
+  email: z.string().optional().refine(
+    (v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v),
+    { message: 'Invalid email format' }
+  ),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
 });
@@ -91,9 +99,16 @@ const studentSchema = z.object({
   schoolId: z.coerce.number().min(1, 'School is required'),
   parentProfileId: z.coerce.number().min(1, 'Parent is required'),
   pickupPointId: z.string().optional(),
+  defaultDropoffPointId: z.string().optional(),
   fullName: z.string().min(1, 'Full name is required'),
   grade: z.string().optional(),
+  className: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
   homeAddress: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhone: z.string().optional(),
+  specialNote: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -102,6 +117,7 @@ const busSchema = z.object({
   busType: z.string().optional(),
   capacity: z.coerce.number().min(1, 'Capacity must be at least 1'),
   status: z.string().min(1, 'Status is required'),
+  homeDepotId: z.string().min(1, 'Home depot is required'),
   isActive: z.boolean().default(true),
 });
 
@@ -109,7 +125,9 @@ const driverSchema = z.object({
   userId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
   phone: z.string().optional(),
-  licenseNumber: z.string().optional(),
+  licenseNumber: z.string().min(1, 'License number is required'),
+  licenseClass: z.string().min(1, 'License class is required'),
+  licenseExpiryDate: z.string().min(1, 'License expiry date is required'),
   status: z.string().min(1, 'Status is required'),
   isActive: z.boolean().default(true),
 });
@@ -197,7 +215,7 @@ export function SchoolFormDialog({
         }
         onCancel={() => onOpenChange(false)}
       >
-        <TextField form={form} name='name' label='School name' />
+        <TextField form={form} name='name' label='School name *' />
         {initialData?.code ? (
           <ReadOnlyField label='School code' value={initialData.code} />
         ) : null}
@@ -252,7 +270,6 @@ export function PickupPointFormDialog({
   const form = useForm<PickupPointFormValues>({
     resolver: zodResolver(pickupPointSchema) as any,
     defaultValues: {
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
       name: initialData?.name || '',
       address: initialData?.address || '',
       latitude:
@@ -263,15 +280,15 @@ export function PickupPointFormDialog({
         initialData?.longitude === null || initialData?.longitude === undefined
           ? ''
           : String(initialData.longitude),
-      pickupWindowStart: initialData?.pickupWindowStart || '',
-      pickupWindowEnd: initialData?.pickupWindowEnd || '',
+      zoneCode: initialData?.zoneCode || '',
+      usageType: initialData?.usageType || '',
+      pickupInstruction: initialData?.pickupInstruction || '',
       isActive: initialData?.isActive ?? true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
       name: initialData?.name || '',
       address: initialData?.address || '',
       latitude:
@@ -282,8 +299,9 @@ export function PickupPointFormDialog({
         initialData?.longitude === null || initialData?.longitude === undefined
           ? ''
           : String(initialData.longitude),
-      pickupWindowStart: initialData?.pickupWindowStart || '',
-      pickupWindowEnd: initialData?.pickupWindowEnd || '',
+      zoneCode: initialData?.zoneCode || '',
+      usageType: initialData?.usageType || '',
+      pickupInstruction: initialData?.pickupInstruction || '',
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData, schools]);
@@ -301,42 +319,35 @@ export function PickupPointFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={async (values) =>
           onSubmit({
-            schoolId: values.schoolId,
             name: values.name,
             address: values.address,
             latitude: values.latitude ? Number(values.latitude) : null,
             longitude: values.longitude ? Number(values.longitude) : null,
-            pickupWindowStart: values.pickupWindowStart || null,
-            pickupWindowEnd: values.pickupWindowEnd || null,
+            zoneCode: values.zoneCode || null,
+            usageType: values.usageType || null,
+            pickupInstruction: values.pickupInstruction || null,
             isActive: values.isActive,
           })
         }
       >
-        <SelectField
-          form={form}
-          name='schoolId'
-          label='School'
-          options={schools.map((school) => ({
-            value: String(school.id),
-            label: school.name,
-          }))}
-        />
-        <TextField form={form} name='name' label='Pickup point name' />
-        <TextareaField form={form} name='address' label='Address' />
+        <TextField form={form} name='name' label='Pickup point name *' />
+        <TextareaField form={form} name='address' label='Address *' />
         <TextField form={form} name='latitude' label='Latitude' />
         <TextField form={form} name='longitude' label='Longitude' />
-        <TextField
+        <TextField form={form} name='zoneCode' label='Zone code' />
+        <SelectField
           form={form}
-          name='pickupWindowStart'
-          label='Pickup window start'
-          type='time'
+          name='usageType'
+          label='Usage type *'
+          allowEmpty
+          emptyLabel='Not specified'
+          options={[
+            { value: 'PICKUP_ONLY', label: 'Pickup only' },
+            { value: 'DROPOFF_ONLY', label: 'Drop-off only' },
+            { value: 'PICKUP_DROPOFF', label: 'Both (pickup & drop-off)' },
+          ]}
         />
-        <TextField
-          form={form}
-          name='pickupWindowEnd'
-          label='Pickup window end'
-          type='time'
-        />
+        <TextareaField form={form} name='pickupInstruction' label='Pickup instruction' />
         <div className='md:col-span-2'>
           <LocationPickerMap
             value={{
@@ -351,7 +362,6 @@ export function PickupPointFormDialog({
               schools
                 .filter(
                   (school) =>
-                    school.id === Number(form.watch('schoolId')) &&
                     typeof school.latitude === 'number' &&
                     typeof school.longitude === 'number'
                 )
@@ -443,7 +453,10 @@ export function DepotFormDialog({
           })
         }
       >
-        <TextField form={form} name='name' label='Depot name' />
+        <TextField form={form} name='name' label='Depot name *' />
+        {initialData?.code ? (
+          <ReadOnlyField label='Depot code' value={initialData.code} />
+        ) : null}
         <TextField form={form} name='contactPhone' label='Contact phone' />
         <TextareaField form={form} name='address' label='Address' />
         <TextField form={form} name='latitude' label='Latitude' />
@@ -565,7 +578,7 @@ export function ParentFormDialog({
         <SelectField
           form={form}
           name='userId'
-          label='Account user'
+          label='Account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
@@ -586,8 +599,8 @@ export function ParentFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
-        <TextField form={form} name='fullName' label='Full name' />
-        <TextField form={form} name='phone' label='Phone' />
+        <TextField form={form} name='fullName' label='Full name *' />
+        <TextField form={form} name='phone' label='Phone *' />
         <TextField form={form} name='email' label='Email' />
         <TextareaField form={form} name='address' label='Address' />
       </SimpleForm>
@@ -609,6 +622,8 @@ interface StudentFormDialogProps extends BaseDialogProps {
   schools: SchoolBusSchool[];
   parents: SchoolBusParent[];
   pickupPoints: SchoolBusPickupPoint[];
+  /** Active school-pickup links used to filter pickup/dropoff per school */
+  schoolPickupPoints?: SchoolBusSchoolPickupPoint[];
   onSubmit: (values: SchoolBusStudentUpsertRequest) => Promise<void>;
 }
 
@@ -619,6 +634,7 @@ export function StudentFormDialog({
   schools,
   parents,
   pickupPoints,
+  schoolPickupPoints = [],
   onSubmit,
   isLoading = false,
 }: StudentFormDialogProps) {
@@ -631,9 +647,19 @@ export function StudentFormDialog({
         initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
           ? ''
           : String(initialData.pickupPointId),
+      defaultDropoffPointId:
+        initialData?.defaultDropoffPointId === null || initialData?.defaultDropoffPointId === undefined
+          ? ''
+          : String(initialData.defaultDropoffPointId),
       fullName: initialData?.fullName || '',
       grade: initialData?.grade || '',
+      className: initialData?.className || '',
+      dateOfBirth: initialData?.dateOfBirth || '',
+      gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
+      emergencyContactName: initialData?.emergencyContactName || '',
+      emergencyContactPhone: initialData?.emergencyContactPhone || '',
+      specialNote: initialData?.specialNote || '',
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -646,12 +672,71 @@ export function StudentFormDialog({
         initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
           ? ''
           : String(initialData.pickupPointId),
+      defaultDropoffPointId:
+        initialData?.defaultDropoffPointId === null || initialData?.defaultDropoffPointId === undefined
+          ? ''
+          : String(initialData.defaultDropoffPointId),
       fullName: initialData?.fullName || '',
       grade: initialData?.grade || '',
+      className: initialData?.className || '',
+      dateOfBirth: initialData?.dateOfBirth || '',
+      gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
+      emergencyContactName: initialData?.emergencyContactName || '',
+      emergencyContactPhone: initialData?.emergencyContactPhone || '',
+      specialNote: initialData?.specialNote || '',
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData, schools, parents]);
+
+  // Watch schoolId to filter pickup/dropoff by school
+  const selectedSchoolId = form.watch('schoolId');
+
+  // When school changes, clear pickup/dropoff selections
+  const prevSchoolRef = React.useRef(selectedSchoolId);
+  React.useEffect(() => {
+    if (prevSchoolRef.current !== selectedSchoolId && prevSchoolRef.current !== 0) {
+      form.setValue('pickupPointId', '');
+      form.setValue('defaultDropoffPointId', '');
+    }
+    prevSchoolRef.current = selectedSchoolId;
+  }, [selectedSchoolId, form]);
+
+  // Filter linked pickup points by the selected school
+  const linkedPointIds = React.useMemo(() => {
+    if (!selectedSchoolId) return new Set<number>();
+    return new Set(
+      schoolPickupPoints
+        .filter((sp) => sp.schoolId === selectedSchoolId)
+        .map((sp) => sp.pickupPointId)
+    );
+  }, [schoolPickupPoints, selectedSchoolId]);
+
+  // Pickup options: linked points with usage PICKUP_ONLY or PICKUP_DROPOFF
+  const pickupOptions = React.useMemo(() => {
+    if (!selectedSchoolId) return [];
+    return pickupPoints
+      .filter(
+        (pp) =>
+          linkedPointIds.has(pp.id) &&
+          (pp.usageType === 'PICKUP_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
+      )
+      .map((pp) => ({ value: String(pp.id), label: pp.name }));
+  }, [pickupPoints, linkedPointIds, selectedSchoolId]);
+
+  // Dropoff options: linked points with usage DROPOFF_ONLY or PICKUP_DROPOFF
+  const dropoffOptions = React.useMemo(() => {
+    if (!selectedSchoolId) return [];
+    return pickupPoints
+      .filter(
+        (pp) =>
+          linkedPointIds.has(pp.id) &&
+          (pp.usageType === 'DROPOFF_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
+      )
+      .map((pp) => ({ value: String(pp.id), label: pp.name }));
+  }, [pickupPoints, linkedPointIds, selectedSchoolId]);
+
+  const noSchoolSelected = !selectedSchoolId;
 
   return (
     <SchoolBusFormDialog
@@ -669,9 +754,16 @@ export function StudentFormDialog({
             schoolId: values.schoolId,
             parentProfileId: values.parentProfileId,
             pickupPointId: values.pickupPointId ? Number(values.pickupPointId) : null,
+            defaultDropoffPointId: values.defaultDropoffPointId ? Number(values.defaultDropoffPointId) : null,
             fullName: values.fullName,
             grade: values.grade || undefined,
+            className: values.className || undefined,
+            dateOfBirth: values.dateOfBirth || null,
+            gender: values.gender || null,
             homeAddress: values.homeAddress || undefined,
+            emergencyContactName: values.emergencyContactName || undefined,
+            emergencyContactPhone: values.emergencyContactPhone || undefined,
+            specialNote: values.specialNote || undefined,
             isActive: values.isActive,
           })
         }
@@ -679,7 +771,7 @@ export function StudentFormDialog({
         <SelectField
           form={form}
           name='schoolId'
-          label='School'
+          label='School *'
           options={schools.map((school) => ({
             value: String(school.id),
             label: school.name,
@@ -688,29 +780,59 @@ export function StudentFormDialog({
         <SelectField
           form={form}
           name='parentProfileId'
-          label='Parent'
+          label='Parent *'
           options={parents.map((parent) => ({
             value: String(parent.id),
             label: parent.fullName,
           }))}
         />
-        <SelectField
-          form={form}
-          name='pickupPointId'
-          label='Pickup point'
-          allowEmpty
-          emptyLabel='No pickup point'
-          options={pickupPoints.map((pickupPoint) => ({
-            value: String(pickupPoint.id),
-            label: `${pickupPoint.name} (${pickupPoint.schoolName})`,
-          }))}
-        />
-        <TextField form={form} name='fullName' label='Full name' />
+        <TextField form={form} name='fullName' label='Student name *' />
         {initialData?.studentCode ? (
           <ReadOnlyField label='Student code' value={initialData.studentCode} />
         ) : null}
-        <TextField form={form} name='grade' label='Grade' />
+        <div className='grid grid-cols-2 gap-4'>
+          <TextField form={form} name='grade' label='Grade' />
+          <TextField form={form} name='className' label='Class name' />
+        </div>
+        <div className='grid grid-cols-2 gap-4'>
+          <TextField form={form} name='dateOfBirth' label='Date of birth' description='Format: YYYY-MM-DD' />
+          <SelectField
+            form={form}
+            name='gender'
+            label='Gender'
+            allowEmpty
+            emptyLabel='Not specified'
+            options={[
+              { value: 'MALE', label: 'Male' },
+              { value: 'FEMALE', label: 'Female' },
+              { value: 'OTHER', label: 'Other' },
+            ]}
+          />
+        </div>
+        <SelectField
+          form={form}
+          name='pickupPointId'
+          label='Default pickup point'
+          allowEmpty
+          emptyLabel={noSchoolSelected ? 'Select a school first' : 'No pickup point'}
+          options={pickupOptions}
+          disabled={noSchoolSelected}
+        />
+        <SelectField
+          form={form}
+          name='defaultDropoffPointId'
+          label='Default drop-off point'
+          allowEmpty
+          emptyLabel={noSchoolSelected ? 'Select a school first' : 'No drop-off point'}
+          options={dropoffOptions}
+          disabled={noSchoolSelected}
+        />
         <TextareaField form={form} name='homeAddress' label='Home address' />
+        <div className='grid grid-cols-2 gap-4'>
+          <TextField form={form} name='emergencyContactName' label='Emergency contact name' />
+          <TextField form={form} name='emergencyContactPhone' label='Emergency contact phone' />
+        </div>
+        <TextareaField form={form} name='specialNote' label='Special note' />
       </SimpleForm>
     </SchoolBusFormDialog>
   );
@@ -720,6 +842,7 @@ interface BusFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusBus | null;
   busTypes: SchoolBusBusType[];
   isLoadingBusTypes?: boolean;
+  depots?: SchoolBusDepot[];
   onSubmit: (values: SchoolBusBusUpsertRequest) => Promise<void>;
 }
 
@@ -729,6 +852,7 @@ export function BusFormDialog({
   initialData,
   busTypes,
   isLoadingBusTypes = false,
+  depots = [],
   onSubmit,
   isLoading = false,
 }: BusFormDialogProps) {
@@ -747,6 +871,7 @@ export function BusFormDialog({
           ? defaultBusTypeMeta.value
           : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
+      homeDepotId: initialData?.homeDepotId ? String(initialData.homeDepotId) : '',
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -765,6 +890,7 @@ export function BusFormDialog({
           ? nextBusTypeMeta.value
           : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
+      homeDepotId: initialData?.homeDepotId ? String(initialData.homeDepotId) : '',
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData, busTypes]);
@@ -829,9 +955,14 @@ export function BusFormDialog({
         form={form}
         isLoading={isLoading}
         onCancel={() => onOpenChange(false)}
-        onSubmit={onSubmit}
+        onSubmit={async (values) =>
+          onSubmit({
+            ...values,
+            homeDepotId: values.homeDepotId ? Number(values.homeDepotId) : null,
+          })
+        }
       >
-        <TextField form={form} name='plateNumber' label='Plate number' />
+        <TextField form={form} name='plateNumber' label='Plate number *' />
         <SelectField
           form={form}
           name='busType'
@@ -854,7 +985,7 @@ export function BusFormDialog({
         <TextField
           form={form}
           name='capacity'
-          label='Capacity'
+          label='Capacity *'
           type='number'
           disabled={!isCustomBusType}
           description={
@@ -866,10 +997,21 @@ export function BusFormDialog({
         <SelectField
           form={form}
           name='status'
-          label='Status'
+          label='Status *'
           options={BUS_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
+          }))}
+        />
+        <SelectField
+          form={form}
+          name='homeDepotId'
+          label='Home depot *'
+          allowEmpty
+          emptyLabel='No home depot'
+          options={depots.map((depot) => ({
+            value: String(depot.id),
+            label: `${depot.name}${depot.code ? ` (${depot.code})` : ''}`,
           }))}
         />
       </SimpleForm>
@@ -900,7 +1042,9 @@ export function DriverFormDialog({
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       licenseNumber: initialData?.licenseNumber || '',
-      status: initialData?.status || PROFILE_STATUS_OPTIONS[0].value,
+      licenseClass: initialData?.licenseClass || '',
+      licenseExpiryDate: initialData?.licenseExpiryDate || '',
+      status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -911,7 +1055,9 @@ export function DriverFormDialog({
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       licenseNumber: initialData?.licenseNumber || '',
-      status: initialData?.status || PROFILE_STATUS_OPTIONS[0].value,
+      licenseClass: initialData?.licenseClass || '',
+      licenseExpiryDate: initialData?.licenseExpiryDate || '',
+      status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData]);
@@ -961,7 +1107,7 @@ export function DriverFormDialog({
         <SelectField
           form={form}
           name='userId'
-          label='Account user'
+          label='Account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
@@ -982,14 +1128,16 @@ export function DriverFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
-        <TextField form={form} name='fullName' label='Full name' />
+        <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
-        <TextField form={form} name='licenseNumber' label='License number' />
+        <TextField form={form} name='licenseNumber' label='License number *' />
+        <TextField form={form} name='licenseClass' label='License class *' />
+        <TextField form={form} name='licenseExpiryDate' label='License expiry date *' description='Format: YYYY-MM-DD' />
         <SelectField
           form={form}
           name='status'
-          label='Status'
-          options={PROFILE_STATUS_OPTIONS.map((option) => ({
+          label='Status *'
+          options={STAFF_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
           }))}
@@ -1021,7 +1169,7 @@ export function AttendantFormDialog({
       userId: initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
-      status: initialData?.status || PROFILE_STATUS_OPTIONS[0].value,
+      status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -1031,7 +1179,7 @@ export function AttendantFormDialog({
       userId: initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
-      status: initialData?.status || PROFILE_STATUS_OPTIONS[0].value,
+      status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData]);
@@ -1081,7 +1229,7 @@ export function AttendantFormDialog({
         <SelectField
           form={form}
           name='userId'
-          label='Account user'
+          label='Account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
@@ -1102,13 +1250,13 @@ export function AttendantFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
-        <TextField form={form} name='fullName' label='Full name' />
+        <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
         <SelectField
           form={form}
           name='status'
-          label='Status'
-          options={PROFILE_STATUS_OPTIONS.map((option) => ({
+          label='Status *'
+          options={STAFF_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
           }))}

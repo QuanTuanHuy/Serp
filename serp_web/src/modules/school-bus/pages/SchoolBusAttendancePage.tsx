@@ -34,6 +34,7 @@ import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
+import { SchoolBusTimeline, mapTripHistoryToTimeline } from '../components/history';
 import {
   Table,
   TableBody,
@@ -272,7 +273,7 @@ export function SchoolBusAttendancePage() {
                         <p className='mt-1 text-sm text-muted-foreground'>
                           {manifest.route.schoolName} -{' '}
                           {formatDate(manifest.route.serviceDate)} -{' '}
-                          {manifest.route.shiftType} -{' '}
+                          {manifest.route.schoolScheduleName} -{' '}
                           {manifest.route.routeDirection === 'RETURN'
                             ? 'Chieu ve'
                             : 'Chieu di'}
@@ -399,40 +400,20 @@ export function SchoolBusAttendancePage() {
           </SchoolBusSection>
 
           <SchoolBusSection
-            title='Trip history'
-            description='Closed routes with captured crew and time metadata.'
+            title='Lịch sử chuyến đi'
+            description='Các chuyến đã hoàn thành với thông tin xe và tài xế.'
           >
-            {history.length === 0 ? (
-              <SchoolBusEmptyState
-                title='No trip history yet'
-                description='Completed routes will show up here after dispatch closes them.'
-                icon={History}
+            <SchoolBusTimeline
+              events={mapTripHistoryToTimeline(history)}
+              mode='compact'
+              maxHeight='500px'
+            />
+            <div className='mt-3'>
+              <SchoolBusPaginationBar
+                page={historyData?.data}
+                onPageChange={historyPagination.setPage}
               />
-            ) : (
-              <div className='space-y-3'>
-                {history.map((trip) => (
-                  <div key={trip.id} className={schoolBusUi.interactiveCard}>
-                    <div className='flex items-start justify-between gap-4'>
-                      <div>
-                        <p className='font-medium'>{trip.routeCode}</p>
-                        <p className='mt-1 text-sm text-muted-foreground'>
-                          {formatDate(trip.serviceDate)}
-                        </p>
-                        <p className='mt-2 text-xs text-muted-foreground'>
-                          {trip.driverName || 'No driver'} -{' '}
-                          {trip.busPlateNumber || 'No bus'}
-                        </p>
-                      </div>
-                      <SchoolBusStatusBadge status={trip.status} />
-                    </div>
-                  </div>
-                ))}
-                <SchoolBusPaginationBar
-                  page={historyData?.data}
-                  onPageChange={historyPagination.setPage}
-                />
-              </div>
-            )}
+            </div>
           </SchoolBusSection>
         </div>
       </div>
