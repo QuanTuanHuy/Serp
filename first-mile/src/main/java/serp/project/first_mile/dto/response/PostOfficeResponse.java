@@ -36,6 +36,7 @@ public record PostOfficeResponse(
         LocalDateTime updatedAt,
         String createdBy,
         String updatedBy,
-        Long tenantId
+        Long tenantId,
+        Long hubId
 ) {
 }

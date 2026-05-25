@@ -8,24 +8,18 @@ package serp.project.pmcore.application.project.command.roleactor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import serp.project.pmcore.domain.shared.enums.ProjectRoleActorSubjectType;
 import serp.project.pmcore.domain.shared.exception.AppException;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
 import serp.project.pmcore.domain.shared.exception.ErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
-import serp.project.pmcore.kernel.utils.HttpClientHelper;
-import serp.project.pmcore.kernel.utils.TokenUtils;
-
-import java.util.Optional;
+import serp.project.pmcore.domain.user.service.IUserService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -33,17 +27,13 @@ import static org.mockito.Mockito.when;
 class RoleActorSubjectValidatorTest {
 
     @Mock
-    private HttpClientHelper httpClientHelper;
-
-    @Mock
-    private TokenUtils tokenUtils;
+    private IUserService userService;
 
     private RoleActorSubjectValidator validator;
 
     @BeforeEach
     void setUp() {
-        validator = new RoleActorSubjectValidator(httpClientHelper, tokenUtils);
-        ReflectionTestUtils.setField(validator, "accountServiceUrl", "http://localhost:8081/account-service");
+        validator = new RoleActorSubjectValidator(userService);
     }
 
     @Test
@@ -87,13 +77,7 @@ class RoleActorSubjectValidatorTest {
 
     @Test
     void validateSubjectExistsForAddShouldRejectMissingUser() {
-        when(tokenUtils.getServiceToken()).thenReturn(Optional.of("token"));
-        when(httpClientHelper.get(
-                any(String.class),
-                ArgumentMatchers.isNull(),
-                any(),
-                eq(RoleActorSubjectValidator.AccountEnvelope.class)
-        ))
+        when(userService.getUserById(eq(99L)))
                 .thenThrow(new AppException(ErrorCode.NOT_FOUND));
 
         assertThrows(

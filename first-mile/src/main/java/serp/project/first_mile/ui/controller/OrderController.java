@@ -13,12 +13,15 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmDropOffOrderRequest;
+import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
+import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
+import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
@@ -205,6 +208,32 @@ public class OrderController {
         return orderService.cancelOrder(orderId, tenantId, request);
     }
 
+    @PostMapping("/{orderId}/payment/initiate")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
+    public OrderPaymentInitResponse initiateOrderPayment(@PathVariable Long orderId) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to initiate payment for Order {} tenant {}", orderId, tenantId);
+        return orderService.initiateOrderPayment(orderId, tenantId);
+    }
+
+    @PostMapping("/{orderId}/payment/confirm")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
+    public OrderPaymentConfirmResponse confirmOrderPayment(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ConfirmOrderPaymentRequest request
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to confirm payment for Order {} tenant {} appTransId={}",
+                orderId,
+                tenantId,
+                request.getAppTransId());
+        return orderService.confirmOrderPayment(orderId, tenantId, request);
+    }
+
     @PostMapping(value = "/{orderId}/pickup-checkin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('TMS_POSTOFFICER')")
     public PickupCheckinResponse pickupCheckinOrder(
@@ -218,5 +247,13 @@ public class OrderController {
         );
         log.info("REST request to pickup-checkin Order {} for tenant {}", orderId, tenantId);
         return orderService.checkInPickupOrder(orderId, latitude, longitude, photo, tenantId);
+    }
+
+    // API test đồng bộ đơn
+    @PostMapping("/{orderCode}/publish-order-event")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public void publishOrderEvent(@PathVariable String orderCode) {
+        log.info("REST request to publish order event for order code {}", orderCode);
+        orderService.publishOrderEvent(orderCode);
     }
 }

@@ -48,4 +48,6 @@ public interface ILeadPort {
     List<LeadEntity> findByExpectedCloseDateBetween(Long startDate, Long endDate, Long tenantId);
 
     Pair<List<LeadEntity>, Long> filter(LeadFilterRequest filter, PageRequest pageRequest, Long tenantId);
+
+    List<LeadEntity> findByIds(List<Long> ids, Long tenantId);
 }

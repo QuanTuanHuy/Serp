@@ -57,7 +57,9 @@ interface QuickAddOpportunityDialogProps {
   preselectedAccountId?: string;
 }
 
-const defaultFormData = (preselectedAccountId?: string): QuickOpportunityFormData => ({
+const defaultFormData = (
+  preselectedAccountId?: string
+): QuickOpportunityFormData => ({
   name: '',
   accountId: preselectedAccountId || '',
   leadId: '',
@@ -204,7 +206,9 @@ export const QuickAddOpportunityDialog: React.FC<
               className={cn(errors.name && 'border-red-500')}
               disabled={isLoading}
             />
-            {errors.name && <p className='text-xs text-red-500'>{errors.name}</p>}
+            {errors.name && (
+              <p className='text-xs text-red-500'>{errors.name}</p>
+            )}
           </div>
 
           <div className='space-y-2'>
@@ -217,7 +221,9 @@ export const QuickAddOpportunityDialog: React.FC<
               onValueChange={(value) => handleChange('accountId', value)}
               disabled={isLoading || isAccountsLoading}
             >
-              <SelectTrigger className={cn(errors.accountId && 'border-red-500')}>
+              <SelectTrigger
+                className={cn(errors.accountId && 'border-red-500')}
+              >
                 <SelectValue
                   placeholder={
                     isAccountsLoading ? 'Loading accounts...' : 'Select account'
@@ -281,7 +287,10 @@ export const QuickAddOpportunityDialog: React.FC<
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='estimatedValue' className='flex items-center gap-2'>
+              <Label
+                htmlFor='estimatedValue'
+                className='flex items-center gap-2'
+              >
                 <DollarSign className='h-4 w-4 text-muted-foreground' />
                 Estimated Value <span className='text-red-500'>*</span>
               </Label>
@@ -327,7 +336,9 @@ export const QuickAddOpportunityDialog: React.FC<
               id='expectedCloseDate'
               type='date'
               value={formData.expectedCloseDate}
-              onChange={(e) => handleChange('expectedCloseDate', e.target.value)}
+              onChange={(e) =>
+                handleChange('expectedCloseDate', e.target.value)
+              }
               className={cn(errors.expectedCloseDate && 'border-red-500')}
               disabled={isLoading}
             />

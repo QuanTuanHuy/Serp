@@ -98,6 +98,7 @@ public enum DomainErrorCode {
     WORK_ITEM_SECURITY_ACCESS_DENIED("Insufficient issue security level to transition this work item"),
     WORKFLOW_NOT_RESOLVABLE("Effective workflow cannot be resolved for this work item"),
     WORK_ITEM_WORKFLOW_STATE_INVALID("Work item workflow_step_id/status_id is inconsistent with the effective workflow"),
+    WORK_ITEM_SCHEDULE_INVALID("Work item schedule is invalid"),
     TRANSITION_FIELD_INVALID("Transition field payload is invalid"),
 
     // Issue types & issue type schemes
@@ -131,6 +132,7 @@ public enum DomainErrorCode {
     // Resolution rules
     RESOLUTION_NOT_FOUND("Resolution not found"),
     RESOLUTION_IS_SYSTEM("Cannot modify a system resolution"),
+    RESOLUTION_IN_USE("Cannot delete resolution that has work items"),
     RESOLUTION_REQUIRED("Resolution must be set before transitioning to done"),
 
     // Links, logs & counters
@@ -138,6 +140,9 @@ public enum DomainErrorCode {
     DUPLICATE_ISSUE_LINK("This link already exists between these work items"),
     ISSUE_LINK_TYPE_NOT_FOUND("Issue link type not found"),
     ISSUE_LINK_NOT_FOUND("Issue link not found"),
+    WORK_ITEM_COMMENT_NOT_FOUND("Work item comment not found"),
+    WORK_ITEM_COMMENT_EMPTY("Comment body is required"),
+    WORK_ITEM_COMMENT_NOT_OWNER("Only the author can modify this comment"),
     WORKLOG_NOT_FOUND("Worklog not found"),
     WORKLOG_NOT_OWNER("Only the author or an admin can modify this worklog"),
     ISSUE_COUNTER_NOT_FOUND("Issue counter not found for this project"),
@@ -170,7 +175,10 @@ public enum DomainErrorCode {
 
     // Workflow schemes
     WORKFLOW_SCHEME_NOT_FOUND("Workflow scheme not found"),
+    WORKFLOW_SCHEME_NAME_ALREADY_EXISTS("Workflow scheme name already exists in this tenant"),
+    WORKFLOW_SCHEME_IS_SYSTEM("Cannot modify a system workflow scheme"),
     WORKFLOW_SCHEME_COVERAGE_MISSING("Workflow scheme does not cover all issue types"),
+    WORKFLOW_SCHEME_BOUND_TO_PROJECT("Cannot delete workflow scheme that is assigned to active projects"),
 
     // Status catalogs
     STATUS_NOT_FOUND("Status not found"),

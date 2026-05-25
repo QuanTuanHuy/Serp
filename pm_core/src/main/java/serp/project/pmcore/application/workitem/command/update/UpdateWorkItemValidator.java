@@ -39,6 +39,7 @@ public class UpdateWorkItemValidator {
         validateNullablePositiveLong(data, WorkItemFieldConstants.PRIORITY_ID);
         validateNullablePositiveLong(data, WorkItemFieldConstants.ASSIGNEE_ID);
         validateNullablePositiveLong(data, WorkItemFieldConstants.SECURITY_LEVEL_ID);
+        validateNullableNonNegativeLong(data, WorkItemFieldConstants.START_DATE);
         validateNullableNonNegativeLong(data, WorkItemFieldConstants.DUE_DATE);
         validateNullableNonNegativeLong(data, WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE);
         validateCustomFieldKeys(data.customFields());

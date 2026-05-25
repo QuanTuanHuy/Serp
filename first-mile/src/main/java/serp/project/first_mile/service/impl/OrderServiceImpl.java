@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -22,6 +23,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.caller.PaymentServiceCaller;
+import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderRequest;
+import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
+import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.first_mile.domain.Dimension;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
@@ -33,6 +38,7 @@ import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.dto.request.FileUploadRequest;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
+import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
@@ -40,6 +46,8 @@ import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.OrderConfirmationResponse;
+import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
+import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
@@ -50,6 +58,7 @@ import serp.project.first_mile.dto.response.WardExcelTemplateDTO;
 import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
@@ -78,7 +87,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -90,6 +98,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class OrderServiceImpl implements OrderService {
 
@@ -138,6 +147,8 @@ public class OrderServiceImpl implements OrderService {
     private final TripOrderRepository tripOrderRepository;
     private final PickupCheckinRepository pickupCheckinRepository;
     private final FileStorageService fileStorageService;
+    private final SyncOrder syncOrder;
+    private final PaymentServiceCaller paymentServiceCaller;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -285,7 +296,106 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderPaymentInitResponse initiateOrderPayment(Long orderId, Long tenantId) {
+        OrderActorScope actorScope = resolveActorScope(tenantId);
+        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanMutateOrder(order, tenantId, actorScope);
+
+        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee is already paid.");
+        }
+
+        long shippingFee = resolveShippingFee(order);
+        Long actorId = firstMileAccessUtils.getCurrentUserIdOrThrow();
+        String orderCode = order.getOrderCode();
+
+        PaymentCreateOrderRequest paymentRequest = PaymentCreateOrderRequest.builder()
+                .appUser(orderCode)
+                .amount(shippingFee)
+                .description("Thanh toan phi van chuyen cho don hang " + orderCode)
+                .title("Phi van chuyen - " + orderCode)
+                .tenantId(tenantId)
+                .actorId(actorId)
+                .userId(actorId)
+                .items(List.of(PaymentCreateOrderRequest.Item.builder()
+                        .itemId("shipping-fee-" + orderCode)
+                        .itemName("Phi van chuyen don hang " + orderCode)
+                        .itemPrice(shippingFee)
+                        .itemQuantity(1)
+                        .build()))
+                .build();
+
+        PaymentCreateOrderResponse paymentResponse = paymentServiceCaller.createOrder(paymentRequest);
+        if (paymentResponse.getStatus() == null || !"SUCCESS".equalsIgnoreCase(paymentResponse.getStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    paymentResponse.getMessage() == null
+                            ? "Cannot create payment order for shipping fee."
+                            : paymentResponse.getMessage()
+            );
+        }
+
+        return new OrderPaymentInitResponse(
+                order.getId(),
+                orderCode,
+                shippingFee,
+                paymentResponse.getAppTransId(),
+                paymentResponse.getOrderUrl(),
+                paymentResponse.getStatus(),
+                paymentResponse.getMessage()
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderPaymentConfirmResponse confirmOrderPayment(Long orderId, Long tenantId, ConfirmOrderPaymentRequest request) {
+        OrderActorScope actorScope = resolveActorScope(tenantId);
+        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanMutateOrder(order, tenantId, actorScope);
+
+        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            return new OrderPaymentConfirmResponse(
+                    order.getId(),
+                    order.getOrderCode(),
+                    order.getPaymentStatus(),
+                    request.getAppTransId(),
+                    "SUCCESS",
+                    "Order shipping fee is already marked as paid."
+            );
+        }
+
+        PaymentQueryOrderResponse queryResponse = paymentServiceCaller.queryOrderStatus(request.getAppTransId());
+        String gatewayStatus = queryResponse.getStatus() == null ? "UNKNOWN" : queryResponse.getStatus();
+        if (!"SUCCESS".equalsIgnoreCase(gatewayStatus)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Payment status is not successful yet. Current status: " + gatewayStatus
+            );
+        }
+
+        order.setPaymentStatus(PaymentStatus.PAID);
+        Order savedOrder = orderRepository.save(order);
+        syncOrder.sendOrderEvent(savedOrder);
+
+        return new OrderPaymentConfirmResponse(
+                savedOrder.getId(),
+                savedOrder.getOrderCode(),
+                savedOrder.getPaymentStatus(),
+                request.getAppTransId(),
+                gatewayStatus,
+                queryResponse.getMessage()
+        );
     }
 
     @Override
@@ -436,14 +546,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if (Boolean.TRUE.equals(order.getIsConfirm())) {
-            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
-            return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order has already been confirmed. If you need to change the order details, please contact support."
+            );
         }
 
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             orderRepository.save(order);
-
+            // Gửi sự kiện kafka
+            syncOrder.sendOrderEvent(order);
             Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
             return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
         }
@@ -463,7 +576,8 @@ public class OrderServiceImpl implements OrderService {
 
         postOfficeRepository.save(postOffice);
         orderRepository.save(order);
-
+        // Gửi sự kiện kafka
+        syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
 
@@ -575,6 +689,16 @@ public class OrderServiceImpl implements OrderService {
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
 
+    @Override
+    public void publishOrderEvent(String orderCode) {
+        var order = orderRepository.findByOrderCodeAndTenantId(orderCode, firstMileAccessUtils.getCurrentTenantIdOrThrow())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        if (order.getIsConfirm()) {
+            syncOrder.sendOrderEvent(order);
+        } else {
+            log.warn("The order with orderCode {} is not confirmed yet, skipping event publish.", orderCode);
+        }
+    }
     private void validateOrderForConfirmation(Order order) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
@@ -593,6 +717,17 @@ public class OrderServiceImpl implements OrderService {
         if (!isValidCoordinate(latitude, longitude)) {
             throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
         }
+    }
+
+    private long resolveShippingFee(Order order) {
+        if (order == null) {
+            throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        Long totalShippingFee = order.getTotalShippingFee();
+        if (totalShippingFee == null || totalShippingFee <= 0L) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee must be greater than 0 for payment.");
+        }
+        return totalShippingFee;
     }
 
     private boolean isValidCoordinate(double latitude, double longitude) {

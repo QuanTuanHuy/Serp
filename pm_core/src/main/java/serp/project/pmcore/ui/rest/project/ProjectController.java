@@ -7,6 +7,10 @@ package serp.project.pmcore.ui.rest.project;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,13 +36,17 @@ import serp.project.pmcore.application.project.query.get.GetProjectByIdQueryHand
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQuery;
 import serp.project.pmcore.application.project.query.get.GetProjectByKeyQueryHandler;
 import serp.project.pmcore.application.project.query.get.ProjectDetailView;
+import serp.project.pmcore.application.project.query.get.ProjectExpandOption;
 import serp.project.pmcore.application.project.query.list.ListProjectsQuery;
 import serp.project.pmcore.application.project.query.list.ListProjectsQueryHandler;
 import serp.project.pmcore.application.project.query.list.ProjectSummaryView;
+import serp.project.pmcore.application.project.query.summary.GetProjectSummaryQuery;
+import serp.project.pmcore.application.project.query.summary.GetProjectSummaryQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
+import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.project.dto.request.CreateProjectRequest;
 import serp.project.pmcore.ui.rest.project.dto.request.UpdateProjectRequest;
@@ -59,6 +67,7 @@ public class ProjectController {
     private final GetProjectByIdQueryHandler getProjectByIdQueryHandler;
     private final GetProjectByKeyQueryHandler getProjectByKeyQueryHandler;
     private final ListProjectsQueryHandler listProjectsQueryHandler;
+    private final GetProjectSummaryQueryHandler getProjectSummaryQueryHandler;
 
     @PostMapping
     public ResponseEntity<GeneralResponse<CreateProjectResult>> createProject(
@@ -152,11 +161,64 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public ResponseEntity<GeneralResponse<ProjectDetailView>> getProjectById(
-            @PathVariable("id") Long projectId) {
+            @PathVariable("id") Long projectId,
+            @RequestParam(required = false) Set<ProjectExpandOption> expand) {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
-        ProjectDetailView response = getProjectByIdQueryHandler.handle(new GetProjectByIdQuery(projectId, tenantId));
+        GetProjectByIdQuery query = new GetProjectByIdQuery(
+                projectId,
+                tenantId,
+                expand == null ? Set.of() : Set.copyOf(expand));
+
+        ProjectDetailView response = getProjectByIdQueryHandler.handle(query);
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<GeneralResponse<serp.project.pmcore.application.project.query.summary.ProjectSummaryView>> getProjectSummary(
+            @PathVariable("id") Long projectId,
+            @RequestParam(required = false) List<Long> assigneeIds,
+            @RequestParam(required = false) List<Long> priorityIds,
+            @RequestParam(required = false) List<Long> statusIds,
+            @RequestParam(required = false) List<Long> issueTypeIds,
+            @RequestParam(required = false) Long parentId,
+            @RequestParam(required = false) Long createdFrom,
+            @RequestParam(required = false) Long createdTo,
+            @RequestParam(required = false) Long updatedFrom,
+            @RequestParam(required = false) Long updatedTo,
+            @RequestParam(required = false) Long dueDateFrom,
+            @RequestParam(required = false) Long dueDateTo,
+            @RequestParam(required = false) Integer activityPage,
+            @RequestParam(required = false) Integer activitySize) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        ProjectSummaryCriteria criteria = ProjectSummaryCriteria.builder()
+                .projectId(projectId)
+                .assigneeIds(assigneeIds)
+                .priorityIds(priorityIds)
+                .statusIds(statusIds)
+                .issueTypeIds(issueTypeIds)
+                .parentId(parentId)
+                .createdFrom(createdFrom)
+                .createdTo(createdTo)
+                .updatedFrom(updatedFrom)
+                .updatedTo(updatedTo)
+                .dueDateFrom(dueDateFrom)
+                .dueDateTo(dueDateTo)
+                .activityPage(activityPage)
+                .activitySize(activitySize)
+                .build();
+
+        var response = getProjectSummaryQueryHandler.handle(new GetProjectSummaryQuery(
+                tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
+                criteria
+        ));
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
@@ -170,11 +232,15 @@ public class ProjectController {
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDirection) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
         PageView<ProjectSummaryView> response = listProjectsQueryHandler.handle(new ListProjectsQuery(
                 tenantId,
+                userId,
+                authUtils.getCurrentGroups(),
                 search,
                 categoryId,
                 projectTypeKey,

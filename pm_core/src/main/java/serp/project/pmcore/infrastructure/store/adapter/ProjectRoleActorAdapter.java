@@ -79,10 +79,19 @@ public class ProjectRoleActorAdapter implements IProjectRoleActorPort {
 
     @Override
     public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndRoleId(Long projectId,
-                                                                                  Long projectRoleId,
-                                                                                  Long tenantId) {
+                                                                                   Long projectRoleId,
+                                                                                   Long tenantId) {
         return projectRoleActorMapper.toEntities(
                 projectRoleActorRepository.findAllByProjectIdAndProjectRoleIdAndTenantId(projectId, projectRoleId, tenantId)
+        );
+    }
+
+    @Override
+    public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndSubjectType(Long projectId,
+                                                                                        String subjectType,
+                                                                                        Long tenantId) {
+        return projectRoleActorMapper.toEntities(
+                projectRoleActorRepository.findAllByTenantIdAndProjectIdAndSubjectType(tenantId, projectId, subjectType)
         );
     }
 }

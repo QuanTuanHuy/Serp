@@ -19,6 +19,7 @@ export {
   settingsUsersApi,
   useGetOrganizationUsersQuery,
   useLazyGetOrganizationUsersQuery,
+  useGetOrganizationRolesQuery,
   useSettingsCreateUserForOrganizationMutation,
   useUpdateOrganizationUserMutation,
 } from './users/usersApi';

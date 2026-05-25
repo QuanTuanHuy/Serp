@@ -72,6 +72,21 @@ public class AccountModel extends BaseModel {
     @Column(name = "account_type", nullable = false, length = 20)
     private String accountType;
 
+    @Column(name = "tier", nullable = false, length = 20)
+    private String tier;
+
+    @Column(name = "preferred_time_slots", columnDefinition = "TEXT")
+    private String preferredTimeSlots;
+
+    @Column(name = "preferred_days", columnDefinition = "TEXT")
+    private String preferredDays;
+
+    @Column(name = "language", length = 50)
+    private String language;
+
+    @Column(name = "timezone", nullable = false, length = 100)
+    private String timezone;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

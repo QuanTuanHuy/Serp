@@ -168,4 +168,11 @@ public class OpportunityAdapter implements IOpportunityPort {
     public boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId) {
         return opportunityRepository.existsByTenantIdAndAccountIdAndName(tenantId, accountId, name);
     }
+
+    @Override
+    public List<OpportunityEntity> findByIds(List<Long> ids, Long tenantId) {
+        return opportunityRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
 }

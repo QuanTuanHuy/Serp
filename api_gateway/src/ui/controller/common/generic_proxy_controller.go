@@ -83,6 +83,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.CrmService.BaseURL(),
 		},
 		{
+			Name:         "payment",
+			SourcePrefix: "/payment/api/v1",
+			TargetPrefix: "/v1",
+			Target:       props.PaymentService.BaseURL(),
+		},
+		{
 			Name:         "notification",
 			SourcePrefix: "/ns/api/v1",
 			TargetPrefix: "/notification/api/v1",
@@ -135,6 +141,18 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			SourcePrefix: "/discuss/api/v1",
 			TargetPrefix: "/discuss/api/v1",
 			Target:       props.DiscussService.BaseURL(),
+		},
+		{
+			Name:         "pm-core",
+			SourcePrefix: "/pm/api/v1",
+			TargetPrefix: "/pm-core/api/v1",
+			Target:       props.PmCoreService.BaseURL(),
+		},
+		{
+			Name:         "ttcrs",
+			SourcePrefix: "/ttcrs/api/v1",
+			TargetPrefix: "/ttcrs/api/v1",
+			Target:       props.TtcrsService.BaseURL(),
 		},
 	}
 }

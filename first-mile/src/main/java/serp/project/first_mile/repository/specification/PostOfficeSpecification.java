@@ -99,6 +99,10 @@ public final class PostOfficeSpecification {
                 predicates.add(criteriaBuilder.le(root.get("priority"), filterRequest.getMaxPriority()));
             }
 
+            if (filterRequest.getHubId() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("hubId"), filterRequest.getHubId()));
+            }
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

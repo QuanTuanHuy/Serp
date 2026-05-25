@@ -51,4 +51,6 @@ public interface LeadRepository extends JpaRepository<LeadModel, Long>, JpaSpeci
     long countByTenantIdAndLeadStatus(Long tenantId, String leadStatus);
 
     long countByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
+
+    List<LeadModel> findByTenantIdAndIdIn(Long tenantId, List<Long> ids);
 }

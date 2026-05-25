@@ -63,7 +63,7 @@ app:
     maxRequests: 3
     interval: 60s
     timeout: 30s
-    consecutiveFailures: 5
+    consecutiveFailures: 10
     failureRatio: 0.6
     minRequests: 10
     maxRetries: 3
@@ -111,6 +111,10 @@ external:
       host: localhost
       port: "8086"
       timeout: 15s
+    paymentService:
+      host: localhost
+      port: "8096"
+      timeout: 15s
     notificationService:
       host: localhost
       port: "8090"
@@ -125,3 +129,11 @@ external:
       port: "8092"
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    pmCoreService:
+      host: localhost
+      port: "8093"
+      timeout: 15s
+    ttcrsService:
+      host: localhost
+      port: "8094"
+      timeout: 15s

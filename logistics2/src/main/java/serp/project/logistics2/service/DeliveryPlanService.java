@@ -2,6 +2,8 @@ package serp.project.logistics2.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -168,6 +170,22 @@ public class DeliveryPlanService {
         deliveryPlanRepository.save(plan);
     }
 
+    @Transactional
+    public void rollbackDeliveryPlan(String deliveryPlanId, Long tenantId) {
+        DeliveryPlanEntity plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId)
+                .orElseThrow(() -> {
+                    log.info("Delivery plan {} is not found", deliveryPlanId);
+                    return new AppException(AppErrorCode.NOT_FOUND);
+                });
+        if (!plan.getOptimizationStatus().equals(PlanOptimizationStatus.FAILED.name())) {
+            log.info("Delivery plan {} is not in failed status", deliveryPlanId);
+            throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        plan.setOptimizationStatus(PlanOptimizationStatus.FAILED.name());
+        deliveryPlanRepository.save(plan);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void updateDeliveryPlan(String deliveryPlanId, DeliveryPlanUpdateForm form, Long tenantId) {
         DeliveryPlanEntity plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId)
@@ -231,7 +249,21 @@ public class DeliveryPlanService {
     }
 
     public DeliveryPlanEntity getDeliveryPlanDetails(String deliveryPlanId, Long tenantId) {
-        return deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId).orElse(null);
+        var plan = deliveryPlanRepository.findByIdAndTenantId(deliveryPlanId, tenantId).orElse(null);
+        if (plan == null) {
+            log.info("[DeliveryPlanService] Delivery plan {} not found", deliveryPlanId);
+            return null;
+        }
+
+        List<String> vehicleIds = plan.getVehicleShippers().stream()
+                .map(VehicleShipperEntity::getVehicleId)
+                .distinct()
+                .toList();
+        List<VehicleEntity> vehicles = vehicleRepository.findAllById(vehicleIds);
+        Map<String, VehicleEntity> vehicleMap = vehicles.stream().collect(Collectors.toMap(VehicleEntity::getId, v -> v));
+
+        plan.getVehicleShippers().forEach(vehicleShipper -> vehicleShipper.setVehicle(vehicleMap.get(vehicleShipper.getVehicleId())));
+        return plan;
     }
 
     public Page<DeliveryPlanEntity> searchDeliveryPlans(
@@ -242,7 +274,24 @@ public class DeliveryPlanService {
             Long tenantId,
             int page, int size, String sortBy, String sortDirection) {
         Pageable pageable = PaginationUtils.createPageable(page, size, sortBy, sortDirection);
-        return deliveryPlanRepository.search(query, facilityId, deliveryDate, optimizationStatus, tenantId, pageable);
+        var planPage = deliveryPlanRepository.search(query, facilityId, deliveryDate, optimizationStatus, tenantId, pageable);
+
+        List<String> vehicleIds = planPage.getContent().stream()
+                .flatMap(plan -> plan.getVehicleShippers().stream())
+                .map(VehicleShipperEntity::getVehicleId)
+                .distinct()
+                .toList();
+        List<VehicleEntity> vehicles = vehicleRepository.findAllById(vehicleIds);
+        Map<String, VehicleEntity> vehicleMap = vehicles.stream().collect(Collectors.toMap(VehicleEntity::getId, v -> v));
+
+        planPage.getContent().forEach(plan -> {
+            plan.getVehicleShippers().forEach(vs -> {
+                VehicleEntity vehicle = vehicleMap.get(vs.getVehicleId());
+                vs.setVehicle(vehicle);
+            });
+        });
+
+        return planPage;
     }
 
 }

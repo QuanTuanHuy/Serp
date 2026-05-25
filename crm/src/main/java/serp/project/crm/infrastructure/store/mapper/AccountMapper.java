@@ -12,8 +12,12 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountTier;
 import serp.project.crm.core.domain.enums.AccountType;
+import serp.project.crm.core.domain.enums.PreferredTimeSlot;
 import serp.project.crm.infrastructure.store.model.AccountModel;
+
+import java.time.DayOfWeek;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +45,11 @@ public class AccountMapper extends BaseMapper {
                 .totalRevenue(model.getTotalRevenue())
                 .activeStatus(stringToEnum(model.getActiveStatus(), ActiveStatus.class))
                 .accountType(stringToEnum(model.getAccountType(), AccountType.class))
+                .tier(stringToEnum(model.getTier(), AccountTier.class))
+                .preferredTimeSlots(parseJsonToEnumList(model.getPreferredTimeSlots(), PreferredTimeSlot.class))
+                .preferredDays(parseJsonToEnumList(model.getPreferredDays(), DayOfWeek.class))
+                .language(model.getLanguage())
+                .timezone(model.getTimezone())
                 .notes(model.getNotes())
                 .address(buildAddress(
                         model.getAddressStreet(),
@@ -77,6 +86,11 @@ public class AccountMapper extends BaseMapper {
                 .totalRevenue(entity.getTotalRevenue())
                 .activeStatus(enumToString(entity.getActiveStatus()))
                 .accountType(enumToString(entity.getAccountType()))
+                .tier(enumToString(entity.getTier()))
+                .preferredTimeSlots(serializeEnumListToJson(entity.getPreferredTimeSlots()))
+                .preferredDays(serializeEnumListToJson(entity.getPreferredDays()))
+                .language(entity.getLanguage())
+                .timezone(entity.getTimezone())
                 .notes(entity.getNotes())
                 .addressStreet(entity.getAddress() != null ? entity.getAddress().getStreet() : null)
                 .addressCity(entity.getAddress() != null ? entity.getAddress().getCity() : null)

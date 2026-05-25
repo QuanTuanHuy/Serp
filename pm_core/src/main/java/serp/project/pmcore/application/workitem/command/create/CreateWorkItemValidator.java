@@ -6,6 +6,8 @@
 package serp.project.pmcore.application.workitem.command.create;
 
 import org.springframework.stereotype.Component;
+import serp.project.pmcore.domain.workitem.validator.WorkItemScheduleValidator;
+
 import java.util.Map;
 
 @Component
@@ -17,6 +19,7 @@ public class CreateWorkItemValidator {
         }
 
         if (command.customFields() == null) {
+            WorkItemScheduleValidator.validateRange(command.startDate(), command.dueDate());
             return;
         }
 
@@ -25,5 +28,7 @@ public class CreateWorkItemValidator {
                 throw new IllegalArgumentException("customFields keys must be non-blank");
             }
         }
+
+        WorkItemScheduleValidator.validateRange(command.startDate(), command.dueDate());
     }
 }

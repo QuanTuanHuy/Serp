@@ -146,6 +146,8 @@ public class GlobalExceptionHandler {
                  PRIORITY_SCHEME_NAME_ALREADY_EXISTS,
                  PRIORITY_SCHEME_IN_USE,
                  PRIORITY_SCHEME_BOUND_TO_PROJECT,
+                 RESOLUTION_IS_SYSTEM,
+                 RESOLUTION_IN_USE,
                  STATUS_KEY_ALREADY_EXISTS,
                  STATUS_IN_USE_BY_WORKFLOW,
                  STATUS_IN_USE_BY_WORK_ITEMS,
@@ -172,6 +174,7 @@ public class GlobalExceptionHandler {
                  WORKFLOW_DRAFT_NOT_FOUND -> HttpStatus.CONFLICT;
 
             case SCHEME_INCOMPATIBLE,
+                 WORK_ITEM_SCHEDULE_INVALID,
                   ISSUE_TYPE_SCHEME_DEFAULT_NOT_IN_ITEMS,
                    WORKFLOW_VALIDATION_FAILED,
                    TRANSITION_VALIDATION_FAILED,

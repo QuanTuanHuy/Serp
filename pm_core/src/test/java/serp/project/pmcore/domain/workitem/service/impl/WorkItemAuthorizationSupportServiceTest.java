@@ -87,12 +87,12 @@ class WorkItemAuthorizationSupportServiceTest {
     }
 
     @Test
-    void checkScheduleIssuesPermissionIfNeededShouldDelegateWhenDueDatePresent() {
+    void checkScheduleIssuesPermissionShouldDelegate() {
         ProjectEntity project = ProjectEntity.builder().id(10L).build();
         ProjectPermissionSubject subject = ProjectPermissionSubject.from(project);
         ProjectPermissionEvaluationContext actorContext = service.buildActorContext(99L, Set.of());
 
-        service.checkScheduleIssuesPermissionIfNeeded(subject, actorContext, 1_700_000_000_000L);
+        service.checkScheduleIssuesPermission(subject, actorContext);
 
         verify(projectPermissionEvaluationService).checkPermission(subject, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
     }

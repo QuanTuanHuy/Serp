@@ -339,14 +339,13 @@ export const OutboundShipmentDetailPage: React.FC<
                       key={item.id}
                       className='rounded-lg border p-4 transition-colors hover:bg-muted/40'
                     >
-                      <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
-                        <div>
+                      <div className='flex flex-col gap-4 md:flex-row md:items-center'>
+                        <div className='md:w-1/4 md:min-w-[200px]'>
                           <p className='font-medium'>
                             {item.product?.name || item.productId}
                           </p>
                         </div>
-
-                        <div className='grid grid-cols-5 gap-3 text-sm md:grid-cols-5'>
+                        <div className='grid flex-1 grid-cols-2 gap-4 text-sm md:grid-cols-5'>
                           <div>
                             <Label className='text-muted-foreground'>
                               Số lượng xuất

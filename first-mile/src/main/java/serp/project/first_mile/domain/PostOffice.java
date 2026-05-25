@@ -3,10 +3,6 @@ package serp.project.first_mile.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
@@ -14,7 +10,6 @@ import serp.project.first_mile.exception.ErrorCode;
 // import org.locationtech.jts.geom.Polygon; 
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Setter
@@ -93,6 +88,12 @@ public class PostOffice extends AbstractAudit {
     @Version
     @Column(name = "version")
     private Long version;
+
+    /**
+     * Hub id in second-mile (same tenant); optional — post office managed under a hub.
+     */
+    @Column(name = "hub_id")
+    private Long hubId;
 
     public boolean isActive() {
         return PostOfficeStatus.ACTIVE.equals(status);

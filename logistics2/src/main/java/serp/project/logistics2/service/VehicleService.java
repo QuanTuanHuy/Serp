@@ -83,10 +83,12 @@ public class VehicleService {
         return vehicleRepository.searchForUsage(query, vehicleType, workingDate, tenantId, pageable);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void activateVehicle(String vehicleId, Long tenantId) {
         updateVehicleStatus(vehicleId, VehicleStatus.IN_USE.name(), tenantId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void deactivateVehicle(String vehicleId, Long tenantId) {
         updateVehicleStatus(vehicleId, VehicleStatus.MAINTENANCE.name(), tenantId);
     }

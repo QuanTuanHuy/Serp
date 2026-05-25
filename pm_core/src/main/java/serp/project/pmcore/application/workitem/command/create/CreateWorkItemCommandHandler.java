@@ -36,9 +36,9 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemFieldRules;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.service.IWorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
+import serp.project.pmcore.domain.workitem.validator.WorkItemScheduleValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -91,7 +91,9 @@ public class CreateWorkItemCommandHandler
         );
         workItemFieldWriteValidator.validateClientSuppliedWritableFields(createWorkItemData, fieldRules);
 
-        workItemAuthorizationSupportService.checkScheduleIssuesPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getDueDate());
+        if (createWorkItemData.getStartDate() != null || createWorkItemData.getDueDate() != null) {
+            workItemAuthorizationSupportService.checkScheduleIssuesPermission(permissionSubject, actorContext);
+        }
         Long assigneeId = workItemAuthorizationSupportService.resolveAssigneeId(permissionSubject, createWorkItemData.getAssigneeId(), actorContext);
         workItemAuthorizationSupportService.checkSetIssueSecurityPermissionIfNeeded(permissionSubject, actorContext, createWorkItemData.getSecurityLevelId());
         Long securityLevelId = workItemCreateConfigurationResolver.resolveSecurityLevelId(
@@ -122,6 +124,7 @@ public class CreateWorkItemCommandHandler
                 fieldRules,
                 customFieldPlan.missingRequiredFields()
         );
+        WorkItemScheduleValidator.validateRange(createWorkItemData.getStartDate(), createWorkItemData.getDueDate());
 
         long issueNo = workItemService.getNextIssueNumber(projectId, tenantId);
         String key = project.getKey() + "-" + issueNo;

@@ -16,7 +16,10 @@ public interface WorkItemDetailProjection {
     String getDescription();
     Long getResolutionId();
     Long getParentId();
+    String getParentKey();
+    String getParentSummary();
     Long getSecurityLevelId();
+    Instant getStartDate();
     Instant getDueDate();
     String getRank();
     Long getTimeOriginalEstimate();
@@ -31,6 +34,8 @@ public interface WorkItemDetailProjection {
 
     Long getIssueTypeId();
     String getIssueTypeName();
+    String getIssueTypeIconUrl();
+    Integer getIssueTypeHierarchyLevel();
 
     Long getPriorityId();
     String getPriorityName();
@@ -38,6 +43,7 @@ public interface WorkItemDetailProjection {
 
     Long getStatusId();
     String getStatusName();
+    String getStatusKey();
 
     Long getWorkflowStepId();
     String getWorkflowStepName();

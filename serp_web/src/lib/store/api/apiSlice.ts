@@ -173,7 +173,10 @@ export const api = createApi({
     'Lead',
     'Opportunity',
     'Activity',
+    'MeetingRequest',
     'Analytics',
+    'Team',
+    'Territory',
     // Admin tags
     'admin/Organization',
     'admin/Subscription',
@@ -256,11 +259,26 @@ export const api = createApi({
     'Order',
     // Notification tags
     'Notification',
+    'NotificationPreference',
     // Discuss tags
     'Channel',
     'Message',
     'DiscussActivity',
     'Presence',
+    // PM tags
+    'pm/Project',
+    'pm/ProjectComponent',
+    'pm/ProjectSummary',
+    'pm/WorkItem',
+    'pm/WorkItemComments',
+    'pm/WorkItemActivities',
+    'pm/WorkItemChildren',
+    'pm/WorkItemLinks',
+    'pm/OptimizationRun',
+    // TTCRS tags
+    'ttcrs/Request',
+    'ttcrs/Location',
+    'ttcrs/Resource',
   ],
 
   // Define endpoints in separate files for each module

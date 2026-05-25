@@ -35,4 +35,7 @@ public class PostOfficeFilterRequest {
 
     private Integer minPriority;
     private Integer maxPriority;
+
+    /** Filter by second-mile hub id */
+    private Long hubId;
 }

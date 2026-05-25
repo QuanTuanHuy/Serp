@@ -52,9 +52,8 @@ export function NotificationItem({
     }
     if (onClick) {
       onClick(notification);
-    }
-    if (notification.actionUrl) {
-      window.open(notification.actionUrl, '_blank');
+    } else if (notification.actionUrl) {
+      window.open(notification.actionUrl, '_blank', 'noopener,noreferrer');
     }
   };
 

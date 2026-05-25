@@ -37,6 +37,7 @@ public class WorkItemDraftFactory {
                 .reporterId(reporterId)
                 .parentId(request.getParentId())
                 .securityLevelId(securityLevelId)
+                .startDate(request.getStartDate())
                 .dueDate(request.getDueDate())
                 .rank(rank)
                 .timeOriginalEstimate(request.getTimeOriginalEstimate())

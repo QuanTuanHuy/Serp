@@ -1,0 +1,446 @@
+/**
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - Second-mile vehicle management page
+ */
+
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { getErrorMessage, useAppSelector } from '@/lib/store';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+} from '@/shared/components/ui';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
+import { useNotification } from '@/shared/hooks';
+import { Plus, RefreshCw, Search, ShieldAlert } from 'lucide-react';
+import {
+  useCreateSecondMileVehicleMutation,
+  useDeleteSecondMileVehicleMutation,
+  useGetHubsQuery,
+  useGetSecondMileVehicleByIdQuery,
+  useGetSecondMileVehiclesQuery,
+  useImportSecondMileVehiclesMutation,
+  useLazyExportSecondMileVehicleTemplateQuery,
+  useUpdateSecondMileVehicleMutation,
+  useUploadSecondMileVehicleImageMutation,
+  useValidateSecondMileVehicleImportMutation,
+} from '../../../api';
+import type {
+  Hub,
+  ImportHistory,
+  SecondMileVehicle,
+  SecondMileVehicleImportItem,
+  ValidateImportFileResponse,
+} from '../../../types';
+import {
+  SecondMileVehicleDetailDialog,
+  SecondMileVehicleFormDialog,
+  SecondMileVehicleImportCard,
+  SecondMileVehicleResultsCard,
+} from './components';
+import {
+  buildVehicleRequest,
+  DEFAULT_VEHICLE_FORM,
+  IMPORT_PREVIEW_LIMIT,
+  mapVehicleToFormState,
+  PAGE_SIZE,
+  validateVehicleForm,
+  type VehicleFormMode,
+  type VehicleFormState,
+} from './vehiclePageModels';
+
+export function SecondMileVehicleListPage() {
+  const notification = useNotification();
+  const isTmsAdmin = useAppSelector((state) =>
+    Boolean(state.account.user.profile?.roles?.includes('TMS_ADMIN'))
+  );
+
+  const [page, setPage] = React.useState(0);
+  const [keywordInput, setKeywordInput] = React.useState('');
+  const [keyword, setKeyword] = React.useState<string | undefined>();
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [formMode, setFormMode] = React.useState<VehicleFormMode>('create');
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [formValues, setFormValues] =
+    React.useState<VehicleFormState>(DEFAULT_VEHICLE_FORM);
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<SecondMileVehicle | null>(null);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  const [importFile, setImportFile] = React.useState<File | null>(null);
+  const [importFileKey, setImportFileKey] = React.useState(0);
+  const [validateResult, setValidateResult] =
+    React.useState<ValidateImportFileResponse<SecondMileVehicleImportItem> | null>(
+      null
+    );
+  const [lastImportJob, setLastImportJob] =
+    React.useState<ImportHistory | null>(null);
+
+  const { data, isLoading, isFetching, refetch } = useGetSecondMileVehiclesQuery(
+    { page, size: PAGE_SIZE, keyword },
+    { skip: !isTmsAdmin }
+  );
+
+  const { data: hubsData, isFetching: isFetchingHubs } = useGetHubsQuery(
+    { page: 0, size: 500 },
+    { skip: !isTmsAdmin }
+  );
+
+  const { data: vehicleDetail, isFetching: isFetchingDetail } =
+    useGetSecondMileVehicleByIdQuery(selectedId ?? 0, {
+      skip: !isTmsAdmin || !detailOpen || selectedId === null,
+    });
+
+  const hubById = React.useMemo(() => {
+    const map: Record<number, Hub> = {};
+    for (const hub of hubsData?.items ?? []) {
+      map[hub.id] = hub;
+    }
+    return map;
+  }, [hubsData?.items]);
+
+  const hubOptions = React.useMemo(
+    () =>
+      (hubsData?.items ?? []).map((hub) => ({
+        value: String(hub.id),
+        label:
+          hub.code && hub.name
+            ? `${hub.code} - ${hub.name}`
+            : hub.code || hub.name || `Hub #${hub.id}`,
+      })),
+    [hubsData?.items]
+  );
+
+  const [createVehicle, { isLoading: isCreating }] =
+    useCreateSecondMileVehicleMutation();
+  const [updateVehicle, { isLoading: isUpdating }] =
+    useUpdateSecondMileVehicleMutation();
+  const [deleteVehicle, { isLoading: isDeleting }] =
+    useDeleteSecondMileVehicleMutation();
+  const [uploadImage, { isLoading: isUploadingImage }] =
+    useUploadSecondMileVehicleImageMutation();
+  const [exportTemplate, { isFetching: isExporting }] =
+    useLazyExportSecondMileVehicleTemplateQuery();
+  const [validateImport, { isLoading: isValidating }] =
+    useValidateSecondMileVehicleImportMutation();
+  const [importVehicles, { isLoading: isImporting }] =
+    useImportSecondMileVehiclesMutation();
+
+  const isSaving = isCreating || isUpdating;
+  const isImportBusy = isExporting || isValidating || isImporting;
+
+  const previewItems = React.useMemo(
+    () => validateResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
+    [validateResult]
+  );
+
+  const updateField = <K extends keyof VehicleFormState>(
+    field: K,
+    value: VehicleFormState[K]
+  ) => {
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  if (!isTmsAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <ShieldAlert className='h-5 w-5' />
+            Access denied
+          </CardTitle>
+          <CardDescription>
+            Second-mile vehicles require TMS_ADMIN role.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div className='space-y-6'>
+        <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+          <div>
+            <div className='mb-2 flex flex-wrap gap-2 text-sm'>
+              <Link
+                href='/first-mile/vehicles/first-mile'
+                className='text-muted-foreground hover:text-foreground'
+              >
+                First-mile vehicles
+              </Link>
+              <span className='text-muted-foreground'>/</span>
+              <span className='font-medium'>Second-mile</span>
+            </div>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Second-mile vehicles
+            </h1>
+            <p className='text-muted-foreground'>
+              Manage hub-linked vehicles, Excel import, and CRUD via
+              second-mile API.
+            </p>
+          </div>
+          <Button onClick={() => {
+            setFormMode('create');
+            setEditingId(null);
+            setFormValues(DEFAULT_VEHICLE_FORM);
+            setIsFormOpen(true);
+          }}>
+            <Plus className='mr-2 h-4 w-4' />
+            New vehicle
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              className='flex flex-col gap-2 md:flex-row'
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPage(0);
+                setKeyword(keywordInput.trim() || undefined);
+              }}
+            >
+              <div className='relative flex-1'>
+                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                <Input
+                  className='pl-10'
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  placeholder='License plate...'
+                />
+              </div>
+              <Button type='submit'>Search</Button>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={isFetching}
+                onClick={() => void refetch()}
+              >
+                <RefreshCw className='mr-2 h-4 w-4' />
+                Refresh
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <SecondMileVehicleImportCard
+          canManage={isTmsAdmin}
+          isBusy={isImportBusy}
+          isExporting={isExporting}
+          isValidating={isValidating}
+          isImporting={isImporting}
+          importFileInputKey={importFileKey}
+          selectedFile={importFile}
+          validateResult={validateResult}
+          previewItems={previewItems}
+          lastImportJob={lastImportJob}
+          onDownloadTemplate={async () => {
+            try {
+              const blob = await exportTemplate().unwrap();
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'vehicle_template.xlsx';
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              URL.revokeObjectURL(url);
+              notification.success('Template downloaded.');
+            } catch (error) {
+              notification.error('Download failed.', {
+                description: getErrorMessage(error),
+              });
+            }
+          }}
+          onSelectFile={(event) => {
+            setImportFile(event.target.files?.[0] ?? null);
+            setValidateResult(null);
+            setLastImportJob(null);
+          }}
+          onValidate={async () => {
+            if (!importFile) {
+              notification.error('Select a file first.');
+              return;
+            }
+            const formData = new FormData();
+            formData.append('file', importFile);
+            try {
+              const result = await validateImport(formData).unwrap();
+              setValidateResult(result);
+              if (result.is_success) {
+                notification.success(`Validated ${result.data.length} row(s).`);
+              } else {
+                notification.error('Validation failed.', {
+                  description: result.error_message,
+                });
+              }
+            } catch (error) {
+              notification.error('Validate failed.', {
+                description: getErrorMessage(error),
+              });
+            }
+          }}
+          onImport={async () => {
+            if (!importFile || !validateResult?.is_success) {
+              return;
+            }
+            const formData = new FormData();
+            formData.append('file', importFile);
+            try {
+              const job = await importVehicles(formData).unwrap();
+              setLastImportJob(job);
+              setImportFile(null);
+              setValidateResult(null);
+              setImportFileKey((k) => k + 1);
+              notification.success(`Import job #${job.id} started.`);
+              void refetch();
+            } catch (error) {
+              notification.error('Import failed.', {
+                description: getErrorMessage(error),
+              });
+            }
+          }}
+        />
+
+        <SecondMileVehicleResultsCard
+          canManage={isTmsAdmin}
+          data={data}
+          hubById={hubById}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isSaving={isSaving}
+          isDeleting={isDeleting}
+          onView={(id) => {
+            setSelectedId(id);
+            setDetailOpen(true);
+          }}
+          onEdit={(vehicle) => {
+            setFormMode('edit');
+            setEditingId(vehicle.id);
+            setFormValues(mapVehicleToFormState(vehicle));
+            setIsFormOpen(true);
+          }}
+          onDelete={setDeleteTarget}
+          onPreviousPage={() => setPage((p) => Math.max(p - 1, 0))}
+          onNextPage={() => setPage((p) => p + 1)}
+        />
+      </div>
+
+      <SecondMileVehicleFormDialog
+        open={isFormOpen}
+        formMode={formMode}
+        formValues={formValues}
+        isSaving={isSaving}
+        hubOptions={hubOptions}
+        isLoadingHubs={isFetchingHubs}
+        onOpenChange={(open) => {
+          if (!open && !isSaving) {
+            setIsFormOpen(false);
+            setEditingId(null);
+          }
+        }}
+        onUpdateField={updateField}
+        onSubmit={async (event) => {
+          event.preventDefault();
+          const err = validateVehicleForm(formValues);
+          if (err) {
+            notification.error(err);
+            return;
+          }
+          const body = buildVehicleRequest(formValues);
+          try {
+            if (formMode === 'create') {
+              await createVehicle(body).unwrap();
+              notification.success('Vehicle created.');
+              if (page !== 0) setPage(0);
+              else void refetch();
+            } else if (editingId !== null) {
+              await updateVehicle({ id: editingId, body }).unwrap();
+              notification.success('Vehicle updated.');
+              void refetch();
+            }
+            setIsFormOpen(false);
+            setEditingId(null);
+          } catch (error) {
+            notification.error('Save failed.', {
+              description: getErrorMessage(error),
+            });
+          }
+        }}
+      />
+
+      <SecondMileVehicleDetailDialog
+        open={detailOpen}
+        canManage={isTmsAdmin}
+        isFetching={isFetchingDetail}
+        isUploadingImage={isUploadingImage}
+        vehicle={vehicleDetail}
+        hubById={hubById}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setSelectedId(null);
+        }}
+        onEdit={() => {
+          if (!vehicleDetail) return;
+          setFormMode('edit');
+          setEditingId(vehicleDetail.id);
+          setFormValues(mapVehicleToFormState(vehicleDetail));
+          setDetailOpen(false);
+          setSelectedId(null);
+          setIsFormOpen(true);
+        }}
+        onUploadImage={async (file) => {
+          if (!selectedId) return;
+          try {
+            await uploadImage({ id: selectedId, file }).unwrap();
+            notification.success('Image uploaded.');
+          } catch (error) {
+            notification.error('Upload failed.', {
+              description: getErrorMessage(error),
+            });
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteTarget(null);
+        }}
+        title='Delete vehicle'
+        description={
+          deleteTarget
+            ? `Delete vehicle ${deleteTarget.licensePlate}?`
+            : undefined
+        }
+        confirmText='Delete'
+        variant='destructive'
+        isLoading={isDeleting}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          try {
+            await deleteVehicle(deleteTarget.id).unwrap();
+            notification.success('Vehicle deleted.');
+            setDeleteTarget(null);
+            void refetch();
+          } catch (error) {
+            notification.error('Delete failed.', {
+              description: getErrorMessage(error),
+            });
+          }
+        }}
+      />
+    </>
+  );
+}

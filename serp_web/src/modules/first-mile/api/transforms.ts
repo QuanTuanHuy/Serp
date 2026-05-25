@@ -8,6 +8,9 @@ import type {
   FirstMileApiResponse,
   FirstMilePageResponse,
   FirstMilePaginatedData,
+  ImportHistory,
+  ImportHistoryStatus,
+  ImportType,
 } from '../types';
 
 export const unwrapFirstMileResult = <T>(
@@ -36,6 +39,28 @@ export const unwrapFirstMilePageResult = <T>(
   response: FirstMileApiResponse<FirstMilePageResponse<T>>
 ): FirstMilePaginatedData<T> => {
   return unwrapFirstMilePageResultOrRaw(response);
+};
+
+/**
+ * second-mile hub import returns {@link ImportHistoryResponse} without ApiResponse wrapper.
+ */
+export const normalizeSecondMileHubImportHistory = (
+  raw: unknown
+): ImportHistory => {
+  const r = raw as Record<string, unknown>;
+  return {
+    id: Number(r.id ?? 0),
+    file_id: String(r.file_id ?? r.fileId ?? ''),
+    file_name: String(r.file_name ?? r.fileName ?? ''),
+    status: (r.status ?? 'PENDING') as ImportHistoryStatus,
+    total_records: Number(r.total_records ?? r.totalRecords ?? 0),
+    success_records: Number(r.success_records ?? r.successRecords ?? 0),
+    failed_records: Number(r.failed_records ?? r.failedRecords ?? 0),
+    error_message: (r.error_message ?? r.errorMessage) as string | undefined,
+    started_at: (r.started_at ?? r.startedAt) as string | undefined,
+    finished_at: (r.finished_at ?? r.finishedAt) as string | undefined,
+    type: (r.type ?? 'HUB') as ImportType,
+  };
 };
 
 export const unwrapFirstMilePageResultOrRaw = <T>(

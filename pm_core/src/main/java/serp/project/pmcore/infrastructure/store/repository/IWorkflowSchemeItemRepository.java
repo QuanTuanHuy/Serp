@@ -20,6 +20,8 @@ public interface IWorkflowSchemeItemRepository extends JpaRepository<WorkflowSch
 
     List<WorkflowSchemeItemModel> findAllByTenantIdAndSchemeId(Long tenantId, Long schemeId);
 
+    List<WorkflowSchemeItemModel> findAllByTenantIdAndSchemeIdOrderByIdAsc(Long tenantId, Long schemeId);
+
     @Query("SELECT i FROM WorkflowSchemeItemModel i WHERE i.schemeId = :schemeId AND (i.tenantId = :tenantId OR i.tenantId = 0)")
     List<WorkflowSchemeItemModel> findAllBySchemeIdAndTenantIdOrSystemTenant(@Param("schemeId") Long schemeId, @Param("tenantId") Long tenantId);
 

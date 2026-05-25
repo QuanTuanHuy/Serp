@@ -51,12 +51,9 @@ public class WorkItemAuthorizationSupportService implements IWorkItemAuthorizati
     }
 
     @Override
-    public void checkScheduleIssuesPermissionIfNeeded(ProjectPermissionSubject subject,
-                                                      ProjectPermissionEvaluationContext actorContext,
-                                                      Long dueDate) {
-        if (dueDate != null) {
-            projectPermissionEvaluationService.checkPermission(subject, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
-        }
+    public void checkScheduleIssuesPermission(ProjectPermissionSubject subject,
+                                              ProjectPermissionEvaluationContext actorContext) {
+        projectPermissionEvaluationService.checkPermission(subject, actorContext, ProjectPermissionKeys.SCHEDULE_ISSUES);
     }
 
     @Override

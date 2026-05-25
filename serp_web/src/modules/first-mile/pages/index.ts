@@ -7,6 +7,7 @@ export * from './post-offices';
 export * from './product-types';
 export * from './import-history';
 export * from './vehicles';
+export * from './routes';
 export * from './orders';
 export * from './dispatchers';
 export * from './pickup';

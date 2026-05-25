@@ -73,7 +73,12 @@ export const Combobox: React.FC<ComboboxProps> = ({
           className={cn('w-full justify-between', className)}
           disabled={disabled}
         >
-          <span className={cn(!selected && 'text-muted-foreground')}>
+          <span
+            className={cn(
+              'min-w-0 truncate text-left',
+              !selected && 'text-muted-foreground'
+            )}
+          >
             {selected ? selected.label : placeholder}
           </span>
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />

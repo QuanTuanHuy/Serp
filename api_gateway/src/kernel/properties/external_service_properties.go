@@ -41,9 +41,12 @@ type ExternalServiceProperties struct {
 	FirstMileService    ServiceProperty
 	SecondMileService   ServiceProperty
 	CrmService          ServiceProperty
+	PaymentService      ServiceProperty
 	NotificationService ServiceProperty
 	SalesService        ServiceProperty
 	DiscussService      ServiceProperty
+	PmCoreService       ServiceProperty
+	TtcrsService        ServiceProperty
 }
 
 func (e ExternalServiceProperties) Prefix() string {

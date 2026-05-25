@@ -20,6 +20,8 @@ public interface IStatusPort {
 
     List<StatusEntity> getStatusesByTenantId(Long tenantId);
 
+    List<StatusEntity> getStatusesByIds(List<Long> statusIds, Long tenantId);
+
     List<StatusEntity> getStatusesByTenantIdIncludingSystem(Long tenantId);
 
     PageResult<StatusEntity> listStatusesIncludingSystem(Long tenantId, StatusListCriteria criteria);

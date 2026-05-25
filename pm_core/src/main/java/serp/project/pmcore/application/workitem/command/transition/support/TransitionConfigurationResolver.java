@@ -43,6 +43,68 @@ public class TransitionConfigurationResolver {
     private final IWorkflowTransitionPort workflowTransitionPort;
     private final IWorkflowTransitionRulePort workflowTransitionRulePort;
 
+    public List<AvailableTransitionConfiguration> listAvailableTransitions(TransitionSubjectContext context,
+                                                                           Long tenantId) {
+        issueTypeService.getIssueTypeById(context.issueTypeId(), tenantId);
+
+        WorkflowEntity workflow;
+        try {
+            workflow = workflowService.resolveWorkflow(context.workflowSchemeId(), context.issueTypeId(), tenantId);
+        } catch (ResourceNotFoundException ex) {
+            throw new DomainValidationException(
+                    DomainErrorCode.WORKFLOW_NOT_RESOLVABLE,
+                    "Effective workflow cannot be resolved for work item: workItemId=" + context.workItemId()
+            );
+        }
+
+        WorkflowVersionEntity workflowVersion = resolveWorkflowVersion(
+                workflow.getId(), workflow.getCurrentPublishedVersionId(), tenantId);
+
+        WorkflowStepEntity currentStep = resolveWorkflowStep(
+                context.workItemId(),
+                context.workflowStepId(),
+                workflowVersion.getId(),
+                tenantId
+        );
+
+        if (!Objects.equals(currentStep.getStatusId(), context.statusId())) {
+            throw new DomainValidationException(
+                    DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,
+                    "Work item status does not match workflow step: workItemId=" + context.workItemId()
+                            + ", workflowStepId=" + currentStep.getId()
+                            + ", workItemStatusId=" + context.statusId()
+                            + ", expectedStatusId=" + currentStep.getStatusId()
+            );
+        }
+
+        return workflowTransitionPort
+                .getWorkflowTransitionsByWorkflowVersionId(workflowVersion.getId(), tenantId)
+                .stream()
+                .filter(t -> t.getFromStepId() == null || t.getFromStepId().equals(currentStep.getId()))
+                .map(transition -> {
+                    WorkflowStepEntity targetStep = resolveWorkflowStep(
+                            context.workItemId(),
+                            transition.getToStepId(),
+                            workflowVersion.getId(),
+                            tenantId
+                    );
+                    StatusEntity targetStatus = statusService.getStatusById(targetStep.getStatusId(), tenantId);
+                    StatusCategoryEntity targetStatusCategory = resolveStatusCategory(
+                            targetStatus.getCategoryId(),
+                            targetStatus.getId(),
+                            tenantId
+                    );
+                    return new AvailableTransitionConfiguration(
+                            transition,
+                            currentStep,
+                            targetStep,
+                            targetStatus,
+                            targetStatusCategory
+                    );
+                })
+                .toList();
+    }
+
     public ResolvedTransitionExecution resolve(TransitionSubjectContext context,
                                                Long transitionId,
                                                Long tenantId) {

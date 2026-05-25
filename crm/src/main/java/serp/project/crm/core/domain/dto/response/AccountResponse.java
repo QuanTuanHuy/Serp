@@ -10,9 +10,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.crm.core.domain.enums.ActiveStatus;
+import serp.project.crm.core.domain.enums.AccountTier;
 import serp.project.crm.core.domain.enums.AccountType;
+import serp.project.crm.core.domain.enums.PreferredTimeSlot;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -38,6 +42,11 @@ public class AccountResponse {
     private String paymentTerms;
     private ActiveStatus activeStatus;
     private AccountType accountType;
+    private AccountTier tier;
+    private List<PreferredTimeSlot> preferredTimeSlots;
+    private List<DayOfWeek> preferredDays;
+    private String language;
+    private String timezone;
     
     private BigDecimal totalRevenue;
     private Integer totalOpportunities;

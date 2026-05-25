@@ -54,4 +54,6 @@ public interface IOpportunityPort {
     List<OpportunityEntity> filterAll(OpportunityFilterRequest filter, Long tenantId);
 
     boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId);
+
+    List<OpportunityEntity> findByIds(List<Long> ids, Long tenantId);
 }

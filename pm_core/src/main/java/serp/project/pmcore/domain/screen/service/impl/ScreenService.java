@@ -8,6 +8,8 @@ package serp.project.pmcore.domain.screen.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeEntity;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeScreenSchemeItemEntity;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemeItemPort;
 import serp.project.pmcore.domain.issuetype.port.IIssueTypeScreenSchemePort;
@@ -79,20 +81,29 @@ public class ScreenService implements IScreenService {
             );
         }
 
-        issueTypeScreenSchemePort
+        IssueTypeScreenSchemeEntity issueTypeScreenScheme = issueTypeScreenSchemePort
                 .getIssueTypeScreenSchemeById(issueTypeScreenSchemeId, tenantId)
-                .orElseThrow(() -> new ResourceNotFoundException(
+                .orElseThrow(() -> {
+                    log.error("[ScreenService] Issue type screen scheme not found: id={}, tenantId={}", issueTypeScreenSchemeId, tenantId);
+                    return new ResourceNotFoundException(
                         DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_NOT_FOUND,
                         "Issue type screen scheme not found: id=" + issueTypeScreenSchemeId
-                ));
+                    );
+                });
 
         Long screenSchemeId = issueTypeScreenSchemeItemPort
                 .getItemBySchemeIdAndIssueTypeId(issueTypeScreenSchemeId, issueTypeId, tenantId)
                 .map(IssueTypeScreenSchemeItemEntity::getScreenSchemeId)
-                .orElseThrow(() -> new DomainValidationException(
-                        DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_COVERAGE_MISSING,
-                        "Issue type screen scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + projectId
-                ));
+                .orElse(issueTypeScreenScheme.getDefaultScreenSchemeId());
+
+        if (screenSchemeId == null) {
+            log.error("[ScreenService] Issue type screen scheme coverage missing: issueTypeScreenSchemeId={}, issueTypeId={}, projectId={}", 
+            issueTypeScreenSchemeId, issueTypeId, projectId);
+            throw new DomainValidationException(
+                    DomainErrorCode.ISSUE_TYPE_SCREEN_SCHEME_COVERAGE_MISSING,
+                    "Issue type screen scheme does not cover issueTypeId=" + issueTypeId + " for projectId=" + projectId
+            );
+        }
 
         ScreenSchemeEntity screenScheme = screenSchemePort.getScreenSchemeById(screenSchemeId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -108,9 +119,10 @@ public class ScreenService implements IScreenService {
                 .orElse(screenScheme.getDefaultScreenId());
 
         if (screenId == null) {
+            log.error("[ScreenService] Screen scheme operation coverage missing: screenSchemeId={}, operationKey={}", screenSchemeId, operationKey);
             throw new DomainValidationException(
                     DomainErrorCode.SCREEN_SCHEME_OPERATION_COVERAGE_MISSING,
-                    operationKey + " screen is not resolvable for screenSchemeId=" + screenSchemeId
+                    operationKey + " screen is not resolvable for screenSchemeId=" + screenSchemeId + " for projectId=" + projectId
             );
         }
 

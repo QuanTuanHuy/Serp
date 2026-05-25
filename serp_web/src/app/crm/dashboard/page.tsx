@@ -16,6 +16,7 @@ import {
   Building2,
   ArrowUpRight,
   BarChart3,
+  CalendarClock,
 } from 'lucide-react';
 import {
   StatsCard,
@@ -106,6 +107,14 @@ export default function CRMDashboard() {
       icon: Building2,
       variant: 'success' as const,
       onClick: () => router.push('/crm/opportunities/create'),
+    },
+    {
+      id: 'meeting-requests',
+      label: 'Meeting requests',
+      description: 'Scheduling queue & activity link',
+      icon: CalendarClock,
+      variant: 'default' as const,
+      onClick: () => router.push('/crm/meeting-requests'),
     },
   ];
 
@@ -234,7 +243,7 @@ export default function CRMDashboard() {
               <div
                 key={customer.id}
                 className='flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer'
-                    onClick={() => router.push(`/crm/accounts/${customer.id}`)}
+                onClick={() => router.push(`/crm/accounts/${customer.id}`)}
               >
                 <div className='flex items-center gap-3'>
                   <div className='flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm'>

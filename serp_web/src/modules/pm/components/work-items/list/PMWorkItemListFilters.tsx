@@ -1,0 +1,451 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - PM work item filters
+ */
+
+'use client';
+
+import type React from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
+import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  ScrollArea,
+  Separator,
+} from '@/shared/components/ui';
+import { useAppSelector } from '@/shared/hooks';
+import { cn } from '@/shared/utils';
+import {
+  useGetPmIssueTypesQuery,
+  useGetPmPrioritiesQuery,
+  useGetPmStatusesQuery,
+  useSearchPmWorkItemsQuery,
+} from '../../../api/workItemApi';
+import type { FilterCriterion } from './pmWorkItemList.utils';
+import { serializeNumberList } from './pmWorkItemList.utils';
+
+interface PMWorkItemListFiltersProps {
+  projectId: number;
+  open: boolean;
+  parentId?: number;
+  assigneeIds: number[];
+  issueTypeIds: number[];
+  statusIds: number[];
+  priorityIds: number[];
+  reporterIds: number[];
+  onOpenChange: (open: boolean) => void;
+  onUpdate: (updates: Record<string, string | undefined>) => void;
+  onClear: () => void;
+}
+
+export function PMWorkItemListFilters({
+  projectId,
+  open,
+  parentId,
+  assigneeIds,
+  issueTypeIds,
+  statusIds,
+  priorityIds,
+  reporterIds,
+  onOpenChange,
+  onUpdate,
+  onClear,
+}: PMWorkItemListFiltersProps) {
+  const organizationId = useAppSelector(selectOrganizationId);
+  const [selectedCriterion, setSelectedCriterion] =
+    useState<FilterCriterion>('parent');
+  const [parentSearch, setParentSearch] = useState('');
+  const deferredParentSearch = useDeferredValue(parentSearch.trim());
+  const [parentLoadedSearch, setParentLoadedSearch] = useState('');
+
+  const { data: statuses } = useGetPmStatusesQuery(
+    {
+      projectId,
+      page: 0,
+      pageSize: 50,
+      sortBy: 'name',
+      sortDirection: 'asc',
+    },
+    { skip: !open || selectedCriterion !== 'status' }
+  );
+
+  const { data: priorities } = useGetPmPrioritiesQuery(
+    {
+      projectId,
+      page: 0,
+      pageSize: 50,
+      sortBy: 'sequence',
+      sortDirection: 'asc',
+    },
+    { skip: !open || selectedCriterion !== 'priority' }
+  );
+
+  const { data: issueTypes } = useGetPmIssueTypesQuery(
+    {
+      projectId,
+      page: 0,
+      pageSize: 50,
+      sortBy: 'name',
+      sortDirection: 'asc',
+    },
+    { skip: !open || selectedCriterion !== 'workType' }
+  );
+
+  const { data: usersResponse } = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      status: 'ACTIVE',
+    },
+    {
+      skip:
+        !open ||
+        !organizationId ||
+        (selectedCriterion !== 'assignee' && selectedCriterion !== 'reporter'),
+    }
+  );
+
+  const { data: parentResponse, isFetching: isParentFetching } =
+    useSearchPmWorkItemsQuery(
+      {
+        projectId,
+        params: {
+          keyword: deferredParentSearch || undefined,
+          enriched: true,
+          page: 0,
+          pageSize: 10,
+          sortField: 'updatedAt',
+          sortDirection: 'DESC',
+        },
+      },
+      { skip: !open || selectedCriterion !== 'parent' }
+    );
+
+  const users = useMemo(
+    () =>
+      [...(usersResponse?.data.items || [])].sort((left, right) => {
+        const leftName =
+          `${left.firstName || ''} ${left.lastName || ''}`.trim();
+        const rightName =
+          `${right.firstName || ''} ${right.lastName || ''}`.trim();
+        return leftName.localeCompare(rightName);
+      }),
+    [usersResponse]
+  );
+
+  const activeCount = [
+    parentId ? 1 : 0,
+    assigneeIds.length,
+    issueTypeIds.length,
+    statusIds.length,
+    priorityIds.length,
+    reporterIds.length,
+  ].reduce((total, item) => total + item, 0);
+
+  const toggleListValue = (key: string, values: number[], value: number) => {
+    const nextValues = values.includes(value)
+      ? values.filter((item) => item !== value)
+      : [...values, value];
+    onUpdate({ [key]: serializeNumberList(nextValues) });
+  };
+
+  const close = () => onOpenChange(false);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-w-5xl gap-0 p-0 sm:max-h-[85vh] sm:max-w-5xl'>
+        <DialogHeader className='border-b px-5 py-4'>
+          <div className='flex items-center justify-between gap-3'>
+            <div>
+              <DialogTitle className='flex items-center gap-2 text-base'>
+                <SlidersHorizontal className='h-4 w-4' />
+                Filters
+                {activeCount > 0 ? (
+                  <Badge variant='secondary'>{activeCount}</Badge>
+                ) : null}
+              </DialogTitle>
+              <p className='mt-1 text-sm text-muted-foreground'>
+                Pick criterion on left, values on right.
+              </p>
+            </div>
+            <Button type='button' variant='ghost' size='sm' onClick={close}>
+              Close
+            </Button>
+          </div>
+        </DialogHeader>
+
+        <div className='grid min-h-[520px] grid-cols-[220px_minmax(0,1fr)]'>
+          <aside className='border-r bg-muted/20 p-3'>
+            <div className='space-y-1'>
+              {(
+                [
+                  'parent',
+                  'assignee',
+                  'workType',
+                  'status',
+                  'priority',
+                  'reporter',
+                ] as const
+              ).map((criterion) => {
+                const active =
+                  criterion === 'parent'
+                    ? parentId
+                    : criterion === 'assignee'
+                      ? assigneeIds.length
+                      : criterion === 'workType'
+                        ? issueTypeIds.length
+                        : criterion === 'status'
+                          ? statusIds.length
+                          : criterion === 'priority'
+                            ? priorityIds.length
+                            : reporterIds.length;
+                const activeCountForCriterion = active ?? 0;
+
+                return (
+                  <button
+                    key={criterion}
+                    type='button'
+                    onClick={() => setSelectedCriterion(criterion)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-background',
+                      selectedCriterion === criterion &&
+                        'bg-background shadow-sm'
+                    )}
+                  >
+                    <span className='capitalize'>
+                      {criterion.replace('workType', 'Work type')}
+                    </span>
+                    <span className='flex items-center gap-2'>
+                      {activeCountForCriterion > 0 ? (
+                        <Badge variant='secondary'>
+                          {activeCountForCriterion}
+                        </Badge>
+                      ) : null}
+                      <ChevronRight className='h-4 w-4 text-muted-foreground' />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Separator className='my-4' />
+            <Button
+              type='button'
+              variant='ghost'
+              className='w-full justify-start'
+              onClick={onClear}
+              disabled={activeCount === 0}
+            >
+              Clear all
+            </Button>
+          </aside>
+
+          <section className='flex min-h-0 flex-col'>
+            {selectedCriterion === 'parent' ? (
+              <CriterionPane title='Parent'>
+                <div className='space-y-2'>
+                  <Input
+                    value={parentSearch}
+                    onChange={(event) => setParentSearch(event.target.value)}
+                    placeholder='Search parent'
+                    className='h-9'
+                  />
+                  <ScrollArea className='h-[380px] rounded-md border'>
+                    <div className='space-y-1 p-2'>
+                      <FilterCheckbox
+                        label='No parent filter'
+                        checked={!parentId}
+                        onCheckedChange={() =>
+                          onUpdate({ parentId: undefined })
+                        }
+                      />
+                      {(parentResponse?.data.items || []).map((item) => (
+                        <FilterCheckbox
+                          key={item.id}
+                          label={`${item.key} ${item.summary}`}
+                          checked={parentId === item.id}
+                          onCheckedChange={() =>
+                            onUpdate({ parentId: String(item.id) })
+                          }
+                        />
+                      ))}
+                      {isParentFetching ? (
+                        <p className='px-2 py-1 text-xs text-muted-foreground'>
+                          Loading...
+                        </p>
+                      ) : null}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'assignee' ? (
+              <CriterionPane title='Assignee'>
+                <ValueList
+                  items={users.map((user) => ({
+                    id: Number(user.id),
+                    label:
+                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                      user.email ||
+                      `User #${user.id}`,
+                  }))}
+                  values={assigneeIds}
+                  onToggle={(id) =>
+                    toggleListValue('assigneeIds', assigneeIds, id)
+                  }
+                />
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'workType' ? (
+              <CriterionPane title='Work type'>
+                <ValueList
+                  items={(issueTypes?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={issueTypeIds}
+                  onToggle={(id) =>
+                    toggleListValue('issueTypeIds', issueTypeIds, id)
+                  }
+                />
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'status' ? (
+              <CriterionPane title='Status'>
+                <ValueList
+                  items={(statuses?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={statusIds}
+                  onToggle={(id) => toggleListValue('statusIds', statusIds, id)}
+                />
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'priority' ? (
+              <CriterionPane title='Priority'>
+                <ValueList
+                  items={(priorities?.data.items || []).map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                  }))}
+                  values={priorityIds}
+                  onToggle={(id) =>
+                    toggleListValue('priorityIds', priorityIds, id)
+                  }
+                />
+              </CriterionPane>
+            ) : null}
+
+            {selectedCriterion === 'reporter' ? (
+              <CriterionPane title='Reporter'>
+                <ValueList
+                  items={users.map((user) => ({
+                    id: Number(user.id),
+                    label:
+                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                      user.email ||
+                      `User #${user.id}`,
+                  }))}
+                  values={reporterIds}
+                  onToggle={(id) =>
+                    toggleListValue('reporterIds', reporterIds, id)
+                  }
+                />
+              </CriterionPane>
+            ) : null}
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CriterionPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>
+          Pick one or more values.
+        </p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ValueList({
+  items,
+  values,
+  onToggle,
+}: {
+  items: Array<{ id: number; label: string }>;
+  values: number[];
+  onToggle: (id: number) => void;
+}) {
+  return (
+    <ScrollArea className='h-[380px] rounded-md border'>
+      <div className='space-y-1 p-2'>
+        {items.length === 0 ? (
+          <p className='px-2 py-1 text-xs text-muted-foreground'>No options</p>
+        ) : null}
+        {items.map((item) => (
+          <FilterCheckbox
+            key={item.id}
+            label={item.label}
+            checked={values.includes(item.id)}
+            onCheckedChange={() => onToggle(item.id)}
+          />
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
+
+function FilterCheckbox({
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onCheckedChange}
+      className='flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted'
+    >
+      <span
+        className={cn(
+          'flex h-4 w-4 items-center justify-center rounded border text-[10px]',
+          checked && 'border-primary bg-primary text-primary-foreground'
+        )}
+      >
+        {checked ? '✓' : ''}
+      </span>
+      <span className='line-clamp-1'>{label}</span>
+    </button>
+  );
+}

@@ -41,4 +41,6 @@ public interface IContactPort {
 
     void deleteById(Long id, Long tenantId);
 
+    List<ContactEntity> findByIds(List<Long> ids, Long tenantId);
+
 }

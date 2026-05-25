@@ -35,6 +35,7 @@ public class AppException extends RuntimeException {
                     ErrorMessage.LEAD_NOT_FOUND,
                     ErrorMessage.OPPORTUNITY_NOT_FOUND,
                     ErrorMessage.ACTIVITY_NOT_FOUND,
+                    ErrorMessage.MEETING_REQUEST_NOT_FOUND,
                     ErrorMessage.TEAM_NOT_FOUND,
                     ErrorMessage.TEAM_MEMBER_NOT_FOUND -> Constants.HttpStatusCode.NOT_FOUND;
             case ErrorMessage.INTERNAL_SERVER_ERROR -> Constants.HttpStatusCode.INTERNAL_SERVER_ERROR;

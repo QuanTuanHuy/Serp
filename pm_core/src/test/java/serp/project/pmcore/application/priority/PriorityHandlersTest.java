@@ -29,17 +29,17 @@ import serp.project.pmcore.application.priority.query.list.ListPrioritiesQueryHa
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.priority.dto.PriorityUpdateData;
 import serp.project.pmcore.domain.priority.entity.PriorityEntity;
+import serp.project.pmcore.domain.priority.port.IPrioritySchemeItemPort;
 import serp.project.pmcore.domain.priority.query.PriorityListCriteria;
 import serp.project.pmcore.domain.priority.service.IPriorityService;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,7 +54,11 @@ class PriorityHandlersTest {
     private IPriorityService priorityService;
     @Mock
     private PriorityOutboxPublisher priorityOutboxPublisher;
-
+    @Mock
+    private IProjectReadPort projectReadPort;
+    @Mock
+    private IPrioritySchemeItemPort prioritySchemeItemPort;
+    
     private CreatePriorityCommandHandler createHandler;
     private UpdatePriorityCommandHandler updateHandler;
     private DeletePriorityCommandHandler deleteHandler;
@@ -67,7 +71,7 @@ class PriorityHandlersTest {
         updateHandler = new UpdatePriorityCommandHandler(priorityService, priorityOutboxPublisher);
         deleteHandler = new DeletePriorityCommandHandler(priorityService, priorityOutboxPublisher);
         getHandler = new GetPriorityByIdQueryHandler(priorityService);
-        listHandler = new ListPrioritiesQueryHandler(priorityService);
+        listHandler = new ListPrioritiesQueryHandler(priorityService, projectReadPort, prioritySchemeItemPort);
     }
 
     @Test
@@ -187,6 +191,7 @@ class PriorityHandlersTest {
                 TENANT_ID,
                 "hi",
                 false,
+                null,
                 0,
                 1,
                 "name",

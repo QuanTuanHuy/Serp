@@ -29,18 +29,14 @@ public class ProjectService implements IProjectService {
     public ProjectEntity createProject(ProjectEntity project, Long tenantId, Long userId) {
         project.setTenantId(tenantId);
         project.setIsArchived(false);
-        project.setCreatedBy(userId);
-        project.setUpdatedBy(userId);
-        project.setCreatedAt(System.currentTimeMillis());
-        project.setUpdatedAt(System.currentTimeMillis());
+        project.applyCreate(userId, System.currentTimeMillis());
 
         return projectWritePort.saveProject(project);
     }
 
     @Override
     public ProjectEntity saveProject(ProjectEntity entity, Long userId) {
-        entity.setUpdatedBy(userId);
-        entity.setUpdatedAt(System.currentTimeMillis());
+        entity.applyUpdate(userId, System.currentTimeMillis());
         return projectWritePort.saveProject(entity);
     }
 
@@ -49,33 +45,12 @@ public class ProjectService implements IProjectService {
         ProjectEntity existing = getProjectById(projectId, tenantId);
 
         if (Boolean.TRUE.equals(existing.getIsArchived())) {
+            log.warn("[ProjectService] Project is archived: projectId={}, tenantId={}", projectId, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ARCHIVED);
         }
 
-        if (updateData.nameProvided()) {
-            existing.setName(updateData.name());
-        }
-        if (updateData.keyProvided()) {
-            existing.setKey(updateData.key());
-        }
-        if (updateData.descriptionProvided()) {
-            existing.setDescription(updateData.description());
-        }
-        if (updateData.leadUserIdProvided()) {
-            existing.setLeadUserId(updateData.leadUserId());
-        }
-        if (updateData.categoryIdProvided()) {
-            existing.setCategoryId(updateData.categoryId());
-        }
-        if (updateData.urlProvided()) {
-            existing.setUrl(updateData.url());
-        }
-        if (updateData.avatarIdProvided()) {
-            existing.setAvatarId(updateData.avatarId());
-        }
-
-        existing.setUpdatedBy(userId);
-        existing.setUpdatedAt(System.currentTimeMillis());
+        applyUpdate(existing, updateData);
+        existing.applyUpdate(userId, System.currentTimeMillis());
 
         return projectWritePort.saveProject(existing);
     }
@@ -110,13 +85,13 @@ public class ProjectService implements IProjectService {
         ProjectEntity project = getProjectById(id, tenantId);
 
         if (Boolean.TRUE.equals(project.getIsArchived())) {
+            log.warn("[ProjectService] Project is already archived: projectId={}, tenantId={}", id, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_ALREADY_ARCHIVED);
         }
 
         project.setIsArchived(true);
         project.setArchivedAt(System.currentTimeMillis());
-        project.setUpdatedBy(userId);
-        project.setUpdatedAt(System.currentTimeMillis());
+        project.applyUpdate(userId, System.currentTimeMillis());
 
         return projectWritePort.saveProject(project);
     }
@@ -126,15 +101,38 @@ public class ProjectService implements IProjectService {
         ProjectEntity project = getProjectById(id, tenantId);
 
         if (!Boolean.TRUE.equals(project.getIsArchived())) {
+            log.warn("[ProjectService] Project is not archived: projectId={}, tenantId={}", id, tenantId);
             throw new BusinessRuleViolationException(DomainErrorCode.PROJECT_NOT_ARCHIVED);
         }
 
         project.setIsArchived(false);
         project.setArchivedAt(null);
-        project.setUpdatedBy(userId);
-        project.setUpdatedAt(System.currentTimeMillis());
+        project.applyUpdate(userId, System.currentTimeMillis());
 
         return projectWritePort.saveProject(project);
     }
 
+    private void applyUpdate(ProjectEntity project, ProjectUpdateData updateData) {
+        if (updateData.nameProvided()) {
+            project.setName(updateData.name());
+        }
+        if (updateData.keyProvided()) {
+            project.setKey(updateData.key());
+        }
+        if (updateData.descriptionProvided()) {
+            project.setDescription(updateData.description());
+        }
+        if (updateData.leadUserIdProvided()) {
+            project.setLeadUserId(updateData.leadUserId());
+        }
+        if (updateData.categoryIdProvided()) {
+            project.setCategoryId(updateData.categoryId());
+        }
+        if (updateData.urlProvided()) {
+            project.setUrl(updateData.url());
+        }
+        if (updateData.avatarIdProvided()) {
+            project.setAvatarId(updateData.avatarId());
+        }
+    }
 }

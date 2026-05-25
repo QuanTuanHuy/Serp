@@ -29,7 +29,7 @@ public class PageCriteria {
     }
 
     public String getSortBy() {
-        return sortBy != null ? sortBy : "id";
+        return sortBy != null ? getRawSortBy() : "id";
     }
 
     public String getSortDirection() {
@@ -41,7 +41,10 @@ public class PageCriteria {
     }
 
     protected String getRawSortBy() {
-        return sortBy;
+        if (sortBy == null || sortBy.isBlank()) {
+            return null;
+        }
+        return sortBy.replaceAll("([A-Z])", "_$1").toLowerCase();
     }
 
     protected String getRawSortDirection() {

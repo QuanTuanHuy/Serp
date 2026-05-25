@@ -16,12 +16,9 @@ import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.dto.PageResponse;
 import serp.project.crm.core.domain.dto.request.AssignOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.ChangeOpportunityStageRequest;
-import serp.project.crm.core.domain.dto.request.CloseOpportunityLostRequest;
-import serp.project.crm.core.domain.dto.request.CloseOpportunityWonRequest;
 import serp.project.crm.core.domain.dto.request.CreateOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.OpportunityFilterRequest;
 import serp.project.crm.core.domain.dto.request.PipelineFilterRequest;
-import serp.project.crm.core.domain.dto.request.ReopenOpportunityRequest;
 import serp.project.crm.core.domain.dto.request.UpdateOpportunityRequest;
 import serp.project.crm.core.domain.dto.response.OpportunityResponse;
 import serp.project.crm.core.domain.dto.response.PipelineResponse;
@@ -42,6 +39,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -113,24 +111,55 @@ public class OpportunityUseCase {
     public GeneralResponse<?> changeOpportunityStage(Long id, ChangeOpportunityStageRequest request, Long userId,
             Long tenantId) {
         try {
+            OpportunityEntity currentOpportunity = opportunityService.getOpportunityById(id, tenantId)
+                    .orElseThrow(() -> new AppException(ErrorMessage.OPPORTUNITY_NOT_FOUND));
+
             OpportunityEntity opportunity;
-            if (OpportunityStage.CLOSED_WON.equals(request.getStage())) {
-                opportunity = opportunityService.closeAsWon(id, null, request.getNotes(), userId, tenantId);
+            String successMessage;
+            OpportunityStage targetStage = request.getStage();
+            OpportunityStage currentStage = currentOpportunity.getStage();
+
+            if (OpportunityStage.CLOSED_LOST.equals(currentStage) && targetStage != null && targetStage.isActive()) {
+                String reopenReason = Optional.ofNullable(request.getReopenReason())
+                        .map(String::trim)
+                        .orElse(null);
+                if (reopenReason == null || reopenReason.isEmpty()) {
+                    throw new AppException("Reopen reason is required when reopening a closed lost opportunity");
+                }
+
+                opportunity = opportunityService.reopenOpportunity(id, targetStage, reopenReason, userId, tenantId);
+                successMessage = "Opportunity reopened successfully";
+            } else if (OpportunityStage.CLOSED_WON.equals(targetStage)) {
+                opportunity = opportunityService.closeAsWon(id, request.getActualValue(), request.getNotes(), userId,
+                        tenantId);
                 if (opportunity.getAccountId() != null) {
                     accountService.updateAccountRevenue(opportunity.getAccountId(), tenantId,
                             opportunity.getActualValue(), true, userId);
                 }
-            } else if (OpportunityStage.CLOSED_LOST.equals(request.getStage())) {
-                opportunity = opportunityService.closeAsLost(id, request.getLossReason(), userId, tenantId);
-                accountService.updateAccountRevenue(opportunity.getAccountId(), tenantId, BigDecimal.ZERO, false,
-                        userId);
+                successMessage = "Opportunity closed as won";
+            } else if (OpportunityStage.CLOSED_LOST.equals(targetStage)) {
+                String lossReason = Optional.ofNullable(request.getLossReason())
+                        .map(String::trim)
+                        .orElse(null);
+                if (lossReason == null || lossReason.isEmpty()) {
+                    throw new AppException("Loss reason is required");
+                }
+
+                opportunity = opportunityService.closeAsLost(id, lossReason, userId, tenantId);
+                if (opportunity.getAccountId() != null) {
+                    accountService.updateAccountRevenue(opportunity.getAccountId(), tenantId, BigDecimal.ZERO, false,
+                            userId);
+                }
+                successMessage = "Opportunity closed as lost";
             } else {
-                opportunity = opportunityService.changeStage(id, request.getStage(), userId, tenantId);
+                opportunity = opportunityService.changeStage(id, targetStage, userId, tenantId);
+                successMessage = "Stage updated successfully";
             }
+
             OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
 
             log.info("Opportunity stage changed successfully: {}", id);
-            return responseUtils.success(response, "Stage updated successfully");
+            return responseUtils.success(response, successMessage);
 
         } catch (AppException e) {
             log.error("Error changing opportunity stage: {}", e.getMessage());
@@ -142,79 +171,11 @@ public class OpportunityUseCase {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> closeOpportunityAsWon(Long id, CloseOpportunityWonRequest request, Long userId,
-            Long tenantId) {
-        try {
-            CloseOpportunityWonRequest safeRequest = request != null ? request : CloseOpportunityWonRequest.builder().build();
-            OpportunityEntity opportunity = opportunityService.closeAsWon(id, safeRequest.getActualValue(),
-                    safeRequest.getNotes(), userId, tenantId);
-
-            if (opportunity.getAccountId() != null && opportunity.getEstimatedValue() != null) {
-                accountService.updateAccountRevenue(
-                    opportunity.getAccountId(),
-                    tenantId,
-                    opportunity.getActualValue(),
-                    true,
-                    userId);
-            }
-
-            OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
-            log.info("Opportunity closed as won: {}", id);
-            return responseUtils.success(response, "Opportunity closed as won");
-
-        } catch (AppException e) {
-            log.error("Error closing opportunity as won: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error closing opportunity as won: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> closeOpportunityAsLost(Long id, CloseOpportunityLostRequest request, Long userId,
-            Long tenantId) {
-        try {
-            OpportunityEntity opportunity = opportunityService.closeAsLost(id, request.getLossReason(), userId,
-                    tenantId);
-
-            if (opportunity.getAccountId() != null) {
-                accountService.updateAccountRevenue(
-                    opportunity.getAccountId(),
-                    tenantId,
-                    BigDecimal.ZERO,
-                    false,
-                    userId);
-            }
-
-
-            OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
-            log.info("Opportunity closed as lost: {}", id);
-            return responseUtils.success(response, "Opportunity closed as lost");
-
-        } catch (AppException e) {
-            log.error("Error closing opportunity as lost: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error closing opportunity as lost: {}", e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> assignOpportunity(Long id, AssignOpportunityRequest request, Long userId, Long tenantId) {
         OpportunityEntity opportunity = opportunityService.assignOpportunity(id, request.getAssignedTo(), userId,
                 tenantId);
         OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
         return responseUtils.success(response, "Opportunity assigned successfully");
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public GeneralResponse<?> reopenOpportunity(Long id, ReopenOpportunityRequest request, Long userId, Long tenantId) {
-        OpportunityEntity opportunity = opportunityService.reopenOpportunity(id, request.getStage(),
-                request.getReopenReason(), userId, tenantId);
-        OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
-        return responseUtils.success(response, "Opportunity reopened successfully");
     }
 
     @Transactional(readOnly = true)
@@ -306,7 +267,7 @@ public class OpportunityUseCase {
                 .expectedCloseDateTo(safeRequest.getToDate())
                 .build();
         List<OpportunityEntity> opportunities = opportunityService.filterAllOpportunities(filter, tenantId).stream()
-                .filter(opportunity -> opportunity.getStage() != null && opportunity.getStage().isActive())
+                .filter(opportunity -> opportunity.getStage() != null)
                 .sorted(Comparator.comparing(OpportunityEntity::getExpectedCloseDate,
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
@@ -317,9 +278,6 @@ public class OpportunityUseCase {
         int totalOpportunities = 0;
 
         for (OpportunityStage stage : OpportunityStage.values()) {
-            if (!stage.isActive()) {
-                continue;
-            }
             List<OpportunityEntity> stageOpportunities = opportunities.stream()
                     .filter(opportunity -> stage.equals(opportunity.getStage()))
                     .toList();

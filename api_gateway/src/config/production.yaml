@@ -111,6 +111,10 @@ external:
       host: ${CRM_SERVICE_HOST}
       port: ${CRM_SERVICE_PORT}
       timeout: 15s
+    paymentService:
+      host: ${PAYMENT_SERVICE_HOST}
+      port: ${PAYMENT_SERVICE_PORT}
+      timeout: 15s
     notificationService:
       host: ${NOTIFICATION_SERVICE_HOST}
       port: ${NOTIFICATION_SERVICE_PORT}
@@ -121,3 +125,7 @@ external:
       port: ${DISCUSS_SERVICE_PORT}
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    pmCoreService:
+      host: ${PM_CORE_SERVICE_HOST}
+      port: ${PM_CORE_SERVICE_PORT}
+      timeout: 15s

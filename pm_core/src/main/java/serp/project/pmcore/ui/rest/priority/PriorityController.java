@@ -100,6 +100,7 @@ public class PriorityController {
     public ResponseEntity<GeneralResponse<PageView<PriorityView>>> listPriorities(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean isSystem,
+            @RequestParam(required = false) Long projectId,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) String sortBy,
@@ -109,6 +110,7 @@ public class PriorityController {
                 tenantId,
                 search,
                 isSystem,
+                projectId,
                 page,
                 pageSize,
                 sortBy,
