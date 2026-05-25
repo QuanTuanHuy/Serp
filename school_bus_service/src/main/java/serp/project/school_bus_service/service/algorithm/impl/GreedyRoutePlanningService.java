@@ -2,6 +2,7 @@ package serp.project.school_bus_service.service.algorithm.impl;
 
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.entity.PickupPointEntity;
+
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.service.algorithm.GreedyPlanInput;
 import serp.project.school_bus_service.service.algorithm.GreedyPlanResult;
@@ -22,7 +23,7 @@ import java.util.Map;
  * student count descending, then partitions into capacity-bounded batches.
  * Does NOT access any repository or external service.
  */
-@Service
+@Service("greedyAlgorithmService")
 public class GreedyRoutePlanningService implements IGreedyRoutePlanningService {
 
     public GreedyRoutePlanningService() {

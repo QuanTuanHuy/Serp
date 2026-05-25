@@ -6,10 +6,10 @@ import serp.project.school_bus_service.service.IRoutePlanningService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStopType;
-import serp.project.school_bus_service.infrastructure.model.PickupPointEntity;
-import serp.project.school_bus_service.infrastructure.model.RoutePlanEntity;
-import serp.project.school_bus_service.infrastructure.model.RouteStopEntity;
-import serp.project.school_bus_service.infrastructure.model.StudentSubscriptionEntity;
+import serp.project.school_bus_service.entity.PickupPointEntity;
+import serp.project.school_bus_service.entity.RoutePlanEntity;
+import serp.project.school_bus_service.entity.RouteStopEntity;
+import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
