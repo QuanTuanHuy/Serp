@@ -111,6 +111,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public List<ProjectEntity> getActiveProjectsByWorkflowSchemeIds(List<Long> workflowSchemeIds, Long tenantId) {
+        if (workflowSchemeIds == null || workflowSchemeIds.isEmpty()) {
+            return List.of();
+        }
+        return projectMapper.toEntities(
+                projectRepository.findActiveProjectsByWorkflowSchemeIds(workflowSchemeIds, tenantId)
+        );
+    }
+
+    @Override
     public PageResult<ProjectEntity> getProjects(Long tenantId, Long userId, Set<String> groupKeys, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,

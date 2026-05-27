@@ -11,19 +11,28 @@ import type {
   PMCreateIssueTypeSchemeRequest,
   PMCreatePriorityRequest,
   PMCreatePrioritySchemeRequest,
+  PMCreateWorkflowRequest,
+  PMCreateWorkflowSchemeRequest,
   PMDeleteIssueTypeResponse,
   PMDeleteIssueTypeSchemeResponse,
   PMDeletePriorityResponse,
   PMDeletePrioritySchemeResponse,
+  PMDeleteWorkflowSchemeResponse,
   PMIssueTypeSettingsOverviewApi,
   PMManageIssueTypeSchemeItemsRequest,
   PMManagePrioritySchemeItemsRequest,
+  PMManageWorkflowSchemeItemsRequest,
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsOverviewApi,
   PMUpdateIssueTypeRequest,
   PMUpdateIssueTypeSchemeRequest,
   PMUpdatePriorityRequest,
   PMUpdatePrioritySchemeRequest,
+  PMUpdateWorkflowRequest,
+  PMUpdateWorkflowSchemeRequest,
+  PMWorkflowOptionApi,
+  PMWorkflowSchemeSettingsApi,
+  PMWorkflowSettingsOverviewApi,
   PMWorkTypeSchemeSettingsApi,
 } from '../types/settings-api.types';
 import type { PMPriorityApi } from '../types/work-item-api.types';
@@ -284,23 +293,146 @@ export const pmSettingsApi = api.injectEndpoints({
         { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
       ],
     }),
+
+    getPmWorkflowSettingsOverview: builder.query<
+      PMWorkflowSettingsOverviewApi,
+      void
+    >({
+      query: () => ({
+        url: '/workflow-settings',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowSettingsOverviewApi>(),
+      providesTags: [{ type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' }],
+    }),
+
+    createPmWorkflow: builder.mutation<
+      PMWorkflowOptionApi,
+      PMCreateWorkflowRequest
+    >({
+      query: (body) => ({
+        url: '/workflows',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowOptionApi>(),
+      invalidatesTags: [
+        { type: 'pm/Workflow' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    updatePmWorkflow: builder.mutation<
+      PMWorkflowOptionApi,
+      { id: number; body: PMUpdateWorkflowRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/workflows/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowOptionApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/Workflow' as const, id },
+        { type: 'pm/Workflow' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    createPmWorkflowScheme: builder.mutation<
+      PMWorkflowSchemeSettingsApi,
+      PMCreateWorkflowSchemeRequest
+    >({
+      query: (body) => ({
+        url: '/workflow-schemes',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowSchemeSettingsApi>(),
+      invalidatesTags: [
+        { type: 'pm/WorkflowScheme' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    updatePmWorkflowScheme: builder.mutation<
+      PMWorkflowSchemeSettingsApi,
+      { id: number; body: PMUpdateWorkflowSchemeRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/workflow-schemes/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowSchemeSettingsApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/WorkflowScheme' as const, id },
+        { type: 'pm/WorkflowScheme' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    managePmWorkflowSchemeItems: builder.mutation<
+      PMWorkflowSchemeSettingsApi,
+      { id: number; body: PMManageWorkflowSchemeItemsRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/workflow-schemes/${id}/items`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowSchemeSettingsApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/WorkflowScheme' as const, id },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    deletePmWorkflowScheme: builder.mutation<
+      PMDeleteWorkflowSchemeResponse,
+      number
+    >({
+      query: (id) => ({
+        url: `/workflow-schemes/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeleteWorkflowSchemeResponse>(),
+      invalidatesTags: [
+        { type: 'pm/WorkflowScheme' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
 
 export const {
+  useCreatePmWorkflowMutation,
+  useCreatePmWorkflowSchemeMutation,
   useCreatePmPriorityMutation,
   useCreatePmPrioritySchemeMutation,
   useCreatePmIssueTypeMutation,
   useCreatePmIssueTypeSchemeMutation,
+  useDeletePmWorkflowSchemeMutation,
   useDeletePmPriorityMutation,
   useDeletePmPrioritySchemeMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
+  useGetPmWorkflowSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
   useGetPmIssueTypeSettingsOverviewQuery,
+  useManagePmWorkflowSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
   useManagePmIssueTypeSchemeItemsMutation,
+  useUpdatePmWorkflowMutation,
+  useUpdatePmWorkflowSchemeMutation,
   useUpdatePmPriorityMutation,
   useUpdatePmPrioritySchemeMutation,
   useUpdatePmIssueTypeMutation,

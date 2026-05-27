@@ -37,6 +37,8 @@ public interface IProjectReadPort {
 
     List<Long> getActiveProjectIdsByWorkflowSchemeId(Long workflowSchemeId, Long tenantId);
 
+    List<ProjectEntity> getActiveProjectsByWorkflowSchemeIds(List<Long> workflowSchemeIds, Long tenantId);
+
     PageResult<ProjectEntity> getProjects(Long tenantId, Long userId, Set<String> groupKeys, String search,
                                           Long categoryId, String projectTypeKey,
                                           Boolean archived, int page, int size,

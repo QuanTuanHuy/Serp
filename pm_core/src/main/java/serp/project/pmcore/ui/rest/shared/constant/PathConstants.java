@@ -31,6 +31,7 @@ public class PathConstants {
     public static final String STATUSES = API_BASE_PATH + "/statuses";
     public static final String WORKFLOWS = API_BASE_PATH + "/workflows";
     public static final String WORKFLOW_SCHEMES = API_BASE_PATH + "/workflow-schemes";
+    public static final String WORKFLOW_SETTINGS = API_BASE_PATH + "/workflow-settings";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }

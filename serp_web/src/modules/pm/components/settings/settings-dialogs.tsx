@@ -31,6 +31,8 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import type {
   PMCreateIssueTypeRequest,
   PMCreatePriorityRequest,
+  PMCreateWorkflowRequest,
+  PMWorkflowSettingsApi,
   PMPrioritySettingsApi,
   PMWorkTypeSettingsApi,
 } from '../../types/api';
@@ -41,6 +43,8 @@ import {
   type PriorityDialogState,
   type PrioritySchemeDialogState,
   type SchemeDialogState,
+  type WorkflowDialogState,
+  type WorkflowSchemeDialogState,
   type WorkTypeDialogState,
 } from './settings-page.types';
 
@@ -730,6 +734,319 @@ export function PrioritySchemeDialog({
             <Button
               type='submit'
               disabled={isSubmitting || priorities.length === 0}
+            >
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function WorkflowDialog({
+  state,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  state: WorkflowDialogState | null;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    mode: WorkflowDialogState['mode'],
+    id: number | undefined,
+    values: PMCreateWorkflowRequest
+  ) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+    setName(state.item?.name ?? '');
+    setDescription(state.item?.description ?? '');
+  }, [state]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!state) {
+      return;
+    }
+    const cleanName = name.trim();
+    if (!cleanName) {
+      toast.error('Workflow name is required.');
+      return;
+    }
+
+    await onSubmit(state.mode, state.item?.id, {
+      name: cleanName,
+      description: normalizeOptionalText(description),
+    });
+  };
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <DialogHeader>
+            <DialogTitle>
+              {state?.mode === 'edit' ? 'Edit workflow' : 'Add workflow'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure the workflow label shown in PM settings and schemes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='workflow-name'>Name</Label>
+              <Input
+                id='workflow-name'
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder='Software Simplified Workflow'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='workflow-description'>Description</Label>
+              <Textarea
+                id='workflow-description'
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type='submit' disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function WorkflowSchemeDialog({
+  state,
+  workTypes,
+  workflows,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  state: WorkflowSchemeDialogState | null;
+  workTypes: PMWorkTypeSettingsApi[];
+  workflows: PMWorkflowSettingsApi[];
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    mode: WorkflowSchemeDialogState['mode'],
+    id: number | undefined,
+    values: {
+      name: string;
+      description: string | null;
+      defaultWorkflowId: number;
+      workflowByWorkTypeId: Record<number, number | undefined>;
+    }
+  ) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [defaultWorkflowId, setDefaultWorkflowId] = useState('');
+  const [workflowByWorkTypeId, setWorkflowByWorkTypeId] = useState<
+    Record<number, number | undefined>
+  >({});
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+
+    const initialDefault =
+      state.mode === 'edit'
+        ? state.item.defaultWorkflowId
+        : (workflows.find((workflow) => workflow.lifecycleState === 'ACTIVE')
+            ?.id ?? workflows[0]?.id);
+    const initialMappings =
+      state.mode === 'edit'
+        ? Object.fromEntries(
+            state.item.items.map((item) => [item.issueTypeId, item.workflowId])
+          )
+        : Object.fromEntries(
+            workTypes.map((workType) => [workType.id, initialDefault])
+          );
+
+    setName(state.item?.name ?? '');
+    setDescription(state.item?.description ?? '');
+    setDefaultWorkflowId(initialDefault ? String(initialDefault) : '');
+    setWorkflowByWorkTypeId(initialMappings);
+  }, [state, workflows, workTypes]);
+
+  const handleMappingChange = (issueTypeId: number, workflowId: string) => {
+    setWorkflowByWorkTypeId((current) => ({
+      ...current,
+      [issueTypeId]: Number(workflowId),
+    }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!state) {
+      return;
+    }
+    const cleanName = name.trim();
+    const defaultId = Number(defaultWorkflowId);
+    const mappedCount = Object.values(workflowByWorkTypeId).filter(
+      (workflowId): workflowId is number => typeof workflowId === 'number'
+    ).length;
+
+    if (!cleanName || !Number.isFinite(defaultId) || mappedCount === 0) {
+      toast.error(
+        'Name, default workflow, and at least one work type mapping are required.'
+      );
+      return;
+    }
+
+    await onSubmit(state.mode, state.item?.id, {
+      name: cleanName,
+      description: normalizeOptionalText(description),
+      defaultWorkflowId: defaultId,
+      workflowByWorkTypeId,
+    });
+  };
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent className='sm:max-w-3xl'>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <DialogHeader>
+            <DialogTitle>
+              {state?.mode === 'edit'
+                ? 'Edit workflow scheme'
+                : 'Add workflow scheme'}
+            </DialogTitle>
+            <DialogDescription>
+              Choose the default workflow and map work types to workflows.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-4'>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='workflow-scheme-name'>Name</Label>
+                <Input
+                  id='workflow-scheme-name'
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label>Default workflow</Label>
+                <Select
+                  value={defaultWorkflowId}
+                  onValueChange={setDefaultWorkflowId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select default' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workflows.map((workflow) => (
+                      <SelectItem key={workflow.id} value={String(workflow.id)}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='workflow-scheme-description'>Description</Label>
+              <Textarea
+                id='workflow-scheme-description'
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Work type mappings</Label>
+              <ScrollArea className='h-72 rounded-md border'>
+                <div className='divide-y'>
+                  {workTypes.map((workType) => (
+                    <div
+                      key={workType.id}
+                      className='grid gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] sm:items-center'
+                    >
+                      <div className='flex min-w-0 items-start gap-2'>
+                        <WorkTypeGlyph workType={workType} />
+                        <span className='min-w-0'>
+                          <span className='block text-sm font-medium'>
+                            {workType.name}
+                          </span>
+                          <span className='block text-xs text-muted-foreground'>
+                            {workType.description || workType.typeKey}
+                          </span>
+                        </span>
+                      </div>
+                      <Select
+                        value={
+                          workflowByWorkTypeId[workType.id]
+                            ? String(workflowByWorkTypeId[workType.id])
+                            : ''
+                        }
+                        onValueChange={(value) =>
+                          handleMappingChange(workType.id, value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select workflow' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workflows.map((workflow) => (
+                            <SelectItem
+                              key={workflow.id}
+                              value={String(workflow.id)}
+                            >
+                              {workflow.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type='submit'
+              disabled={
+                isSubmitting || workTypes.length === 0 || workflows.length === 0
+              }
             >
               {isSubmitting ? 'Saving...' : 'Save'}
             </Button>

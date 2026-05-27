@@ -39,9 +39,9 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
                     OR (:isActive = false AND w.currentPublishedVersionId IS NULL)
               )
               AND (
-                    :search IS NULL
-                    OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(w.workflowKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(w.name) LIKE :searchPattern
+                    OR LOWER(w.workflowKey) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -55,13 +55,13 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
                     OR (:isActive = false AND w.currentPublishedVersionId IS NULL)
               )
               AND (
-                    :search IS NULL
-                    OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(w.workflowKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(w.name) LIKE :searchPattern
+                    OR LOWER(w.workflowKey) LIKE :searchPattern
               )
             """)
     Page<WorkflowModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                  @Param("search") String search,
+                                                  @Param("searchPattern") String searchPattern,
                                                   @Param("isActive") Boolean isActive,
                                                   @Param("isSystem") Boolean isSystem,
                                                   Pageable pageable);

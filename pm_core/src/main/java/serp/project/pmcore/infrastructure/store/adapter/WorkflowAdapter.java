@@ -63,7 +63,7 @@ public class WorkflowAdapter implements IWorkflowPort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<WorkflowModel> result = workflowRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPatternLower(),
                 criteria.getIsActive(),
                 criteria.getIsSystem(),
                 pageable

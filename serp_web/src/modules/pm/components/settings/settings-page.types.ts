@@ -6,6 +6,8 @@
 import type {
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsApi,
+  PMWorkflowSchemeSettingsApi,
+  PMWorkflowSettingsApi,
   PMWorkTypeSchemeSettingsApi,
   PMWorkTypeSettingsApi,
 } from '../../types/api';
@@ -13,6 +15,8 @@ import type {
 export type PMSettingsSection =
   | 'work-types'
   | 'work-type-schemes'
+  | 'workflows'
+  | 'workflow-schemes'
   | 'priorities'
   | 'priority-schemes';
 
@@ -32,11 +36,20 @@ export type PrioritySchemeDialogState =
   | { mode: 'create'; item?: undefined }
   | { mode: 'edit'; item: PMPrioritySchemeSettingsApi };
 
+export type WorkflowDialogState =
+  | { mode: 'create'; item?: undefined }
+  | { mode: 'edit'; item: PMWorkflowSettingsApi };
+
+export type WorkflowSchemeDialogState =
+  | { mode: 'create'; item?: undefined }
+  | { mode: 'edit'; item: PMWorkflowSchemeSettingsApi };
+
 export type DeleteTarget =
   | { kind: 'work-type'; item: PMWorkTypeSettingsApi }
   | { kind: 'scheme'; item: PMWorkTypeSchemeSettingsApi }
   | { kind: 'priority'; item: PMPrioritySettingsApi }
-  | { kind: 'priority-scheme'; item: PMPrioritySchemeSettingsApi };
+  | { kind: 'priority-scheme'; item: PMPrioritySchemeSettingsApi }
+  | { kind: 'workflow-scheme'; item: PMWorkflowSchemeSettingsApi };
 
 export const SETTINGS_ITEMS: Array<{
   key: PMSettingsSection;
@@ -57,6 +70,18 @@ export const SETTINGS_ITEMS: Array<{
     group: 'Work types',
   },
   {
+    key: 'workflows',
+    title: 'Workflows',
+    description: 'Manage status paths and workflow lifecycle.',
+    group: 'Workflows',
+  },
+  {
+    key: 'workflow-schemes',
+    title: 'Workflow schemes',
+    description: 'Map work types to workflows for each project.',
+    group: 'Workflows',
+  },
+  {
     key: 'priorities',
     title: 'Priorities',
     description: 'Manage priority order, colors, and labels.',
@@ -70,7 +95,7 @@ export const SETTINGS_ITEMS: Array<{
   },
 ];
 
-export const SETTINGS_GROUPS = ['Work types', 'Priorities'];
+export const SETTINGS_GROUPS = ['Work types', 'Workflows', 'Priorities'];
 
 export const HIERARCHY_OPTIONS = [
   { value: 0, label: '0 - Sub-task level' },
@@ -109,4 +134,19 @@ export function orderedSelectedPriorityIds(
   return priorities
     .filter((priority) => selected.has(priority.id))
     .map((priority) => priority.id);
+}
+
+export function orderedWorkflowSchemeItems(
+  workTypes: PMWorkTypeSettingsApi[],
+  workflowByWorkTypeId: Record<number, number | undefined>
+) {
+  return workTypes
+    .map((workType) => ({
+      issueTypeId: workType.id,
+      workflowId: workflowByWorkTypeId[workType.id],
+    }))
+    .filter(
+      (item): item is { issueTypeId: number; workflowId: number } =>
+        typeof item.workflowId === 'number'
+    );
 }

@@ -126,6 +126,89 @@ export interface PMPrioritySettingsOverviewApi {
   prioritySchemes: PMPrioritySchemeSettingsApi[];
 }
 
+export type PMWorkflowLifecycleStateApi = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+
+export interface PMWorkflowSchemeRefApi {
+  id: number;
+  name: string;
+  isSystem: boolean;
+}
+
+export interface PMWorkflowProjectRefApi {
+  id: number;
+  key: string;
+  name: string;
+}
+
+export interface PMWorkflowSettingsApi {
+  id: number;
+  tenantId: number;
+  workflowKey: string;
+  name: string;
+  description?: string | null;
+  currentPublishedVersionId?: number | null;
+  draftVersionId?: number | null;
+  lifecycleState: PMWorkflowLifecycleStateApi;
+  isSystem: boolean;
+  readOnly: boolean;
+  relatedSchemes: PMWorkflowSchemeRefApi[];
+  spaces: PMWorkflowProjectRefApi[];
+  createdAt?: number | string;
+  createdBy?: number;
+  updatedAt?: number | string;
+  updatedBy?: number;
+}
+
+export interface PMWorkflowOptionApi {
+  id: number;
+  workflowKey: string;
+  name: string;
+  description?: string | null;
+  currentPublishedVersionId?: number | null;
+  draftVersionId?: number | null;
+  lifecycleState: PMWorkflowLifecycleStateApi;
+  isSystem: boolean;
+  readOnly: boolean;
+}
+
+export interface PMWorkflowSchemeWorkTypeOptionApi {
+  id: number;
+  typeKey: string;
+  name: string;
+  hierarchyLevel?: number | null;
+  isSystem: boolean;
+  readOnly: boolean;
+}
+
+export interface PMWorkflowSchemeItemApi {
+  id?: number | null;
+  issueTypeId: number;
+  workflowId: number;
+  workType?: PMWorkflowSchemeWorkTypeOptionApi | null;
+  workflow?: PMWorkflowOptionApi | null;
+}
+
+export interface PMWorkflowSchemeSettingsApi {
+  id: number;
+  tenantId: number;
+  name: string;
+  description?: string | null;
+  defaultWorkflowId: number;
+  isSystem: boolean;
+  readOnly: boolean;
+  items: PMWorkflowSchemeItemApi[];
+  spaces: PMWorkflowProjectRefApi[];
+  createdAt?: number | string;
+  createdBy?: number;
+  updatedAt?: number | string;
+  updatedBy?: number;
+}
+
+export interface PMWorkflowSettingsOverviewApi {
+  workflows: PMWorkflowSettingsApi[];
+  workflowSchemes: PMWorkflowSchemeSettingsApi[];
+}
+
 export interface PMCreateIssueTypeRequest {
   typeKey: string;
   name: string;
@@ -215,4 +298,40 @@ export interface PMDeletePrioritySchemeResponse {
   deleted: boolean;
   deletedAt?: number | string | null;
   deletedBy?: number | null;
+}
+
+export interface PMCreateWorkflowRequest {
+  name: string;
+  description?: string | null;
+}
+
+export interface PMUpdateWorkflowRequest {
+  name: string;
+  description?: string | null;
+}
+
+export interface PMCreateWorkflowSchemeRequest {
+  name: string;
+  description?: string | null;
+  defaultWorkflowId: number;
+}
+
+export interface PMUpdateWorkflowSchemeRequest {
+  name?: string;
+  description?: string | null;
+  defaultWorkflowId?: number;
+}
+
+export interface PMManageWorkflowSchemeItemsRequest {
+  items: Array<{
+    issueTypeId: number;
+    workflowId: number;
+  }>;
+}
+
+export interface PMDeleteWorkflowSchemeResponse {
+  id: number;
+  deleted: boolean;
+  deletedAt?: number | string | null;
+  updatedBy?: number | null;
 }

@@ -29,29 +29,40 @@ import {
   useCreatePmIssueTypeSchemeMutation,
   useCreatePmPriorityMutation,
   useCreatePmPrioritySchemeMutation,
+  useCreatePmWorkflowMutation,
+  useCreatePmWorkflowSchemeMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
   useDeletePmPriorityMutation,
   useDeletePmPrioritySchemeMutation,
+  useDeletePmWorkflowSchemeMutation,
   useGetPmIssueTypeSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
+  useGetPmWorkflowSettingsOverviewQuery,
   useManagePmIssueTypeSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
+  useManagePmWorkflowSchemeItemsMutation,
   useUpdatePmIssueTypeMutation,
   useUpdatePmIssueTypeSchemeMutation,
   useUpdatePmPriorityMutation,
   useUpdatePmPrioritySchemeMutation,
+  useUpdatePmWorkflowMutation,
+  useUpdatePmWorkflowSchemeMutation,
 } from '../api';
 import {
   PriorityDialog,
   PrioritySchemeDialog,
   SchemeDialog,
+  WorkflowDialog,
+  WorkflowSchemeDialog,
   WorkTypeDialog,
 } from '../components/settings/settings-dialogs';
 import {
   MiniStat,
   PrioritiesTable,
   PrioritySchemesTable,
+  WorkflowSchemesTable,
+  WorkflowsTable,
   WorkTypeSchemesTable,
   WorkTypesTable,
 } from '../components/settings/settings-tables';
@@ -61,22 +72,30 @@ import {
   includesText,
   orderedSelectedPriorityIds,
   orderedSelectedWorkTypeIds,
+  orderedWorkflowSchemeItems,
   type DeleteTarget,
   type PMSettingsSection,
   type PriorityDialogState,
   type PrioritySchemeDialogState,
   type SchemeDialogState,
+  type WorkflowDialogState,
+  type WorkflowSchemeDialogState,
   type WorkTypeDialogState,
 } from '../components/settings/settings-page.types';
 import type {
   PMCreateIssueTypeRequest,
   PMCreatePriorityRequest,
+  PMCreateWorkflowRequest,
   PMManageIssueTypeSchemeItemsRequest,
   PMManagePrioritySchemeItemsRequest,
+  PMManageWorkflowSchemeItemsRequest,
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsApi,
   PMUpdateIssueTypeRequest,
   PMUpdatePriorityRequest,
+  PMUpdateWorkflowRequest,
+  PMWorkflowSchemeSettingsApi,
+  PMWorkflowSettingsApi,
   PMWorkTypeSchemeSettingsApi,
   PMWorkTypeSettingsApi,
 } from '../types/api';
@@ -85,6 +104,10 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
   'work-types': 'Structure the work items that teams can create and track.',
   'work-type-schemes':
     'Choose which work types are available to each project space.',
+  workflows:
+    'A workflow is a set of statuses and transitions that a work item moves through during its lifecycle.',
+  'workflow-schemes':
+    'Define which workflows apply to given work types and project spaces.',
   priorities:
     'Add priorities, edit their order, and tune their visual treatment.',
   'priority-schemes':
@@ -94,6 +117,8 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
 const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
   'work-types': 'Add work type',
   'work-type-schemes': 'Add work type scheme',
+  workflows: 'Add workflow',
+  'workflow-schemes': 'Add workflow scheme',
   priorities: 'Add priority',
   'priority-schemes': 'Add priority scheme',
 };
@@ -101,6 +126,8 @@ const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
 const SECTION_SEARCH_PLACEHOLDERS: Record<PMSettingsSection, string> = {
   'work-types': 'Filter work types',
   'work-type-schemes': 'Filter work type schemes',
+  workflows: 'Find workflow',
+  'workflow-schemes': 'Filter workflow schemes',
   priorities: 'Filter priorities',
   'priority-schemes': 'Filter priority schemes',
 };
@@ -128,10 +155,15 @@ export function PMSettingsPage() {
     useState<PriorityDialogState | null>(null);
   const [prioritySchemeDialog, setPrioritySchemeDialog] =
     useState<PrioritySchemeDialogState | null>(null);
+  const [workflowDialog, setWorkflowDialog] =
+    useState<WorkflowDialogState | null>(null);
+  const [workflowSchemeDialog, setWorkflowSchemeDialog] =
+    useState<WorkflowSchemeDialogState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const overviewQuery = useGetPmIssueTypeSettingsOverviewQuery();
   const priorityOverviewQuery = useGetPmPrioritySettingsOverviewQuery();
+  const workflowOverviewQuery = useGetPmWorkflowSettingsOverviewQuery();
   const [createWorkType, createWorkTypeState] = useCreatePmIssueTypeMutation();
   const [updateWorkType, updateWorkTypeState] = useUpdatePmIssueTypeMutation();
   const [deleteWorkType, deleteWorkTypeState] = useDeletePmIssueTypeMutation();
@@ -154,11 +186,23 @@ export function PMSettingsPage() {
     useManagePmPrioritySchemeItemsMutation();
   const [deletePriorityScheme, deletePrioritySchemeState] =
     useDeletePmPrioritySchemeMutation();
+  const [createWorkflow, createWorkflowState] = useCreatePmWorkflowMutation();
+  const [updateWorkflow, updateWorkflowState] = useUpdatePmWorkflowMutation();
+  const [createWorkflowScheme, createWorkflowSchemeState] =
+    useCreatePmWorkflowSchemeMutation();
+  const [updateWorkflowScheme, updateWorkflowSchemeState] =
+    useUpdatePmWorkflowSchemeMutation();
+  const [manageWorkflowSchemeItems, manageWorkflowSchemeItemsState] =
+    useManagePmWorkflowSchemeItemsMutation();
+  const [deleteWorkflowScheme, deleteWorkflowSchemeState] =
+    useDeletePmWorkflowSchemeMutation();
 
   const workTypes = overviewQuery.data?.workTypes ?? [];
   const schemes = overviewQuery.data?.workTypeSchemes ?? [];
   const priorities = priorityOverviewQuery.data?.priorities ?? [];
   const prioritySchemes = priorityOverviewQuery.data?.prioritySchemes ?? [];
+  const workflows = workflowOverviewQuery.data?.workflows ?? [];
+  const workflowSchemes = workflowOverviewQuery.data?.workflowSchemes ?? [];
 
   const filteredWorkTypes = useMemo(() => {
     if (!deferredSearch) {
@@ -214,17 +258,56 @@ export function PMSettingsPage() {
     );
   }, [deferredSearch, prioritySchemes]);
 
+  const filteredWorkflows = useMemo(() => {
+    if (!deferredSearch) {
+      return workflows;
+    }
+    return workflows.filter(
+      (workflow) =>
+        includesText(workflow.name, deferredSearch) ||
+        includesText(workflow.workflowKey, deferredSearch) ||
+        includesText(workflow.description, deferredSearch) ||
+        workflow.relatedSchemes.some((scheme) =>
+          includesText(scheme.name, deferredSearch)
+        ) ||
+        workflow.spaces.some((space) =>
+          includesText(space.name, deferredSearch)
+        )
+    );
+  }, [deferredSearch, workflows]);
+
+  const filteredWorkflowSchemes = useMemo(() => {
+    if (!deferredSearch) {
+      return workflowSchemes;
+    }
+    return workflowSchemes.filter(
+      (scheme) =>
+        includesText(scheme.name, deferredSearch) ||
+        includesText(scheme.description, deferredSearch) ||
+        scheme.items.some(
+          (item) =>
+            includesText(item.workType?.name, deferredSearch) ||
+            includesText(item.workflow?.name, deferredSearch)
+        ) ||
+        scheme.spaces.some((space) => includesText(space.name, deferredSearch))
+    );
+  }, [deferredSearch, workflowSchemes]);
+
   const stats = useMemo(
     () => ({
       workTypes: workTypes.length,
       schemes: schemes.length,
       priorities: priorities.length,
       prioritySchemes: prioritySchemes.length,
+      workflows: workflows.length,
+      workflowSchemes: workflowSchemes.length,
     }),
     [
       priorities.length,
       prioritySchemes.length,
       schemes.length,
+      workflowSchemes.length,
+      workflows.length,
       workTypes.length,
     ]
   );
@@ -245,6 +328,10 @@ export function PMSettingsPage() {
       setWorkTypeDialog({ mode: 'create' });
     } else if (section === 'work-type-schemes') {
       setSchemeDialog({ mode: 'create' });
+    } else if (section === 'workflows') {
+      setWorkflowDialog({ mode: 'create' });
+    } else if (section === 'workflow-schemes') {
+      setWorkflowSchemeDialog({ mode: 'create' });
     } else if (section === 'priorities') {
       setPriorityDialog({ mode: 'create' });
     } else {
@@ -429,6 +516,95 @@ export function PMSettingsPage() {
     ]
   );
 
+  const handleWorkflowSubmit = useCallback(
+    async (
+      mode: WorkflowDialogState['mode'],
+      id: number | undefined,
+      values: PMCreateWorkflowRequest
+    ) => {
+      try {
+        if (mode === 'create') {
+          await createWorkflow(values).unwrap();
+          toast.success('Workflow created.');
+        } else if (id) {
+          const updateBody: PMUpdateWorkflowRequest = {
+            name: values.name,
+            description: values.description,
+          };
+          await updateWorkflow({ id, body: updateBody }).unwrap();
+          toast.success('Workflow updated.');
+        }
+        setWorkflowDialog(null);
+      } catch (error) {
+        toast.error('Unable to save workflow', {
+          description: getErrorMessage(error),
+        });
+      }
+    },
+    [createWorkflow, updateWorkflow]
+  );
+
+  const handleWorkflowSchemeSubmit = useCallback(
+    async (
+      mode: WorkflowSchemeDialogState['mode'],
+      id: number | undefined,
+      values: {
+        name: string;
+        description: string | null;
+        defaultWorkflowId: number;
+        workflowByWorkTypeId: Record<number, number | undefined>;
+      }
+    ) => {
+      const itemBody: PMManageWorkflowSchemeItemsRequest = {
+        items: orderedWorkflowSchemeItems(
+          workTypes,
+          values.workflowByWorkTypeId
+        ),
+      };
+      if (itemBody.items.length === 0) {
+        toast.error('At least one work type must be mapped to a workflow.');
+        return;
+      }
+
+      try {
+        if (mode === 'create') {
+          const created = await createWorkflowScheme({
+            name: values.name,
+            description: values.description,
+            defaultWorkflowId: values.defaultWorkflowId,
+          }).unwrap();
+          await manageWorkflowSchemeItems({
+            id: created.id,
+            body: itemBody,
+          }).unwrap();
+          toast.success('Workflow scheme created.');
+        } else if (id) {
+          await updateWorkflowScheme({
+            id,
+            body: {
+              name: values.name,
+              description: values.description,
+              defaultWorkflowId: values.defaultWorkflowId,
+            },
+          }).unwrap();
+          await manageWorkflowSchemeItems({ id, body: itemBody }).unwrap();
+          toast.success('Workflow scheme updated.');
+        }
+        setWorkflowSchemeDialog(null);
+      } catch (error) {
+        toast.error('Unable to save workflow scheme', {
+          description: getErrorMessage(error),
+        });
+      }
+    },
+    [
+      createWorkflowScheme,
+      manageWorkflowSchemeItems,
+      updateWorkflowScheme,
+      workTypes,
+    ]
+  );
+
   const handleMovePriority = useCallback(
     async (priority: PMPrioritySettingsApi, direction: 'up' | 'down') => {
       const ordered = [...priorities].sort(
@@ -478,9 +654,12 @@ export function PMSettingsPage() {
       } else if (deleteTarget.kind === 'priority') {
         await deletePriority(deleteTarget.item.id).unwrap();
         toast.success('Priority deleted.');
-      } else {
+      } else if (deleteTarget.kind === 'priority-scheme') {
         await deletePriorityScheme(deleteTarget.item.id).unwrap();
         toast.success('Priority scheme deleted.');
+      } else {
+        await deleteWorkflowScheme(deleteTarget.item.id).unwrap();
+        toast.success('Workflow scheme deleted.');
       }
       setDeleteTarget(null);
     } catch (error) {
@@ -491,6 +670,7 @@ export function PMSettingsPage() {
   }, [
     deletePriority,
     deletePriorityScheme,
+    deleteWorkflowScheme,
     deleteScheme,
     deleteTarget,
     deleteWorkType,
@@ -534,6 +714,20 @@ export function PMSettingsPage() {
       setDeleteTarget({ kind: 'priority-scheme', item }),
     []
   );
+  const handleEditWorkflow = useCallback(
+    (item: PMWorkflowSettingsApi) => setWorkflowDialog({ mode: 'edit', item }),
+    []
+  );
+  const handleEditWorkflowScheme = useCallback(
+    (item: PMWorkflowSchemeSettingsApi) =>
+      setWorkflowSchemeDialog({ mode: 'edit', item }),
+    []
+  );
+  const handleDeleteWorkflowScheme = useCallback(
+    (item: PMWorkflowSchemeSettingsApi) =>
+      setDeleteTarget({ kind: 'workflow-scheme', item }),
+    []
+  );
   const handleWorkTypeDialogOpenChange = useCallback((open: boolean) => {
     if (!open) {
       setWorkTypeDialog(null);
@@ -554,6 +748,16 @@ export function PMSettingsPage() {
       setPrioritySchemeDialog(null);
     }
   }, []);
+  const handleWorkflowDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setWorkflowDialog(null);
+    }
+  }, []);
+  const handleWorkflowSchemeDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setWorkflowSchemeDialog(null);
+    }
+  }, []);
   const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
     if (!open) {
       setDeleteTarget(null);
@@ -564,7 +768,8 @@ export function PMSettingsPage() {
     deleteWorkTypeState.isLoading ||
     deleteSchemeState.isLoading ||
     deletePriorityState.isLoading ||
-    deletePrioritySchemeState.isLoading;
+    deletePrioritySchemeState.isLoading ||
+    deleteWorkflowSchemeState.isLoading;
   const isSchemeSaving =
     createSchemeState.isLoading ||
     updateSchemeState.isLoading ||
@@ -573,18 +778,28 @@ export function PMSettingsPage() {
     createPrioritySchemeState.isLoading ||
     updatePrioritySchemeState.isLoading ||
     managePrioritySchemeItemsState.isLoading;
+  const isWorkflowSchemeSaving =
+    createWorkflowSchemeState.isLoading ||
+    updateWorkflowSchemeState.isLoading ||
+    manageWorkflowSchemeItemsState.isLoading;
   const activeItems =
     section === 'work-types'
       ? filteredWorkTypes
       : section === 'work-type-schemes'
         ? filteredSchemes
-        : section === 'priorities'
-          ? filteredPriorities
-          : filteredPrioritySchemes;
+        : section === 'workflows'
+          ? filteredWorkflows
+          : section === 'workflow-schemes'
+            ? filteredWorkflowSchemes
+            : section === 'priorities'
+              ? filteredPriorities
+              : filteredPrioritySchemes;
   const activeQuery =
     section === 'work-types' || section === 'work-type-schemes'
       ? overviewQuery
-      : priorityOverviewQuery;
+      : section === 'workflows' || section === 'workflow-schemes'
+        ? workflowOverviewQuery
+        : priorityOverviewQuery;
 
   return (
     <div className='grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]'>
@@ -660,10 +875,12 @@ export function PMSettingsPage() {
           </Button>
         </div>
 
-        <div className='grid gap-3 md:grid-cols-4'>
+        <div className='grid gap-3 md:grid-cols-3 xl:grid-cols-6'>
           <MiniStat title='Work types' value={stats.workTypes} />
+          <MiniStat title='Workflows' value={stats.workflows} />
           <MiniStat title='Priorities' value={stats.priorities} />
           <MiniStat title='Schemes' value={stats.schemes} />
+          <MiniStat title='Workflow schemes' value={stats.workflowSchemes} />
           <MiniStat title='Priority schemes' value={stats.prioritySchemes} />
         </div>
 
@@ -702,6 +919,17 @@ export function PMSettingsPage() {
                 schemes={filteredSchemes}
                 onEdit={handleEditScheme}
                 onDelete={handleDeleteScheme}
+              />
+            ) : section === 'workflows' ? (
+              <WorkflowsTable
+                workflows={filteredWorkflows}
+                onEdit={handleEditWorkflow}
+              />
+            ) : section === 'workflow-schemes' ? (
+              <WorkflowSchemesTable
+                schemes={filteredWorkflowSchemes}
+                onEdit={handleEditWorkflowScheme}
+                onDelete={handleDeleteWorkflowScheme}
               />
             ) : section === 'priorities' ? (
               <PrioritiesTable
@@ -751,6 +979,22 @@ export function PMSettingsPage() {
         isSubmitting={isPrioritySchemeSaving}
         onOpenChange={handlePrioritySchemeDialogOpenChange}
         onSubmit={handlePrioritySchemeSubmit}
+      />
+      <WorkflowDialog
+        state={workflowDialog}
+        isSubmitting={
+          createWorkflowState.isLoading || updateWorkflowState.isLoading
+        }
+        onOpenChange={handleWorkflowDialogOpenChange}
+        onSubmit={handleWorkflowSubmit}
+      />
+      <WorkflowSchemeDialog
+        state={workflowSchemeDialog}
+        workTypes={workTypes}
+        workflows={workflows}
+        isSubmitting={isWorkflowSchemeSaving}
+        onOpenChange={handleWorkflowSchemeDialogOpenChange}
+        onSubmit={handleWorkflowSchemeSubmit}
       />
       <ConfirmDialog
         open={deleteTarget !== null}

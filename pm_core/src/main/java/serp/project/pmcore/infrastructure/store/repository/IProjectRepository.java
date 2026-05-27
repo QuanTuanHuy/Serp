@@ -69,6 +69,12 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     List<Long> findActiveProjectIdsByWorkflowSchemeId(@Param("workflowSchemeId") Long workflowSchemeId,
                                                       @Param("tenantId") Long tenantId);
 
+    @Query("SELECT p FROM ProjectModel p WHERE p.workflowSchemeId IN :workflowSchemeIds " +
+            "AND p.tenantId = :tenantId AND p.deletedAt IS NULL AND p.archived = false " +
+            "ORDER BY p.name ASC, p.id ASC")
+    List<ProjectModel> findActiveProjectsByWorkflowSchemeIds(@Param("workflowSchemeIds") List<Long> workflowSchemeIds,
+                                                             @Param("tenantId") Long tenantId);
+
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
     @Query(value = """
