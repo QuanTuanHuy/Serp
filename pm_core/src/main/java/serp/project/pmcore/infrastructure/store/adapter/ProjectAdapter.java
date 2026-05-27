@@ -91,6 +91,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public List<ProjectEntity> getActiveProjectsByPrioritySchemeIds(List<Long> prioritySchemeIds, Long tenantId) {
+        if (prioritySchemeIds == null || prioritySchemeIds.isEmpty()) {
+            return List.of();
+        }
+        return projectMapper.toEntities(
+                projectRepository.findActiveProjectsByPrioritySchemeIds(prioritySchemeIds, tenantId)
+        );
+    }
+
+    @Override
     public boolean existsActiveProjectByWorkflowSchemeId(Long workflowSchemeId, Long tenantId) {
         return projectRepository.existsActiveProjectByWorkflowSchemeId(workflowSchemeId, tenantId);
     }

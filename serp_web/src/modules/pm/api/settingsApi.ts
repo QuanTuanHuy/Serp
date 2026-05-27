@@ -9,30 +9,39 @@ import type { PMIssueTypeApi } from '../types/api';
 import type {
   PMCreateIssueTypeRequest,
   PMCreateIssueTypeSchemeRequest,
+  PMCreatePriorityRequest,
+  PMCreatePrioritySchemeRequest,
   PMDeleteIssueTypeResponse,
   PMDeleteIssueTypeSchemeResponse,
+  PMDeletePriorityResponse,
+  PMDeletePrioritySchemeResponse,
   PMIssueTypeSettingsOverviewApi,
   PMManageIssueTypeSchemeItemsRequest,
+  PMManagePrioritySchemeItemsRequest,
+  PMPrioritySchemeSettingsApi,
+  PMPrioritySettingsOverviewApi,
   PMUpdateIssueTypeRequest,
   PMUpdateIssueTypeSchemeRequest,
+  PMUpdatePriorityRequest,
+  PMUpdatePrioritySchemeRequest,
   PMWorkTypeSchemeSettingsApi,
 } from '../types/settings-api.types';
+import type { PMPriorityApi } from '../types/work-item-api.types';
 
 export const pmSettingsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getPmIssueTypeSettingsOverview:
-      builder.query<PMIssueTypeSettingsOverviewApi, void>({
-        query: () => ({
-          url: '/issue-type-settings',
-          method: 'GET',
-        }),
-        extraOptions: { service: 'pm' },
-        transformResponse:
-          createDataTransform<PMIssueTypeSettingsOverviewApi>(),
-        providesTags: [
-          { type: 'pm/IssueTypeSettings' as const, id: 'OVERVIEW' },
-        ],
+    getPmIssueTypeSettingsOverview: builder.query<
+      PMIssueTypeSettingsOverviewApi,
+      void
+    >({
+      query: () => ({
+        url: '/issue-type-settings',
+        method: 'GET',
       }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMIssueTypeSettingsOverviewApi>(),
+      providesTags: [{ type: 'pm/IssueTypeSettings' as const, id: 'OVERVIEW' }],
+    }),
 
     createPmIssueType: builder.mutation<
       PMIssueTypeApi,
@@ -143,11 +152,136 @@ export const pmSettingsApi = api.injectEndpoints({
         method: 'DELETE',
       }),
       extraOptions: { service: 'pm' },
-      transformResponse:
-        createDataTransform<PMDeleteIssueTypeSchemeResponse>(),
+      transformResponse: createDataTransform<PMDeleteIssueTypeSchemeResponse>(),
       invalidatesTags: [
         { type: 'pm/IssueTypeScheme' as const, id: 'LIST' },
         { type: 'pm/IssueTypeSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    getPmPrioritySettingsOverview: builder.query<
+      PMPrioritySettingsOverviewApi,
+      void
+    >({
+      query: () => ({
+        url: '/priority-settings',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPrioritySettingsOverviewApi>(),
+      providesTags: [{ type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' }],
+    }),
+
+    createPmPriority: builder.mutation<PMPriorityApi, PMCreatePriorityRequest>({
+      query: (body) => ({
+        url: '/priorities',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPriorityApi>(),
+      invalidatesTags: [
+        { type: 'pm/Priority' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    updatePmPriority: builder.mutation<
+      PMPriorityApi,
+      { id: number; body: PMUpdatePriorityRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/priorities/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPriorityApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/Priority' as const, id },
+        { type: 'pm/Priority' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    deletePmPriority: builder.mutation<PMDeletePriorityResponse, number>({
+      query: (id) => ({
+        url: `/priorities/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeletePriorityResponse>(),
+      invalidatesTags: [
+        { type: 'pm/Priority' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    createPmPriorityScheme: builder.mutation<
+      PMPrioritySchemeSettingsApi,
+      PMCreatePrioritySchemeRequest
+    >({
+      query: (body) => ({
+        url: '/priority-schemes',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPrioritySchemeSettingsApi>(),
+      invalidatesTags: [
+        { type: 'pm/PriorityScheme' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    updatePmPriorityScheme: builder.mutation<
+      PMPrioritySchemeSettingsApi,
+      { id: number; body: PMUpdatePrioritySchemeRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/priority-schemes/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPrioritySchemeSettingsApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/PriorityScheme' as const, id },
+        { type: 'pm/PriorityScheme' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    managePmPrioritySchemeItems: builder.mutation<
+      PMPrioritySchemeSettingsApi,
+      { id: number; body: PMManagePrioritySchemeItemsRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/priority-schemes/${id}/items`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMPrioritySchemeSettingsApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/PriorityScheme' as const, id },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    deletePmPriorityScheme: builder.mutation<
+      PMDeletePrioritySchemeResponse,
+      number
+    >({
+      query: (id) => ({
+        url: `/priority-schemes/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeletePrioritySchemeResponse>(),
+      invalidatesTags: [
+        { type: 'pm/PriorityScheme' as const, id: 'LIST' },
+        { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
       ],
     }),
   }),
@@ -155,12 +289,20 @@ export const pmSettingsApi = api.injectEndpoints({
 });
 
 export const {
+  useCreatePmPriorityMutation,
+  useCreatePmPrioritySchemeMutation,
   useCreatePmIssueTypeMutation,
   useCreatePmIssueTypeSchemeMutation,
+  useDeletePmPriorityMutation,
+  useDeletePmPrioritySchemeMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
+  useGetPmPrioritySettingsOverviewQuery,
   useGetPmIssueTypeSettingsOverviewQuery,
+  useManagePmPrioritySchemeItemsMutation,
   useManagePmIssueTypeSchemeItemsMutation,
+  useUpdatePmPriorityMutation,
+  useUpdatePmPrioritySchemeMutation,
   useUpdatePmIssueTypeMutation,
   useUpdatePmIssueTypeSchemeMutation,
 } = pmSettingsApi;

@@ -31,6 +31,8 @@ public interface IProjectReadPort {
 
     List<Long> getActiveProjectIdsByPrioritySchemeId(Long prioritySchemeId, Long tenantId);
 
+    List<ProjectEntity> getActiveProjectsByPrioritySchemeIds(List<Long> prioritySchemeIds, Long tenantId);
+
     boolean existsActiveProjectByWorkflowSchemeId(Long workflowSchemeId, Long tenantId);
 
     List<Long> getActiveProjectIdsByWorkflowSchemeId(Long workflowSchemeId, Long tenantId);
