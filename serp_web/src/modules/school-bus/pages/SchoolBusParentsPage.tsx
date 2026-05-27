@@ -15,6 +15,7 @@ import {
 import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import { ParentFormDialog } from '../components/SchoolBusMasterDataForms';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
@@ -116,6 +117,14 @@ export function SchoolBusParentsPage() {
       <SchoolBusPageShell
         title='Parent profiles'
         description='Parent accounts stay owned by account, while this page maintains the operational profile used by requests and student linkage.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Parents', current: true },
+            ]}
+          />
+        }
         actions={
           <Button
             className='rounded-full'

@@ -3,6 +3,9 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.dto.response.DashboardSummaryResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
+import serp.project.school_bus_service.enums.RequestStatus;
+import serp.project.school_bus_service.enums.RouteStatus;
+import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IBusService;
@@ -12,9 +15,8 @@ import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.service.IStudentService;
 import serp.project.school_bus_service.service.ITransportRequestService;
+import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.ITripHistoryService;
-import serp.project.school_bus_service.enums.RequestStatus;
-import serp.project.school_bus_service.enums.RouteStatus;
 
 @Service
 public class DashboardServiceImpl implements IDashboardService {
@@ -25,6 +27,7 @@ public class DashboardServiceImpl implements IDashboardService {
     private final IBusService busService;
     private final ITransportRequestService transportRequestService;
     private final IRouteService routeService;
+    private final ITripExecutionService tripExecutionService;
     private final ITripHistoryService tripHistoryService;
     private final IAttendanceService attendanceService;
     private final IAuditLogService auditLogService;
@@ -36,6 +39,7 @@ public class DashboardServiceImpl implements IDashboardService {
             IBusService busService,
             ITransportRequestService transportRequestService,
             IRouteService routeService,
+            ITripExecutionService tripExecutionService,
             ITripHistoryService tripHistoryService,
             IAttendanceService attendanceService,
             IAuditLogService auditLogService) {
@@ -45,6 +49,7 @@ public class DashboardServiceImpl implements IDashboardService {
         this.busService = busService;
         this.transportRequestService = transportRequestService;
         this.routeService = routeService;
+        this.tripExecutionService = tripExecutionService;
         this.tripHistoryService = tripHistoryService;
         this.attendanceService = attendanceService;
         this.auditLogService = auditLogService;
@@ -59,7 +64,8 @@ public class DashboardServiceImpl implements IDashboardService {
                 busService.countByTenant(tenantId),
                 transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.SUBMITTED),
                 routeService.countByTenantAndStatus(tenantId, RouteStatus.ASSIGNED),
-                routeService.countByTenantAndStatus(tenantId, RouteStatus.IN_PROGRESS),
+                // Active trips = trips currently IN_PROGRESS (owned by TripExecution, not RoutePlan)
+                tripExecutionService.countByTenantAndStatus(tenantId, TripStatus.IN_PROGRESS),
                 tripHistoryService.countByTenant(tenantId));
     }
 
@@ -68,15 +74,16 @@ public class DashboardServiceImpl implements IDashboardService {
         long totalRequests = transportRequestService.countByTenant(tenantId);
         long approvedRequests = transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.APPROVED);
         long rejectedRequests = transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.REJECTED);
-        long activeRoutes = routeService.countByTenantAndStatus(tenantId, RouteStatus.IN_PROGRESS);
-        long completedRoutes = routeService.countByTenantAndStatus(tenantId, RouteStatus.COMPLETED);
+        // Active/completed counts come from TripExecution, not RoutePlan
+        long activeTrips = tripExecutionService.countByTenantAndStatus(tenantId, TripStatus.IN_PROGRESS);
+        long completedTrips = tripExecutionService.countByTenantAndStatus(tenantId, TripStatus.COMPLETED);
 
         return new OperationalReportResponse(
                 totalRequests,
                 approvedRequests,
                 rejectedRequests,
-                activeRoutes,
-                completedRoutes,
+                activeTrips,
+                completedTrips,
                 attendanceService.countByTenant(tenantId),
                 auditLogService.countByTenant(tenantId));
     }

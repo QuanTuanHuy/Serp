@@ -548,9 +548,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void requireEditable(RoutePlanEntity route) {
-        if (route.getStatus() == RouteStatus.COMPLETED
-                || route.getStatus() == RouteStatus.IN_PROGRESS
-                || route.getStatus() == RouteStatus.TRIP_CREATED
+        if (route.getStatus() == RouteStatus.TRIP_CREATED
                 || route.getStatus() == RouteStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Route.INVALID_STATE,
                     messageCommon.getMessage(AppErrorCode.Route.FIELD_INVALID, "route status", route.getStatus()));

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { Building2, CalendarClock, ChevronDown, ChevronRight, Clock, Link2, MapPinned, Pencil, Plus, Trash2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
@@ -955,6 +956,14 @@ export function SchoolBusSchoolsPage() {
       <SchoolBusPageShell
         title='Schools and pickup network'
         description='Manage school entities and the pickup-point network that powers request intake and routing.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Schools', current: true },
+            ]}
+          />
+        }
         actions={
           <>
             <Button

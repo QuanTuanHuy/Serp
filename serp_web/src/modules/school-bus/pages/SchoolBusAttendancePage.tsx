@@ -21,6 +21,7 @@ import {
   useGetRoutesQuery,
   useGetTripHistoryQuery,
 } from '../api/schoolBusApi';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
@@ -153,6 +154,14 @@ export function SchoolBusAttendancePage() {
     <SchoolBusPageShell
       title='Attendance and trip history'
       description='Attendance is now route-driven: open a route manifest, record check-in and check-out, and review the historical trail.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Attendance', current: true },
+          ]}
+        />
+      }
     >
       <div className='grid gap-4 md:grid-cols-4'>
         <SchoolBusMetricCard

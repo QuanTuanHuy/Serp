@@ -17,7 +17,6 @@ import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.enums.RequestStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.AttendanceEntity;
@@ -68,15 +67,16 @@ public class ReportingServiceImpl implements IReportingService {
         }
         long approvedRequests = transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.APPROVED);
         long rejectedRequests = transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.REJECTED);
-        long activeRoutes = routeService.countByTenantAndStatus(tenantId, RouteStatus.IN_PROGRESS);
-        long completedRoutes = routeService.countByTenantAndStatus(tenantId, RouteStatus.COMPLETED);
+        // Active/completed counts come from TripExecution, not RoutePlan
+        long activeTrips = tripExecutionRepository.countByTenantIdAndStatusAndIsDeletedFalse(tenantId, TripStatus.IN_PROGRESS);
+        long completedTrips = tripExecutionRepository.countByTenantIdAndStatusAndIsDeletedFalse(tenantId, TripStatus.COMPLETED);
 
         return new OperationalReportResponse(
                 totalRequests,
                 approvedRequests,
                 rejectedRequests,
-                activeRoutes,
-                completedRoutes,
+                activeTrips,
+                completedTrips,
                 attendanceService.countByTenant(tenantId),
                 auditLogService.countByTenant(tenantId));
     }

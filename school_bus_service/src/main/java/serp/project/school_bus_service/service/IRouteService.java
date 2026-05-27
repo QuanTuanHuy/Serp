@@ -51,10 +51,6 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
 
     RoutePathResponse computePath(Long routeId, Long tenantId, Long actorId);
 
-    RoutePlanResponse startRoute(Long routeId, Long tenantId, Long actorId);
-
-    RoutePlanResponse completeRoute(Long routeId, Long tenantId, Long actorId);
-
     List<AssignmentHistoryResponse> getAssignmentHistory(Long routeId, Long tenantId);
 
     // Manual editing

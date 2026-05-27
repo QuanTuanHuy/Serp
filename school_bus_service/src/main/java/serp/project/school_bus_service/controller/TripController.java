@@ -10,11 +10,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.params.TripExecutionParamsRequest;
+import serp.project.school_bus_service.dto.request.CancelTripRequest;
+import serp.project.school_bus_service.dto.request.CompleteTripRequest;
+import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
+import serp.project.school_bus_service.dto.response.TripStopLogResponse;
+import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
@@ -82,10 +87,44 @@ public class TripController extends AbstractBaseController {
                 tripExecutionService.departStop(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
     }
 
+    @PostMapping("/{id}/skip-stop/{routeStopId}")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
+    public ResponseEntity<GeneralResponse<TripExecutionResponse>> skipStop(
+            @PathVariable Long id,
+            @PathVariable Long routeStopId,
+            @Valid @RequestBody SkipStopRequest request) {
+        return ok("Skipped route stop",
+                tripExecutionService.skipStop(id, routeStopId, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
     @PostMapping("/{id}/complete")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> completeTrip(@PathVariable Long id) {
-        return ok("Completed trip", tripExecutionService.completeTrip(id, getCurrentTenantId(), getCurrentUserId()));
+    public ResponseEntity<GeneralResponse<TripExecutionResponse>> completeTrip(
+            @PathVariable Long id,
+            @RequestBody(required = false) CompleteTripRequest request) {
+        return ok("Completed trip",
+                tripExecutionService.completeTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/cancel")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
+    public ResponseEntity<GeneralResponse<TripExecutionResponse>> cancelTrip(
+            @PathVariable Long id,
+            @Valid @RequestBody CancelTripRequest request) {
+        return ok("Cancelled trip",
+                tripExecutionService.cancelTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/{id}/stops")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.read')")
+    public ResponseEntity<GeneralResponse<List<TripStopLogResponse>>> getTripStops(@PathVariable Long id) {
+        return ok("Fetched trip stops", tripExecutionService.getTripStops(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/students")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.read')")
+    public ResponseEntity<GeneralResponse<List<TripStudentResponse>>> getTripStudents(@PathVariable Long id) {
+        return ok("Fetched trip students", tripExecutionService.getTripStudents(id, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}/attendance")
@@ -119,5 +158,14 @@ public class TripController extends AbstractBaseController {
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student absence",
                 attendanceService.markTripStudentAbsent(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/attendance/no-show")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.check-in')")
+    public ResponseEntity<GeneralResponse<AttendanceResponse>> markStudentNoShow(
+            @PathVariable Long id,
+            @Valid @RequestBody TripAttendanceActionRequest request) {
+        return ok("Recorded student no-show",
+                attendanceService.markTripStudentNoShow(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 }

@@ -16,6 +16,7 @@ import {
   useGetSchoolBusReportQuery,
   useGetSchoolBusReportTripsQuery,
 } from '../api/schoolBusApi';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -70,6 +71,14 @@ export function SchoolBusReportsPage() {
     <SchoolBusPageShell
       title='Operational reporting'
       description='Filtered reports for trips, attendance, and capacity utilization. CSV export is available for the operations summary.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Reports', current: true },
+          ]}
+        />
+      }
       actions={
         <Button onClick={handleExport}>
           <Download className='mr-2 h-4 w-4' />

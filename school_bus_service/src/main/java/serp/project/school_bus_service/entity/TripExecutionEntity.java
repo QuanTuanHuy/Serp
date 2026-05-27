@@ -71,6 +71,16 @@ public class TripExecutionEntity extends BaseModel {
     @Column(name = "completion_note", columnDefinition = "TEXT")
     private String completionNote;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    // BIGINT: consistent with published_by, assigned_by, approved_by (all store actor/user ID as Long).
+    @Column(name = "cancelled_by")
+    private Long cancelledBy;
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
     @Column(name = "simulation_mode", nullable = false)
     private Boolean simulationMode = Boolean.FALSE;
 

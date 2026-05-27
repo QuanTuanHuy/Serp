@@ -28,6 +28,9 @@ public interface IAttendanceService extends IBaseService<AttendanceEntity, Long>
     AttendanceResponse markTripStudentAbsent(Long tripId, TripAttendanceActionRequest request, Long tenantId,
             Long actorId);
 
+    AttendanceResponse markTripStudentNoShow(Long tripId, TripAttendanceActionRequest request, Long tenantId,
+            Long actorId);
+
     /** Internal: returns raw entities ordered by recordedAt desc, used for manifest building. */
     List<AttendanceEntity> findAttendancesByRoute(Long routeId, Long tenantId);
 

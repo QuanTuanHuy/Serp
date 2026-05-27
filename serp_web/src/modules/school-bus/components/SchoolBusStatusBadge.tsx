@@ -12,7 +12,7 @@ export function SchoolBusStatusBadge({
   const normalizedStatus = status?.toUpperCase() || 'UNKNOWN';
 
   if (
-    ['APPROVED', 'ASSIGNED', 'COMPLETED', 'ON_BOARD', 'CHECKED_IN', 'ACTIVE', 'PUBLISHED', 'GENERATED', 'REVIEWING']
+    ['APPROVED', 'ASSIGNED', 'COMPLETED', 'ON_BOARD', 'CHECKED_IN', 'ACTIVE', 'PUBLISHED', 'GENERATED', 'REVIEWING', 'BOARDED', 'DROPPED_OFF']
       .includes(normalizedStatus)
   ) {
     return (
@@ -35,7 +35,7 @@ export function SchoolBusStatusBadge({
   }
 
   if (
-    ['REJECTED', 'CANCELLED', 'ABSENT', 'INACTIVE', 'OFFLINE', 'STOPPED', 'EXPIRED'].includes(
+    ['REJECTED', 'CANCELLED', 'ABSENT', 'INACTIVE', 'OFFLINE', 'STOPPED', 'EXPIRED', 'NO_SHOW', 'NOT_SERVED'].includes(
       normalizedStatus
     )
   ) {

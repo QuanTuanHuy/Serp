@@ -14,6 +14,7 @@ import {
   useStartDemoTripMutation,
   useStopDemoTripMutation,
 } from '../api/schoolBusApi';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -68,6 +69,14 @@ export function SchoolBusDemoPage() {
     <SchoolBusPageShell
       title='Simulation demo'
       description='Demo mode runs on trip execution data. It does not replace real GPS, but gives a controlled operations walkthrough for school-bus demos.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Simulation demo', current: true },
+          ]}
+        />
+      }
     >
       <div className='grid gap-4 md:grid-cols-3'>
         <SchoolBusMetricCard

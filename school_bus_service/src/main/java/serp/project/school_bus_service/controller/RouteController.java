@@ -101,18 +101,6 @@ public class RouteController extends AbstractBaseController {
                 routeService.reorderRouteStops(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
-    @PostMapping("/{id}/start")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.start')")
-    public ResponseEntity<GeneralResponse<RoutePlanResponse>> startRoute(@PathVariable Long id) {
-        return ok("Started route", routeService.startRoute(id, getCurrentTenantId(), getCurrentUserId()));
-    }
-
-    @PostMapping("/{id}/complete")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.complete')")
-    public ResponseEntity<GeneralResponse<RoutePlanResponse>> completeRoute(@PathVariable Long id) {
-        return ok("Completed route", routeService.completeRoute(id, getCurrentTenantId(), getCurrentUserId()));
-    }
-
     @PostMapping("/{id}/compute-path")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
     public ResponseEntity<GeneralResponse<RoutePathResponse>> computePath(@PathVariable Long id) {

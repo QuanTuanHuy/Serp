@@ -19,6 +19,7 @@ import {
   useRejectTransportRequestMutation,
 } from '../api/schoolBusApi';
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
@@ -101,6 +102,14 @@ export function SchoolBusRequestsPage() {
       <SchoolBusPageShell
         title='Transport request queue'
         description='Manage the approval queue and move valid demand into planning without leaving the module.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Requests', current: true },
+            ]}
+          />
+        }
         actions={
           <Button asChild className='rounded-full'>
             <Link href='/school-bus/requests/new'>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import * as React from 'react';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   ClipboardCheck,
   BusFront,
@@ -16,7 +17,6 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
   useAssignRouteMutation,
-  useCompleteRouteMutation,
   useComputeRoutePathMutation,
   useCreateTripFromRouteMutation,
   useGetAttendantsQuery,
@@ -24,7 +24,6 @@ import {
   useGetDriversQuery,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
-  useStartRouteMutation,
 } from '../api/schoolBusApi';
 import { RouteAssignmentDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -69,8 +68,6 @@ export function SchoolBusRouteDetailPage({
   const [computeRoutePath, { isLoading: computingPath }] =
     useComputeRoutePathMutation();
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
-  const [startRoute, { isLoading: starting }] = useStartRouteMutation();
-  const [completeRoute, { isLoading: completing }] = useCompleteRouteMutation();
   const [createTripFromRoute, { isLoading: creatingTrip }] =
     useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
@@ -99,24 +96,6 @@ export function SchoolBusRouteDetailPage({
       setAssignmentOpen(false);
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to assign route');
-    }
-  };
-
-  const handleStart = async () => {
-    try {
-      const response = await startRoute(routeId).unwrap();
-      toast.success(response.message || 'Route started');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to start route');
-    }
-  };
-
-  const handleComplete = async () => {
-    try {
-      const response = await completeRoute(routeId).unwrap();
-      toast.success(response.message || 'Route completed');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to complete route');
     }
   };
 
@@ -152,6 +131,38 @@ export function SchoolBusRouteDetailPage({
       <SchoolBusPageShell
         title={`${route.routeCode} - ${route.routeName}`}
         description='Inspect route state, stop plan, and assignment details before and during execution.'
+        breadcrumb={
+          <div className='space-y-2'>
+            <SchoolBusBreadcrumb
+              items={[
+                { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                { label: 'Dispatch', href: '/school-bus/dispatch' },
+                { label: `${route.routeCode} - ${route.routeName}`, current: true },
+              ]}
+            />
+            {/* Section scroll sub-nav */}
+            <div className='flex flex-wrap items-center gap-x-4 gap-y-1'>
+              {([
+                { id: 'section-summary', label: 'Route summary' },
+                { id: 'section-assignment', label: 'Assignment' },
+                { id: 'section-map', label: 'Map & stops' },
+                { id: 'section-next', label: 'Next action' },
+              ] as const).map((s) => (
+                <button
+                  key={s.id}
+                  type='button'
+                  onClick={() => {
+                    const el = document.getElementById(s.id);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className='text-[12px] text-slate-400 transition-colors duration-150 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500'
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
         actions={
           <>
             {['DRAFT', 'PLANNED', 'ASSIGNED'].includes(route.status) ? (
@@ -194,22 +205,12 @@ export function SchoolBusRouteDetailPage({
                 {creatingTrip ? 'Creating trip...' : 'Create trip'}
               </Button>
             ) : null}
-            {['PLANNED', 'ASSIGNED'].includes(route.status) ? (
-              <Button className='rounded-full' onClick={handleStart}>
-                <PlayCircle className='h-4 w-4' />
-                {starting ? 'Starting...' : 'Start route'}
-              </Button>
-            ) : null}
-            {route.status === 'IN_PROGRESS' ? (
-              <Button className='rounded-full' variant='secondary' onClick={handleComplete}>
-                {completing ? 'Completing...' : 'Complete route'}
-              </Button>
-            ) : null}
           </>
         }
       >
         <div className='grid gap-6 xl:grid-cols-[0.9fr_1.1fr]'>
           <SchoolBusSection
+            id='section-summary'
             title='Route summary'
             description='Core planning and execution metadata.'
           >
@@ -247,6 +248,7 @@ export function SchoolBusRouteDetailPage({
           </SchoolBusSection>
 
           <SchoolBusSection
+            id='section-assignment'
             title='Assignment'
             description='Current crew and vehicle attached to this route.'
           >
@@ -275,6 +277,7 @@ export function SchoolBusRouteDetailPage({
 
         <div className='space-y-6'>
           <SchoolBusSection
+            id='section-map'
             title='Route map and stop plan'
             description='Map-first workspace with fixed start/end and ordered stop list.'
           >
@@ -352,6 +355,7 @@ export function SchoolBusRouteDetailPage({
           </SchoolBusSection>
 
           <SchoolBusSection
+            id='section-next'
             title='Next action'
             description='Move from planning into execution and attendance.'
           >

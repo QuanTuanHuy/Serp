@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { PlanningContextPanel, type ContextFormState } from '../components/planning/PlanningContextPanel';
 import { PlanningSessionPanel } from '../components/planning/PlanningSessionPanel';
@@ -423,6 +424,15 @@ export default function SchoolBusRoutePlanningPage() {
       compact
       title='Route Planning Workspace'
       description='Preview demand · auto-generate or build routes manually · publish.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Dispatch', href: '/school-bus/dispatch' },
+            { label: 'Route Planning', current: true },
+          ]}
+        />
+      }
     >
       {/* Workspace container — fills remaining viewport height below the compact hero */}
       <div

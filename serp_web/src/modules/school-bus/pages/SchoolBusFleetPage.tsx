@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   BusFront,
   Pencil,
@@ -604,6 +605,14 @@ export function SchoolBusFleetPage() {
       <SchoolBusPageShell
         title='Fleet and crew readiness'
         description='V1 now supports direct maintenance of buses, drivers, and attendants from the School Bus console.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Fleet & Crew', current: true },
+            ]}
+          />
+        }
         actions={
           <>
             <Button

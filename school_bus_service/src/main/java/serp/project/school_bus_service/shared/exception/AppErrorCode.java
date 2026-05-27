@@ -151,7 +151,9 @@ public class AppErrorCode {
         public static final ErrorInfo MUST_BOARD_FIRST   = new ErrorInfo("attendance.mustBoardFirst",   "Must board before dropoff.",          HttpStatus.BAD_REQUEST);
         public static final ErrorInfo STUDENT_NOT_IN_TRIP= new ErrorInfo("attendance.studentNotInTrip", "Student is not in this trip.",        HttpStatus.BAD_REQUEST);
         public static final ErrorInfo INVALID_STATE      = new ErrorInfo("attendance.invalidState",     "Invalid attendance state.",           HttpStatus.BAD_REQUEST);
-        public static final ErrorInfo INVALID_REQUEST    = new ErrorInfo("attendance.invalidRequest",   "Invalid attendance request.",         HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo INVALID_REQUEST        = new ErrorInfo("attendance.invalidRequest",       "Invalid attendance request.",                                          HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo STOP_NOT_ACTIVE         = new ErrorInfo("attendance.stopNotActive",        "Cannot record attendance for a departed or skipped stop.",             HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo STUDENT_STATUS_INVALID  = new ErrorInfo("attendance.studentStatusInvalid", "Student status does not allow this action.",                          HttpStatus.BAD_REQUEST);
         private Attendance() {}
     }
 
@@ -226,9 +228,17 @@ public class AppErrorCode {
 
     // ── Trip ──────────────────────────────────────────────────────────────────
     public static class Trip {
-        public static final ErrorInfo ROUTE_STATUS_INVALID = new ErrorInfo("trip.routeStatus.invalid", "Only ASSIGNED routes can create trips.",  HttpStatus.BAD_REQUEST);
-        public static final ErrorInfo NO_ASSIGNMENT        = new ErrorInfo("trip.noAssignment",        "Route must have an active assignment.",   HttpStatus.BAD_REQUEST);
-        public static final ErrorInfo INVALID_STATE        = new ErrorInfo("trip.invalidState",        "Invalid trip state transition.",          HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ROUTE_STATUS_INVALID    = new ErrorInfo("trip.routeStatus.invalid",    "Only ASSIGNED routes can create trips.",                                      HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo NO_ASSIGNMENT           = new ErrorInfo("trip.noAssignment",           "Route must have an active assignment.",                                       HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo INVALID_STATE           = new ErrorInfo("trip.invalidState",           "Invalid trip state transition.",                                              HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo NO_STOPS                = new ErrorInfo("trip.noStops",               "Trip has no stops configured.",                                               HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo STOP_ALREADY_DONE       = new ErrorInfo("trip.stop.alreadyDone",      "Stop is already departed or skipped.",                                        HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo STOP_NOT_ARRIVED        = new ErrorInfo("trip.stop.notArrived",       "Stop must be ARRIVED or BOARDING before it can be departed.",                 HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo SKIP_REASON_REQUIRED    = new ErrorInfo("trip.skip.reasonRequired",   "A reason is required to skip a stop.",                                        HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo CANCEL_REASON_REQUIRED  = new ErrorInfo("trip.cancel.reasonRequired", "A reason is required to cancel a trip.",                                      HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ALREADY_CANCELLED       = new ErrorInfo("trip.alreadyCancelled",      "Trip is already cancelled.",                                                  HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ALREADY_COMPLETED       = new ErrorInfo("trip.alreadyCompleted",      "Trip is already completed.",                                                  HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo UNPROCESSED_STUDENTS    = new ErrorInfo("trip.unprocessedStudents",   "Cannot complete trip: some students are still unprocessed (PLANNED).",        HttpStatus.BAD_REQUEST);
         private Trip() {}
     }
 

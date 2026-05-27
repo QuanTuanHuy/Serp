@@ -24,7 +24,6 @@ import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
-import serp.project.school_bus_service.service.IRouteLifecycleService;
 import serp.project.school_bus_service.service.domain.IRouteGeometryService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
@@ -79,7 +78,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final IRouteGeometryService routeGeometryService;
     private final IRouteStopService routeStopService;
     private final IRouteDispatchService routeDispatchService;
-    private final IRouteLifecycleService routeLifecycleService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
 
@@ -95,7 +93,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             IRouteGeometryService routeGeometryService,
                             IRouteStopService routeStopService,
                             IRouteDispatchService routeDispatchService,
-                            IRouteLifecycleService routeLifecycleService,
                             SchoolBusMapper mapper,
                             MessageCommon messageCommon) {
         this.routePlanRepository = routePlanRepository;
@@ -110,7 +107,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.routeGeometryService = routeGeometryService;
         this.routeStopService = routeStopService;
         this.routeDispatchService = routeDispatchService;
-        this.routeLifecycleService = routeLifecycleService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
@@ -212,7 +208,11 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Transactional
     public RoutePlanResponse updateRoute(Long id, RoutePlanUpsertRequest request, Long tenantId, Long actorId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
-        if (route.getStatus() == RouteStatus.COMPLETED || route.getStatus() == RouteStatus.IN_PROGRESS) {
+        // Block edits once a trip has been created or the route is cancelled.
+        // IN_PROGRESS / COMPLETED are not valid RoutePlan statuses — they belong
+        // to TripExecution. Use TRIP_CREATED as the terminal editing boundary.
+        if (route.getStatus() == RouteStatus.TRIP_CREATED
+                || route.getStatus() == RouteStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Route.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Route.INVALID_STATE));
         }
         route.markUpdated(actor(actorId));
@@ -240,16 +240,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     public List<RouteStopResponse> reorderRouteStops(Long routeId, ReorderStopsRequest request, Long tenantId,
             Long actorId) {
         return routeStopService.reorderRouteStops(routeId, request, tenantId, actorId);
-    }
-
-    @Override
-    public RoutePlanResponse startRoute(Long routeId, Long tenantId, Long actorId) {
-        return routeLifecycleService.startRoute(routeId, tenantId, actorId);
-    }
-
-    @Override
-    public RoutePlanResponse completeRoute(Long routeId, Long tenantId, Long actorId) {
-        return routeLifecycleService.completeRoute(routeId, tenantId, actorId);
     }
 
     @Override

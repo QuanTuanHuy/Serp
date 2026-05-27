@@ -53,6 +53,9 @@ public class TripMapper extends BaseMapper {
         response.setActualDistanceKm(entity.getActualDistanceKm());
         response.setActualDurationMin(entity.getActualDurationMin());
         response.setCompletionNote(entity.getCompletionNote());
+        response.setCancelledAt(entity.getCancelledAt());
+        response.setCancelledBy(entity.getCancelledBy());
+        response.setCancellationReason(entity.getCancellationReason());
         response.setSimulationMode(entity.getSimulationMode());
         response.setBusId(entity.getBus() == null ? null : entity.getBus().getId());
         response.setBusPlateNumber(entity.getBus() == null ? null : entity.getBus().getPlateNumber());

@@ -459,6 +459,9 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   actualDistanceKm?: number | null;
   actualDurationMin?: number | null;
   completionNote?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: number | null;
+  cancellationReason?: string | null;
   simulationMode?: boolean;
   busId?: number | null;
   busPlateNumber?: string | null;
@@ -972,6 +975,7 @@ export interface PlanningSessionPreviewRequest {
 
 export interface GreedyGenerateRequest {
   defaultBusCapacity?: number;
+  depotId?: number;
 }
 
 export interface CreateRouteInSessionRequest {

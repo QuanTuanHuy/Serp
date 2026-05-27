@@ -6,6 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.TripExecutionParamsRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
+import serp.project.school_bus_service.dto.request.CancelTripRequest;
+import serp.project.school_bus_service.dto.request.CompleteTripRequest;
+import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
@@ -18,6 +21,7 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.enums.RoutePlanStudentAction;
+import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.TripStopStatus;
@@ -42,13 +46,17 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionEntity, Long>
@@ -209,12 +217,20 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         if (trip.getStatus() != TripStatus.ASSIGNED && trip.getStatus() != TripStatus.PLANNED) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
         }
+        // Ensure at least one stop was snapshotted before starting
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(trip.getId(), tenantId);
+        if (stops.isEmpty()) {
+            throw new AppException(AppErrorCode.Trip.NO_STOPS, messageCommon.getMessage(AppErrorCode.Trip.NO_STOPS));
+        }
         trip.setStatus(TripStatus.IN_PROGRESS);
         trip.setStartedAt(LocalDateTime.now());
         trip.markUpdated(actor(actorId));
-        trip.getRoute().setStatus(RouteStatus.IN_PROGRESS);
+        // RoutePlan.status intentionally NOT mutated here.
+        // RoutePlan keeps TRIP_CREATED throughout trip execution.
+        // Operational state is tracked exclusively by TripExecution.status.
         tripRepository.save(trip);
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "START", "Started trip");
+        // TODO notification: notify parents/admins when trip starts.
         return toDetail(trip, tenantId);
     }
 
@@ -225,13 +241,28 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         TripStopLogEntity stop = tripStopLogService
                 .findByTripAndRouteStop(id, routeStopId, tenantId)
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
+        // Guard: only PENDING stops can be arrived at
+        if (stop.getStatus() != TripStopStatus.PENDING) {
+            throw new AppException(AppErrorCode.Trip.STOP_ALREADY_DONE, messageCommon.getMessage(AppErrorCode.Trip.STOP_ALREADY_DONE));
+        }
         ensureNextStop(trip, stop, tenantId);
+        LocalDateTime now = LocalDateTime.now();
         stop.setStatus(TripStopStatus.ARRIVED);
-        stop.setActualArrivalTime(LocalDateTime.now());
+        stop.setActualArrivalTime(now);
+        // Calculate delay: compare actual arrival vs planned arrival time on service date
+        LocalTime plannedArrivalTime = stop.getRouteStop().getPlannedArrivalTime();
+        if (plannedArrivalTime != null) {
+            LocalDateTime planned = LocalDateTime.of(
+                    trip.getServiceDate() != null ? trip.getServiceDate() : LocalDate.now(),
+                    plannedArrivalTime);
+            long delayMin = Duration.between(planned, now).toMinutes();
+            stop.setDelayMinutes((int) delayMin);
+        }
         stop.markUpdated(actor(actorId));
         tripStopLogService.save(stop);
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "ARRIVE_STOP",
                 "Arrived stop " + stop.getStopOrder());
+        // TODO notification: notify parents/guardians when bus arrives at this stop.
         return toDetail(trip, tenantId);
     }
 
@@ -242,8 +273,12 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         TripStopLogEntity stop = tripStopLogService
                 .findByTripAndRouteStop(id, routeStopId, tenantId)
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
+        // Guard: can only depart an ARRIVED or BOARDING stop
+        if (stop.getStatus() == TripStopStatus.DEPARTED || stop.getStatus() == TripStopStatus.SKIPPED) {
+            throw new AppException(AppErrorCode.Trip.STOP_ALREADY_DONE, messageCommon.getMessage(AppErrorCode.Trip.STOP_ALREADY_DONE));
+        }
         if (stop.getStatus() != TripStopStatus.ARRIVED && stop.getStatus() != TripStopStatus.BOARDING) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
+            throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED, messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED));
         }
         stop.setStatus(TripStopStatus.DEPARTED);
         stop.setActualDepartureTime(LocalDateTime.now());
@@ -251,13 +286,67 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         tripStopLogService.save(stop);
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "DEPART_STOP",
                 "Departed stop " + stop.getStopOrder());
+        // TODO notification: notify parents/guardians when bus departs this stop.
         return toDetail(trip, tenantId);
     }
 
     @Override
     @Transactional
-    public TripExecutionResponse completeTrip(Long id, Long tenantId, Long actorId) {
+    public TripExecutionResponse skipStop(Long id, Long routeStopId, SkipStopRequest request, Long tenantId, Long actorId) {
         TripExecutionEntity trip = requireInProgress(id, tenantId);
+        TripStopLogEntity stop = tripStopLogService
+                .findByTripAndRouteStop(id, routeStopId, tenantId)
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
+        // Can skip a PENDING, ARRIVED, or BOARDING stop.
+        // Once DEPARTED or SKIPPED, the stop cannot be skipped again.
+        if (stop.getStatus() == TripStopStatus.DEPARTED || stop.getStatus() == TripStopStatus.SKIPPED) {
+            throw new AppException(AppErrorCode.Trip.STOP_ALREADY_DONE, messageCommon.getMessage(AppErrorCode.Trip.STOP_ALREADY_DONE));
+        }
+        if (request.getReason() == null || request.getReason().isBlank()) {
+            throw new AppException(AppErrorCode.Trip.SKIP_REASON_REQUIRED, messageCommon.getMessage(AppErrorCode.Trip.SKIP_REASON_REQUIRED));
+        }
+        stop.setStatus(TripStopStatus.SKIPPED);
+        stop.setNote(request.getReason());
+        stop.markUpdated(actor(actorId));
+        tripStopLogService.save(stop);
+
+        // Immediately mark PLANNED students whose service stop is this stop as NOT_SERVED.
+        // NOT_SERVED = stop was skipped before the student could be served (operational, not the student's fault).
+        // Direction-aware:
+        //   OUTBOUND: the critical stop is pickupStop (home → school; student boards here).
+        //   RETURN:   the critical stop is dropoffStop (school → home; student alights here).
+        //             Students start PLANNED in RETURN because school boarding stop is not yet modeled.
+        //             NOT_SERVED still applies — they will not receive their expected drop-off service.
+        //             BOARDED students in RETURN (explicitly confirmed at school) are unaffected.
+        boolean isOutbound = trip.getRouteDirection() == RouteDirection.OUTBOUND;
+        tripStudentService.findByTrip(id, tenantId).stream()
+                .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
+                .filter(ts -> {
+                    if (isOutbound) {
+                        return ts.getPickupStop() != null && ts.getPickupStop().getId().equals(routeStopId);
+                    } else {
+                        return ts.getDropoffStop() != null && ts.getDropoffStop().getId().equals(routeStopId);
+                    }
+                })
+                .forEach(ts -> {
+                    ts.setStatus(TripStudentStatus.NOT_SERVED);
+                    ts.setNote("Stop skipped: " + request.getReason());
+                    ts.markUpdated(actor(actorId));
+                    tripStudentService.save(ts);
+                });
+
+        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "SKIP_STOP",
+                "Skipped stop " + stop.getStopOrder() + ": " + request.getReason());
+        // TODO notification: notify parents/guardians that this stop has been skipped.
+        return toDetail(trip, tenantId);
+    }
+
+    @Override
+    @Transactional
+    public TripExecutionResponse completeTrip(Long id, CompleteTripRequest request, Long tenantId, Long actorId) {
+        TripExecutionEntity trip = requireInProgress(id, tenantId);
+
+        // All stops must be DEPARTED or SKIPPED
         boolean hasPendingStops = tripStopLogService
                 .findByTrip(id, tenantId)
                 .stream()
@@ -266,12 +355,118 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         if (hasPendingStops) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
         }
+
+        // Auto-resolve PLANNED students whose service stop was SKIPPED as NOT_SERVED (safety net).
+        // skipStop() already marks students NOT_SERVED immediately; this covers edge cases where stops
+        // were skipped via cancelTrip or other paths that bypass skipStop().
+        // Direction-aware: OUTBOUND checks pickupStop (home stop); RETURN checks dropoffStop (home stop).
+        boolean isOutboundComplete = trip.getRouteDirection() == RouteDirection.OUTBOUND;
+        Set<Long> skippedRouteStopIds = tripStopLogService.findByTrip(id, tenantId).stream()
+                .filter(s -> s.getStatus() == TripStopStatus.SKIPPED)
+                .map(s -> s.getRouteStop().getId())
+                .collect(Collectors.toSet());
+        tripStudentService.findByTrip(id, tenantId).stream()
+                .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
+                .filter(ts -> {
+                    if (isOutboundComplete) {
+                        return ts.getPickupStop() != null && skippedRouteStopIds.contains(ts.getPickupStop().getId());
+                    } else {
+                        return ts.getDropoffStop() != null && skippedRouteStopIds.contains(ts.getDropoffStop().getId());
+                    }
+                })
+                .forEach(ts -> {
+                    ts.setStatus(TripStudentStatus.NOT_SERVED);
+                    ts.setNote("Auto NOT_SERVED: service stop was skipped.");
+                    ts.markUpdated(actor(actorId));
+                    tripStudentService.save(ts);
+                });
+
+        // Block if any PLANNED students remain — these are students at DEPARTED stops whom the attendant
+        // did not process (board / absent / no-show). They must be resolved before the trip can complete.
+        boolean hasUnprocessedStudents = tripStudentService
+                .findByTrip(id, tenantId)
+                .stream()
+                .anyMatch(s -> s.getStatus() == TripStudentStatus.PLANNED);
+        if (hasUnprocessedStudents) {
+            throw new AppException(AppErrorCode.Trip.UNPROCESSED_STUDENTS, messageCommon.getMessage(AppErrorCode.Trip.UNPROCESSED_STUDENTS));
+        }
+
+        LocalDateTime completedAt = LocalDateTime.now();
         trip.setStatus(TripStatus.COMPLETED);
-        trip.setCompletedAt(LocalDateTime.now());
+        trip.setCompletedAt(completedAt);
+
+        // Calculate actual duration from startedAt to completedAt
+        if (trip.getStartedAt() != null) {
+            trip.setActualDurationMin((int) Duration.between(trip.getStartedAt(), completedAt).toMinutes());
+        }
+
+        // Fallback: actual GPS distance not available; using planned distance.
+        if (trip.getActualDistanceKm() == null && trip.getPlannedDistanceKm() != null) {
+            trip.setActualDistanceKm(trip.getPlannedDistanceKm());
+        }
+
+        if (request != null && request.getNote() != null && !request.getNote().isBlank()) {
+            trip.setCompletionNote(request.getNote());
+        }
+
         trip.markUpdated(actor(actorId));
-        trip.getRoute().setStatus(RouteStatus.COMPLETED);
+        // RoutePlan.status intentionally NOT mutated here.
+        // RoutePlan keeps TRIP_CREATED; completion is recorded only on TripExecution.
         tripRepository.save(trip);
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "COMPLETE", "Completed trip");
+        // TODO notification: notify parents/admins when trip is completed.
+        return toDetail(trip, tenantId);
+    }
+
+    @Override
+    @Transactional
+    public TripExecutionResponse cancelTrip(Long id, CancelTripRequest request, Long tenantId, Long actorId) {
+        TripExecutionEntity trip = findById(id, tenantId);
+        if (trip.getStatus() == TripStatus.COMPLETED) {
+            throw new AppException(AppErrorCode.Trip.ALREADY_COMPLETED, messageCommon.getMessage(AppErrorCode.Trip.ALREADY_COMPLETED));
+        }
+        if (trip.getStatus() == TripStatus.CANCELLED) {
+            throw new AppException(AppErrorCode.Trip.ALREADY_CANCELLED, messageCommon.getMessage(AppErrorCode.Trip.ALREADY_CANCELLED));
+        }
+        if (request == null || request.getReason() == null || request.getReason().isBlank()) {
+            throw new AppException(AppErrorCode.Trip.CANCEL_REASON_REQUIRED, messageCommon.getMessage(AppErrorCode.Trip.CANCEL_REASON_REQUIRED));
+        }
+        trip.setStatus(TripStatus.CANCELLED);
+        trip.setCancelledAt(LocalDateTime.now());
+        trip.setCancelledBy(actorId);
+        trip.setCancellationReason(request.getReason());
+        trip.markUpdated(actor(actorId));
+
+        // Mark all non-terminal stops (PENDING, ARRIVED, BOARDING) as SKIPPED
+        tripStopLogService.findByTrip(id, tenantId).forEach(stop -> {
+            if (stop.getStatus() == TripStopStatus.PENDING
+                    || stop.getStatus() == TripStopStatus.ARRIVED
+                    || stop.getStatus() == TripStopStatus.BOARDING) {
+                stop.setStatus(TripStopStatus.SKIPPED);
+                stop.setNote("Cancelled: " + request.getReason());
+                stop.markUpdated(actor(actorId));
+                tripStopLogService.save(stop);
+            }
+        });
+
+        // Mark PLANNED students as NOT_SERVED — the trip was cancelled before they could be served.
+        // BOARDED students (already on the bus) are deliberately NOT touched here:
+        //   they require manual resolution (e.g. return to depot/school) outside the trip lifecycle.
+        // TODO domain: introduce a RETURNED_WITHOUT_SERVICE or similar status for BOARDED students
+        //   whose trip is cancelled mid-route, so their outcome can also be recorded.
+        tripStudentService.findByTrip(id, tenantId).stream()
+                .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
+                .forEach(ts -> {
+                    ts.setStatus(TripStudentStatus.NOT_SERVED);
+                    ts.setNote("Trip cancelled: " + request.getReason());
+                    ts.markUpdated(actor(actorId));
+                    tripStudentService.save(ts);
+                });
+
+        tripRepository.save(trip);
+        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "CANCEL",
+                "Cancelled trip: " + request.getReason());
+        // TODO notification: notify parents/admins when trip is cancelled.
         return toDetail(trip, tenantId);
     }
 
@@ -404,5 +599,10 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
 
     private Pageable pageable(BaseParamsRequest params, Set<String> allowedSorts, String defaultSortBy) {
         return PageableUtils.from(params, allowedSorts, defaultSortBy);
+    }
+
+    @Override
+    public long countByTenantAndStatus(Long tenantId, TripStatus status) {
+        return tripRepository.countByTenantIdAndStatusAndIsDeletedFalse(tenantId, status);
     }
 }

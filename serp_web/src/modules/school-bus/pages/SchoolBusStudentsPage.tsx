@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { GraduationCap, Pencil, Plus, School, Trash2, Users } from 'lucide-react';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
@@ -113,6 +114,14 @@ export function SchoolBusStudentsPage() {
       <SchoolBusPageShell
         title='Student roster'
         description='Students sit at the center of demand, route planning, and attendance. V1 now supports direct roster maintenance.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Students', current: true },
+            ]}
+          />
+        }
         actions={
           <Button
             className='rounded-full'

@@ -2,6 +2,7 @@
 
 import { BusFront, CheckCircle2, MapPin, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { Button } from '@/shared/components/ui';
 import {
   Table,
@@ -55,6 +56,14 @@ export function SchoolBusTripsPage() {
     <SchoolBusPageShell
       title='Trip execution'
       description='Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Trips', current: true },
+          ]}
+        />
+      }
     >
       <div className='grid gap-4 md:grid-cols-3'>
         <SchoolBusMetricCard
@@ -145,7 +154,16 @@ export function SchoolBusTripsPage() {
                       </TableCell>
                       <TableCell>{trip.stops.length}</TableCell>
                       <TableCell>
-                        <SchoolBusStatusBadge status={trip.status} />
+                        <div className='space-y-1'>
+                          <SchoolBusStatusBadge status={trip.status} />
+                          {trip.status === 'CANCELLED' && trip.cancellationReason && (
+                            <p className='text-xs text-rose-600' title={trip.cancellationReason}>
+                              {trip.cancellationReason.length > 40
+                                ? trip.cancellationReason.slice(0, 40) + '…'
+                                : trip.cancellationReason}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className='flex justify-end gap-2'>
@@ -195,7 +213,7 @@ export function SchoolBusTripsPage() {
                             size='sm'
                             onClick={() =>
                               call('Complete trip', () =>
-                                completeTrip(trip.id).unwrap()
+                                completeTrip({ id: trip.id }).unwrap()
                               )
                             }
                           >

@@ -10,6 +10,8 @@ interface SchoolBusSectionProps {
   children: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
+  /** Optional id for in-page anchor/scroll targeting from breadcrumbs. */
+  id?: string;
 }
 
 export const SchoolBusSection: React.FC<SchoolBusSectionProps> = ({
@@ -18,9 +20,11 @@ export const SchoolBusSection: React.FC<SchoolBusSectionProps> = ({
   children,
   action,
   className,
+  id,
 }) => {
   return (
     <section
+      id={id}
       className={cn(
         'space-y-4',
         schoolBusUi.section,

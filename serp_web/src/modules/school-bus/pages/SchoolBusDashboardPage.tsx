@@ -18,6 +18,7 @@ import {
   useGetSchoolBusSummaryQuery,
   useGetTransportRequestsQuery,
 } from '../api/schoolBusApi';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -67,6 +68,14 @@ export function SchoolBusDashboardPage() {
     <SchoolBusPageShell
       title='School bus operations dashboard'
       description='Use the dashboard as the operational cockpit for approvals, dispatch readiness, and latest attendance activity.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dashboard' },
+            { label: 'Dashboard', current: true },
+          ]}
+        />
+      }
       actions={
         <>
           <Button asChild variant='outline' className='rounded-full'>

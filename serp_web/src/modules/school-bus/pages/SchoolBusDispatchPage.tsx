@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import * as React from 'react';
 import { useMemo } from 'react';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   Clock3,
   Eye,
@@ -17,12 +18,10 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
-  useCompleteRouteMutation,
   useComputeRoutePathMutation,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
-  useStartRouteMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -45,22 +44,18 @@ export function SchoolBusDispatchPage() {
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetRoutesQuery(pagination.params);
-  const [startRoute, { isLoading: starting }] = useStartRouteMutation();
-  const [completeRoute, { isLoading: completing }] = useCompleteRouteMutation();
   const [computeRoutePath, { isLoading: computingPath }] =
     useComputeRoutePathMutation();
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
   const routes = getPageItems(data?.data);
+  // Route-level status — reflects planning/dispatch state, NOT execution state
   const plannedRoutes = routes.filter((route) =>
     ['PLANNED', 'ASSIGNED'].includes(route.status)
   ).length;
-  const inProgressRoutes = routes.filter(
-    (route) => route.status === 'IN_PROGRESS'
-  ).length;
-  const completedRoutes = routes.filter(
-    (route) => route.status === 'COMPLETED'
+  const dispatchedRoutes = routes.filter(
+    (route) => route.status === 'TRIP_CREATED'
   ).length;
 
   const prioritizedRoutes = useMemo(
@@ -109,28 +104,18 @@ export function SchoolBusDispatchPage() {
     }
   };
 
-  const handleStartRoute = async (routeId: number) => {
-    try {
-      const response = await startRoute(routeId).unwrap();
-      toast.success(response.message || 'Route started');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to start route');
-    }
-  };
-
-  const handleCompleteRoute = async (routeId: number) => {
-    try {
-      const response = await completeRoute(routeId).unwrap();
-      toast.success(response.message || 'Route completed');
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to complete route');
-    }
-  };
-
   return (
     <SchoolBusPageShell
       title='Dispatch board'
       description='Plan, inspect, and move routes through the core execution lifecycle.'
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Dispatch', current: true },
+          ]}
+        />
+      }
       actions={
         <Button asChild className='rounded-full'>
           <Link href='/school-bus/dispatch/planning'>
@@ -156,18 +141,11 @@ export function SchoolBusDispatchPage() {
           tone='warning'
         />
         <SchoolBusMetricCard
-          label='In progress'
-          value={inProgressRoutes}
-          hint='Trips currently under active execution'
+          label='Dispatched (trip created)'
+          value={dispatchedRoutes}
+          hint='Routes with a trip snapshot locked for execution'
           icon={PlayCircle}
           tone='success'
-        />
-        <SchoolBusMetricCard
-          label='Completed'
-          value={completedRoutes}
-          hint='Routes already closed and reported'
-          icon={Clock3}
-          tone='default'
         />
       </div>
 
@@ -245,25 +223,6 @@ export function SchoolBusDispatchPage() {
                         Plan workspace
                       </Link>
                     </Button>
-                    {['PLANNED', 'ASSIGNED'].includes(route.status) ? (
-                      <Button
-                        className='rounded-full'
-                        disabled={starting}
-                        onClick={() => handleStartRoute(route.id)}
-                      >
-                        {starting ? 'Starting...' : 'Start route'}
-                      </Button>
-                    ) : null}
-                    {route.status === 'IN_PROGRESS' ? (
-                      <Button
-                        variant='secondary'
-                        className='rounded-full'
-                        disabled={completing}
-                        onClick={() => handleCompleteRoute(route.id)}
-                      >
-                        {completing ? 'Completing...' : 'Complete route'}
-                      </Button>
-                    ) : null}
                   </div>
                 </div>
                 </div>
