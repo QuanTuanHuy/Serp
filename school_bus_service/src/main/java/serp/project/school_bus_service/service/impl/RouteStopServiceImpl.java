@@ -302,12 +302,13 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         planStudent.setServiceAction(action);
         RoutePlanStudentEntity saved = routePlanStudentService.save(planStudent);
 
-        // 9. Update stop boarding/dropoff counts
+        // 9. Update stop boarding/dropoff counts and keep estimatedStudentCount in sync
         if (action == RoutePlanStudentAction.BOARD) {
             stop.setPlannedBoardingCount(stop.getPlannedBoardingCount() + 1);
         } else {
             stop.setPlannedDropoffCount(stop.getPlannedDropoffCount() + 1);
         }
+        stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
         routeStopRepository.save(stop);
 
         // 10. Recompute route geometry (waypoints may have changed if a new stop was auto-created)
@@ -403,12 +404,13 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         planStudent.setServiceAction(action);
         RoutePlanStudentEntity saved = routePlanStudentService.save(planStudent);
 
-        // 9. Update stop boarding/dropoff counts
+        // 9. Update stop boarding/dropoff counts and keep estimatedStudentCount in sync
         if (action == RoutePlanStudentAction.BOARD) {
             stop.setPlannedBoardingCount(stop.getPlannedBoardingCount() + 1);
         } else {
             stop.setPlannedDropoffCount(stop.getPlannedDropoffCount() + 1);
         }
+        stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
         routeStopRepository.save(stop);
 
         // 10. Update route student count
@@ -578,6 +580,18 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             entry.setIsDeleted(true);
             entry.setIsActive(false);
             entry.markUpdated(actor(actorId));
+
+            // Decrement the stop's planned count and keep estimatedStudentCount in sync
+            RouteStopEntity stop = entry.getRouteStop();
+            if (stop != null) {
+                if (entry.getServiceAction() == RoutePlanStudentAction.BOARD) {
+                    stop.setPlannedBoardingCount(Math.max(0, stop.getPlannedBoardingCount() - 1));
+                } else {
+                    stop.setPlannedDropoffCount(Math.max(0, stop.getPlannedDropoffCount() - 1));
+                }
+                stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
+                routeStopRepository.save(stop);
+            }
         }
         routePlanStudentService.saveAll(entries);
 

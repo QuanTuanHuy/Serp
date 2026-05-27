@@ -22,8 +22,9 @@ export function ManualDemandAssignPanel({
   eligibleStudents,
   sessionId,
 }: ManualDemandAssignPanelProps) {
-  const [addStudentToStop, { isLoading }] = useAddStudentToStopMutation();
+  const [addStudentToStop] = useAddStudentToStopMutation();
   const [lastAssigned, setLastAssigned] = useState<number | null>(null);
+  const [loadingStudentId, setLoadingStudentId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Filter to unassigned students (those with a relevant point that hasn't been assigned yet)
@@ -32,6 +33,7 @@ export function ManualDemandAssignPanel({
   const handleAssign = async (student: SchoolBusEligibleStudent) => {
     if (!selectedRoute) return;
     setError(null);
+    setLoadingStudentId(student.studentId);
     try {
       await addStudentToStop({
         routeId: selectedRoute.id,
@@ -43,6 +45,8 @@ export function ManualDemandAssignPanel({
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       setError(err?.data?.message ?? 'Failed to assign student');
+    } finally {
+      setLoadingStudentId(null);
     }
   };
 
@@ -105,6 +109,7 @@ export function ManualDemandAssignPanel({
             ? Boolean(student.pickupPointId)
             : Boolean(student.dropoffPointId);
           const isJustAssigned = lastAssigned === student.studentId;
+          const isThisLoading = loadingStudentId === student.studentId;
 
           return (
             <div
@@ -135,14 +140,14 @@ export function ManualDemandAssignPanel({
                 <Button
                   size='sm'
                   variant='outline'
-                  disabled={!hasPoint || isLoading}
+                  disabled={!hasPoint || loadingStudentId !== null}
                   onClick={() => handleAssign(student)}
                   className={cn(
                     'ml-2 shrink-0 rounded-full border-rose-200 px-3 py-1 text-[11px] font-semibold text-rose-600',
                     'hover:bg-rose-50 hover:border-rose-300 disabled:opacity-40',
                   )}
                 >
-                  {isLoading ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Add'}
+                  {isThisLoading ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Add'}
                 </Button>
               )}
             </div>

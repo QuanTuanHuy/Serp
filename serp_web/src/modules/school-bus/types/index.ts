@@ -307,12 +307,19 @@ export interface SchoolBusRoutePath {
 
 export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   routeId: number;
-  pickupPointId: number;
-  pickupPointName: string;
+  locationType?: string | null;   // DEPOT | SCHOOL | PICKUP_POINT
+  stopPurpose?: string | null;    // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
+  displayName?: string | null;
+  pickupPointId?: number | null;
+  pickupPointName?: string | null;
   pickupPointAddress?: string | null;
   pickupPointLatitude?: number | null;
   pickupPointLongitude?: number | null;
-  stopType?: 'PICKUP' | 'DROPOFF';
+  schoolId?: number | null;
+  schoolName?: string | null;
+  depotId?: number | null;
+  depotName?: string | null;
+  stopType?: 'PICKUP' | 'DROPOFF'; // legacy compat
   stopOrder: number;
   estimatedStudentCount?: number | null;
   plannedArrivalTime?: string | null;
@@ -509,20 +516,52 @@ export interface SchoolBusCapacityUtilization {
   utilizationPercent: number;
 }
 
-export interface SchoolBusAttendanceManifestStudent {
-  studentId: number;
-  studentName: string;
-  pickupPointId?: number | null;
-  pickupPointName?: string | null;
-  latestAttendanceType?: string | null;
-  latestAttendanceStatus?: string | null;
-  latestRecordedAt?: string | null;
+export interface TripAttendanceStopItem {
+  routeStopId: number;
+  stopOrder: number;
+  locationType?: string | null;   // DEPOT | SCHOOL | PICKUP_POINT
+  stopPurpose?: string | null;    // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
+  displayName?: string | null;
+  stopName?: string | null;       // legacy compat
+  stopStatus: string;
+  plannedBoardingCount: number;
+  plannedDropoffCount: number;
+  actualBoardedCount: number;
+  actualDroppedCount: number;
 }
 
-export interface SchoolBusAttendanceManifest {
-  route: SchoolBusRoute;
-  assignment: SchoolBusRouteAssignment | null;
-  students: SchoolBusAttendanceManifestStudent[];
+export interface TripAttendanceStudentItem {
+  tripStudentId: number;
+  studentId: number;
+  studentName?: string | null;
+  studentCode?: string | null;
+  status: string;
+  pickupStopId?: number | null;
+  dropoffStopId?: number | null;
+  subscriptionId?: number | null;
+  note?: string | null;
+}
+
+export interface SchoolBusTripAttendanceSummary {
+  totalStudents: number;
+  planned: number;
+  boarded: number;
+  droppedOff: number;
+  absent: number;
+  noShow: number;
+  notServed: number;
+}
+
+export interface SchoolBusTripAttendanceManifest {
+  tripId: number;
+  tripCode?: string | null;
+  routeId?: number | null;
+  routeCode?: string | null;
+  routeDirection?: string | null;
+  tripStatus: string;
+  summary: SchoolBusTripAttendanceSummary;
+  stops: TripAttendanceStopItem[];
+  students: TripAttendanceStudentItem[];
 }
 
 export interface SchoolBusTripHistory extends SchoolBusBaseRecord {
@@ -742,13 +781,6 @@ export interface SchoolBusTripAttendanceActionRequest {
 
 export interface SchoolBusDemoSpeedRequest {
   speedMultiplier: number;
-  isActive?: boolean;
-}
-
-export interface SchoolBusAttendanceActionRequest {
-  routeId: number;
-  studentId: number;
-  notes?: string;
   isActive?: boolean;
 }
 

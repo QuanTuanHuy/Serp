@@ -108,9 +108,14 @@ export function SchoolBusConfirmDialog({
           <AlertDialogAction
             className={cn(confirmCls)}
             disabled={isLoading}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              void onConfirm();
+              try {
+                await onConfirm();
+                onOpenChange(false);
+              } catch {
+                // stay open so user can retry or cancel
+              }
             }}
           >
             {isLoading ? `${confirmLabel}…` : confirmLabel}
