@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,7 +52,7 @@ public class GetPrioritySettingsOverviewQueryHandler
                 .toList();
 
         Map<Long, PriorityEntity> prioritiesById = priorities.stream()
-                .collect(Collectors.toMap(PriorityEntity::getId, priority -> priority));
+                .collect(Collectors.toMap(PriorityEntity::getId, Function.identity()));
         Map<Long, List<PrioritySettingsOverviewView.SchemeRefView>> schemeRefsByPriorityId =
                 buildSchemeRefsByPriorityId(schemeDetails);
         Map<Long, List<PrioritySettingsOverviewView.ProjectRefView>> projectRefsBySchemeId =
