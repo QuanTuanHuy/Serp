@@ -5,7 +5,8 @@ import serp.project.school_bus_service.shared.exception.AppException;
 
 public enum RouteLocationType {
     SCHOOL,
-    DEPOT;
+    DEPOT,
+    PICKUP_POINT;
 
     public static RouteLocationType parse(String value) {
         try { return valueOf(value == null ? "" : value.toUpperCase()); }

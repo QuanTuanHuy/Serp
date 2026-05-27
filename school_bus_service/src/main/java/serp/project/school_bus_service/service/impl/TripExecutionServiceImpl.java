@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.service.impl;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -23,12 +24,14 @@ import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStatus;
+import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.TripStopStatus;
 import serp.project.school_bus_service.enums.TripStudentStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.service.IAuditLogService;
+import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
@@ -70,6 +73,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     private final IRouteDispatchService routeDispatchService;
     private final IRoutePlanStudentService routePlanStudentService;
     private final IAuditLogService auditLogService;
+    private final IAttendanceService attendanceService;
     private final ICodeGeneratorService codeGeneratorService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
@@ -83,6 +87,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                                      IRouteDispatchService routeDispatchService,
                                      IRoutePlanStudentService routePlanStudentService,
                                      IAuditLogService auditLogService,
+                                     @Lazy IAttendanceService attendanceService,
                                      ICodeGeneratorService codeGeneratorService,
                                      SchoolBusMapper mapper,
                                      MessageCommon messageCommon) {
@@ -94,6 +99,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         this.routeDispatchService = routeDispatchService;
         this.routePlanStudentService = routePlanStudentService;
         this.auditLogService = auditLogService;
+        this.attendanceService = attendanceService;
         this.codeGeneratorService = codeGeneratorService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
@@ -302,6 +308,12 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         if (stop.getStatus() == TripStopStatus.DEPARTED || stop.getStatus() == TripStopStatus.SKIPPED) {
             throw new AppException(AppErrorCode.Trip.STOP_ALREADY_DONE, messageCommon.getMessage(AppErrorCode.Trip.STOP_ALREADY_DONE));
         }
+        // Terminal stops (DEPOT / SCHOOL terminals) must not be skipped
+        RouteStopPurpose purpose = stop.getRouteStop() != null ? stop.getRouteStop().getStopPurpose() : null;
+        if (purpose != null && purpose.isTerminal()) {
+            throw new AppException(AppErrorCode.Trip.CANNOT_SKIP_TERMINAL,
+                    messageCommon.getMessage(AppErrorCode.Trip.CANNOT_SKIP_TERMINAL));
+        }
         if (request.getReason() == null || request.getReason().isBlank()) {
             throw new AppException(AppErrorCode.Trip.SKIP_REASON_REQUIRED, messageCommon.getMessage(AppErrorCode.Trip.SKIP_REASON_REQUIRED));
         }
@@ -315,9 +327,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         // Direction-aware:
         //   OUTBOUND: the critical stop is pickupStop (home → school; student boards here).
         //   RETURN:   the critical stop is dropoffStop (school → home; student alights here).
-        //             Students start PLANNED in RETURN because school boarding stop is not yet modeled.
-        //             NOT_SERVED still applies — they will not receive their expected drop-off service.
-        //             BOARDED students in RETURN (explicitly confirmed at school) are unaffected.
         boolean isOutbound = trip.getRouteDirection() == RouteDirection.OUTBOUND;
         tripStudentService.findByTrip(id, tenantId).stream()
                 .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
@@ -333,6 +342,9 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                     ts.setNote("Stop skipped: " + request.getReason());
                     ts.markUpdated(actor(actorId));
                     tripStudentService.save(ts);
+                    // Log NOT_SERVED attendance event for audit trail
+                    attendanceService.recordNotServedEvent(trip, ts, stop.getRouteStop(),
+                            "Stop skipped: " + request.getReason(), tenantId, actorId);
                 });
 
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "SKIP_STOP",
@@ -454,6 +466,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         //   they require manual resolution (e.g. return to depot/school) outside the trip lifecycle.
         // TODO domain: introduce a RETURNED_WITHOUT_SERVICE or similar status for BOARDED students
         //   whose trip is cancelled mid-route, so their outcome can also be recorded.
+        boolean isOutboundCancel = trip.getRouteDirection() == RouteDirection.OUTBOUND;
         tripStudentService.findByTrip(id, tenantId).stream()
                 .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
                 .forEach(ts -> {
@@ -461,6 +474,11 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                     ts.setNote("Trip cancelled: " + request.getReason());
                     ts.markUpdated(actor(actorId));
                     tripStudentService.save(ts);
+                    // Log NOT_SERVED attendance event — use service stop as routeStop context
+                    serp.project.school_bus_service.entity.RouteStopEntity serviceStop =
+                            isOutboundCancel ? ts.getPickupStop() : ts.getDropoffStop();
+                    attendanceService.recordNotServedEvent(trip, ts, serviceStop,
+                            "Trip cancelled: " + request.getReason(), tenantId, actorId);
                 });
 
         tripRepository.save(trip);

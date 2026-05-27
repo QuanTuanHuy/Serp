@@ -19,6 +19,8 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
+import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
+import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ITripExecutionService;
@@ -167,5 +169,21 @@ public class TripController extends AbstractBaseController {
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student no-show",
                 attendanceService.markTripStudentNoShow(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/{id}/attendance/manifest")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<TripAttendanceManifestResponse>> getTripAttendanceManifest(
+            @PathVariable Long id) {
+        return ok("Fetched trip attendance manifest",
+                attendanceService.getTripAttendanceManifest(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/attendance/summary")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<TripAttendanceSummaryResponse>> getTripAttendanceSummary(
+            @PathVariable Long id) {
+        return ok("Fetched trip attendance summary",
+                attendanceService.getTripAttendanceSummary(id, getCurrentTenantId()));
     }
 }

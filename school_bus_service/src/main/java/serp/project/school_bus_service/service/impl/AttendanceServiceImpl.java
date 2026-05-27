@@ -1,22 +1,19 @@
 package serp.project.school_bus_service.service.impl;
 
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
-import serp.project.school_bus_service.dto.request.AttendanceActionRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
+import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
+import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IAuditLogService;
-import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
-import serp.project.school_bus_service.service.IStudentService;
-import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.ITripStopLogService;
 import serp.project.school_bus_service.service.ITripStudentService;
@@ -24,14 +21,13 @@ import serp.project.school_bus_service.enums.AttendanceStatus;
 import serp.project.school_bus_service.enums.AttendanceType;
 import serp.project.school_bus_service.enums.AttendanceEventType;
 import serp.project.school_bus_service.enums.EventSource;
-import serp.project.school_bus_service.enums.RouteStatus;
+import serp.project.school_bus_service.enums.RouteLocationType;
+import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.TripStudentStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.AttendanceEntity;
-import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
-import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
@@ -51,10 +47,7 @@ import java.util.Set;
 public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity, Long> implements IAttendanceService {
 
     private final AttendanceRepository attendanceRepository;
-    private final IRouteService routeService;
     private final ITripExecutionService tripExecutionService;
-    private final IStudentService studentService;
-    private final ITransportRequestService transportRequestService;
     private final IAuditLogService auditLogService;
     private final IRouteStopService routeStopService;
     private final ITripStudentService tripStudentService;
@@ -64,22 +57,16 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
 
     public AttendanceServiceImpl(
-    AttendanceRepository attendanceRepository,
-                                 @Lazy IRouteService routeService,
-                                 ITripExecutionService tripExecutionService,
-                                 IStudentService studentService,
-                                 ITransportRequestService transportRequestService,
-                                 IAuditLogService auditLogService,
-                                 IRouteStopService routeStopService,
-                                 ITripStudentService tripStudentService,
-                                 ITripStopLogService tripStopLogService,
-                                 SchoolBusMapper mapper,
-                                 MessageCommon messageCommon) {
+            AttendanceRepository attendanceRepository,
+            ITripExecutionService tripExecutionService,
+            IAuditLogService auditLogService,
+            IRouteStopService routeStopService,
+            ITripStudentService tripStudentService,
+            ITripStopLogService tripStopLogService,
+            SchoolBusMapper mapper,
+            MessageCommon messageCommon) {
         this.attendanceRepository = attendanceRepository;
-        this.routeService = routeService;
         this.tripExecutionService = tripExecutionService;
-        this.studentService = studentService;
-        this.transportRequestService = transportRequestService;
         this.auditLogService = auditLogService;
         this.routeStopService = routeStopService;
         this.tripStudentService = tripStudentService;
@@ -102,18 +89,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                 pageable(params, Set.of("id", "recordedAt", "attendanceType", "status", "createdAt", "updatedAt"),
                         "recordedAt")),
                 mapper::toAttendanceResponse);
-    }
-
-    @Override
-    @Transactional
-    public AttendanceResponse checkIn(AttendanceActionRequest request, Long tenantId, Long actorId) {
-        return recordAttendance(request, tenantId, actorId, AttendanceType.CHECKED_IN);
-    }
-
-    @Override
-    @Transactional
-    public AttendanceResponse checkOut(AttendanceActionRequest request, Long tenantId, Long actorId) {
-        return recordAttendance(request, tenantId, actorId, AttendanceType.CHECKED_OUT);
     }
 
     @Override
@@ -153,41 +128,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         return recordTripAttendance(tripId, request, tenantId, actorId, AttendanceEventType.NO_SHOW);
     }
 
-    private AttendanceResponse recordAttendance(AttendanceActionRequest request, Long tenantId, Long actorId,
-            AttendanceType attendanceType) {
-        RoutePlanEntity route = routeService.getRouteEntity(request.getRouteId(), tenantId);
-        StudentEntity student = studentService.getStudent(request.getStudentId(), tenantId);
-
-        // Allow attendance recording when a trip is being executed (TRIP_CREATED)
-        // or the route is already assigned (ASSIGNED) but trip not yet started.
-        if (route.getStatus() != RouteStatus.TRIP_CREATED && route.getStatus() != RouteStatus.ASSIGNED) {
-            throw new AppException(AppErrorCode.Attendance.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Attendance.INVALID_STATE));
-        }
-
-        if (!student.getSchool().getId().equals(route.getSchool().getId())) {
-            throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST, messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
-        }
-
-        if (!transportRequestService.hasApprovedRequestForStudent(student.getId(), route.getSchool().getId(),
-                route.getServiceDate(), tenantId)) {
-            throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST, messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
-        }
-
-        AttendanceEntity attendance = new AttendanceEntity();
-        attendance.markCreated(tenantId, actor(actorId));
-        attendance.setRoute(route);
-        attendance.setStudent(student);
-        attendance.setAttendanceType(attendanceType);
-        attendance.setStatus(AttendanceStatus.PRESENT);
-        attendance.setRecordedAt(LocalDateTime.now());
-        attendance.setRecordedBy(actorId);
-        attendance.setNotes(request.getNotes());
-        AttendanceEntity saved = attendanceRepository.save(attendance);
-        auditLogService.log(tenantId, actorId, "Attendance", saved.getId(), attendanceType.name(),
-                "Recorded " + attendanceType.name().toLowerCase());
-        return mapper.toAttendanceResponse(saved);
-    }
-
     private AttendanceResponse recordTripAttendance(Long tripId, TripAttendanceActionRequest request, Long tenantId,
             Long actorId, AttendanceEventType eventType) {
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
@@ -213,28 +153,38 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
         }
 
-        // Validate that the requested stop matches the student's planned pickup or dropoff stop.
-        // This prevents recording attendance at the wrong stop due to operator error.
-        if (eventType == AttendanceEventType.BOARDED
-                && tripStudent.getPickupStop() != null
-                && !tripStudent.getPickupStop().getId().equals(request.getRouteStopId())) {
-            throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
-                    messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
-        }
-        if (eventType == AttendanceEventType.DROPPED_OFF
-                && tripStudent.getDropoffStop() != null
-                && !tripStudent.getDropoffStop().getId().equals(request.getRouteStopId())) {
+        // DEPOT terminal stops never have attendance actions
+        if (routeStop.getLocationType() == RouteLocationType.DEPOT) {
             throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
         }
 
-        // Status-based duplicate guard: use TripStudent.status as the single source of truth.
-        // This prevents duplicate board/dropoff/absent/no-show events that would corrupt counts.
         TripStudentStatus currentStatus = tripStudent.getStatus();
         boolean isOutbound = trip.getRouteDirection() != null
                 && "OUTBOUND".equals(trip.getRouteDirection().name());
+
+        // ── Stop-purpose / event-type validation ──────────────────────────────
         switch (eventType) {
             case BOARDED -> {
+                if (isOutbound) {
+                    // OUTBOUND: board at a PICKUP stop only
+                    if (routeStop.getStopPurpose() != RouteStopPurpose.PICKUP) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                    if (tripStudent.getPickupStop() != null
+                            && !tripStudent.getPickupStop().getId().equals(request.getRouteStopId())) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                } else {
+                    // RETURN: board at SCHOOL START_TERMINAL only
+                    if (routeStop.getStopPurpose() != RouteStopPurpose.START_TERMINAL
+                            || routeStop.getLocationType() != RouteLocationType.SCHOOL) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                }
                 if (currentStatus == TripStudentStatus.BOARDED) {
                     throw new AppException(AppErrorCode.Attendance.ALREADY_BOARDED,
                             messageCommon.getMessage(AppErrorCode.Attendance.ALREADY_BOARDED));
@@ -245,25 +195,36 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                 }
             }
             case DROPPED_OFF -> {
-                // For OUTBOUND: student must have boarded first.
-                // For RETURN: the trip starts at school, so students begin as PLANNED (not yet explicitly boarded at school).
-                //   We allow dropoff from PLANNED or BOARDED because the school boarding stop is not yet modeled as a
-                //   separate TripStop. Once school terminal boarding is modeled, this should require BOARDED only.
-                // TODO: enforce BOARDED-only when RETURN school boarding stop is modeled.
-                if (isOutbound && currentStatus != TripStudentStatus.BOARDED) {
-                    throw new AppException(AppErrorCode.Attendance.MUST_BOARD_FIRST,
-                            messageCommon.getMessage(AppErrorCode.Attendance.MUST_BOARD_FIRST));
-                }
-                if (!isOutbound
-                        && currentStatus != TripStudentStatus.BOARDED
-                        && currentStatus != TripStudentStatus.PLANNED) {
-                    throw new AppException(AppErrorCode.Attendance.STUDENT_STATUS_INVALID,
-                            messageCommon.getMessage(AppErrorCode.Attendance.STUDENT_STATUS_INVALID));
+                if (isOutbound) {
+                    // OUTBOUND: drop off at SCHOOL END_TERMINAL only; student must be BOARDED
+                    if (routeStop.getStopPurpose() != RouteStopPurpose.END_TERMINAL
+                            || routeStop.getLocationType() != RouteLocationType.SCHOOL) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                    if (currentStatus != TripStudentStatus.BOARDED) {
+                        throw new AppException(AppErrorCode.Attendance.MUST_BOARD_FIRST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.MUST_BOARD_FIRST));
+                    }
+                } else {
+                    // RETURN: drop off at a DROPOFF stop; student must be BOARDED
+                    if (routeStop.getStopPurpose() != RouteStopPurpose.DROPOFF) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                    if (tripStudent.getDropoffStop() != null
+                            && !tripStudent.getDropoffStop().getId().equals(request.getRouteStopId())) {
+                        throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+                    }
+                    if (currentStatus != TripStudentStatus.BOARDED) {
+                        throw new AppException(AppErrorCode.Attendance.MUST_BOARD_FIRST,
+                                messageCommon.getMessage(AppErrorCode.Attendance.MUST_BOARD_FIRST));
+                    }
                 }
             }
             case ABSENT, NO_SHOW -> {
-                // ABSENT/NO_SHOW are only valid for students still in PLANNED state.
-                // NOT_SERVED, BOARDED, DROPPED_OFF, ABSENT, NO_SHOW are all terminal — reject.
+                // ABSENT/NO_SHOW are only valid from PLANNED state
                 if (currentStatus != TripStudentStatus.PLANNED) {
                     throw new AppException(AppErrorCode.Attendance.STUDENT_STATUS_INVALID,
                             messageCommon.getMessage(AppErrorCode.Attendance.STUDENT_STATUS_INVALID));
@@ -294,6 +255,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             case DROPPED_OFF -> TripStudentStatus.DROPPED_OFF;
             case ABSENT -> TripStudentStatus.ABSENT;
             case NO_SHOW -> TripStudentStatus.NO_SHOW;
+            // NOT_SERVED is system-generated via recordNotServedEvent(); should never reach here.
+            case NOT_SERVED -> TripStudentStatus.NOT_SERVED;
         });
         tripStudent.markUpdated(actor(actorId));
         tripStudentService.save(tripStudent);
@@ -333,6 +296,157 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     public List<AttendanceEntity> findAttendancesByRoute(Long routeId, Long tenantId) {
         return attendanceRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(routeId, tenantId);
+    }
+
+    @Override
+    @Transactional
+    public void recordNotServedEvent(TripExecutionEntity trip, TripStudentEntity student,
+                                     RouteStopEntity routeStop, String reason, Long tenantId, Long actorId) {
+        AttendanceEntity attendance = new AttendanceEntity();
+        attendance.markCreated(tenantId, actor(null)); // system actor
+        attendance.setRoute(trip.getRoute());
+        attendance.setTrip(trip);
+        attendance.setRouteStop(routeStop);
+        attendance.setStudent(student.getStudent());
+        attendance.setAttendanceType(AttendanceType.CHECKED_IN);
+        attendance.setEventType(AttendanceEventType.NOT_SERVED);
+        attendance.setEventSource(EventSource.SYSTEM);
+        attendance.setStatus(AttendanceStatus.ABSENT);
+        attendance.setRecordedAt(LocalDateTime.now());
+        attendance.setRecordedBy(actorId);
+        attendance.setNotes(reason);
+        attendanceRepository.save(attendance);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId) {
+        tripExecutionService.getTripEntity(tripId, tenantId);
+        List<serp.project.school_bus_service.entity.TripStudentEntity> students =
+                tripStudentService.findByTrip(tripId, tenantId);
+        TripAttendanceSummaryResponse summary = new TripAttendanceSummaryResponse();
+        summary.setTotalStudents(students.size());
+        summary.setPlanned((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.PLANNED).count());
+        summary.setBoarded((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.BOARDED).count());
+        summary.setDroppedOff((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.DROPPED_OFF).count());
+        summary.setAbsent((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.ABSENT).count());
+        summary.setNoShow((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.NO_SHOW).count());
+        summary.setNotServed((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.NOT_SERVED).count());
+        return summary;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TripAttendanceManifestResponse getTripAttendanceManifest(Long tripId, Long tenantId) {
+        TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
+        List<serp.project.school_bus_service.entity.TripStudentEntity> tripStudents =
+                tripStudentService.findByTrip(tripId, tenantId);
+        List<serp.project.school_bus_service.entity.TripStopLogEntity> stopLogs =
+                tripStopLogService.findByTrip(tripId, tenantId);
+
+        // Summary
+        TripAttendanceSummaryResponse summary = new TripAttendanceSummaryResponse();
+        summary.setTotalStudents(tripStudents.size());
+        summary.setPlanned((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.PLANNED).count());
+        summary.setBoarded((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.BOARDED).count());
+        summary.setDroppedOff((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.DROPPED_OFF).count());
+        summary.setAbsent((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.ABSENT).count());
+        summary.setNoShow((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.NO_SHOW).count());
+        summary.setNotServed((int) tripStudents.stream().filter(s -> s.getStatus() == TripStudentStatus.NOT_SERVED).count());
+
+        boolean isOutbound = trip.getRouteDirection() != null
+                && trip.getRouteDirection().name().equals("OUTBOUND");
+
+        // Build stop items
+        java.util.Map<Long, java.util.List<serp.project.school_bus_service.entity.TripStudentEntity>> boardingByStop =
+                new java.util.HashMap<>();
+        java.util.Map<Long, java.util.List<serp.project.school_bus_service.entity.TripStudentEntity>> dropoffByStop =
+                new java.util.HashMap<>();
+        for (serp.project.school_bus_service.entity.TripStudentEntity ts : tripStudents) {
+            if (ts.getPickupStop() != null) {
+                boardingByStop.computeIfAbsent(ts.getPickupStop().getId(), k -> new java.util.ArrayList<>()).add(ts);
+            }
+            if (ts.getDropoffStop() != null) {
+                dropoffByStop.computeIfAbsent(ts.getDropoffStop().getId(), k -> new java.util.ArrayList<>()).add(ts);
+            }
+        }
+
+        java.util.List<TripAttendanceManifestResponse.TripAttendanceStopItem> stops = stopLogs.stream()
+                .sorted(java.util.Comparator.comparing(serp.project.school_bus_service.entity.TripStopLogEntity::getStopOrder))
+                .map(sl -> {
+                    TripAttendanceManifestResponse.TripAttendanceStopItem item =
+                            new TripAttendanceManifestResponse.TripAttendanceStopItem();
+                    RouteStopEntity rs = sl.getRouteStop();
+                    item.setRouteStopId(rs.getId());
+                    item.setStopOrder(sl.getStopOrder());
+                    item.setLocationType(rs.getLocationType() != null ? rs.getLocationType().name() : null);
+                    item.setStopPurpose(rs.getStopPurpose() != null ? rs.getStopPurpose().name() : null);
+                    item.setDisplayName(rs.getDisplayName());
+                    item.setStopStatus(sl.getStatus().name());
+                    item.setActualBoardedCount(sl.getActualBoardedCount() != null ? sl.getActualBoardedCount() : 0);
+                    item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
+
+                    // Boarding count depends on purpose
+                    // OUTBOUND PICKUP: students with pickupStopId == this stop
+                    // RETURN START_TERMINAL (school): all PLANNED students (board here)
+                    // OUTBOUND END_TERMINAL (school): all BOARDED students (drop here)
+                    // RETURN DROPOFF: students with dropoffStopId == this stop
+                    if (rs.getStopPurpose() == RouteStopPurpose.END_TERMINAL
+                            && rs.getLocationType() == RouteLocationType.SCHOOL
+                            && isOutbound) {
+                        // OUTBOUND school terminal: count BOARDED students (they drop off here)
+                        long boardedCount = tripStudents.stream()
+                                .filter(s -> s.getStatus() == TripStudentStatus.BOARDED
+                                        || s.getStatus() == TripStudentStatus.DROPPED_OFF).count();
+                        item.setPlannedDropoffCount((int) boardedCount);
+                        item.setPlannedBoardingCount(0);
+                    } else if (rs.getStopPurpose() == RouteStopPurpose.START_TERMINAL
+                            && rs.getLocationType() == RouteLocationType.SCHOOL
+                            && !isOutbound) {
+                        // RETURN school terminal: count PLANNED students (they board here)
+                        item.setPlannedBoardingCount(tripStudents.size());
+                        item.setPlannedDropoffCount(0);
+                    } else {
+                        java.util.List<serp.project.school_bus_service.entity.TripStudentEntity> boarding =
+                                boardingByStop.getOrDefault(rs.getId(), java.util.List.of());
+                        java.util.List<serp.project.school_bus_service.entity.TripStudentEntity> dropping =
+                                dropoffByStop.getOrDefault(rs.getId(), java.util.List.of());
+                        item.setPlannedBoardingCount(boarding.size());
+                        item.setPlannedDropoffCount(dropping.size());
+                    }
+                    return item;
+                })
+                .toList();
+
+        // Build student items
+        java.util.List<TripAttendanceManifestResponse.TripAttendanceStudentItem> students = tripStudents.stream()
+                .map(ts -> {
+                    TripAttendanceManifestResponse.TripAttendanceStudentItem item =
+                            new TripAttendanceManifestResponse.TripAttendanceStudentItem();
+                    item.setTripStudentId(ts.getId());
+                    item.setStudentId(ts.getStudent() != null ? ts.getStudent().getId() : null);
+                    item.setStudentName(ts.getStudent() != null ? ts.getStudent().getFullName() : null);
+                    item.setStudentCode(ts.getStudent() != null ? ts.getStudent().getStudentCode() : null);
+                    item.setStatus(ts.getStatus().name());
+                    item.setPickupStopId(ts.getPickupStop() != null ? ts.getPickupStop().getId() : null);
+                    item.setDropoffStopId(ts.getDropoffStop() != null ? ts.getDropoffStop().getId() : null);
+                    item.setSubscriptionId(ts.getSubscription() != null ? ts.getSubscription().getId() : null);
+                    item.setNote(ts.getNote());
+                    return item;
+                })
+                .toList();
+
+        TripAttendanceManifestResponse response = new TripAttendanceManifestResponse();
+        response.setTripId(trip.getId());
+        response.setTripCode(trip.getTripCode());
+        response.setRouteId(trip.getRoute() != null ? trip.getRoute().getId() : null);
+        response.setRouteCode(trip.getRoute() != null ? trip.getRoute().getRouteCode() : null);
+        response.setRouteDirection(trip.getRouteDirection() != null ? trip.getRouteDirection().name() : null);
+        response.setTripStatus(trip.getStatus().name());
+        response.setSummary(summary);
+        response.setStops(stops);
+        response.setStudents(students);
+        return response;
     }
 
     @Override

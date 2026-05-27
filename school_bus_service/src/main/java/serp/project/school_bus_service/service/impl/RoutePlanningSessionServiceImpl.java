@@ -33,7 +33,7 @@ import serp.project.school_bus_service.enums.RouteGenerationMethod;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 import serp.project.school_bus_service.enums.RouteStatus;
-import serp.project.school_bus_service.enums.RouteStopType;
+import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.enums.ShiftType;
 import serp.project.school_bus_service.repository.RoutePlanningSessionRepository;
 import serp.project.school_bus_service.service.algorithm.GreedyPlanInput;
@@ -280,7 +280,8 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                 stop.markCreated(tenantId, actor(actorId));
                 stop.setRoute(route);
                 stop.setPickupPoint(assignment.getPickupPoint());
-                stop.setStopType(isOutbound ? RouteStopType.PICKUP : RouteStopType.DROPOFF);
+                stop.setLocationType(RouteLocationType.PICKUP_POINT);
+                stop.setStopPurpose(isOutbound ? RouteStopPurpose.PICKUP : RouteStopPurpose.DROPOFF);
                 stop.setStopOrder(assignment.getStopOrder());
                 stop.setEstimatedStudentCount(assignment.getStudents().size());
                 stop.setPlannedBoardingCount(isOutbound ? assignment.getStudents().size() : 0);
@@ -300,9 +301,13 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                 }
             }
 
-            // Auto-compute route geometry using the stop list just created
-            routeGeometryService.computeAndUpdate(route, batchStops);
-            routeStopService.saveAllRouteStops(batchStops);
+            // Add terminal stops (START + END) around the middle stops
+            List<RouteStopEntity> allStops = addTerminalStops(
+                    route, batchStops, depot, session.getSchool(), isOutbound, tenantId, actorId);
+
+            // Auto-compute route geometry using ALL stops including terminals
+            routeGeometryService.computeAndUpdate(route, allStops);
+            routeStopService.saveAllRouteStops(allStops);
             route = routeService.saveRouteEntity(route);
 
             // Build per-route issues
@@ -590,6 +595,68 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         r.setCreatedAt(e.getCreatedAt());
         r.setUpdatedAt(e.getUpdatedAt());
         return r;
+    }
+
+    // ── Terminal stop generation ─────────────────────────────────────────────
+
+    /**
+     * Inserts START_TERMINAL (order 0) and END_TERMINAL (order N+1) around the provided
+     * middle stops, then returns the full ordered list (terminals + middle).
+     *
+     * <p>OUTBOUND: Depot → PICKUP stops → School<br>
+     * RETURN:  School → DROPOFF stops → Depot
+     */
+    private List<RouteStopEntity> addTerminalStops(RoutePlanEntity route,
+                                                    List<RouteStopEntity> middleStops,
+                                                    DepotEntity depot,
+                                                    SchoolEntity school,
+                                                    boolean isOutbound,
+                                                    Long tenantId, Long actorId) {
+        // Shift middle stop orders up by 1 to make room for START_TERMINAL at order 0
+        middleStops.forEach(s -> s.setStopOrder(s.getStopOrder() + 1));
+
+        // START_TERMINAL
+        RouteStopEntity start = new RouteStopEntity();
+        start.markCreated(tenantId, actor(actorId));
+        start.setRoute(route);
+        start.setStopOrder(0);
+        start.setStopPurpose(RouteStopPurpose.START_TERMINAL);
+        start.setEstimatedStudentCount(0);
+        start.setPlannedBoardingCount(0);
+        start.setPlannedDropoffCount(0);
+        if (isOutbound) {
+            start.setLocationType(RouteLocationType.DEPOT);
+            start.setDepot(depot);
+        } else {
+            start.setLocationType(RouteLocationType.SCHOOL);
+            start.setSchool(school);
+        }
+        start = routeStopService.saveRouteStop(start);
+
+        // END_TERMINAL
+        int endOrder = middleStops.stream().mapToInt(RouteStopEntity::getStopOrder).max().orElse(0) + 1;
+        RouteStopEntity end = new RouteStopEntity();
+        end.markCreated(tenantId, actor(actorId));
+        end.setRoute(route);
+        end.setStopOrder(endOrder);
+        end.setStopPurpose(RouteStopPurpose.END_TERMINAL);
+        end.setEstimatedStudentCount(0);
+        end.setPlannedBoardingCount(0);
+        end.setPlannedDropoffCount(0);
+        if (isOutbound) {
+            end.setLocationType(RouteLocationType.SCHOOL);
+            end.setSchool(school);
+        } else {
+            end.setLocationType(RouteLocationType.DEPOT);
+            end.setDepot(depot);
+        }
+        end = routeStopService.saveRouteStop(end);
+
+        List<RouteStopEntity> all = new ArrayList<>();
+        all.add(start);
+        all.addAll(middleStops);
+        all.add(end);
+        return all;
     }
 
     // ── Refresh session summary ──────────────────────────────────────────────

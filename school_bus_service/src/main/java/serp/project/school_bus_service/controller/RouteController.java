@@ -24,7 +24,6 @@ import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
-import serp.project.school_bus_service.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
@@ -58,13 +57,6 @@ public class RouteController extends AbstractBaseController {
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
     public ResponseEntity<GeneralResponse<RouteDetailResponse>> getRoute(@PathVariable Long id) {
         return ok("Fetched route", routeService.getRoute(id, getCurrentTenantId()));
-    }
-
-    @GetMapping("/{id}/attendance-manifest")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
-    public ResponseEntity<GeneralResponse<RouteAttendanceManifestResponse>> getAttendanceManifest(
-            @PathVariable Long id) {
-        return ok("Fetched attendance manifest", routeService.getAttendanceManifest(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")

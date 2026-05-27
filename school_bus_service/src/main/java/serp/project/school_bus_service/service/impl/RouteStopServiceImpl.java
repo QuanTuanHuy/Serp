@@ -20,8 +20,9 @@ import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RoutePlanStudentAction;
+import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
-import serp.project.school_bus_service.enums.RouteStopType;
+import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.repository.RouteStopRepository;
@@ -102,8 +103,27 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             throw new AppException(AppErrorCode.RouteStop.COUNT_MISMATCH, messageCommon.getMessage(AppErrorCode.RouteStop.COUNT_MISMATCH));
         }
 
-        for (int i = 0; i < request.getOrderedStopIds().size(); i++) {
-            Long stopId = request.getOrderedStopIds().get(i);
+        // Collect terminal stop IDs to verify they stay at positions 0 and N-1
+        Long startTerminalId = stops.stream()
+                .filter(s -> s.getStopPurpose() != null && s.getStopPurpose() == RouteStopPurpose.START_TERMINAL)
+                .map(RouteStopEntity::getId).findFirst().orElse(null);
+        Long endTerminalId = stops.stream()
+                .filter(s -> s.getStopPurpose() != null && s.getStopPurpose() == RouteStopPurpose.END_TERMINAL)
+                .map(RouteStopEntity::getId).findFirst().orElse(null);
+
+        List<Long> ordered = request.getOrderedStopIds();
+        int last = ordered.size() - 1;
+        if (startTerminalId != null && !startTerminalId.equals(ordered.get(0))) {
+            throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
+        }
+        if (endTerminalId != null && !endTerminalId.equals(ordered.get(last))) {
+            throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
+        }
+
+        for (int i = 0; i < ordered.size(); i++) {
+            Long stopId = ordered.get(i);
             RouteStopEntity stop = stops.stream().filter(s -> s.getId().equals(stopId)).findFirst()
                     .orElseThrow(() -> new AppException(AppErrorCode.RouteStop.NOT_FOUND, messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND)));
             stop.setStopOrder(i);
@@ -134,29 +154,37 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         List<RouteStopEntity> existingStops = routeStopRepository
                 .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
 
-        // Check for duplicate pickup point on same route
+        // Only middle stops (PICKUP/DROPOFF) may be added manually — terminals are auto-managed
+        // Check for duplicate pickup point on same route (non-terminal stops only)
         boolean duplicate = existingStops.stream()
+                .filter(s -> s.getPickupPoint() != null)
                 .anyMatch(s -> s.getPickupPoint().getId().equals(request.getPickupPointId()));
         if (duplicate) {
             throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
                     messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
 
-        RouteStopType stopType = RouteStopType.PICKUP;
-        if (request.getStopType() != null) {
-            try {
-                stopType = RouteStopType.valueOf(request.getStopType().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new AppException(AppErrorCode.Route.FIELD_INVALID, messageCommon.getMessage(AppErrorCode.Route.FIELD_INVALID, "stop type", request.getStopType()));
-            }
-        }
+        boolean isOutbound = route.getRouteDirection() == RouteDirection.OUTBOUND;
+        RouteStopPurpose purpose = isOutbound ? RouteStopPurpose.PICKUP : RouteStopPurpose.DROPOFF;
+
+        // Count only non-terminal stops for ordering, insert before the END_TERMINAL if present
+        int insertOrder = existingStops.stream()
+                .filter(s -> s.getStopPurpose() != RouteStopPurpose.END_TERMINAL)
+                .mapToInt(RouteStopEntity::getStopOrder).max().orElse(-1) + 1;
+
+        // Shift END_TERMINAL to make room
+        existingStops.stream()
+                .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL)
+                .forEach(s -> s.setStopOrder(insertOrder + 1));
+        routeStopRepository.saveAll(existingStops);
 
         RouteStopEntity stop = new RouteStopEntity();
         stop.markCreated(tenantId, actor(actorId));
         stop.setRoute(route);
         stop.setPickupPoint(pickupPoint);
-        stop.setStopType(stopType);
-        stop.setStopOrder(existingStops.size()); // append at end
+        stop.setLocationType(RouteLocationType.PICKUP_POINT);
+        stop.setStopPurpose(purpose);
+        stop.setStopOrder(insertOrder);
         stop.setEstimatedStudentCount(request.getEstimatedStudentCount() != null ? request.getEstimatedStudentCount() : 0);
         stop.setPlannedBoardingCount(0);
         stop.setPlannedDropoffCount(0);
@@ -233,15 +261,24 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                 .orElse(null);
 
         if (stop == null) {
-            // Auto-create a new stop at the end of the route
-            RouteStopType stopType = direction == RouteDirection.OUTBOUND
-                    ? RouteStopType.PICKUP : RouteStopType.DROPOFF;
+            // Auto-create a new PICKUP_POINT stop before the END_TERMINAL
+            RouteStopPurpose purpose = direction == RouteDirection.OUTBOUND
+                    ? RouteStopPurpose.PICKUP : RouteStopPurpose.DROPOFF;
+            int insertOrder = existingStops.stream()
+                    .filter(s -> s.getStopPurpose() != RouteStopPurpose.END_TERMINAL)
+                    .mapToInt(RouteStopEntity::getStopOrder).max().orElse(-1) + 1;
+            existingStops.stream()
+                    .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL)
+                    .forEach(s -> s.setStopOrder(insertOrder + 1));
+            routeStopRepository.saveAll(existingStops);
+
             stop = new RouteStopEntity();
             stop.markCreated(tenantId, actor(actorId));
             stop.setRoute(route);
             stop.setPickupPoint(relevantPoint);
-            stop.setStopType(stopType);
-            stop.setStopOrder(existingStops.size());
+            stop.setLocationType(RouteLocationType.PICKUP_POINT);
+            stop.setStopPurpose(purpose);
+            stop.setStopOrder(insertOrder);
             stop.setEstimatedStudentCount(0);
             stop.setPlannedBoardingCount(0);
             stop.setPlannedDropoffCount(0);
@@ -273,10 +310,15 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         }
         routeStopRepository.save(stop);
 
-        // 10. Update route student count
+        // 10. Recompute route geometry (waypoints may have changed if a new stop was auto-created)
+        recalculateGeometry(route, tenantId);
+        route.markUpdated(actor(actorId));
+        routeService.saveRouteEntity(route);
+
+        // 11. Update route student count
         updateRouteStudentCount(route, routeId, actorId);
 
-        // 11. Refresh session summary counters
+        // 12. Refresh session summary counters
         planningSessionService.refreshSessionSummary(session.getId(), tenantId);
 
         auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "ASSIGN_STUDENT",
@@ -335,7 +377,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.NO_PICKUP_POINT,
                             direction == RouteDirection.OUTBOUND ? "pickup" : "dropoff"));
         }
-        if (!stop.getPickupPoint().getId().equals(relevantPoint.getId())) {
+        if (stop.getPickupPoint() == null || !stop.getPickupPoint().getId().equals(relevantPoint.getId())) {
             throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
                     messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
@@ -376,7 +418,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         planningSessionService.refreshSessionSummary(session.getId(), tenantId);
 
         auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "ADD_STUDENT_TO_STOP",
-                "Added student " + student.getFullName() + " to stop " + stop.getPickupPoint().getName());
+                "Added student " + student.getFullName() + " to stop " + stop.getDisplayName());
 
         return mapper.toRoutePlanStudentResponse(saved);
     }
@@ -395,6 +437,12 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
 
         if (!stop.getRoute().getId().equals(routeId)) {
             throw new AppException(AppErrorCode.RouteStop.NOT_FOUND, messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND));
+        }
+
+        // Terminal stops may not be removed manually
+        if (stop.getStopPurpose() != null && stop.getStopPurpose().isTerminal()) {
+            throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
 
         // Soft-delete the stop
@@ -479,10 +527,10 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         for (RoutePlanStudentEntity original : sourceEntries) {
             // Try to find a matching stop in the target route by pickup point
             RouteStopEntity matchStop = null;
-            if (original.getRouteStop() != null) {
+            if (original.getRouteStop() != null && original.getRouteStop().getPickupPoint() != null) {
                 Long pointId = original.getRouteStop().getPickupPoint().getId();
                 matchStop = targetStops.stream()
-                        .filter(s -> s.getPickupPoint().getId().equals(pointId))
+                        .filter(s -> s.getPickupPoint() != null && s.getPickupPoint().getId().equals(pointId))
                         .findFirst()
                         .orElse(null);
             }

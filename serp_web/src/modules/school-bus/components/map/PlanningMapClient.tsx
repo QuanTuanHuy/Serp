@@ -127,12 +127,17 @@ export default function PlanningMapClient({
   }
 
   // Route stop positions (in order) — used for polyline + "fit route"
+  // Uses displayName coordinates (new terminal model) or legacy pickupPoint coords
   const sortedStops = [...selectedRouteStops]
-    .filter(
-      (s) =>
-        typeof s.pickupPointLatitude === 'number' &&
-        typeof s.pickupPointLongitude === 'number'
-    )
+    .filter((s) => {
+      const lat = typeof s.pickupPointLatitude === 'number'
+        ? s.pickupPointLatitude
+        : null;
+      const lon = typeof s.pickupPointLongitude === 'number'
+        ? s.pickupPointLongitude
+        : null;
+      return lat !== null && lon !== null;
+    })
     .sort((a, b) => a.stopOrder - b.stopOrder);
 
   const routeLinePositions: [number, number][] = sortedStops.map(
@@ -148,6 +153,11 @@ export default function PlanningMapClient({
       .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
   const resolvedLinePositions =
     actualPathCoordinates.length >= 2 ? actualPathCoordinates : routeLinePositions;
+
+  const isFallback =
+    selectedRoutePath?.fallbackUsed === true ||
+    selectedRoutePath?.geometrySource === 'STRAIGHT_LINE_ESTIMATE' ||
+    (selectedRoutePath != null && actualPathCoordinates.length < 2);
 
   // Positions passed to FitBounds depend on fitTarget
   const fitPositions: [number, number][] =
@@ -248,10 +258,10 @@ export default function PlanningMapClient({
       {resolvedLinePositions.length >= 2 && (
         <Polyline
           positions={resolvedLinePositions}
-          color='#0369a1'
-          weight={4}
+          color={isFallback ? '#f59e0b' : '#0369a1'}
+          weight={isFallback ? 3 : 4}
           opacity={0.85}
-          dashArray={actualPathCoordinates.length < 2 ? '8 6' : undefined}
+          dashArray={isFallback ? '10 6' : undefined}
         />
       )}
     </>
@@ -267,7 +277,7 @@ export default function PlanningMapClient({
 
   if (isMapExpanded) {
     return (
-      <div className='h-full w-full'>
+      <div className='relative h-full w-full'>
         <LeafletMapShell
           center={initialCenter}
           zoom={initialZoom}
@@ -275,13 +285,29 @@ export default function PlanningMapClient({
         >
           {shellContent}
         </LeafletMapShell>
+        {isFallback && (
+          <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
+            <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
+              ⚠ Straight-line estimate — road geometry unavailable
+            </span>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <LeafletMapShell center={initialCenter} zoom={initialZoom} className={className}>
-      {shellContent}
-    </LeafletMapShell>
+    <div className='relative h-full w-full'>
+      <LeafletMapShell center={initialCenter} zoom={initialZoom} className={className}>
+        {shellContent}
+      </LeafletMapShell>
+      {isFallback && (
+        <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
+          <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
+            ⚠ Straight-line estimate — road geometry unavailable
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

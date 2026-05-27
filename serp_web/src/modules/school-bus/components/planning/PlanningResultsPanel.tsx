@@ -5,6 +5,7 @@ import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusSection } from '../SchoolBusSection';
+import { SchoolBusConfirmDialog, useSchoolBusConfirm } from '../SchoolBusConfirmDialog';
 import { schoolBusUi } from '../../theme';
 import { ManualDemandAssignPanel } from './ManualDemandAssignPanel';
 import {
@@ -341,9 +342,29 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
 function RouteDetailPanel({ routeId }: { routeId: number }) {
   const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId);
   const [reorderStops] = useReorderRouteStopsMutation();
-  const [removeStop] = useRemoveRouteStopMutation();
-  const [removeStudent] = useRemoveRouteStudentMutation();
+  const [removeStop, { isLoading: removingStop }] = useRemoveRouteStopMutation();
+  const [removeStudent, { isLoading: removingStudent }] = useRemoveRouteStudentMutation();
   const detail = routeDetail?.data;
+
+  // ── Confirm dialogs ──────────────────────────────────────────────────────
+  const stopConfirm = useSchoolBusConfirm({
+    onConfirm: async () => {
+      const stopId = stopConfirm.confirmState.payload as number;
+      try { await removeStop({ routeId, stopId }).unwrap(); } catch { /* RTK */ }
+    },
+    isLoading: removingStop,
+  });
+
+  const studentConfirm = useSchoolBusConfirm({
+    onConfirm: async () => {
+      const { studentId, subscriptionId } = studentConfirm.confirmState.payload as {
+        studentId: number;
+        subscriptionId: number;
+      };
+      try { await removeStudent({ routeId, studentId, subscriptionId }).unwrap(); } catch { /* RTK */ }
+    },
+    isLoading: removingStudent,
+  });
 
   if (isLoading || !detail) return <div className='py-8 text-center text-sm text-slate-400'>Loading route detail…</div>;
 
@@ -356,44 +377,68 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
     [ids[i], ids[j]] = [ids[j], ids[i]];
     try { await reorderStops({ id: routeId, orderedStopIds: ids }).unwrap(); } catch { /* RTK */ }
   };
-  const delStop = async (stopId: number) => { if (window.confirm('Remove this stop and its students?')) try { await removeStop({ routeId, stopId }).unwrap(); } catch { /* RTK */ } };
-  const delStudent = async (sid: number, subId: number) => { if (window.confirm('Remove student?')) try { await removeStudent({ routeId, studentId: sid, subscriptionId: subId }).unwrap(); } catch { /* RTK */ } };
+
+  const delStop = (stopId: number) => {
+    stopConfirm.requestConfirm({
+      title: 'Remove stop?',
+      description: 'This stop and all students assigned to it will be removed from the route.',
+      confirmLabel: 'Remove stop',
+      variant: 'danger',
+      payload: stopId,
+    });
+  };
+
+  const delStudent = (studentId: number, subscriptionId: number) => {
+    studentConfirm.requestConfirm({
+      title: 'Remove student?',
+      description: 'The student will be unassigned from this route and returned to the unassigned pool.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+      payload: { studentId, subscriptionId },
+    });
+  };
 
   return (
-    <SchoolBusSection title={`${detail.route.routeName} — Detail`}>
-      <p className='mb-3 text-xs font-medium text-slate-400'>Stops ({stops.length})</p>
-      {stops.length === 0 && <p className='text-xs text-slate-300'>No stops</p>}
-      <div className='space-y-1'>
-        {stops.map((stop, i) => (
-          <div key={stop.id} className='flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2'>
-            <span className='flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-[10px] font-bold text-rose-600'>{stop.stopOrder + 1}</span>
-            <span className='flex-1 text-sm text-slate-700'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
-            <span className='text-[11px] text-slate-400'>{stop.estimatedStudentCount ?? 0} students</span>
-            {editable && (
-              <div className='flex gap-0.5'>
-                <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i - 1)} disabled={i === 0}><ChevronUp className='h-3 w-3' /></Button>
-                <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i + 1)} disabled={i >= stops.length - 1}><ChevronDown className='h-3 w-3' /></Button>
-                <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+    <>
+      <SchoolBusSection title={`${detail.route.routeName} — Detail`}>
+        <p className='mb-3 text-xs font-medium text-slate-400'>Stops ({stops.length})</p>
+        {stops.length === 0 && <p className='text-xs text-slate-300'>No stops</p>}
+        <div className='space-y-1'>
+          {stops.map((stop, i) => (
+            <div key={stop.id} className='flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2'>
+              <span className='flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-[10px] font-bold text-rose-600'>{stop.stopOrder + 1}</span>
+              <span className='flex-1 text-sm text-slate-700'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
+              <span className='text-[11px] text-slate-400'>{stop.estimatedStudentCount ?? 0} students</span>
+              {editable && (
+                <div className='flex gap-0.5'>
+                  <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i - 1)} disabled={i === 0}><ChevronUp className='h-3 w-3' /></Button>
+                  <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i + 1)} disabled={i >= stops.length - 1}><ChevronDown className='h-3 w-3' /></Button>
+                  <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-      <p className='mb-3 mt-5 text-xs font-medium text-slate-400'>Students ({students.length})</p>
-      {students.length === 0 && <p className='text-xs text-slate-300'>No students</p>}
-      <div className='space-y-1'>
-        {students.map(ps => (
-          <div key={`${ps.studentId}-${ps.subscriptionId}-${ps.serviceAction}`} className='flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2'>
-            <span className='flex-1 text-sm text-slate-700'>{ps.studentName || `Student #${ps.studentId}`}</span>
-            <span className='text-[11px] text-slate-400'>{ps.serviceAction} · {ps.stopName ?? '—'}</span>
-            {editable && (
-              <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
-            )}
-          </div>
-        ))}
-      </div>
-    </SchoolBusSection>
+        <p className='mb-3 mt-5 text-xs font-medium text-slate-400'>Students ({students.length})</p>
+        {students.length === 0 && <p className='text-xs text-slate-300'>No students</p>}
+        <div className='space-y-1'>
+          {students.map(ps => (
+            <div key={`${ps.studentId}-${ps.subscriptionId}-${ps.serviceAction}`} className='flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2'>
+              <span className='flex-1 text-sm text-slate-700'>{ps.studentName || `Student #${ps.studentId}`}</span>
+              <span className='text-[11px] text-slate-400'>{ps.serviceAction} · {ps.stopName ?? '—'}</span>
+              {editable && (
+                <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </SchoolBusSection>
+
+      {/* Confirm dialogs */}
+      <SchoolBusConfirmDialog {...stopConfirm.dialogProps} />
+      <SchoolBusConfirmDialog {...studentConfirm.dialogProps} />
+    </>
   );
 }
 

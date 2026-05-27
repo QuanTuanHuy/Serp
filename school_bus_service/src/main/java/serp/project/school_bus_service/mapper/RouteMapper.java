@@ -63,12 +63,24 @@ public class RouteMapper extends BaseMapper {
     public RouteStopResponse toRouteStopResponse(RouteStopEntity entity) {
         RouteStopResponse response = enrich(new RouteStopResponse(), entity);
         response.setRouteId(entity.getRoute().getId());
-        response.setPickupPointId(entity.getPickupPoint().getId());
-        response.setPickupPointName(entity.getPickupPoint().getName());
-        response.setPickupPointAddress(entity.getPickupPoint().getAddress());
-        response.setPickupPointLatitude(entity.getPickupPoint().getLatitude());
-        response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
-        response.setStopType(entity.getStopType().name());
+        response.setLocationType(entity.getLocationType() != null ? entity.getLocationType().name() : null);
+        response.setStopPurpose(entity.getStopPurpose() != null ? entity.getStopPurpose().name() : null);
+        response.setDisplayName(entity.getDisplayName());
+        if (entity.getPickupPoint() != null) {
+            response.setPickupPointId(entity.getPickupPoint().getId());
+            response.setPickupPointName(entity.getPickupPoint().getName());
+            response.setPickupPointAddress(entity.getPickupPoint().getAddress());
+            response.setPickupPointLatitude(entity.getPickupPoint().getLatitude());
+            response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
+        }
+        if (entity.getSchool() != null) {
+            response.setSchoolId(entity.getSchool().getId());
+            response.setSchoolName(entity.getSchool().getName());
+        }
+        if (entity.getDepot() != null) {
+            response.setDepotId(entity.getDepot().getId());
+            response.setDepotName(entity.getDepot().getName());
+        }
         response.setStopOrder(entity.getStopOrder());
         response.setEstimatedStudentCount(entity.getEstimatedStudentCount());
         response.setPlannedArrivalTime(entity.getPlannedArrivalTime());

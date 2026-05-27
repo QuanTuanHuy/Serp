@@ -85,7 +85,7 @@ public class TripMapper extends BaseMapper {
         TripStopLogResponse response = enrich(new TripStopLogResponse(), entity);
         response.setTripId(entity.getTrip().getId());
         response.setRouteStopId(entity.getRouteStop().getId());
-        response.setStopName(entity.getRouteStop().getPickupPoint().getName());
+        response.setStopName(entity.getRouteStop().getDisplayName());
         response.setStopOrder(entity.getStopOrder());
         response.setStatus(entity.getStatus().name());
         response.setActualArrivalTime(entity.getActualArrivalTime());

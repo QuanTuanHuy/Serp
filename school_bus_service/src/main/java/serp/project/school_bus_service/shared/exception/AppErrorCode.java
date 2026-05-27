@@ -239,6 +239,7 @@ public class AppErrorCode {
         public static final ErrorInfo ALREADY_CANCELLED       = new ErrorInfo("trip.alreadyCancelled",      "Trip is already cancelled.",                                                  HttpStatus.BAD_REQUEST);
         public static final ErrorInfo ALREADY_COMPLETED       = new ErrorInfo("trip.alreadyCompleted",      "Trip is already completed.",                                                  HttpStatus.BAD_REQUEST);
         public static final ErrorInfo UNPROCESSED_STUDENTS    = new ErrorInfo("trip.unprocessedStudents",   "Cannot complete trip: some students are still unprocessed (PLANNED).",        HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo CANNOT_SKIP_TERMINAL    = new ErrorInfo("trip.cannotSkipTerminal",    "Terminal depot/school stops cannot be skipped.",                              HttpStatus.BAD_REQUEST);
         private Trip() {}
     }
 

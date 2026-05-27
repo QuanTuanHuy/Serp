@@ -11,6 +11,7 @@ import {
   useUpdateTransportRequestMutation,
 } from '../api/schoolBusApi';
 import { TransportRequestForm } from '../components/SchoolBusWorkflowForms';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import type { SchoolBusTransportRequestUpsertRequest } from '../types';
@@ -61,11 +62,22 @@ export function SchoolBusRequestFormPage({
     }
   };
 
+  const breadcrumb = (
+    <SchoolBusBreadcrumb
+      items={[
+        { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+        { label: 'Requests', href: '/school-bus/requests' },
+        { label: isEditMode ? `Edit #${requestId}` : 'New request', current: true },
+      ]}
+    />
+  );
+
   if (isEditMode && loadingRequest) {
     return (
       <SchoolBusPageShell
         title='Edit transport request'
         description='Loading request details...'
+        breadcrumb={breadcrumb}
       >
         <SchoolBusEmptyState
           title='Loading request'
@@ -79,6 +91,7 @@ export function SchoolBusRequestFormPage({
     <SchoolBusPageShell
       title={isEditMode ? 'Edit transport request' : 'Create transport request'}
       description='Capture transport demand with effective dates, a parent profile, and the student list to be served.'
+      breadcrumb={breadcrumb}
     >
       <TransportRequestForm
         initialData={requestData?.data}

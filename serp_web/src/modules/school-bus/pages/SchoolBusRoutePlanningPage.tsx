@@ -492,20 +492,22 @@ export default function SchoolBusRoutePlanningPage() {
               />
             </div>
 
-            {hasMapData ? (
-              <PlanningMap
-                school={school}
-                pickupPoints={mapPickupPoints}
-                selectedRouteStops={selectedRouteStops}
-                selectedRoutePath={selectedRoutePath}
-                depots={depots}
-                fitTarget={fitTarget}
-                fitKey={fitKey}
-                isMapExpanded={false}
-                className='h-full w-full'
-              />
-            ) : (
-              <MapEmptyState step={mapEmptyStep} />
+            {/* Map is always rendered so Leaflet initialises; empty-state overlays when no data yet */}
+            <PlanningMap
+              school={school}
+              pickupPoints={mapPickupPoints}
+              selectedRouteStops={selectedRouteStops}
+              selectedRoutePath={selectedRoutePath}
+              depots={depots}
+              fitTarget={fitTarget}
+              fitKey={fitKey}
+              isMapExpanded={false}
+              className='h-full w-full'
+            />
+            {!hasMapData && (
+              <div className='absolute inset-0 z-[500]'>
+                <MapEmptyState step={mapEmptyStep} />
+              </div>
             )}
           </div>
         </div>

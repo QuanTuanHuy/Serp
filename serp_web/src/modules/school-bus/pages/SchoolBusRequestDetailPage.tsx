@@ -16,6 +16,7 @@ import { SchoolBusTimeline, mapRequestHistoryToTimeline } from '../components/hi
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
@@ -87,6 +88,15 @@ export function SchoolBusRequestDetailPage({
       <SchoolBusPageShell
         title='Transport request detail'
         description='Loading transport request...'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Requests', href: '/school-bus/requests' },
+              { label: 'Detail', current: true },
+            ]}
+          />
+        }
       >
         <SchoolBusEmptyState
           title='Loading request detail'
@@ -103,6 +113,15 @@ export function SchoolBusRequestDetailPage({
       <SchoolBusPageShell
         title={`Transport request #${request.id}`}
         description='Inspect the full request payload, review the student list, and take approval actions.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Requests', href: '/school-bus/requests' },
+              { label: `#${request.id} — ${request.parentProfileName ?? 'Request'}`, current: true },
+            ]}
+          />
+        }
         actions={
           <>
             {request.status === 'SUBMITTED' ? (

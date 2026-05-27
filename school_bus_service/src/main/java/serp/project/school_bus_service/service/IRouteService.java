@@ -14,7 +14,6 @@ import serp.project.school_bus_service.dto.request.RoutePlanUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
-import serp.project.school_bus_service.dto.response.RouteAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
@@ -33,8 +32,6 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
     RouteDetailResponse getRoute(Long id, Long tenantId);
 
     RoutePathResponse getRoutePath(Long routeId, Long tenantId);
-
-    RouteAttendanceManifestResponse getAttendanceManifest(Long routeId, Long tenantId);
 
     List<RouteStopResponse> getRouteStops(Long routeId, Long tenantId);
 

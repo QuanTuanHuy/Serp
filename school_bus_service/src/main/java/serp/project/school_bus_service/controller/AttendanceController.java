@@ -1,16 +1,12 @@
 package serp.project.school_bus_service.controller;
 
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
 import serp.project.school_bus_service.dto.params.TripHistoryParamsRequest;
-import serp.project.school_bus_service.dto.request.AttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
@@ -38,18 +34,6 @@ public class AttendanceController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<AttendanceResponse>>> getAttendance(
             @ModelAttribute AttendanceParamsRequest params) {
         return ok("Fetched attendance", attendanceService.getAttendance(params, getCurrentTenantId()));
-    }
-
-    @PostMapping("/check-in")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.check-in')")
-    public ResponseEntity<GeneralResponse<AttendanceResponse>> checkIn(@Valid @RequestBody AttendanceActionRequest request) {
-        return ok("Recorded check-in", attendanceService.checkIn(request, getCurrentTenantId(), getCurrentUserId()));
-    }
-
-    @PostMapping("/check-out")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.check-out')")
-    public ResponseEntity<GeneralResponse<AttendanceResponse>> checkOut(@Valid @RequestBody AttendanceActionRequest request) {
-        return ok("Recorded check-out", attendanceService.checkOut(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/trip-history")

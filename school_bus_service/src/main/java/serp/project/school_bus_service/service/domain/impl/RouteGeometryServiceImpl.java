@@ -47,8 +47,7 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
 
     @Override
     public RoutePathResponse computeAndUpdate(RoutePlanEntity route, List<RouteStopEntity> stops) {
-        boolean hasStart = startLatitude(route) != null && startLongitude(route) != null;
-        List<RoutePathCoordinateResponse> waypoints = collectWaypoints(route, stops);
+        List<RoutePathCoordinateResponse> waypoints = collectWaypoints(stops);
 
         if (waypoints.size() < 2) {
             RoutePathResponse noGeom = noGeometryResponse(route.getId(), waypoints);
@@ -73,7 +72,7 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
         if (result.getDurationMin() != null) {
             route.setPlannedDurationMin(result.getDurationMin());
         }
-        applyLegDistancesToStops(stops, result, hasStart);
+        applyLegDistancesToStops(stops, result);
         return result;
     }
 
@@ -105,16 +104,11 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
     /**
      * Assigns distanceFromPreviousKm and estimatedTravelTimeFromPrevious to each stop from legs.
      *
-     * <p>Leg index mapping:
-     * <pre>
-     * waypoints = [start?, stop[0], stop[1], ..., stop[N-1], end?]
-     * legs[k] = waypoints[k] → waypoints[k+1]
-     * stop[i] is at waypoints[hasStart ? i+1 : i]
-     * incoming leg for stop[i] = legs[hasStart ? i : i-1]
-     * </pre>
+     * <p>With terminal stops modelled as route stops, all waypoints come from stops in stopOrder.
+     * Leg index: legs[i] = stops[i] → stops[i+1], so incoming leg for stop[i] = legs[i-1].
+     * The first stop (order 0, START_TERMINAL) has no incoming leg.
      */
-    private void applyLegDistancesToStops(List<RouteStopEntity> stops,
-                                          RoutePathResponse result, boolean hasStart) {
+    private void applyLegDistancesToStops(List<RouteStopEntity> stops, RoutePathResponse result) {
         List<RoutePathLegInfo> legs = result.getLegs();
         if (legs == null || legs.isEmpty()) {
             clearStopDistances(stops);
@@ -124,7 +118,7 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
                 .sorted(Comparator.comparingInt(RouteStopEntity::getStopOrder))
                 .toList();
         for (int i = 0; i < ordered.size(); i++) {
-            int legIndex = hasStart ? i : i - 1;
+            int legIndex = i - 1; // incoming leg (no incoming leg for first stop)
             RouteStopEntity stop = ordered.get(i);
             if (legIndex >= 0 && legIndex < legs.size()) {
                 RoutePathLegInfo leg = legs.get(legIndex);
@@ -145,15 +139,12 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
         });
     }
 
-    private List<RoutePathCoordinateResponse> collectWaypoints(RoutePlanEntity route, List<RouteStopEntity> stops) {
+    /** Collects waypoints from all route stops ordered by stopOrder (terminals included). */
+    private List<RoutePathCoordinateResponse> collectWaypoints(List<RouteStopEntity> stops) {
         List<RoutePathCoordinateResponse> waypoints = new ArrayList<>();
-        appendCoordinate(waypoints, startLatitude(route), startLongitude(route));
         stops.stream()
                 .sorted(Comparator.comparingInt(RouteStopEntity::getStopOrder))
-                .forEach(stop -> appendCoordinate(waypoints,
-                        stop.getPickupPoint().getLatitude(),
-                        stop.getPickupPoint().getLongitude()));
-        appendCoordinate(waypoints, endLatitude(route), endLongitude(route));
+                .forEach(stop -> appendCoordinate(waypoints, stop.getLatitude(), stop.getLongitude()));
         return waypoints;
     }
 
@@ -161,26 +152,6 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
         if (lat != null && lon != null) {
             target.add(new RoutePathCoordinateResponse(lat, lon));
         }
-    }
-
-    private Double startLatitude(RoutePlanEntity route) {
-        if (route.getStartSchool() != null) return route.getStartSchool().getLatitude();
-        return route.getStartDepot() == null ? null : route.getStartDepot().getLatitude();
-    }
-
-    private Double startLongitude(RoutePlanEntity route) {
-        if (route.getStartSchool() != null) return route.getStartSchool().getLongitude();
-        return route.getStartDepot() == null ? null : route.getStartDepot().getLongitude();
-    }
-
-    private Double endLatitude(RoutePlanEntity route) {
-        if (route.getEndSchool() != null) return route.getEndSchool().getLatitude();
-        return route.getEndDepot() == null ? null : route.getEndDepot().getLatitude();
-    }
-
-    private Double endLongitude(RoutePlanEntity route) {
-        if (route.getEndSchool() != null) return route.getEndSchool().getLongitude();
-        return route.getEndDepot() == null ? null : route.getEndDepot().getLongitude();
     }
 
     private RoutePathResponse noGeometryResponse(Long routeId, List<RoutePathCoordinateResponse> waypoints) {
