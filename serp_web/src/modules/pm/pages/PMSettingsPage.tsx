@@ -5,16 +5,25 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
+import { FormEvent, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  FolderKanban,
-  ListFilter,
-  Settings2,
-  Tag,
+  Bug,
+  CheckSquare,
+  ChevronDown,
+  Copy,
+  Edit,
+  Layers3,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Trash2,
   Workflow,
+  Zap,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/store/api';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import {
   Badge,
   Button,
@@ -22,8 +31,26 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Checkbox,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
+  Label,
   ScrollArea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Skeleton,
   Table,
   TableBody,
@@ -31,474 +58,997 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetPmIssueTypesQuery,
-  useGetPmPrioritiesQuery,
-  useGetPmProjectsQuery,
-  useGetPmStatusesQuery,
+  useCreatePmIssueTypeMutation,
+  useCreatePmIssueTypeSchemeMutation,
+  useDeletePmIssueTypeMutation,
+  useDeletePmIssueTypeSchemeMutation,
+  useGetPmIssueTypeSettingsOverviewQuery,
+  useManagePmIssueTypeSchemeItemsMutation,
+  useUpdatePmIssueTypeMutation,
+  useUpdatePmIssueTypeSchemeMutation,
 } from '../api';
 import type {
-  PMIssueTypeApi,
-  PMPriorityApi,
-  PMProjectSummaryApi,
-  PMStatusApi,
+  PMCreateIssueTypeRequest,
+  PMManageIssueTypeSchemeItemsRequest,
+  PMUpdateIssueTypeRequest,
+  PMWorkTypeSchemeSettingsApi,
+  PMWorkTypeSettingsApi,
 } from '../types/api';
 
-type PMSettingsScope = 'work-items' | 'projects';
-type PMSettingsSection = 'issue-types' | 'statuses' | 'priorities' | 'projects';
+type PMSettingsSection = 'work-types' | 'work-type-schemes';
+type WorkTypeDialogState =
+  | { mode: 'create'; item?: undefined }
+  | { mode: 'edit'; item: PMWorkTypeSettingsApi };
+type SchemeDialogState =
+  | { mode: 'create'; item?: undefined }
+  | { mode: 'edit'; item: PMWorkTypeSchemeSettingsApi };
+type DeleteTarget =
+  | { kind: 'work-type'; item: PMWorkTypeSettingsApi }
+  | { kind: 'scheme'; item: PMWorkTypeSchemeSettingsApi };
 
-type SettingsMenuItem = {
+const SETTINGS_ITEMS: Array<{
   key: PMSettingsSection;
   title: string;
   description: string;
-  icon: typeof Settings2;
   group: string;
-};
-
-const WORK_ITEM_ITEMS: SettingsMenuItem[] = [
+}> = [
   {
-    key: 'issue-types',
+    key: 'work-types',
     title: 'Work types',
-    description: 'Issue type catalog used by project teams.',
-    icon: Tag,
+    description: 'Manage the work item type catalog.',
     group: 'Work types',
   },
   {
-    key: 'statuses',
-    title: 'Statuses',
-    description: 'Status catalog and status category mapping.',
-    icon: Workflow,
-    group: 'Workflows',
-  },
-  {
-    key: 'priorities',
-    title: 'Priorities',
-    description: 'Priority catalog and sort order.',
-    icon: ListFilter,
-    group: 'Priorities',
+    key: 'work-type-schemes',
+    title: 'Work type schemes',
+    description: 'Control which work types are available to projects.',
+    group: 'Work types',
   },
 ];
 
-const PROJECT_ITEMS: SettingsMenuItem[] = [
-  {
-    key: 'projects',
-    title: 'Project directory',
-    description: 'Open project-level settings for each project.',
-    icon: FolderKanban,
-    group: 'Projects',
-  },
+const HIERARCHY_OPTIONS = [
+  { value: 0, label: '0 - Sub-task level' },
+  { value: 1, label: '1 - Standard work item' },
+  { value: 2, label: '2 - Epic level' },
 ];
+
+function includesText(value: string | null | undefined, needle: string) {
+  return value?.toLowerCase().includes(needle) ?? false;
+}
 
 function formatCount(value?: number | null) {
   return typeof value === 'number' ? value.toString() : '-';
 }
 
-function countBy<T>(items: T[], predicate: (item: T) => boolean) {
-  return items.filter(predicate).length;
+function normalizeOptionalText(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function orderedSelectedWorkTypeIds(
+  workTypes: PMWorkTypeSettingsApi[],
+  selectedIds: number[]
+) {
+  const selected = new Set(selectedIds);
+  return workTypes
+    .filter((workType) => selected.has(workType.id))
+    .map((workType) => workType.id);
+}
+
+function WorkTypeGlyph({ workType }: { workType: { typeKey?: string; hierarchyLevel?: number | null } }) {
+  const key = workType.typeKey?.toLowerCase() || '';
+  if (key.includes('bug')) {
+    return <Bug className='h-4 w-4 text-red-500' />;
+  }
+  if (key.includes('epic') || workType.hierarchyLevel === 2) {
+    return <Zap className='h-4 w-4 text-purple-500' />;
+  }
+  if (key.includes('story')) {
+    return <CheckSquare className='h-4 w-4 text-blue-500' />;
+  }
+  return <Copy className='h-4 w-4 text-sky-500' />;
 }
 
 export function PMSettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rawSection = searchParams.get('section') as PMSettingsSection | null;
+  const section = SETTINGS_ITEMS.some((item) => item.key === rawSection)
+    ? rawSection!
+    : 'work-types';
   const [search, setSearch] = useState('');
-  const scope = (searchParams.get('scope') as PMSettingsScope) || 'work-items';
-  const section =
-    (searchParams.get('section') as PMSettingsSection) ||
-    (scope === 'projects' ? 'projects' : 'issue-types');
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const [workTypeDialog, setWorkTypeDialog] =
+    useState<WorkTypeDialogState | null>(null);
+  const [schemeDialog, setSchemeDialog] = useState<SchemeDialogState | null>(
+    null
+  );
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const issueTypesQuery = useGetPmIssueTypesQuery({
-    page: 0,
-    pageSize: 100,
-    sortBy: 'name',
-    sortDirection: 'asc',
-  });
-  const prioritiesQuery = useGetPmPrioritiesQuery({
-    page: 0,
-    pageSize: 100,
-    sortBy: 'sequence',
-    sortDirection: 'asc',
-  });
-  const statusesQuery = useGetPmStatusesQuery({
-    page: 0,
-    pageSize: 100,
-    sortBy: 'name',
-    sortDirection: 'asc',
-  });
-  const projectsQuery = useGetPmProjectsQuery({
-    page: 0,
-    pageSize: 100,
-    sortBy: 'updatedAt',
-    sortDirection: 'desc',
-  });
+  const overviewQuery = useGetPmIssueTypeSettingsOverviewQuery();
+  const [createWorkType, createWorkTypeState] = useCreatePmIssueTypeMutation();
+  const [updateWorkType, updateWorkTypeState] = useUpdatePmIssueTypeMutation();
+  const [deleteWorkType, deleteWorkTypeState] = useDeletePmIssueTypeMutation();
+  const [createScheme, createSchemeState] =
+    useCreatePmIssueTypeSchemeMutation();
+  const [updateScheme, updateSchemeState] =
+    useUpdatePmIssueTypeSchemeMutation();
+  const [manageSchemeItems, manageSchemeItemsState] =
+    useManagePmIssueTypeSchemeItemsMutation();
+  const [deleteScheme, deleteSchemeState] =
+    useDeletePmIssueTypeSchemeMutation();
 
-  const currentMenu = scope === 'projects' ? PROJECT_ITEMS : WORK_ITEM_ITEMS;
-  const activeSection = currentMenu.some((item) => item.key === section)
-    ? section
-    : currentMenu[0].key;
+  const workTypes = overviewQuery.data?.workTypes ?? [];
+  const schemes = overviewQuery.data?.workTypeSchemes ?? [];
 
-  const updateUrl = (updates: Partial<Record<'scope' | 'section', string>>) => {
+  const filteredWorkTypes = useMemo(() => {
+    if (!deferredSearch) {
+      return workTypes;
+    }
+    return workTypes.filter(
+      (workType) =>
+        includesText(workType.name, deferredSearch) ||
+        includesText(workType.typeKey, deferredSearch) ||
+        includesText(workType.description, deferredSearch)
+    );
+  }, [deferredSearch, workTypes]);
+
+  const filteredSchemes = useMemo(() => {
+    if (!deferredSearch) {
+      return schemes;
+    }
+    return schemes.filter(
+      (scheme) =>
+        includesText(scheme.name, deferredSearch) ||
+        includesText(scheme.description, deferredSearch) ||
+        scheme.workTypes.some((workType) =>
+          includesText(workType.name, deferredSearch)
+        ) ||
+        scheme.spaces.some((space) => includesText(space.name, deferredSearch))
+    );
+  }, [deferredSearch, schemes]);
+
+  const stats = useMemo(
+    () => ({
+      workTypes: workTypes.length,
+      customWorkTypes: workTypes.filter((item) => !item.isSystem).length,
+      schemes: schemes.length,
+      boundSchemes: schemes.filter((item) => item.spaces.length > 0).length,
+    }),
+    [schemes, workTypes]
+  );
+
+  const updateSection = (nextSection: PMSettingsSection) => {
     const nextParams = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value) {
-        nextParams.set(key, value);
-      } else {
-        nextParams.delete(key);
-      }
-    });
-    const query = nextParams.toString();
-    router.replace(query ? `/pm/settings?${query}` : '/pm/settings', {
+    nextParams.set('section', nextSection);
+    router.replace(`/pm/settings?${nextParams.toString()}`, {
       scroll: false,
     });
   };
 
-  const filteredMenu = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (!needle) return currentMenu;
-    return currentMenu.filter((item) =>
-      `${item.title} ${item.description} ${item.group}`
-        .toLowerCase()
-        .includes(needle)
-    );
-  }, [currentMenu, search]);
+  const handleWorkTypeSubmit = async (
+    mode: WorkTypeDialogState['mode'],
+    id: number | undefined,
+    values: PMCreateIssueTypeRequest
+  ) => {
+    try {
+      if (mode === 'create') {
+        await createWorkType(values).unwrap();
+        toast.success('Work type created.');
+      } else if (id) {
+        const updateBody: PMUpdateIssueTypeRequest = {
+          name: values.name,
+          description: values.description,
+          iconUrl: values.iconUrl,
+          hierarchyLevel: values.hierarchyLevel,
+        };
+        await updateWorkType({ id, body: updateBody }).unwrap();
+        toast.success('Work type updated.');
+      }
+      setWorkTypeDialog(null);
+    } catch (error) {
+      toast.error('Unable to save work type', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
 
-  const workItemsStats = useMemo(() => {
-    const issueTypes = issueTypesQuery.data?.data.items ?? [];
-    const priorities = prioritiesQuery.data?.data.items ?? [];
-    const statuses = statusesQuery.data?.data.items ?? [];
-
-    return {
-      issueTypesTotal:
-        issueTypesQuery.data?.data.totalItems ?? issueTypes.length,
-      issueTypesSystem: countBy(issueTypes, (item) => item.isSystem),
-      prioritiesTotal:
-        prioritiesQuery.data?.data.totalItems ?? priorities.length,
-      statusesTotal: statusesQuery.data?.data.totalItems ?? statuses.length,
-      statusesSystem: countBy(statuses, (item) => item.isSystem),
-    };
-  }, [
-    issueTypesQuery.data?.data.items,
-    issueTypesQuery.data?.data.totalItems,
-    prioritiesQuery.data?.data.items,
-    prioritiesQuery.data?.data.totalItems,
-    statusesQuery.data?.data.items,
-    statusesQuery.data?.data.totalItems,
-  ]);
-
-  const projectStats = useMemo(() => {
-    const projects = projectsQuery.data?.data.items ?? [];
-    return {
-      total: projectsQuery.data?.data.totalItems ?? projects.length,
-      active: countBy(projects, (item) => !item.isArchived),
-      archived: countBy(projects, (item) => item.isArchived),
-    };
-  }, [projectsQuery.data?.data.items, projectsQuery.data?.data.totalItems]);
-
-  const sectionContent = (() => {
-    if (scope === 'projects') {
-      return {
-        title: 'Project directory',
-        description: 'Open a project-specific settings page from here.',
-        loading: projectsQuery.isLoading,
-        items: projectsQuery.data?.data.items ?? [],
-        total: projectsQuery.data?.data.totalItems ?? 0,
-        headers: ['Name', 'Key', 'Lead', 'Category', 'State', 'Action'],
-        renderRow: (item: PMProjectSummaryApi) => (
-          <>
-            <TableCell className='font-medium'>{item.name}</TableCell>
-            <TableCell>{item.key}</TableCell>
-            <TableCell>
-              {item.leadUserName ||
-                (item.leadUserId ? `User #${item.leadUserId}` : '-')}
-            </TableCell>
-            <TableCell>{item.categoryName || '-'}</TableCell>
-            <TableCell>
-              <Badge variant={item.isArchived ? 'secondary' : 'outline'}>
-                {item.isArchived ? 'Archived' : 'Active'}
-              </Badge>
-            </TableCell>
-            <TableCell className='text-right'>
-              <Button type='button' variant='outline' size='sm' asChild>
-                <Link href={`/pm/projects/${item.id}/settings`}>
-                  Open settings
-                </Link>
-              </Button>
-            </TableCell>
-          </>
-        ),
-      };
+  const handleSchemeSubmit = async (
+    mode: SchemeDialogState['mode'],
+    id: number | undefined,
+    values: {
+      name: string;
+      description: string | null;
+      defaultIssueTypeId: number;
+      issueTypeIds: number[];
+    }
+  ) => {
+    if (!values.issueTypeIds.includes(values.defaultIssueTypeId)) {
+      toast.error('Default work type must be included in the scheme.');
+      return;
     }
 
-    if (activeSection === 'priorities') {
-      const items = prioritiesQuery.data?.data.items ?? [];
-      return {
-        title: 'Priorities',
-        description:
-          'Manage the priority catalog used in project boards and lists.',
-        loading: prioritiesQuery.isLoading,
-        items,
-        total: prioritiesQuery.data?.data.totalItems ?? 0,
-        headers: ['Name', 'Key', 'Color', 'Rank', 'Type', 'Action'],
-        renderRow: (item: PMPriorityApi) => (
-          <>
-            <TableCell className='font-medium'>{item.name}</TableCell>
-            <TableCell>{item.priorityKey}</TableCell>
-            <TableCell>{item.color || '-'}</TableCell>
-            <TableCell>{formatCount(item.sequence)}</TableCell>
-            <TableCell>{item.isSystem ? 'System' : 'Custom'}</TableCell>
-            <TableCell />
-          </>
-        ),
+    try {
+      const itemBody: PMManageIssueTypeSchemeItemsRequest = {
+        issueTypeIds: orderedSelectedWorkTypeIds(workTypes, values.issueTypeIds),
       };
+
+      if (mode === 'create') {
+        const created = await createScheme({
+          name: values.name,
+          description: values.description,
+          defaultIssueTypeId: values.defaultIssueTypeId,
+        }).unwrap();
+        await manageSchemeItems({ id: created.id, body: itemBody }).unwrap();
+        toast.success('Work type scheme created.');
+      } else if (id) {
+        await updateScheme({
+          id,
+          body: {
+            name: values.name,
+            description: values.description,
+            defaultIssueTypeId: values.defaultIssueTypeId,
+          },
+        }).unwrap();
+        await manageSchemeItems({ id, body: itemBody }).unwrap();
+        toast.success('Work type scheme updated.');
+      }
+      setSchemeDialog(null);
+    } catch (error) {
+      toast.error('Unable to save work type scheme', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
     }
 
-    if (activeSection === 'statuses') {
-      const items = statusesQuery.data?.data.items ?? [];
-      return {
-        title: 'Statuses',
-        description: 'Manage status labels and status category mapping.',
-        loading: statusesQuery.isLoading,
-        items,
-        total: statusesQuery.data?.data.totalItems ?? 0,
-        headers: ['Name', 'Key', 'Category', 'Status', 'Type', 'Action'],
-        renderRow: (item: PMStatusApi) => (
-          <>
-            <TableCell className='font-medium'>{item.name}</TableCell>
-            <TableCell>{item.statusKey}</TableCell>
-            <TableCell>{formatCount(item.statusCategoryId)}</TableCell>
-            <TableCell>{item.readOnly ? 'Read only' : 'Editable'}</TableCell>
-            <TableCell>{item.isSystem ? 'System' : 'Custom'}</TableCell>
-            <TableCell />
-          </>
-        ),
-      };
+    try {
+      if (deleteTarget.kind === 'work-type') {
+        await deleteWorkType(deleteTarget.item.id).unwrap();
+        toast.success('Work type deleted.');
+      } else {
+        await deleteScheme(deleteTarget.item.id).unwrap();
+        toast.success('Work type scheme deleted.');
+      }
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error('Unable to delete record', {
+        description: getErrorMessage(error),
+      });
     }
+  };
 
-    const items = issueTypesQuery.data?.data.items ?? [];
-    return {
-      title: 'Work types',
-      description:
-        'Manage issue types used by projects and work item creation.',
-      loading: issueTypesQuery.isLoading,
-      items,
-      total: issueTypesQuery.data?.data.totalItems ?? 0,
-      headers: ['Name', 'Key', 'Hierarchy', 'Status', 'Type', 'Action'],
-      renderRow: (item: PMIssueTypeApi) => (
-        <>
-          <TableCell className='font-medium'>{item.name}</TableCell>
-          <TableCell>{item.typeKey}</TableCell>
-          <TableCell>{formatCount(item.hierarchyLevel)}</TableCell>
-          <TableCell>{item.readOnly ? 'Read only' : 'Editable'}</TableCell>
-          <TableCell>{item.isSystem ? 'System' : 'Custom'}</TableCell>
-          <TableCell />
-        </>
-      ),
-    };
-  })();
+  const isDeleting =
+    deleteWorkTypeState.isLoading || deleteSchemeState.isLoading;
+  const isSchemeSaving =
+    createSchemeState.isLoading ||
+    updateSchemeState.isLoading ||
+    manageSchemeItemsState.isLoading;
+  const activeItems = section === 'work-types' ? filteredWorkTypes : filteredSchemes;
 
   return (
-    <div className='grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]'>
+    <div className='grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]'>
       <aside className='space-y-4'>
-        <div className='flex items-center gap-2'>
-          <Button
-            type='button'
-            variant={scope === 'work-items' ? 'default' : 'outline'}
-            className='justify-start gap-2'
-            onClick={() =>
-              updateUrl({
-                scope: 'work-items',
-                section: 'issue-types',
-              })
-            }
-          >
-            <Tag className='h-4 w-4' />
-            Work items
-          </Button>
-          <Button
-            type='button'
-            variant={scope === 'projects' ? 'default' : 'outline'}
-            className='justify-start gap-2'
-            onClick={() =>
-              updateUrl({
-                scope: 'projects',
-                section: 'projects',
-              })
-            }
-          >
-            <FolderKanban className='h-4 w-4' />
-            Projects
-          </Button>
-        </div>
-
         <Card className='border-border/60 bg-background/90 shadow-sm'>
           <CardHeader className='border-b py-4'>
             <CardTitle className='text-sm'>Switch settings</CardTitle>
           </CardHeader>
           <CardContent className='p-2'>
-            <ScrollArea className='h-[calc(100vh-14rem)] pr-2'>
-              <div className='space-y-4 p-1'>
-                <div className='relative'>
-                  <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder='Search settings'
-                    className='pl-3'
-                  />
-                </div>
+            <div className='space-y-3 p-1'>
+              <Button
+                type='button'
+                variant='outline'
+                className='w-full justify-between'
+              >
+                <span className='flex items-center gap-2'>
+                  <Layers3 className='h-4 w-4' />
+                  Work items
+                </span>
+                <ChevronDown className='h-4 w-4 text-muted-foreground' />
+              </Button>
 
-                {filteredMenu.map((item) => {
-                  const Icon = item.icon;
-                  const active = item.key === activeSection;
+              <div className='space-y-2'>
+                <p className='px-2 text-xs font-semibold uppercase text-muted-foreground'>
+                  Work types
+                </p>
+                {SETTINGS_ITEMS.map((item) => {
+                  const active = item.key === section;
                   return (
-                    <div key={item.key} className='space-y-2'>
-                      <p className='px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-                        {item.group}
-                      </p>
-                      <button
-                        type='button'
-                        onClick={() => updateUrl({ section: item.key })}
-                        className={cn(
-                          'flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted',
-                          active && 'bg-primary/10 text-primary'
-                        )}
-                      >
-                        <Icon className='mt-0.5 h-4 w-4 shrink-0' />
-                        <span className='min-w-0'>
-                          <span className='block text-sm font-medium'>
-                            {item.title}
-                          </span>
-                          <span className='block text-xs text-muted-foreground'>
-                            {item.description}
-                          </span>
+                    <button
+                      key={item.key}
+                      type='button'
+                      onClick={() => updateSection(item.key)}
+                      className={cn(
+                        'flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted',
+                        active && 'bg-primary/10 text-primary'
+                      )}
+                    >
+                      <Workflow className='mt-0.5 h-4 w-4 shrink-0' />
+                      <span className='min-w-0'>
+                        <span className='block text-sm font-medium'>
+                          {item.title}
                         </span>
-                      </button>
-                    </div>
+                        <span className='block text-xs text-muted-foreground'>
+                          {item.description}
+                        </span>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       </aside>
 
       <main className='space-y-4'>
+        <div className='flex flex-col gap-3 border-b border-border/60 pb-4 md:flex-row md:items-start md:justify-between'>
+          <div className='space-y-1'>
+            <h1 className='text-2xl font-semibold tracking-tight'>
+              {section === 'work-types'
+                ? 'Work types'
+                : 'Work type schemes'}
+            </h1>
+            <p className='text-sm text-muted-foreground'>
+              {section === 'work-types'
+                ? 'Structure the work items that teams can create and track.'
+                : 'Choose which work types are available to each project space.'}
+            </p>
+          </div>
+          <Button
+            type='button'
+            onClick={() =>
+              section === 'work-types'
+                ? setWorkTypeDialog({ mode: 'create' })
+                : setSchemeDialog({ mode: 'create' })
+            }
+          >
+            <Plus className='mr-2 h-4 w-4' />
+            {section === 'work-types'
+              ? 'Add work type'
+              : 'Add work type scheme'}
+          </Button>
+        </div>
+
+        <div className='grid gap-3 md:grid-cols-4'>
+          <MiniStat title='Work types' value={stats.workTypes} />
+          <MiniStat title='Custom types' value={stats.customWorkTypes} />
+          <MiniStat title='Schemes' value={stats.schemes} />
+          <MiniStat title='Bound schemes' value={stats.boundSchemes} />
+        </div>
+
         <Card className='border-border/60 bg-background/90 shadow-sm'>
-          <CardHeader className='flex flex-row items-center justify-between gap-3 border-b py-4'>
-            <div className='space-y-1'>
-              <CardTitle className='text-base'>
-                {sectionContent.title}
-              </CardTitle>
-              <p className='text-sm text-muted-foreground'>
-                {sectionContent.description}
-              </p>
+          <CardHeader className='flex flex-col gap-3 border-b py-4 md:flex-row md:items-center md:justify-between'>
+            <div className='relative w-full md:max-w-sm'>
+              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={
+                  section === 'work-types'
+                    ? 'Filter work types'
+                    : 'Filter work type schemes'
+                }
+                className='pl-9'
+              />
             </div>
-            <Badge variant='secondary'>
-              {scope === 'projects'
-                ? `${projectStats.total} projects`
-                : `${sectionContent.total} records`}
-            </Badge>
+            <Badge variant='secondary'>{activeItems.length} shown</Badge>
           </CardHeader>
-
-          <CardContent className='space-y-4 p-4'>
-            {scope === 'work-items' ? (
-              <div className='grid gap-4 md:grid-cols-3'>
-                <MiniStat
-                  title='Work types'
-                  value={workItemsStats.issueTypesTotal}
-                  detail={`${workItemsStats.issueTypesSystem} system`}
-                />
-                <MiniStat
-                  title='Statuses'
-                  value={workItemsStats.statusesTotal}
-                  detail={`${workItemsStats.statusesSystem} system`}
-                />
-                <MiniStat
-                  title='Priorities'
-                  value={workItemsStats.prioritiesTotal}
-                  detail='Catalog entries'
-                />
-              </div>
-            ) : (
-              <div className='grid gap-4 md:grid-cols-3'>
-                <MiniStat
-                  title='Projects'
-                  value={projectStats.total}
-                  detail='Total projects'
-                />
-                <MiniStat
-                  title='Active'
-                  value={projectStats.active}
-                  detail='Open projects'
-                />
-                <MiniStat
-                  title='Archived'
-                  value={projectStats.archived}
-                  detail='Closed projects'
-                />
-              </div>
-            )}
-
-            {sectionContent.loading ? (
-              <div className='space-y-3'>
+          <CardContent className='p-0'>
+            {overviewQuery.isLoading ? (
+              <div className='space-y-3 p-4'>
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <Skeleton key={index} className='h-10 rounded-md' />
+                  <Skeleton key={index} className='h-12 rounded-md' />
                 ))}
               </div>
-            ) : sectionContent.items.length === 0 ? (
-              <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
-                No records available.
+            ) : overviewQuery.error ? (
+              <div className='p-6 text-sm text-muted-foreground'>
+                Unable to load PM settings: {getErrorMessage(overviewQuery.error)}
               </div>
+            ) : section === 'work-types' ? (
+              <WorkTypesTable
+                workTypes={filteredWorkTypes}
+                onEdit={(item) => setWorkTypeDialog({ mode: 'edit', item })}
+                onDelete={(item) => setDeleteTarget({ kind: 'work-type', item })}
+              />
             ) : (
-              <div className='overflow-hidden rounded-lg border'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {sectionContent.headers.map((header) => (
-                        <TableHead
-                          key={header}
-                          className={
-                            header === 'Action' ? 'text-right' : undefined
-                          }
-                        >
-                          {header}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sectionContent.items.map((item) => (
-                      <TableRow key={item.id}>
-                        {sectionContent.renderRow(item as never)}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <WorkTypeSchemesTable
+                schemes={filteredSchemes}
+                onEdit={(item) => setSchemeDialog({ mode: 'edit', item })}
+                onDelete={(item) => setDeleteTarget({ kind: 'scheme', item })}
+              />
             )}
           </CardContent>
         </Card>
       </main>
+
+      <WorkTypeDialog
+        state={workTypeDialog}
+        isSubmitting={createWorkTypeState.isLoading || updateWorkTypeState.isLoading}
+        onOpenChange={(open) => !open && setWorkTypeDialog(null)}
+        onSubmit={handleWorkTypeSubmit}
+      />
+      <SchemeDialog
+        state={schemeDialog}
+        workTypes={workTypes}
+        isSubmitting={isSchemeSaving}
+        onOpenChange={(open) => !open && setSchemeDialog(null)}
+        onSubmit={handleSchemeSubmit}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title='Delete PM setting'
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.item.name}"? This may fail if it is still used by projects or work items.`
+            : undefined
+        }
+        confirmText='Delete'
+        variant='destructive'
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
 
-function MiniStat({
-  title,
-  value,
-  detail,
+function WorkTypesTable({
+  workTypes,
+  onEdit,
+  onDelete,
 }: {
-  title: string;
-  value: number;
-  detail: string;
+  workTypes: PMWorkTypeSettingsApi[];
+  onEdit: (item: PMWorkTypeSettingsApi) => void;
+  onDelete: (item: PMWorkTypeSettingsApi) => void;
+}) {
+  if (workTypes.length === 0) {
+    return <EmptyState message='No work types match the current filter.' />;
+  }
+
+  return (
+    <div className='overflow-x-auto'>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Hierarchy level</TableHead>
+            <TableHead>Related schemes</TableHead>
+            <TableHead className='text-right'>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workTypes.map((workType) => (
+            <TableRow key={workType.id}>
+              <TableCell>
+                <div className='flex min-w-64 items-start gap-2'>
+                  <WorkTypeGlyph workType={workType} />
+                  <div className='min-w-0'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <span className='font-medium'>{workType.name}</span>
+                      {workType.isSystem && (
+                        <Badge variant='outline'>System</Badge>
+                      )}
+                    </div>
+                    <p className='mt-0.5 text-xs text-muted-foreground'>
+                      {workType.description || workType.typeKey}
+                    </p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{formatCount(workType.hierarchyLevel)}</TableCell>
+              <TableCell>
+                <RelatedSchemeList schemes={workType.relatedSchemes} />
+              </TableCell>
+              <TableCell className='text-right'>
+                <RowActionMenu
+                  readOnly={workType.readOnly}
+                  onEdit={() => onEdit(workType)}
+                  onDelete={() => onDelete(workType)}
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function WorkTypeSchemesTable({
+  schemes,
+  onEdit,
+  onDelete,
+}: {
+  schemes: PMWorkTypeSchemeSettingsApi[];
+  onEdit: (item: PMWorkTypeSchemeSettingsApi) => void;
+  onDelete: (item: PMWorkTypeSchemeSettingsApi) => void;
+}) {
+  if (schemes.length === 0) {
+    return (
+      <EmptyState message='No work type schemes match the current filter.' />
+    );
+  }
+
+  return (
+    <div className='overflow-x-auto'>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Options</TableHead>
+            <TableHead>Spaces</TableHead>
+            <TableHead className='text-right'>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {schemes.map((scheme) => (
+            <TableRow key={scheme.id}>
+              <TableCell>
+                <div className='min-w-72'>
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <span className='font-medium'>{scheme.name}</span>
+                    {scheme.isSystem && <Badge variant='outline'>System</Badge>}
+                  </div>
+                  <p className='mt-0.5 text-xs text-muted-foreground'>
+                    {scheme.description || 'No description.'}
+                  </p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className='space-y-1'>
+                  {scheme.workTypes.map((workType) => (
+                    <div key={workType.id} className='flex items-center gap-2'>
+                      <WorkTypeGlyph workType={workType} />
+                      <span className='text-sm'>{workType.name}</span>
+                      {workType.isDefault && (
+                        <Badge variant='secondary'>Default</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className='space-y-1'>
+                  {scheme.spaces.length === 0 ? (
+                    <span className='text-sm text-muted-foreground'>-</span>
+                  ) : (
+                    scheme.spaces.map((space) => (
+                      <Badge key={space.id} variant='outline'>
+                        {space.key} {space.name}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className='text-right'>
+                <RowActionMenu
+                  readOnly={scheme.readOnly}
+                  onEdit={() => onEdit(scheme)}
+                  onDelete={() => onDelete(scheme)}
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function RelatedSchemeList({
+  schemes,
+}: {
+  schemes: PMWorkTypeSettingsApi['relatedSchemes'];
+}) {
+  if (schemes.length === 0) {
+    return <span className='text-sm text-muted-foreground'>-</span>;
+  }
+
+  return (
+    <div className='flex flex-wrap gap-1.5'>
+      {schemes.map((scheme) => (
+        <Badge key={scheme.id} variant='outline'>
+          {scheme.name}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function RowActionMenu({
+  readOnly,
+  onEdit,
+  onDelete,
+}: {
+  readOnly: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type='button' variant='ghost' size='sm'>
+          <MoreHorizontal className='h-4 w-4' />
+          <span className='sr-only'>Open actions</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem disabled={readOnly} onClick={onEdit}>
+          <Edit className='mr-2 h-4 w-4' />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={readOnly}
+          variant='destructive'
+          onClick={onDelete}
+        >
+          <Trash2 className='mr-2 h-4 w-4' />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function WorkTypeDialog({
+  state,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  state: WorkTypeDialogState | null;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    mode: WorkTypeDialogState['mode'],
+    id: number | undefined,
+    values: PMCreateIssueTypeRequest
+  ) => Promise<void>;
+}) {
+  const [typeKey, setTypeKey] = useState('');
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [iconUrl, setIconUrl] = useState('');
+  const [hierarchyLevel, setHierarchyLevel] = useState('1');
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+    setTypeKey(state.item?.typeKey ?? '');
+    setName(state.item?.name ?? '');
+    setDescription(state.item?.description ?? '');
+    setIconUrl(state.item?.iconUrl ?? '');
+    setHierarchyLevel(String(state.item?.hierarchyLevel ?? 1));
+  }, [state]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!state) {
+      return;
+    }
+    const cleanName = name.trim();
+    const cleanTypeKey = typeKey.trim();
+    if (!cleanName || (state.mode === 'create' && !cleanTypeKey)) {
+      toast.error('Work type key and name are required.');
+      return;
+    }
+
+    await onSubmit(state.mode, state.item?.id, {
+      typeKey: cleanTypeKey,
+      name: cleanName,
+      description: normalizeOptionalText(description),
+      iconUrl: normalizeOptionalText(iconUrl),
+      hierarchyLevel: Number(hierarchyLevel),
+    });
+  };
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <DialogHeader>
+            <DialogTitle>
+              {state?.mode === 'edit' ? 'Edit work type' : 'Add work type'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure the catalog item that teams use when creating work.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='work-type-key'>Key</Label>
+              <Input
+                id='work-type-key'
+                value={typeKey}
+                onChange={(event) => setTypeKey(event.target.value)}
+                disabled={state?.mode === 'edit'}
+                placeholder='task'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='work-type-name'>Name</Label>
+              <Input
+                id='work-type-name'
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder='Task'
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='work-type-description'>Description</Label>
+              <Textarea
+                id='work-type-description'
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='work-type-icon'>Icon URL</Label>
+                <Input
+                  id='work-type-icon'
+                  value={iconUrl}
+                  onChange={(event) => setIconUrl(event.target.value)}
+                  placeholder='https://...'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label>Hierarchy level</Label>
+                <Select value={hierarchyLevel} onValueChange={setHierarchyLevel}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HIERARCHY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type='submit' disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SchemeDialog({
+  state,
+  workTypes,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  state: SchemeDialogState | null;
+  workTypes: PMWorkTypeSettingsApi[];
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    mode: SchemeDialogState['mode'],
+    id: number | undefined,
+    values: {
+      name: string;
+      description: string | null;
+      defaultIssueTypeId: number;
+      issueTypeIds: number[];
+    }
+  ) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [defaultIssueTypeId, setDefaultIssueTypeId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+    const initialIds =
+      state.mode === 'edit'
+        ? state.item.workTypes.map((workType) => workType.id)
+        : workTypes.slice(0, 1).map((workType) => workType.id);
+    const initialDefault =
+      state.mode === 'edit'
+        ? state.item.defaultIssueTypeId
+        : initialIds[0] ?? workTypes[0]?.id;
+
+    setName(state.item?.name ?? '');
+    setDescription(state.item?.description ?? '');
+    setSelectedIds(initialIds);
+    setDefaultIssueTypeId(initialDefault ? String(initialDefault) : '');
+  }, [state, workTypes]);
+
+  const toggleWorkType = (id: number, checked: boolean) => {
+    setSelectedIds((current) => {
+      if (checked) {
+        return current.includes(id) ? current : [...current, id];
+      }
+      return current.filter((currentId) => currentId !== id);
+    });
+    if (!checked && defaultIssueTypeId === String(id)) {
+      setDefaultIssueTypeId('');
+    }
+  };
+
+  const handleDefaultChange = (value: string) => {
+    const id = Number(value);
+    setDefaultIssueTypeId(value);
+    setSelectedIds((current) => (current.includes(id) ? current : [...current, id]));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!state) {
+      return;
+    }
+    const cleanName = name.trim();
+    const defaultId = Number(defaultIssueTypeId);
+    if (!cleanName || !Number.isFinite(defaultId) || selectedIds.length === 0) {
+      toast.error('Name, default work type, and at least one option are required.');
+      return;
+    }
+
+    await onSubmit(state.mode, state.item?.id, {
+      name: cleanName,
+      description: normalizeOptionalText(description),
+      defaultIssueTypeId: defaultId,
+      issueTypeIds: selectedIds,
+    });
+  };
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent className='sm:max-w-2xl'>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <DialogHeader>
+            <DialogTitle>
+              {state?.mode === 'edit'
+                ? 'Edit work type scheme'
+                : 'Add work type scheme'}
+            </DialogTitle>
+            <DialogDescription>
+              Select the work types available to projects using this scheme.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-4'>
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='scheme-name'>Name</Label>
+                <Input
+                  id='scheme-name'
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label>Default work type</Label>
+                <Select
+                  value={defaultIssueTypeId}
+                  onValueChange={handleDefaultChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select default' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workTypes.map((workType) => (
+                      <SelectItem key={workType.id} value={String(workType.id)}>
+                        {workType.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='scheme-description'>Description</Label>
+              <Textarea
+                id='scheme-description'
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Options</Label>
+              <ScrollArea className='h-56 rounded-md border'>
+                <div className='divide-y'>
+                  {workTypes.map((workType) => {
+                    const checked = selectedIds.includes(workType.id);
+                    return (
+                      <label
+                        key={workType.id}
+                        className='flex cursor-pointer items-start gap-3 px-3 py-2'
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            toggleWorkType(workType.id, value === true)
+                          }
+                        />
+                        <span className='flex min-w-0 items-start gap-2'>
+                          <WorkTypeGlyph workType={workType} />
+                          <span className='min-w-0'>
+                            <span className='block text-sm font-medium'>
+                              {workType.name}
+                            </span>
+                            <span className='block text-xs text-muted-foreground'>
+                              {workType.description || workType.typeKey}
+                            </span>
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type='submit' disabled={isSubmitting || workTypes.length === 0}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MiniStat({ title, value }: { title: string; value: number }) {
+  return (
     <div className='rounded-md border bg-muted/20 px-3 py-3'>
-      <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
+      <p className='text-xs font-medium uppercase text-muted-foreground'>
         {title}
       </p>
       <div className='mt-1 text-2xl font-semibold'>{value}</div>
-      <p className='mt-1 text-sm text-muted-foreground'>{detail}</p>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className='p-6 text-sm text-muted-foreground'>
+      {message}
     </div>
   );
 }

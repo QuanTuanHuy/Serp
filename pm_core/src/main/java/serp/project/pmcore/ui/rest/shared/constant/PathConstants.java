@@ -21,6 +21,7 @@ public class PathConstants {
     public static final String PROJECT_ROLE_ACTORS = PROJECTS + "/{projectId}/roles/{roleId}/actors";
     public static final String ISSUE_LINK_TYPES = API_BASE_PATH + "/issue-link-types";
     public static final String ISSUE_TYPES = API_BASE_PATH + "/issue-types";
+    public static final String ISSUE_TYPE_SETTINGS = API_BASE_PATH + "/issue-type-settings";
     public static final String RESOLUTIONS = API_BASE_PATH + "/resolutions";
     public static final String ISSUE_TYPE_SCHEMES = API_BASE_PATH + "/issue-type-schemes";
     public static final String PRIORITIES = API_BASE_PATH + "/priorities";

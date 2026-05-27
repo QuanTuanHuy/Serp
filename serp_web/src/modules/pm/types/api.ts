@@ -5,4 +5,5 @@
 
 export type * from './project-api.types';
 export type * from './optimization.types';
+export type * from './settings-api.types';
 export type * from './work-item-api.types';

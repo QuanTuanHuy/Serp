@@ -45,6 +45,17 @@ export {
   useGetPmOptimizationRunQuery,
   useUpdatePmOptimizationRunItemDecisionMutation,
 } from './optimizationApi';
+export {
+  pmSettingsApi,
+  useCreatePmIssueTypeMutation,
+  useCreatePmIssueTypeSchemeMutation,
+  useDeletePmIssueTypeMutation,
+  useDeletePmIssueTypeSchemeMutation,
+  useGetPmIssueTypeSettingsOverviewQuery,
+  useManagePmIssueTypeSchemeItemsMutation,
+  useUpdatePmIssueTypeMutation,
+  useUpdatePmIssueTypeSchemeMutation,
+} from './settingsApi';
 export type {
   PMCreateProjectRequest,
   PMCreateProjectComponentRequest,
@@ -56,6 +67,7 @@ export type {
   PMGetWorkItemBoardParams,
   PMGetWorkItemTimelineParams,
   PMIssueTypeApi,
+  PMIssueTypeSettingsOverviewApi,
   PMListProjectComponentsParams,
   PMListProjectsParams,
   PMOptimizationApplyStatus,
@@ -96,4 +108,8 @@ export type {
   PMWorkItemTimelinePriorityApi,
   PMWorkItemTimelineResponse,
   PMWorkItemTimelineStatusApi,
+  PMWorkTypeProjectRefApi,
+  PMWorkTypeSchemeRefApi,
+  PMWorkTypeSchemeSettingsApi,
+  PMWorkTypeSettingsApi,
 } from '../types/api';
