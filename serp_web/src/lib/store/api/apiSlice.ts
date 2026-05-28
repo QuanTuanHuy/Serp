@@ -261,6 +261,7 @@ export const api = createApi({
     'pm/PriorityScheme',
     'pm/PrioritySettings',
     'pm/Workflow',
+    'pm/WorkflowEditor',
     'pm/WorkflowScheme',
     'pm/WorkflowSettings',
     'pm/WorkItem',

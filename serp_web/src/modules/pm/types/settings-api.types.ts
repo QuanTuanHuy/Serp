@@ -127,6 +127,7 @@ export interface PMPrioritySettingsOverviewApi {
 }
 
 export type PMWorkflowLifecycleStateApi = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+export type PMWorkflowVersionStateApi = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface PMWorkflowSchemeRefApi {
   id: number;
@@ -207,6 +208,58 @@ export interface PMWorkflowSchemeSettingsApi {
 export interface PMWorkflowSettingsOverviewApi {
   workflows: PMWorkflowSettingsApi[];
   workflowSchemes: PMWorkflowSchemeSettingsApi[];
+}
+
+export interface PMWorkflowStepApi {
+  id: number;
+  tenantId: number;
+  workflowVersionId: number;
+  stepKey: string;
+  name: string;
+  statusId: number;
+  stepOrder?: number | null;
+  isInitial: boolean;
+  isTerminal: boolean;
+  createdAt?: number | string;
+  createdBy?: number;
+  updatedAt?: number | string;
+  updatedBy?: number;
+}
+
+export interface PMWorkflowTransitionApi {
+  id: number;
+  tenantId: number;
+  workflowVersionId: number;
+  name: string;
+  fromStepId?: number | null;
+  toStepId: number;
+  screenId?: number | null;
+  sequence?: number | null;
+  createdAt?: number | string;
+  createdBy?: number;
+  updatedAt?: number | string;
+  updatedBy?: number;
+}
+
+export interface PMWorkflowEditorApi {
+  workflow: PMWorkflowOptionApi;
+  versionId?: number | null;
+  versionState: PMWorkflowVersionStateApi;
+  editable: boolean;
+  steps: PMWorkflowStepApi[];
+  transitions: PMWorkflowTransitionApi[];
+}
+
+export interface PMWorkflowValidationFindingApi {
+  ruleKey: string;
+  severity: string;
+  message: string;
+}
+
+export interface PMWorkflowValidationApi {
+  valid: boolean;
+  errors: PMWorkflowValidationFindingApi[];
+  warnings: PMWorkflowValidationFindingApi[];
 }
 
 export interface PMCreateIssueTypeRequest {
@@ -330,6 +383,44 @@ export interface PMManageWorkflowSchemeItemsRequest {
 }
 
 export interface PMDeleteWorkflowSchemeResponse {
+  id: number;
+  deleted: boolean;
+  deletedAt?: number | string | null;
+  updatedBy?: number | null;
+}
+
+export interface PMAddWorkflowStepRequest {
+  statusId: number;
+  isInitial?: boolean;
+  isTerminal?: boolean;
+}
+
+export interface PMReorderWorkflowStepsRequest {
+  stepIds: number[];
+}
+
+export interface PMAddWorkflowTransitionRequest {
+  name: string;
+  fromStepId?: number | null;
+  toStepId: number;
+  screenId?: number | null;
+  sequence?: number | null;
+}
+
+export interface PMUpdateWorkflowTransitionRequest {
+  name: string;
+  screenId?: number | null;
+  sequence?: number | null;
+}
+
+export interface PMDeleteWorkflowStepResponse {
+  id: number;
+  deleted: boolean;
+  deletedAt?: number | string | null;
+  updatedBy?: number | null;
+}
+
+export interface PMDeleteWorkflowTransitionResponse {
   id: number;
   deleted: boolean;
   deletedAt?: number | string | null;

@@ -718,6 +718,13 @@ export function PMSettingsPage() {
     (item: PMWorkflowSettingsApi) => setWorkflowDialog({ mode: 'edit', item }),
     []
   );
+
+  const handleOpenWorkflowEditor = useCallback(
+    (item: PMWorkflowSettingsApi) => {
+      router.push(`/pm/settings/workflows/${item.id}`);
+    },
+    [router]
+  );
   const handleEditWorkflowScheme = useCallback(
     (item: PMWorkflowSchemeSettingsApi) =>
       setWorkflowSchemeDialog({ mode: 'edit', item }),
@@ -924,6 +931,7 @@ export function PMSettingsPage() {
               <WorkflowsTable
                 workflows={filteredWorkflows}
                 onEdit={handleEditWorkflow}
+                onOpenEditor={handleOpenWorkflowEditor}
               />
             ) : section === 'workflow-schemes' ? (
               <WorkflowSchemesTable

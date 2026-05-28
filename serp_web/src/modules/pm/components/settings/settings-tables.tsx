@@ -345,9 +345,11 @@ export const PrioritySchemesTable = memo(function PrioritySchemesTable({
 export const WorkflowsTable = memo(function WorkflowsTable({
   workflows,
   onEdit,
+  onOpenEditor,
 }: {
   workflows: PMWorkflowSettingsApi[];
   onEdit: (item: PMWorkflowSettingsApi) => void;
+  onOpenEditor: (item: PMWorkflowSettingsApi) => void;
 }) {
   const [tab, setTab] = useState('active');
   const activeWorkflows = workflows.filter(
@@ -374,10 +376,18 @@ export const WorkflowsTable = memo(function WorkflowsTable({
         </TabsList>
       </div>
       <TabsContent value='active' className='m-0'>
-        <WorkflowRows workflows={activeWorkflows} onEdit={onEdit} />
+        <WorkflowRows
+          workflows={activeWorkflows}
+          onEdit={onEdit}
+          onOpenEditor={onOpenEditor}
+        />
       </TabsContent>
       <TabsContent value='inactive' className='m-0'>
-        <WorkflowRows workflows={inactiveWorkflows} onEdit={onEdit} />
+        <WorkflowRows
+          workflows={inactiveWorkflows}
+          onEdit={onEdit}
+          onOpenEditor={onOpenEditor}
+        />
       </TabsContent>
     </Tabs>
   );
@@ -488,9 +498,11 @@ function EmptyState({ message }: { message: string }) {
 function WorkflowRows({
   workflows,
   onEdit,
+  onOpenEditor,
 }: {
   workflows: PMWorkflowSettingsApi[];
   onEdit: (item: PMWorkflowSettingsApi) => void;
+  onOpenEditor: (item: PMWorkflowSettingsApi) => void;
 }) {
   if (workflows.length === 0) {
     return <EmptyState message='No workflows in this group.' />;
@@ -533,6 +545,7 @@ function WorkflowRows({
                 <EditOnlyActionMenu
                   label={workflow.name}
                   readOnly={workflow.readOnly}
+                  onOpenEditor={() => onOpenEditor(workflow)}
                   onEdit={() => onEdit(workflow)}
                 />
               </TableCell>
@@ -583,10 +596,12 @@ function SpaceList({
 function EditOnlyActionMenu({
   label,
   readOnly,
+  onOpenEditor,
   onEdit,
 }: {
   label: string;
   readOnly: boolean;
+  onOpenEditor: () => void;
   onEdit: () => void;
 }) {
   return (
@@ -597,6 +612,11 @@ function EditOnlyActionMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end'>
+        <DropdownMenuItem onClick={onOpenEditor}>
+          <GitBranch className='mr-2 h-4 w-4' />
+          Open editor
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onEdit} disabled={readOnly}>
           <Edit className='mr-2 h-4 w-4' />
           Edit

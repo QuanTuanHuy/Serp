@@ -7,6 +7,8 @@ import { api } from '@/lib/store/api';
 import { createDataTransform } from '@/lib/store/api/utils';
 import type { PMIssueTypeApi } from '../types/api';
 import type {
+  PMAddWorkflowStepRequest,
+  PMAddWorkflowTransitionRequest,
   PMCreateIssueTypeRequest,
   PMCreateIssueTypeSchemeRequest,
   PMCreatePriorityRequest,
@@ -17,6 +19,8 @@ import type {
   PMDeleteIssueTypeSchemeResponse,
   PMDeletePriorityResponse,
   PMDeletePrioritySchemeResponse,
+  PMDeleteWorkflowStepResponse,
+  PMDeleteWorkflowTransitionResponse,
   PMDeleteWorkflowSchemeResponse,
   PMIssueTypeSettingsOverviewApi,
   PMManageIssueTypeSchemeItemsRequest,
@@ -24,15 +28,21 @@ import type {
   PMManageWorkflowSchemeItemsRequest,
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsOverviewApi,
+  PMReorderWorkflowStepsRequest,
   PMUpdateIssueTypeRequest,
   PMUpdateIssueTypeSchemeRequest,
   PMUpdatePriorityRequest,
   PMUpdatePrioritySchemeRequest,
   PMUpdateWorkflowRequest,
   PMUpdateWorkflowSchemeRequest,
+  PMUpdateWorkflowTransitionRequest,
+  PMWorkflowEditorApi,
   PMWorkflowOptionApi,
   PMWorkflowSchemeSettingsApi,
   PMWorkflowSettingsOverviewApi,
+  PMWorkflowStepApi,
+  PMWorkflowTransitionApi,
+  PMWorkflowValidationApi,
   PMWorkTypeSchemeSettingsApi,
 } from '../types/settings-api.types';
 import type { PMPriorityApi } from '../types/work-item-api.types';
@@ -307,6 +317,18 @@ export const pmSettingsApi = api.injectEndpoints({
       providesTags: [{ type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' }],
     }),
 
+    getPmWorkflowEditor: builder.query<PMWorkflowEditorApi, number>({
+      query: (workflowId) => ({
+        url: `/workflows/${workflowId}/editor`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowEditorApi>(),
+      providesTags: (_result, _error, workflowId) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
     createPmWorkflow: builder.mutation<
       PMWorkflowOptionApi,
       PMCreateWorkflowRequest
@@ -338,6 +360,129 @@ export const pmSettingsApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'pm/Workflow' as const, id },
         { type: 'pm/Workflow' as const, id: 'LIST' },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    addPmWorkflowStep: builder.mutation<
+      PMWorkflowStepApi,
+      { workflowId: number; body: PMAddWorkflowStepRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/steps`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowStepApi>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+        { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    removePmWorkflowStep: builder.mutation<
+      PMDeleteWorkflowStepResponse,
+      { workflowId: number; stepId: number }
+    >({
+      query: ({ workflowId, stepId }) => ({
+        url: `/workflows/${workflowId}/steps/${stepId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeleteWorkflowStepResponse>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
+    reorderPmWorkflowSteps: builder.mutation<
+      PMWorkflowStepApi[],
+      { workflowId: number; body: PMReorderWorkflowStepsRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/steps/reorder`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowStepApi[]>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
+    addPmWorkflowTransition: builder.mutation<
+      PMWorkflowTransitionApi,
+      { workflowId: number; body: PMAddWorkflowTransitionRequest }
+    >({
+      query: ({ workflowId, body }) => ({
+        url: `/workflows/${workflowId}/transitions`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowTransitionApi>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
+    updatePmWorkflowTransition: builder.mutation<
+      PMWorkflowTransitionApi,
+      {
+        workflowId: number;
+        transitionId: number;
+        body: PMUpdateWorkflowTransitionRequest;
+      }
+    >({
+      query: ({ workflowId, transitionId, body }) => ({
+        url: `/workflows/${workflowId}/transitions/${transitionId}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowTransitionApi>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
+    removePmWorkflowTransition: builder.mutation<
+      PMDeleteWorkflowTransitionResponse,
+      { workflowId: number; transitionId: number }
+    >({
+      query: ({ workflowId, transitionId }) => ({
+        url: `/workflows/${workflowId}/transitions/${transitionId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMDeleteWorkflowTransitionResponse>(),
+      invalidatesTags: (_result, _error, { workflowId }) => [
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
+      ],
+    }),
+
+    validatePmWorkflow: builder.mutation<PMWorkflowValidationApi, number>({
+      query: (workflowId) => ({
+        url: `/workflows/${workflowId}/validate`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowValidationApi>(),
+    }),
+
+    publishPmWorkflow: builder.mutation<PMWorkflowOptionApi, number>({
+      query: (workflowId) => ({
+        url: `/workflows/${workflowId}/publish`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkflowOptionApi>(),
+      invalidatesTags: (_result, _error, workflowId) => [
+        { type: 'pm/Workflow' as const, id: workflowId },
+        { type: 'pm/WorkflowEditor' as const, id: workflowId },
         { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
       ],
     }),
@@ -414,6 +559,8 @@ export const pmSettingsApi = api.injectEndpoints({
 });
 
 export const {
+  useAddPmWorkflowStepMutation,
+  useAddPmWorkflowTransitionMutation,
   useCreatePmWorkflowMutation,
   useCreatePmWorkflowSchemeMutation,
   useCreatePmPriorityMutation,
@@ -425,16 +572,23 @@ export const {
   useDeletePmPrioritySchemeMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
+  useGetPmWorkflowEditorQuery,
   useGetPmWorkflowSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
   useGetPmIssueTypeSettingsOverviewQuery,
   useManagePmWorkflowSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
   useManagePmIssueTypeSchemeItemsMutation,
+  usePublishPmWorkflowMutation,
+  useRemovePmWorkflowStepMutation,
+  useRemovePmWorkflowTransitionMutation,
+  useReorderPmWorkflowStepsMutation,
   useUpdatePmWorkflowMutation,
   useUpdatePmWorkflowSchemeMutation,
+  useUpdatePmWorkflowTransitionMutation,
   useUpdatePmPriorityMutation,
   useUpdatePmPrioritySchemeMutation,
   useUpdatePmIssueTypeMutation,
   useUpdatePmIssueTypeSchemeMutation,
+  useValidatePmWorkflowMutation,
 } = pmSettingsApi;
