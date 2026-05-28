@@ -25,6 +25,9 @@ import serp.project.account.core.usecase.RoleUseCase;
 import serp.project.account.core.service.IMenuDisplayService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IRoleService;
+import serp.project.account.core.service.IUserService;
+import serp.project.account.core.service.IUserModuleAccessService;
+import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
 import serp.project.account.kernel.property.AdminProperties;
 import serp.project.account.kernel.utils.RoleEnumUtils;
@@ -37,10 +40,12 @@ public class DataInitializer implements CommandLineRunner {
     private static final String MODULE_CODE_PTM = "PTM";
     private static final String MODULE_CODE_CRM = "CRM";
     private static final String MODULE_CODE_TMS = "TMS";
+    private static final String MODULE_CODE_SCHOOL_BUS = "SCHOOLBUS";
 
     private static final String CLIENT_ID_PTM = "serp-ptm";
     private static final String CLIENT_ID_CRM = "serp-crm";
     private static final String CLIENT_ID_TMS = "serp-first-mile";
+    private static final String CLIENT_ID_SCHOOL_BUS = "serp-bds";
 
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
 
@@ -48,6 +53,9 @@ public class DataInitializer implements CommandLineRunner {
     private final IModuleService moduleService;
     private final IRoleService roleService;
     private final IMenuDisplayService menuDisplayService;
+    private final IUserService userService;
+    private final IUserModuleAccessService userModuleAccessService;
+    private final ICombineRoleService combineRoleService;
 
     private final RoleMapper roleMapper;
 
@@ -78,6 +86,12 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         try {
+            seedSchoolBusMenus();
+        } catch (Exception e) {
+            log.error("School Bus menu seeding failed: {}", e.getMessage());
+        }
+
+        try {
             createSuperAdminUser();
         } catch (Exception e) {
             log.error("Data initialization failed: {}", e.getMessage());
@@ -100,6 +114,7 @@ public class DataInitializer implements CommandLineRunner {
         createRoleBatch(RoleEnumUtils.getPtmRoles(), MODULE_CODE_PTM, CLIENT_ID_PTM, "PTM module roles");
         createRoleBatch(RoleEnumUtils.getCrmRoles(), MODULE_CODE_CRM, CLIENT_ID_CRM, "CRM module roles");
         createRoleBatch(RoleEnumUtils.getTmsRoles(), MODULE_CODE_TMS, CLIENT_ID_TMS, "TMS module roles");
+        createRoleBatch(RoleEnumUtils.getSchoolBusRoles(), MODULE_CODE_SCHOOL_BUS, CLIENT_ID_SCHOOL_BUS, "School Bus module roles");
     }
 
     private void createRoleBatch(List<RoleEnum> roleEnums, String moduleCode,
@@ -219,6 +234,153 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
         log.info("Super Admin create successfully");
+    }
+
+    private void seedSchoolBusMenus() {
+        var module = moduleService.getModuleByCode(MODULE_CODE_SCHOOL_BUS);
+        if (module == null) {
+            log.warn("Skip school-bus menu seed because module {} is missing", MODULE_CODE_SCHOOL_BUS);
+            return;
+        }
+
+        List<CreateMenuDisplayDto> menuSeeds = List.of(
+                CreateMenuDisplayDto.builder()
+                        .name("Dashboard")
+                        .path("/school-bus/dashboard")
+                        .icon("LayoutDashboard")
+                        .order(1)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("School bus dashboard")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Schools")
+                        .path("/school-bus/schools")
+                        .icon("School")
+                        .order(2)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("School directory")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Students")
+                        .path("/school-bus/students")
+                        .icon("GraduationCap")
+                        .order(3)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Student roster")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Parents")
+                        .path("/school-bus/parents")
+                        .icon("Users")
+                        .order(4)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Parent profiles")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Fleet")
+                        .path("/school-bus/fleet")
+                        .icon("BusFront")
+                        .order(5)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Fleet and crew")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Requests")
+                        .path("/school-bus/requests")
+                        .icon("GitPullRequest")
+                        .order(6)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Transport request queue")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Subscriptions")
+                        .path("/school-bus/subscriptions")
+                        .icon("CalendarDays")
+                        .order(7)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Long-term student bus subscriptions")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Dispatch")
+                        .path("/school-bus/dispatch")
+                        .icon("RouteIcon")
+                        .order(8)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Dispatch board")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Trips")
+                        .path("/school-bus/trips")
+                        .icon("BusFront")
+                        .order(9)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Trip execution control board")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Attendance")
+                        .path("/school-bus/attendance")
+                        .icon("ClipboardCheck")
+                        .order(10)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Attendance and trip history")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Demo")
+                        .path("/school-bus/demo")
+                        .icon("Gauge")
+                        .order(11)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Simulation demo console")
+                        .build(),
+                CreateMenuDisplayDto.builder()
+                        .name("Reports")
+                        .path("/school-bus/reports")
+                        .icon("BarChart4")
+                        .order(12)
+                        .moduleId(module.getId())
+                        .menuType("SIDEBAR")
+                        .isVisible(true)
+                        .description("Operational reports")
+                        .build()
+        );
+
+        List<Long> menuIds = new ArrayList<>();
+        for (CreateMenuDisplayDto seed : menuSeeds) {
+            var existing = menuDisplayService.getMenuDisplayByModuleIdAndName(module.getId(), seed.getName());
+            if (existing != null) {
+                menuIds.add(existing.getId());
+                continue;
+            }
+
+            var created = menuDisplayService.createMenuDisplay(seed);
+            menuIds.add(created.getId());
+        }
+
+        for (RoleEnum role : RoleEnumUtils.getSchoolBusRoles()) {
+            assignMenusToRole(role.getRoleName(), menuIds);
+        }
     }
 
 }

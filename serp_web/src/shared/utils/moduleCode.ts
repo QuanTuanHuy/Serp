@@ -22,6 +22,7 @@ const MODULE_ROOT_PATHS: Record<string, string> = {
   SALES: '/sales',
   SETTINGS: '/settings',
   TMS: '/first-mile',
+  SCHOOLBUS: '/school-bus',
 };
 
 const KNOWN_APP_ROOT_SEGMENTS = new Set([
@@ -42,6 +43,8 @@ const KNOWN_APP_ROOT_SEGMENTS = new Set([
   'settings',
   'subscription',
   'tms',
+  'school-bus',
+  'bds',
 ]);
 
 export const normalizePath = (path: string): string => {
