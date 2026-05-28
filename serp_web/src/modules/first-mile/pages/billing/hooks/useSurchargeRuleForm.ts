@@ -1,0 +1,61 @@
+/**
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - Surcharge rule admin form hook
+ */
+
+import React from 'react';
+import { getErrorMessage } from '@/lib/store';
+import { useNotification } from '@/shared/hooks';
+import { useUpsertSurchargeRuleMutation } from '../../../api';
+import type { SurchargeRuleAdminResponse } from '../../../types';
+import {
+  buildUpsertSurchargeRuleRequest,
+  CALCULATION_TYPE_OPTIONS,
+  DEFAULT_SURCHARGE_FORM,
+  type SurchargeRuleFormState,
+} from '../billingPageModels';
+
+export const useSurchargeRuleForm = () => {
+  const notification = useNotification();
+  const [form, setForm] =
+    React.useState<SurchargeRuleFormState>(DEFAULT_SURCHARGE_FORM);
+  const [lastSaved, setLastSaved] =
+    React.useState<SurchargeRuleAdminResponse | null>(null);
+  const [upsertSurchargeRule, { isLoading }] = useUpsertSurchargeRuleMutation();
+
+  const calculationTypeHelper = React.useMemo(() => {
+    return CALCULATION_TYPE_OPTIONS.find(
+      (option) => option.value === form.calculationType
+    )?.helper;
+  }, [form.calculationType]);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    try {
+      const response = await upsertSurchargeRule(
+        buildUpsertSurchargeRuleRequest(form)
+      ).unwrap();
+      setLastSaved(response);
+      notification.success('Surcharge rule saved successfully.');
+    } catch (error) {
+      notification.error('Unable to save surcharge rule.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const reset = () => {
+    setForm(DEFAULT_SURCHARGE_FORM);
+  };
+
+  return {
+    form,
+    setForm,
+    lastSaved,
+    calculationTypeHelper,
+    isLoading,
+    submit,
+    reset,
+  };
+};
