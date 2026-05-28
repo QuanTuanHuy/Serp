@@ -62,10 +62,10 @@ public class ProjectRoleActorAdapter implements IProjectRoleActorPort {
 
     @Override
     public int softDeleteActiveAssignment(Long tenantId,
-                                          Long projectId,
-                                          Long projectRoleId,
-                                          String subjectType,
-                                          String subjectId,
+                                           Long projectId,
+                                           Long projectRoleId,
+                                           String subjectType,
+                                           String subjectId,
                                           Long updatedBy) {
         return projectRoleActorRepository.softDeleteActiveAssignment(
                 tenantId,
@@ -74,6 +74,26 @@ public class ProjectRoleActorAdapter implements IProjectRoleActorPort {
                 subjectType,
                 subjectId,
                 updatedBy
+        );
+    }
+
+    @Override
+    public void softDeleteActiveUserAssignmentsByProject(Long tenantId,
+                                                         Long projectId,
+                                                         String subjectId,
+                                                         Long updatedBy) {
+        projectRoleActorRepository.softDeleteActiveUserAssignmentsByProject(
+                tenantId,
+                projectId,
+                subjectId,
+                updatedBy
+        );
+    }
+
+    @Override
+    public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectId(Long projectId, Long tenantId) {
+        return projectRoleActorMapper.toEntities(
+                projectRoleActorRepository.findAllByProjectIdAndTenantId(projectId, tenantId)
         );
     }
 
