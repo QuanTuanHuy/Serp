@@ -25,10 +25,12 @@ import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.TripStudentStatus;
+import serp.project.school_bus_service.enums.TripStopStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.AttendanceEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
+import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
@@ -159,6 +161,17 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
         }
 
+        // Stop must be ARRIVED or BOARDING to record attendance
+        TripStopLogEntity stopLog = tripStopLogService
+                .findByTripAndRouteStop(tripId, request.getRouteStopId(), tenantId)
+                .orElse(null);
+        if (stopLog == null
+                || (stopLog.getStatus() != TripStopStatus.ARRIVED
+                        && stopLog.getStatus() != TripStopStatus.BOARDING)) {
+            throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
+                    messageCommon.getMessage(AppErrorCode.Attendance.STOP_NOT_ACTIVE));
+        }
+
         TripStudentStatus currentStatus = tripStudent.getStatus();
         boolean isOutbound = trip.getRouteDirection() != null
                 && "OUTBOUND".equals(trip.getRouteDirection().name());
@@ -262,18 +275,16 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         tripStudentService.save(tripStudent);
 
         // Update the stop log counts for BOARDED / DROPPED_OFF events
-        tripStopLogService.findByTripAndRouteStop(tripId, request.getRouteStopId(), tenantId)
-                .ifPresent(stopLog -> {
-                    if (eventType == AttendanceEventType.BOARDED) {
-                        stopLog.setActualBoardedCount(stopLog.getActualBoardedCount() + 1);
-                        stopLog.markUpdated(actor(actorId));
-                        tripStopLogService.save(stopLog);
-                    } else if (eventType == AttendanceEventType.DROPPED_OFF) {
-                        stopLog.setActualDroppedCount(stopLog.getActualDroppedCount() + 1);
-                        stopLog.markUpdated(actor(actorId));
-                        tripStopLogService.save(stopLog);
-                    }
-                });
+        // (reuse the stopLog already fetched for the status validation above)
+        if (eventType == AttendanceEventType.BOARDED) {
+            stopLog.setActualBoardedCount(stopLog.getActualBoardedCount() + 1);
+            stopLog.markUpdated(actor(actorId));
+            tripStopLogService.save(stopLog);
+        } else if (eventType == AttendanceEventType.DROPPED_OFF) {
+            stopLog.setActualDroppedCount(stopLog.getActualDroppedCount() + 1);
+            stopLog.markUpdated(actor(actorId));
+            tripStopLogService.save(stopLog);
+        }
 
         AttendanceEntity saved = attendanceRepository.save(attendance);
         auditLogService.log(tenantId, actorId, "TripAttendance", saved.getId(), eventType.name(),

@@ -1230,6 +1230,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusTripExecution>(),
       invalidatesTags: (_result, _error, { tripId }) => [
         { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+        { type: 'schoolBus/Attendance', id: `TRIP-${tripId}` },
       ],
     }),
     getTripStops: builder.query<ApiResponse<SchoolBusTripStopLog[]>, number>({
