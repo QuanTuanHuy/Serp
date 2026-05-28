@@ -40,8 +40,12 @@ public class GetIssueTypeSettingsOverviewQueryHandler
     @Override
     @Transactional(readOnly = true)
     public IssueTypeSettingsOverviewView handle(GetIssueTypeSettingsOverviewQuery query) {
-        List<IssueTypeEntity> issueTypes = listVisibleIssueTypes(query.tenantId());
-        List<IssueTypeSchemeEntity> schemes = listVisibleIssueTypeSchemes(query.tenantId());
+        List<IssueTypeEntity> issueTypes = listVisibleIssueTypes(query.tenantId()).stream()
+                .filter(issueType -> !issueType.isSystem())
+                .toList();
+        List<IssueTypeSchemeEntity> schemes = listVisibleIssueTypeSchemes(query.tenantId()).stream()
+                .filter(scheme -> !scheme.isSystem())
+                .toList();
         List<IssueTypeSchemeEntity> schemeDetails = schemes.stream()
                 .map(scheme -> issueTypeSchemeService.getVisibleIssueTypeSchemeDetailById(
                         scheme.getId(),
@@ -70,6 +74,7 @@ public class GetIssueTypeSettingsOverviewQueryHandler
         IssueTypeListCriteria criteria = IssueTypeListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("hierarchy_level")
                 .sortDirection("ASC")
                 .build();
@@ -80,6 +85,7 @@ public class GetIssueTypeSettingsOverviewQueryHandler
         IssueTypeSchemeListCriteria criteria = IssueTypeSchemeListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("name")
                 .sortDirection("ASC")
                 .build();
@@ -172,7 +178,7 @@ public class GetIssueTypeSettingsOverviewQueryHandler
                 scheme.getTenantId(),
                 scheme.getName(),
                 scheme.getDescription(),
-                scheme.getDefaultIssueTypeId(),
+                issueTypesById.containsKey(scheme.getDefaultIssueTypeId()) ? scheme.getDefaultIssueTypeId() : null,
                 scheme.isSystem(),
                 scheme.isSystem(),
                 workTypes,

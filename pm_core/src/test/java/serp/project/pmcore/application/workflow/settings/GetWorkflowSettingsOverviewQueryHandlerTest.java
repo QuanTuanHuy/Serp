@@ -28,9 +28,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,7 +80,10 @@ class GetWorkflowSettingsOverviewQueryHandlerTest {
                 true,
                 WorkflowLifecycleState.INACTIVE
         );
-        WorkflowSchemeEntity scheme = scheme(List.of(item(ISSUE_TYPE_ID, ACTIVE_WORKFLOW_ID)));
+        WorkflowSchemeEntity scheme = scheme(List.of(
+                item(ISSUE_TYPE_ID, ACTIVE_WORKFLOW_ID),
+                item(ISSUE_TYPE_ID, INACTIVE_WORKFLOW_ID)
+        ));
 
         when(workflowService.listVisibleWorkflows(eq(TENANT_ID), any(WorkflowListCriteria.class)))
                 .thenReturn(new PageResult<>(List.of(activeWorkflow, inactiveWorkflow), 2));
@@ -94,13 +98,12 @@ class GetWorkflowSettingsOverviewQueryHandlerTest {
 
         WorkflowSettingsOverviewView result = handler.handle(new GetWorkflowSettingsOverviewQuery(TENANT_ID));
 
-        assertEquals(2, result.workflows().size());
+        assertEquals(1, result.workflows().size());
         assertEquals(ACTIVE_WORKFLOW_ID, result.workflows().getFirst().id());
         assertEquals(WorkflowLifecycleState.ACTIVE, result.workflows().getFirst().lifecycleState());
         assertEquals(1, result.workflows().getFirst().relatedSchemes().size());
         assertEquals("Scrum 1", result.workflows().getFirst().spaces().getFirst().name());
         assertFalse(result.workflows().getFirst().readOnly());
-        assertTrue(result.workflows().get(1).readOnly());
 
         WorkflowSettingsOverviewView.WorkflowSchemeView schemeView = result.workflowSchemes().getFirst();
         assertEquals(SCHEME_ID, schemeView.id());
@@ -109,6 +112,11 @@ class GetWorkflowSettingsOverviewQueryHandlerTest {
         assertEquals("Task", schemeView.items().getFirst().workType().name());
         assertEquals("Software Simplified Workflow", schemeView.items().getFirst().workflow().name());
         assertEquals("SCRUM", schemeView.spaces().getFirst().key());
+
+        verify(workflowService).listVisibleWorkflows(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
+        verify(workflowSchemeService).listVisibleWorkflowSchemes(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
     }
 
     private WorkflowEntity workflow(

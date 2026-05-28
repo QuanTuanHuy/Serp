@@ -27,7 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,17 +77,21 @@ class GetIssueTypeSettingsOverviewQueryHandlerTest {
 
         IssueTypeSettingsOverviewView result = handler.handle(new GetIssueTypeSettingsOverviewQuery(TENANT_ID));
 
-        assertEquals(2, result.workTypes().size());
+        assertEquals(1, result.workTypes().size());
         assertEquals(1, result.workTypes().getFirst().relatedSchemes().size());
         assertFalse(result.workTypes().getFirst().readOnly());
-        assertTrue(result.workTypes().get(1).readOnly());
 
         IssueTypeSettingsOverviewView.WorkTypeSchemeView schemeView = result.workTypeSchemes().getFirst();
         assertEquals(SCHEME_ID, schemeView.id());
         assertEquals(TASK_ID, schemeView.defaultIssueTypeId());
-        assertEquals(2, schemeView.workTypes().size());
+        assertEquals(1, schemeView.workTypes().size());
         assertTrue(schemeView.workTypes().getFirst().isDefault());
         assertEquals("PM", schemeView.spaces().getFirst().key());
+
+        verify(issueTypeService).listVisibleIssueTypes(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
+        verify(issueTypeSchemeService).listVisibleIssueTypeSchemes(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
     }
 
     private IssueTypeEntity issueType(Long id, String key, String name, boolean system) {

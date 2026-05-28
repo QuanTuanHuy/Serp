@@ -47,8 +47,12 @@ public class GetWorkflowSettingsOverviewQueryHandler
     @Override
     @Transactional(readOnly = true)
     public WorkflowSettingsOverviewView handle(GetWorkflowSettingsOverviewQuery query) {
-        List<WorkflowEntity> workflows = listVisibleWorkflows(query.tenantId());
-        List<WorkflowSchemeEntity> schemes = listVisibleWorkflowSchemes(query.tenantId());
+        List<WorkflowEntity> workflows = listVisibleWorkflows(query.tenantId()).stream()
+                .filter(workflow -> !Boolean.TRUE.equals(workflow.getIsSystem()))
+                .toList();
+        List<WorkflowSchemeEntity> schemes = listVisibleWorkflowSchemes(query.tenantId()).stream()
+                .filter(scheme -> !scheme.isSystem())
+                .toList();
         List<WorkflowSchemeEntity> schemeDetails = schemes.stream()
                 .map(scheme -> workflowSchemeService.getVisibleWorkflowSchemeDetailById(
                         scheme.getId(),
@@ -89,6 +93,7 @@ public class GetWorkflowSettingsOverviewQueryHandler
         WorkflowListCriteria criteria = WorkflowListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("name")
                 .sortDirection("ASC")
                 .build();
@@ -99,6 +104,7 @@ public class GetWorkflowSettingsOverviewQueryHandler
         WorkflowSchemeListCriteria criteria = WorkflowSchemeListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("name")
                 .sortDirection("ASC")
                 .build();
@@ -226,6 +232,7 @@ public class GetWorkflowSettingsOverviewQueryHandler
                         issueTypesById.get(item.getIssueTypeId()),
                         workflowsById.get(item.getWorkflowId())
                 ))
+                .filter(item -> item.workType() != null && item.workflow() != null)
                 .toList();
 
         return new WorkflowSettingsOverviewView.WorkflowSchemeView(
@@ -233,7 +240,7 @@ public class GetWorkflowSettingsOverviewQueryHandler
                 scheme.getTenantId(),
                 scheme.getName(),
                 scheme.getDescription(),
-                scheme.getDefaultWorkflowId(),
+                workflowsById.containsKey(scheme.getDefaultWorkflowId()) ? scheme.getDefaultWorkflowId() : null,
                 scheme.isSystem(),
                 scheme.isSystem(),
                 items,

@@ -42,8 +42,12 @@ public class GetPrioritySettingsOverviewQueryHandler
     @Override
     @Transactional(readOnly = true)
     public PrioritySettingsOverviewView handle(GetPrioritySettingsOverviewQuery query) {
-        List<PriorityEntity> priorities = listVisiblePriorities(query.tenantId());
-        List<PrioritySchemeEntity> schemes = listVisiblePrioritySchemes(query.tenantId());
+        List<PriorityEntity> priorities = listVisiblePriorities(query.tenantId()).stream()
+                .filter(priority -> !priority.isSystem())
+                .toList();
+        List<PrioritySchemeEntity> schemes = listVisiblePrioritySchemes(query.tenantId()).stream()
+                .filter(scheme -> !scheme.isSystem())
+                .toList();
         List<PrioritySchemeEntity> schemeDetails = schemes.stream()
                 .map(scheme -> prioritySchemeService.getVisiblePrioritySchemeDetailById(
                         scheme.getId(),
@@ -72,6 +76,7 @@ public class GetPrioritySettingsOverviewQueryHandler
         PriorityListCriteria criteria = PriorityListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("sequence")
                 .sortDirection("ASC")
                 .build();
@@ -82,6 +87,7 @@ public class GetPrioritySettingsOverviewQueryHandler
         PrioritySchemeListCriteria criteria = PrioritySchemeListCriteria.builder()
                 .page(0)
                 .pageSize(SETTINGS_OVERVIEW_LIMIT)
+                .isSystem(false)
                 .sortBy("name")
                 .sortDirection("ASC")
                 .build();
@@ -178,7 +184,7 @@ public class GetPrioritySettingsOverviewQueryHandler
                 scheme.getTenantId(),
                 scheme.getName(),
                 scheme.getDescription(),
-                scheme.getDefaultPriorityId(),
+                prioritiesById.containsKey(scheme.getDefaultPriorityId()) ? scheme.getDefaultPriorityId() : null,
                 scheme.isSystem(),
                 scheme.isSystem(),
                 priorities,

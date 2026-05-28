@@ -25,9 +25,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,18 +77,21 @@ class GetPrioritySettingsOverviewQueryHandlerTest {
 
         PrioritySettingsOverviewView result = handler.handle(new GetPrioritySettingsOverviewQuery(TENANT_ID));
 
-        assertEquals(2, result.priorities().size());
+        assertEquals(1, result.priorities().size());
         assertEquals(1, result.priorities().getFirst().relatedSchemes().size());
         assertFalse(result.priorities().getFirst().readOnly());
-        assertTrue(result.priorities().get(1).readOnly());
 
         PrioritySettingsOverviewView.PrioritySchemeView schemeView = result.prioritySchemes().getFirst();
         assertEquals(SCHEME_ID, schemeView.id());
-        assertEquals(MEDIUM_ID, schemeView.defaultPriorityId());
-        assertEquals(2, schemeView.priorities().size());
+        assertNull(schemeView.defaultPriorityId());
+        assertEquals(1, schemeView.priorities().size());
         assertFalse(schemeView.priorities().getFirst().isDefault());
-        assertTrue(schemeView.priorities().get(1).isDefault());
         assertEquals("SCRUM", schemeView.spaces().getFirst().key());
+
+        verify(priorityService).listVisiblePriorities(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
+        verify(prioritySchemeService).listVisiblePrioritySchemes(eq(TENANT_ID),
+                argThat(criteria -> Boolean.FALSE.equals(criteria.getIsSystem())));
     }
 
     private PriorityEntity priority(Long id, String key, String name, boolean system, Integer sequence) {
