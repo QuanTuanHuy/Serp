@@ -75,6 +75,7 @@ import {
   useRemovePmWorkflowStepMutation,
   useRemovePmWorkflowTransitionMutation,
   useReorderPmWorkflowStepsMutation,
+  useUpdatePmWorkflowMutation,
   useUpdatePmWorkflowTransitionMutation,
   useValidatePmWorkflowMutation,
 } from '../api';
@@ -86,6 +87,7 @@ import type {
 } from '../types/api';
 
 const ANY_STEP_VALUE = '__any__';
+const STATUS_PICKER_PAGE_SIZE = 100;
 
 export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
   const router = useRouter();
@@ -102,7 +104,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
   const editorQuery = useGetPmWorkflowEditorQuery(workflowId);
   const statusesQuery = useGetPmStatusesQuery({
     page: 0,
-    pageSize: 200,
+    pageSize: STATUS_PICKER_PAGE_SIZE,
     sortBy: 'name',
     sortDirection: 'asc',
   });
@@ -119,14 +121,16 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
     useValidatePmWorkflowMutation();
   const [publishWorkflow, publishWorkflowState] =
     usePublishPmWorkflowMutation();
+  const [updateWorkflow, updateWorkflowState] = useUpdatePmWorkflowMutation();
 
   const editor = editorQuery.data;
   const workflow = editor?.workflow;
   const steps = editor?.steps ?? [];
   const transitions = editor?.transitions ?? [];
   const statuses = statusesQuery.data?.data.items ?? [];
-  const editable = Boolean(editor?.editable);
+  const editable = Boolean(workflow && !workflow.readOnly);
   const isSaving =
+    updateWorkflowState.isLoading ||
     addStepState.isLoading ||
     removeStepState.isLoading ||
     reorderStepsState.isLoading ||
@@ -154,7 +158,44 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
     [showLabels, steps, transitions]
   );
 
+  const ensureDraft = useCallback(async () => {
+    if (!workflow || !editor) {
+      return null;
+    }
+    if (!editable) {
+      toast.error('This workflow is read-only.');
+      return null;
+    }
+    if (workflow.draftVersionId) {
+      return editor;
+    }
+
+    try {
+      await updateWorkflow({
+        id: workflowId,
+        body: {
+          name: workflow.name,
+          description: workflow.description ?? null,
+        },
+      }).unwrap();
+      const refreshed = await editorQuery.refetch().unwrap();
+      setValidation(null);
+      toast.success('Workflow draft created.');
+      return refreshed;
+    } catch (error) {
+      toast.error('Unable to create workflow draft', {
+        description: getErrorMessage(error),
+      });
+      return null;
+    }
+  }, [editable, editor, editorQuery, updateWorkflow, workflow, workflowId]);
+
   const handleValidate = useCallback(async () => {
+    const draftEditor = await ensureDraft();
+    if (!draftEditor) {
+      return null;
+    }
+
     try {
       const result = await validateWorkflow(workflowId).unwrap();
       setValidation(result);
@@ -170,7 +211,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
       });
       return null;
     }
-  }, [validateWorkflow, workflowId]);
+  }, [ensureDraft, validateWorkflow, workflowId]);
 
   const handlePublish = useCallback(async () => {
     const result = await handleValidate();
@@ -188,8 +229,29 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
     }
   }, [handleValidate, publishWorkflow, workflowId]);
 
+  const handleOpenAddStepDialog = useCallback(async () => {
+    const draftEditor = await ensureDraft();
+    if (!draftEditor) {
+      return;
+    }
+    setStepDialogOpen(true);
+  }, [ensureDraft]);
+
+  const handleOpenAddTransitionDialog = useCallback(async () => {
+    const draftEditor = await ensureDraft();
+    if (!draftEditor || draftEditor.steps.length === 0) {
+      return;
+    }
+    setTransitionDialog({ mode: 'create' });
+  }, [ensureDraft]);
+
   const handleAddStep = useCallback(
     async (values: AddStepValues) => {
+      const draftEditor = await ensureDraft();
+      if (!draftEditor) {
+        return;
+      }
+
       try {
         await addStep({
           workflowId,
@@ -199,6 +261,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
             isTerminal: values.isTerminal,
           },
         }).unwrap();
+        await editorQuery.refetch().unwrap();
         setStepDialogOpen(false);
         setValidation(null);
         toast.success('Status added to workflow.');
@@ -208,7 +271,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
         });
       }
     },
-    [addStep, workflowId]
+    [addStep, editorQuery, ensureDraft, workflowId]
   );
 
   const handleRemoveStep = useCallback(
@@ -216,8 +279,18 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
       if (!window.confirm(`Remove ${step.name} from this workflow?`)) {
         return;
       }
+      const draftEditor = await ensureDraft();
+      const draftStep = draftEditor
+        ? findMatchingStep(draftEditor.steps, step)
+        : null;
+      if (!draftStep) {
+        toast.error('Unable to locate the workflow draft status.');
+        return;
+      }
+
       try {
-        await removeStep({ workflowId, stepId: step.id }).unwrap();
+        await removeStep({ workflowId, stepId: draftStep.id }).unwrap();
+        await editorQuery.refetch().unwrap();
         setValidation(null);
         toast.success('Status removed from workflow.');
       } catch (error) {
@@ -226,23 +299,38 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
         });
       }
     },
-    [removeStep, workflowId]
+    [editorQuery, ensureDraft, removeStep, workflowId]
   );
 
   const handleMoveStep = useCallback(
     async (step: PMWorkflowStepApi, direction: 'up' | 'down') => {
-      const index = steps.findIndex((candidate) => candidate.id === step.id);
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (index < 0 || targetIndex < 0 || targetIndex >= steps.length) {
+      const draftEditor = await ensureDraft();
+      if (!draftEditor) {
         return;
       }
-      const next = [...steps];
+
+      const draftSteps = draftEditor.steps;
+      const draftStep = findMatchingStep(draftSteps, step);
+      if (!draftStep) {
+        toast.error('Unable to locate the workflow draft status.');
+        return;
+      }
+
+      const index = draftSteps.findIndex(
+        (candidate) => candidate.id === draftStep.id
+      );
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (index < 0 || targetIndex < 0 || targetIndex >= draftSteps.length) {
+        return;
+      }
+      const next = [...draftSteps];
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
       try {
         await reorderSteps({
           workflowId,
           body: { stepIds: next.map((item) => item.id) },
         }).unwrap();
+        await editorQuery.refetch().unwrap();
         toast.success('Status order updated.');
       } catch (error) {
         toast.error('Unable to reorder statuses', {
@@ -250,22 +338,40 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
         });
       }
     },
-    [reorderSteps, steps, workflowId]
+    [editorQuery, ensureDraft, reorderSteps, workflowId]
   );
 
   const handleSaveTransition = useCallback(
     async (values: TransitionValues, item?: PMWorkflowTransitionApi) => {
+      const draftEditor = await ensureDraft();
+      if (!draftEditor) {
+        return;
+      }
+      const draftItem = item
+        ? findMatchingTransition(
+            draftEditor.transitions,
+            item,
+            stepById,
+            draftEditor.steps
+          )
+        : undefined;
+      if (item && !draftItem) {
+        toast.error('Unable to locate the workflow draft transition.');
+        return;
+      }
+
       try {
-        if (item) {
+        if (draftItem) {
           await updateTransition({
             workflowId,
-            transitionId: item.id,
+            transitionId: draftItem.id,
             body: {
               name: values.name,
               screenId: null,
               sequence: values.sequence,
             },
           }).unwrap();
+          await editorQuery.refetch().unwrap();
           toast.success('Transition updated.');
         } else {
           await addTransition({
@@ -278,6 +384,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
               sequence: values.sequence,
             },
           }).unwrap();
+          await editorQuery.refetch().unwrap();
           toast.success('Transition added.');
         }
         setTransitionDialog(null);
@@ -288,7 +395,14 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
         });
       }
     },
-    [addTransition, updateTransition, workflowId]
+    [
+      addTransition,
+      editorQuery,
+      ensureDraft,
+      stepById,
+      updateTransition,
+      workflowId,
+    ]
   );
 
   const handleRemoveTransition = useCallback(
@@ -296,11 +410,26 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
       if (!window.confirm(`Remove transition ${transition.name}?`)) {
         return;
       }
+      const draftEditor = await ensureDraft();
+      const draftTransition = draftEditor
+        ? findMatchingTransition(
+            draftEditor.transitions,
+            transition,
+            stepById,
+            draftEditor.steps
+          )
+        : null;
+      if (!draftTransition) {
+        toast.error('Unable to locate the workflow draft transition.');
+        return;
+      }
+
       try {
         await removeTransition({
           workflowId,
-          transitionId: transition.id,
+          transitionId: draftTransition.id,
         }).unwrap();
+        await editorQuery.refetch().unwrap();
         setValidation(null);
         toast.success('Transition removed.');
       } catch (error) {
@@ -309,7 +438,27 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
         });
       }
     },
-    [removeTransition, workflowId]
+    [editorQuery, ensureDraft, removeTransition, stepById, workflowId]
+  );
+
+  const handleEditTransition = useCallback(
+    async (transition: PMWorkflowTransitionApi) => {
+      const draftEditor = await ensureDraft();
+      const draftTransition = draftEditor
+        ? findMatchingTransition(
+            draftEditor.transitions,
+            transition,
+            stepById,
+            draftEditor.steps
+          )
+        : null;
+      if (!draftTransition) {
+        toast.error('Unable to locate the workflow draft transition.');
+        return;
+      }
+      setTransitionDialog({ mode: 'edit', item: draftTransition });
+    },
+    [ensureDraft, stepById]
   );
 
   if (Number.isNaN(workflowId)) {
@@ -402,16 +551,16 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
             <Button
               type='button'
               variant='outline'
-              onClick={() => setStepDialogOpen(true)}
-              disabled={!editable || availableStatuses.length === 0}
+              onClick={handleOpenAddStepDialog}
+              disabled={!editable || availableStatuses.length === 0 || isSaving}
             >
               <Plus className='mr-2 h-4 w-4' />
               Add status
             </Button>
             <Button
               type='button'
-              onClick={() => setTransitionDialog({ mode: 'create' })}
-              disabled={!editable || steps.length === 0}
+              onClick={handleOpenAddTransitionDialog}
+              disabled={!editable || steps.length === 0 || isSaving}
             >
               <GitBranch className='mr-2 h-4 w-4' />
               Add transition
@@ -457,9 +606,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
             stepById={stepById}
             onMoveStep={handleMoveStep}
             onRemoveStep={handleRemoveStep}
-            onEditTransition={(item) =>
-              setTransitionDialog({ mode: 'edit', item })
-            }
+            onEditTransition={handleEditTransition}
             onRemoveTransition={handleRemoveTransition}
           />
         </TabsContent>
@@ -771,6 +918,27 @@ function AddStepDialog({
   const [isInitial, setIsInitial] = useState(false);
   const [isTerminal, setIsTerminal] = useState(false);
 
+  useEffect(() => {
+    if (!open) {
+      setStatusId('');
+      setIsInitial(false);
+      setIsTerminal(false);
+      return;
+    }
+
+    if (statuses.length === 1) {
+      setStatusId(String(statuses[0].id));
+      return;
+    }
+
+    if (
+      statusId &&
+      statuses.every((status) => String(status.id) !== statusId)
+    ) {
+      setStatusId('');
+    }
+  }, [open, statusId, statuses]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -1048,6 +1216,50 @@ function formatStepName(
     return 'Any status';
   }
   return stepById.get(stepId)?.name ?? `Status ${stepId}`;
+}
+
+function findMatchingStep(
+  steps: PMWorkflowStepApi[],
+  source: PMWorkflowStepApi
+) {
+  return (
+    steps.find((step) => step.id === source.id) ??
+    steps.find((step) => step.statusId === source.statusId) ??
+    null
+  );
+}
+
+function findMatchingTransition(
+  transitions: PMWorkflowTransitionApi[],
+  source: PMWorkflowTransitionApi,
+  sourceStepById: Map<number, PMWorkflowStepApi>,
+  targetSteps: PMWorkflowStepApi[]
+) {
+  const targetStepById = new Map(targetSteps.map((step) => [step.id, step]));
+  const sourceFromStatusId = source.fromStepId
+    ? sourceStepById.get(source.fromStepId)?.statusId
+    : null;
+  const sourceToStatusId = sourceStepById.get(source.toStepId)?.statusId;
+
+  return (
+    transitions.find((transition) => transition.id === source.id) ??
+    transitions.find((transition) => {
+      const targetFromStatusId = transition.fromStepId
+        ? targetStepById.get(transition.fromStepId)?.statusId
+        : null;
+      const targetToStatusId = targetStepById.get(
+        transition.toStepId
+      )?.statusId;
+
+      return (
+        transition.name === source.name &&
+        transition.sequence === source.sequence &&
+        targetFromStatusId === sourceFromStatusId &&
+        targetToStatusId === sourceToStatusId
+      );
+    }) ??
+    null
+  );
 }
 
 type AddStepValues = {

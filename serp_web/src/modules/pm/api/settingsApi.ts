@@ -359,6 +359,7 @@ export const pmSettingsApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMWorkflowOptionApi>(),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'pm/Workflow' as const, id },
+        { type: 'pm/WorkflowEditor' as const, id },
         { type: 'pm/Workflow' as const, id: 'LIST' },
         { type: 'pm/WorkflowSettings' as const, id: 'OVERVIEW' },
       ],
