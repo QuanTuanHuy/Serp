@@ -985,6 +985,7 @@ export interface SchoolBusGreedyGenerateResult {
   totalUnassignedStudents: number;
   unassignedStudents: SchoolBusEligibleStudent[];
   sessionIssues: SchoolBusPlanningIssue[];
+  eligiblePickupPoints?: SchoolBusPlanningPickupPoint[];
 }
 
 // ── Requests ─────────────────────────────────────────────────────────────

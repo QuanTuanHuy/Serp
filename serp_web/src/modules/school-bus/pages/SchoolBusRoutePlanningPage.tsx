@@ -290,8 +290,9 @@ export default function SchoolBusRoutePlanningPage() {
     hasRoutes &&
     unassignedStudents === 0;
 
-  // Map pickup points from preview
-  const mapPickupPoints = (preview?.eligiblePickupPoints ?? []).map((pp) => ({
+  // Map pickup points from preview (or from greedy result when preview was skipped)
+  const rawPickupPoints = preview?.eligiblePickupPoints ?? greedyResult?.eligiblePickupPoints ?? [];
+  const mapPickupPoints = rawPickupPoints.map((pp) => ({
     pickupPointId: pp.pickupPointId,
     pickupPointName: pp.pickupPointName,
     latitude: pp.latitude,

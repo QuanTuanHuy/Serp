@@ -40,6 +40,16 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     }
 
     @Override
+    public long countDistinctStudentsByRoute(Long routeId) {
+        return routePlanStudentRepository.countDistinctStudentsByRoute(routeId);
+    }
+
+    @Override
+    public long countDistinctStudentsBySession(Long sessionId) {
+        return routePlanStudentRepository.countDistinctStudentsBySession(sessionId);
+    }
+
+    @Override
     public boolean existsBySessionAndStudent(Long sessionId, Long studentId) {
         return routePlanStudentRepository.existsBySessionAndStudent(sessionId, studentId);
     }

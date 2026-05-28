@@ -1739,7 +1739,7 @@ export const schoolBusApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${id}` }],
     }),
-    addStudentToStop: builder.mutation<
+    assignStudentToRoute: builder.mutation<
       import('../types').ApiResponse<import('../types').SchoolBusRoutePlanStudent>,
       { routeId: number; sessionId: number; body: import('../types').AddStudentToStopRequest }
     >({
@@ -1900,5 +1900,5 @@ export const {
   useGetSessionRoutesQuery,
   useCreateRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery,
-  useAddStudentToStopMutation,
+  useAssignStudentToRouteMutation,
 } = schoolBusApi;

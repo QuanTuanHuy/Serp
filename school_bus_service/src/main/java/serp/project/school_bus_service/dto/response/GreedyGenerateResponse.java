@@ -15,4 +15,6 @@ public class GreedyGenerateResponse {
     private Integer totalUnassignedStudents;
     private List<EligibleStudentResponse> unassignedStudents;
     private List<PlanningIssueResponse> sessionIssues;
+    /** All pickup points covered by the generated routes (for map display). */
+    private List<PlanningPreviewResponse.EligiblePickupPointResponse> eligiblePickupPoints;
 }

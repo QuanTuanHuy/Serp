@@ -126,8 +126,15 @@ public class RouteMapper extends BaseMapper {
         response.setStudentName(entity.getStudent().getFullName());
         response.setSubscriptionId(entity.getSubscription().getId());
         response.setServiceAction(entity.getServiceAction().name());
-        response.setStopName(entity.getRouteStop() == null ? null
-                : entity.getRouteStop().getPickupPoint().getName());
+        if (entity.getRouteStop() != null) {
+            String displayName = entity.getRouteStop().getDisplayName();
+            response.setStopName(displayName);
+            response.setStopDisplayName(displayName);
+            response.setStopLocationType(entity.getRouteStop().getLocationType() != null
+                    ? entity.getRouteStop().getLocationType().name() : null);
+            response.setStopPurpose(entity.getRouteStop().getStopPurpose() != null
+                    ? entity.getRouteStop().getStopPurpose().name() : null);
+        }
         response.setPlannedTime(entity.getPlannedTime() == null ? null : entity.getPlannedTime().toString());
         return response;
     }

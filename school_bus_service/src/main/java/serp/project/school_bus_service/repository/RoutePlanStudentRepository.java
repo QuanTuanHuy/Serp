@@ -19,6 +19,22 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
 
     long countByRouteIdAndIsDeletedFalse(Long routeId);
 
+    /** Count DISTINCT students assigned to a route (excludes double-counting from dual BOARD+DROPOFF entries). */
+    @Query("""
+            SELECT COUNT(DISTINCT ps.student.id) FROM RoutePlanStudentEntity ps
+            WHERE ps.route.id = :routeId
+              AND ps.isDeleted = false
+            """)
+    long countDistinctStudentsByRoute(@Param("routeId") Long routeId);
+
+    /** Count DISTINCT students across all routes in a session (excludes double-counting). */
+    @Query("""
+            SELECT COUNT(DISTINCT ps.student.id) FROM RoutePlanStudentEntity ps
+            WHERE ps.route.planningSession.id = :sessionId
+              AND ps.isDeleted = false
+            """)
+    long countDistinctStudentsBySession(@Param("sessionId") Long sessionId);
+
     /** Check if a student is already assigned anywhere in a given planning session (duplicate guard). */
     @Query("""
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps

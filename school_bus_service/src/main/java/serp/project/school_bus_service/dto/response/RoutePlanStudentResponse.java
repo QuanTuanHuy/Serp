@@ -14,6 +14,10 @@ public class RoutePlanStudentResponse {
     private String studentName;
     private Long subscriptionId;
     private String serviceAction;
+    /** @deprecated use stopDisplayName — kept for backward compatibility */
     private String stopName;
+    private String stopDisplayName;
+    private String stopLocationType;
+    private String stopPurpose;
     private String plannedTime;
 }

@@ -45,6 +45,7 @@ import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.domain.IRouteEligibilityService;
 import serp.project.school_bus_service.service.domain.IRouteGeometryService;
+import serp.project.school_bus_service.service.domain.RouteStopFactory;
 import serp.project.school_bus_service.service.IRoutePlanningIssueService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
@@ -63,7 +64,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePlanningSessionEntity, Long>
@@ -84,6 +87,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     private final IRouteGeometryService routeGeometryService;
     private final ICodeGeneratorService codeGeneratorService;
     private final IDepotService depotService;
+    private final RouteStopFactory routeStopFactory;
     private final MessageCommon messageCommon;
 
     public RoutePlanningSessionServiceImpl(RoutePlanningSessionRepository sessionRepository,
@@ -98,6 +102,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                                             IRouteGeometryService routeGeometryService,
                                             ICodeGeneratorService codeGeneratorService,
                                             IDepotService depotService,
+                                            RouteStopFactory routeStopFactory,
                                             MessageCommon messageCommon) {
         this.sessionRepository = sessionRepository;
         this.routeService = routeService;
@@ -111,6 +116,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         this.routeGeometryService = routeGeometryService;
         this.codeGeneratorService = codeGeneratorService;
         this.depotService = depotService;
+        this.routeStopFactory = routeStopFactory;
         this.messageCommon = messageCommon;
     }
 
@@ -273,23 +279,48 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
             }
             route = routeService.saveRouteEntity(route);
 
-            // Create stops and students from algorithm assignments
-            List<RouteStopEntity> batchStops = new ArrayList<>();
+            // ── Build full stop list in memory, assign final stopOrder, save once ──
+            // 1. Build middle stop entities (no DB save yet — no IDs needed for RouteStopEntity)
+            List<RouteStopEntity> middleStops = new ArrayList<>();
             for (GreedyStopAssignment assignment : batch.getStopAssignments()) {
-                RouteStopEntity stop = new RouteStopEntity();
-                stop.markCreated(tenantId, actor(actorId));
-                stop.setRoute(route);
-                stop.setPickupPoint(assignment.getPickupPoint());
-                stop.setLocationType(RouteLocationType.PICKUP_POINT);
-                stop.setStopPurpose(isOutbound ? RouteStopPurpose.PICKUP : RouteStopPurpose.DROPOFF);
-                stop.setStopOrder(assignment.getStopOrder());
+                RouteStopEntity stop = routeStopFactory.buildMiddleStop(route, assignment.getPickupPoint(),
+                        tenantId, actor(actorId));
                 stop.setEstimatedStudentCount(assignment.getStudents().size());
                 stop.setPlannedBoardingCount(isOutbound ? assignment.getStudents().size() : 0);
                 stop.setPlannedDropoffCount(!isOutbound ? assignment.getStudents().size() : 0);
-                stop = routeStopService.saveRouteStop(stop);
-                batchStops.add(stop);
+                middleStops.add(stop);
+            }
 
+            // 2. Build full ordered list: START_TERMINAL + middle + END_TERMINAL
+            //    with final stopOrder assigned in one pass — no shifting needed
+            List<RouteStopEntity> allStops = routeStopFactory.buildFullStopList(
+                    route, middleStops, tenantId, actor(actorId));
+
+            // 3. Save all stops in one batch (orders already final → no unique constraint violation)
+            List<RouteStopEntity> savedStops = routeStopService.saveAllRouteStops(allStops);
+
+            // 4. Map middle stops back from savedStops (need IDs for RoutePlanStudent)
+            //    Middle stops in savedStops are at indices 1..N (index 0 = START, last = END)
+            List<RouteStopEntity> savedMiddle = savedStops.stream()
+                    .filter(s -> s.getStopPurpose() != null && !s.getStopPurpose().isTerminal())
+                    .toList();
+
+            // Resolve terminal stop for complementary action
+            //   OUTBOUND: each student also gets DROPOFF at END_TERMINAL (school)
+            //   RETURN:   each student also gets BOARD at START_TERMINAL (school)
+            RouteStopEntity terminalStop = savedStops.stream()
+                    .filter(s -> s.getStopPurpose() != null && (isOutbound
+                            ? s.getStopPurpose() == RouteStopPurpose.END_TERMINAL
+                            : s.getStopPurpose() == RouteStopPurpose.START_TERMINAL))
+                    .findFirst()
+                    .orElse(null);
+
+            // 5. Save RoutePlanStudents: main action (middle stop) + complementary (terminal stop)
+            for (int ai = 0; ai < batch.getStopAssignments().size(); ai++) {
+                GreedyStopAssignment assignment = batch.getStopAssignments().get(ai);
+                RouteStopEntity stop = savedMiddle.get(ai);
                 for (StudentSubscriptionEntity sub : assignment.getStudents()) {
+                    // Main: BOARD at pickup stop (OUTBOUND) or DROPOFF at dropoff stop (RETURN)
                     RoutePlanStudentEntity planStudent = new RoutePlanStudentEntity();
                     planStudent.markCreated(tenantId, actor(actorId));
                     planStudent.setRoute(route);
@@ -298,16 +329,23 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                     planStudent.setSubscription(sub);
                     planStudent.setServiceAction(isOutbound ? RoutePlanStudentAction.BOARD : RoutePlanStudentAction.DROPOFF);
                     routePlanStudentService.save(planStudent);
+
+                    // Complementary: DROPOFF at END_TERMINAL (OUTBOUND) or BOARD at START_TERMINAL (RETURN)
+                    if (terminalStop != null) {
+                        RoutePlanStudentEntity terminalEntry = new RoutePlanStudentEntity();
+                        terminalEntry.markCreated(tenantId, actor(actorId));
+                        terminalEntry.setRoute(route);
+                        terminalEntry.setRouteStop(terminalStop);
+                        terminalEntry.setStudent(sub.getStudent());
+                        terminalEntry.setSubscription(sub);
+                        terminalEntry.setServiceAction(isOutbound ? RoutePlanStudentAction.DROPOFF : RoutePlanStudentAction.BOARD);
+                        routePlanStudentService.save(terminalEntry);
+                    }
                 }
             }
 
-            // Add terminal stops (START + END) around the middle stops
-            List<RouteStopEntity> allStops = addTerminalStops(
-                    route, batchStops, depot, session.getSchool(), isOutbound, tenantId, actorId);
-
-            // Auto-compute route geometry using ALL stops including terminals
-            routeGeometryService.computeAndUpdate(route, allStops);
-            routeStopService.saveAllRouteStops(allStops);
+            // 6. Compute route geometry with full stop list (terminal → middle → terminal)
+            routeGeometryService.computeAndUpdate(route, savedStops);
             route = routeService.saveRouteEntity(route);
 
             // Build per-route issues
@@ -344,7 +382,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
             routeService.saveRouteEntity(route);
 
             totalPlanned += batch.getTotalStudents();
-            routeQualityList.add(buildQuality(route, batch.getTotalStudents(), batchStops.size(), routeIssues));
+            routeQualityList.add(buildQuality(route, batch.getTotalStudents(), savedMiddle.size(), routeIssues));
         }
 
         issueService.saveAll(sessionIssues);
@@ -371,12 +409,35 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         List<PlanningIssueResponse> sessionIssueResponses = sessionIssues.stream()
                 .map(this::toIssueResponse).toList();
 
+        // Collect unique pickup points covered by all generated routes (for map display)
+        Map<Long, PlanningPreviewResponse.EligiblePickupPointResponse> ppMap = new LinkedHashMap<>();
+        for (GreedyRouteBatch batch : plan.getBatches()) {
+            for (GreedyStopAssignment assignment : batch.getStopAssignments()) {
+                PickupPointEntity pt = assignment.getPickupPoint();
+                if (!ppMap.containsKey(pt.getId())) {
+                    PlanningPreviewResponse.EligiblePickupPointResponse ppResp =
+                            new PlanningPreviewResponse.EligiblePickupPointResponse();
+                    ppResp.setPickupPointId(pt.getId());
+                    ppResp.setPickupPointName(pt.getName());
+                    ppResp.setLatitude(pt.getLatitude());
+                    ppResp.setLongitude(pt.getLongitude());
+                    ppResp.setStudentCount(assignment.getStudents().size());
+                    ppMap.put(pt.getId(), ppResp);
+                } else {
+                    // Accumulate student count across routes using the same stop
+                    PlanningPreviewResponse.EligiblePickupPointResponse existing = ppMap.get(pt.getId());
+                    existing.setStudentCount(existing.getStudentCount() + assignment.getStudents().size());
+                }
+            }
+        }
+
         GreedyGenerateResponse response = new GreedyGenerateResponse();
         response.setSession(toResponse(session));
         response.setRoutes(routeQualityList);
         response.setTotalUnassignedStudents(unassignedSubs.size());
         response.setUnassignedStudents(unassigned);
         response.setSessionIssues(sessionIssueResponses);
+        response.setEligiblePickupPoints(new ArrayList<>(ppMap.values()));
         return response;
     }
 
@@ -599,73 +660,13 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
 
     // ── Terminal stop generation ─────────────────────────────────────────────
 
-    /**
-     * Inserts START_TERMINAL (order 0) and END_TERMINAL (order N+1) around the provided
-     * middle stops, then returns the full ordered list (terminals + middle).
-     *
-     * <p>OUTBOUND: Depot → PICKUP stops → School<br>
-     * RETURN:  School → DROPOFF stops → Depot
-     */
-    private List<RouteStopEntity> addTerminalStops(RoutePlanEntity route,
-                                                    List<RouteStopEntity> middleStops,
-                                                    DepotEntity depot,
-                                                    SchoolEntity school,
-                                                    boolean isOutbound,
-                                                    Long tenantId, Long actorId) {
-        // Shift middle stop orders up by 1 to make room for START_TERMINAL at order 0
-        middleStops.forEach(s -> s.setStopOrder(s.getStopOrder() + 1));
-
-        // START_TERMINAL
-        RouteStopEntity start = new RouteStopEntity();
-        start.markCreated(tenantId, actor(actorId));
-        start.setRoute(route);
-        start.setStopOrder(0);
-        start.setStopPurpose(RouteStopPurpose.START_TERMINAL);
-        start.setEstimatedStudentCount(0);
-        start.setPlannedBoardingCount(0);
-        start.setPlannedDropoffCount(0);
-        if (isOutbound) {
-            start.setLocationType(RouteLocationType.DEPOT);
-            start.setDepot(depot);
-        } else {
-            start.setLocationType(RouteLocationType.SCHOOL);
-            start.setSchool(school);
-        }
-        start = routeStopService.saveRouteStop(start);
-
-        // END_TERMINAL
-        int endOrder = middleStops.stream().mapToInt(RouteStopEntity::getStopOrder).max().orElse(0) + 1;
-        RouteStopEntity end = new RouteStopEntity();
-        end.markCreated(tenantId, actor(actorId));
-        end.setRoute(route);
-        end.setStopOrder(endOrder);
-        end.setStopPurpose(RouteStopPurpose.END_TERMINAL);
-        end.setEstimatedStudentCount(0);
-        end.setPlannedBoardingCount(0);
-        end.setPlannedDropoffCount(0);
-        if (isOutbound) {
-            end.setLocationType(RouteLocationType.SCHOOL);
-            end.setSchool(school);
-        } else {
-            end.setLocationType(RouteLocationType.DEPOT);
-            end.setDepot(depot);
-        }
-        end = routeStopService.saveRouteStop(end);
-
-        List<RouteStopEntity> all = new ArrayList<>();
-        all.add(start);
-        all.addAll(middleStops);
-        all.add(end);
-        return all;
-    }
-
     // ── Refresh session summary ──────────────────────────────────────────────
 
     @Override
     @Transactional
     public void refreshSessionSummary(Long sessionId, Long tenantId) {
         RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
-        long planned = routePlanStudentService.countBySession(sessionId);
+        long planned = routePlanStudentService.countDistinctStudentsBySession(sessionId);
         long routes = routePlanStudentService.countRoutesBySession(sessionId);
         long stops = routePlanStudentService.countStopsBySession(sessionId);
         int eligible = session.getTotalEligibleStudents() != null ? session.getTotalEligibleStudents() : 0;

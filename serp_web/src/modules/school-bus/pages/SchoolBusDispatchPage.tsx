@@ -75,11 +75,14 @@ export function SchoolBusDispatchPage() {
     selectedRouteId as number,
     { skip: !selectedRouteId }
   );
+  // Middle stops that lack coordinates (terminals use route-level coords instead)
   const selectedRouteMissingCoordinates =
     selectedRouteDetail?.data.stops.filter(
       (stop) =>
-        typeof stop.pickupPointLatitude !== 'number' ||
-        typeof stop.pickupPointLongitude !== 'number'
+        stop.stopPurpose !== 'START_TERMINAL' &&
+        stop.stopPurpose !== 'END_TERMINAL' &&
+        (typeof stop.pickupPointLatitude !== 'number' ||
+          typeof stop.pickupPointLongitude !== 'number'),
     ).length || 0;
 
   React.useEffect(() => {

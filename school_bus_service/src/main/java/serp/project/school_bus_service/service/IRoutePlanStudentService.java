@@ -14,6 +14,12 @@ public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentE
 
     long countByRoute(Long routeId);
 
+    /** Count distinct students on a route (not double-counted from BOARD+DROPOFF dual entries). */
+    long countDistinctStudentsByRoute(Long routeId);
+
+    /** Count distinct students across all routes in a session. */
+    long countDistinctStudentsBySession(Long sessionId);
+
     /** Guard: true if student is already assigned to any route in the same session. */
     boolean existsBySessionAndStudent(Long sessionId, Long studentId);
 

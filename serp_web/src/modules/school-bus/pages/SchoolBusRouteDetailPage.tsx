@@ -120,10 +120,13 @@ export function SchoolBusRouteDetailPage({
   }
 
   const route = detail.route;
+  // Middle stops that lack coordinates (terminals use route-level coords instead)
   const missingStopCoordinates = detail.stops.filter(
     (stop) =>
-      typeof stop.pickupPointLatitude !== 'number' ||
-      typeof stop.pickupPointLongitude !== 'number'
+      stop.stopPurpose !== 'START_TERMINAL' &&
+      stop.stopPurpose !== 'END_TERMINAL' &&
+      (typeof stop.pickupPointLatitude !== 'number' ||
+        typeof stop.pickupPointLongitude !== 'number'),
   ).length;
 
   return (
@@ -328,11 +331,17 @@ export function SchoolBusRouteDetailPage({
                           {detail.stops.map((stop) => (
                             <TableRow key={stop.id}>
                               <TableCell>{stop.stopOrder}</TableCell>
-                              <TableCell>{stop.pickupPointName}</TableCell>
                               <TableCell>
-                                {stop.stopType === 'DROPOFF'
-                                  ? 'Drop-off'
-                                  : 'Pickup'}
+                                {stop.displayName ?? stop.pickupPointName ?? `Stop #${stop.id}`}
+                              </TableCell>
+                              <TableCell>
+                                {stop.stopPurpose === 'START_TERMINAL'
+                                  ? 'Start terminal'
+                                  : stop.stopPurpose === 'END_TERMINAL'
+                                    ? 'End terminal'
+                                    : stop.stopPurpose === 'DROPOFF'
+                                      ? 'Drop-off'
+                                      : 'Pickup'}
                               </TableCell>
                               <TableCell>
                                 {stop.estimatedStudentCount ?? 0}

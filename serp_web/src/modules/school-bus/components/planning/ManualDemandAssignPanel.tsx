@@ -5,7 +5,7 @@ import { UserPlus, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusSection } from '../SchoolBusSection';
-import { useAddStudentToStopMutation } from '../../api/schoolBusApi';
+import { useAssignStudentToRouteMutation } from '../../api/schoolBusApi';
 import type { SchoolBusEligibleStudent, SchoolBusRoute } from '../../types';
 
 interface ManualDemandAssignPanelProps {
@@ -22,7 +22,7 @@ export function ManualDemandAssignPanel({
   eligibleStudents,
   sessionId,
 }: ManualDemandAssignPanelProps) {
-  const [addStudentToStop] = useAddStudentToStopMutation();
+  const [assignStudentToRoute] = useAssignStudentToRouteMutation();
   const [lastAssigned, setLastAssigned] = useState<number | null>(null);
   const [loadingStudentId, setLoadingStudentId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function ManualDemandAssignPanel({
     setError(null);
     setLoadingStudentId(student.studentId);
     try {
-      await addStudentToStop({
+      await assignStudentToRoute({
         routeId: selectedRoute.id,
         sessionId,
         body: { studentId: student.studentId, subscriptionId: student.subscriptionId },

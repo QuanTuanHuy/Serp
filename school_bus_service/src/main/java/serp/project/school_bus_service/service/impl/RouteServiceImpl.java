@@ -21,6 +21,7 @@ import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.domain.IRouteGeometryService;
+import serp.project.school_bus_service.service.domain.RouteStopFactory;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ISchoolService;
@@ -53,6 +54,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
 
 /**
  * Route service facade. Retains CRUD, query, and manifest logic directly.
@@ -72,6 +74,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final IRouteGeometryService routeGeometryService;
     private final IRouteStopService routeStopService;
     private final IRouteDispatchService routeDispatchService;
+    private final RouteStopFactory routeStopFactory;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
 
@@ -86,6 +89,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             IRouteGeometryService routeGeometryService,
                             IRouteStopService routeStopService,
                             IRouteDispatchService routeDispatchService,
+                            RouteStopFactory routeStopFactory,
                             SchoolBusMapper mapper,
                             MessageCommon messageCommon) {
         this.routePlanRepository = routePlanRepository;
@@ -99,6 +103,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.routeGeometryService = routeGeometryService;
         this.routeStopService = routeStopService;
         this.routeDispatchService = routeDispatchService;
+        this.routeStopFactory = routeStopFactory;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
@@ -427,6 +432,23 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         route.setStatus(RouteStatus.DRAFT);
         route.setPlanningSession(planningSession);
         RoutePlanEntity saved = routePlanRepository.save(route);
+
+        // Validate terminal coordinates before creating geometry
+        try {
+            routeStopFactory.validateTerminalCoordinates(saved);
+        } catch (IllegalStateException ex) {
+            throw new AppException(AppErrorCode.Route.DEPOT_REQUIRED, ex.getMessage());
+        }
+
+        // Create START_TERMINAL + END_TERMINAL immediately (no middle stops yet)
+        List<RouteStopEntity> terminals = routeStopFactory.buildFullStopList(saved, List.of(), tenantId, actor(actorId));
+        routeStopService.saveAllRouteStops(terminals);
+
+        // Compute geometry terminal → terminal (depot → school or school → depot)
+        List<RouteStopEntity> allStops = routeStopService.findByRoute(saved.getId(), tenantId);
+        routeGeometryService.computeAndUpdate(saved, allStops);
+        routePlanRepository.save(saved);
+
         auditLogService.log(tenantId, actorId, "RoutePlan", saved.getId(), "CREATE",
                 "Created route in planning session " + sessionId);
         return mapper.toRoutePlanResponse(saved);

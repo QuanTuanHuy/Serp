@@ -1,14 +1,11 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { schoolBusUi } from '../../theme';
 
 export const RouteMap = dynamic(() => import('./RouteMapClient'), {
   ssr: false,
   loading: () => (
-    <div
-      className={`flex h-[420px] items-center justify-center text-sm text-slate-500 ${schoolBusUi.mapFrame}`}
-    >
+    <div className='flex h-full min-h-[320px] w-full items-center justify-center text-sm text-slate-500'>
       Loading route map...
     </div>
   ),

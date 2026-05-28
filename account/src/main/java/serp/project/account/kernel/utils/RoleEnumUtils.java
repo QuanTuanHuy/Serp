@@ -86,6 +86,15 @@ public class RoleEnumUtils {
     }
 
     /**
+     * Get all School Bus-specific roles
+     */
+    public static List<RoleEnum> getSchoolBusRoles() {
+        return Arrays.stream(RoleEnum.values())
+                .filter(role -> role.getRoleName().startsWith("SCHOOL_BUS_"))
+                .toList();
+    }
+
+    /**
      * Get all roles by scope
      */
     public static List<RoleEnum> getRolesByScope(RoleScope scope) {

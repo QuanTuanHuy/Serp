@@ -1,34 +1,54 @@
 'use client';
 
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
-import { latLngBounds } from 'leaflet';
 import { LeafletMapShell } from '@/shared/components/map/LeafletMapShell';
-import { cn } from '@/shared/utils';
 import { useMapExpand } from './MapExpandContext';
-
-// ── Map size invalidator — reacts to expand/collapse ─────────────────────────
-function MapInvalidator({ trigger }: { trigger: number }) {
-  const map = useMap();
-  React.useEffect(() => {
-    const t = setTimeout(() => map.invalidateSize(), 150);
-    return () => clearTimeout(t);
-  }, [map, trigger]);
-  return null;
-}
 import {
   SCHOOL_BUS_MAP_DEFAULT_CENTER,
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
-import { schoolBusBrand, schoolBusUi } from '../../theme';
 import type {
   SchoolBusRoute,
   SchoolBusRouteAssignment,
   SchoolBusRoutePath,
   SchoolBusRouteStop,
 } from '../../types';
-import { createDirectionArrowIcon, createSchoolBusMarkerIcon } from './mapIcons';
+import { createSchoolBusMarkerIcon, createStopNumberIcon } from './mapIcons';
+
+// ── Auto-fit bounds ───────────────────────────────────────────────────────────
+
+interface FitBoundsProps {
+  positions: [number, number][];
+  fitKey?: number;
+}
+function FitBounds({ positions, fitKey }: FitBoundsProps) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length === 0) return;
+    if (positions.length === 1) {
+      map.setView(positions[0], SCHOOL_BUS_MAP_DETAIL_ZOOM);
+    } else {
+      map.fitBounds(positions, { padding: [48, 48] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, positions, fitKey]);
+  return null;
+}
+
+// ── Map size invalidator ──────────────────────────────────────────────────────
+
+function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 150);
+    return () => clearTimeout(t);
+  }, [map, trigger]);
+  return null;
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface RouteMapClientProps {
   route: SchoolBusRoute;
@@ -38,6 +58,8 @@ interface RouteMapClientProps {
   className?: string;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function RouteMapClient({
   route,
   stops,
@@ -46,230 +68,229 @@ export default function RouteMapClient({
   className,
 }: RouteMapClientProps) {
   const { isExpanded, expandKey } = useMapExpand();
-  const plottedStops = stops
-    .filter(
-      (stop) =>
-        typeof stop.pickupPointLatitude === 'number' &&
-        typeof stop.pickupPointLongitude === 'number'
-    )
-    .sort((left, right) => left.stopOrder - right.stopOrder);
 
-  const startCoordinate =
+  const isOutbound = route.routeDirection !== 'RETURN';
+
+  // Terminal coordinates from route metadata
+  const startCoord: [number, number] | null =
     typeof route.startLocationLatitude === 'number' &&
     typeof route.startLocationLongitude === 'number'
-      ? ([route.startLocationLatitude, route.startLocationLongitude] as [
-          number,
-          number,
-        ])
+      ? [route.startLocationLatitude, route.startLocationLongitude]
       : null;
-  const endCoordinate =
+
+  const endCoord: [number, number] | null =
     typeof route.endLocationLatitude === 'number' &&
     typeof route.endLocationLongitude === 'number'
-      ? ([route.endLocationLatitude, route.endLocationLongitude] as [
-          number,
-          number,
-        ])
+      ? [route.endLocationLatitude, route.endLocationLongitude]
       : null;
-  const fallbackLineCoordinates = [
-    ...(startCoordinate ? [startCoordinate] : []),
-    ...plottedStops.map((stop) => [
-      stop.pickupPointLatitude as number,
-      stop.pickupPointLongitude as number,
-    ] as [number, number]),
-    ...(endCoordinate ? [endCoordinate] : []),
+
+  // Middle stops only — terminals have no pickupPointLatitude in new model
+  const sortedMiddleStops = [...stops]
+    .filter(
+      (s) =>
+        typeof s.pickupPointLatitude === 'number' &&
+        typeof s.pickupPointLongitude === 'number',
+    )
+    .sort((a, b) => a.stopOrder - b.stopOrder);
+
+  // All known positions for auto-fit
+  const allPositions: [number, number][] = [
+    ...(startCoord ? [startCoord] : []),
+    ...sortedMiddleStops.map(
+      (s) =>
+        [s.pickupPointLatitude as number, s.pickupPointLongitude as number] as [
+          number,
+          number,
+        ],
+    ),
+    ...(endCoord ? [endCoord] : []),
   ];
-  const actualLineCoordinates =
+
+  // Real road geometry when available
+  const actualPathCoords: [number, number][] =
     routePath?.coordinates
       ?.filter(
-        (point) =>
-          typeof point.latitude === 'number' &&
-          typeof point.longitude === 'number'
+        (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
       )
-      .map((point) => [point.latitude, point.longitude] as [number, number]) ??
-    [];
-  const lineCoordinates =
-    actualLineCoordinates.length >= 2 ? actualLineCoordinates : fallbackLineCoordinates;
-  const routeColor =
-    route.routeDirection === 'RETURN'
-      ? schoolBusBrand.emerald
-      : schoolBusBrand.rose;
-  const isReturn = route.routeDirection === 'RETURN';
-  const arrowSegments = lineCoordinates
-    .map((point, index) => ({ point, index }))
-    .slice(1)
-    .map(({ point, index }) => {
-      const prev = lineCoordinates[index - 1];
-      const midLat = (prev[0] + point[0]) / 2;
-      const midLng = (prev[1] + point[1]) / 2;
-      const angle =
-        (Math.atan2(point[0] - prev[0], point[1] - prev[1]) * 180) / Math.PI +
-        90;
-      return {
-        id: `${index}-${midLat}-${midLng}`,
-        position: [midLat, midLng] as [number, number],
-        angle,
-      };
-    });
-  const busPosition = startCoordinate
-    ? ([startCoordinate[0] + 0.00022, startCoordinate[1] + 0.00022] as [
-        number,
-        number,
-      ])
-    : null;
+      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
 
-  // When the workspace is expanded, the map container is flex-1/min-h-0 — use h-full.
-  const leafletClass = isExpanded
-    ? cn('h-full w-full', schoolBusUi.mapFrame)
-    : cn('h-[420px] w-full', schoolBusUi.mapFrame, className);
+  // Fallback: straight lines depot/school → middle stops → school/depot
+  const fallbackPositions: [number, number][] = [
+    ...(startCoord ? [startCoord] : []),
+    ...sortedMiddleStops.map(
+      (s) =>
+        [s.pickupPointLatitude as number, s.pickupPointLongitude as number] as [
+          number,
+          number,
+        ],
+    ),
+    ...(endCoord ? [endCoord] : []),
+  ];
 
-  return (
-    <LeafletMapShell
-      center={[
-        SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
-        SCHOOL_BUS_MAP_DEFAULT_CENTER.lng,
-      ]}
-      zoom={SCHOOL_BUS_MAP_DEFAULT_ZOOM}
-      className={leafletClass}
-    >
-      <MapInvalidator trigger={expandKey} />
-      <RouteViewport coordinates={lineCoordinates} />
+  const resolvedLine: [number, number][] =
+    actualPathCoords.length >= 2 ? actualPathCoords : fallbackPositions;
 
-      {routePath?.estimated && routePath.warning ? (
-        <div className='absolute right-3 top-3 z-[1000] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 shadow-sm'>
-          {routePath.warning}
-        </div>
-      ) : null}
+  const isFallback =
+    routePath?.fallbackUsed === true ||
+    routePath?.geometrySource === 'STRAIGHT_LINE_ESTIMATE' ||
+    (routePath != null && actualPathCoords.length < 2);
 
-      {startCoordinate ? (
+  // Direction colour: rose for OUTBOUND, emerald for RETURN
+  const lineColor = isOutbound ? '#e11d48' : '#059669';
+
+  const defaultCenter: [number, number] = [
+    SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
+    SCHOOL_BUS_MAP_DEFAULT_CENTER.lng,
+  ];
+  const initialCenter =
+    allPositions.length > 0 ? allPositions[0] : defaultCenter;
+  const initialZoom =
+    allPositions.length > 0 ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
+
+  const startIcon =
+    route.startLocationType === 'DEPOT' ? 'depot' : 'school';
+  const endIcon =
+    route.endLocationType === 'DEPOT' ? 'depot' : 'school';
+
+  const markerContent = (
+    <>
+      {/* Start terminal marker */}
+      {startCoord && (
         <Marker
-          position={startCoordinate}
-          icon={createSchoolBusMarkerIcon(
-            route.startLocationType === 'DEPOT' ? 'depot' : 'start',
-            30
-          )}
+          position={startCoord}
+          icon={createSchoolBusMarkerIcon(startIcon, 30)}
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='font-medium text-slate-950'>
-                {route.startLocationName}
+              <p className='text-xs font-semibold text-amber-700'>
+                {route.startLocationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
               </p>
-              <p className='text-xs text-slate-500'>
-                Start - {route.startLocationType}
-              </p>
+              <p className='font-medium'>{route.startLocationName}</p>
+              <p className='text-xs text-slate-500'>Route start</p>
+              {assignment && (
+                <>
+                  <p className='text-xs text-slate-500'>
+                    🚌 {assignment.busPlateNumber}
+                  </p>
+                  <p className='text-xs text-slate-500'>
+                    👤 {assignment.driverName}
+                  </p>
+                  {assignment.attendantName && (
+                    <p className='text-xs text-slate-500'>
+                      🙋 {assignment.attendantName}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           </Popup>
         </Marker>
-      ) : null}
+      )}
 
-      {endCoordinate ? (
+      {/* End terminal marker */}
+      {endCoord && (
         <Marker
-          position={endCoordinate}
-          icon={createSchoolBusMarkerIcon(
-            route.endLocationType === 'DEPOT' ? 'depot' : 'end',
-            30
-          )}
+          position={endCoord}
+          icon={createSchoolBusMarkerIcon(endIcon, 30)}
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='font-medium text-slate-950'>
-                {route.endLocationName}
+              <p className='text-xs font-semibold text-rose-700'>
+                {route.endLocationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
               </p>
-              <p className='text-xs text-slate-500'>
-                End - {route.endLocationType}
-              </p>
+              <p className='font-medium'>{route.endLocationName}</p>
+              <p className='text-xs text-slate-500'>Route end</p>
             </div>
           </Popup>
         </Marker>
-      ) : null}
+      )}
 
-      {plottedStops.map((stop) => (
+      {/* Numbered middle-stop markers (indigo, size 26 — consistent with planning map) */}
+      {sortedMiddleStops.map((stop, idx) => (
         <Marker
-          key={stop.id}
+          key={`stop-${stop.id}`}
           position={[
             stop.pickupPointLatitude as number,
             stop.pickupPointLongitude as number,
           ]}
-          icon={createSchoolBusMarkerIcon(
-            stop.stopType === 'DROPOFF' ? 'dropoff' : 'pickup'
-          )}
+          icon={createStopNumberIcon(idx + 1, 26)}
+          zIndexOffset={500}
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='font-medium text-slate-950'>
-                {stop.stopOrder}. {stop.pickupPointName}
+              <p className='text-xs font-semibold text-indigo-700'>
+                Stop {idx + 1}
               </p>
-              <p className='text-xs font-medium text-sky-700'>
-                {stop.stopType === 'DROPOFF' ? 'Drop-off stop' : 'Pickup stop'}
+              <p className='font-medium'>
+                {stop.displayName ?? stop.pickupPointName ?? `Stop #${stop.id}`}
               </p>
               <p className='text-xs text-slate-500'>
-                {stop.pickupPointAddress || 'No address'}
+                {stop.estimatedStudentCount ?? 0} student(s)
               </p>
+              {stop.plannedArrivalTime && (
+                <p className='text-xs text-slate-400'>
+                  ETA: {stop.plannedArrivalTime}
+                </p>
+              )}
             </div>
           </Popup>
         </Marker>
       ))}
 
-      {assignment && busPosition ? (
-        <Marker position={busPosition} icon={createSchoolBusMarkerIcon('bus', 26)}>
-          <Popup>
-            <div className='space-y-1'>
-              <p className='font-medium text-slate-950'>
-                Bus {assignment.busPlateNumber}
-              </p>
-              <p className='text-xs text-slate-500'>
-                Driver: {assignment.driverName}
-              </p>
-            </div>
-          </Popup>
-        </Marker>
-      ) : null}
-
-      {lineCoordinates.length >= 2 ? (
+      {/* Route polyline — real road geometry if available, else straight-line fallback */}
+      {resolvedLine.length >= 2 && (
         <Polyline
-          positions={lineCoordinates}
-          pathOptions={{
-            color: routeColor,
-            weight: 4,
-            dashArray: isReturn ? '10 14' : undefined,
-          }}
+          positions={resolvedLine}
+          color={isFallback ? '#f59e0b' : lineColor}
+          weight={isFallback ? 3 : 4}
+          opacity={0.85}
+          dashArray={isFallback ? '10 6' : undefined}
         />
-      ) : null}
-
-      {arrowSegments.map((arrow) => (
-        <Marker
-          key={arrow.id}
-          position={arrow.position}
-          icon={createDirectionArrowIcon(routeColor, arrow.angle)}
-          interactive={false}
-        />
-      ))}
-    </LeafletMapShell>
+      )}
+    </>
   );
-}
 
-function RouteViewport({
-  coordinates,
-}: {
-  coordinates: [number, number][];
-}) {
-  const map = useMap();
+  const shellContent = (
+    <>
+      <FitBounds positions={allPositions} />
+      <MapInvalidator trigger={isExpanded ? 1 : expandKey} />
+      {markerContent}
+    </>
+  );
 
-  React.useEffect(() => {
-    if (coordinates.length === 0) {
-      map.setView(
-        [SCHOOL_BUS_MAP_DEFAULT_CENTER.lat, SCHOOL_BUS_MAP_DEFAULT_CENTER.lng],
-        SCHOOL_BUS_MAP_DEFAULT_ZOOM
-      );
-      return;
-    }
+  const fallbackBadge = isFallback && (
+    <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
+      <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
+        ⚠ Straight-line estimate — road geometry unavailable
+      </span>
+    </div>
+  );
 
-    if (coordinates.length === 1) {
-      map.setView(coordinates[0], SCHOOL_BUS_MAP_DETAIL_ZOOM);
-      return;
-    }
+  if (isExpanded) {
+    return (
+      <div className='relative h-full w-full'>
+        <LeafletMapShell
+          center={initialCenter}
+          zoom={initialZoom}
+          className='h-full w-full'
+        >
+          {shellContent}
+        </LeafletMapShell>
+        {fallbackBadge}
+      </div>
+    );
+  }
 
-    map.fitBounds(latLngBounds(coordinates), { padding: [36, 36] });
-  }, [coordinates, map]);
-
-  return null;
+  return (
+    <div className='relative h-full w-full'>
+      <LeafletMapShell
+        center={initialCenter}
+        zoom={initialZoom}
+        className={className ?? 'h-full w-full'}
+      >
+        {shellContent}
+      </LeafletMapShell>
+      {fallbackBadge}
+    </div>
+  );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusSection } from '../SchoolBusSection';
@@ -350,7 +351,10 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
   const stopConfirm = useSchoolBusConfirm({
     onConfirm: async () => {
       const stopId = stopConfirm.confirmState.payload as number;
-      try { await removeStop({ routeId, stopId }).unwrap(); } catch { /* RTK */ }
+      try { await removeStop({ routeId, stopId }).unwrap(); } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Failed to remove stop');
+      }
     },
     isLoading: removingStop,
   });
@@ -361,7 +365,10 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
         studentId: number;
         subscriptionId: number;
       };
-      try { await removeStudent({ routeId, studentId, subscriptionId }).unwrap(); } catch { /* RTK */ }
+      try { await removeStudent({ routeId, studentId, subscriptionId }).unwrap(); } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Failed to remove student');
+      }
     },
     isLoading: removingStudent,
   });
@@ -373,9 +380,16 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
   const editable = !['COMPLETED', 'IN_PROGRESS', 'TRIP_CREATED', 'CANCELLED'].includes(detail.route.status);
 
   const swap = async (i: number, j: number) => {
-    const ids = stops.map(s => s.id);
+    // Only swap middle stops — find their indices in the full stops array
+    const middleStops = stops.filter(s => s.stopPurpose !== 'START_TERMINAL' && s.stopPurpose !== 'END_TERMINAL');
+    const ids = middleStops.map(s => s.id);
     [ids[i], ids[j]] = [ids[j], ids[i]];
-    try { await reorderStops({ id: routeId, orderedStopIds: ids }).unwrap(); } catch { /* RTK */ }
+    try {
+      await reorderStops({ id: routeId, orderedStopIds: ids }).unwrap();
+    } catch (e: unknown) {
+      const err = e as { data?: { message?: string } };
+      toast.error(err?.data?.message ?? 'Failed to reorder stops');
+    }
   };
 
   const delStop = (stopId: number) => {
@@ -398,26 +412,38 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
     });
   };
 
+  const middleStops = stops.filter(s => s.stopPurpose !== 'START_TERMINAL' && s.stopPurpose !== 'END_TERMINAL');
+
   return (
     <>
       <SchoolBusSection title={`${detail.route.routeName} — Detail`}>
         <p className='mb-3 text-xs font-medium text-slate-400'>Stops ({stops.length})</p>
         {stops.length === 0 && <p className='text-xs text-slate-300'>No stops</p>}
         <div className='space-y-1'>
-          {stops.map((stop, i) => (
-            <div key={stop.id} className='flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2'>
-              <span className='flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-[10px] font-bold text-rose-600'>{stop.stopOrder + 1}</span>
-              <span className='flex-1 text-sm text-slate-700'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
-              <span className='text-[11px] text-slate-400'>{stop.estimatedStudentCount ?? 0} students</span>
-              {editable && (
-                <div className='flex gap-0.5'>
-                  <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i - 1)} disabled={i === 0}><ChevronUp className='h-3 w-3' /></Button>
-                  <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(i, i + 1)} disabled={i >= stops.length - 1}><ChevronDown className='h-3 w-3' /></Button>
-                  <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
-                </div>
-              )}
-            </div>
-          ))}
+          {stops.map((stop, i) => {
+            const isTerminal = stop.stopPurpose === 'START_TERMINAL' || stop.stopPurpose === 'END_TERMINAL';
+            const middleIndex = isTerminal ? -1 : middleStops.findIndex(s => s.id === stop.id);
+            const isFirstMiddle = middleIndex === 0;
+            const isLastMiddle = middleIndex === middleStops.length - 1;
+            const terminalLabel = stop.stopPurpose === 'START_TERMINAL' ? 'Departure' : stop.stopPurpose === 'END_TERMINAL' ? 'Destination' : null;
+            return (
+              <div key={stop.id} className={cn('flex items-center gap-2 rounded-xl border px-3 py-2', isTerminal ? 'border-blue-200 bg-blue-50/60' : 'border-slate-100 bg-slate-50/60')}>
+                {isTerminal
+                  ? <span className='flex h-6 items-center justify-center rounded-full bg-blue-100 px-2 text-[10px] font-bold text-blue-600'>{terminalLabel}</span>
+                  : <span className='flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-[10px] font-bold text-rose-600'>{stop.stopOrder + 1}</span>
+                }
+                <span className='flex-1 text-sm text-slate-700'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
+                {!isTerminal && <span className='text-[11px] text-slate-400'>{stop.estimatedStudentCount ?? 0} students</span>}
+                {editable && !isTerminal && (
+                  <div className='flex gap-0.5'>
+                    <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex - 1)} disabled={isFirstMiddle}><ChevronUp className='h-3 w-3' /></Button>
+                    <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex + 1)} disabled={isLastMiddle}><ChevronDown className='h-3 w-3' /></Button>
+                    <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <p className='mb-3 mt-5 text-xs font-medium text-slate-400'>Students ({students.length})</p>
