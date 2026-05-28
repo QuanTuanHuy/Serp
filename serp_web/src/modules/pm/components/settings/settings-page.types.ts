@@ -15,6 +15,7 @@ import type {
 export type PMSettingsSection =
   | 'work-types'
   | 'work-type-schemes'
+  | 'skills'
   | 'workflows'
   | 'workflow-schemes'
   | 'priorities'
@@ -70,6 +71,12 @@ export const SETTINGS_ITEMS: Array<{
     group: 'Work types',
   },
   {
+    key: 'skills',
+    title: 'Skills',
+    description: 'Manage skill catalog data for optimization.',
+    group: 'Optimization',
+  },
+  {
     key: 'workflows',
     title: 'Workflows',
     description: 'Manage status paths and workflow lifecycle.',
@@ -95,7 +102,12 @@ export const SETTINGS_ITEMS: Array<{
   },
 ];
 
-export const SETTINGS_GROUPS = ['Work types', 'Workflows', 'Priorities'];
+export const SETTINGS_GROUPS = [
+  'Work types',
+  'Optimization',
+  'Workflows',
+  'Priorities',
+];
 
 export const HIERARCHY_OPTIONS = [
   { value: 0, label: '0 - Sub-task level' },

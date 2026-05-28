@@ -66,6 +66,7 @@ import {
   WorkTypeSchemesTable,
   WorkTypesTable,
 } from '../components/settings/settings-tables';
+import { PMSkillCatalogSection } from '../components/skills';
 import {
   SETTINGS_GROUPS,
   SETTINGS_ITEMS,
@@ -104,6 +105,8 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
   'work-types': 'Structure the work items that teams can create and track.',
   'work-type-schemes':
     'Choose which work types are available to each project space.',
+  skills:
+    'Maintain the skill catalog used by people profiles, work item requirements, and optimization ranking.',
   workflows:
     'A workflow is a set of statuses and transitions that a work item moves through during its lifecycle.',
   'workflow-schemes':
@@ -117,6 +120,7 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
 const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
   'work-types': 'Add work type',
   'work-type-schemes': 'Add work type scheme',
+  skills: 'Add skill',
   workflows: 'Add workflow',
   'workflow-schemes': 'Add workflow scheme',
   priorities: 'Add priority',
@@ -126,6 +130,7 @@ const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
 const SECTION_SEARCH_PLACEHOLDERS: Record<PMSettingsSection, string> = {
   'work-types': 'Filter work types',
   'work-type-schemes': 'Filter work type schemes',
+  skills: 'Filter skills',
   workflows: 'Find workflow',
   'workflow-schemes': 'Filter workflow schemes',
   priorities: 'Filter priorities',
@@ -868,93 +873,106 @@ export function PMSettingsPage() {
       </aside>
 
       <main className='space-y-4'>
-        <div className='flex flex-col gap-3 border-b border-border/60 pb-4 md:flex-row md:items-start md:justify-between'>
-          <div className='space-y-1'>
-            <h1 className='text-2xl font-semibold tracking-tight'>
-              {activeSetting?.title}
-            </h1>
-            <p className='text-sm text-muted-foreground'>
-              {SECTION_DESCRIPTIONS[section]}
-            </p>
-          </div>
-          <Button type='button' onClick={openCreateDialog}>
-            {SECTION_ADD_LABELS[section]}
-          </Button>
-        </div>
+        {section === 'skills' ? (
+          <PMSkillCatalogSection />
+        ) : (
+          <>
+            <div className='flex flex-col gap-3 border-b border-border/60 pb-4 md:flex-row md:items-start md:justify-between'>
+              <div className='space-y-1'>
+                <h1 className='text-2xl font-semibold tracking-tight'>
+                  {activeSetting?.title}
+                </h1>
+                <p className='text-sm text-muted-foreground'>
+                  {SECTION_DESCRIPTIONS[section]}
+                </p>
+              </div>
+              <Button type='button' onClick={openCreateDialog}>
+                {SECTION_ADD_LABELS[section]}
+              </Button>
+            </div>
 
-        <div className='grid gap-3 md:grid-cols-3 xl:grid-cols-6'>
-          <MiniStat title='Work types' value={stats.workTypes} />
-          <MiniStat title='Workflows' value={stats.workflows} />
-          <MiniStat title='Priorities' value={stats.priorities} />
-          <MiniStat title='Schemes' value={stats.schemes} />
-          <MiniStat title='Workflow schemes' value={stats.workflowSchemes} />
-          <MiniStat title='Priority schemes' value={stats.prioritySchemes} />
-        </div>
-
-        <Card className='border-border/60 bg-background/90 shadow-sm'>
-          <CardHeader className='flex flex-col gap-3 border-b py-4 md:flex-row md:items-center md:justify-between'>
-            <div className='relative w-full md:max-w-sm'>
-              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={SECTION_SEARCH_PLACEHOLDERS[section]}
-                className='pl-9'
+            <div className='grid gap-3 md:grid-cols-3 xl:grid-cols-6'>
+              <MiniStat title='Work types' value={stats.workTypes} />
+              <MiniStat title='Workflows' value={stats.workflows} />
+              <MiniStat title='Priorities' value={stats.priorities} />
+              <MiniStat title='Schemes' value={stats.schemes} />
+              <MiniStat
+                title='Workflow schemes'
+                value={stats.workflowSchemes}
+              />
+              <MiniStat
+                title='Priority schemes'
+                value={stats.prioritySchemes}
               />
             </div>
-            <Badge variant='secondary'>{activeItems.length} shown</Badge>
-          </CardHeader>
-          <CardContent className='p-0'>
-            {activeQuery.isLoading ? (
-              <div className='space-y-3 p-4'>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <Skeleton key={index} className='h-12 rounded-md' />
-                ))}
-              </div>
-            ) : activeQuery.error ? (
-              <div className='p-6 text-sm text-muted-foreground'>
-                Unable to load PM settings: {getErrorMessage(activeQuery.error)}
-              </div>
-            ) : section === 'work-types' ? (
-              <WorkTypesTable
-                workTypes={filteredWorkTypes}
-                onEdit={handleEditWorkType}
-                onDelete={handleDeleteWorkType}
-              />
-            ) : section === 'work-type-schemes' ? (
-              <WorkTypeSchemesTable
-                schemes={filteredSchemes}
-                onEdit={handleEditScheme}
-                onDelete={handleDeleteScheme}
-              />
-            ) : section === 'workflows' ? (
-              <WorkflowsTable
-                workflows={filteredWorkflows}
-                onEdit={handleEditWorkflow}
-                onOpenEditor={handleOpenWorkflowEditor}
-              />
-            ) : section === 'workflow-schemes' ? (
-              <WorkflowSchemesTable
-                schemes={filteredWorkflowSchemes}
-                onEdit={handleEditWorkflowScheme}
-                onDelete={handleDeleteWorkflowScheme}
-              />
-            ) : section === 'priorities' ? (
-              <PrioritiesTable
-                priorities={filteredPriorities}
-                onMove={handleMovePriority}
-                onEdit={handleEditPriority}
-                onDelete={handleDeletePriority}
-              />
-            ) : (
-              <PrioritySchemesTable
-                schemes={filteredPrioritySchemes}
-                onEdit={handleEditPriorityScheme}
-                onDelete={handleDeletePriorityScheme}
-              />
-            )}
-          </CardContent>
-        </Card>
+
+            <Card className='border-border/60 bg-background/90 shadow-sm'>
+              <CardHeader className='flex flex-col gap-3 border-b py-4 md:flex-row md:items-center md:justify-between'>
+                <div className='relative w-full md:max-w-sm'>
+                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder={SECTION_SEARCH_PLACEHOLDERS[section]}
+                    className='pl-9'
+                  />
+                </div>
+                <Badge variant='secondary'>{activeItems.length} shown</Badge>
+              </CardHeader>
+              <CardContent className='p-0'>
+                {activeQuery.isLoading ? (
+                  <div className='space-y-3 p-4'>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Skeleton key={index} className='h-12 rounded-md' />
+                    ))}
+                  </div>
+                ) : activeQuery.error ? (
+                  <div className='p-6 text-sm text-muted-foreground'>
+                    Unable to load PM settings:{' '}
+                    {getErrorMessage(activeQuery.error)}
+                  </div>
+                ) : section === 'work-types' ? (
+                  <WorkTypesTable
+                    workTypes={filteredWorkTypes}
+                    onEdit={handleEditWorkType}
+                    onDelete={handleDeleteWorkType}
+                  />
+                ) : section === 'work-type-schemes' ? (
+                  <WorkTypeSchemesTable
+                    schemes={filteredSchemes}
+                    onEdit={handleEditScheme}
+                    onDelete={handleDeleteScheme}
+                  />
+                ) : section === 'workflows' ? (
+                  <WorkflowsTable
+                    workflows={filteredWorkflows}
+                    onEdit={handleEditWorkflow}
+                    onOpenEditor={handleOpenWorkflowEditor}
+                  />
+                ) : section === 'workflow-schemes' ? (
+                  <WorkflowSchemesTable
+                    schemes={filteredWorkflowSchemes}
+                    onEdit={handleEditWorkflowScheme}
+                    onDelete={handleDeleteWorkflowScheme}
+                  />
+                ) : section === 'priorities' ? (
+                  <PrioritiesTable
+                    priorities={filteredPriorities}
+                    onMove={handleMovePriority}
+                    onEdit={handleEditPriority}
+                    onDelete={handleDeletePriority}
+                  />
+                ) : (
+                  <PrioritySchemesTable
+                    schemes={filteredPrioritySchemes}
+                    onEdit={handleEditPriorityScheme}
+                    onDelete={handleDeletePriorityScheme}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </main>
 
       <WorkTypeDialog

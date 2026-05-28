@@ -6,7 +6,7 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
-import { MoreHorizontal, Plus, Search, Users } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, Sparkles, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { selectOrganizationId } from '@/modules/account/store';
@@ -57,6 +57,7 @@ import {
   useRemovePmProjectPersonMutation,
   useReplacePmProjectPersonRolesMutation,
 } from '../api/projectApi';
+import { PMUserSkillDialog } from '../components/skills';
 import type { PMProjectPersonApi } from '../types/api';
 
 interface PMProjectPeoplePageProps {
@@ -76,8 +77,12 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [removingPerson, setRemovingPerson] =
     useState<PMProjectPersonApi | null>(null);
+  const [skillPerson, setSkillPerson] = useState<PMProjectPersonApi | null>(
+    null
+  );
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const deferredUserSearch = useDeferredValue(userSearch.trim());
+  const canSearchUsers = deferredUserSearch.length > 0;
 
   const peopleQuery = useGetPmProjectPeopleQuery(numericProjectId, {
     skip: !Number.isFinite(numericProjectId),
@@ -93,7 +98,13 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
       sortBy: 'firstName',
       sortDir: 'ASC',
     },
-    { skip: !organizationId || !dialogOpen || dialogMode !== 'add' }
+    {
+      skip:
+        !organizationId ||
+        !dialogOpen ||
+        dialogMode !== 'add' ||
+        !canSearchUsers,
+    }
   );
   const [replaceRoles, replaceState] = useReplacePmProjectPersonRolesMutation();
   const [removePerson, removeState] = useRemovePmProjectPersonMutation();
@@ -298,6 +309,12 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
                           <DropdownMenuItem
+                            onClick={() => setSkillPerson(person)}
+                          >
+                            <Sparkles className='mr-2 h-4 w-4' />
+                            Edit skills
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => openEditDialog(person)}
                           >
                             Edit roles
@@ -353,30 +370,39 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
                   placeholder='Search organization users...'
                 />
                 <div className='max-h-48 overflow-y-auto rounded-md border'>
-                  {availableUsers.map((user) => {
-                    const label = getUserLabel(user);
-                    return (
-                      <button
-                        key={user.id}
-                        type='button'
-                        className='flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted'
-                        onClick={() => setSelectedUserId(Number(user.id))}
-                      >
-                        <span>
-                          <span className='font-medium'>{label}</span>
-                          <span className='block text-muted-foreground'>
-                            {user.email || '-'}
-                          </span>
-                        </span>
-                        {selectedUserId === Number(user.id) ? (
-                          <Badge>Selected</Badge>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                  {availableUsers.length === 0 ? (
+                  {!canSearchUsers ? (
                     <div className='px-3 py-6 text-center text-sm text-muted-foreground'>
-                      No users available.
+                      Start typing to search organization users.
+                    </div>
+                  ) : null}
+                  {canSearchUsers
+                    ? availableUsers.map((user) => {
+                        const label = getUserLabel(user);
+                        return (
+                          <button
+                            key={user.id}
+                            type='button'
+                            className='flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted'
+                            onClick={() => setSelectedUserId(Number(user.id))}
+                          >
+                            <span>
+                              <span className='font-medium'>{label}</span>
+                              <span className='block text-muted-foreground'>
+                                {user.email || '-'}
+                              </span>
+                            </span>
+                            {selectedUserId === Number(user.id) ? (
+                              <Badge>Selected</Badge>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    : null}
+                  {canSearchUsers &&
+                  !usersQuery.isFetching &&
+                  availableUsers.length === 0 ? (
+                    <div className='px-3 py-6 text-center text-sm text-muted-foreground'>
+                      No users found.
                     </div>
                   ) : null}
                 </div>
@@ -444,6 +470,13 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PMUserSkillDialog
+        open={skillPerson !== null}
+        userId={skillPerson?.userId}
+        userName={skillPerson?.name}
+        onOpenChange={(open) => !open && setSkillPerson(null)}
+      />
     </div>
   );
 }
