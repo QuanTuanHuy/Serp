@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - First-mile module types
  */
 
+export * from './billing.types';
+
 export interface FirstMileApiResponse<T> {
   code: number;
   message: string;
