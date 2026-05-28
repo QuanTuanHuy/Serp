@@ -28,12 +28,15 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from '@/shared/components';
 import { useNotification } from '@/shared/hooks';
 import {
   useGetActiveCouriersByPostOfficeQuery,
   useGetPickupTrackingOverviewQuery,
   useGetPostOfficesQuery,
+  useGetProvincesQuery,
+  useGetWardsByProvinceCodeQuery,
   usePickupCheckinOrderMutation,
 } from '../../api';
 import type {
@@ -42,8 +45,16 @@ import type {
   PickupTrackingTrip,
   PostOffice,
   PostOfficeStaff,
+  Province,
+  Ward,
 } from '../../types';
 import { PickupOrdersMap } from './components/PickupOrdersMap';
+import {
+  isPickupCheckinDevFeatureAvailable,
+  readDevCheckinModePreference,
+  resolveValidCheckinCoordinates,
+  writeDevCheckinModePreference,
+} from './pickupCheckinDev';
 
 type PickupPageAccessScope =
   | 'ADMIN_ALL'
@@ -186,6 +197,8 @@ export const PickupPage: React.FC = () => {
   const isCourierScope = accessScope === 'COURIER_SELF';
 
   const [tripDate, setTripDate] = React.useState(getTodayDateInputValue);
+  const [selectedProvinceCode, setSelectedProvinceCode] = React.useState('');
+  const [selectedWardCode, setSelectedWardCode] = React.useState('');
   const [selectedPostOfficeId, setSelectedPostOfficeId] = React.useState('');
   const [selectedCourierStaffId, setSelectedCourierStaffId] =
     React.useState('all');
@@ -200,17 +213,60 @@ export const PickupPage: React.FC = () => {
   const [checkinLatitude, setCheckinLatitude] = React.useState('');
   const [checkinLongitude, setCheckinLongitude] = React.useState('');
   const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
+  const isDevCheckinFeatureAvailable = isPickupCheckinDevFeatureAvailable();
+  const [devCheckinMode, setDevCheckinMode] = React.useState(false);
 
-  const shouldLoadPostOffices = canAccess && !isCourierScope;
+  React.useEffect(() => {
+    if (isDevCheckinFeatureAvailable) {
+      setDevCheckinMode(readDevCheckinModePreference());
+    }
+  }, [isDevCheckinFeatureAvailable]);
+
+  const shouldLoadLocationFilters = canAccess && !isCourierScope;
+
+  const { data: provincesData, isLoading: isLoadingProvinces } =
+    useGetProvincesQuery(
+      {
+        page: 0,
+        size: POST_OFFICE_PAGE_SIZE,
+      },
+      {
+        skip: !shouldLoadLocationFilters,
+      }
+    );
+
+  const provinceOptions = React.useMemo<Province[]>(
+    () => provincesData?.items ?? [],
+    [provincesData]
+  );
+
+  const { data: wardsData, isLoading: isLoadingWards } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedProvinceCode,
+        page: 0,
+        size: POST_OFFICE_PAGE_SIZE,
+      },
+      {
+        skip: !shouldLoadLocationFilters || !selectedProvinceCode,
+      }
+    );
+
+  const wardOptions = React.useMemo<Ward[]>(
+    () => wardsData?.items ?? [],
+    [wardsData]
+  );
 
   const { data: postOfficesData, isLoading: isLoadingPostOffices } =
     useGetPostOfficesQuery(
       {
         page: 0,
         size: POST_OFFICE_PAGE_SIZE,
+        provinceCode: selectedProvinceCode || undefined,
+        ...(selectedWardCode ? { wardCode: selectedWardCode } : {}),
       },
       {
-        skip: !shouldLoadPostOffices,
+        skip: !shouldLoadLocationFilters || !selectedProvinceCode,
       }
     );
 
@@ -220,7 +276,32 @@ export const PickupPage: React.FC = () => {
   );
 
   React.useEffect(() => {
-    if (isCourierScope || !postOfficeOptions.length) {
+    if (!provinceOptions.length) {
+      return;
+    }
+
+    const hasSelectedProvince = provinceOptions.some(
+      (province) => province.provinceCode === selectedProvinceCode
+    );
+
+    if (!hasSelectedProvince) {
+      setSelectedProvinceCode(provinceOptions[0].provinceCode);
+    }
+  }, [provinceOptions, selectedProvinceCode]);
+
+  React.useEffect(() => {
+    setSelectedWardCode('');
+    setSelectedPostOfficeId('');
+    setSelectedCourierStaffId('all');
+  }, [selectedProvinceCode]);
+
+  React.useEffect(() => {
+    setSelectedPostOfficeId('');
+    setSelectedCourierStaffId('all');
+  }, [selectedWardCode]);
+
+  React.useEffect(() => {
+    if (isCourierScope || !selectedProvinceCode || !postOfficeOptions.length) {
       return;
     }
 
@@ -231,7 +312,20 @@ export const PickupPage: React.FC = () => {
     if (!hasSelectedPostOffice) {
       setSelectedPostOfficeId(String(postOfficeOptions[0].id));
     }
-  }, [isCourierScope, postOfficeOptions, selectedPostOfficeId]);
+  }, [
+    isCourierScope,
+    postOfficeOptions,
+    selectedPostOfficeId,
+    selectedProvinceCode,
+  ]);
+
+  const handleProvinceChange = (value: string) => {
+    setSelectedProvinceCode(value);
+  };
+
+  const handleWardChange = (value: string) => {
+    setSelectedWardCode(value === 'ALL' ? '' : value);
+  };
 
   const selectedPostOfficeNumericId = React.useMemo(
     () => parseOptionalPositiveInteger(selectedPostOfficeId),
@@ -370,12 +464,57 @@ export const PickupPage: React.FC = () => {
   const [pickupCheckinOrder, { isLoading: isSubmittingCheckin }] =
     usePickupCheckinOrderMutation();
 
+  const applyValidCheckinCoordinates = React.useCallback(
+    (order: PickupTrackingOrder) => {
+      const coordinates = resolveValidCheckinCoordinates(order);
+      if (!coordinates) {
+        notification.error('Pickup location is missing for this order.', {
+          description:
+            'Ensure the order has sender coordinates before check-in.',
+        });
+        return false;
+      }
+
+      setCheckinLatitude(coordinates.latitude.toFixed(6));
+      setCheckinLongitude(coordinates.longitude.toFixed(6));
+      return true;
+    },
+    [notification]
+  );
+
+  const handleDevCheckinModeChange = (enabled: boolean) => {
+    setDevCheckinMode(enabled);
+    writeDevCheckinModePreference(enabled);
+
+    if (enabled && checkinOrder) {
+      applyValidCheckinCoordinates(checkinOrder);
+    }
+  };
+
   const handleOpenCheckinDialog = (order: PickupTrackingOrder) => {
     setCheckinOrder(order);
     setCheckinPhoto(null);
     setCheckinLatitude('');
     setCheckinLongitude('');
     setIsCheckinDialogOpen(true);
+
+    if (devCheckinMode) {
+      applyValidCheckinCoordinates(order);
+    }
+  };
+
+  const handleResolveCheckinLocation = async () => {
+    if (devCheckinMode) {
+      if (!checkinOrder) {
+        notification.error('Please select an order to check in.');
+        return;
+      }
+
+      applyValidCheckinCoordinates(checkinOrder);
+      return;
+    }
+
+    await handleResolveCurrentLocation();
   };
 
   const handleResolveCurrentLocation = async () => {
@@ -488,10 +627,11 @@ export const PickupPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Tracking Filters</CardTitle>
               <CardDescription>
-                Select trip date and tracking scope.
+                Select trip date, narrow by province and ward, then choose post
+                office and courier.
               </CardDescription>
             </CardHeader>
-            <CardContent className='grid gap-4 md:grid-cols-3'>
+            <CardContent className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
               <div className='space-y-2'>
                 <Label htmlFor='trip-date'>Trip date</Label>
                 <Input
@@ -505,16 +645,76 @@ export const PickupPage: React.FC = () => {
               {!isCourierScope ? (
                 <>
                   <div className='space-y-2'>
-                    <Label>Post office</Label>
+                    <Label htmlFor='pickup-province'>Province</Label>
                     <Select
-                      value={selectedPostOfficeId}
+                      value={selectedProvinceCode || undefined}
+                      onValueChange={handleProvinceChange}
+                      disabled={isLoadingProvinces || !provinceOptions.length}
+                    >
+                      <SelectTrigger id='pickup-province'>
+                        <SelectValue placeholder='Select province' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provinceOptions.map((province) => (
+                          <SelectItem
+                            key={province.provinceCode}
+                            value={province.provinceCode}
+                          >
+                            {province.name} ({province.provinceCode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='pickup-ward'>Ward</Label>
+                    <Select
+                      value={selectedWardCode || 'ALL'}
+                      onValueChange={handleWardChange}
+                      disabled={!selectedProvinceCode || isLoadingWards}
+                    >
+                      <SelectTrigger id='pickup-ward'>
+                        <SelectValue
+                          placeholder={
+                            selectedProvinceCode
+                              ? 'Select ward (optional)'
+                              : 'Select province first'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='ALL'>
+                          All wards in province
+                        </SelectItem>
+                        {wardOptions.map((ward) => (
+                          <SelectItem key={ward.wardCode} value={ward.wardCode}>
+                            {ward.name} ({ward.wardCode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='pickup-post-office'>Post office</Label>
+                    <Select
+                      value={selectedPostOfficeId || undefined}
                       onValueChange={setSelectedPostOfficeId}
                       disabled={
-                        isLoadingPostOffices || !postOfficeOptions.length
+                        !selectedProvinceCode ||
+                        isLoadingPostOffices ||
+                        !postOfficeOptions.length
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select post office' />
+                      <SelectTrigger id='pickup-post-office'>
+                        <SelectValue
+                          placeholder={
+                            selectedProvinceCode
+                              ? 'Select post office'
+                              : 'Select province first'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {postOfficeOptions.map((postOffice) => (
@@ -527,16 +727,23 @@ export const PickupPage: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {selectedProvinceCode &&
+                    !isLoadingPostOffices &&
+                    !postOfficeOptions.length ? (
+                      <p className='text-xs text-muted-foreground'>
+                        No post offices found for selected location.
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className='space-y-2'>
-                    <Label>Courier</Label>
+                    <Label htmlFor='pickup-courier'>Courier</Label>
                     <Select
                       value={selectedCourierStaffId}
                       onValueChange={setSelectedCourierStaffId}
                       disabled={!selectedPostOfficeId || isLoadingCouriers}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id='pickup-courier'>
                         <SelectValue placeholder='All couriers in post office' />
                       </SelectTrigger>
                       <SelectContent>
@@ -811,11 +1018,31 @@ export const PickupPage: React.FC = () => {
               Pickup check-in {checkinOrder?.orderCode || ''}
             </DialogTitle>
             <DialogDescription>
-              Upload pickup photo and share your current location.
+              {devCheckinMode
+                ? 'Upload pickup photo. Development mode fills coordinates at the order pickup location.'
+                : 'Upload pickup photo and share your current location.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className='space-y-4'>
+            {isDevCheckinFeatureAvailable ? (
+              <div className='flex items-center justify-between gap-4 rounded-md border border-dashed border-amber-500/50 bg-amber-500/5 px-3 py-2'>
+                <div className='space-y-0.5'>
+                  <Label htmlFor='dev-checkin-mode' className='text-sm'>
+                    Development mode
+                  </Label>
+                  <p className='text-xs text-muted-foreground'>
+                    Fill check-in coordinates at pickup location (within radius)
+                    instead of your current GPS position.
+                  </p>
+                </div>
+                <Switch
+                  id='dev-checkin-mode'
+                  checked={devCheckinMode}
+                  onCheckedChange={handleDevCheckinModeChange}
+                />
+              </div>
+            ) : null}
             <div className='space-y-2'>
               <Label htmlFor='checkin-photo'>Photo</Label>
               <Input
@@ -836,7 +1063,11 @@ export const PickupPage: React.FC = () => {
                   id='checkin-latitude'
                   value={checkinLatitude}
                   readOnly
-                  placeholder='Resolve current location'
+                  placeholder={
+                    devCheckinMode
+                      ? 'Auto-filled from pickup location'
+                      : 'Resolve current location'
+                  }
                 />
               </div>
 
@@ -846,7 +1077,11 @@ export const PickupPage: React.FC = () => {
                   id='checkin-longitude'
                   value={checkinLongitude}
                   readOnly
-                  placeholder='Resolve current location'
+                  placeholder={
+                    devCheckinMode
+                      ? 'Auto-filled from pickup location'
+                      : 'Resolve current location'
+                  }
                 />
               </div>
             </div>
@@ -854,12 +1089,14 @@ export const PickupPage: React.FC = () => {
             <Button
               type='button'
               variant='outline'
-              onClick={() => void handleResolveCurrentLocation()}
+              onClick={() => void handleResolveCheckinLocation()}
               disabled={isResolvingLocation}
             >
               {isResolvingLocation
                 ? 'Resolving location...'
-                : 'Use current location'}
+                : devCheckinMode
+                  ? 'Fill valid pickup location'
+                  : 'Use current location'}
             </Button>
           </div>
 

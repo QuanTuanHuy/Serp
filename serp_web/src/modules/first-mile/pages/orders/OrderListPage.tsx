@@ -20,6 +20,7 @@ import {
   useLazyExportOrderTemplateQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
+  useLazyGetOrderTimelineQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetProvincesQuery,
@@ -32,6 +33,7 @@ import type {
   CreateOrderRequest,
   FirstMileOrderDetail,
   FirstMileOrderStatus,
+  FirstMileOrderTimelineItem,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
@@ -112,6 +114,10 @@ export const OrderListPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false);
   const [detailOrder, setDetailOrder] =
     React.useState<FirstMileOrderDetail | null>(null);
+  const [detailTimeline, setDetailTimeline] = React.useState<
+    FirstMileOrderTimelineItem[]
+  >([]);
+  const [isLoadingTimeline, setIsLoadingTimeline] = React.useState(false);
   const [cancelTarget, setCancelTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [cancelReason, setCancelReason] = React.useState('');
@@ -428,6 +434,7 @@ export const OrderListPage: React.FC = () => {
   ] = useLazyGetDropOffPostOfficeSuggestionsQuery();
   const [geocodeAddress] = useGeocodeAddressMutation();
   const [loadOrderById] = useLazyGetOrderByIdQuery();
+  const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
   const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
     useLazyExportOrderTemplateQuery();
   const [validateOrderImport, { isLoading: isValidatingImport }] =
@@ -579,18 +586,39 @@ export const OrderListPage: React.FC = () => {
     [loadOrderById, notification]
   );
 
+  const loadOrderTimelineData = React.useCallback(
+    async (orderId: number): Promise<FirstMileOrderTimelineItem[]> => {
+      try {
+        return await loadOrderTimeline(orderId).unwrap();
+      } catch (error) {
+        notification.error('Failed to load order timeline.', {
+          description: getErrorMessage(error),
+        });
+        return [];
+      }
+    },
+    [loadOrderTimeline, notification]
+  );
+
   const handleOpenOrderDetail = async (orderId: number) => {
     setLoadingOrderActionId(orderId);
     setIsDetailDialogOpen(true);
     setDetailOrder(null);
+    setDetailTimeline([]);
+    setIsLoadingTimeline(true);
 
-    const orderDetailResult = await loadOrderDetail(orderId);
+    const [orderDetailResult, orderTimelineResult] = await Promise.all([
+      loadOrderDetail(orderId),
+      loadOrderTimelineData(orderId),
+    ]);
     if (orderDetailResult) {
       setDetailOrder(orderDetailResult);
+      setDetailTimeline(orderTimelineResult);
     } else {
       setIsDetailDialogOpen(false);
     }
 
+    setIsLoadingTimeline(false);
     setLoadingOrderActionId(null);
   };
 
@@ -1384,10 +1412,14 @@ export const OrderListPage: React.FC = () => {
       <OrderDetailDialog
         open={isDetailDialogOpen}
         detailOrder={detailOrder}
+        timeline={detailTimeline}
+        isLoadingTimeline={isLoadingTimeline}
         onOpenChange={(open) => {
           setIsDetailDialogOpen(open);
           if (!open) {
             setDetailOrder(null);
+            setDetailTimeline([]);
+            setIsLoadingTimeline(false);
           }
         }}
         formatStatusLabel={formatStatusLabel}

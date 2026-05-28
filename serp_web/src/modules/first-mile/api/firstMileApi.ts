@@ -17,6 +17,7 @@ import type {
   CreateProductTypeRequest,
   FirstMileOrderDetail,
   FirstMileOrderListFilters,
+  FirstMileOrderTimelineItem,
   FirstMilePaginatedData,
   GeocodeAddressRequest,
   GeocodeAddressResponse,
@@ -899,6 +900,15 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
+    getOrderTimeline: builder.query<FirstMileOrderTimelineItem[], number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}/timeline`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderTimelineItem[]>,
+    }),
+
     createOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
       query: (body) => ({
         url: '/orders',
@@ -1027,6 +1037,7 @@ export const firstMileApi = api.injectEndpoints({
       query: (body) => ({
         url: '/pickup-optimization/manual-assign',
         method: 'POST',
+        params: body.force_assign ? { force_assign: true } : undefined,
         body,
       }),
       extraOptions: FIRST_MILE_SERVICE,
@@ -1160,6 +1171,7 @@ export const {
   useGetOrdersQuery,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
+  useLazyGetOrderTimelineQuery,
   useCreateOrderMutation,
   useUpdateOrderMutation,
   useCancelOrderMutation,

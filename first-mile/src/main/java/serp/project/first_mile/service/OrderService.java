@@ -15,6 +15,7 @@ import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
+import serp.project.first_mile.dto.response.OrderTimelineResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 
 import java.util.List;
@@ -37,6 +38,8 @@ public interface OrderService {
 	OrderDetailResponse createOrder(CreateOrderRequest request, Long tenantId);
 
 	OrderDetailResponse getOrderById(Long orderId, Long tenantId);
+
+	List<OrderTimelineResponse> getOrderTimeline(Long orderId, Long tenantId);
 
 	OrderDetailResponse updateOrder(Long orderId, UpdateOrderRequest request, Long tenantId);
 

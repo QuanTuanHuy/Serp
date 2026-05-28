@@ -11,16 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin, Truck, UserRound } from 'lucide-react';
 import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
+  FirstMileOrderTimelineItem,
 } from '../../../types';
 import { OrderRoutePreviewMap } from './OrderRoutePreviewMap';
 
 interface OrderDetailDialogProps {
   open: boolean;
   detailOrder: FirstMileOrderDetail | null;
+  timeline: FirstMileOrderTimelineItem[];
+  isLoadingTimeline: boolean;
   onOpenChange: (open: boolean) => void;
   formatStatusLabel: (status: FirstMileOrderStatus) => string;
   formatPickupMethodLabel: (
@@ -39,6 +42,8 @@ interface OrderDetailDialogProps {
 export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
   open,
   detailOrder,
+  timeline,
+  isLoadingTimeline,
   onOpenChange,
   formatStatusLabel,
   formatPickupMethodLabel,
@@ -110,6 +115,68 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
                   {formatPickupMethodLabel(detailOrder.pickupMethod)}
                 </p>
               </div>
+            </div>
+
+            <div className='space-y-3 rounded-md border p-3'>
+              <p className='font-semibold'>Status timeline</p>
+              {isLoadingTimeline ? (
+                <div className='flex items-center gap-2 text-muted-foreground'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  Loading timeline...
+                </div>
+              ) : timeline.length === 0 ? (
+                <p className='text-muted-foreground'>No timeline data yet.</p>
+              ) : (
+                <div className='space-y-3'>
+                  {timeline.map((item, index) => (
+                    <div
+                      key={`${item.id ?? index}-${item.eventTime ?? index}`}
+                      className='rounded-md border bg-muted/20 p-3'
+                    >
+                      <div className='flex flex-wrap items-center justify-between gap-2'>
+                        <p className='font-medium'>
+                          {item.orderStatus
+                            ? formatStatusLabel(item.orderStatus)
+                            : '--'}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {formatDateTime(item.eventTime)}
+                        </p>
+                      </div>
+                      {item.description ? (
+                        <p className='mt-1 text-sm'>{item.description}</p>
+                      ) : null}
+
+                      <div className='mt-2 space-y-1 text-xs text-muted-foreground'>
+                        {item.locationLabel || item.postOfficeCode ? (
+                          <p className='flex items-center gap-1'>
+                            <MapPin className='h-3.5 w-3.5' />
+                            {item.locationLabel ||
+                              `${item.postOfficeCode || '--'} ${item.postOfficeName ? `- ${item.postOfficeName}` : ''}`}
+                          </p>
+                        ) : null}
+                        {item.courierName || item.courierCode ? (
+                          <p className='flex items-center gap-1'>
+                            <UserRound className='h-3.5 w-3.5' />
+                            {item.courierName || '--'}{' '}
+                            {item.courierCode ? `(${item.courierCode})` : ''}
+                          </p>
+                        ) : null}
+                        {item.vehicleLicensePlate || item.tripCode ? (
+                          <p className='flex items-center gap-1'>
+                            <Truck className='h-3.5 w-3.5' />
+                            {item.vehicleLicensePlate || '--'}
+                            {item.tripCode ? ` | Trip ${item.tripCode}` : ''}
+                          </p>
+                        ) : null}
+                        {item.recordedBy ? (
+                          <p>Recorded by: {item.recordedBy}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className='space-y-2 rounded-md border p-3'>

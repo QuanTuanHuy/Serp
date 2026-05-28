@@ -2,6 +2,7 @@ package serp.project.first_mile.repository;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,6 +40,21 @@ public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
         );
 
     void deleteByTrip_Id(Long tripId);
+
+    @Modifying
+    @Query("""
+            delete from TripOrder to
+            where to.tenantId = :tenantId
+                and to.orderId in :orderIds
+                and to.trip.status in :statuses
+                and to.trip.id <> :targetTripId
+            """)
+    int deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
+            @Param("tenantId") Long tenantId,
+            @Param("orderIds") Collection<Long> orderIds,
+            @Param("statuses") Collection<TripStatus> statuses,
+            @Param("targetTripId") Long targetTripId
+    );
 
     @Query("""
             select (count(to) > 0)

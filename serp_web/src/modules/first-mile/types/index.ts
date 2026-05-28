@@ -457,6 +457,30 @@ export interface FirstMileOrderDetail {
   tenantId?: number;
 }
 
+export interface FirstMileOrderTimelineItem {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  description?: string;
+  eventTime?: string;
+  recordedBy?: string;
+  tripId?: number;
+  tripCode?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
+}
+
 export interface FirstMileOrderListFilters {
   keyword?: string;
   orderCode?: string;
@@ -632,6 +656,7 @@ export interface ManualAssignPickupOrdersRequest {
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
+  force_assign?: boolean;
 }
 
 export interface PickupOptimizationStop {

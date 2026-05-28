@@ -50,6 +50,7 @@ import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
+import serp.project.first_mile.dto.response.OrderTimelineResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
@@ -76,9 +77,11 @@ import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.OrderExcelService;
 import serp.project.first_mile.service.OrderImportExcelService;
 import serp.project.first_mile.service.OrderService;
+import serp.project.first_mile.service.OrderTimelineService;
 import serp.project.first_mile.service.dto.ManualOrderPayload;
 import serp.project.first_mile.service.dto.ManualOrderProductPayload;
 import serp.project.first_mile.service.dto.OrderActorScope;
+import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -149,6 +152,7 @@ public class OrderServiceImpl implements OrderService {
     private final FileStorageService fileStorageService;
     private final SyncOrder syncOrder;
     private final PaymentServiceCaller paymentServiceCaller;
+    private final OrderTimelineService orderTimelineService;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -247,6 +251,27 @@ public class OrderServiceImpl implements OrderService {
         applyManualOrderPayload(order, payload, tenantId);
 
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.CREATED,
+                "Order created.",
+                new OrderTimelineContext(
+                        savedOrder.getCreatedAt(),
+                        null,
+                        null,
+                        null,
+                        savedOrder.getOriginPostOfficeCode(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        toLatitude(savedOrder.getSenderLocation()),
+                        toLongitude(savedOrder.getSenderLocation()),
+                        buildSenderLocationLabel(savedOrder)
+                )
+        );
         return OrderMapper.toOrderDetailResponse(savedOrder);
     }
 
@@ -258,6 +283,44 @@ public class OrderServiceImpl implements OrderService {
 
         validateCanReadOrder(order, tenantId, actorScope);
         return OrderMapper.toOrderDetailResponse(order);
+    }
+
+    @Override
+    public List<OrderTimelineResponse> getOrderTimeline(Long orderId, Long tenantId) {
+        OrderActorScope actorScope = resolveActorScope(tenantId);
+        Order order = orderRepository.findByIdAndTenantId(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanReadOrder(order, tenantId, actorScope);
+
+        List<OrderTimelineResponse> timeline = orderTimelineService.getTimeline(orderId, tenantId);
+        if (!timeline.isEmpty()) {
+            return timeline;
+        }
+
+        return List.of(new OrderTimelineResponse(
+                null,
+                order.getId(),
+                order.getOrderCode(),
+                order.getCustomerOrderCode(),
+                order.getStatus() == null ? OrderStatus.CREATED : order.getStatus(),
+                "Order created.",
+                order.getCreatedAt(),
+                order.getCreatedBy(),
+                null,
+                null,
+                null,
+                order.getOriginPostOfficeCode(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                toLatitude(order.getSenderLocation()),
+                toLongitude(order.getSenderLocation()),
+                buildSenderLocationLabel(order)
+        ));
     }
 
     @Override
@@ -296,6 +359,29 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                cancelledOrder,
+                OrderStatus.CANCELLED,
+                hasText(cancelledOrder.getCancelReason())
+                        ? "Order cancelled. Reason: " + cancelledOrder.getCancelReason()
+                        : "Order cancelled.",
+                new OrderTimelineContext(
+                        cancelledOrder.getCancelledAt(),
+                        null,
+                        null,
+                        null,
+                        cancelledOrder.getOriginPostOfficeCode(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        toLatitude(cancelledOrder.getSenderLocation()),
+                        toLongitude(cancelledOrder.getSenderLocation()),
+                        buildSenderLocationLabel(cancelledOrder)
+                )
+        );
         // Gửi sự kiện kafka
         syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
@@ -525,6 +611,27 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(OrderStatus.PICKING_UP);
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.PICKING_UP,
+                "Courier checked in and started pickup.",
+                new OrderTimelineContext(
+                        savedCheckin.getCheckinTime(),
+                        tripOrder.getTrip().getId(),
+                        tripOrder.getTrip().getTripCode(),
+                        null,
+                        order.getOriginPostOfficeCode(),
+                        null,
+                        courierStaffId,
+                        null,
+                        null,
+                        tripOrder.getTrip().getVehicleId(),
+                        null,
+                        checkinLatitude,
+                        checkinLongitude,
+                        "Pickup check-in location"
+                )
+        );
 
         return toPickupCheckinResponse(savedOrder, tripOrder.getTrip(), savedCheckin, pickupLocation);
     }
@@ -645,7 +752,8 @@ public class OrderServiceImpl implements OrderService {
                     && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
                 if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
                     order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                    orderRepository.save(order);
+                    Order savedOrder = orderRepository.save(order);
+                    recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
                 }
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
@@ -661,7 +769,8 @@ public class OrderServiceImpl implements OrderService {
                     && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
                 order.setIsConfirm(true);
                 order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                orderRepository.save(order);
+                Order savedOrder = orderRepository.save(order);
+                recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
 
@@ -684,7 +793,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
 
         postOfficeRepository.save(postOffice);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order confirmed and received at origin post office.");
 
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
@@ -739,6 +849,60 @@ public class OrderServiceImpl implements OrderService {
                 && latitude <= 90.0
                 && longitude >= -180.0
                 && longitude <= 180.0;
+    }
+
+    private Double toLatitude(Point location) {
+        return location == null ? null : location.getY();
+    }
+
+    private Double toLongitude(Point location) {
+        return location == null ? null : location.getX();
+    }
+
+    private String buildSenderLocationLabel(Order order) {
+        if (order == null) {
+            return null;
+        }
+
+        List<String> addressParts = new ArrayList<>();
+        if (hasText(order.getSenderAddressDetail())) {
+            addressParts.add(order.getSenderAddressDetail().trim());
+        }
+        if (hasText(order.getSenderWardCode())) {
+            addressParts.add(order.getSenderWardCode().trim());
+        }
+        if (hasText(order.getSenderProvinceCode())) {
+            addressParts.add(order.getSenderProvinceCode().trim());
+        }
+
+        if (addressParts.isEmpty()) {
+            return null;
+        }
+        return String.join(", ", addressParts);
+    }
+
+    private void recordAtOriginPostOfficeTimeline(Order order, PostOffice postOffice, String description) {
+        orderTimelineService.recordStatusEvent(
+                order,
+                OrderStatus.AT_ORIGIN_POST_OFFICE,
+                description,
+                new OrderTimelineContext(
+                        LocalDateTime.now(),
+                        null,
+                        null,
+                        postOffice == null ? null : postOffice.getId(),
+                        postOffice == null ? null : postOffice.getCode(),
+                        postOffice == null ? null : postOffice.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        postOffice == null ? null : toLatitude(postOffice.getLocation()),
+                        postOffice == null ? null : toLongitude(postOffice.getLocation()),
+                        postOffice == null ? null : postOffice.getName()
+                )
+        );
     }
 
     private boolean hasText(String value) {
