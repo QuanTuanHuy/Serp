@@ -264,6 +264,10 @@ export const api = createApi({
     'ttcrs/Request',
     'ttcrs/Location',
     'ttcrs/Resource',
+    // TMS billing tags
+    'billing/Tariff',
+    'billing/SurchargeRule',
+    'billing/VasRule',
   ],
 
   // Define endpoints in separate files for each module

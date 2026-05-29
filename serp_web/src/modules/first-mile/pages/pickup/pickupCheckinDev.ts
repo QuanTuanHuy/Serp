@@ -36,7 +36,12 @@ export const resolveValidCheckinCoordinates = (
   const latitude = order.senderLatitude;
   const longitude = order.senderLongitude;
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (
+    latitude === undefined ||
+    longitude === undefined ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
     return null;
   }
 

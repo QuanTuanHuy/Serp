@@ -12,6 +12,7 @@ import {
   buildUpsertVasRuleRequest,
   CALCULATION_TYPE_OPTIONS,
   DEFAULT_VAS_FORM,
+  vasResponseToForm,
   type VasRuleFormState,
 } from '../billingPageModels';
 
@@ -47,6 +48,11 @@ export const useVasRuleForm = () => {
     setForm(DEFAULT_VAS_FORM);
   };
 
+  const loadFromSaved = (saved: VasRuleAdminResponse) => {
+    setForm(vasResponseToForm(saved));
+    setLastSaved(saved);
+  };
+
   return {
     form,
     setForm,
@@ -55,5 +61,6 @@ export const useVasRuleForm = () => {
     isLoading,
     submit,
     reset,
+    loadFromSaved,
   };
 };

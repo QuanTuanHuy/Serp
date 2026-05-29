@@ -11,6 +11,7 @@ import type { TariffAdminResponse } from '../../../types';
 import {
   buildUpsertTariffRequest,
   DEFAULT_TARIFF_FORM,
+  tariffResponseToForm,
   type TariffFormState,
 } from '../billingPageModels';
 
@@ -40,6 +41,11 @@ export const useTariffRuleForm = () => {
     setForm(DEFAULT_TARIFF_FORM);
   };
 
+  const loadFromSaved = (saved: TariffAdminResponse) => {
+    setForm(tariffResponseToForm(saved));
+    setLastSaved(saved);
+  };
+
   return {
     form,
     setForm,
@@ -47,5 +53,6 @@ export const useTariffRuleForm = () => {
     isLoading,
     submit,
     reset,
+    loadFromSaved,
   };
 };

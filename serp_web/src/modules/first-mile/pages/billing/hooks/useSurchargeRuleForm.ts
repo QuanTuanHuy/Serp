@@ -12,6 +12,7 @@ import {
   buildUpsertSurchargeRuleRequest,
   CALCULATION_TYPE_OPTIONS,
   DEFAULT_SURCHARGE_FORM,
+  surchargeResponseToForm,
   type SurchargeRuleFormState,
 } from '../billingPageModels';
 
@@ -49,6 +50,11 @@ export const useSurchargeRuleForm = () => {
     setForm(DEFAULT_SURCHARGE_FORM);
   };
 
+  const loadFromSaved = (saved: SurchargeRuleAdminResponse) => {
+    setForm(surchargeResponseToForm(saved));
+    setLastSaved(saved);
+  };
+
   return {
     form,
     setForm,
@@ -57,5 +63,6 @@ export const useSurchargeRuleForm = () => {
     isLoading,
     submit,
     reset,
+    loadFromSaved,
   };
 };

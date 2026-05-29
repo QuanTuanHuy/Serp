@@ -12,3 +12,4 @@ export * from './TariffRuleFormCard';
 export * from './SurchargeRuleFormCard';
 export * from './VasRuleFormCard';
 export * from './BillingPricingAdminTab';
+export * from './BillingPricingRulesTable';
