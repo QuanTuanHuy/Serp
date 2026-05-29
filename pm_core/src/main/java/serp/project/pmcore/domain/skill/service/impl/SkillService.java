@@ -135,6 +135,11 @@ public class SkillService implements ISkillService {
     }
 
     @Override
+    public List<UserSkillEntity> listUsersSkills(Long tenantId, List<Long> userIds) {
+        return userSkillReadPort.listActiveByUserIds(tenantId, userIds);
+    }
+
+    @Override
     public List<UserSkillEntity> replaceUserSkills(
             Long tenantId,
             Long targetUserId,

@@ -9,7 +9,9 @@ public class PathConstants {
     public static final String PROJECTS = API_BASE_PATH + "/projects";
     public static final String PROJECT_OPTIMIZATION_RUNS = PROJECTS + "/{projectId}/optimization-runs";
     public static final String SKILLS = API_BASE_PATH + "/skills";
-    public static final String USER_SKILLS = API_BASE_PATH + "/users/{userId}/skills";
+    public static final String USERS = API_BASE_PATH + "/users";
+    public static final String USER_SKILLS = USERS + "/{userId}/skills";
+    public static final String USER_SKILLS_BATCH = USERS + "/skills";
     public static final String PROJECT_COMPONENTS = PROJECTS + "/{projectId}/components";
     public static final String PROJECT_PEOPLE = PROJECTS + "/{projectId}/people";
     public static final String PROJECT_CATEGORIES = API_BASE_PATH + "/project-categories";

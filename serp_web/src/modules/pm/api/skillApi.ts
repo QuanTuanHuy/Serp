@@ -12,6 +12,7 @@ import type {
   PMSkillApi,
   PMUpdateSkillRequest,
   PMUserSkillApi,
+  PMUserSkillsByUserApi,
   PMWorkItemSkillApi,
 } from '../types/api';
 
@@ -80,6 +81,23 @@ export const pmSkillApi = api.injectEndpoints({
       ],
     }),
 
+    getPmUsersSkills: builder.query<PMUserSkillsByUserApi, number[]>({
+      query: (userIds) => ({
+        url: '/users/skills',
+        method: 'GET',
+        params: { userIds: userIds.join(',') },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMUserSkillsByUserApi>(),
+      providesTags: (_result, _error, userIds) => [
+        ...userIds.map((userId) => ({
+          type: 'pm/UserSkill' as const,
+          id: userId,
+        })),
+        { type: 'pm/UserSkill' as const, id: 'BATCH' },
+      ],
+    }),
+
     replacePmUserSkills: builder.mutation<
       PMUserSkillApi[],
       { userId: number; body: PMReplaceUserSkillsRequest }
@@ -140,6 +158,7 @@ export const {
   useCreatePmSkillMutation,
   useGetPmSkillsQuery,
   useGetPmUserSkillsQuery,
+  useGetPmUsersSkillsQuery,
   useGetPmWorkItemSkillsQuery,
   useReplacePmUserSkillsMutation,
   useReplacePmWorkItemSkillsMutation,

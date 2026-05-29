@@ -38,6 +38,8 @@ export interface PMUserSkillApi {
   verifiedAt?: number | null;
 }
 
+export type PMUserSkillsByUserApi = Record<string, PMUserSkillApi[]>;
+
 export interface PMReplaceUserSkillsRequest {
   items: Array<{
     skillId: number;

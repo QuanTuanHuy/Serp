@@ -52,19 +52,37 @@ import {
 } from '@/shared/components/ui';
 import { useAppSelector } from '@/shared/hooks';
 import {
+  useGetPmSkillsQuery,
+  useGetPmUsersSkillsQuery,
+} from '../api';
+import {
   useGetPmProjectPeopleQuery,
   useGetPmProjectRolesQuery,
   useRemovePmProjectPersonMutation,
   useReplacePmProjectPersonRolesMutation,
 } from '../api/projectApi';
 import { PMUserSkillDialog } from '../components/skills';
-import type { PMProjectPersonApi } from '../types/api';
+import {
+  buildSkillMap,
+  getProficiencyLabel,
+} from '../components/skills/skill-ui.utils';
+import type {
+  PMProjectPersonApi,
+  PMSkillApi,
+  PMUserSkillApi,
+  PMUserSkillsByUserApi,
+} from '../types/api';
 
 interface PMProjectPeoplePageProps {
   projectId: string;
 }
 
 type PeopleDialogMode = 'add' | 'edit';
+
+interface SkillBadgesProps {
+  skills: PMUserSkillApi[];
+  skillsById: Map<number, PMSkillApi>;
+}
 
 export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   const numericProjectId = Number(projectId);
@@ -110,7 +128,21 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   const [removePerson, removeState] = useRemovePmProjectPersonMutation();
 
   const people = peopleQuery.data ?? [];
+  const peopleUserIds = useMemo(
+    () => people.map((person) => person.userId),
+    [people]
+  );
+  const userSkillsQuery = useGetPmUsersSkillsQuery(peopleUserIds, {
+    skip: peopleUserIds.length === 0,
+  });
+  const skillsQuery = useGetPmSkillsQuery(undefined, {
+    skip: peopleUserIds.length === 0,
+  });
   const roles = rolesQuery.data?.data.items ?? [];
+  const skillsById = useMemo(
+    () => buildSkillMap(skillsQuery.data),
+    [skillsQuery.data]
+  );
   const existingUserIds = useMemo(
     () => new Set(people.map((person) => person.userId)),
     [people]
@@ -131,13 +163,18 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
         person.name,
         person.email,
         ...person.roles.map((role) => role.name),
+        getPersonSkillSearchText(
+          person.userId,
+          userSkillsQuery.data,
+          skillsById
+        ),
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return text.includes(deferredSearch);
     });
-  }, [deferredSearch, people]);
+  }, [deferredSearch, people, skillsById, userSkillsQuery.data]);
 
   const openAddDialog = () => {
     setDialogMode('add');
@@ -207,6 +244,9 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   );
   const isSaving = replaceState.isLoading;
   const isInitialLoading = peopleQuery.isLoading && people.length === 0;
+  const isSkillsLoading =
+    peopleUserIds.length > 0 &&
+    (skillsQuery.isLoading || userSkillsQuery.isLoading);
 
   return (
     <div className='space-y-5'>
@@ -252,88 +292,107 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Roles</TableHead>
+                  <TableHead>Skills</TableHead>
                   <TableHead>Added</TableHead>
                   <TableHead className='w-12' />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPeople.map((person) => (
-                  <TableRow key={person.userId}>
-                    <TableCell>
-                      <div className='flex items-center gap-3'>
-                        <Avatar className='h-9 w-9'>
-                          {person.avatarUrl ? (
-                            <AvatarImage src={person.avatarUrl} alt='' />
-                          ) : null}
-                          <AvatarFallback>{getInitials(person)}</AvatarFallback>
-                        </Avatar>
-                        <div className='min-w-0'>
-                          <div className='flex flex-wrap items-center gap-2'>
-                            <span className='font-medium'>
-                              {person.name || `User #${person.userId}`}
-                            </span>
-                            {person.projectLead ? (
-                              <Badge variant='secondary'>Project lead</Badge>
+                {filteredPeople.map((person) => {
+                  const userSkills = getUserSkillItems(
+                    person.userId,
+                    userSkillsQuery.data
+                  );
+                  return (
+                    <TableRow key={person.userId}>
+                      <TableCell>
+                        <div className='flex items-center gap-3'>
+                          <Avatar className='h-9 w-9'>
+                            {person.avatarUrl ? (
+                              <AvatarImage src={person.avatarUrl} alt='' />
                             ) : null}
+                            <AvatarFallback>
+                              {getInitials(person)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className='min-w-0'>
+                            <div className='flex flex-wrap items-center gap-2'>
+                              <span className='font-medium'>
+                                {person.name || `User #${person.userId}`}
+                              </span>
+                              {person.projectLead ? (
+                                <Badge variant='secondary'>Project lead</Badge>
+                              ) : null}
+                            </div>
+                            <p className='truncate text-sm text-muted-foreground'>
+                              {person.email || '-'}
+                            </p>
                           </div>
-                          <p className='truncate text-sm text-muted-foreground'>
-                            {person.email || '-'}
-                          </p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className='flex flex-wrap gap-1.5'>
-                        {person.roles.length > 0 ? (
-                          person.roles.map((role) => (
-                            <Badge key={role.id} variant='outline'>
-                              {role.name}
-                            </Badge>
-                          ))
+                      </TableCell>
+                      <TableCell>
+                        <div className='flex flex-wrap gap-1.5'>
+                          {person.roles.length > 0 ? (
+                            person.roles.map((role) => (
+                              <Badge key={role.id} variant='outline'>
+                                {role.name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className='text-sm text-muted-foreground'>
+                              No roles
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {isSkillsLoading ? (
+                          <Skeleton className='h-6 w-40' />
                         ) : (
-                          <span className='text-sm text-muted-foreground'>
-                            No roles
-                          </span>
+                          <SkillBadges
+                            skills={userSkills}
+                            skillsById={skillsById}
+                          />
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className='text-sm text-muted-foreground'>
-                      {formatTimestamp(person.addedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant='ghost' size='icon'>
-                            <MoreHorizontal className='h-4 w-4' />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end'>
-                          <DropdownMenuItem
-                            onClick={() => setSkillPerson(person)}
-                          >
-                            <Sparkles className='mr-2 h-4 w-4' />
-                            Edit skills
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openEditDialog(person)}
-                          >
-                            Edit roles
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className='text-destructive'
-                            onClick={() => setRemovingPerson(person)}
-                          >
-                            Remove from project
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className='text-sm text-muted-foreground'>
+                        {formatTimestamp(person.addedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant='ghost' size='icon'>
+                              <MoreHorizontal className='h-4 w-4' />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align='end'>
+                            <DropdownMenuItem
+                              onClick={() => setSkillPerson(person)}
+                            >
+                              <Sparkles className='mr-2 h-4 w-4' />
+                              Edit skills
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEditDialog(person)}
+                            >
+                              Edit roles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className='text-destructive'
+                              onClick={() => setRemovingPerson(person)}
+                            >
+                              Remove from project
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {filteredPeople.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className='h-32 text-center text-sm text-muted-foreground'
                     >
                       No project people found.
@@ -481,6 +540,28 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   );
 }
 
+function SkillBadges({ skills, skillsById }: SkillBadgesProps) {
+  if (skills.length === 0) {
+    return <span className='text-sm text-muted-foreground'>No skills</span>;
+  }
+
+  const visibleSkills = skills.slice(0, 3);
+  const hiddenCount = skills.length - visibleSkills.length;
+
+  return (
+    <div className='flex max-w-md flex-wrap gap-1.5'>
+      {visibleSkills.map((skill) => (
+        <Badge key={skill.id} variant='outline'>
+          {getSkillBadgeLabel(skill, skillsById)}
+        </Badge>
+      ))}
+      {hiddenCount > 0 ? (
+        <Badge variant='secondary'>+{hiddenCount}</Badge>
+      ) : null}
+    </div>
+  );
+}
+
 function getInitials(person: PMProjectPersonApi) {
   const source = person.name || person.email || String(person.userId);
   return source
@@ -489,6 +570,41 @@ function getInitials(person: PMProjectPersonApi) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('');
+}
+
+function getUserSkillItems(
+  userId: number,
+  userSkillsByUser?: PMUserSkillsByUserApi
+) {
+  return userSkillsByUser?.[String(userId)] ?? [];
+}
+
+function getPersonSkillSearchText(
+  userId: number,
+  userSkillsByUser: PMUserSkillsByUserApi | undefined,
+  skillsById: Map<number, PMSkillApi>
+) {
+  return getUserSkillItems(userId, userSkillsByUser)
+    .map((skill) => {
+      const catalogSkill = skillsById.get(skill.skillId);
+      return [
+        catalogSkill?.name,
+        catalogSkill?.code,
+        getProficiencyLabel(skill.proficiency),
+      ]
+        .filter(Boolean)
+        .join(' ');
+    })
+    .join(' ');
+}
+
+function getSkillBadgeLabel(
+  userSkill: PMUserSkillApi,
+  skillsById: Map<number, PMSkillApi>
+) {
+  const skill = skillsById.get(userSkill.skillId);
+  const name = skill?.code || skill?.name || `Skill #${userSkill.skillId}`;
+  return `${name}: ${getProficiencyLabel(userSkill.proficiency)}`;
 }
 
 function formatTimestamp(value?: number | null) {
