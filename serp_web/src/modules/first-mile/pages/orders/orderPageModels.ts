@@ -399,9 +399,18 @@ export const mapOrderToFormState = (
       order.codAmount > 0
         ? 'true'
         : 'false',
-    dimensionLengthCm: '',
-    dimensionWidthCm: '',
-    dimensionHeightCm: '',
+    dimensionLengthCm:
+      order.dimensionLengthCm === undefined || order.dimensionLengthCm === null
+        ? ''
+        : String(order.dimensionLengthCm),
+    dimensionWidthCm:
+      order.dimensionWidthCm === undefined || order.dimensionWidthCm === null
+        ? ''
+        : String(order.dimensionWidthCm),
+    dimensionHeightCm:
+      order.dimensionHeightCm === undefined || order.dimensionHeightCm === null
+        ? ''
+        : String(order.dimensionHeightCm),
     totalVolumeM3:
       order.totalVolume === undefined || order.totalVolume === null
         ? ''

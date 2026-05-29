@@ -38,15 +38,32 @@ import {
   formatTariffMoney,
   getTariffRouteLabel,
 } from './BillingPricingRulesTable';
-import { SurchargeRuleFormCard } from './SurchargeRuleFormCard';
-import { TariffRuleFormCard } from './TariffRuleFormCard';
-import { VasRuleFormCard } from './VasRuleFormCard';
+import {
+  SurchargeRuleFormDialog,
+  type SurchargeRuleFormMode,
+} from './SurchargeRuleFormDialog';
+import {
+  TariffRuleFormDialog,
+  type TariffRuleFormMode,
+} from './TariffRuleFormDialog';
+import { VasRuleFormDialog, type VasRuleFormMode } from './VasRuleFormDialog';
 
 export const BillingPricingAdminTab: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('tariff');
   const [tariffServiceFilter, setTariffServiceFilter] = React.useState<
     BillingDeliveryService | 'ALL'
   >('ALL');
+
+  const [tariffDialogOpen, setTariffDialogOpen] = React.useState(false);
+  const [tariffFormMode, setTariffFormMode] =
+    React.useState<TariffRuleFormMode>('create');
+  const [surchargeDialogOpen, setSurchargeDialogOpen] = React.useState(false);
+  const [surchargeFormMode, setSurchargeFormMode] =
+    React.useState<SurchargeRuleFormMode>('create');
+  const [vasDialogOpen, setVasDialogOpen] = React.useState(false);
+  const [vasFormMode, setVasFormMode] = React.useState<VasRuleFormMode>(
+    'create'
+  );
 
   const tariff = useTariffRuleForm();
   const surcharge = useSurchargeRuleForm();
@@ -68,15 +85,96 @@ export const BillingPricingAdminTab: React.FC = () => {
     return items.filter((item) => item.serviceCode === tariffServiceFilter);
   }, [tariffQuery.data, tariffServiceFilter]);
 
+  const openTariffCreate = () => {
+    tariff.reset();
+    setTariffFormMode('create');
+    setTariffDialogOpen(true);
+  };
+
+  const openTariffEdit = (row: TariffAdminResponse) => {
+    tariff.loadFromSaved(row);
+    setTariffFormMode('edit');
+    setTariffDialogOpen(true);
+  };
+
+  const handleTariffDialogChange = (open: boolean) => {
+    if (!open && !tariff.isLoading) {
+      setTariffDialogOpen(false);
+      tariff.reset();
+    }
+  };
+
+  const handleTariffSubmit = async (event: React.FormEvent) => {
+    const saved = await tariff.submit(event);
+    if (saved) {
+      setTariffDialogOpen(false);
+      tariff.reset();
+    }
+  };
+
+  const openSurchargeCreate = () => {
+    surcharge.reset();
+    setSurchargeFormMode('create');
+    setSurchargeDialogOpen(true);
+  };
+
+  const openSurchargeEdit = (row: SurchargeRuleAdminResponse) => {
+    surcharge.loadFromSaved(row);
+    setSurchargeFormMode('edit');
+    setSurchargeDialogOpen(true);
+  };
+
+  const handleSurchargeDialogChange = (open: boolean) => {
+    if (!open && !surcharge.isLoading) {
+      setSurchargeDialogOpen(false);
+      surcharge.reset();
+    }
+  };
+
+  const handleSurchargeSubmit = async (event: React.FormEvent) => {
+    const saved = await surcharge.submit(event);
+    if (saved) {
+      setSurchargeDialogOpen(false);
+      surcharge.reset();
+    }
+  };
+
+  const openVasCreate = () => {
+    vas.reset();
+    setVasFormMode('create');
+    setVasDialogOpen(true);
+  };
+
+  const openVasEdit = (row: VasRuleAdminResponse) => {
+    vas.loadFromSaved(row);
+    setVasFormMode('edit');
+    setVasDialogOpen(true);
+  };
+
+  const handleVasDialogChange = (open: boolean) => {
+    if (!open && !vas.isLoading) {
+      setVasDialogOpen(false);
+      vas.reset();
+    }
+  };
+
+  const handleVasSubmit = async (event: React.FormEvent) => {
+    const saved = await vas.submit(event);
+    if (saved) {
+      setVasDialogOpen(false);
+      vas.reset();
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <Alert>
         <CircleHelp className='h-4 w-4' />
         <AlertTitle>How to use pricing administration</AlertTitle>
         <AlertDescription>
-          View current rules from the billing service, click Edit to load a row
-          into the form, then save changes. Tariffs are keyed by service, route
-          type, and effective date.
+          View current rules from the billing service. Click Edit on a row or Add
+          to open the form in a dialog, then save changes. Tariffs are keyed by
+          service, route type, and effective date.
         </AlertDescription>
       </Alert>
 
@@ -105,9 +203,11 @@ export const BillingPricingAdminTab: React.FC = () => {
             rows={filteredTariffs}
             isLoading={tariffQuery.isLoading}
             isError={tariffQuery.isError}
-            emptyMessage='No tariffs found. Save a tariff rule below or run DB migration seeds.'
+            emptyMessage='No tariffs found. Add a tariff rule or run DB migration seeds.'
             getRowKey={(row) => row.id}
-            onEdit={tariff.loadFromSaved}
+            onEdit={openTariffEdit}
+            onCreate={openTariffCreate}
+            createLabel='Add tariff'
             serviceFilter={{
               value: tariffServiceFilter,
               onChange: setTariffServiceFilter,
@@ -129,15 +229,6 @@ export const BillingPricingAdminTab: React.FC = () => {
               </>
             )}
           />
-
-          <TariffRuleFormCard
-            form={tariff.form}
-            onFormChange={tariff.setForm}
-            lastSaved={tariff.lastSaved}
-            isLoading={tariff.isLoading}
-            onSubmit={tariff.submit}
-            onReset={tariff.reset}
-          />
         </TabsContent>
 
         <TabsContent value='surcharge' className='space-y-6'>
@@ -155,7 +246,9 @@ export const BillingPricingAdminTab: React.FC = () => {
             isError={surchargeQuery.isError}
             emptyMessage='No surcharge rules found.'
             getRowKey={(row) => row.id}
-            onEdit={surcharge.loadFromSaved}
+            onEdit={openSurchargeEdit}
+            onCreate={openSurchargeCreate}
+            createLabel='Add surcharge'
             renderCells={(row) => (
               <>
                 <TableCell className='font-medium'>{row.code}</TableCell>
@@ -172,16 +265,6 @@ export const BillingPricingAdminTab: React.FC = () => {
                 </TableCell>
               </>
             )}
-          />
-
-          <SurchargeRuleFormCard
-            form={surcharge.form}
-            onFormChange={surcharge.setForm}
-            calculationTypeHelper={surcharge.calculationTypeHelper}
-            lastSaved={surcharge.lastSaved}
-            isLoading={surcharge.isLoading}
-            onSubmit={surcharge.submit}
-            onReset={surcharge.reset}
           />
         </TabsContent>
 
@@ -200,7 +283,9 @@ export const BillingPricingAdminTab: React.FC = () => {
             isError={vasQuery.isError}
             emptyMessage='No VAS rules found.'
             getRowKey={(row) => row.id}
-            onEdit={vas.loadFromSaved}
+            onEdit={openVasEdit}
+            onCreate={openVasCreate}
+            createLabel='Add VAS rule'
             renderCells={(row) => (
               <>
                 <TableCell className='font-medium'>{row.code}</TableCell>
@@ -216,18 +301,40 @@ export const BillingPricingAdminTab: React.FC = () => {
               </>
             )}
           />
-
-          <VasRuleFormCard
-            form={vas.form}
-            onFormChange={vas.setForm}
-            calculationTypeHelper={vas.calculationTypeHelper}
-            lastSaved={vas.lastSaved}
-            isLoading={vas.isLoading}
-            onSubmit={vas.submit}
-            onReset={vas.reset}
-          />
         </TabsContent>
       </Tabs>
+
+      <TariffRuleFormDialog
+        open={tariffDialogOpen}
+        mode={tariffFormMode}
+        form={tariff.form}
+        onFormChange={tariff.setForm}
+        isLoading={tariff.isLoading}
+        onOpenChange={handleTariffDialogChange}
+        onSubmit={handleTariffSubmit}
+      />
+
+      <SurchargeRuleFormDialog
+        open={surchargeDialogOpen}
+        mode={surchargeFormMode}
+        form={surcharge.form}
+        onFormChange={surcharge.setForm}
+        calculationTypeHelper={surcharge.calculationTypeHelper}
+        isLoading={surcharge.isLoading}
+        onOpenChange={handleSurchargeDialogChange}
+        onSubmit={handleSurchargeSubmit}
+      />
+
+      <VasRuleFormDialog
+        open={vasDialogOpen}
+        mode={vasFormMode}
+        form={vas.form}
+        onFormChange={vas.setForm}
+        calculationTypeHelper={vas.calculationTypeHelper}
+        isLoading={vas.isLoading}
+        onOpenChange={handleVasDialogChange}
+        onSubmit={handleVasSubmit}
+      />
     </div>
   );
 };

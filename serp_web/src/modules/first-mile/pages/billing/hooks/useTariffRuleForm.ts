@@ -23,17 +23,19 @@ export const useTariffRuleForm = () => {
   );
   const [upsertTariff, { isLoading }] = useUpsertTariffMutation();
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent): Promise<boolean> => {
     event.preventDefault();
 
     try {
       const response = await upsertTariff(buildUpsertTariffRequest(form)).unwrap();
       setLastSaved(response);
       notification.success('Tariff rule saved successfully.');
+      return true;
     } catch (error) {
       notification.error('Unable to save tariff rule.', {
         description: getErrorMessage(error),
       });
+      return false;
     }
   };
 

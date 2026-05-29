@@ -75,6 +75,9 @@ payment:
     gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
     create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
     query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
+    redirect-url: ${PAYMENT_REDIRECT_URL:http://localhost:3000/payment/result}
+  webhook:
+    secret: ${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

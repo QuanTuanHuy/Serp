@@ -40,8 +40,10 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
+import serp.project.first_mile.dto.request.InitiateOrderPaymentRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
@@ -51,6 +53,7 @@ import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.OrderTimelineResponse;
+import serp.project.first_mile.dto.response.PaymentWebhookProcessResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
@@ -138,6 +141,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
+
+    @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
+    private String paymentRedirectUrl;
 
     private final OrderExcelService orderExcelService;
     private final OrderImportExcelService orderImportExcelService;
@@ -389,7 +395,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrderPaymentInitResponse initiateOrderPayment(Long orderId, Long tenantId) {
+    public OrderPaymentInitResponse initiateOrderPayment(
+            Long orderId,
+            Long tenantId,
+            InitiateOrderPaymentRequest request
+    ) {
         OrderActorScope actorScope = resolveActorScope(tenantId);
         Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
@@ -400,7 +410,9 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee is already paid.");
         }
 
-        long shippingFee = resolveShippingFee(order);
+        long shippingFee = resolveShippingFeeForPayment(order, request);
+        order.setTotalShippingFee(shippingFee);
+        orderRepository.save(order);
         Long actorId = firstMileAccessUtils.getCurrentUserIdOrThrow();
         String orderCode = order.getOrderCode();
 
@@ -408,6 +420,9 @@ public class OrderServiceImpl implements OrderService {
                 .appUser(orderCode)
                 .amount(shippingFee)
                 .description("Thanh toan phi van chuyen cho don hang " + orderCode)
+                .embedData(PaymentCreateOrderRequest.EmbedData.builder()
+                        .redirectUrl(paymentRedirectUrl + "?source=first-mile&orderId=" + order.getId())
+                        .build())
                 .title("Phi van chuyen - " + orderCode)
                 .tenantId(tenantId)
                 .actorId(actorId)
@@ -481,6 +496,43 @@ public class OrderServiceImpl implements OrderService {
                 request.getAppTransId(),
                 gatewayStatus,
                 queryResponse.getMessage()
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentWebhookProcessResponse processPaymentOrderConfirmedWebhook(
+            PaymentOrderConfirmedWebhookRequest request
+    ) {
+        if (request == null || !hasText(request.getOrderCode()) || request.getTenantId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid webhook payload.");
+        }
+
+        String orderCode = request.getOrderCode().trim();
+        Order order = orderRepository.findByOrderCodeAndTenantIdForUpdate(orderCode, request.getTenantId())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            return new PaymentWebhookProcessResponse(
+                    orderCode,
+                    request.getAppTransId(),
+                    false,
+                    "Order shipping fee is already marked as paid."
+            );
+        }
+
+        if (request.getAmount() != null && request.getAmount() > 0L) {
+            order.setTotalShippingFee(request.getAmount());
+        }
+        order.setPaymentStatus(PaymentStatus.PAID);
+        Order savedOrder = orderRepository.save(order);
+        syncOrder.sendOrderEvent(savedOrder);
+
+        return new PaymentWebhookProcessResponse(
+                savedOrder.getOrderCode(),
+                request.getAppTransId(),
+                true,
+                "Order payment status updated to PAID."
         );
     }
 
@@ -661,6 +713,14 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+        if (FeePayer.SENDER.equals(order.getFeePayer())
+                && !PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Sender must complete shipping fee payment before order confirmation."
+            );
+        }
+
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             orderRepository.save(order);
@@ -831,9 +891,16 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private long resolveShippingFee(Order order) {
+    private long resolveShippingFeeForPayment(Order order, InitiateOrderPaymentRequest request) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        if (request != null && request.getAmount() != null) {
+            Long amount = request.getAmount();
+            if (amount <= 0L) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee must be greater than 0 for payment.");
+            }
+            return amount;
         }
         Long totalShippingFee = order.getTotalShippingFee();
         if (totalShippingFee == null || totalShippingFee <= 0L) {

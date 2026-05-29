@@ -1,19 +1,17 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - VAS rule admin form card
+ * Description: Part of Serp Project - VAS rule admin form dialog
  */
 
 import React from 'react';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -23,41 +21,47 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
-import type { VasRuleAdminResponse } from '../../../types';
 import {
   CALCULATION_TYPE_OPTIONS,
   VAS_RULE_CODE_OPTIONS,
   type VasRuleFormState,
 } from '../billingPageModels';
 
-interface VasRuleFormCardProps {
+export type VasRuleFormMode = 'create' | 'edit';
+
+interface VasRuleFormDialogProps {
+  open: boolean;
+  mode: VasRuleFormMode;
   form: VasRuleFormState;
   onFormChange: React.Dispatch<React.SetStateAction<VasRuleFormState>>;
   calculationTypeHelper?: string;
-  lastSaved: VasRuleAdminResponse | null;
   isLoading: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
-  onReset: () => void;
 }
 
-export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
+export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
+  open,
+  mode,
   form,
   onFormChange,
   calculationTypeHelper,
-  lastSaved,
   isLoading,
+  onOpenChange,
   onSubmit,
-  onReset,
 }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>VAS Rule</CardTitle>
-        <CardDescription>
-          Configure add-on service rules such as COD and insurance.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-4'>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
+        <DialogHeader>
+          <DialogTitle>
+            {mode === 'create' ? 'Create VAS Rule' : 'Edit VAS Rule'}
+          </DialogTitle>
+          <DialogDescription>
+            Configure add-on service rules such as COD and insurance.
+          </DialogDescription>
+        </DialogHeader>
+
         <form className='space-y-4' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
@@ -71,6 +75,7 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                     name: prev.name || value,
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='vasCode'>
                   <SelectValue placeholder='Select VAS code' />
@@ -97,6 +102,7 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: Insurance fee'
+                disabled={isLoading}
               />
             </div>
 
@@ -111,6 +117,7 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                       value as VasRuleFormState['calculationType'],
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='vasCalculationType'>
                   <SelectValue placeholder='Select type' />
@@ -143,6 +150,7 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -159,6 +167,7 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -175,41 +184,35 @@ export const VasRuleFormCard: React.FC<VasRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
           </div>
 
-          <div className='flex flex-wrap gap-2'>
-            <Button type='submit' disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Saving VAS...
-                </>
-              ) : (
-                'Save VAS Rule'
-              )}
-            </Button>
+          <DialogFooter>
             <Button
               type='button'
               variant='outline'
-              onClick={onReset}
+              onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Reset VAS Form
+              Cancel
             </Button>
-          </div>
+            <Button type='submit' disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Saving...
+                </>
+              ) : mode === 'create' ? (
+                'Create VAS Rule'
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
         </form>
-
-        {lastSaved ? (
-          <Alert>
-            <AlertTitle>Last saved VAS</AlertTitle>
-            <AlertDescription>
-              #{lastSaved.id} - {lastSaved.code}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };

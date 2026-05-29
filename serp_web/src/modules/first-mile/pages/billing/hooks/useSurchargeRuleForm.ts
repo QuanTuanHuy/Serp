@@ -30,7 +30,7 @@ export const useSurchargeRuleForm = () => {
     )?.helper;
   }, [form.calculationType]);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent): Promise<boolean> => {
     event.preventDefault();
 
     try {
@@ -39,10 +39,12 @@ export const useSurchargeRuleForm = () => {
       ).unwrap();
       setLastSaved(response);
       notification.success('Surcharge rule saved successfully.');
+      return true;
     } catch (error) {
       notification.error('Unable to save surcharge rule.', {
         description: getErrorMessage(error),
       });
+      return false;
     }
   };
 

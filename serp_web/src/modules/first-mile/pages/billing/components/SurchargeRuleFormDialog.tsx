@@ -1,19 +1,17 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Surcharge rule admin form card
+ * Description: Part of Serp Project - Surcharge rule admin form dialog
  */
 
 import React from 'react';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -23,41 +21,49 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
-import type { SurchargeRuleAdminResponse } from '../../../types';
 import {
   CALCULATION_TYPE_OPTIONS,
   SURCHARGE_RULE_CODE_OPTIONS,
   type SurchargeRuleFormState,
 } from '../billingPageModels';
 
-interface SurchargeRuleFormCardProps {
+export type SurchargeRuleFormMode = 'create' | 'edit';
+
+interface SurchargeRuleFormDialogProps {
+  open: boolean;
+  mode: SurchargeRuleFormMode;
   form: SurchargeRuleFormState;
   onFormChange: React.Dispatch<React.SetStateAction<SurchargeRuleFormState>>;
   calculationTypeHelper?: string;
-  lastSaved: SurchargeRuleAdminResponse | null;
   isLoading: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
-  onReset: () => void;
 }
 
-export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
+export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = ({
+  open,
+  mode,
   form,
   onFormChange,
   calculationTypeHelper,
-  lastSaved,
   isLoading,
+  onOpenChange,
   onSubmit,
-  onReset,
 }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Surcharge Rule</CardTitle>
-        <CardDescription>
-          Configure additional fee logic for remote areas and special cargo.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-4'>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
+        <DialogHeader>
+          <DialogTitle>
+            {mode === 'create'
+              ? 'Create Surcharge Rule'
+              : 'Edit Surcharge Rule'}
+          </DialogTitle>
+          <DialogDescription>
+            Configure additional fee logic for remote areas and special cargo.
+          </DialogDescription>
+        </DialogHeader>
+
         <form className='space-y-4' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
@@ -71,6 +77,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                     name: prev.name || value,
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='surchargeCode'>
                   <SelectValue placeholder='Select rule code' />
@@ -97,6 +104,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: Remote area surcharge'
+                disabled={isLoading}
               />
             </div>
 
@@ -111,6 +119,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                       value as SurchargeRuleFormState['calculationType'],
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='surchargeCalculationType'>
                   <SelectValue placeholder='Select type' />
@@ -143,6 +152,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -159,6 +169,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -175,6 +186,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -191,6 +203,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -207,6 +220,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -223,6 +237,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -239,6 +254,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Optional'
+                disabled={isLoading}
               />
             </div>
 
@@ -254,6 +270,7 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                     effectiveDate: event.target.value,
                   }))
                 }
+                disabled={isLoading}
               />
             </div>
 
@@ -269,41 +286,35 @@ export const SurchargeRuleFormCard: React.FC<SurchargeRuleFormCardProps> = ({
                     expirationDate: event.target.value,
                   }))
                 }
+                disabled={isLoading}
               />
             </div>
           </div>
 
-          <div className='flex flex-wrap gap-2'>
-            <Button type='submit' disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Saving Surcharge...
-                </>
-              ) : (
-                'Save Surcharge Rule'
-              )}
-            </Button>
+          <DialogFooter>
             <Button
               type='button'
               variant='outline'
-              onClick={onReset}
+              onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Reset Surcharge Form
+              Cancel
             </Button>
-          </div>
+            <Button type='submit' disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Saving...
+                </>
+              ) : mode === 'create' ? (
+                'Create Surcharge Rule'
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
         </form>
-
-        {lastSaved ? (
-          <Alert>
-            <AlertTitle>Last saved surcharge</AlertTitle>
-            <AlertDescription>
-              #{lastSaved.id} - {lastSaved.code}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
