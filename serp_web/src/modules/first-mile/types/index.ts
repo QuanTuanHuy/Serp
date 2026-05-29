@@ -457,6 +457,30 @@ export interface FirstMileOrderDetail {
   tenantId?: number;
 }
 
+export interface FirstMileOrderTimelineItem {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  description?: string;
+  eventTime?: string;
+  recordedBy?: string;
+  tripId?: number;
+  tripCode?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
+}
+
 export interface FirstMileOrderListFilters {
   keyword?: string;
   orderCode?: string;
@@ -632,6 +656,7 @@ export interface ManualAssignPickupOrdersRequest {
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
+  force_assign?: boolean;
 }
 
 export interface PickupOptimizationStop {
@@ -834,7 +859,7 @@ export interface PickupTrackingOverviewResponse {
 }
 
 export interface PickupCheckinResponse {
-  id?: number;
+  checkinId?: number;
   orderId?: number;
   orderCode?: string;
   orderStatus?: FirstMileOrderStatus;
@@ -847,8 +872,47 @@ export interface PickupCheckinResponse {
   checkinLongitude?: number;
   pickupLatitude?: number;
   pickupLongitude?: number;
-  distanceM?: number;
-  allowedRadiusM?: number;
+  distanceMeters?: number;
+  allowedRadiusMeters?: number;
+}
+
+export interface PickupCheckinDetailResponse {
+  checkinId?: number;
+  orderId?: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  tripId?: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  senderName?: string;
+  senderPhone?: string;
+  senderAddressDetail?: string;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  checkinTime?: string;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+  photoUrl?: string;
+  distanceMeters?: number;
+  allowedRadiusMeters?: number;
+}
+
+export interface PickupTripLifecycleResponse {
+  tripId?: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  totalOrders?: number;
+  checkedInOrders?: number;
+  pendingCheckinOrders?: number;
+  returnedToPostOfficeOrders?: number;
+  allOrdersCheckedIn?: boolean;
 }
 
 export interface HubListFilters {

@@ -60,6 +60,8 @@ app:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
+    order-sync:
+      consumer-group-id: ${KAFKA_FIRST_MILE_ORDER_SYNC_GROUP:first-mile-sync-order}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     dlq:

@@ -24,6 +24,7 @@ import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
+import serp.project.first_mile.dto.response.OrderTimelineResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.OrderStatus;
@@ -183,6 +184,16 @@ public class OrderController {
         );
         log.info("REST request to get Order {} for tenant {}", orderId, tenantId);
         return orderService.getOrderById(orderId, tenantId);
+    }
+
+    @GetMapping("/{orderId}/timeline")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    public List<OrderTimelineResponse> getOrderTimeline(@PathVariable Long orderId) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to get Order timeline {} for tenant {}", orderId, tenantId);
+        return orderService.getOrderTimeline(orderId, tenantId);
     }
 
     @PutMapping("/{orderId}")

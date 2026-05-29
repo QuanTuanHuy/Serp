@@ -18,12 +18,14 @@ import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
+import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 import serp.project.tms_billing_service.repository.VasRuleRepository;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -56,17 +58,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         tariff.setExpirationDate(request.getExpirationDate());
 
         Tariff saved = tariffRepository.save(tariff);
-        return TariffAdminResponse.builder()
-                .id(saved.getId())
-                .serviceCode(saved.getServiceCode())
-                .routeTypeCode(saved.getRouteTypeCode())
-                .baseWeight(saved.getBaseWeight())
-                .basePrice(saved.getBasePrice())
-                .stepWeight(saved.getStepWeight())
-                .stepPrice(saved.getStepPrice())
-                .effectiveDate(saved.getEffectiveDate())
-                .expirationDate(saved.getExpirationDate())
-                .build();
+        return toTariffResponse(saved);
     }
 
     @Override
@@ -89,21 +81,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         rule.setExpirationDate(request.getExpirationDate());
 
         SurchargeRule saved = surchargeRuleRepository.save(rule);
-        return SurchargeRuleAdminResponse.builder()
-                .id(saved.getId())
-                .code(saved.getCode())
-                .name(saved.getName())
-                .calculationType(saved.getCalculationType())
-                .ratePercent(saved.getRatePercent())
-                .fixedAmount(saved.getFixedAmount())
-                .minAmount(saved.getMinAmount())
-                .baseWeight(saved.getBaseWeight())
-                .basePrice(saved.getBasePrice())
-                .stepWeight(saved.getStepWeight())
-                .stepPrice(saved.getStepPrice())
-                .effectiveDate(saved.getEffectiveDate())
-                .expirationDate(saved.getExpirationDate())
-                .build();
+        return toSurchargeResponse(saved);
     }
 
     @Override
@@ -118,15 +96,31 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         rule.setMinAmount(request.getMinAmount());
 
         VasRule saved = vasRuleRepository.save(rule);
-        return VasRuleAdminResponse.builder()
-                .id(saved.getId())
-                .code(saved.getCode())
-                .name(saved.getName())
-                .calculationType(saved.getCalculationType())
-                .ratePercent(saved.getRatePercent())
-                .fixedAmount(saved.getFixedAmount())
-                .minAmount(saved.getMinAmount())
-                .build();
+        return toVasResponse(saved);
+    }
+
+    @Override
+    public List<TariffAdminResponse> listTariffs(DeliveryService serviceCode) {
+        List<Tariff> tariffs = serviceCode == null
+                ? tariffRepository.findAllByOrderByServiceCodeAscRouteTypeCodeAscEffectiveDateDesc()
+                : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(serviceCode);
+        return tariffs.stream()
+                .map(this::toTariffResponse)
+                .toList();
+    }
+
+    @Override
+    public List<SurchargeRuleAdminResponse> listSurchargeRules() {
+        return surchargeRuleRepository.findAll().stream()
+                .map(this::toSurchargeResponse)
+                .toList();
+    }
+
+    @Override
+    public List<VasRuleAdminResponse> listVasRules() {
+        return vasRuleRepository.findAll().stream()
+                .map(this::toVasResponse)
+                .toList();
     }
 
     private void validateDateRange(java.time.LocalDate effectiveDate, java.time.LocalDate expirationDate) {
@@ -136,5 +130,49 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                     "expirationDate phải lớn hơn hoặc bằng effectiveDate"
             );
         }
+    }
+
+    private TariffAdminResponse toTariffResponse(Tariff tariff) {
+        return TariffAdminResponse.builder()
+                .id(tariff.getId())
+                .serviceCode(tariff.getServiceCode())
+                .routeTypeCode(tariff.getRouteTypeCode())
+                .baseWeight(tariff.getBaseWeight())
+                .basePrice(tariff.getBasePrice())
+                .stepWeight(tariff.getStepWeight())
+                .stepPrice(tariff.getStepPrice())
+                .effectiveDate(tariff.getEffectiveDate())
+                .expirationDate(tariff.getExpirationDate())
+                .build();
+    }
+
+    private SurchargeRuleAdminResponse toSurchargeResponse(SurchargeRule rule) {
+        return SurchargeRuleAdminResponse.builder()
+                .id(rule.getId())
+                .code(rule.getCode())
+                .name(rule.getName())
+                .calculationType(rule.getCalculationType())
+                .ratePercent(rule.getRatePercent())
+                .fixedAmount(rule.getFixedAmount())
+                .minAmount(rule.getMinAmount())
+                .baseWeight(rule.getBaseWeight())
+                .basePrice(rule.getBasePrice())
+                .stepWeight(rule.getStepWeight())
+                .stepPrice(rule.getStepPrice())
+                .effectiveDate(rule.getEffectiveDate())
+                .expirationDate(rule.getExpirationDate())
+                .build();
+    }
+
+    private VasRuleAdminResponse toVasResponse(VasRule rule) {
+        return VasRuleAdminResponse.builder()
+                .id(rule.getId())
+                .code(rule.getCode())
+                .name(rule.getName())
+                .calculationType(rule.getCalculationType())
+                .ratePercent(rule.getRatePercent())
+                .fixedAmount(rule.getFixedAmount())
+                .minAmount(rule.getMinAmount())
+                .build();
     }
 }

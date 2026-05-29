@@ -31,7 +31,6 @@ import {
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
-  Search,
   Building2,
   AlertCircle,
   MapPin,
@@ -44,6 +43,7 @@ import {
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react';
+import type { TmsFilterMode } from '../../components/list';
 import {
   useGetHubsQuery,
   useGetHubPostOfficesQuery,
@@ -65,17 +65,23 @@ import type {
   HubPostOfficeMapping,
   HubStatus,
   HubImportItem,
+  HubListFilters,
   ImportHistory,
   ValidateImportFileResponse,
   Ward,
 } from '../../types';
-import { HubFormDialog, HubImportCard } from './components';
+import { HubFiltersCard, HubFormDialog, HubImportCard } from './components';
+import {
+  buildHubListFilters,
+  countActiveHubAdvancedFilters,
+  DEFAULT_HUB_FILTER_FORM,
+  type HubFilterFormState,
+} from './hubFilterModels';
 import {
   buildCreateHubRequest,
   buildUpdateHubRequest,
   DEFAULT_HUB_FORM,
   getHubTypeLabel,
-  HUB_STATUS_OPTIONS,
   mapHubToFormState,
   validateHubForm,
   type HubFormMode,
@@ -106,10 +112,10 @@ export function HubListPage() {
     Boolean(state.account.user.profile?.roles?.includes('TMS_ADMIN'))
   );
 
-  const [searchKeyword, setSearchKeyword] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState<'ALL' | HubStatus>(
-    'ALL'
-  );
+  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
+  const [filterFormValues, setFilterFormValues] =
+    React.useState<HubFilterFormState>(DEFAULT_HUB_FILTER_FORM);
+  const [appliedFilters, setAppliedFilters] = React.useState<HubListFilters>({});
   const [currentPage, setCurrentPage] = React.useState(0);
 
   const {
@@ -119,9 +125,64 @@ export function HubListPage() {
   } = useGetHubsQuery({
     page: currentPage,
     size: PAGE_SIZE,
-    keyword: searchKeyword || undefined,
-    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    ...appliedFilters,
   });
+
+  const selectedFilterProvinceCode = React.useMemo(
+    () => filterFormValues.provinceCode.trim(),
+    [filterFormValues.provinceCode]
+  );
+  const selectedFilterWardCode = React.useMemo(
+    () => filterFormValues.wardCode.trim(),
+    [filterFormValues.wardCode]
+  );
+
+  const { data: wardsForFilterData, isFetching: isFetchingWardsForFilter } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedFilterProvinceCode,
+        page: 0,
+        size: 1000,
+      },
+      { skip: !selectedFilterProvinceCode }
+    );
+
+  const filterWardOptions = React.useMemo(() => {
+    const options = [...(wardsForFilterData?.items ?? [])];
+    if (
+      selectedFilterWardCode &&
+      !options.some((ward) => ward.wardCode === selectedFilterWardCode)
+    ) {
+      options.unshift({
+        wardCode: selectedFilterWardCode,
+        name: selectedFilterWardCode,
+        provinceCode: selectedFilterProvinceCode,
+      } as Ward);
+    }
+    return options;
+  }, [
+    selectedFilterProvinceCode,
+    selectedFilterWardCode,
+    wardsForFilterData,
+  ]);
+
+  const advancedFieldCount = React.useMemo(
+    () => countActiveHubAdvancedFilters(filterFormValues),
+    [filterFormValues]
+  );
+
+  const updateFilterField = React.useCallback(
+    <K extends keyof HubFilterFormState>(
+      field: K,
+      value: HubFilterFormState[K]
+    ) => {
+      setFilterFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
+  );
 
   const hubs = hubsData?.items || [];
   const totalPages = hubsData?.totalPages || 0;
@@ -514,13 +575,24 @@ export function HubListPage() {
     }
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchKeyword(event.target.value);
-    setCurrentPage(0);
+  const handleApplyFilters = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    try {
+      const nextFilters = buildHubListFilters(filterFormValues);
+      setCurrentPage(0);
+      setAppliedFilters(nextFilters);
+    } catch (error) {
+      notification.error(
+        error instanceof Error ? error.message : 'Invalid filter values.'
+      );
+    }
   };
 
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value as 'ALL' | HubStatus);
+  const handleClearFilters = () => {
+    setFilterFormValues(DEFAULT_HUB_FILTER_FORM);
+    setAppliedFilters({});
+    setFilterMode('basic');
     setCurrentPage(0);
   };
 
@@ -570,27 +642,48 @@ export function HubListPage() {
           </div>
         </div>
 
-        <HubImportCard
-          isTmsAdmin={isTmsAdmin}
-          isImportFlowBusy={isImportFlowBusy}
-          isExportingTemplate={isExportingTemplate}
-          isValidatingImport={isValidatingImport}
-          isImportingHubs={isImportingHubs}
-          importFileInputKey={importFileInputKey}
-          selectedImportFile={selectedImportFile}
-          validateImportResult={validateImportResult}
-          validatedPreviewItems={validatedPreviewItems}
-          lastImportJob={lastImportJob}
-          previewLimit={IMPORT_PREVIEW_LIMIT}
-          getProvinceLabel={getProvinceLabel}
-          onSelectImportFile={(e) => {
-            const file = e.target.files?.[0];
-            setSelectedImportFile(file ?? null);
-            setValidateImportResult(null);
+        {isTmsAdmin ? (
+          <HubImportCard
+            isTmsAdmin={isTmsAdmin}
+            isImportFlowBusy={isImportFlowBusy}
+            isExportingTemplate={isExportingTemplate}
+            isValidatingImport={isValidatingImport}
+            isImportingHubs={isImportingHubs}
+            importFileInputKey={importFileInputKey}
+            selectedImportFile={selectedImportFile}
+            validateImportResult={validateImportResult}
+            validatedPreviewItems={validatedPreviewItems}
+            lastImportJob={lastImportJob}
+            previewLimit={IMPORT_PREVIEW_LIMIT}
+            getProvinceLabel={getProvinceLabel}
+            onSelectImportFile={(e) => {
+              const file = e.target.files?.[0];
+              setSelectedImportFile(file ?? null);
+              setValidateImportResult(null);
+            }}
+            onDownloadTemplate={handleDownloadTemplate}
+            onValidateImportFile={handleValidateImportFile}
+            onImportFile={handleImportFile}
+          />
+        ) : null}
+
+        <HubFiltersCard
+          filterMode={filterMode}
+          filterFormValues={filterFormValues}
+          advancedFieldCount={advancedFieldCount}
+          isFetching={isFetching}
+          provinceSelectOptions={provinceSelectOptions}
+          filterWardOptions={filterWardOptions}
+          selectedFilterProvinceCode={selectedFilterProvinceCode}
+          selectedFilterWardCode={selectedFilterWardCode}
+          isFetchingWardsForFilter={isFetchingWardsForFilter}
+          onFilterModeChange={setFilterMode}
+          onFilterFieldChange={updateFilterField}
+          onApplyFilters={handleApplyFilters}
+          onClearFilters={handleClearFilters}
+          onRefresh={() => {
+            void refetch();
           }}
-          onDownloadTemplate={handleDownloadTemplate}
-          onValidateImportFile={handleValidateImportFile}
-          onImportFile={handleImportFile}
         />
 
         <Card>
@@ -599,39 +692,11 @@ export function HubListPage() {
               <Building2 className='h-5 w-5' />
               Hub list
             </CardTitle>
-            <CardDescription>Search and open hub details.</CardDescription>
+            <CardDescription>
+              Apply filters above, then open hub details or manage post offices.
+            </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <div className='flex gap-3 flex-wrap'>
-              <div className='flex-1 min-w-[200px]'>
-                <div className='relative'>
-                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                  <Input
-                    placeholder='Search by code or name'
-                    className='pl-9'
-                    value={searchKeyword}
-                    onChange={handleSearchChange}
-                  />
-                </div>
-              </div>
-              <Select
-                value={statusFilter}
-                onValueChange={handleStatusFilterChange}
-              >
-                <SelectTrigger className='w-48'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='ALL'>All statuses</SelectItem>
-                  {HUB_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {isFetching && hubs.length === 0 ? (
               <div className='text-center text-muted-foreground py-8'>
                 Loading hubs...

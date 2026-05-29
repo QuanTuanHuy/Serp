@@ -20,6 +20,7 @@ import {
   useLazyExportOrderTemplateQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
+  useLazyGetOrderTimelineQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetProvincesQuery,
@@ -27,11 +28,13 @@ import {
   useUpdateOrderMutation,
   useValidateOrderImportMutation,
 } from '../../api';
+import type { TmsFilterMode } from '../../components/list';
 import type {
   CancelOrderRequest,
   CreateOrderRequest,
   FirstMileOrderDetail,
-  FirstMileOrderStatus,
+  FirstMileOrderTimelineItem,
+  FirstMileOrderListFilters,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
@@ -40,6 +43,12 @@ import type {
   UpdateOrderRequest,
   ValidateImportFileResponse,
 } from '../../types';
+import {
+  buildOrderListFilters,
+  countActiveOrderAdvancedFilters,
+  DEFAULT_ORDER_FILTER_FORM,
+  type OrderFilterFormState,
+} from './orderFilterModels';
 import {
   OrderAccessScopeCard,
   OrderCancelDialog,
@@ -80,7 +89,6 @@ import {
   type CreateOrderFormState,
   type LocationTarget,
   type OrderFormMode,
-  type OrderStatusFilter,
 } from './orderPageModels';
 
 export const OrderListPage: React.FC = () => {
@@ -90,13 +98,11 @@ export const OrderListPage: React.FC = () => {
   const notification = useNotification();
 
   const [page, setPage] = React.useState(0);
-  const [keywordInput, setKeywordInput] = React.useState('');
-  const [statusInput, setStatusInput] =
-    React.useState<OrderStatusFilter>('ALL');
-  const [keyword, setKeyword] = React.useState<string | undefined>(undefined);
-  const [status, setStatus] = React.useState<FirstMileOrderStatus | undefined>(
-    undefined
-  );
+  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
+  const [filterFormValues, setFilterFormValues] =
+    React.useState<OrderFilterFormState>(DEFAULT_ORDER_FILTER_FORM);
+  const [appliedFilters, setAppliedFilters] =
+    React.useState<FirstMileOrderListFilters>({});
   const [orderFormMode, setOrderFormMode] =
     React.useState<OrderFormMode>('create');
   const [editingOrderId, setEditingOrderId] = React.useState<number | null>(
@@ -112,6 +118,10 @@ export const OrderListPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false);
   const [detailOrder, setDetailOrder] =
     React.useState<FirstMileOrderDetail | null>(null);
+  const [detailTimeline, setDetailTimeline] = React.useState<
+    FirstMileOrderTimelineItem[]
+  >([]);
+  const [isLoadingTimeline, setIsLoadingTimeline] = React.useState(false);
   const [cancelTarget, setCancelTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [cancelReason, setCancelReason] = React.useState('');
@@ -190,12 +200,29 @@ export const OrderListPage: React.FC = () => {
     {
       page,
       size: PAGE_SIZE,
-      keyword,
-      status,
+      ...appliedFilters,
     },
     {
       skip: !canViewOrders,
     }
+  );
+
+  const advancedFieldCount = React.useMemo(
+    () => countActiveOrderAdvancedFilters(filterFormValues),
+    [filterFormValues]
+  );
+
+  const updateFilterField = React.useCallback(
+    <K extends keyof OrderFilterFormState>(
+      field: K,
+      value: OrderFilterFormState[K]
+    ) => {
+      setFilterFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
   );
 
   const {
@@ -428,6 +455,7 @@ export const OrderListPage: React.FC = () => {
   ] = useLazyGetDropOffPostOfficeSuggestionsQuery();
   const [geocodeAddress] = useGeocodeAddressMutation();
   const [loadOrderById] = useLazyGetOrderByIdQuery();
+  const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
   const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
     useLazyExportOrderTemplateQuery();
   const [validateOrderImport, { isLoading: isValidatingImport }] =
@@ -446,9 +474,23 @@ export const OrderListPage: React.FC = () => {
 
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
+
+    try {
+      const nextFilters = buildOrderListFilters(filterFormValues);
+      setPage(0);
+      setAppliedFilters(nextFilters);
+    } catch (error) {
+      notification.error(
+        error instanceof Error ? error.message : 'Invalid filter values.'
+      );
+    }
+  };
+
+  const handleClearFilters = () => {
+    setFilterFormValues(DEFAULT_ORDER_FILTER_FORM);
+    setAppliedFilters({});
+    setFilterMode('basic');
     setPage(0);
-    setKeyword(keywordInput.trim() || undefined);
-    setStatus(statusInput === 'ALL' ? undefined : statusInput);
   };
 
   const handleOpenCreateDialog = () => {
@@ -579,18 +621,39 @@ export const OrderListPage: React.FC = () => {
     [loadOrderById, notification]
   );
 
+  const loadOrderTimelineData = React.useCallback(
+    async (orderId: number): Promise<FirstMileOrderTimelineItem[]> => {
+      try {
+        return await loadOrderTimeline(orderId).unwrap();
+      } catch (error) {
+        notification.error('Failed to load order timeline.', {
+          description: getErrorMessage(error),
+        });
+        return [];
+      }
+    },
+    [loadOrderTimeline, notification]
+  );
+
   const handleOpenOrderDetail = async (orderId: number) => {
     setLoadingOrderActionId(orderId);
     setIsDetailDialogOpen(true);
     setDetailOrder(null);
+    setDetailTimeline([]);
+    setIsLoadingTimeline(true);
 
-    const orderDetailResult = await loadOrderDetail(orderId);
+    const [orderDetailResult, orderTimelineResult] = await Promise.all([
+      loadOrderDetail(orderId),
+      loadOrderTimelineData(orderId),
+    ]);
     if (orderDetailResult) {
       setDetailOrder(orderDetailResult);
+      setDetailTimeline(orderTimelineResult);
     } else {
       setIsDetailDialogOpen(false);
     }
 
+    setIsLoadingTimeline(false);
     setLoadingOrderActionId(null);
   };
 
@@ -1256,11 +1319,44 @@ export const OrderListPage: React.FC = () => {
         onCreateOrder={handleOpenCreateDialog}
       />
 
-      <OrderAccessScopeCard
-        canViewOrders={canViewOrders}
-        badgeLabel={getScopeBadgeLabel(accessScope)}
-        description={getScopeDescription(accessScope)}
-      />
+      <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
+        {canViewOrders ? (
+          <OrderAccessScopeCard
+            canViewOrders={canViewOrders}
+            badgeLabel={getScopeBadgeLabel(accessScope)}
+            description={getScopeDescription(accessScope)}
+            className='flex-1'
+          />
+        ) : null}
+
+        {canMutateOrders ? (
+          <OrderImportCard
+            className='w-full lg:max-w-2xl'
+            canMutateOrders={canMutateOrders}
+            isImportFlowBusy={isImportFlowBusy}
+            isExportingTemplate={isExportingTemplate}
+            isValidatingImport={isValidatingImport}
+            isImportingOrders={isImportingOrders}
+            importFileInputKey={importFileInputKey}
+            selectedImportFile={selectedImportFile}
+            validateImportResult={validateImportResult}
+            validatedPreviewItems={validatedPreviewItems}
+            importPreviewLimit={IMPORT_PREVIEW_LIMIT}
+            lastImportJob={lastImportJob}
+            onDownloadTemplate={() => {
+              void handleDownloadTemplate();
+            }}
+            onSelectImportFile={handleSelectImportFile}
+            onValidateImportFile={() => {
+              void handleValidateImportFile();
+            }}
+            onImportFile={() => {
+              void handleImportFile();
+            }}
+            formatProductsPreview={formatOrderImportProductsPreview}
+          />
+        ) : null}
+      </div>
 
       {canConfirmDropOffAtPostOffice ? (
         <OrderDropOffManagerConfirmCard
@@ -1279,42 +1375,19 @@ export const OrderListPage: React.FC = () => {
 
       <OrderFiltersCard
         canViewOrders={canViewOrders}
-        keywordInput={keywordInput}
-        statusInput={statusInput}
+        filterMode={filterMode}
+        filterFormValues={filterFormValues}
+        advancedFieldCount={advancedFieldCount}
         statusOptions={ORDER_STATUS_OPTIONS}
         isFetching={isFetching}
-        onKeywordInputChange={setKeywordInput}
-        onStatusInputChange={setStatusInput}
+        onFilterModeChange={setFilterMode}
+        onFilterFieldChange={updateFilterField}
         onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
         onRefresh={() => {
           void refetch();
         }}
         formatStatusLabel={formatStatusLabel}
-      />
-
-      <OrderImportCard
-        canMutateOrders={canMutateOrders}
-        isImportFlowBusy={isImportFlowBusy}
-        isExportingTemplate={isExportingTemplate}
-        isValidatingImport={isValidatingImport}
-        isImportingOrders={isImportingOrders}
-        importFileInputKey={importFileInputKey}
-        selectedImportFile={selectedImportFile}
-        validateImportResult={validateImportResult}
-        validatedPreviewItems={validatedPreviewItems}
-        importPreviewLimit={IMPORT_PREVIEW_LIMIT}
-        lastImportJob={lastImportJob}
-        onDownloadTemplate={() => {
-          void handleDownloadTemplate();
-        }}
-        onSelectImportFile={handleSelectImportFile}
-        onValidateImportFile={() => {
-          void handleValidateImportFile();
-        }}
-        onImportFile={() => {
-          void handleImportFile();
-        }}
-        formatProductsPreview={formatOrderImportProductsPreview}
       />
 
       <OrderResultsCard
@@ -1384,10 +1457,14 @@ export const OrderListPage: React.FC = () => {
       <OrderDetailDialog
         open={isDetailDialogOpen}
         detailOrder={detailOrder}
+        timeline={detailTimeline}
+        isLoadingTimeline={isLoadingTimeline}
         onOpenChange={(open) => {
           setIsDetailDialogOpen(open);
           if (!open) {
             setDetailOrder(null);
+            setDetailTimeline([]);
+            setIsLoadingTimeline(false);
           }
         }}
         formatStatusLabel={formatStatusLabel}

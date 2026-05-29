@@ -19,7 +19,7 @@ public record OrderActorScope(
     }
 
     public static OrderActorScope customer(String customerCreatedBy) {
-        return new OrderActorScope(OrderActorType.CUSTOMER, customerCreatedBy, Set.of(), null, List.of());
+        return new OrderActorScope(OrderActorType.CUSTOMER, customerCreatedBy, null, null, List.of());
     }
 
     public static OrderActorScope manager(Set<String> managedOriginPostOfficeCodes) {
@@ -30,7 +30,7 @@ public record OrderActorScope(
         return new OrderActorScope(
                 OrderActorType.COURIER,
                 null,
-                Set.of(),
+                null,
                 courierStaffId,
                 courierVisibleTripStatuses == null ? List.of() : List.copyOf(courierVisibleTripStatuses)
         );

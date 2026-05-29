@@ -20,5 +20,7 @@ public interface BagOrderRepository extends JpaRepository<BagOrder, Long> {
 
     boolean existsByOrder_IdAndTenantId(Long orderId, Long tenantId);
 
+    List<BagOrder> findByOrder_IdInAndTenantId(List<Long> orderIds, Long tenantId);
+
     Optional<BagOrder> findByBag_IdAndOrder_OrderCodeIgnoreCaseAndTenantId(Long bagId, String orderCode, Long tenantId);
 }

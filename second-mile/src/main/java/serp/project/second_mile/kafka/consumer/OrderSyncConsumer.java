@@ -26,7 +26,7 @@ public class OrderSyncConsumer {
 
     @KafkaListener(
             topics = "${app.kafka.topics.sync-order:SYNC_ORDER}",
-            groupId = "${spring.kafka.consumer.group-id:second-mile-sync-order}"
+            groupId = "${app.kafka.order-sync.consumer-group-id:second-mile-sync-order}"
     )
     public void consume(
             String payload,
