@@ -4,12 +4,12 @@
  */
 
 import type {
-  DispatchCourierOption,
   FirstMileOrderDetail,
   FirstMileOrderStatus,
   PickupShift,
   PostOffice,
 } from '../../../types';
+import type { DispatchCourierOption } from './components/types';
 
 const CANDIDATE_STATUSES: FirstMileOrderStatus[] = ['CREATED', 'PICKUP_FAILED'];
 

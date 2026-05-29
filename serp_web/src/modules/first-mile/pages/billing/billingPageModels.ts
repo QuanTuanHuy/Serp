@@ -11,9 +11,12 @@ import type {
   BillingSurchargeRuleCode,
   BillingVasRuleCode,
   CalculateShippingFeeRequest,
+  SurchargeRuleAdminResponse,
+  TariffAdminResponse,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
   UpsertVasRuleRequest,
+  VasRuleAdminResponse,
 } from '../../types';
 
 export interface BillingFormState {
@@ -214,13 +217,13 @@ export interface TariffFormState {
 }
 
 export const DEFAULT_TARIFF_FORM: TariffFormState = {
-  serviceCode: 'HOA_TOC',
+  serviceCode: 'TIEU_CHUAN',
   routeTypeCode: 'NOI_TINH_NOI_CUM',
-  baseWeight: '2000',
-  basePrice: '',
+  baseWeight: '3000',
+  basePrice: '16500',
   stepWeight: '500',
-  stepPrice: '',
-  effectiveDate: new Date().toISOString().slice(0, 10),
+  stepPrice: '2500',
+  effectiveDate: '2025-07-10',
   expirationDate: '',
 };
 
@@ -241,16 +244,16 @@ export interface SurchargeRuleFormState {
 
 export const DEFAULT_SURCHARGE_FORM: SurchargeRuleFormState = {
   code: 'VUNG_XA',
-  name: '',
-  calculationType: 'FIXED_PER_ORDER',
+  name: 'Remote area surcharge',
+  calculationType: 'STEP_WEIGHT',
   ratePercent: '',
   fixedAmount: '',
   minAmount: '',
-  baseWeight: '',
-  basePrice: '',
-  stepWeight: '',
-  stepPrice: '',
-  effectiveDate: new Date().toISOString().slice(0, 10),
+  baseWeight: '5000',
+  basePrice: '7000',
+  stepWeight: '500',
+  stepPrice: '500',
+  effectiveDate: '2025-07-10',
   expirationDate: '',
 };
 
@@ -265,12 +268,58 @@ export interface VasRuleFormState {
 
 export const DEFAULT_VAS_FORM: VasRuleFormState = {
   code: 'COD',
-  name: '',
+  name: 'COD fee',
   calculationType: 'FIXED_PER_ORDER',
   ratePercent: '',
-  fixedAmount: '',
+  fixedAmount: '0',
   minAmount: '',
 };
+
+const toFormNumber = (value?: number): string => {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  return String(value);
+};
+
+export const tariffResponseToForm = (
+  tariff: TariffAdminResponse
+): TariffFormState => ({
+  serviceCode: tariff.serviceCode,
+  routeTypeCode: tariff.routeTypeCode,
+  baseWeight: toFormNumber(tariff.baseWeight),
+  basePrice: toFormNumber(tariff.basePrice),
+  stepWeight: toFormNumber(tariff.stepWeight),
+  stepPrice: toFormNumber(tariff.stepPrice),
+  effectiveDate: tariff.effectiveDate ?? '',
+  expirationDate: tariff.expirationDate ?? '',
+});
+
+export const surchargeResponseToForm = (
+  rule: SurchargeRuleAdminResponse
+): SurchargeRuleFormState => ({
+  code: rule.code,
+  name: rule.name,
+  calculationType: rule.calculationType,
+  ratePercent: toFormNumber(rule.ratePercent),
+  fixedAmount: toFormNumber(rule.fixedAmount),
+  minAmount: toFormNumber(rule.minAmount),
+  baseWeight: toFormNumber(rule.baseWeight),
+  basePrice: toFormNumber(rule.basePrice),
+  stepWeight: toFormNumber(rule.stepWeight),
+  stepPrice: toFormNumber(rule.stepPrice),
+  effectiveDate: rule.effectiveDate ?? '',
+  expirationDate: rule.expirationDate ?? '',
+});
+
+export const vasResponseToForm = (rule: VasRuleAdminResponse): VasRuleFormState => ({
+  code: rule.code,
+  name: rule.name,
+  calculationType: rule.calculationType,
+  ratePercent: toFormNumber(rule.ratePercent),
+  fixedAmount: toFormNumber(rule.fixedAmount),
+  minAmount: toFormNumber(rule.minAmount),
+});
 
 export const ROUTE_TYPE_OPTIONS: Array<{
   value: BillingRouteType;
