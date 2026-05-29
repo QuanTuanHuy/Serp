@@ -32,10 +32,12 @@ import {
 } from '@/shared/components';
 import { useNotification } from '@/shared/hooks';
 import {
+  useCompletePickupTripMutation,
   useGetActiveCouriersByPostOfficeQuery,
   useGetPickupTrackingOverviewQuery,
   useGetPostOfficesQuery,
   useGetProvincesQuery,
+  useReturnPickupTripToPostOfficeMutation,
   useGetWardsByProvinceCodeQuery,
   usePickupCheckinOrderMutation,
 } from '../../api';
@@ -48,6 +50,7 @@ import type {
   Province,
   Ward,
 } from '../../types';
+import { PickupCheckinDetailDialog } from './components/PickupCheckinDetailDialog';
 import { PickupOrdersMap } from './components/PickupOrdersMap';
 import {
   isPickupCheckinDevFeatureAvailable,
@@ -171,6 +174,16 @@ const canCheckinOrder = (
   );
 };
 
+const canViewCheckinDetail = (order: PickupTrackingOrder): boolean =>
+  Boolean(order.checkedIn && order.orderId);
+
+const canCompleteTrip = (trip: PickupTrackingTrip): boolean =>
+  trip.tripId !== undefined &&
+  (trip.tripStatus === 'PLANNED' || trip.tripStatus === 'IN_PROGRESS');
+
+const canReturnTripToPostOffice = (trip: PickupTrackingTrip): boolean =>
+  trip.tripId !== undefined && trip.tripStatus === 'COMPLETED';
+
 const resolveOrders = (
   overview?: PickupTrackingOverviewResponse
 ): PickupTrackingOrder[] => {
@@ -207,6 +220,10 @@ export const PickupPage: React.FC = () => {
   >(undefined);
 
   const [isCheckinDialogOpen, setIsCheckinDialogOpen] = React.useState(false);
+  const [isCheckinDetailDialogOpen, setIsCheckinDetailDialogOpen] =
+    React.useState(false);
+  const [checkinDetailOrder, setCheckinDetailOrder] =
+    React.useState<PickupTrackingOrder | null>(null);
   const [checkinOrder, setCheckinOrder] =
     React.useState<PickupTrackingOrder | null>(null);
   const [checkinPhoto, setCheckinPhoto] = React.useState<File | null>(null);
@@ -463,6 +480,10 @@ export const PickupPage: React.FC = () => {
 
   const [pickupCheckinOrder, { isLoading: isSubmittingCheckin }] =
     usePickupCheckinOrderMutation();
+  const [completePickupTrip, { isLoading: isCompletingTrip }] =
+    useCompletePickupTripMutation();
+  const [returnPickupTripToPostOffice, { isLoading: isReturningTrip }] =
+    useReturnPickupTripToPostOfficeMutation();
 
   const applyValidCheckinCoordinates = React.useCallback(
     (order: PickupTrackingOrder) => {
@@ -489,6 +510,11 @@ export const PickupPage: React.FC = () => {
     if (enabled && checkinOrder) {
       applyValidCheckinCoordinates(checkinOrder);
     }
+  };
+
+  const handleOpenCheckinDetailDialog = (order: PickupTrackingOrder) => {
+    setCheckinDetailOrder(order);
+    setIsCheckinDetailDialogOpen(true);
   };
 
   const handleOpenCheckinDialog = (order: PickupTrackingOrder) => {
@@ -585,6 +611,44 @@ export const PickupPage: React.FC = () => {
       void refetchOverview();
     } catch (error) {
       notification.error('Pickup check-in failed.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleCompleteTrip = async (trip: PickupTrackingTrip) => {
+    if (!trip.tripId) {
+      notification.error('Trip id is missing.');
+      return;
+    }
+
+    try {
+      await completePickupTrip(trip.tripId).unwrap();
+      notification.success(
+        `Trip ${trip.tripCode || `#${trip.tripId}`} completed successfully.`
+      );
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to complete trip.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleReturnTripToPostOffice = async (trip: PickupTrackingTrip) => {
+    if (!trip.tripId) {
+      notification.error('Trip id is missing.');
+      return;
+    }
+
+    try {
+      await returnPickupTripToPostOffice(trip.tripId).unwrap();
+      notification.success(
+        `Trip ${trip.tripCode || `#${trip.tripId}`} returned to post office successfully.`
+      );
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to return trip to post office.', {
         description: getErrorMessage(error),
       });
     }
@@ -826,6 +890,103 @@ export const PickupPage: React.FC = () => {
 
           <Card>
             <CardHeader>
+              <CardTitle>Assigned trips</CardTitle>
+              <CardDescription>
+                Complete trips manually or confirm return to origin post office.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {trips.length === 0 ? (
+                <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
+                  No trips found for selected filters.
+                </div>
+              ) : (
+                <div className='overflow-x-auto rounded-md border'>
+                  <table className='w-full min-w-[820px] text-sm'>
+                    <thead className='bg-muted/40 text-left'>
+                      <tr>
+                        <th className='px-3 py-2 font-medium'>Trip</th>
+                        <th className='px-3 py-2 font-medium'>Courier</th>
+                        <th className='px-3 py-2 font-medium'>Status</th>
+                        <th className='px-3 py-2 font-medium'>Check-in progress</th>
+                        <th className='px-3 py-2 font-medium'>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trips.map((trip) => (
+                        <tr key={trip.tripId} className='border-t'>
+                          <td className='px-3 py-2'>
+                            <div className='font-medium'>
+                              {trip.tripCode || `#${trip.tripId}`}
+                            </div>
+                            <div className='text-xs text-muted-foreground'>
+                              {formatDateTime(trip.plannedStartTime)} -{' '}
+                              {formatDateTime(trip.plannedEndTime)}
+                            </div>
+                          </td>
+                          <td className='px-3 py-2'>
+                            <div>{trip.courierName || '--'}</div>
+                            <div className='text-xs text-muted-foreground'>
+                              {trip.courierCode || '--'}
+                            </div>
+                          </td>
+                          <td className='px-3 py-2'>
+                            <Badge
+                              variant={
+                                trip.tripStatus === 'COMPLETED'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {trip.tripStatus || '--'}
+                            </Badge>
+                          </td>
+                          <td className='px-3 py-2'>
+                            {formatNumber(trip.checkedInOrders)} /{' '}
+                            {formatNumber(trip.totalOrders)}
+                          </td>
+                          <td className='px-3 py-2'>
+                            <div className='flex flex-wrap gap-2'>
+                              {canCompleteTrip(trip) ? (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={isCompletingTrip || isReturningTrip}
+                                  onClick={() => void handleCompleteTrip(trip)}
+                                >
+                                  Complete trip
+                                </Button>
+                              ) : null}
+                              {canReturnTripToPostOffice(trip) ? (
+                                <Button
+                                  size='sm'
+                                  disabled={isCompletingTrip || isReturningTrip}
+                                  onClick={() =>
+                                    void handleReturnTripToPostOffice(trip)
+                                  }
+                                >
+                                  Return to post office
+                                </Button>
+                              ) : null}
+                              {!canCompleteTrip(trip) &&
+                              !canReturnTripToPostOffice(trip) ? (
+                                <span className='text-xs text-muted-foreground'>
+                                  No actions
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Pickup map</CardTitle>
               <CardDescription>
                 {ordersWithCoordinates.length} assigned order(s) with location.
@@ -921,39 +1082,61 @@ export const PickupPage: React.FC = () => {
                               </div>
                             </td>
                             <td className='px-3 py-2'>
-                              <Badge
-                                variant={
-                                  order.checkedIn ? 'default' : 'secondary'
-                                }
-                              >
-                                {order.checkedIn
-                                  ? `Checked in ${formatDateTime(order.checkinTime)}`
-                                  : 'Pending'}
-                              </Badge>
+                              {canViewCheckinDetail(order) ? (
+                                <button
+                                  type='button'
+                                  className='inline-flex'
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleOpenCheckinDetailDialog(order);
+                                  }}
+                                >
+                                  <Badge variant='default'>
+                                    Checked in{' '}
+                                    {formatDateTime(order.checkinTime)}
+                                  </Badge>
+                                </button>
+                              ) : (
+                                <Badge variant='secondary'>Pending</Badge>
+                              )}
                             </td>
                             <td className='px-3 py-2'>
-                              {canCheckinOrder(order, isCourierScope) ? (
-                                <Button
-                                  size='sm'
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleOpenCheckinDialog(order);
-                                  }}
-                                >
-                                  Check in
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setSelectedOrderId(order.orderId);
-                                  }}
-                                >
-                                  View
-                                </Button>
-                              )}
+                              <div className='flex flex-wrap gap-2'>
+                                {canCheckinOrder(order, isCourierScope) ? (
+                                  <Button
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleOpenCheckinDialog(order);
+                                    }}
+                                  >
+                                    Check in
+                                  </Button>
+                                ) : null}
+                                {canViewCheckinDetail(order) ? (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleOpenCheckinDetailDialog(order);
+                                    }}
+                                  >
+                                    View check-in
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedOrderId(order.orderId);
+                                    }}
+                                  >
+                                    View
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -989,6 +1172,31 @@ export const PickupPage: React.FC = () => {
                   </div>
                 </div>
 
+                <div className='space-y-2'>
+                  <div className='text-xs text-muted-foreground'>Check-in</div>
+                  {canViewCheckinDetail(selectedOrder) ? (
+                    <>
+                      <Badge variant='default'>
+                        Checked in{' '}
+                        {formatDateTime(selectedOrder.checkinTime)}
+                      </Badge>
+                      <div>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            handleOpenCheckinDetailDialog(selectedOrder)
+                          }
+                        >
+                          View check-in detail
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Badge variant='secondary'>Pending check-in</Badge>
+                  )}
+                </div>
+
                 <div>
                   <div className='text-xs text-muted-foreground'>
                     Planned service
@@ -1010,6 +1218,18 @@ export const PickupPage: React.FC = () => {
           ) : null}
         </>
       )}
+
+      <PickupCheckinDetailDialog
+        open={isCheckinDetailDialogOpen}
+        orderId={checkinDetailOrder?.orderId}
+        orderCode={checkinDetailOrder?.orderCode}
+        onOpenChange={(open) => {
+          setIsCheckinDetailDialogOpen(open);
+          if (!open) {
+            setCheckinDetailOrder(null);
+          }
+        }}
+      />
 
       <Dialog open={isCheckinDialogOpen} onOpenChange={setIsCheckinDialogOpen}>
         <DialogContent>

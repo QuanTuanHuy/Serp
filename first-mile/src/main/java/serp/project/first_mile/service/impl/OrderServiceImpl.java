@@ -633,6 +633,8 @@ public class OrderServiceImpl implements OrderService {
                 )
         );
 
+        tryAutoCompleteTripAfterCheckin(tripOrder.getTrip(), tenantId);
+
         return toPickupCheckinResponse(savedOrder, tripOrder.getTrip(), savedCheckin, pickupLocation);
     }
 
@@ -1403,6 +1405,34 @@ public class OrderServiceImpl implements OrderService {
 
         LocalDate endDate = postOffice.getOperationalEndDate();
         return endDate == null || !endDate.isBefore(operationalDate);
+    }
+
+    private void tryAutoCompleteTripAfterCheckin(Trip trip, Long tenantId) {
+        if (trip == null || trip.getId() == null) {
+            return;
+        }
+        if (!TripStatus.PLANNED.equals(trip.getStatus()) && !TripStatus.IN_PROGRESS.equals(trip.getStatus())) {
+            return;
+        }
+
+        long totalOrders = tripOrderRepository.countByTenantIdAndTrip_Id(tenantId, trip.getId());
+        if (totalOrders <= 0) {
+            return;
+        }
+
+        long checkedInOrders = pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        if (checkedInOrders < totalOrders) {
+            return;
+        }
+
+        trip.setStatus(TripStatus.COMPLETED);
+        log.info(
+                "Auto completed pickup trip tripId={} tenantId={} checkedInOrders={} totalOrders={}",
+                trip.getId(),
+                tenantId,
+                checkedInOrders,
+                totalOrders
+        );
     }
 
     private double resolvePickupCheckinRadiusMeters() {

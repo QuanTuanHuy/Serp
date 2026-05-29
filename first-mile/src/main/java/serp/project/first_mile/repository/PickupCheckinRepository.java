@@ -18,5 +18,9 @@ public interface PickupCheckinRepository extends JpaRepository<PickupCheckin, Lo
 
     Optional<PickupCheckin> findByTenantIdAndTripOrderId(Long tenantId, Long tripOrderId);
 
+    Optional<PickupCheckin> findByTenantIdAndOrderId(Long tenantId, Long orderId);
+
+    long countByTenantIdAndTripId(Long tenantId, Long tripId);
+
     List<PickupCheckin> findByTenantIdAndTripOrderIdIn(Long tenantId, Collection<Long> tripOrderIds);
 }

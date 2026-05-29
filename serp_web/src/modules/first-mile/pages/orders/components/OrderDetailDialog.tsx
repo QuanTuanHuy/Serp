@@ -5,11 +5,16 @@
 
 import React from 'react';
 import {
+  Badge,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@/shared/components/ui';
 import { Loader2, MapPin, Truck, UserRound } from 'lucide-react';
 import type {
@@ -69,6 +74,14 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
     );
   }, [detailOrder]);
 
+  const formatCoordinate = (value?: number): string => {
+    if (value === undefined || value === null || !Number.isFinite(value)) {
+      return '--';
+    }
+
+    return value.toFixed(6);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
@@ -127,55 +140,93 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
               ) : timeline.length === 0 ? (
                 <p className='text-muted-foreground'>No timeline data yet.</p>
               ) : (
-                <div className='space-y-3'>
-                  {timeline.map((item, index) => (
-                    <div
-                      key={`${item.id ?? index}-${item.eventTime ?? index}`}
-                      className='rounded-md border bg-muted/20 p-3'
-                    >
-                      <div className='flex flex-wrap items-center justify-between gap-2'>
-                        <p className='font-medium'>
-                          {item.orderStatus
-                            ? formatStatusLabel(item.orderStatus)
-                            : '--'}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          {formatDateTime(item.eventTime)}
-                        </p>
-                      </div>
-                      {item.description ? (
-                        <p className='mt-1 text-sm'>{item.description}</p>
-                      ) : null}
+                <TooltipProvider delayDuration={120}>
+                  <div className='space-y-1'>
+                    <p className='text-xs text-muted-foreground'>
+                      Hover a timeline event to view full metadata.
+                    </p>
+                    <div className='pt-1'>
+                      {timeline.map((item, index) => {
+                        const itemKey = `${item.id ?? index}-${item.eventTime ?? index}`;
+                        const statusLabel = item.orderStatus
+                          ? formatStatusLabel(item.orderStatus)
+                          : '--';
+                        const locationText =
+                          item.locationLabel ||
+                          `${item.postOfficeCode || '--'}${item.postOfficeName ? ` - ${item.postOfficeName}` : ''}`;
+                        const courierText =
+                          item.courierName || item.courierCode
+                            ? `${item.courierName || '--'}${item.courierCode ? ` (${item.courierCode})` : ''}`
+                            : '--';
+                        const vehicleText = item.vehicleLicensePlate || '--';
+                        const tripText = item.tripCode || '--';
 
-                      <div className='mt-2 space-y-1 text-xs text-muted-foreground'>
-                        {item.locationLabel || item.postOfficeCode ? (
-                          <p className='flex items-center gap-1'>
-                            <MapPin className='h-3.5 w-3.5' />
-                            {item.locationLabel ||
-                              `${item.postOfficeCode || '--'} ${item.postOfficeName ? `- ${item.postOfficeName}` : ''}`}
-                          </p>
-                        ) : null}
-                        {item.courierName || item.courierCode ? (
-                          <p className='flex items-center gap-1'>
-                            <UserRound className='h-3.5 w-3.5' />
-                            {item.courierName || '--'}{' '}
-                            {item.courierCode ? `(${item.courierCode})` : ''}
-                          </p>
-                        ) : null}
-                        {item.vehicleLicensePlate || item.tripCode ? (
-                          <p className='flex items-center gap-1'>
-                            <Truck className='h-3.5 w-3.5' />
-                            {item.vehicleLicensePlate || '--'}
-                            {item.tripCode ? ` | Trip ${item.tripCode}` : ''}
-                          </p>
-                        ) : null}
-                        {item.recordedBy ? (
-                          <p>Recorded by: {item.recordedBy}</p>
-                        ) : null}
-                      </div>
+                        return (
+                          <div
+                            key={itemKey}
+                            className={`relative pl-10 ${index === timeline.length - 1 ? '' : 'pb-6'}`}
+                          >
+                            {index !== timeline.length - 1 ? (
+                              <span className='absolute left-[15px] top-6 h-full w-px bg-border' />
+                            ) : null}
+                            <span className='absolute left-[10px] top-2 h-3 w-3 rounded-full border-2 border-background bg-primary' />
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type='button'
+                                  className='w-full rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40'
+                                >
+                                  <div className='flex flex-wrap items-center justify-between gap-2'>
+                                    <Badge variant='outline'>{statusLabel}</Badge>
+                                    <span className='text-xs text-muted-foreground'>
+                                      {formatDateTime(item.eventTime)}
+                                    </span>
+                                  </div>
+                                  <p className='mt-2 line-clamp-2 text-sm text-foreground/90'>
+                                    {item.description || 'No description'}
+                                  </p>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side='right' className='max-w-sm p-3'>
+                                <div className='space-y-2 text-xs'>
+                                  <div className='font-medium text-foreground'>
+                                    {statusLabel} - {formatDateTime(item.eventTime)}
+                                  </div>
+                                  {item.description ? (
+                                    <p className='text-foreground/90'>
+                                      {item.description}
+                                    </p>
+                                  ) : null}
+                                  <div className='space-y-1 text-muted-foreground'>
+                                    <p className='flex items-center gap-1'>
+                                      <MapPin className='h-3.5 w-3.5' />
+                                      {locationText}
+                                    </p>
+                                    <p className='flex items-center gap-1'>
+                                      <UserRound className='h-3.5 w-3.5' />
+                                      {courierText}
+                                    </p>
+                                    <p className='flex items-center gap-1'>
+                                      <Truck className='h-3.5 w-3.5' />
+                                      {vehicleText} | Trip {tripText}
+                                    </p>
+                                    <p>
+                                      Coordinates: {formatCoordinate(item.latitude)},{' '}
+                                      {formatCoordinate(item.longitude)}
+                                    </p>
+                                    {item.recordedBy ? (
+                                      <p>Recorded by: {item.recordedBy}</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </TooltipProvider>
               )}
             </div>
 
