@@ -30,17 +30,19 @@ export const useVasRuleForm = () => {
     )?.helper;
   }, [form.calculationType]);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent): Promise<boolean> => {
     event.preventDefault();
 
     try {
       const response = await upsertVasRule(buildUpsertVasRuleRequest(form)).unwrap();
       setLastSaved(response);
       notification.success('VAS rule saved successfully.');
+      return true;
     } catch (error) {
       notification.error('Unable to save VAS rule.', {
         description: getErrorMessage(error),
       });
+      return false;
     }
   };
 

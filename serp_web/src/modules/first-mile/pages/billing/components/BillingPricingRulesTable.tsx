@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2, Pencil, Plus } from 'lucide-react';
 import type { BillingDeliveryService } from '../../../types';
 import {
   DELIVERY_SERVICE_OPTIONS,
@@ -40,6 +40,8 @@ interface BillingPricingRulesTableProps<T> {
   getRowKey: (row: T) => string | number;
   renderCells: (row: T) => React.ReactNode;
   onEdit: (row: T) => void;
+  onCreate?: () => void;
+  createLabel?: string;
   serviceFilter?: {
     value: BillingDeliveryService | 'ALL';
     onChange: (value: BillingDeliveryService | 'ALL') => void;
@@ -57,6 +59,8 @@ export function BillingPricingRulesTable<T>({
   getRowKey,
   renderCells,
   onEdit,
+  onCreate,
+  createLabel = 'Add rule',
   serviceFilter,
 }: BillingPricingRulesTableProps<T>) {
   return (
@@ -66,31 +70,39 @@ export function BillingPricingRulesTable<T>({
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        {serviceFilter ? (
-          <div className='flex flex-wrap gap-2'>
-            <Button
-              type='button'
-              size='sm'
-              variant={serviceFilter.value === 'ALL' ? 'default' : 'outline'}
-              onClick={() => serviceFilter.onChange('ALL')}
-            >
-              All services
+        <div className='flex flex-wrap items-center gap-2'>
+          {onCreate ? (
+            <Button type='button' size='sm' onClick={onCreate}>
+              <Plus className='mr-1 h-3.5 w-3.5' />
+              {createLabel}
             </Button>
-            {DELIVERY_SERVICE_OPTIONS.map((option) => (
+          ) : null}
+          {serviceFilter ? (
+            <>
               <Button
-                key={option.value}
                 type='button'
                 size='sm'
-                variant={
-                  serviceFilter.value === option.value ? 'default' : 'outline'
-                }
-                onClick={() => serviceFilter.onChange(option.value)}
+                variant={serviceFilter.value === 'ALL' ? 'default' : 'outline'}
+                onClick={() => serviceFilter.onChange('ALL')}
               >
-                {option.label}
+                All services
               </Button>
-            ))}
-          </div>
-        ) : null}
+              {DELIVERY_SERVICE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  type='button'
+                  size='sm'
+                  variant={
+                    serviceFilter.value === option.value ? 'default' : 'outline'
+                  }
+                  onClick={() => serviceFilter.onChange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

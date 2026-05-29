@@ -1,19 +1,17 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Tariff rule admin form card
+ * Description: Part of Serp Project - Tariff rule admin form dialog
  */
 
 import React from 'react';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -23,39 +21,45 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
-import type { TariffAdminResponse } from '../../../types';
 import {
   DELIVERY_SERVICE_OPTIONS,
   ROUTE_TYPE_OPTIONS,
   type TariffFormState,
 } from '../billingPageModels';
 
-interface TariffRuleFormCardProps {
+export type TariffRuleFormMode = 'create' | 'edit';
+
+interface TariffRuleFormDialogProps {
+  open: boolean;
+  mode: TariffRuleFormMode;
   form: TariffFormState;
   onFormChange: React.Dispatch<React.SetStateAction<TariffFormState>>;
-  lastSaved: TariffAdminResponse | null;
   isLoading: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
-  onReset: () => void;
 }
 
-export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
+export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
+  open,
+  mode,
   form,
   onFormChange,
-  lastSaved,
   isLoading,
+  onOpenChange,
   onSubmit,
-  onReset,
 }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tariff Rule</CardTitle>
-        <CardDescription>
-          Configure base price and step price by service and route type.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-4'>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
+        <DialogHeader>
+          <DialogTitle>
+            {mode === 'create' ? 'Create Tariff Rule' : 'Edit Tariff Rule'}
+          </DialogTitle>
+          <DialogDescription>
+            Configure base price and step price by service and route type.
+          </DialogDescription>
+        </DialogHeader>
+
         <form className='space-y-4' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
@@ -68,6 +72,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                     serviceCode: value as TariffFormState['serviceCode'],
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='tariffServiceCode'>
                   <SelectValue placeholder='Select service' />
@@ -92,6 +97,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                     routeTypeCode: value as TariffFormState['routeTypeCode'],
                   }))
                 }
+                disabled={isLoading}
               >
                 <SelectTrigger id='tariffRouteType'>
                   <SelectValue placeholder='Select route type' />
@@ -119,6 +125,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: 2000'
+                disabled={isLoading}
               />
             </div>
 
@@ -135,6 +142,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: 25000'
+                disabled={isLoading}
               />
             </div>
 
@@ -151,6 +159,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: 500'
+                disabled={isLoading}
               />
             </div>
 
@@ -167,6 +176,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                   }))
                 }
                 placeholder='Example: 5000'
+                disabled={isLoading}
               />
             </div>
 
@@ -182,6 +192,7 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                     effectiveDate: event.target.value,
                   }))
                 }
+                disabled={isLoading}
               />
             </div>
 
@@ -197,42 +208,35 @@ export const TariffRuleFormCard: React.FC<TariffRuleFormCardProps> = ({
                     expirationDate: event.target.value,
                   }))
                 }
+                disabled={isLoading}
               />
             </div>
           </div>
 
-          <div className='flex flex-wrap gap-2'>
-            <Button type='submit' disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Saving Tariff...
-                </>
-              ) : (
-                'Save Tariff Rule'
-              )}
-            </Button>
+          <DialogFooter>
             <Button
               type='button'
               variant='outline'
-              onClick={onReset}
+              onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Reset Tariff Form
+              Cancel
             </Button>
-          </div>
+            <Button type='submit' disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Saving...
+                </>
+              ) : mode === 'create' ? (
+                'Create Tariff Rule'
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
         </form>
-
-        {lastSaved ? (
-          <Alert>
-            <AlertTitle>Last saved tariff</AlertTitle>
-            <AlertDescription>
-              #{lastSaved.id} - {lastSaved.serviceCode} /{' '}
-              {lastSaved.routeTypeCode}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
