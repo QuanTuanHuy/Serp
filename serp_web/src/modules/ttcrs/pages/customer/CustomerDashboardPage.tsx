@@ -155,7 +155,7 @@ export function CustomerDashboardPage() {
     const q = searchQuery.toLowerCase();
     return items.filter(
       (r) =>
-        r.srcLocationCode.toLowerCase().includes(q) ||
+        (r.srcLocationCode ?? '').toLowerCase().includes(q) ||
         r.destLocationCode.toLowerCase().includes(q) ||
         formatId(r.id).toLowerCase().includes(q),
     );
@@ -255,7 +255,7 @@ export function CustomerDashboardPage() {
                       <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          {req.srcLocationCode}
+                          {req.srcLocationCode ?? '—'}
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">

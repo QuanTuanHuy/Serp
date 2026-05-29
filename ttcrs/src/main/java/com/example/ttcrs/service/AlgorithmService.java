@@ -143,32 +143,33 @@ public class AlgorithmService {
             String earlyAtDest = fmt(req.getEarlyAtDest(), defaultEarly);
             String lateAtDest  = fmt(req.getLateAtDest(),  defaultLate);
             double weight = req.getWeight() != null ? req.getWeight() : 0.0;
+            boolean isBreakRomooc = Boolean.TRUE.equals(req.getDropTrailerRequired());
 
             if (req.getType() == RequestType.OE) {
                 // Export Empty: pickup container at depot (src), load at warehouse (dest)
                 exEmpty.add(new ExportEmptyRequests(
-                        id, false, "", "", "", "", "", "", "", "",
+                        id, isBreakRomooc, "", "", "", "", "", "", "", "",
                         earlyAtSrc, lateAtSrc, earlyAtDest, lateAtDest,
                         "", weight, src, dest, 0, 0));
 
             } else if (req.getType() == RequestType.OF) {
                 // Export Laden: attach at warehouse (src), unload at port (dest)
                 exLaden.add(new ExportLadenRequests(
-                        id, false, "", "", "", "", "", "", "", "",
+                        id, isBreakRomooc, "", "", "", "", "", "", "", "",
                         earlyAtSrc, lateAtDest,
                         "", weight, src, dest, 0, 0, 0));
 
             } else if (req.getType() == RequestType.IE) {
                 // Import Empty: receive at warehouse (src), return empty to depot (dest)
                 imEmpty.add(new ImportEmptyRequests(
-                        id, false, "", "", "", "", "", "", "", "",
+                        id, isBreakRomooc, "", "", "", "", "", "", "", "",
                         earlyAtSrc, lateAtDest,
                         "", weight, src, dest, 0, 0));
 
             } else if (req.getType() == RequestType.IF) {
                 // Import Laden: pickup at port (src), unload at warehouse (dest)
                 imLaden.add(new ImportLadenRequests(
-                        id, false, "", "", "", "", "", "", "", "",
+                        id, isBreakRomooc, "", "", "", "", "", "", "", "",
                         earlyAtSrc, lateAtSrc, earlyAtDest, lateAtDest,
                         "", weight, src, dest, 0, 0));
             }

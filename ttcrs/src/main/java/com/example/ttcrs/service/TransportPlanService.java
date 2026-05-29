@@ -1,6 +1,7 @@
 package com.example.ttcrs.service;
 
 import com.example.ttcrs.constant.RequestStatus;
+import com.example.ttcrs.constant.RequestType;
 import com.example.ttcrs.constant.StopAction;
 import com.example.ttcrs.constant.TransportPlanStatus;
 import com.example.ttcrs.dto.request.transportplan.SaveTransportPlanDTO;
@@ -40,6 +41,7 @@ public class TransportPlanService {
     private final TransportPlanRepository     transportPlanRepository;
     private final TransportPlanStopRepository transportPlanStopRepository;
     private final TruckRepository             truckRepository;
+    private final TrailerRepository           trailerRepository;
     private final RequestRepository           requestRepository;
     private final LocationRepository          locationRepository;
     private final AccountClientAdapter        accountClientAdapter;
@@ -102,12 +104,18 @@ public class TransportPlanService {
                     .build();
             plan = transportPlanRepository.save(plan);
             final Long planId = plan.getId();
+            Map<Long, String> oeOriginByRequestId = new java.util.HashMap<>();
 
             List<TransportPlanStopEntity> stopEntities = new ArrayList<>();
             for (SaveTransportPlanDTO.StopDTO stopDto : stops) {
                 LocalDateTime plannedArrival = stopDto.getPlannedArrival() != null && !stopDto.getPlannedArrival().isBlank()
                         ? LocalDateTime.parse(stopDto.getPlannedArrival(), DT_FMT)
                         : null;
+                StopAction action = mapAction(stopDto.getAction());
+
+                if (stopDto.getRequestId() != null && action == StopAction.PICKUP_CONTAINER) {
+                    oeOriginByRequestId.putIfAbsent(stopDto.getRequestId(), stopDto.getLocationCode());
+                }
 
                 stopEntities.add(TransportPlanStopEntity.builder()
                         .tenantId(tenantId)
@@ -115,7 +123,8 @@ public class TransportPlanService {
                         .sequence(stopDto.getSequence())
                         .locationCode(stopDto.getLocationCode())
                         .requestId(stopDto.getRequestId())
-                        .action(mapAction(stopDto.getAction()))
+                    .trailerId(stopDto.getTrailerId())
+                        .action(action)
                         .plannedArrivalTime(plannedArrival)
                         .build());
             }
@@ -132,6 +141,18 @@ public class TransportPlanService {
                 for (RequestEntity req : linkedRequests) {
                     req.setTransportPlanId(planId);
                 }
+
+                Map<Long, RequestEntity> requestById = linkedRequests.stream()
+                        .collect(Collectors.toMap(RequestEntity::getId, Function.identity(), (a, b) -> a));
+                oeOriginByRequestId.forEach((requestId, originLocationCode) -> {
+                    RequestEntity req = requestById.get(requestId);
+                    if (req != null
+                            && req.getType() == RequestType.OE
+                            && originLocationCode != null
+                            && !originLocationCode.isBlank()) {
+                        req.setSrcLocationCode(originLocationCode);
+                    }
+                });
                 requestRepository.saveAll(linkedRequests);
             }
 
@@ -406,9 +427,15 @@ public class TransportPlanService {
         // Save evidence for the associated request
         if (stop.getRequestId() != null && evidenceUrl != null && !evidenceUrl.isBlank()) {
             requestRepository.findById(stop.getRequestId()).ifPresent(req -> {
-                if (stop.getLocationCode().equalsIgnoreCase(req.getSrcLocationCode())) {
+                if (
+                        req.getSrcLocationCode() != null
+                                && stop.getLocationCode().equalsIgnoreCase(req.getSrcLocationCode())
+                ) {
                     req.setEvidenceAtSrc(evidenceUrl);
-                } else if (stop.getLocationCode().equalsIgnoreCase(req.getDestLocationCode())) {
+                } else if (
+                        req.getDestLocationCode() != null
+                                && stop.getLocationCode().equalsIgnoreCase(req.getDestLocationCode())
+                ) {
                     req.setEvidenceAtDest(evidenceUrl);
                 }
                 requestRepository.save(req);
@@ -417,6 +444,8 @@ public class TransportPlanService {
 
         stop.setIsCompleted(true);
         transportPlanStopRepository.save(stop);
+
+        updateVehicleLocationsForStop(plan, stop);
 
         // Check if this is the last stop
         List<TransportPlanStopEntity> allStops =
@@ -544,8 +573,18 @@ public class TransportPlanService {
 
     private String resolveEvidenceUrl(String locationCode, RequestEntity req) {
         if (locationCode == null) return null;
-        if (locationCode.equalsIgnoreCase(req.getSrcLocationCode())) return req.getEvidenceAtSrc();
-        if (locationCode.equalsIgnoreCase(req.getDestLocationCode())) return req.getEvidenceAtDest();
+        if (
+                req.getSrcLocationCode() != null
+                        && locationCode.equalsIgnoreCase(req.getSrcLocationCode())
+        ) {
+            return req.getEvidenceAtSrc();
+        }
+        if (
+                req.getDestLocationCode() != null
+                        && locationCode.equalsIgnoreCase(req.getDestLocationCode())
+        ) {
+            return req.getEvidenceAtDest();
+        }
         return null;
     }
 
@@ -582,6 +621,22 @@ public class TransportPlanService {
                 yield StopAction.DEPOT_START;
             }
         };
+    }
+
+    private void updateVehicleLocationsForStop(TransportPlanEntity plan, TransportPlanStopEntity stop) {
+        if (stop.getAction() == StopAction.DEPOT_END) {
+            truckRepository.findById(plan.getTruckId()).ifPresent(truck -> {
+                truck.setCurrentLocationCode(stop.getLocationCode());
+                truckRepository.save(truck);
+            });
+        }
+
+        if (stop.getAction() == StopAction.DROP_TRAILER && stop.getTrailerId() != null) {
+            trailerRepository.findById(stop.getTrailerId()).ifPresent(trailer -> {
+                trailer.setCurrentLocationCode(stop.getLocationCode());
+                trailerRepository.save(trailer);
+            });
+        }
     }
 
     private List<Long> extractRequestIds(SaveTransportPlanDTO dto) {

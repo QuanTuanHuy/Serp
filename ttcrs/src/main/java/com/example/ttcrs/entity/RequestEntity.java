@@ -35,7 +35,7 @@ public class RequestEntity {
     @Column(name = "customer_id")
     private Long customerId;
 
-    @Column(name = "src_location_code", nullable = false, length = 50)
+    @Column(name = "src_location_code", length = 50)
     private String srcLocationCode;
 
     @Column(name = "dest_location_code", nullable = false, length = 50)

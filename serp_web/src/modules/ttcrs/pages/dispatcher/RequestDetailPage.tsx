@@ -265,7 +265,7 @@ export function RequestDetailPage({ requestId }: Props) {
   async function handleSave() {
     if (!request) return;
     const payload: UpdateRequestPayload = {};
-    if (srcLocationCode.trim()) payload.srcLocationCode = srcLocationCode.trim();
+    if (request.type !== 'OE' && srcLocationCode.trim()) payload.srcLocationCode = srcLocationCode.trim();
     if (destLocationCode.trim()) payload.destLocationCode = destLocationCode.trim();
     if (weight !== '') payload.weight = Number(weight);
     if (containerSize) payload.containerSize = containerSize;
@@ -394,7 +394,11 @@ export function RequestDetailPage({ requestId }: Props) {
                     Execution status
                   </p>
                   <p className={cn('text-sm font-semibold', SUB_STATUS_COLOR[subStatus])}>
-                    {subStatusLabel(subStatus, request.srcLocationCode, request.destLocationCode)}
+                    {subStatusLabel(
+                      subStatus,
+                      request.srcLocationCode ?? 'Origin',
+                      request.destLocationCode
+                    )}
                   </p>
                 </div>
                 {planId && (
@@ -430,22 +434,28 @@ export function RequestDetailPage({ requestId }: Props) {
               <div className="space-y-1.5">
                 <Label>Origin</Label>
                 {isPending ? (
-                  <Select value={srcLocationCode} onValueChange={setSrcLocationCode}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select origin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((loc) => (
-                        <SelectItem key={loc.locationCode} value={loc.locationCode}>
-                          {loc.locationCode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  request.type === 'OE' ? (
+                    <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                      Origin for OE requests is determined from the selected container when building a route.
+                    </div>
+                  ) : (
+                    <Select value={srcLocationCode} onValueChange={setSrcLocationCode}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select origin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.map((loc) => (
+                          <SelectItem key={loc.locationCode} value={loc.locationCode}>
+                            {loc.locationCode}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
                 ) : (
                   <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-3 py-2 text-sm">
                     <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                    {request.srcLocationCode}
+                    {request.srcLocationCode ?? '—'}
                   </div>
                 )}
               </div>

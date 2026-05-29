@@ -26,8 +26,7 @@ public class CreateRequestDTO {
     @NotNull(message = "type không được để trống")
     private RequestType type;
 
-    /** Mã location điểm đi */
-    @NotBlank(message = "srcLocationCode không được để trống")
+    /** Mã location điểm đi (bắt buộc với OF/IF/IE; OE có thể để trống) */
     private String srcLocationCode;
 
     /** Mã location điểm đến */

@@ -191,9 +191,7 @@ export function Step1SelectRequests({
                       <TableCell className='px-4 py-3'>
                         <div className='flex items-center gap-1.5'>
                           <MapPin className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-                          <span className='text-foreground'>
-                            {request.srcLocationCode}
-                          </span>
+                          <span className='text-foreground'>{request.srcLocationCode ?? '—'}</span>
                         </div>
                       </TableCell>
                       <TableCell className='px-4 py-3'>

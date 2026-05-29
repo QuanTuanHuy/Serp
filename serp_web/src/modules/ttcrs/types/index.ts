@@ -21,7 +21,7 @@ export interface TtcrsRequest {
   id: number;
   tenantId: number;
   customerId: number | null;
-  srcLocationCode: string;
+  srcLocationCode: string | null;
   destLocationCode: string;
   earlyAtSrc: string | null;
   lateAtSrc: string | null;
@@ -80,7 +80,7 @@ export interface RequestFilterParams {
 export interface CreateRequestPayload {
   customerId: number;
   type: RequestType;
-  srcLocationCode: string;
+  srcLocationCode?: string | null;
   destLocationCode: string;
   quantity: number;
   weight?: number | null;
@@ -213,6 +213,7 @@ export interface AlgorithmRouteElement {
   departureTime: string;
   travelTime: number;
   requestId: number | null;
+  trailerId?: number | null;
 }
 
 export interface AlgorithmTruck {
@@ -253,6 +254,7 @@ export interface SaveTransportPlanStopPayload {
   action: string;
   plannedArrival: string;
   requestId: number | null;
+  trailerId?: number | null;
 }
 
 export interface SaveTransportPlanItemPayload {

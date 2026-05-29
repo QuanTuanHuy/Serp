@@ -44,14 +44,23 @@ import {
 } from '@/shared/components/ui';
 import {
   useCreateManualRouteMutation,
+  useGetDispatcherContainersQuery,
   useGetDispatcherDriversQuery,
   useGetDispatcherLocationsQuery,
   useGetDispatcherRequestsQuery,
   useGetDispatcherTrailersQuery,
   useGetDispatcherTrucksQuery,
 } from '../../api/ttcrsApi';
-import type { DriverItem, TrailerItem, TruckItem, TtcrsRequest } from '../../types';
+import type {
+  ContainerItem,
+  DriverItem,
+  RequestType,
+  TrailerItem,
+  TruckItem,
+  TtcrsRequest,
+} from '../../types';
 import type { RoutePolylineData } from '../../components/RouteMapPanel';
+import { cn } from '@/shared/utils';
 
 type WizardStep = 1 | 2;
 
@@ -84,6 +93,7 @@ interface ManualSelection {
   returnDepotTrailer: string;
   requests: TtcrsRequest[];
   replacementTrailerByRequest: Record<number, TrailerItem>;
+  containerByRequest: Record<number, ContainerItem>;
 }
 
 interface RouteValidationResult {
@@ -97,6 +107,13 @@ const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
   month: '2-digit',
   year: 'numeric',
 });
+
+const TYPE_CLASS: Record<RequestType, string> = {
+  OF: 'bg-green-500 hover:bg-green-500/90 text-white border-transparent',
+  IF: 'bg-blue-500 hover:bg-blue-500/90 text-white border-transparent',
+  OE: 'bg-amber-500 hover:bg-amber-500/90 text-white border-transparent',
+  IE: 'bg-purple-500 hover:bg-purple-500/90 text-white border-transparent',
+};
 
 const DynamicRouteMapPanel = dynamic(
   () =>
@@ -143,6 +160,16 @@ function computeLatestFirstOperationalDeadline(requests: TtcrsRequest[]) {
   return new Date(Math.min(...candidates.map((date) => date.getTime())));
 }
 
+function computeEarliestFirstOperationalTime(requests: TtcrsRequest[]) {
+  const candidates = requests
+    .flatMap((request) => [request.earlyAtSrc, request.earlyAtDest])
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()));
+  if (candidates.length === 0) return null;
+  return new Date(Math.max(...candidates.map((date) => date.getTime())));
+}
+
 function logicalActionClass(action: LogicalAction): string {
   switch (action) {
     case 'DEPOT_START':
@@ -156,6 +183,19 @@ function logicalActionClass(action: LogicalAction): string {
     case 'DELIVERY_CONTAINER':
       return 'bg-orange-100 text-orange-700 border-orange-200';
   }
+}
+
+function getTimeWindowLabel(card: ManualStopCard) {
+  const lines: string[] = [];
+
+  if (card.earliestAt) {
+    lines.push(`Earliest: ${formatDateTime(card.earliestAt)}`);
+  }
+  if (card.lateAt) {
+    lines.push(`Latest: ${formatDateTime(card.lateAt)}`);
+  }
+
+  return lines.length > 0 ? lines : ['No time window'];
 }
 
 function buildStopCards(selection: ManualSelection): {
@@ -222,11 +262,21 @@ function buildStopCards(selection: ManualSelection): {
   });
 
   selection.requests.forEach((request) => {
+    const selectedContainer = selection.containerByRequest[request.id];
+    const sourceLocationCode =
+      request.type === 'OE' && selectedContainer?.currentLocationCode
+        ? selectedContainer.currentLocationCode
+        : request.srcLocationCode ?? request.destLocationCode;
+    const sourceDescription =
+      request.type === 'OE' && selectedContainer
+        ? `Container ${selectedContainer.code}`
+        : request.srcLocationCode ?? '—';
+
     addCard({
       id: `req-${request.id}-src`,
       title: `Request #${request.id} - Source`,
-      description: request.srcLocationCode,
-      locationCode: request.srcLocationCode,
+      description: sourceDescription,
+      locationCode: sourceLocationCode,
       logicalAction: 'PICKUP_CONTAINER',
       apiAction: 'PICKUP_EMPTYCONT',
       requestId: request.id,
@@ -458,6 +508,19 @@ function StepIndicator({ step }: { step: WizardStep }) {
   );
 }
 
+function TypeBadge({ type }: { type: RequestType }) {
+  return (
+    <Badge
+      className={cn(
+        'rounded px-2 py-0.5 text-xs font-bold tracking-wide',
+        TYPE_CLASS[type] ?? 'bg-gray-400 text-white border-transparent'
+      )}
+    >
+      {type}
+    </Badge>
+  );
+}
+
 export function CreateManualRoutePage() {
   const router = useRouter();
   const user = useAppSelector(selectUserProfile);
@@ -473,6 +536,7 @@ export function CreateManualRoutePage() {
   const [replacementTrailerByRequest, setReplacementTrailerByRequest] = useState<
     Record<number, number>
   >({});
+  const [containerByRequest, setContainerByRequest] = useState<Record<number, number>>({});
 
   const [cardsById, setCardsById] = useState<Record<string, ManualStopCard>>({});
   const [poolIds, setPoolIds] = useState<string[]>([]);
@@ -491,12 +555,15 @@ export function CreateManualRoutePage() {
     sortBy: 'id',
     sortDirection: 'desc',
   });
+  const { data: containersData, isLoading: isLoadingContainers } =
+    useGetDispatcherContainersQuery();
   const { data: trucksData, isLoading: isLoadingTrucks } = useGetDispatcherTrucksQuery();
   const { data: trailersData, isLoading: isLoadingTrailers } = useGetDispatcherTrailersQuery();
   const { data: driversData, isLoading: isLoadingDrivers } = useGetDispatcherDriversQuery();
   const { data: locationsData } = useGetDispatcherLocationsQuery();
 
   const requests = requestsData?.data?.items ?? [];
+  const containers = containersData?.data ?? [];
   const trucks = trucksData?.data ?? [];
   const trailers = trailersData?.data ?? [];
   const drivers = driversData?.data ?? [];
@@ -552,8 +619,27 @@ export function CreateManualRoutePage() {
     return map;
   }, [replacementTrailerByRequest, selectedRequests, trailers]);
 
+  const containerSelectionMap = useMemo(() => {
+    const map: Record<number, ContainerItem> = {};
+    selectedRequests
+      .filter((request) => request.type === 'OE')
+      .forEach((request) => {
+        const containerId = containerByRequest[request.id];
+        const container = containers.find((item) => item.id === containerId);
+        if (container) {
+          map[request.id] = container;
+        }
+      });
+    return map;
+  }, [containerByRequest, containers, selectedRequests]);
+
   const latestFirstOperationalDeadline = useMemo(
     () => computeLatestFirstOperationalDeadline(selectedRequests),
+    [selectedRequests]
+  );
+
+  const earliestFirstOperationalTime = useMemo(
+    () => computeEarliestFirstOperationalTime(selectedRequests),
     [selectedRequests]
   );
 
@@ -565,7 +651,11 @@ export function CreateManualRoutePage() {
   }, [step, routeIds, startRouteTime]);
 
   const isStep1Loading =
-    isLoadingRequests || isLoadingTrucks || isLoadingTrailers || isLoadingDrivers;
+    isLoadingRequests ||
+    isLoadingContainers ||
+    isLoadingTrucks ||
+    isLoadingTrailers ||
+    isLoadingDrivers;
 
   const handleToggleRequest = (requestId: number) => {
     setSelectedRequestIds((prev) => {
@@ -616,6 +706,19 @@ export function CreateManualRoutePage() {
       return;
     }
 
+    const missingContainerSelection = selectedRequests.filter(
+      (request) =>
+        request.type === 'OE' && !containerSelectionMap[request.id]?.currentLocationCode
+    );
+    if (missingContainerSelection.length > 0) {
+      toast.error(
+        `OE requests require a container selection with a valid location: ${missingContainerSelection
+          .map((request) => `#${request.id}`)
+          .join(', ')}`
+      );
+      return;
+    }
+
     const selection: ManualSelection = {
       truck: selectedTruck,
       startTrailer: selectedStartTrailer,
@@ -624,6 +727,7 @@ export function CreateManualRoutePage() {
       returnDepotTrailer,
       requests: selectedRequests,
       replacementTrailerByRequest: replacementTrailerMap,
+      containerByRequest: containerSelectionMap,
     };
 
     const built = buildStopCards(selection);
@@ -723,6 +827,7 @@ export function CreateManualRoutePage() {
       returnDepotTrailer,
       requests: selectedRequests,
       replacementTrailerByRequest: replacementTrailerMap,
+      containerByRequest: containerSelectionMap,
     };
 
     const baseValidation = validateRoute(routeCards, selection);
@@ -831,13 +936,28 @@ export function CreateManualRoutePage() {
         {
           truckCode: selectedTruck.code,
           driverId: selectedDriver.userId,
-          stops: routeCards.map((card, idx) => ({
-            sequence: idx + 1,
-            locationCode: card.locationCode,
-            action: card.apiAction,
-            plannedArrival: etaByCardId[card.id],
-            requestId: card.requestId,
-          })),
+          stops: (() => {
+            let currentTrailerId: number | null = null;
+            return routeCards.map((card, idx) => {
+              let trailerId: number | null = card.trailerId ?? null;
+
+              if (card.logicalAction === 'PICKUP_TRAILER') {
+                currentTrailerId = trailerId;
+              } else if (card.logicalAction === 'DROP_TRAILER') {
+                trailerId = trailerId ?? currentTrailerId;
+                currentTrailerId = null;
+              }
+
+              return {
+                sequence: idx + 1,
+                locationCode: card.locationCode,
+                action: card.apiAction,
+                plannedArrival: etaByCardId[card.id],
+                requestId: card.requestId,
+                trailerId,
+              };
+            });
+          })(),
         },
       ],
     };
@@ -1000,8 +1120,9 @@ export function CreateManualRoutePage() {
                     <TableRow className='bg-muted/20'>
                       <TableHead className='w-14'>Pick</TableHead>
                       <TableHead>Request</TableHead>
-                      <TableHead>Source</TableHead>
+                      <TableHead>Origin</TableHead>
                       <TableHead>Destination</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Drop Trailer</TableHead>
                       <TableHead>Replacement Trailer</TableHead>
                     </TableRow>
@@ -1010,7 +1131,9 @@ export function CreateManualRoutePage() {
                     {requests.map((request) => {
                       const checked = selectedRequestIds.has(request.id);
                       const requiresDrop = Boolean(request.dropTrailerRequired);
-
+                      const selectedContainerId = containerByRequest[request.id]
+                        ? String(containerByRequest[request.id])
+                        : '';
                       return (
                         <TableRow key={request.id}>
                           <TableCell>
@@ -1019,9 +1142,49 @@ export function CreateManualRoutePage() {
                               onCheckedChange={() => handleToggleRequest(request.id)}
                             />
                           </TableCell>
-                          <TableCell className='font-medium'>#{request.id}</TableCell>
-                          <TableCell>{request.srcLocationCode}</TableCell>
+                          <TableCell className='font-medium'>
+                            #{request.id}
+                          </TableCell>
+                          <TableCell>
+                            {request.type === 'OE' ? (
+                              <Select
+                                value={selectedContainerId}
+                                onValueChange={(value) =>
+                                  setContainerByRequest((prev) => ({
+                                    ...prev,
+                                    [request.id]: Number(value),
+                                  }))
+                                }
+                                disabled={!checked || isLoadingContainers}
+                              >
+                                <SelectTrigger className='h-8'>
+                                  <SelectValue
+                                    placeholder={
+                                      isLoadingContainers ? 'Loading...' : 'Select container'
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {containers.map((container) => (
+                                    <SelectItem
+                                      key={container.id}
+                                      value={String(container.id)}
+                                      disabled={!container.currentLocationCode}
+                                    >
+                                      {container.code}
+                                      {container.currentLocationCode
+                                        ? ` (${container.currentLocationCode})`
+                                        : ' (no location)'}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              request.srcLocationCode ?? '—'
+                            )}
+                          </TableCell>
                           <TableCell>{request.destLocationCode}</TableCell>
+                          <TableCell><TypeBadge type={request.type} /></TableCell>
                           <TableCell>
                             <Badge
                               className={
@@ -1084,8 +1247,16 @@ export function CreateManualRoutePage() {
           <Card>
             <CardContent className='flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between'>
               <div className='space-y-1'>
+                {/* <p className='text-sm text-muted-foreground'>
+                  Earliest time to reach first operational stop (after depot):{' '}
+                  <span className='font-semibold text-foreground'>
+                    {earliestFirstOperationalTime
+                      ? formatDateTime(earliestFirstOperationalTime.toISOString())
+                      : 'N/A'}
+                  </span>
+                </p> */}
                 <p className='text-sm text-muted-foreground'>
-                  Latest deadline to reach first operational stop (after depot):{' '}
+                  Latest deadline to reach first operational stop (after picking start trailer):{' '}
                   <span className='font-semibold text-foreground'>
                     {latestFirstOperationalDeadline
                       ? formatDateTime(latestFirstOperationalDeadline.toISOString())
@@ -1126,6 +1297,11 @@ export function CreateManualRoutePage() {
                         {poolIds.map((id, index) => {
                           const card = cardsById[id];
                           if (!card) return null;
+                          const timeWindow =
+                            card.requestId != null &&
+                            (card.id.endsWith('-src') || card.id.endsWith('-dest'))
+                              ? getTimeWindowLabel(card)
+                              : null;
 
                           const requiresDropAtDest =
                             card.requestId != null &&
@@ -1156,10 +1332,17 @@ export function CreateManualRoutePage() {
                                       )}
                                     </div>
                                   </div>
-                                  <p className='text-xs text-muted-foreground'>{card.description}</p>
                                   <p className='text-xs text-muted-foreground'>
                                     Location: <span className='font-medium'>{card.locationCode}</span>
                                   </p>
+                                  {timeWindow && (
+                                    <div className='mt-2 space-y-0.5 text-xs text-muted-foreground'>
+                                      <div className='font-semibold text-foreground'>Time window</div>
+                                      {timeWindow.map((line) => (
+                                        <div key={line}>{line}</div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </Draggable>
@@ -1194,6 +1377,11 @@ export function CreateManualRoutePage() {
                         {routeIds.map((id, index) => {
                           const card = cardsById[id];
                           if (!card) return null;
+                          const timeWindow =
+                            card.requestId != null &&
+                            (card.id.endsWith('-src') || card.id.endsWith('-dest'))
+                              ? getTimeWindowLabel(card)
+                              : null;
 
                           const requiresDropAtDest =
                             card.requestId != null &&
@@ -1236,6 +1424,14 @@ export function CreateManualRoutePage() {
                                       </>
                                     ) : null}
                                   </p>
+                                  {timeWindow && (
+                                    <div className='mt-2 space-y-0.5 text-xs text-muted-foreground'>
+                                      <div className='font-semibold text-foreground'>Time window</div>
+                                      {timeWindow.map((line) => (
+                                        <div key={line}>{line}</div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </Draggable>

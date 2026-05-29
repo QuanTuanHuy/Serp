@@ -283,7 +283,11 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
                   Execution status
                 </p>
                 <p className={cn('text-sm font-semibold', SUB_STATUS_COLOR[subStatus])}>
-                  {subStatusLabel(subStatus, request.srcLocationCode, request.destLocationCode)}
+                  {subStatusLabel(
+                    subStatus,
+                    request.srcLocationCode ?? 'Origin',
+                    request.destLocationCode
+                  )}
                 </p>
               </div>
             </div>
@@ -300,7 +304,7 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
               <p className="text-xs text-muted-foreground uppercase tracking-wider">Origin</p>
               <div className="flex items-center gap-1.5 text-sm font-medium">
                 <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                {request.srcLocationCode}
+                  {request.srcLocationCode ?? '—'}
               </div>
             </div>
             <div className="space-y-1">

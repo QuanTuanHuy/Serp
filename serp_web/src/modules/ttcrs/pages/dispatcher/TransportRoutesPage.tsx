@@ -67,7 +67,7 @@ const STATUS_BADGE: Record<TransportPlanStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-700 border-red-200',
 };
 
-type SortField = 'truckCode' | 'driverName' | 'status' | 'startTime' | 'stopCount';
+type SortField = 'truckCode' | 'driverName' | 'status' | 'startTime' | 'stopCount' | 'createdStamp';
 const ROUTE_COLORS = ['#3b82f6', '#f97316', '#22c55e', '#8b5cf6', '#ef4444', '#14b8a6'];
 
 // -------------------------------------------------------------------------
@@ -146,14 +146,12 @@ export function TransportRoutesPage() {
     }
     result = [...result].sort((a, b) => {
       let cmp = 0;
-      if (sortBy === 'truckCode')
-        cmp = (a.truckCode ?? '').localeCompare(b.truckCode ?? '');
-      if (sortBy === 'driverName')
-        cmp = (a.driverName ?? '').localeCompare(b.driverName ?? '');
-      if (sortBy === 'status') cmp = a.status.localeCompare(b.status);
-      if (sortBy === 'startTime')
-        cmp = (a.startTime ?? '').localeCompare(b.startTime ?? '');
-      if (sortBy === 'stopCount') cmp = a.stopCount - b.stopCount;
+      if (sortBy === 'truckCode')  cmp = (a.truckCode ?? '').localeCompare(b.truckCode ?? '');
+      if (sortBy === 'driverName') cmp = (a.driverName ?? '').localeCompare(b.driverName ?? '');
+      if (sortBy === 'status')     cmp = a.status.localeCompare(b.status);
+      if (sortBy === 'startTime')  cmp = (a.startTime ?? '').localeCompare(b.startTime ?? '');
+      if (sortBy === 'stopCount')  cmp = a.stopCount - b.stopCount;
+      if (sortBy === 'createdStamp') cmp = (a.createdStamp ?? '').localeCompare(b.createdStamp ?? '');
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
@@ -388,7 +386,11 @@ export function TransportRoutesPage() {
                       Stops <SortIcon field='stopCount' />
                     </button>
                   </TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead>
+                    <button className='flex items-center text-xs font-medium uppercase' onClick={() => toggleSort('createdStamp')}>
+                      Created At <SortIcon field='createdStamp' />
+                    </button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -44,5 +44,8 @@ public class SaveTransportPlanDTO {
 
         /** DB entity ID of the linked request; null for depot/mooc stops */
         private Long requestId;
+
+        /** DB entity ID of the trailer linked to this stop (optional) */
+        private Long trailerId;
     }
 }

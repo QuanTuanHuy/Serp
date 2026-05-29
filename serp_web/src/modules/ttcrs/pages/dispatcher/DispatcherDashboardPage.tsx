@@ -276,7 +276,7 @@ export function DispatcherDashboardPage() {
     const q = searchQuery.toLowerCase();
     return items.filter(
       (r) =>
-        r.srcLocationCode.toLowerCase().includes(q) ||
+        (r.srcLocationCode ?? '').toLowerCase().includes(q) ||
         r.destLocationCode.toLowerCase().includes(q) ||
         formatId(r.id).toLowerCase().includes(q) ||
         r.type.toLowerCase().includes(q)
@@ -442,24 +442,27 @@ export function DispatcherDashboardPage() {
             id='dispatcher-create-transport-plan-btn'
             variant='outline'
             size='sm'
+            style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
             onClick={() => router.push('/ttcrs/dispatcher/plans/create')}
           >
             <Route className='h-4 w-4' />
-            Create Transport Plan
+            Generate Transport Plan
           </Button>
           <Button
             id='dispatcher-create-manual-route-btn'
             variant='outline'
             size='sm'
+            style={{ borderColor: '#22c55e', color: '#22c55e' }}
             onClick={() => router.push('/ttcrs/dispatcher/routes/manual/create')}
           >
-            <Route className='h-4 w-4' />
+            <MapPin className='h-4 w-4' />
             Create Manual Route
           </Button>
           <Button
             id='dispatcher-create-request-btn'
             variant='outline'
             size='sm'
+            style={{ borderColor: '#8b5cf6', color: '#8b5cf6' }}
             onClick={() => setIsCreateOpen(true)}
           >
             <Plus className='h-4 w-4' />
@@ -642,7 +645,7 @@ export function DispatcherDashboardPage() {
                         <div className='flex items-center gap-1.5'>
                           <MapPin className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
                           <span className='text-foreground'>
-                            {req.srcLocationCode}
+                            {req.srcLocationCode ?? '—'}
                           </span>
                         </div>
                       </TableCell>

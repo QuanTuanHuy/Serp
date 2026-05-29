@@ -1,6 +1,7 @@
 package com.example.ttcrs.service;
 
 import com.example.ttcrs.constant.RequestStatus;
+import com.example.ttcrs.constant.RequestType;
 import com.example.ttcrs.dto.request.request.CreateRequestDTO;
 import com.example.ttcrs.dto.request.request.RequestFilterDTO;
 import com.example.ttcrs.dto.request.request.UpdateRequestDTO;
@@ -107,6 +108,12 @@ public class RequestService {
 
         log.info("Creating {} requests for customerId={}, tenantId={}, type={}",
                 dto.getQuantity(), dto.getCustomerId(), tenantId, dto.getType());
+
+                if (dto.getType() != RequestType.OE) {
+                        if (dto.getSrcLocationCode() == null || dto.getSrcLocationCode().isBlank()) {
+                                throw new IllegalArgumentException("srcLocationCode không được để trống");
+                        }
+                }
 
         List<RequestEntity> entities = new ArrayList<>(dto.getQuantity());
         for (int i = 0; i < dto.getQuantity(); i++) {
@@ -348,7 +355,9 @@ public class RequestService {
 
         log.info("Updating request id={}, tenantId={}", id, tenantId);
 
-        if (dto.getSrcLocationCode()  != null && !dto.getSrcLocationCode().isBlank())
+        if (entity.getType() != RequestType.OE
+                && dto.getSrcLocationCode() != null
+                && !dto.getSrcLocationCode().isBlank())
             entity.setSrcLocationCode(dto.getSrcLocationCode());
         if (dto.getDestLocationCode() != null && !dto.getDestLocationCode().isBlank())
             entity.setDestLocationCode(dto.getDestLocationCode());
