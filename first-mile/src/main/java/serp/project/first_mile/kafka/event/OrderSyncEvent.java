@@ -18,6 +18,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import serp.project.first_mile.domain.Dimension;
 import serp.project.first_mile.enums.OrderProductCategory;
 import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.OrderSyncEventSource;
 import serp.project.first_mile.enums.OrderType;
 
 import java.time.LocalDateTime;
@@ -74,4 +75,7 @@ public class OrderSyncEvent {
 
     @JsonProperty("updated_at")
     private LocalDateTime updatedAt;
+
+    @JsonProperty("event_source")
+    private OrderSyncEventSource eventSource;
 }

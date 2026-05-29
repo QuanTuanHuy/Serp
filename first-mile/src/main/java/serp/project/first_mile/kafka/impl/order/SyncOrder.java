@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.enums.OrderSyncEventSource;
 import serp.project.first_mile.kafka.KafkaProducer;
 import serp.project.first_mile.kafka.event.OrderSyncEvent;
 
@@ -39,6 +40,7 @@ public class SyncOrder {
                 .tenantId(order.getTenantId())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .eventSource(OrderSyncEventSource.FIRST_MILE)
                 .build();
         String key = order.getOrderCode();
         kafkaProducer.sendMessageAsync(key, orderSyncEvent, syncOrderTopic, (success, sentTopic, payload, ex) -> {;

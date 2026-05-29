@@ -12,6 +12,7 @@ import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -34,4 +35,8 @@ public interface TariffRepository extends JpaRepository<Tariff, Long> {
             LocalDate effectiveDate,
             LocalDate expirationDate
     );
+
+    List<Tariff> findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(DeliveryService serviceCode);
+
+    List<Tariff> findAllByOrderByServiceCodeAscRouteTypeCodeAscEffectiveDateDesc();
 }

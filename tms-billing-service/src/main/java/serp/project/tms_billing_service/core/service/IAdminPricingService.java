@@ -11,6 +11,9 @@ import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
+import serp.project.tms_billing_service.enums.DeliveryService;
+
+import java.util.List;
 
 public interface IAdminPricingService {
     TariffAdminResponse upsertTariff(UpsertTariffRequest request);
@@ -18,4 +21,10 @@ public interface IAdminPricingService {
     SurchargeRuleAdminResponse upsertSurchargeRule(UpsertSurchargeRuleRequest request);
 
     VasRuleAdminResponse upsertVasRule(UpsertVasRuleRequest request);
+
+    List<TariffAdminResponse> listTariffs(DeliveryService serviceCode);
+
+    List<SurchargeRuleAdminResponse> listSurchargeRules();
+
+    List<VasRuleAdminResponse> listVasRules();
 }

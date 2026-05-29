@@ -41,4 +41,11 @@ public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSp
             HubStaffRole role,
             HubStaffStatus status
     );
+
+    boolean existsByTenantIdAndUserIdAndRoleInAndStatus(
+            Long tenantId,
+            Long userId,
+            List<HubStaffRole> roles,
+            HubStaffStatus status
+    );
 }
