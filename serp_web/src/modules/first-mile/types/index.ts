@@ -446,6 +446,13 @@ export interface FirstMileOrderDetail {
   totalWeight?: number;
   totalValue?: number;
   totalVolume?: number;
+  dimensionLengthCm?: number;
+  dimensionWidthCm?: number;
+  dimensionHeightCm?: number;
+  baseShippingFee?: number;
+  codFee?: number;
+  extraFee?: number;
+  totalShippingFee?: number;
   originPostOfficeCode?: string;
   destinationPostOfficeCode?: string;
   note?: string;
@@ -558,6 +565,33 @@ export interface OrderConfirmationResponse {
   status: FirstMileOrderStatus;
   alreadyConfirmed: boolean;
   originPostOffice?: OrderConfirmationOriginPostOffice | null;
+}
+
+export interface InitiateOrderPaymentRequest {
+  amount?: number;
+}
+
+export interface OrderPaymentInitResponse {
+  orderId: number;
+  orderCode: string;
+  amount: number;
+  appTransId: string;
+  paymentUrl?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface ConfirmOrderPaymentRequest {
+  appTransId: string;
+}
+
+export interface OrderPaymentConfirmResponse {
+  orderId: number;
+  orderCode: string;
+  paymentStatus: FirstMilePaymentStatus;
+  appTransId: string;
+  gatewayStatus?: string;
+  message?: string;
 }
 
 export interface OrderDropOffPostOfficeSuggestion {

@@ -15,6 +15,7 @@ import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmDropOffOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
+import serp.project.first_mile.dto.request.InitiateOrderPaymentRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
@@ -221,12 +222,15 @@ public class OrderController {
 
     @PostMapping("/{orderId}/payment/initiate")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
-    public OrderPaymentInitResponse initiateOrderPayment(@PathVariable Long orderId) {
+    public OrderPaymentInitResponse initiateOrderPayment(
+            @PathVariable Long orderId,
+            @RequestBody(required = false) InitiateOrderPaymentRequest request
+    ) {
         Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
                 () -> new AppException(ErrorCode.UNAUTHORIZED)
         );
         log.info("REST request to initiate payment for Order {} tenant {}", orderId, tenantId);
-        return orderService.initiateOrderPayment(orderId, tenantId);
+        return orderService.initiateOrderPayment(orderId, tenantId, request);
     }
 
     @PostMapping("/{orderId}/payment/confirm")

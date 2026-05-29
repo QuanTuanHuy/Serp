@@ -15,6 +15,7 @@ import type {
   CreateVehicleRequest,
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
+  ConfirmOrderPaymentRequest,
   FirstMileOrderDetail,
   FirstMileOrderListFilters,
   FirstMileOrderTimelineItem,
@@ -24,6 +25,7 @@ import type {
   Hub,
   HubListFilters,
   HubPostOfficeMapping,
+  InitiateOrderPaymentRequest,
   ImportHistory,
   ImportType,
   ManualAssignPickupOrdersRequest,
@@ -31,6 +33,8 @@ import type {
   OrderConfirmationResponse,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
+  OrderPaymentConfirmResponse,
+  OrderPaymentInitResponse,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
   PostOfficeStaff,
@@ -956,6 +960,33 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
     }),
 
+    initiateOrderPayment: builder.mutation<
+      OrderPaymentInitResponse,
+      { orderId: number; body?: InitiateOrderPaymentRequest }
+    >({
+      query: ({ orderId, body }) => ({
+        url: `/orders/${orderId}/payment/initiate`,
+        method: 'POST',
+        ...(body ? { body } : {}),
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<OrderPaymentInitResponse>,
+    }),
+
+    confirmOrderPayment: builder.mutation<
+      OrderPaymentConfirmResponse,
+      { orderId: number; body: ConfirmOrderPaymentRequest }
+    >({
+      query: ({ orderId, body }) => ({
+        url: `/orders/${orderId}/payment/confirm`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<OrderPaymentConfirmResponse>,
+    }),
+
     getDropOffPostOfficeSuggestions: builder.query<
       OrderDropOffPostOfficeSuggestion[],
       { orderId: number; limit?: number }
@@ -1214,6 +1245,8 @@ export const {
   useUpdateOrderMutation,
   useCancelOrderMutation,
   useConfirmOrderMutation,
+  useInitiateOrderPaymentMutation,
+  useConfirmOrderPaymentMutation,
   useGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useConfirmDropOffOrderAtPostOfficeMutation,

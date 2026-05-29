@@ -1,6 +1,7 @@
 package serp.project.payment_service.service.impl;
 
 import serp.project.payment_service.config.ZaloPayConfig;
+import serp.project.payment_service.dto.webhook.FirstMilePaymentConfirmedWebhookRequest;
 import serp.project.payment_service.dto.transaction.TransactionHistoryFilterRequest;
 import serp.project.payment_service.dto.transaction.TransactionHistoryResponse;
 import serp.project.payment_service.dto.zalopay.*;
@@ -12,6 +13,7 @@ import serp.project.payment_service.repository.ZaloPayTransactionRepository;
 import serp.project.payment_service.repository.ZaloPayRefundTransactionRepository;
 import serp.project.payment_service.repository.specification.TransactionSpecification;
 import serp.project.payment_service.service.ZaloPayService;
+import serp.project.payment_service.service.WebhookEventService;
 import serp.project.payment_service.util.ZaloPayHMACUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +54,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
     private final ZaloPayRefundTransactionRepository refundTransactionRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final PaymentKafkaMessagePublisher kafkaMessagePublisher;
+    private final WebhookEventService webhookEventService;
 
     @Value("${app.notification.default-tenant-id:1}")
     private Long defaultTenantId;
@@ -463,6 +466,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
             }
             
             transactionRepository.save(transaction);
+            sendFirstMilePaymentConfirmedWebhook(transaction);
             
             log.info("Updated transaction on callback: {}", callbackData.getAppTransId());
             
@@ -646,6 +650,37 @@ public class ZaloPayServiceImpl implements ZaloPayService {
             return "Đơn hàng #" + transaction.getAppTransId();
         }
         return transaction.getTitle();
+    }
+
+    private void sendFirstMilePaymentConfirmedWebhook(ZaloPayTransaction transaction) {
+        try {
+            if (transaction == null || transaction.getAppTransId() == null || transaction.getAppTransId().isBlank()) {
+                return;
+            }
+            if (transaction.getAppUser() == null || transaction.getAppUser().isBlank()) {
+                log.warn("Missing appUser(orderCode). Skip first-mile webhook for appTransId={}", transaction.getAppTransId());
+                return;
+            }
+
+            NotificationContext context = resolveNotificationContext(transaction);
+            FirstMilePaymentConfirmedWebhookRequest webhookRequest = FirstMilePaymentConfirmedWebhookRequest.builder()
+                    .appTransId(transaction.getAppTransId())
+                    .orderCode(transaction.getAppUser())
+                    .tenantId(context.tenantId())
+                    .amount(transaction.getAmount())
+                    .paidAt(transaction.getPaidAt() != null ? transaction.getPaidAt() : LocalDateTime.now())
+                    .gatewayCode("zalopay")
+                    .gatewayTransactionId(
+                            transaction.getZpTransId() == null
+                                    ? null
+                                    : String.valueOf(transaction.getZpTransId())
+                    )
+                    .build();
+
+            webhookEventService.enqueueOrderPaymentConfirmedWebhook(webhookRequest);
+        } catch (Exception ex) {
+            log.error("Failed to enqueue first-mile payment webhook appTransId={}", transaction.getAppTransId(), ex);
+        }
     }
 
     private NotificationContext resolveNotificationContext(ZaloPayTransaction transaction) {
@@ -1001,6 +1036,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
                     transaction.setDiscountAmount(queryResponse.getDiscountAmount());
                     transaction.setPaidAt(LocalDateTime.now());
                     transactionRepository.save(transaction);
+                    sendFirstMilePaymentConfirmedWebhook(transaction);
                     
                     log.info("Updated transaction from query to SUCCESS: {}", appTransId);
                     break;

@@ -13,10 +13,13 @@ import {
   useConfirmDropOffOrderAtPostOfficeMutation,
   firstMileApi,
   useCancelOrderMutation,
+  useCalculateShippingFeeMutation,
+  useConfirmOrderPaymentMutation,
   useConfirmOrderMutation,
   useCreateOrderMutation,
   useGeocodeAddressMutation,
   useImportOrdersMutation,
+  useInitiateOrderPaymentMutation,
   useLazyExportOrderTemplateQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
@@ -30,6 +33,8 @@ import {
 } from '../../api';
 import type { TmsFilterMode } from '../../components/list';
 import type {
+  CalculateShippingFeeRequest,
+  CalculateShippingFeeResponse,
   CancelOrderRequest,
   CreateOrderRequest,
   FirstMileOrderDetail,
@@ -38,6 +43,7 @@ import type {
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
+  OrderPaymentInitResponse,
   PostOffice,
   Province,
   UpdateOrderRequest,
@@ -52,6 +58,7 @@ import {
 import {
   OrderAccessScopeCard,
   OrderCancelDialog,
+  OrderConfirmDialog,
   OrderDetailDialog,
   OrderDropOffManagerConfirmCard,
   OrderDropOffSuggestionsDialog,
@@ -133,6 +140,13 @@ export const OrderListPage: React.FC = () => {
   const [confirmingOrderId, setConfirmingOrderId] = React.useState<
     number | null
   >(null);
+  const [confirmDialogOrder, setConfirmDialogOrder] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
+  const [shippingFeeQuote, setShippingFeeQuote] =
+    React.useState<CalculateShippingFeeResponse | null>(null);
+  const [paymentInitResult, setPaymentInitResult] =
+    React.useState<OrderPaymentInitResponse | null>(null);
   const [dropOffSuggestionTarget, setDropOffSuggestionTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [dropOffSuggestions, setDropOffSuggestions] = React.useState<
@@ -446,7 +460,14 @@ export const OrderListPage: React.FC = () => {
     useUpdateOrderMutation();
   const [cancelOrder, { isLoading: isCancellingOrder }] =
     useCancelOrderMutation();
-  const [confirmOrder] = useConfirmOrderMutation();
+  const [confirmOrder, { isLoading: isConfirmingOrder }] =
+    useConfirmOrderMutation();
+  const [calculateShippingFee, { isLoading: isCalculatingShippingFee }] =
+    useCalculateShippingFeeMutation();
+  const [initiateOrderPayment, { isLoading: isInitiatingOrderPayment }] =
+    useInitiateOrderPaymentMutation();
+  const [confirmOrderPayment, { isLoading: isConfirmingOrderPayment }] =
+    useConfirmOrderPaymentMutation();
   const [confirmDropOffOrderAtPostOffice, { isLoading: isConfirmingDropOff }] =
     useConfirmDropOffOrderAtPostOfficeMutation();
   const [
@@ -999,7 +1020,84 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  const handleConfirmOrder = async (order: FirstMileOrderDetail) => {
+  const buildShippingFeeRequestFromOrder = React.useCallback(
+    (order: FirstMileOrderDetail): CalculateShippingFeeRequest => {
+      if (!order.senderWardCode || !order.receiverWardCode) {
+        throw new Error(
+          'Order is missing sender/receiver ward code for fee calculation.'
+        );
+      }
+
+      const actualWeightGram = Math.max(1, Math.round(order.totalWeight ?? 0));
+      const lengthCm = Math.max(1, Math.round(order.dimensionLengthCm ?? 0));
+      const widthCm = Math.max(1, Math.round(order.dimensionWidthCm ?? 0));
+      const heightCm = Math.max(1, Math.round(order.dimensionHeightCm ?? 0));
+
+      return {
+        serviceCode:
+          order.orderType === 'EXPRESS_ORDER' ? 'HOA_TOC' : 'TIEU_CHUAN',
+        senderWardCode: order.senderWardCode,
+        receiverWardCode: order.receiverWardCode,
+        actualWeightGram,
+        lengthCm,
+        widthCm,
+        heightCm,
+        ...(order.codAmount && order.codAmount > 0
+          ? { codAmount: Math.round(order.codAmount) }
+          : {}),
+        ...(order.totalValue && order.totalValue > 0
+          ? { declaredValue: Math.round(order.totalValue) }
+          : {}),
+      };
+    },
+    []
+  );
+
+  const calculateOrderShippingFee = React.useCallback(
+    async (order: FirstMileOrderDetail): Promise<CalculateShippingFeeResponse | null> => {
+      try {
+        const payload = buildShippingFeeRequestFromOrder(order);
+        const feeResult = await calculateShippingFee(payload).unwrap();
+        setShippingFeeQuote(feeResult);
+        return feeResult;
+      } catch (error) {
+        setShippingFeeQuote(null);
+        notification.error('Failed to calculate shipping fee from billing.', {
+          description: getErrorMessage(error),
+        });
+        return null;
+      }
+    },
+    [buildShippingFeeRequestFromOrder, calculateShippingFee, notification]
+  );
+
+  const confirmOrderAndRefresh = React.useCallback(
+    async (order: FirstMileOrderDetail): Promise<boolean> => {
+      const confirmationResult = await confirmOrder(order.id).unwrap();
+      const originPostOffice = confirmationResult.originPostOffice;
+
+      notification.success(
+        confirmationResult.alreadyConfirmed
+          ? 'Order was already confirmed.'
+          : 'Order confirmed successfully.',
+        originPostOffice
+          ? {
+              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
+            }
+          : undefined
+      );
+
+      setIsConfirmDialogOpen(false);
+      setConfirmDialogOrder(null);
+      setPaymentInitResult(null);
+      setShippingFeeQuote(null);
+      void refetch();
+      return true;
+    },
+    [confirmOrder, notification, refetch]
+  );
+
+  const handleOpenConfirmOrder = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
         'Only TMS_ADMIN or TMS_CUSTOMER can confirm first-mile orders.'
@@ -1017,27 +1115,129 @@ export const OrderListPage: React.FC = () => {
     setConfirmingOrderId(order.id);
 
     try {
-      const confirmationResult = await confirmOrder(order.id).unwrap();
-      const originPostOffice = confirmationResult.originPostOffice;
+      const orderDetail = await loadOrderDetail(order.id);
+      if (!orderDetail) {
+        return;
+      }
 
-      notification.success(
-        confirmationResult.alreadyConfirmed
-          ? 'Order was already confirmed.'
-          : 'Order confirmed successfully.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
-          : undefined
+      setConfirmDialogOrder(orderDetail);
+      setPaymentInitResult(null);
+      setShippingFeeQuote(null);
+      setIsConfirmDialogOpen(true);
+      await calculateOrderShippingFee(orderDetail);
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  const handleConfirmOrderFromDialog = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+
+    if (
+      confirmDialogOrder.feePayer === 'SENDER' &&
+      confirmDialogOrder.paymentStatus !== 'PAID'
+    ) {
+      notification.error(
+        'Sender payment is required before order confirmation.'
       );
+      return;
+    }
 
-      void refetch();
+    try {
+      await confirmOrderAndRefresh(confirmDialogOrder);
     } catch (error) {
       notification.error('Failed to confirm order.', {
         description: getErrorMessage(error),
       });
-    } finally {
-      setConfirmingOrderId(null);
+    }
+  };
+
+  const handleRecalculateConfirmDialogFee = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+    await calculateOrderShippingFee(confirmDialogOrder);
+  };
+
+  const handleInitiateConfirmDialogPayment = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+
+    if (confirmDialogOrder.feePayer !== 'SENDER') {
+      notification.error('Payment is only required when sender pays shipping.');
+      return;
+    }
+
+    if (!shippingFeeQuote || !Number.isFinite(shippingFeeQuote.totalFee)) {
+      notification.error(
+        'Shipping fee quote is required before initiating payment.'
+      );
+      return;
+    }
+
+    try {
+      const paymentResult = await initiateOrderPayment({
+        orderId: confirmDialogOrder.id,
+        body: {
+          amount: Math.max(1, Math.round(shippingFeeQuote.totalFee)),
+        },
+      }).unwrap();
+
+      setPaymentInitResult(paymentResult);
+
+      if (paymentResult.paymentUrl) {
+        window.open(paymentResult.paymentUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      notification.success('Payment request created.', {
+        description: paymentResult.appTransId,
+      });
+    } catch (error) {
+      notification.error('Failed to initiate payment.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleConfirmDialogPayment = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+
+    if (!paymentInitResult?.appTransId) {
+      notification.error('Please initiate payment first.');
+      return;
+    }
+
+    try {
+      const paymentConfirmResult = await confirmOrderPayment({
+        orderId: confirmDialogOrder.id,
+        body: {
+          appTransId: paymentInitResult.appTransId,
+        },
+      }).unwrap();
+
+      if (paymentConfirmResult.paymentStatus !== 'PAID') {
+        notification.error('Payment has not been completed successfully yet.');
+        return;
+      }
+
+      notification.success('Shipping fee payment confirmed successfully.');
+
+      const nextOrder: FirstMileOrderDetail = {
+        ...confirmDialogOrder,
+        paymentStatus: paymentConfirmResult.paymentStatus,
+      };
+      setConfirmDialogOrder(nextOrder);
+
+      await confirmOrderAndRefresh(nextOrder);
+    } catch (error) {
+      notification.error('Failed to verify payment status.', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
@@ -1409,7 +1609,7 @@ export const OrderListPage: React.FC = () => {
         onRequestCancel={handleRequestCancelOrder}
         onRequestDelete={handleRequestDeleteOrder}
         onConfirm={(order) => {
-          void handleConfirmOrder(order);
+          void handleOpenConfirmOrder(order);
         }}
         onOpenDropOffSuggestions={(order) => {
           void handleOpenDropOffSuggestions(order);
@@ -1473,6 +1673,37 @@ export const OrderListPage: React.FC = () => {
         getProvinceLabel={getProvinceLabel}
         getWardLabel={getWardLabel}
         formatDateTime={formatDateTime}
+      />
+
+      <OrderConfirmDialog
+        open={isConfirmDialogOpen}
+        order={confirmDialogOrder}
+        shippingFee={shippingFeeQuote}
+        paymentInitResult={paymentInitResult}
+        isCalculatingFee={isCalculatingShippingFee}
+        isConfirmingOrder={isConfirmingOrder}
+        isInitiatingPayment={isInitiatingOrderPayment}
+        isConfirmingPayment={isConfirmingOrderPayment}
+        onOpenChange={(open) => {
+          setIsConfirmDialogOpen(open);
+          if (!open) {
+            setConfirmDialogOrder(null);
+            setShippingFeeQuote(null);
+            setPaymentInitResult(null);
+          }
+        }}
+        onRecalculateFee={() => {
+          void handleRecalculateConfirmDialogFee();
+        }}
+        onConfirmOrder={() => {
+          void handleConfirmOrderFromDialog();
+        }}
+        onInitiatePayment={() => {
+          void handleInitiateConfirmDialogPayment();
+        }}
+        onConfirmPayment={() => {
+          void handleConfirmDialogPayment();
+        }}
       />
 
       <OrderDropOffSuggestionsDialog
