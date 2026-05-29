@@ -11,18 +11,21 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderRequest;
 import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
 import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderRequest;
 import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kernel.utils.AuthUtils;
 
 @Component
 @Slf4j
 public class PaymentServiceCaller {
 
     private final RestClient restClient;
+    private final AuthUtils authUtils;
 
     @Value("${payment.service.gateway-code:zalopay}")
     private String gatewayCode;
@@ -35,7 +38,9 @@ public class PaymentServiceCaller {
 
     public PaymentServiceCaller(
             RestClient.Builder restClientBuilder,
+            AuthUtils authUtils,
             @Value("${payment.service.base-url:http://localhost:8096}") String paymentServiceBaseUrl) {
+        this.authUtils = authUtils;
         this.restClient = restClientBuilder.baseUrl(paymentServiceBaseUrl).build();
     }
 
@@ -53,15 +58,22 @@ public class PaymentServiceCaller {
             return response;
         } catch (RestClientException ex) {
             log.error("Failed to call payment create-order endpoint: {}", ex.getMessage(), ex);
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Cannot connect to payment service.");
+            throw toPaymentServiceException(ex);
         }
     }
 
     public PaymentQueryOrderResponse queryOrderStatus(String appTransId) {
+        String bearerToken = authUtils.getBearerToken()
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.UNAUTHORIZED,
+                        "Missing authentication token for payment verification."
+                ));
+
         try {
             PaymentQueryOrderResponse response = restClient.post()
                     .uri(resolveQueryOrderPath())
                     .contentType(MediaType.APPLICATION_JSON)
+                    .headers(headers -> headers.setBearerAuth(bearerToken))
                     .body(PaymentQueryOrderRequest.builder().appTransId(appTransId).build())
                     .retrieve()
                     .body(PaymentQueryOrderResponse.class);
@@ -71,8 +83,28 @@ public class PaymentServiceCaller {
             return response;
         } catch (RestClientException ex) {
             log.error("Failed to call payment query-order endpoint: {}", ex.getMessage(), ex);
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Cannot connect to payment service.");
+            throw toPaymentServiceException(ex);
         }
+    }
+
+    private AppException toPaymentServiceException(RestClientException ex) {
+        if (ex instanceof RestClientResponseException responseException) {
+            int statusCode = responseException.getStatusCode().value();
+            if (statusCode == 401 || statusCode == 403) {
+                return new AppException(
+                        ErrorCode.UNAUTHORIZED,
+                        "Payment service rejected the request. Please sign in again and retry."
+                );
+            }
+            return new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Payment service returned HTTP " + statusCode + "."
+            );
+        }
+        return new AppException(
+                ErrorCode.UNCATEGORIZED_EXCEPTION,
+                "Cannot connect to payment service. Ensure payment-service is running and PAYMENT_SERVICE_BASE_URL is correct."
+        );
     }
 
     private String resolveCreateOrderPath() {

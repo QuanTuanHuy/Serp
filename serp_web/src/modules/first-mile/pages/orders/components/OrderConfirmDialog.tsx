@@ -29,12 +29,12 @@ interface OrderConfirmDialogProps {
   isCalculatingFee: boolean;
   isConfirmingOrder: boolean;
   isInitiatingPayment: boolean;
-  isConfirmingPayment: boolean;
+  isAwaitingPaymentCompletion: boolean;
+  isProcessingPaymentWebhook: boolean;
   onOpenChange: (open: boolean) => void;
   onRecalculateFee: () => void;
   onConfirmOrder: () => void;
   onInitiatePayment: () => void;
-  onConfirmPayment: () => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US');
@@ -54,12 +54,12 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
   isCalculatingFee,
   isConfirmingOrder,
   isInitiatingPayment,
-  isConfirmingPayment,
+  isAwaitingPaymentCompletion,
+  isProcessingPaymentWebhook,
   onOpenChange,
   onRecalculateFee,
   onConfirmOrder,
   onInitiatePayment,
-  onConfirmPayment,
 }) => {
   const isSenderPayer = order?.feePayer === 'SENDER';
   const isShippingPaid = order?.paymentStatus === 'PAID';
@@ -69,7 +69,8 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
     isCalculatingFee ||
     isConfirmingOrder ||
     isInitiatingPayment ||
-    isConfirmingPayment;
+    isAwaitingPaymentCompletion ||
+    isProcessingPaymentWebhook;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,9 +186,23 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
               <div className='rounded-md border p-3'>
                 <p className='font-semibold'>Sender payment flow</p>
                 <p className='mt-1 text-xs text-muted-foreground'>
-                  Initiate payment, complete it on payment service, then verify
-                  payment to continue order confirmation.
+                  Initiate payment and complete it on the payment page. This
+                  dialog will detect successful payment and confirm the order
+                  automatically.
                 </p>
+
+                {isAwaitingPaymentCompletion ? (
+                  <div className='mt-2 flex items-center gap-2 text-xs text-muted-foreground'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    Waiting for payment confirmation...
+                  </div>
+                ) : null}
+                {isProcessingPaymentWebhook ? (
+                  <div className='mt-2 flex items-center gap-2 text-xs text-muted-foreground'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    Payment was received. Waiting for webhook confirmation...
+                  </div>
+                ) : null}
 
                 {paymentInitResult ? (
                   <div className='mt-2 space-y-1 text-xs text-muted-foreground'>
@@ -210,23 +225,21 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                 type='button'
                 variant='outline'
                 onClick={onInitiatePayment}
-                disabled={busy || !shippingFee}
+                disabled={
+                  busy ||
+                  !shippingFee ||
+                  isAwaitingPaymentCompletion ||
+                  isProcessingPaymentWebhook
+                }
               >
-                {isInitiatingPayment ? (
+                {isInitiatingPayment ||
+                isAwaitingPaymentCompletion ||
+                isProcessingPaymentWebhook ? (
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                 ) : null}
-                Pay shipping fee
-              </Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onConfirmPayment}
-                disabled={busy || !paymentInitResult?.appTransId}
-              >
-                {isConfirmingPayment ? (
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                ) : null}
-                Verify payment
+                {isAwaitingPaymentCompletion || isProcessingPaymentWebhook
+                  ? 'Processing payment...'
+                  : 'Pay shipping fee'}
               </Button>
             </>
           ) : null}

@@ -98,6 +98,8 @@ import {
   type OrderFormMode,
 } from './orderPageModels';
 
+const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
+
 export const OrderListPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const profile = useAppSelector((state) => state.account.user.profile);
@@ -147,6 +149,13 @@ export const OrderListPage: React.FC = () => {
     React.useState<CalculateShippingFeeResponse | null>(null);
   const [paymentInitResult, setPaymentInitResult] =
     React.useState<OrderPaymentInitResponse | null>(null);
+  const [isAwaitingPaymentCompletion, setIsAwaitingPaymentCompletion] =
+    React.useState(false);
+  const [isProcessingPaymentWebhook, setIsProcessingPaymentWebhook] =
+    React.useState(false);
+  const paymentCompletionHandledRef = React.useRef(false);
+  const paymentResultHandlingInProgressRef = React.useRef(false);
+  const lastHandledPaymentMessageKeyRef = React.useRef<string | null>(null);
   const [dropOffSuggestionTarget, setDropOffSuggestionTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [dropOffSuggestions, setDropOffSuggestions] = React.useState<
@@ -466,8 +475,7 @@ export const OrderListPage: React.FC = () => {
     useCalculateShippingFeeMutation();
   const [initiateOrderPayment, { isLoading: isInitiatingOrderPayment }] =
     useInitiateOrderPaymentMutation();
-  const [confirmOrderPayment, { isLoading: isConfirmingOrderPayment }] =
-    useConfirmOrderPaymentMutation();
+  const [confirmOrderPayment] = useConfirmOrderPaymentMutation();
   const [confirmDropOffOrderAtPostOffice, { isLoading: isConfirmingDropOff }] =
     useConfirmDropOffOrderAtPostOfficeMutation();
   const [
@@ -1091,11 +1099,165 @@ export const OrderListPage: React.FC = () => {
       setConfirmDialogOrder(null);
       setPaymentInitResult(null);
       setShippingFeeQuote(null);
+      setIsAwaitingPaymentCompletion(false);
+      setIsProcessingPaymentWebhook(false);
+      paymentCompletionHandledRef.current = false;
+      paymentResultHandlingInProgressRef.current = false;
+      lastHandledPaymentMessageKeyRef.current = null;
       void refetch();
       return true;
     },
     [confirmOrder, notification, refetch]
   );
+
+  const confirmOrderAndRefreshRef = React.useRef(confirmOrderAndRefresh);
+  confirmOrderAndRefreshRef.current = confirmOrderAndRefresh;
+
+  React.useEffect(() => {
+    paymentCompletionHandledRef.current = false;
+    paymentResultHandlingInProgressRef.current = false;
+    lastHandledPaymentMessageKeyRef.current = null;
+  }, [confirmDialogOrder?.id, paymentInitResult?.appTransId]);
+
+  const handlePaymentResultMessage = React.useCallback(
+    async (messageOrderId?: number, messageAppTransId?: string) => {
+      if (
+        paymentCompletionHandledRef.current ||
+        paymentResultHandlingInProgressRef.current ||
+        !confirmDialogOrder
+      ) {
+        return;
+      }
+
+      if (
+        confirmDialogOrder.feePayer !== 'SENDER' ||
+        confirmDialogOrder.paymentStatus === 'PAID'
+      ) {
+        return;
+      }
+
+      const expectedAppTransId = paymentInitResult?.appTransId?.trim();
+      if (!expectedAppTransId) {
+        return;
+      }
+
+      if (messageOrderId && messageOrderId !== confirmDialogOrder.id) {
+        return;
+      }
+
+      if (messageAppTransId && messageAppTransId !== expectedAppTransId) {
+        return;
+      }
+
+      const messageKey = `${confirmDialogOrder.id}:${expectedAppTransId}`;
+      if (lastHandledPaymentMessageKeyRef.current === messageKey) {
+        return;
+      }
+      lastHandledPaymentMessageKeyRef.current = messageKey;
+      paymentResultHandlingInProgressRef.current = true;
+
+      setIsAwaitingPaymentCompletion(true);
+      setIsProcessingPaymentWebhook(false);
+
+      try {
+        let latestOrder = await loadOrderById(confirmDialogOrder.id).unwrap();
+        if (latestOrder.paymentStatus !== 'PAID') {
+          const paymentConfirmResult = await confirmOrderPayment({
+            orderId: confirmDialogOrder.id,
+            body: { appTransId: expectedAppTransId },
+          }).unwrap();
+
+          latestOrder = {
+            ...latestOrder,
+            paymentStatus: paymentConfirmResult.paymentStatus,
+          };
+        }
+
+        if (latestOrder.paymentStatus !== 'PAID') {
+          setIsAwaitingPaymentCompletion(false);
+          setIsProcessingPaymentWebhook(true);
+          setConfirmDialogOrder(latestOrder);
+          notification.info('Payment is being finalized.', {
+            description:
+              'Gateway payment was completed. Waiting for webhook confirmation from payment service.',
+          });
+          return;
+        }
+
+        paymentCompletionHandledRef.current = true;
+        setConfirmDialogOrder(latestOrder);
+        setIsAwaitingPaymentCompletion(false);
+        setIsProcessingPaymentWebhook(false);
+
+        notification.success('Shipping fee payment confirmed successfully.', {
+          description: 'Confirming order...',
+        });
+
+        await confirmOrderAndRefreshRef.current(latestOrder);
+      } catch (error) {
+        setIsAwaitingPaymentCompletion(false);
+        setIsProcessingPaymentWebhook(false);
+        lastHandledPaymentMessageKeyRef.current = null;
+        notification.error('Failed to finalize payment confirmation.', {
+          description: getErrorMessage(error),
+        });
+      } finally {
+        paymentResultHandlingInProgressRef.current = false;
+      }
+    },
+    [
+      confirmDialogOrder,
+      paymentInitResult?.appTransId,
+      loadOrderById,
+      confirmOrderPayment,
+      notification,
+    ]
+  );
+
+  React.useEffect(() => {
+    const onPaymentResultMessage = (event: MessageEvent<unknown>) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        !event.data ||
+        typeof event.data !== 'object' ||
+        !('type' in event.data) ||
+        (event.data as { type?: string }).type !== PAYMENT_RESULT_MESSAGE_TYPE
+      ) {
+        return;
+      }
+
+      const payload = (event.data as {
+        payload?: {
+          orderId?: number | string;
+          appTransId?: string;
+          query?: Record<string, string>;
+        };
+      }).payload;
+
+      const rawOrderId = payload?.orderId ?? payload?.query?.orderId;
+      const parsedOrderId = Number.parseInt(String(rawOrderId ?? ''), 10);
+      const messageOrderId =
+        Number.isInteger(parsedOrderId) && parsedOrderId > 0
+          ? parsedOrderId
+          : undefined;
+
+      const messageAppTransId = (
+        payload?.appTransId ??
+        payload?.query?.appTransId ??
+        payload?.query?.apptransid
+      )?.trim();
+
+      void handlePaymentResultMessage(messageOrderId, messageAppTransId);
+    };
+
+    window.addEventListener('message', onPaymentResultMessage);
+    return () => {
+      window.removeEventListener('message', onPaymentResultMessage);
+    };
+  }, [handlePaymentResultMessage]);
 
   const handleOpenConfirmOrder = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
@@ -1123,6 +1285,8 @@ export const OrderListPage: React.FC = () => {
       setConfirmDialogOrder(orderDetail);
       setPaymentInitResult(null);
       setShippingFeeQuote(null);
+      setIsAwaitingPaymentCompletion(false);
+      setIsProcessingPaymentWebhook(false);
       setIsConfirmDialogOpen(true);
       await calculateOrderShippingFee(orderDetail);
     } finally {
@@ -1187,55 +1351,36 @@ export const OrderListPage: React.FC = () => {
       }).unwrap();
 
       setPaymentInitResult(paymentResult);
+      setIsAwaitingPaymentCompletion(true);
+      setIsProcessingPaymentWebhook(false);
+      paymentCompletionHandledRef.current = false;
+      paymentResultHandlingInProgressRef.current = false;
+      lastHandledPaymentMessageKeyRef.current = null;
 
       if (paymentResult.paymentUrl) {
-        window.open(paymentResult.paymentUrl, '_blank', 'noopener,noreferrer');
+        const paymentPopup = window.open(
+          paymentResult.paymentUrl,
+          'serp-payment-window',
+          'width=520,height=760,scrollbars=yes,resizable=yes'
+        );
+
+        if (!paymentPopup) {
+          setIsAwaitingPaymentCompletion(false);
+          setIsProcessingPaymentWebhook(false);
+          notification.error('Popup was blocked by the browser.', {
+            description:
+              'Allow popups for this site to complete payment confirmation automatically.',
+          });
+          return;
+        }
       }
 
       notification.success('Payment request created.', {
-        description: paymentResult.appTransId,
+        description:
+          'Complete payment in the opened window. This dialog will confirm the order automatically when payment succeeds.',
       });
     } catch (error) {
       notification.error('Failed to initiate payment.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleConfirmDialogPayment = async () => {
-    if (!confirmDialogOrder) {
-      return;
-    }
-
-    if (!paymentInitResult?.appTransId) {
-      notification.error('Please initiate payment first.');
-      return;
-    }
-
-    try {
-      const paymentConfirmResult = await confirmOrderPayment({
-        orderId: confirmDialogOrder.id,
-        body: {
-          appTransId: paymentInitResult.appTransId,
-        },
-      }).unwrap();
-
-      if (paymentConfirmResult.paymentStatus !== 'PAID') {
-        notification.error('Payment has not been completed successfully yet.');
-        return;
-      }
-
-      notification.success('Shipping fee payment confirmed successfully.');
-
-      const nextOrder: FirstMileOrderDetail = {
-        ...confirmDialogOrder,
-        paymentStatus: paymentConfirmResult.paymentStatus,
-      };
-      setConfirmDialogOrder(nextOrder);
-
-      await confirmOrderAndRefresh(nextOrder);
-    } catch (error) {
-      notification.error('Failed to verify payment status.', {
         description: getErrorMessage(error),
       });
     }
@@ -1683,13 +1828,19 @@ export const OrderListPage: React.FC = () => {
         isCalculatingFee={isCalculatingShippingFee}
         isConfirmingOrder={isConfirmingOrder}
         isInitiatingPayment={isInitiatingOrderPayment}
-        isConfirmingPayment={isConfirmingOrderPayment}
+        isAwaitingPaymentCompletion={isAwaitingPaymentCompletion}
+        isProcessingPaymentWebhook={isProcessingPaymentWebhook}
         onOpenChange={(open) => {
           setIsConfirmDialogOpen(open);
           if (!open) {
             setConfirmDialogOrder(null);
             setShippingFeeQuote(null);
             setPaymentInitResult(null);
+            setIsAwaitingPaymentCompletion(false);
+            setIsProcessingPaymentWebhook(false);
+            paymentCompletionHandledRef.current = false;
+            paymentResultHandlingInProgressRef.current = false;
+            lastHandledPaymentMessageKeyRef.current = null;
           }
         }}
         onRecalculateFee={() => {
@@ -1700,9 +1851,6 @@ export const OrderListPage: React.FC = () => {
         }}
         onInitiatePayment={() => {
           void handleInitiateConfirmDialogPayment();
-        }}
-        onConfirmPayment={() => {
-          void handleConfirmDialogPayment();
         }}
       />
 

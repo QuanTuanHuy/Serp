@@ -35,6 +35,10 @@ public class AuthUtils {
         }
     }
 
+    public Optional<String> getBearerToken() {
+        return getCurrentJwt().map(Jwt::getTokenValue);
+    }
+
     public Optional<Long> getCurrentUserId() {
         return getCurrentJwt()
                 .map(jwt -> jwt.getClaimAsString("uid"))

@@ -142,6 +142,9 @@ public class OrderServiceImpl implements OrderService {
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
 
+    @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
+    private String paymentRedirectUrl;
+
     private final OrderExcelService orderExcelService;
     private final OrderImportExcelService orderImportExcelService;
     private final OrderRepository orderRepository;
@@ -417,6 +420,9 @@ public class OrderServiceImpl implements OrderService {
                 .appUser(orderCode)
                 .amount(shippingFee)
                 .description("Thanh toan phi van chuyen cho don hang " + orderCode)
+                .embedData(PaymentCreateOrderRequest.EmbedData.builder()
+                        .redirectUrl(paymentRedirectUrl + "?source=first-mile&orderId=" + order.getId())
+                        .build())
                 .title("Phi van chuyen - " + orderCode)
                 .tenantId(tenantId)
                 .actorId(actorId)
