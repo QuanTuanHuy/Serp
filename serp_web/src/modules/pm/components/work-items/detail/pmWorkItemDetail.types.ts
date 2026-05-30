@@ -12,7 +12,7 @@ export type PMWorkItemDetailFallback =
   | PMWorkItemSearchApi
   | PMWorkItemBoardCardApi;
 
-export type ActivityTab = 'all' | 'comments' | 'history';
+export type ActivityTab = 'comments' | 'history' | 'worklogs';
 
 export type WorkItemDetailModel = {
   id?: number;

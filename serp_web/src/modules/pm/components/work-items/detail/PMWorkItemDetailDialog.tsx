@@ -125,6 +125,8 @@ export function PMWorkItemDetailDialog({
 }: PMWorkItemDetailDialogProps) {
   const [activityTab, setActivityTab] = useState<ActivityTab>('comments');
   const shouldFetch = open && Boolean(workItemId);
+  const showComments = shouldFetch && activityTab === 'comments';
+  const showHistory = shouldFetch && activityTab === 'history';
 
   const detailQuery = useGetPmWorkItemByIdQuery(
     { projectId, workItemId: workItemId ?? 0 },
@@ -140,7 +142,7 @@ export function PMWorkItemDetailDialog({
   );
   const commentsQuery = useGetPmWorkItemCommentsQuery(
     { projectId, workItemId: workItemId ?? 0, page: 0, size: 20 },
-    { skip: !shouldFetch }
+    { skip: !showComments }
   );
   const activitiesQuery = useGetPmWorkItemActivitiesQuery(
     {
@@ -150,7 +152,7 @@ export function PMWorkItemDetailDialog({
       size: 20,
       type: getActivityType(activityTab),
     },
-    { skip: !shouldFetch }
+    { skip: !showHistory }
   );
 
   const item = toDetailModel(workItemId, detailQuery.data, fallbackItem);
@@ -386,13 +388,6 @@ function PMWorkItemDetailMain({
           />
         </DetailSection>
 
-        <DetailSection title='Work logs'>
-          <PMWorkItemWorklogPanel
-            projectId={projectId}
-            workItemId={workItemId}
-          />
-        </DetailSection>
-
         <DetailSection
           title={`Activity${item.commentTotal !== undefined ? ` (${item.commentTotal} comments)` : ''}`}
         >
@@ -403,25 +398,32 @@ function PMWorkItemDetailMain({
           >
             <div className='flex items-center justify-between gap-3'>
               <TabsList>
-                <TabsTrigger value='all'>All</TabsTrigger>
                 <TabsTrigger value='comments'>Comments</TabsTrigger>
                 <TabsTrigger value='history'>History</TabsTrigger>
+                <TabsTrigger value='worklogs'>Work logs</TabsTrigger>
               </TabsList>
               <SlidersHorizontal className='h-4 w-4 text-muted-foreground' />
             </div>
-            <CommentComposer
-              projectId={projectId}
-              workItemId={workItemId}
-              reporterName={item.reporterName}
-            />
             {activityTab === 'comments' ? (
-              <CommentsList
+              <>
+                <CommentComposer
+                  projectId={projectId}
+                  workItemId={workItemId}
+                  reporterName={item.reporterName}
+                />
+                <CommentsList
+                  projectId={projectId}
+                  workItemId={workItemId}
+                  query={commentsQuery}
+                />
+              </>
+            ) : activityTab === 'history' ? (
+              <ActivitiesList query={activitiesQuery} />
+            ) : (
+              <PMWorkItemWorklogPanel
                 projectId={projectId}
                 workItemId={workItemId}
-                query={commentsQuery}
               />
-            ) : (
-              <ActivitiesList query={activitiesQuery} />
             )}
           </Tabs>
         </DetailSection>

@@ -82,12 +82,8 @@ export function toDetailModel(
   };
 }
 
-export function getActivityType(
-  tab: ActivityTab
-): 'ALL' | 'COMMENT' | 'HISTORY' {
-  if (tab === 'comments') return 'COMMENT';
-  if (tab === 'history') return 'HISTORY';
-  return 'ALL';
+export function getActivityType(tab: ActivityTab): 'COMMENT' | 'HISTORY' {
+  return tab === 'comments' ? 'COMMENT' : 'HISTORY';
 }
 
 export function formatDetailDate(value?: number | string | null): string {
