@@ -13,13 +13,17 @@ import {
   useConfirmDropOffOrderAtPostOfficeMutation,
   firstMileApi,
   useCancelOrderMutation,
+  useCalculateShippingFeeMutation,
+  useConfirmOrderPaymentMutation,
   useConfirmOrderMutation,
   useCreateOrderMutation,
   useGeocodeAddressMutation,
   useImportOrdersMutation,
+  useInitiateOrderPaymentMutation,
   useLazyExportOrderTemplateQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
+  useLazyGetOrderTimelineQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetProvincesQuery,
@@ -27,22 +31,34 @@ import {
   useUpdateOrderMutation,
   useValidateOrderImportMutation,
 } from '../../api';
+import type { TmsFilterMode } from '../../components/list';
 import type {
+  CalculateShippingFeeRequest,
+  CalculateShippingFeeResponse,
   CancelOrderRequest,
   CreateOrderRequest,
   FirstMileOrderDetail,
-  FirstMileOrderStatus,
+  FirstMileOrderTimelineItem,
+  FirstMileOrderListFilters,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
+  OrderPaymentInitResponse,
   PostOffice,
   Province,
   UpdateOrderRequest,
   ValidateImportFileResponse,
 } from '../../types';
 import {
+  buildOrderListFilters,
+  countActiveOrderAdvancedFilters,
+  DEFAULT_ORDER_FILTER_FORM,
+  type OrderFilterFormState,
+} from './orderFilterModels';
+import {
   OrderAccessScopeCard,
   OrderCancelDialog,
+  OrderConfirmDialog,
   OrderDetailDialog,
   OrderDropOffManagerConfirmCard,
   OrderDropOffSuggestionsDialog,
@@ -80,8 +96,9 @@ import {
   type CreateOrderFormState,
   type LocationTarget,
   type OrderFormMode,
-  type OrderStatusFilter,
 } from './orderPageModels';
+
+const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
 
 export const OrderListPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -90,13 +107,11 @@ export const OrderListPage: React.FC = () => {
   const notification = useNotification();
 
   const [page, setPage] = React.useState(0);
-  const [keywordInput, setKeywordInput] = React.useState('');
-  const [statusInput, setStatusInput] =
-    React.useState<OrderStatusFilter>('ALL');
-  const [keyword, setKeyword] = React.useState<string | undefined>(undefined);
-  const [status, setStatus] = React.useState<FirstMileOrderStatus | undefined>(
-    undefined
-  );
+  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
+  const [filterFormValues, setFilterFormValues] =
+    React.useState<OrderFilterFormState>(DEFAULT_ORDER_FILTER_FORM);
+  const [appliedFilters, setAppliedFilters] =
+    React.useState<FirstMileOrderListFilters>({});
   const [orderFormMode, setOrderFormMode] =
     React.useState<OrderFormMode>('create');
   const [editingOrderId, setEditingOrderId] = React.useState<number | null>(
@@ -112,6 +127,10 @@ export const OrderListPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false);
   const [detailOrder, setDetailOrder] =
     React.useState<FirstMileOrderDetail | null>(null);
+  const [detailTimeline, setDetailTimeline] = React.useState<
+    FirstMileOrderTimelineItem[]
+  >([]);
+  const [isLoadingTimeline, setIsLoadingTimeline] = React.useState(false);
   const [cancelTarget, setCancelTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [cancelReason, setCancelReason] = React.useState('');
@@ -123,6 +142,20 @@ export const OrderListPage: React.FC = () => {
   const [confirmingOrderId, setConfirmingOrderId] = React.useState<
     number | null
   >(null);
+  const [confirmDialogOrder, setConfirmDialogOrder] =
+    React.useState<FirstMileOrderDetail | null>(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
+  const [shippingFeeQuote, setShippingFeeQuote] =
+    React.useState<CalculateShippingFeeResponse | null>(null);
+  const [paymentInitResult, setPaymentInitResult] =
+    React.useState<OrderPaymentInitResponse | null>(null);
+  const [isAwaitingPaymentCompletion, setIsAwaitingPaymentCompletion] =
+    React.useState(false);
+  const [isProcessingPaymentWebhook, setIsProcessingPaymentWebhook] =
+    React.useState(false);
+  const paymentCompletionHandledRef = React.useRef(false);
+  const paymentResultHandlingInProgressRef = React.useRef(false);
+  const lastHandledPaymentMessageKeyRef = React.useRef<string | null>(null);
   const [dropOffSuggestionTarget, setDropOffSuggestionTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [dropOffSuggestions, setDropOffSuggestions] = React.useState<
@@ -190,12 +223,29 @@ export const OrderListPage: React.FC = () => {
     {
       page,
       size: PAGE_SIZE,
-      keyword,
-      status,
+      ...appliedFilters,
     },
     {
       skip: !canViewOrders,
     }
+  );
+
+  const advancedFieldCount = React.useMemo(
+    () => countActiveOrderAdvancedFilters(filterFormValues),
+    [filterFormValues]
+  );
+
+  const updateFilterField = React.useCallback(
+    <K extends keyof OrderFilterFormState>(
+      field: K,
+      value: OrderFilterFormState[K]
+    ) => {
+      setFilterFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    },
+    []
   );
 
   const {
@@ -419,7 +469,13 @@ export const OrderListPage: React.FC = () => {
     useUpdateOrderMutation();
   const [cancelOrder, { isLoading: isCancellingOrder }] =
     useCancelOrderMutation();
-  const [confirmOrder] = useConfirmOrderMutation();
+  const [confirmOrder, { isLoading: isConfirmingOrder }] =
+    useConfirmOrderMutation();
+  const [calculateShippingFee, { isLoading: isCalculatingShippingFee }] =
+    useCalculateShippingFeeMutation();
+  const [initiateOrderPayment, { isLoading: isInitiatingOrderPayment }] =
+    useInitiateOrderPaymentMutation();
+  const [confirmOrderPayment] = useConfirmOrderPaymentMutation();
   const [confirmDropOffOrderAtPostOffice, { isLoading: isConfirmingDropOff }] =
     useConfirmDropOffOrderAtPostOfficeMutation();
   const [
@@ -428,6 +484,7 @@ export const OrderListPage: React.FC = () => {
   ] = useLazyGetDropOffPostOfficeSuggestionsQuery();
   const [geocodeAddress] = useGeocodeAddressMutation();
   const [loadOrderById] = useLazyGetOrderByIdQuery();
+  const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
   const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
     useLazyExportOrderTemplateQuery();
   const [validateOrderImport, { isLoading: isValidatingImport }] =
@@ -446,9 +503,23 @@ export const OrderListPage: React.FC = () => {
 
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
+
+    try {
+      const nextFilters = buildOrderListFilters(filterFormValues);
+      setPage(0);
+      setAppliedFilters(nextFilters);
+    } catch (error) {
+      notification.error(
+        error instanceof Error ? error.message : 'Invalid filter values.'
+      );
+    }
+  };
+
+  const handleClearFilters = () => {
+    setFilterFormValues(DEFAULT_ORDER_FILTER_FORM);
+    setAppliedFilters({});
+    setFilterMode('basic');
     setPage(0);
-    setKeyword(keywordInput.trim() || undefined);
-    setStatus(statusInput === 'ALL' ? undefined : statusInput);
   };
 
   const handleOpenCreateDialog = () => {
@@ -579,18 +650,39 @@ export const OrderListPage: React.FC = () => {
     [loadOrderById, notification]
   );
 
+  const loadOrderTimelineData = React.useCallback(
+    async (orderId: number): Promise<FirstMileOrderTimelineItem[]> => {
+      try {
+        return await loadOrderTimeline(orderId).unwrap();
+      } catch (error) {
+        notification.error('Failed to load order timeline.', {
+          description: getErrorMessage(error),
+        });
+        return [];
+      }
+    },
+    [loadOrderTimeline, notification]
+  );
+
   const handleOpenOrderDetail = async (orderId: number) => {
     setLoadingOrderActionId(orderId);
     setIsDetailDialogOpen(true);
     setDetailOrder(null);
+    setDetailTimeline([]);
+    setIsLoadingTimeline(true);
 
-    const orderDetailResult = await loadOrderDetail(orderId);
+    const [orderDetailResult, orderTimelineResult] = await Promise.all([
+      loadOrderDetail(orderId),
+      loadOrderTimelineData(orderId),
+    ]);
     if (orderDetailResult) {
       setDetailOrder(orderDetailResult);
+      setDetailTimeline(orderTimelineResult);
     } else {
       setIsDetailDialogOpen(false);
     }
 
+    setIsLoadingTimeline(false);
     setLoadingOrderActionId(null);
   };
 
@@ -936,7 +1028,238 @@ export const OrderListPage: React.FC = () => {
     }
   };
 
-  const handleConfirmOrder = async (order: FirstMileOrderDetail) => {
+  const buildShippingFeeRequestFromOrder = React.useCallback(
+    (order: FirstMileOrderDetail): CalculateShippingFeeRequest => {
+      if (!order.senderWardCode || !order.receiverWardCode) {
+        throw new Error(
+          'Order is missing sender/receiver ward code for fee calculation.'
+        );
+      }
+
+      const actualWeightGram = Math.max(1, Math.round(order.totalWeight ?? 0));
+      const lengthCm = Math.max(1, Math.round(order.dimensionLengthCm ?? 0));
+      const widthCm = Math.max(1, Math.round(order.dimensionWidthCm ?? 0));
+      const heightCm = Math.max(1, Math.round(order.dimensionHeightCm ?? 0));
+
+      return {
+        serviceCode:
+          order.orderType === 'EXPRESS_ORDER' ? 'HOA_TOC' : 'TIEU_CHUAN',
+        senderWardCode: order.senderWardCode,
+        receiverWardCode: order.receiverWardCode,
+        actualWeightGram,
+        lengthCm,
+        widthCm,
+        heightCm,
+        ...(order.codAmount && order.codAmount > 0
+          ? { codAmount: Math.round(order.codAmount) }
+          : {}),
+        ...(order.totalValue && order.totalValue > 0
+          ? { declaredValue: Math.round(order.totalValue) }
+          : {}),
+      };
+    },
+    []
+  );
+
+  const calculateOrderShippingFee = React.useCallback(
+    async (order: FirstMileOrderDetail): Promise<CalculateShippingFeeResponse | null> => {
+      try {
+        const payload = buildShippingFeeRequestFromOrder(order);
+        const feeResult = await calculateShippingFee(payload).unwrap();
+        setShippingFeeQuote(feeResult);
+        return feeResult;
+      } catch (error) {
+        setShippingFeeQuote(null);
+        notification.error('Failed to calculate shipping fee from billing.', {
+          description: getErrorMessage(error),
+        });
+        return null;
+      }
+    },
+    [buildShippingFeeRequestFromOrder, calculateShippingFee, notification]
+  );
+
+  const confirmOrderAndRefresh = React.useCallback(
+    async (order: FirstMileOrderDetail): Promise<boolean> => {
+      const confirmationResult = await confirmOrder(order.id).unwrap();
+      const originPostOffice = confirmationResult.originPostOffice;
+
+      notification.success(
+        confirmationResult.alreadyConfirmed
+          ? 'Order was already confirmed.'
+          : 'Order confirmed successfully.',
+        originPostOffice
+          ? {
+              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
+            }
+          : undefined
+      );
+
+      setIsConfirmDialogOpen(false);
+      setConfirmDialogOrder(null);
+      setPaymentInitResult(null);
+      setShippingFeeQuote(null);
+      setIsAwaitingPaymentCompletion(false);
+      setIsProcessingPaymentWebhook(false);
+      paymentCompletionHandledRef.current = false;
+      paymentResultHandlingInProgressRef.current = false;
+      lastHandledPaymentMessageKeyRef.current = null;
+      void refetch();
+      return true;
+    },
+    [confirmOrder, notification, refetch]
+  );
+
+  const confirmOrderAndRefreshRef = React.useRef(confirmOrderAndRefresh);
+  confirmOrderAndRefreshRef.current = confirmOrderAndRefresh;
+
+  React.useEffect(() => {
+    paymentCompletionHandledRef.current = false;
+    paymentResultHandlingInProgressRef.current = false;
+    lastHandledPaymentMessageKeyRef.current = null;
+  }, [confirmDialogOrder?.id, paymentInitResult?.appTransId]);
+
+  const handlePaymentResultMessage = React.useCallback(
+    async (messageOrderId?: number, messageAppTransId?: string) => {
+      if (
+        paymentCompletionHandledRef.current ||
+        paymentResultHandlingInProgressRef.current ||
+        !confirmDialogOrder
+      ) {
+        return;
+      }
+
+      if (
+        confirmDialogOrder.feePayer !== 'SENDER' ||
+        confirmDialogOrder.paymentStatus === 'PAID'
+      ) {
+        return;
+      }
+
+      const expectedAppTransId = paymentInitResult?.appTransId?.trim();
+      if (!expectedAppTransId) {
+        return;
+      }
+
+      if (messageOrderId && messageOrderId !== confirmDialogOrder.id) {
+        return;
+      }
+
+      if (messageAppTransId && messageAppTransId !== expectedAppTransId) {
+        return;
+      }
+
+      const messageKey = `${confirmDialogOrder.id}:${expectedAppTransId}`;
+      if (lastHandledPaymentMessageKeyRef.current === messageKey) {
+        return;
+      }
+      lastHandledPaymentMessageKeyRef.current = messageKey;
+      paymentResultHandlingInProgressRef.current = true;
+
+      setIsAwaitingPaymentCompletion(true);
+      setIsProcessingPaymentWebhook(false);
+
+      try {
+        let latestOrder = await loadOrderById(confirmDialogOrder.id).unwrap();
+        if (latestOrder.paymentStatus !== 'PAID') {
+          const paymentConfirmResult = await confirmOrderPayment({
+            orderId: confirmDialogOrder.id,
+            body: { appTransId: expectedAppTransId },
+          }).unwrap();
+
+          latestOrder = {
+            ...latestOrder,
+            paymentStatus: paymentConfirmResult.paymentStatus,
+          };
+        }
+
+        if (latestOrder.paymentStatus !== 'PAID') {
+          setIsAwaitingPaymentCompletion(false);
+          setIsProcessingPaymentWebhook(true);
+          setConfirmDialogOrder(latestOrder);
+          notification.info('Payment is being finalized.', {
+            description:
+              'Gateway payment was completed. Waiting for webhook confirmation from payment service.',
+          });
+          return;
+        }
+
+        paymentCompletionHandledRef.current = true;
+        setConfirmDialogOrder(latestOrder);
+        setIsAwaitingPaymentCompletion(false);
+        setIsProcessingPaymentWebhook(false);
+
+        notification.success('Shipping fee payment confirmed successfully.', {
+          description: 'Confirming order...',
+        });
+
+        await confirmOrderAndRefreshRef.current(latestOrder);
+      } catch (error) {
+        setIsAwaitingPaymentCompletion(false);
+        setIsProcessingPaymentWebhook(false);
+        lastHandledPaymentMessageKeyRef.current = null;
+        notification.error('Failed to finalize payment confirmation.', {
+          description: getErrorMessage(error),
+        });
+      } finally {
+        paymentResultHandlingInProgressRef.current = false;
+      }
+    },
+    [
+      confirmDialogOrder,
+      paymentInitResult?.appTransId,
+      loadOrderById,
+      confirmOrderPayment,
+      notification,
+    ]
+  );
+
+  React.useEffect(() => {
+    const onPaymentResultMessage = (event: MessageEvent<unknown>) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (
+        !event.data ||
+        typeof event.data !== 'object' ||
+        !('type' in event.data) ||
+        (event.data as { type?: string }).type !== PAYMENT_RESULT_MESSAGE_TYPE
+      ) {
+        return;
+      }
+
+      const payload = (event.data as {
+        payload?: {
+          orderId?: number | string;
+          appTransId?: string;
+          query?: Record<string, string>;
+        };
+      }).payload;
+
+      const rawOrderId = payload?.orderId ?? payload?.query?.orderId;
+      const parsedOrderId = Number.parseInt(String(rawOrderId ?? ''), 10);
+      const messageOrderId =
+        Number.isInteger(parsedOrderId) && parsedOrderId > 0
+          ? parsedOrderId
+          : undefined;
+
+      const messageAppTransId = (
+        payload?.appTransId ??
+        payload?.query?.appTransId ??
+        payload?.query?.apptransid
+      )?.trim();
+
+      void handlePaymentResultMessage(messageOrderId, messageAppTransId);
+    };
+
+    window.addEventListener('message', onPaymentResultMessage);
+    return () => {
+      window.removeEventListener('message', onPaymentResultMessage);
+    };
+  }, [handlePaymentResultMessage]);
+
+  const handleOpenConfirmOrder = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
         'Only TMS_ADMIN or TMS_CUSTOMER can confirm first-mile orders.'
@@ -954,27 +1277,112 @@ export const OrderListPage: React.FC = () => {
     setConfirmingOrderId(order.id);
 
     try {
-      const confirmationResult = await confirmOrder(order.id).unwrap();
-      const originPostOffice = confirmationResult.originPostOffice;
+      const orderDetail = await loadOrderDetail(order.id);
+      if (!orderDetail) {
+        return;
+      }
 
-      notification.success(
-        confirmationResult.alreadyConfirmed
-          ? 'Order was already confirmed.'
-          : 'Order confirmed successfully.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
-          : undefined
+      setConfirmDialogOrder(orderDetail);
+      setPaymentInitResult(null);
+      setShippingFeeQuote(null);
+      setIsAwaitingPaymentCompletion(false);
+      setIsProcessingPaymentWebhook(false);
+      setIsConfirmDialogOpen(true);
+      await calculateOrderShippingFee(orderDetail);
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  const handleConfirmOrderFromDialog = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+
+    if (
+      confirmDialogOrder.feePayer === 'SENDER' &&
+      confirmDialogOrder.paymentStatus !== 'PAID'
+    ) {
+      notification.error(
+        'Sender payment is required before order confirmation.'
       );
+      return;
+    }
 
-      void refetch();
+    try {
+      await confirmOrderAndRefresh(confirmDialogOrder);
     } catch (error) {
       notification.error('Failed to confirm order.', {
         description: getErrorMessage(error),
       });
-    } finally {
-      setConfirmingOrderId(null);
+    }
+  };
+
+  const handleRecalculateConfirmDialogFee = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+    await calculateOrderShippingFee(confirmDialogOrder);
+  };
+
+  const handleInitiateConfirmDialogPayment = async () => {
+    if (!confirmDialogOrder) {
+      return;
+    }
+
+    if (confirmDialogOrder.feePayer !== 'SENDER') {
+      notification.error('Payment is only required when sender pays shipping.');
+      return;
+    }
+
+    if (!shippingFeeQuote || !Number.isFinite(shippingFeeQuote.totalFee)) {
+      notification.error(
+        'Shipping fee quote is required before initiating payment.'
+      );
+      return;
+    }
+
+    try {
+      const paymentResult = await initiateOrderPayment({
+        orderId: confirmDialogOrder.id,
+        body: {
+          amount: Math.max(1, Math.round(shippingFeeQuote.totalFee)),
+        },
+      }).unwrap();
+
+      setPaymentInitResult(paymentResult);
+      setIsAwaitingPaymentCompletion(true);
+      setIsProcessingPaymentWebhook(false);
+      paymentCompletionHandledRef.current = false;
+      paymentResultHandlingInProgressRef.current = false;
+      lastHandledPaymentMessageKeyRef.current = null;
+
+      if (paymentResult.paymentUrl) {
+        const paymentPopup = window.open(
+          paymentResult.paymentUrl,
+          'serp-payment-window',
+          'width=520,height=760,scrollbars=yes,resizable=yes'
+        );
+
+        if (!paymentPopup) {
+          setIsAwaitingPaymentCompletion(false);
+          setIsProcessingPaymentWebhook(false);
+          notification.error('Popup was blocked by the browser.', {
+            description:
+              'Allow popups for this site to complete payment confirmation automatically.',
+          });
+          return;
+        }
+      }
+
+      notification.success('Payment request created.', {
+        description:
+          'Complete payment in the opened window. This dialog will confirm the order automatically when payment succeeds.',
+      });
+    } catch (error) {
+      notification.error('Failed to initiate payment.', {
+        description: getErrorMessage(error),
+      });
     }
   };
 
@@ -1256,11 +1664,44 @@ export const OrderListPage: React.FC = () => {
         onCreateOrder={handleOpenCreateDialog}
       />
 
-      <OrderAccessScopeCard
-        canViewOrders={canViewOrders}
-        badgeLabel={getScopeBadgeLabel(accessScope)}
-        description={getScopeDescription(accessScope)}
-      />
+      <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
+        {canViewOrders ? (
+          <OrderAccessScopeCard
+            canViewOrders={canViewOrders}
+            badgeLabel={getScopeBadgeLabel(accessScope)}
+            description={getScopeDescription(accessScope)}
+            className='flex-1'
+          />
+        ) : null}
+
+        {canMutateOrders ? (
+          <OrderImportCard
+            className='w-full lg:max-w-2xl'
+            canMutateOrders={canMutateOrders}
+            isImportFlowBusy={isImportFlowBusy}
+            isExportingTemplate={isExportingTemplate}
+            isValidatingImport={isValidatingImport}
+            isImportingOrders={isImportingOrders}
+            importFileInputKey={importFileInputKey}
+            selectedImportFile={selectedImportFile}
+            validateImportResult={validateImportResult}
+            validatedPreviewItems={validatedPreviewItems}
+            importPreviewLimit={IMPORT_PREVIEW_LIMIT}
+            lastImportJob={lastImportJob}
+            onDownloadTemplate={() => {
+              void handleDownloadTemplate();
+            }}
+            onSelectImportFile={handleSelectImportFile}
+            onValidateImportFile={() => {
+              void handleValidateImportFile();
+            }}
+            onImportFile={() => {
+              void handleImportFile();
+            }}
+            formatProductsPreview={formatOrderImportProductsPreview}
+          />
+        ) : null}
+      </div>
 
       {canConfirmDropOffAtPostOffice ? (
         <OrderDropOffManagerConfirmCard
@@ -1279,42 +1720,19 @@ export const OrderListPage: React.FC = () => {
 
       <OrderFiltersCard
         canViewOrders={canViewOrders}
-        keywordInput={keywordInput}
-        statusInput={statusInput}
+        filterMode={filterMode}
+        filterFormValues={filterFormValues}
+        advancedFieldCount={advancedFieldCount}
         statusOptions={ORDER_STATUS_OPTIONS}
         isFetching={isFetching}
-        onKeywordInputChange={setKeywordInput}
-        onStatusInputChange={setStatusInput}
+        onFilterModeChange={setFilterMode}
+        onFilterFieldChange={updateFilterField}
         onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
         onRefresh={() => {
           void refetch();
         }}
         formatStatusLabel={formatStatusLabel}
-      />
-
-      <OrderImportCard
-        canMutateOrders={canMutateOrders}
-        isImportFlowBusy={isImportFlowBusy}
-        isExportingTemplate={isExportingTemplate}
-        isValidatingImport={isValidatingImport}
-        isImportingOrders={isImportingOrders}
-        importFileInputKey={importFileInputKey}
-        selectedImportFile={selectedImportFile}
-        validateImportResult={validateImportResult}
-        validatedPreviewItems={validatedPreviewItems}
-        importPreviewLimit={IMPORT_PREVIEW_LIMIT}
-        lastImportJob={lastImportJob}
-        onDownloadTemplate={() => {
-          void handleDownloadTemplate();
-        }}
-        onSelectImportFile={handleSelectImportFile}
-        onValidateImportFile={() => {
-          void handleValidateImportFile();
-        }}
-        onImportFile={() => {
-          void handleImportFile();
-        }}
-        formatProductsPreview={formatOrderImportProductsPreview}
       />
 
       <OrderResultsCard
@@ -1336,7 +1754,7 @@ export const OrderListPage: React.FC = () => {
         onRequestCancel={handleRequestCancelOrder}
         onRequestDelete={handleRequestDeleteOrder}
         onConfirm={(order) => {
-          void handleConfirmOrder(order);
+          void handleOpenConfirmOrder(order);
         }}
         onOpenDropOffSuggestions={(order) => {
           void handleOpenDropOffSuggestions(order);
@@ -1384,10 +1802,14 @@ export const OrderListPage: React.FC = () => {
       <OrderDetailDialog
         open={isDetailDialogOpen}
         detailOrder={detailOrder}
+        timeline={detailTimeline}
+        isLoadingTimeline={isLoadingTimeline}
         onOpenChange={(open) => {
           setIsDetailDialogOpen(open);
           if (!open) {
             setDetailOrder(null);
+            setDetailTimeline([]);
+            setIsLoadingTimeline(false);
           }
         }}
         formatStatusLabel={formatStatusLabel}
@@ -1396,6 +1818,40 @@ export const OrderListPage: React.FC = () => {
         getProvinceLabel={getProvinceLabel}
         getWardLabel={getWardLabel}
         formatDateTime={formatDateTime}
+      />
+
+      <OrderConfirmDialog
+        open={isConfirmDialogOpen}
+        order={confirmDialogOrder}
+        shippingFee={shippingFeeQuote}
+        paymentInitResult={paymentInitResult}
+        isCalculatingFee={isCalculatingShippingFee}
+        isConfirmingOrder={isConfirmingOrder}
+        isInitiatingPayment={isInitiatingOrderPayment}
+        isAwaitingPaymentCompletion={isAwaitingPaymentCompletion}
+        isProcessingPaymentWebhook={isProcessingPaymentWebhook}
+        onOpenChange={(open) => {
+          setIsConfirmDialogOpen(open);
+          if (!open) {
+            setConfirmDialogOrder(null);
+            setShippingFeeQuote(null);
+            setPaymentInitResult(null);
+            setIsAwaitingPaymentCompletion(false);
+            setIsProcessingPaymentWebhook(false);
+            paymentCompletionHandledRef.current = false;
+            paymentResultHandlingInProgressRef.current = false;
+            lastHandledPaymentMessageKeyRef.current = null;
+          }
+        }}
+        onRecalculateFee={() => {
+          void handleRecalculateConfirmDialogFee();
+        }}
+        onConfirmOrder={() => {
+          void handleConfirmOrderFromDialog();
+        }}
+        onInitiatePayment={() => {
+          void handleInitiateConfirmDialogPayment();
+        }}
       />
 
       <OrderDropOffSuggestionsDialog

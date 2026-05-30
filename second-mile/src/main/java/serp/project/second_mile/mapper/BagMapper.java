@@ -27,6 +27,9 @@ public final class BagMapper {
         bag.setDestinationHubId(request.getDestinationHubId());
         bag.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
         bag.setVehicleId(request.getVehicleId());
+        bag.setMaxWeight(request.getMaxWeight());
+        bag.setMaxVolume(request.getMaxVolume());
+        bag.setMaxOrders(request.getMaxOrders());
         bag.setStatus(request.getStatus() == null ? BagStatus.CREATED : request.getStatus());
         bag.setNote(request.getNote());
         return bag;
@@ -39,6 +42,9 @@ public final class BagMapper {
         bag.setDestinationHubId(request.getDestinationHubId());
         bag.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
         bag.setVehicleId(request.getVehicleId());
+        bag.setMaxWeight(request.getMaxWeight());
+        bag.setMaxVolume(request.getMaxVolume());
+        bag.setMaxOrders(request.getMaxOrders());
         bag.setStatus(request.getStatus());
         bag.setNote(request.getNote());
     }
@@ -52,7 +58,14 @@ public final class BagMapper {
                 bag.getDestinationHubId(),
                 bag.getDestinationPostOfficeCode(),
                 bag.getVehicleId(),
+                bag.getMaxWeight(),
+                bag.getMaxVolume(),
+                bag.getMaxOrders(),
+                bag.getCurrentWeight(),
+                bag.getCurrentVolume(),
+                bag.getCurrentOrders(),
                 bag.getStatus(),
+                bag.getSealedAt(),
                 bag.getNote(),
                 bagOrders.stream()
                         .map(BagMapper::toBagOrderResponse)

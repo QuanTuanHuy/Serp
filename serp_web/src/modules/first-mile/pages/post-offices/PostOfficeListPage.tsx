@@ -10,30 +10,20 @@ import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { Plus, RefreshCw, Search, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
+import type { TmsFilterMode } from '../../components/list';
 import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
+  useGetHubsQuery,
   useGetPostOfficesQuery,
   useGetWardsByProvinceCodeQuery,
   useImportPostOfficesMutation,
@@ -47,21 +37,26 @@ import type {
   PostOffice,
   PostOfficeImportItem,
   PostOfficeListFilters,
-  PostOfficeStatus,
   ValidateImportFileResponse,
   Ward,
 } from '../../types';
 import {
+  PostOfficeFiltersCard,
   PostOfficeFormDialog,
   PostOfficeImportCard,
   PostOfficeResultsCard,
 } from './components';
 import {
+  buildPostOfficeListFilters,
+  countActivePostOfficeAdvancedFilters,
+  DEFAULT_POST_OFFICE_FILTER_FORM,
+  type PostOfficeFilterFormState,
+} from './postOfficeFilterModels';
+import {
   buildCreatePostOfficeRequest,
   DEFAULT_POST_OFFICE_FORM,
   getStatusBadgeVariant,
   mapPostOfficeToFormState,
-  POST_OFFICE_STATUS_OPTIONS,
   type PostOfficeFormMode,
   type PostOfficeFormState,
   type PostOfficeViewMode,
@@ -72,78 +67,6 @@ import { usePostOfficeLocations } from './usePostOfficeLocations';
 const PAGE_SIZE = 20;
 const IMPORT_PREVIEW_LIMIT = 5;
 
-type HasLocationFilter = 'ALL' | 'YES' | 'NO';
-
-interface PostOfficeFilterFormState {
-  keyword: string;
-  code: string;
-  name: string;
-  provinceCode: string;
-  wardCode: string;
-  status: 'ALL' | PostOfficeStatus;
-  hasLocation: HasLocationFilter;
-  minServiceRadiusM: string;
-  maxServiceRadiusM: string;
-  minDailyCapacity: string;
-  maxDailyCapacity: string;
-  minCurrentLoad: string;
-  maxCurrentLoad: string;
-  minPriority: string;
-  maxPriority: string;
-}
-
-const DEFAULT_POST_OFFICE_FILTER_FORM: PostOfficeFilterFormState = {
-  keyword: '',
-  code: '',
-  name: '',
-  provinceCode: '',
-  wardCode: '',
-  status: 'ALL',
-  hasLocation: 'ALL',
-  minServiceRadiusM: '',
-  maxServiceRadiusM: '',
-  minDailyCapacity: '',
-  maxDailyCapacity: '',
-  minCurrentLoad: '',
-  maxCurrentLoad: '',
-  minPriority: '',
-  maxPriority: '',
-};
-
-const parseOptionalNonNegativeInteger = (
-  rawValue: string,
-  fieldLabel: string
-): number | undefined => {
-  const trimmedValue = rawValue.trim();
-  if (!trimmedValue) {
-    return undefined;
-  }
-
-  const parsedValue = Number(trimmedValue);
-  if (!Number.isInteger(parsedValue) || parsedValue < 0) {
-    throw new Error(`${fieldLabel} must be a non-negative integer.`);
-  }
-
-  return parsedValue;
-};
-
-const validateRange = (
-  minValue: number | undefined,
-  maxValue: number | undefined,
-  fieldLabel: string
-) => {
-  if (minValue !== undefined && maxValue !== undefined && minValue > maxValue) {
-    throw new Error(
-      `${fieldLabel}: min value must be less than or equal to max value.`
-    );
-  }
-};
-
-const normalizeText = (value: string): string | undefined => {
-  const trimmedValue = value.trim();
-  return trimmedValue ? trimmedValue : undefined;
-};
-
 export const PostOfficeListPage: React.FC = () => {
   const notification = useNotification();
   const isTmsAdmin = useAppSelector((state) =>
@@ -151,6 +74,7 @@ export const PostOfficeListPage: React.FC = () => {
   );
 
   const [page, setPage] = React.useState(0);
+  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
   const [filterFormValues, setFilterFormValues] =
     React.useState<PostOfficeFilterFormState>(DEFAULT_POST_OFFICE_FILTER_FORM);
   const [appliedFilters, setAppliedFilters] =
@@ -205,6 +129,21 @@ export const PostOfficeListPage: React.FC = () => {
         skip: !selectedFilterProvinceCode,
       }
     );
+
+  const { data: hubsForFilterData } = useGetHubsQuery({
+    page: 0,
+    size: 200,
+  });
+
+  const hubFilterOptions = React.useMemo(
+    () => hubsForFilterData?.items ?? [],
+    [hubsForFilterData]
+  );
+
+  const advancedFieldCount = React.useMemo(
+    () => countActivePostOfficeAdvancedFilters(filterFormValues),
+    [filterFormValues]
+  );
 
   const filterWardOptions = React.useMemo(() => {
     const options = [...(wardsForFilterData?.items ?? [])];
@@ -266,76 +205,11 @@ export const PostOfficeListPage: React.FC = () => {
     []
   );
 
-  const buildPostOfficeFilters =
-    React.useCallback((): PostOfficeListFilters => {
-      const minServiceRadiusM = parseOptionalNonNegativeInteger(
-        filterFormValues.minServiceRadiusM,
-        'Min service radius'
-      );
-      const maxServiceRadiusM = parseOptionalNonNegativeInteger(
-        filterFormValues.maxServiceRadiusM,
-        'Max service radius'
-      );
-      const minDailyCapacity = parseOptionalNonNegativeInteger(
-        filterFormValues.minDailyCapacity,
-        'Min daily capacity'
-      );
-      const maxDailyCapacity = parseOptionalNonNegativeInteger(
-        filterFormValues.maxDailyCapacity,
-        'Max daily capacity'
-      );
-      const minCurrentLoad = parseOptionalNonNegativeInteger(
-        filterFormValues.minCurrentLoad,
-        'Min current load'
-      );
-      const maxCurrentLoad = parseOptionalNonNegativeInteger(
-        filterFormValues.maxCurrentLoad,
-        'Max current load'
-      );
-      const minPriority = parseOptionalNonNegativeInteger(
-        filterFormValues.minPriority,
-        'Min priority'
-      );
-      const maxPriority = parseOptionalNonNegativeInteger(
-        filterFormValues.maxPriority,
-        'Max priority'
-      );
-
-      validateRange(minServiceRadiusM, maxServiceRadiusM, 'Service radius');
-      validateRange(minDailyCapacity, maxDailyCapacity, 'Daily capacity');
-      validateRange(minCurrentLoad, maxCurrentLoad, 'Current load');
-      validateRange(minPriority, maxPriority, 'Priority');
-
-      return {
-        keyword: normalizeText(filterFormValues.keyword),
-        code: normalizeText(filterFormValues.code),
-        name: normalizeText(filterFormValues.name),
-        provinceCode: normalizeText(filterFormValues.provinceCode),
-        wardCode: normalizeText(filterFormValues.wardCode),
-        status:
-          filterFormValues.status === 'ALL'
-            ? undefined
-            : filterFormValues.status,
-        hasLocation:
-          filterFormValues.hasLocation === 'ALL'
-            ? undefined
-            : filterFormValues.hasLocation === 'YES',
-        minServiceRadiusM,
-        maxServiceRadiusM,
-        minDailyCapacity,
-        maxDailyCapacity,
-        minCurrentLoad,
-        maxCurrentLoad,
-        minPriority,
-        maxPriority,
-      };
-    }, [filterFormValues]);
-
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
 
     try {
-      const nextFilters = buildPostOfficeFilters();
+      const nextFilters = buildPostOfficeListFilters(filterFormValues);
       setPage(0);
       setAppliedFilters(nextFilters);
     } catch (error) {
@@ -348,6 +222,7 @@ export const PostOfficeListPage: React.FC = () => {
   const handleClearFilters = () => {
     setFilterFormValues(DEFAULT_POST_OFFICE_FILTER_FORM);
     setAppliedFilters({});
+    setFilterMode('basic');
     setPage(0);
   };
 
@@ -649,374 +524,47 @@ export const PostOfficeListPage: React.FC = () => {
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-            <CardDescription>
-              Combine one or more criteria to filter post offices.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleApplyFilters} className='space-y-4'>
-              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
-                <div className='space-y-2 sm:col-span-2'>
-                  <Label htmlFor='post-office-filter-keyword'>Keyword</Label>
-                  <div className='relative'>
-                    <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                    <Input
-                      id='post-office-filter-keyword'
-                      className='pl-10'
-                      value={filterFormValues.keyword}
-                      onChange={(event) =>
-                        updateFilterField('keyword', event.target.value)
-                      }
-                      placeholder='Code, name, address...'
-                    />
-                  </div>
-                </div>
+        {isTmsAdmin ? (
+          <PostOfficeImportCard
+            className='w-full'
+            isTmsAdmin={isTmsAdmin}
+            isImportFlowBusy={isImportFlowBusy}
+            isExportingTemplate={isExportingTemplate}
+            isValidatingImport={isValidatingImport}
+            isImportingPostOffices={isImportingPostOffices}
+            importFileInputKey={importFileInputKey}
+            selectedImportFile={selectedImportFile}
+            validateImportResult={validateImportResult}
+            validatedPreviewItems={validatedPreviewItems}
+            lastImportJob={lastImportJob}
+            previewLimit={IMPORT_PREVIEW_LIMIT}
+            onSelectImportFile={handleSelectImportFile}
+            onDownloadTemplate={handleDownloadTemplate}
+            onValidateImportFile={handleValidateImportFile}
+            onImportFile={handleImportFile}
+            getProvinceLabel={getProvinceLabel}
+            getWardLabel={getWardLabel}
+          />
+        ) : null}
 
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-code'>Code</Label>
-                  <Input
-                    id='post-office-filter-code'
-                    value={filterFormValues.code}
-                    onChange={(event) =>
-                      updateFilterField('code', event.target.value)
-                    }
-                    placeholder='PO-HCM-01'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-name'>Name</Label>
-                  <Input
-                    id='post-office-filter-name'
-                    value={filterFormValues.name}
-                    onChange={(event) =>
-                      updateFilterField('name', event.target.value)
-                    }
-                    placeholder='Post office name'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-status'>Status</Label>
-                  <Select
-                    value={filterFormValues.status}
-                    onValueChange={(value) =>
-                      updateFilterField(
-                        'status',
-                        value as PostOfficeFilterFormState['status']
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      id='post-office-filter-status'
-                      className='w-full'
-                    >
-                      <SelectValue placeholder='All statuses' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='ALL'>All statuses</SelectItem>
-                      {POST_OFFICE_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-province'>Province</Label>
-                  <Select
-                    value={selectedFilterProvinceCode || 'ALL'}
-                    onValueChange={(value) => {
-                      const nextProvinceCode = value === 'ALL' ? '' : value;
-                      updateFilterField('provinceCode', nextProvinceCode);
-                      updateFilterField('wardCode', '');
-                    }}
-                  >
-                    <SelectTrigger
-                      id='post-office-filter-province'
-                      className='w-full'
-                    >
-                      <SelectValue placeholder='All provinces' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='ALL'>All provinces</SelectItem>
-                      {provinceSelectOptions.map((province) => {
-                        if (!province.provinceCode) {
-                          return null;
-                        }
-
-                        return (
-                          <SelectItem
-                            key={province.provinceCode}
-                            value={province.provinceCode}
-                          >
-                            {province.name} ({province.provinceCode})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-ward'>Ward</Label>
-                  <Select
-                    value={selectedFilterWardCode || 'ALL'}
-                    onValueChange={(value) =>
-                      updateFilterField(
-                        'wardCode',
-                        value === 'ALL' ? '' : value
-                      )
-                    }
-                    disabled={!selectedFilterProvinceCode}
-                  >
-                    <SelectTrigger
-                      id='post-office-filter-ward'
-                      className='w-full'
-                    >
-                      <SelectValue
-                        placeholder={
-                          selectedFilterProvinceCode
-                            ? 'All wards'
-                            : 'Select province first'
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='ALL'>All wards</SelectItem>
-                      {selectedFilterProvinceCode &&
-                      isFetchingWardsForFilter ? (
-                        <SelectItem value='__loading__' disabled>
-                          Loading wards...
-                        </SelectItem>
-                      ) : filterWardOptions.length > 0 ? (
-                        filterWardOptions.map((ward) => {
-                          if (!ward.wardCode) {
-                            return null;
-                          }
-
-                          return (
-                            <SelectItem
-                              key={ward.wardCode}
-                              value={ward.wardCode}
-                            >
-                              {ward.name} ({ward.wardCode})
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <SelectItem value='__empty__' disabled>
-                          No wards available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-has-location'>
-                    Has Location
-                  </Label>
-                  <Select
-                    value={filterFormValues.hasLocation}
-                    onValueChange={(value) =>
-                      updateFilterField(
-                        'hasLocation',
-                        value as PostOfficeFilterFormState['hasLocation']
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      id='post-office-filter-has-location'
-                      className='w-full'
-                    >
-                      <SelectValue placeholder='All records' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='ALL'>All records</SelectItem>
-                      <SelectItem value='YES'>Has location</SelectItem>
-                      <SelectItem value='NO'>No location</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-min-service-radius'>
-                    Min service radius (m)
-                  </Label>
-                  <Input
-                    id='post-office-filter-min-service-radius'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.minServiceRadiusM}
-                    onChange={(event) =>
-                      updateFilterField('minServiceRadiusM', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-max-service-radius'>
-                    Max service radius (m)
-                  </Label>
-                  <Input
-                    id='post-office-filter-max-service-radius'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.maxServiceRadiusM}
-                    onChange={(event) =>
-                      updateFilterField('maxServiceRadiusM', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-min-daily-capacity'>
-                    Min daily capacity
-                  </Label>
-                  <Input
-                    id='post-office-filter-min-daily-capacity'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.minDailyCapacity}
-                    onChange={(event) =>
-                      updateFilterField('minDailyCapacity', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-max-daily-capacity'>
-                    Max daily capacity
-                  </Label>
-                  <Input
-                    id='post-office-filter-max-daily-capacity'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.maxDailyCapacity}
-                    onChange={(event) =>
-                      updateFilterField('maxDailyCapacity', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-min-current-load'>
-                    Min current load
-                  </Label>
-                  <Input
-                    id='post-office-filter-min-current-load'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.minCurrentLoad}
-                    onChange={(event) =>
-                      updateFilterField('minCurrentLoad', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-max-current-load'>
-                    Max current load
-                  </Label>
-                  <Input
-                    id='post-office-filter-max-current-load'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.maxCurrentLoad}
-                    onChange={(event) =>
-                      updateFilterField('maxCurrentLoad', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-min-priority'>
-                    Min priority
-                  </Label>
-                  <Input
-                    id='post-office-filter-min-priority'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.minPriority}
-                    onChange={(event) =>
-                      updateFilterField('minPriority', event.target.value)
-                    }
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='post-office-filter-max-priority'>
-                    Max priority
-                  </Label>
-                  <Input
-                    id='post-office-filter-max-priority'
-                    type='number'
-                    min={0}
-                    step={1}
-                    value={filterFormValues.maxPriority}
-                    onChange={(event) =>
-                      updateFilterField('maxPriority', event.target.value)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className='flex flex-wrap gap-2'>
-                <Button type='submit'>Apply filters</Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleClearFilters}
-                >
-                  Clear
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => refetch()}
-                  disabled={isFetching}
-                >
-                  <RefreshCw className='h-4 w-4 mr-2' />
-                  Refresh
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <PostOfficeImportCard
-          isTmsAdmin={isTmsAdmin}
-          isImportFlowBusy={isImportFlowBusy}
-          isExportingTemplate={isExportingTemplate}
-          isValidatingImport={isValidatingImport}
-          isImportingPostOffices={isImportingPostOffices}
-          importFileInputKey={importFileInputKey}
-          selectedImportFile={selectedImportFile}
-          validateImportResult={validateImportResult}
-          validatedPreviewItems={validatedPreviewItems}
-          lastImportJob={lastImportJob}
-          previewLimit={IMPORT_PREVIEW_LIMIT}
-          onSelectImportFile={handleSelectImportFile}
-          onDownloadTemplate={handleDownloadTemplate}
-          onValidateImportFile={handleValidateImportFile}
-          onImportFile={handleImportFile}
-          getProvinceLabel={getProvinceLabel}
-          getWardLabel={getWardLabel}
+        <PostOfficeFiltersCard
+          filterMode={filterMode}
+          filterFormValues={filterFormValues}
+          advancedFieldCount={advancedFieldCount}
+          isFetching={isFetching}
+          provinceSelectOptions={provinceSelectOptions}
+          filterWardOptions={filterWardOptions}
+          hubOptions={hubFilterOptions}
+          selectedFilterProvinceCode={selectedFilterProvinceCode}
+          selectedFilterWardCode={selectedFilterWardCode}
+          isFetchingWardsForFilter={isFetchingWardsForFilter}
+          onFilterModeChange={setFilterMode}
+          onFilterFieldChange={updateFilterField}
+          onApplyFilters={handleApplyFilters}
+          onClearFilters={handleClearFilters}
+          onRefresh={() => {
+            void refetch();
+          }}
         />
 
         <PostOfficeResultsCard

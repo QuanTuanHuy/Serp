@@ -39,6 +39,14 @@ spring:
 app:
   notification:
     default-tenant-id: ${PAYMENT_NOTIFICATION_DEFAULT_TENANT_ID:1}
+  webhook:
+    first-mile:
+      payment-confirmed-url: ${FIRST_MILE_PAYMENT_CONFIRMED_WEBHOOK_URL:http://localhost:8093/api/v1/internal/payment-webhooks/orders/payment-confirmed}
+      secret: ${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}
+    retry:
+      max-attempts: ${WEBHOOK_MAX_ATTEMPTS:5}
+      initial-delay-seconds: ${WEBHOOK_INITIAL_DELAY_SECONDS:30}
+      scheduler-delay-ms: ${WEBHOOK_SCHEDULER_DELAY_MS:30000}
   kafka:
     source: ${PAYMENT_KAFKA_SOURCE:payment-service}
     topics:

@@ -16,6 +16,7 @@ import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.shared.constant.EventConstants;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.constant.WorkItemFieldConstants;
@@ -50,6 +51,7 @@ public class AssignWorkItemCommandHandler
     private final RoleActorSubjectValidator roleActorSubjectValidator;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
+    private final IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -98,7 +100,19 @@ public class AssignWorkItemCommandHandler
 
         workItem.setAssigneeId(resolvedAssigneeId);
         WorkItemEntity updatedWorkItem = workItemService.updateWorkItem(workItem, command.userId());
-        persistAssignedOutboxEvent(updatedWorkItem, previousAssigneeId, command.tenantId(), command.userId());
+        OutboxEventEntity sourceEvent = persistAssignedOutboxEvent(
+                updatedWorkItem,
+                previousAssigneeId,
+                command.tenantId(),
+                command.userId()
+        );
+        notificationOutboxPublisher.publishWorkItemAssignedNotifications(
+                project,
+                updatedWorkItem,
+                command.tenantId(),
+                command.userId(),
+                sourceEvent == null ? null : sourceEvent.getId()
+        );
 
         log.info("Assigned work item id={} projectId={} previousAssigneeId={} assigneeId={}",
                 updatedWorkItem.getId(),
@@ -121,10 +135,10 @@ public class AssignWorkItemCommandHandler
         }
     }
 
-    private void persistAssignedOutboxEvent(WorkItemEntity workItem,
-                                            Long previousAssigneeId,
-                                            Long tenantId,
-                                            Long userId) {
+    private OutboxEventEntity persistAssignedOutboxEvent(WorkItemEntity workItem,
+                                                         Long previousAssigneeId,
+                                                         Long tenantId,
+                                                         Long userId) {
         WorkItemEventPayload payload = WorkItemEventPayload.builder()
                 .workItemId(workItem.getId())
                 .workItemKey(workItem.getKey())
@@ -151,6 +165,6 @@ public class AssignWorkItemCommandHandler
                 .updatedAt(System.currentTimeMillis())
                 .build();
 
-        outboxEventService.saveEvent(outboxEvent);
+        return outboxEventService.saveEvent(outboxEvent);
     }
 }

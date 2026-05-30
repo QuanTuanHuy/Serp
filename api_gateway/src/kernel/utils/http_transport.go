@@ -185,8 +185,9 @@ func isCircuitBreakerOpen(err error) bool {
 	return err == gobreaker.ErrOpenState || err == gobreaker.ErrTooManyRequests
 }
 
-// ResilientTransport combines retry and circuit breaker
-// Chain: Retry -> CircuitBreaker -> Base Transport
+// ResilientTransport combines retry and circuit breaker.
+// Chain: CircuitBreaker -> Retry -> Base Transport, so breaker counts each
+// logical request once after retries finish.
 type ResilientTransport struct {
 	transport http.RoundTripper
 }
@@ -197,11 +198,11 @@ func NewResilientTransport(
 	maxRetries int,
 	initialDelay, maxDelay time.Duration,
 ) *ResilientTransport {
-	cbTransport := NewCircuitBreakerTransport(http.DefaultTransport, cb)
-	retryTransport := NewRetryTransport(cbTransport, maxRetries, initialDelay, maxDelay)
+	retryTransport := NewRetryTransport(http.DefaultTransport, maxRetries, initialDelay, maxDelay)
+	cbTransport := NewCircuitBreakerTransport(retryTransport, cb)
 
 	return &ResilientTransport{
-		transport: retryTransport,
+		transport: cbTransport,
 	}
 }
 

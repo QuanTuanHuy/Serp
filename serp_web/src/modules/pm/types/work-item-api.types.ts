@@ -90,6 +90,7 @@ export interface PMIssueTypeApi {
 
 export interface PMProjectScopedListParams {
   projectId?: number;
+  isSystem?: boolean;
   search?: string;
   page?: number;
   pageSize?: number;

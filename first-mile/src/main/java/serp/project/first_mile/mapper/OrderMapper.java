@@ -1,6 +1,7 @@
 package serp.project.first_mile.mapper;
 
 import org.locationtech.jts.geom.Point;
+import serp.project.first_mile.domain.Dimension;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.Product;
@@ -58,6 +59,13 @@ public final class OrderMapper {
                 order.getTotalWeight(),
                 order.getTotalValue(),
                 order.getTotalVolume(),
+                getDimensionLength(order.getDimensions()),
+                getDimensionWidth(order.getDimensions()),
+                getDimensionHeight(order.getDimensions()),
+                order.getBaseShippingFee(),
+                order.getCodFee(),
+                order.getExtraFee(),
+                order.getTotalShippingFee(),
                 order.getOriginPostOfficeCode(),
                 order.getDestinationPostOfficeCode(),
                 order.getNote(),
@@ -90,6 +98,18 @@ public final class OrderMapper {
 
     private static Double toLongitude(Point location) {
         return location == null ? null : location.getX();
+    }
+
+    private static Double getDimensionLength(Dimension dimension) {
+        return dimension == null ? null : dimension.getLength();
+    }
+
+    private static Double getDimensionWidth(Dimension dimension) {
+        return dimension == null ? null : dimension.getWidth();
+    }
+
+    private static Double getDimensionHeight(Dimension dimension) {
+        return dimension == null ? null : dimension.getHeight();
     }
 
     public static OrderConfirmationResponse toOrderConfirmationResponse(

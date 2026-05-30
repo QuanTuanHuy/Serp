@@ -68,6 +68,7 @@ import serp.project.pmcore.domain.shared.service.IOutboxEventService;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.enums.WorkflowVersionState;
+import serp.project.pmcore.domain.shared.entity.OutboxEventEntity;
 import serp.project.pmcore.domain.shared.exception.BusinessRuleViolationException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.DomainValidationException;
@@ -87,6 +88,7 @@ import serp.project.pmcore.domain.workitem.port.IWorkItemCustomFieldValuePort;
 import serp.project.pmcore.domain.workitem.service.impl.WorkItemAuthorizationSupportService;
 import serp.project.pmcore.domain.workitem.service.IWorkItemFieldResolver;
 import serp.project.pmcore.domain.workitem.service.impl.WorkItemFieldResolver;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.workitem.service.IWorkItemService;
 import serp.project.pmcore.application.workitem.command.create.support.CreateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemCreateConfigurationResolver;
@@ -105,6 +107,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -207,6 +210,8 @@ class CreateWorkItemCommandHandlerTest {
     private IOutboxEventService outboxEventService;
     @Mock
     private JsonUtils jsonUtils;
+    @Mock
+    private IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     private CreateWorkItemCommandHandler createWorkItemCommandHandler;
 
@@ -239,7 +244,8 @@ class CreateWorkItemCommandHandlerTest {
                 ),
                 new WorkItemFieldWriteValidator(),
                 outboxEventService,
-                jsonUtils
+                jsonUtils,
+                notificationOutboxPublisher
         );
         stubHappyPath(List.of(), List.of(screenField("SYSTEM", "summary")));
     }
@@ -265,6 +271,13 @@ class CreateWorkItemCommandHandlerTest {
         assertEquals(9000L, response.getId());
         assertEquals("SERP-1", response.getKey());
         assertEquals(1_700_000_000_000L, response.getDueDate());
+        verify(notificationOutboxPublisher).publishWorkItemCreatedNotifications(
+                any(ProjectEntity.class),
+                any(WorkItemEntity.class),
+                eq(TENANT_ID),
+                eq(USER_ID),
+                eq(7000L)
+        );
     }
 
     @Test
@@ -570,7 +583,11 @@ class CreateWorkItemCommandHandlerTest {
                     requestEntity.setId(9000L);
                     return requestEntity;
                 });
-        when(outboxEventService.saveEvent(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            OutboxEventEntity event = invocation.getArgument(0);
+            event.setId(7000L);
+            return event;
+        }).when(outboxEventService).saveEvent(any());
         when(jsonUtils.toJson(any())).thenReturn("{}");
     }
 

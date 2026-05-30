@@ -51,6 +51,35 @@ export interface PMProjectComponentApi {
   updatedBy?: number | null;
 }
 
+export interface PMProjectRoleApi {
+  id: number;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
+}
+
+export interface PMProjectPersonRoleApi {
+  id: number;
+  name: string;
+  system: boolean;
+}
+
+export interface PMProjectPersonApi {
+  userId: number;
+  name?: string | null;
+  email?: string | null;
+  avatarUrl?: string | null;
+  projectLead: boolean;
+  roles: PMProjectPersonRoleApi[];
+  addedAt?: number | null;
+}
+
+export interface PMReplaceProjectPersonRolesRequest {
+  roleIds: number[];
+}
+
 export interface PMListProjectComponentsParams {
   search?: string;
   page?: number;

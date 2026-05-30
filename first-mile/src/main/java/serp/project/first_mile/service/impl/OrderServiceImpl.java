@@ -40,8 +40,10 @@ import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
+import serp.project.first_mile.dto.request.InitiateOrderPaymentRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
+import serp.project.first_mile.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
@@ -50,6 +52,8 @@ import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
+import serp.project.first_mile.dto.response.OrderTimelineResponse;
+import serp.project.first_mile.dto.response.PaymentWebhookProcessResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ProductTypeTemplateDTO;
 import serp.project.first_mile.dto.response.ProvinceExcelTemplateDTO;
@@ -76,9 +80,11 @@ import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.OrderExcelService;
 import serp.project.first_mile.service.OrderImportExcelService;
 import serp.project.first_mile.service.OrderService;
+import serp.project.first_mile.service.OrderTimelineService;
 import serp.project.first_mile.service.dto.ManualOrderPayload;
 import serp.project.first_mile.service.dto.ManualOrderProductPayload;
 import serp.project.first_mile.service.dto.OrderActorScope;
+import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -136,6 +142,9 @@ public class OrderServiceImpl implements OrderService {
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
 
+    @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
+    private String paymentRedirectUrl;
+
     private final OrderExcelService orderExcelService;
     private final OrderImportExcelService orderImportExcelService;
     private final OrderRepository orderRepository;
@@ -149,6 +158,7 @@ public class OrderServiceImpl implements OrderService {
     private final FileStorageService fileStorageService;
     private final SyncOrder syncOrder;
     private final PaymentServiceCaller paymentServiceCaller;
+    private final OrderTimelineService orderTimelineService;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -247,6 +257,27 @@ public class OrderServiceImpl implements OrderService {
         applyManualOrderPayload(order, payload, tenantId);
 
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.CREATED,
+                "Order created.",
+                new OrderTimelineContext(
+                        savedOrder.getCreatedAt(),
+                        null,
+                        null,
+                        null,
+                        savedOrder.getOriginPostOfficeCode(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        toLatitude(savedOrder.getSenderLocation()),
+                        toLongitude(savedOrder.getSenderLocation()),
+                        buildSenderLocationLabel(savedOrder)
+                )
+        );
         return OrderMapper.toOrderDetailResponse(savedOrder);
     }
 
@@ -258,6 +289,44 @@ public class OrderServiceImpl implements OrderService {
 
         validateCanReadOrder(order, tenantId, actorScope);
         return OrderMapper.toOrderDetailResponse(order);
+    }
+
+    @Override
+    public List<OrderTimelineResponse> getOrderTimeline(Long orderId, Long tenantId) {
+        OrderActorScope actorScope = resolveActorScope(tenantId);
+        Order order = orderRepository.findByIdAndTenantId(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanReadOrder(order, tenantId, actorScope);
+
+        List<OrderTimelineResponse> timeline = orderTimelineService.getTimeline(orderId, tenantId);
+        if (!timeline.isEmpty()) {
+            return timeline;
+        }
+
+        return List.of(new OrderTimelineResponse(
+                null,
+                order.getId(),
+                order.getOrderCode(),
+                order.getCustomerOrderCode(),
+                order.getStatus() == null ? OrderStatus.CREATED : order.getStatus(),
+                "Order created.",
+                order.getCreatedAt(),
+                order.getCreatedBy(),
+                null,
+                null,
+                null,
+                order.getOriginPostOfficeCode(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                toLatitude(order.getSenderLocation()),
+                toLongitude(order.getSenderLocation()),
+                buildSenderLocationLabel(order)
+        ));
     }
 
     @Override
@@ -296,6 +365,29 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                cancelledOrder,
+                OrderStatus.CANCELLED,
+                hasText(cancelledOrder.getCancelReason())
+                        ? "Order cancelled. Reason: " + cancelledOrder.getCancelReason()
+                        : "Order cancelled.",
+                new OrderTimelineContext(
+                        cancelledOrder.getCancelledAt(),
+                        null,
+                        null,
+                        null,
+                        cancelledOrder.getOriginPostOfficeCode(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        toLatitude(cancelledOrder.getSenderLocation()),
+                        toLongitude(cancelledOrder.getSenderLocation()),
+                        buildSenderLocationLabel(cancelledOrder)
+                )
+        );
         // Gửi sự kiện kafka
         syncOrder.sendOrderEvent(order);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
@@ -303,7 +395,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public OrderPaymentInitResponse initiateOrderPayment(Long orderId, Long tenantId) {
+    public OrderPaymentInitResponse initiateOrderPayment(
+            Long orderId,
+            Long tenantId,
+            InitiateOrderPaymentRequest request
+    ) {
         OrderActorScope actorScope = resolveActorScope(tenantId);
         Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
@@ -314,7 +410,9 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee is already paid.");
         }
 
-        long shippingFee = resolveShippingFee(order);
+        long shippingFee = resolveShippingFeeForPayment(order, request);
+        order.setTotalShippingFee(shippingFee);
+        orderRepository.save(order);
         Long actorId = firstMileAccessUtils.getCurrentUserIdOrThrow();
         String orderCode = order.getOrderCode();
 
@@ -322,6 +420,9 @@ public class OrderServiceImpl implements OrderService {
                 .appUser(orderCode)
                 .amount(shippingFee)
                 .description("Thanh toan phi van chuyen cho don hang " + orderCode)
+                .embedData(PaymentCreateOrderRequest.EmbedData.builder()
+                        .redirectUrl(paymentRedirectUrl + "?source=first-mile&orderId=" + order.getId())
+                        .build())
                 .title("Phi van chuyen - " + orderCode)
                 .tenantId(tenantId)
                 .actorId(actorId)
@@ -395,6 +496,43 @@ public class OrderServiceImpl implements OrderService {
                 request.getAppTransId(),
                 gatewayStatus,
                 queryResponse.getMessage()
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentWebhookProcessResponse processPaymentOrderConfirmedWebhook(
+            PaymentOrderConfirmedWebhookRequest request
+    ) {
+        if (request == null || !hasText(request.getOrderCode()) || request.getTenantId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid webhook payload.");
+        }
+
+        String orderCode = request.getOrderCode().trim();
+        Order order = orderRepository.findByOrderCodeAndTenantIdForUpdate(orderCode, request.getTenantId())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            return new PaymentWebhookProcessResponse(
+                    orderCode,
+                    request.getAppTransId(),
+                    false,
+                    "Order shipping fee is already marked as paid."
+            );
+        }
+
+        if (request.getAmount() != null && request.getAmount() > 0L) {
+            order.setTotalShippingFee(request.getAmount());
+        }
+        order.setPaymentStatus(PaymentStatus.PAID);
+        Order savedOrder = orderRepository.save(order);
+        syncOrder.sendOrderEvent(savedOrder);
+
+        return new PaymentWebhookProcessResponse(
+                savedOrder.getOrderCode(),
+                request.getAppTransId(),
+                true,
+                "Order payment status updated to PAID."
         );
     }
 
@@ -525,6 +663,29 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(OrderStatus.PICKING_UP);
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.PICKING_UP,
+                "Courier checked in and started pickup.",
+                new OrderTimelineContext(
+                        savedCheckin.getCheckinTime(),
+                        tripOrder.getTrip().getId(),
+                        tripOrder.getTrip().getTripCode(),
+                        null,
+                        order.getOriginPostOfficeCode(),
+                        null,
+                        courierStaffId,
+                        null,
+                        null,
+                        tripOrder.getTrip().getVehicleId(),
+                        null,
+                        checkinLatitude,
+                        checkinLongitude,
+                        "Pickup check-in location"
+                )
+        );
+
+        tryAutoCompleteTripAfterCheckin(tripOrder.getTrip(), tenantId);
 
         return toPickupCheckinResponse(savedOrder, tripOrder.getTrip(), savedCheckin, pickupLocation);
     }
@@ -549,6 +710,14 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(
                     ErrorCode.INVALID_REQUEST,
                     "Order has already been confirmed. If you need to change the order details, please contact support."
+            );
+        }
+
+        if (FeePayer.SENDER.equals(order.getFeePayer())
+                && !PaymentStatus.PAID.equals(order.getPaymentStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Sender must complete shipping fee payment before order confirmation."
             );
         }
 
@@ -645,7 +814,8 @@ public class OrderServiceImpl implements OrderService {
                     && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
                 if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
                     order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                    orderRepository.save(order);
+                    Order savedOrder = orderRepository.save(order);
+                    recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
                 }
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
@@ -661,7 +831,8 @@ public class OrderServiceImpl implements OrderService {
                     && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
                 order.setIsConfirm(true);
                 order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                orderRepository.save(order);
+                Order savedOrder = orderRepository.save(order);
+                recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
 
@@ -684,7 +855,8 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
 
         postOfficeRepository.save(postOffice);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order confirmed and received at origin post office.");
 
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }
@@ -719,9 +891,16 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private long resolveShippingFee(Order order) {
+    private long resolveShippingFeeForPayment(Order order, InitiateOrderPaymentRequest request) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        if (request != null && request.getAmount() != null) {
+            Long amount = request.getAmount();
+            if (amount <= 0L) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee must be greater than 0 for payment.");
+            }
+            return amount;
         }
         Long totalShippingFee = order.getTotalShippingFee();
         if (totalShippingFee == null || totalShippingFee <= 0L) {
@@ -739,6 +918,60 @@ public class OrderServiceImpl implements OrderService {
                 && latitude <= 90.0
                 && longitude >= -180.0
                 && longitude <= 180.0;
+    }
+
+    private Double toLatitude(Point location) {
+        return location == null ? null : location.getY();
+    }
+
+    private Double toLongitude(Point location) {
+        return location == null ? null : location.getX();
+    }
+
+    private String buildSenderLocationLabel(Order order) {
+        if (order == null) {
+            return null;
+        }
+
+        List<String> addressParts = new ArrayList<>();
+        if (hasText(order.getSenderAddressDetail())) {
+            addressParts.add(order.getSenderAddressDetail().trim());
+        }
+        if (hasText(order.getSenderWardCode())) {
+            addressParts.add(order.getSenderWardCode().trim());
+        }
+        if (hasText(order.getSenderProvinceCode())) {
+            addressParts.add(order.getSenderProvinceCode().trim());
+        }
+
+        if (addressParts.isEmpty()) {
+            return null;
+        }
+        return String.join(", ", addressParts);
+    }
+
+    private void recordAtOriginPostOfficeTimeline(Order order, PostOffice postOffice, String description) {
+        orderTimelineService.recordStatusEvent(
+                order,
+                OrderStatus.AT_ORIGIN_POST_OFFICE,
+                description,
+                new OrderTimelineContext(
+                        LocalDateTime.now(),
+                        null,
+                        null,
+                        postOffice == null ? null : postOffice.getId(),
+                        postOffice == null ? null : postOffice.getCode(),
+                        postOffice == null ? null : postOffice.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        postOffice == null ? null : toLatitude(postOffice.getLocation()),
+                        postOffice == null ? null : toLongitude(postOffice.getLocation()),
+                        postOffice == null ? null : postOffice.getName()
+                )
+        );
     }
 
     private boolean hasText(String value) {
@@ -1239,6 +1472,34 @@ public class OrderServiceImpl implements OrderService {
 
         LocalDate endDate = postOffice.getOperationalEndDate();
         return endDate == null || !endDate.isBefore(operationalDate);
+    }
+
+    private void tryAutoCompleteTripAfterCheckin(Trip trip, Long tenantId) {
+        if (trip == null || trip.getId() == null) {
+            return;
+        }
+        if (!TripStatus.PLANNED.equals(trip.getStatus()) && !TripStatus.IN_PROGRESS.equals(trip.getStatus())) {
+            return;
+        }
+
+        long totalOrders = tripOrderRepository.countByTenantIdAndTrip_Id(tenantId, trip.getId());
+        if (totalOrders <= 0) {
+            return;
+        }
+
+        long checkedInOrders = pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        if (checkedInOrders < totalOrders) {
+            return;
+        }
+
+        trip.setStatus(TripStatus.COMPLETED);
+        log.info(
+                "Auto completed pickup trip tripId={} tenantId={} checkedInOrders={} totalOrders={}",
+                trip.getId(),
+                tenantId,
+                checkedInOrders,
+                totalOrders
+        );
     }
 
     private double resolvePickupCheckinRadiusMeters() {

@@ -20,15 +20,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
-import { CheckCircle2, Loader2, Search } from 'lucide-react';
-import { CandidateOrderItem } from './CandidateOrderItem';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import type { PickupShift, Province, Ward } from '../../../../types';
+import { OrderMultiSelect } from './OrderMultiSelect';
 import type { ManualDispatchCardProps } from './types';
 
+const MANUAL_SHIFT_OPTIONS: Array<{ value: PickupShift; label: string }> = [
+  { value: 'MORNING', label: 'Morning (07:30 - 12:00)' },
+  { value: 'AFTERNOON', label: 'Afternoon (13:30 - 18:00)' },
+  { value: 'EVENING', label: 'Evening (18:30 - 22:00)' },
+];
+
 export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
+  provinceOptions,
+  wardOptions,
+  selectedProvinceCode,
+  onProvinceChange,
+  selectedWardCode,
+  onWardChange,
+  isLoadingProvinces,
+  isLoadingWards,
+  postOfficeOptions,
   selectedPostOfficeId,
-  orderKeywordInput,
-  onOrderKeywordInputChange,
-  onApplyOrderFilters,
+  onPostOfficeChange,
+  isLoadingPostOffices,
+  shift,
+  onShiftChange,
+  tripDate,
+  onTripDateChange,
   courierOptions,
   selectedManualCourierId,
   onManualCourierIdChange,
@@ -38,50 +57,130 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
   isLoadingOrders,
   candidateOrders,
   selectedOrderIds,
-  selectedOrderIdSet,
-  onToggleOrder,
-  onSelectAllCurrentOrders,
+  onOrderSelectionChange,
   onClearSelectedOrders,
-  currentPage,
-  totalPages,
-  hasPrevious,
-  hasNext,
-  isFetchingOrders,
-  onPreviousPage,
-  onNextPage,
   onManualAssign,
   isManualAssigning,
   activeAction,
 }) => {
+  const canSelectPostOffice = Boolean(selectedProvinceCode);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Manual Dispatch</CardTitle>
         <CardDescription>
-          Select candidate orders and assign them to a courier.
+          Filter post office by location, then select orders and assign them to
+          a courier. This section uses its own post office scope, separate from
+          Dispatch Setup.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
-        <form
-          onSubmit={onApplyOrderFilters}
-          className='flex flex-col gap-3 sm:flex-row'
-        >
-          <div className='relative flex-1'>
-            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+        <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
+          <div className='space-y-2'>
+            <Label htmlFor='manual-province'>Province</Label>
+            <Select
+              value={selectedProvinceCode || undefined}
+              onValueChange={onProvinceChange}
+              disabled={isLoadingProvinces}
+            >
+              <SelectTrigger id='manual-province'>
+                <SelectValue placeholder='Select province' />
+              </SelectTrigger>
+              <SelectContent>
+                {provinceOptions.map((province: Province) => (
+                  <SelectItem
+                    key={province.provinceCode}
+                    value={province.provinceCode}
+                  >
+                    {province.name} ({province.provinceCode})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='manual-ward'>Ward</Label>
+            <Select
+              value={selectedWardCode || undefined}
+              onValueChange={onWardChange}
+              disabled={!selectedProvinceCode || isLoadingWards}
+            >
+              <SelectTrigger id='manual-ward'>
+                <SelectValue
+                  placeholder={
+                    selectedProvinceCode
+                      ? 'Select ward (optional)'
+                      : 'Select province first'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='ALL'>All wards in province</SelectItem>
+                {wardOptions.map((ward: Ward) => (
+                  <SelectItem key={ward.wardCode} value={ward.wardCode}>
+                    {ward.name} ({ward.wardCode})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='manual-post-office'>Post office</Label>
+            <Select
+              value={selectedPostOfficeId || undefined}
+              onValueChange={onPostOfficeChange}
+              disabled={!canSelectPostOffice || isLoadingPostOffices}
+            >
+              <SelectTrigger id='manual-post-office'>
+                <SelectValue placeholder='Select post office' />
+              </SelectTrigger>
+              <SelectContent>
+                {postOfficeOptions.map((postOffice) => (
+                  <SelectItem key={postOffice.id} value={String(postOffice.id)}>
+                    {postOffice.code} - {postOffice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isLoadingPostOffices ? (
+              <p className='text-xs text-muted-foreground'>
+                Loading post offices...
+              </p>
+            ) : null}
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='manual-shift'>Shift</Label>
+            <Select
+              value={shift}
+              onValueChange={(value) => onShiftChange(value as PickupShift)}
+            >
+              <SelectTrigger id='manual-shift'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MANUAL_SHIFT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='manual-trip-date'>Trip date</Label>
             <Input
-              className='pl-10'
-              value={orderKeywordInput}
-              onChange={(event) =>
-                onOrderKeywordInputChange(event.target.value)
-              }
-              placeholder='Search candidate orders...'
-              disabled={!selectedPostOfficeId}
+              id='manual-trip-date'
+              type='date'
+              value={tripDate}
+              onChange={(event) => onTripDateChange(event.target.value)}
             />
           </div>
-          <Button type='submit' disabled={!selectedPostOfficeId}>
-            Apply
-          </Button>
-        </form>
+        </div>
 
         <div className='grid gap-3 md:grid-cols-2'>
           <div className='space-y-2'>
@@ -108,6 +207,7 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
               </p>
             ) : null}
           </div>
+
           <div className='space-y-2'>
             <Label>Quick pick courier</Label>
             {suggestedCouriers.length > 0 ? (
@@ -126,87 +226,61 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
               </div>
             ) : (
               <p className='text-xs text-muted-foreground'>
-                No suggested couriers yet. Run preview or auto assign to get
+                Run preview or auto assign in Dispatch Setup to get courier
                 suggestions.
               </p>
             )}
           </div>
         </div>
 
-        {isLoadingOrders ? (
-          <div className='flex items-center gap-2 text-muted-foreground'>
-            <Loader2 className='h-4 w-4 animate-spin' />
-            Loading candidate orders...
-          </div>
-        ) : candidateOrders.length > 0 ? (
-          <div className='space-y-3'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={onSelectAllCurrentOrders}
-              >
-                Select all current page
-              </Button>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={onClearSelectedOrders}
-              >
-                Clear selection
-              </Button>
+        <div className='space-y-2'>
+          <div className='flex flex-wrap items-center justify-between gap-2'>
+            <Label htmlFor='manual-orders-select'>Orders</Label>
+            <div className='flex items-center gap-2'>
               <Badge variant='secondary'>
                 Selected: {selectedOrderIds.length}
               </Badge>
-            </div>
-
-            <div className='space-y-2'>
-              {candidateOrders.map((order) => (
-                <CandidateOrderItem
-                  key={order.id}
-                  order={order}
-                  checked={selectedOrderIdSet.has(order.id)}
-                  onToggle={onToggleOrder}
-                />
-              ))}
-            </div>
-
-            <div className='flex items-center justify-between'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onPreviousPage}
-                disabled={!hasPrevious || isFetchingOrders}
-              >
-                Previous
-              </Button>
-              <span className='text-sm text-muted-foreground'>
-                Page {currentPage + 1} / {Math.max(totalPages, 1)}
-              </span>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onNextPage}
-                disabled={!hasNext || isFetchingOrders}
-              >
-                Next
-              </Button>
+              {selectedOrderIds.length > 0 ? (
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={onClearSelectedOrders}
+                >
+                  Clear selection
+                </Button>
+              ) : null}
             </div>
           </div>
-        ) : (
-          <p className='text-muted-foreground'>
-            No candidate orders found with CREATED/PICKUP_FAILED status on this
-            page.
-          </p>
-        )}
+          <OrderMultiSelect
+            orders={candidateOrders}
+            selectedOrderIds={selectedOrderIds}
+            onSelectionChange={onOrderSelectionChange}
+            disabled={!selectedPostOfficeId}
+            loading={isLoadingOrders}
+            placeholder={
+              selectedPostOfficeId
+                ? 'Select orders to assign...'
+                : 'Select post office first'
+            }
+          />
+          {!isLoadingOrders && selectedPostOfficeId ? (
+            <p className='text-xs text-muted-foreground'>
+              {candidateOrders.length} candidate order(s) with CREATED or
+              PICKUP_FAILED status.
+            </p>
+          ) : null}
+        </div>
 
         <div className='pt-1'>
           <Button
             type='button'
             onClick={onManualAssign}
-            disabled={isManualAssigning || selectedOrderIds.length === 0}
+            disabled={
+              isManualAssigning ||
+              selectedOrderIds.length === 0 ||
+              !selectedPostOfficeId
+            }
           >
             {activeAction === 'manual' ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />

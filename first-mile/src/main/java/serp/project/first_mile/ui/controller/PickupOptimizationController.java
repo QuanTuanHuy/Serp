@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.request.AutoAssignPickupPlanRequest;
@@ -54,8 +55,13 @@ public class PickupOptimizationController {
     @PostMapping("/manual-assign")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
     public ApiResponse<PickupAssignmentResponse> manualAssignPickupOrders(
-            @Valid @RequestBody ManualAssignPickupOrdersRequest request
+            @Valid @RequestBody ManualAssignPickupOrdersRequest request,
+            @RequestParam(value = "force_assign", required = false) Boolean forceAssign
     ) {
+        if (Boolean.TRUE.equals(forceAssign)) {
+            request.setForceAssign(true);
+        }
+
         return ApiResponse.<PickupAssignmentResponse>builder()
                 .message(messageService.getMessage("success.pickup_optimization.manual_assign"))
                 .result(pickupOptimizationService.manualAssignPickupOrders(request))

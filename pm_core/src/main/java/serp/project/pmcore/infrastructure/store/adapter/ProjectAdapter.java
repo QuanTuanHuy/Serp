@@ -71,6 +71,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public List<ProjectEntity> getActiveProjectsByIssueTypeSchemeIds(List<Long> issueTypeSchemeIds, Long tenantId) {
+        if (issueTypeSchemeIds == null || issueTypeSchemeIds.isEmpty()) {
+            return List.of();
+        }
+        return projectMapper.toEntities(
+                projectRepository.findActiveProjectsByIssueTypeSchemeIds(issueTypeSchemeIds, tenantId)
+        );
+    }
+
+    @Override
     public boolean existsActiveProjectByPrioritySchemeId(Long prioritySchemeId, Long tenantId) {
         return projectRepository.existsActiveProjectByPrioritySchemeId(prioritySchemeId, tenantId);
     }
@@ -81,6 +91,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public List<ProjectEntity> getActiveProjectsByPrioritySchemeIds(List<Long> prioritySchemeIds, Long tenantId) {
+        if (prioritySchemeIds == null || prioritySchemeIds.isEmpty()) {
+            return List.of();
+        }
+        return projectMapper.toEntities(
+                projectRepository.findActiveProjectsByPrioritySchemeIds(prioritySchemeIds, tenantId)
+        );
+    }
+
+    @Override
     public boolean existsActiveProjectByWorkflowSchemeId(Long workflowSchemeId, Long tenantId) {
         return projectRepository.existsActiveProjectByWorkflowSchemeId(workflowSchemeId, tenantId);
     }
@@ -88,6 +108,16 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     @Override
     public List<Long> getActiveProjectIdsByWorkflowSchemeId(Long workflowSchemeId, Long tenantId) {
         return projectRepository.findActiveProjectIdsByWorkflowSchemeId(workflowSchemeId, tenantId);
+    }
+
+    @Override
+    public List<ProjectEntity> getActiveProjectsByWorkflowSchemeIds(List<Long> workflowSchemeIds, Long tenantId) {
+        if (workflowSchemeIds == null || workflowSchemeIds.isEmpty()) {
+            return List.of();
+        }
+        return projectMapper.toEntities(
+                projectRepository.findActiveProjectsByWorkflowSchemeIds(workflowSchemeIds, tenantId)
+        );
     }
 
     @Override

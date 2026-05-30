@@ -19,6 +19,7 @@ import serp.project.pmcore.application.workitem.command.create.support.CreateWor
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemDraftFactory;
 import serp.project.pmcore.application.workitem.command.create.support.WorkItemFieldWriteValidator;
 import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -59,6 +60,7 @@ public class CreateWorkItemCommandHandler
     private final WorkItemFieldWriteValidator workItemFieldWriteValidator;
     private final IOutboxEventService outboxEventService;
     private final JsonUtils jsonUtils;
+    private final IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -144,7 +146,14 @@ public class CreateWorkItemCommandHandler
 
         WorkItemEntity savedWorkItem = workItemService.createWorkItem(workItem, tenantId, userId);
         workItemCustomFieldMutationService.applyPlan(savedWorkItem.getId(), tenantId, userId, customFieldPlan);
-        persistCreatedOutboxEvent(savedWorkItem, tenantId, projectId);
+        OutboxEventEntity sourceEvent = persistCreatedOutboxEvent(savedWorkItem, tenantId, projectId);
+        notificationOutboxPublisher.publishWorkItemCreatedNotifications(
+                project,
+                savedWorkItem,
+                tenantId,
+                userId,
+                sourceEvent == null ? null : sourceEvent.getId()
+        );
 
         log.info("Created work item id={} key={} projectId={} tenantId={}",
                 savedWorkItem.getId(), savedWorkItem.getKey(), projectId, tenantId);
@@ -158,9 +167,9 @@ public class CreateWorkItemCommandHandler
         }
     }
 
-    private void persistCreatedOutboxEvent(WorkItemEntity workItem,
-                                           Long tenantId,
-                                           Long projectId) {
+    private OutboxEventEntity persistCreatedOutboxEvent(WorkItemEntity workItem,
+                                                        Long tenantId,
+                                                        Long projectId) {
         WorkItemEventPayload payload = WorkItemEventPayload.builder()
                 .workItemId(workItem.getId())
                 .workItemKey(workItem.getKey())
@@ -183,7 +192,7 @@ public class CreateWorkItemCommandHandler
                 .updatedAt(System.currentTimeMillis())
                 .build();
 
-        outboxEventService.saveEvent(outboxEvent);
+        return outboxEventService.saveEvent(outboxEvent);
     }
 
     private Map<String, Boolean> toRequiredCustomFieldMap(WorkItemFieldRules fieldRules) {

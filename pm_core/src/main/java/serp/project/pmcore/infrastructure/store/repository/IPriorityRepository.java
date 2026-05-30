@@ -42,9 +42,9 @@ public interface IPriorityRepository extends JpaRepository<PriorityModel, Long> 
             WHERE (p.tenantId = :tenantId OR p.tenantId = 0)
               AND (:isSystem IS NULL OR p.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(p.priorityKey) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(p.priorityKey) LIKE :searchPattern
+                    OR LOWER(p.name) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -53,13 +53,13 @@ public interface IPriorityRepository extends JpaRepository<PriorityModel, Long> 
             WHERE (p.tenantId = :tenantId OR p.tenantId = 0)
               AND (:isSystem IS NULL OR p.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(p.priorityKey) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(p.priorityKey) LIKE :searchPattern
+                    OR LOWER(p.name) LIKE :searchPattern
               )
             """)
     Page<PriorityModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                  @Param("search") String search,
+                                                  @Param("searchPattern") String searchPattern,
                                                   @Param("isSystem") Boolean isSystem,
                                                   Pageable pageable);
 

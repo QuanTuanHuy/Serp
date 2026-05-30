@@ -42,6 +42,7 @@ type ExternalServiceProperties struct {
 	SecondMileService   ServiceProperty
 	CrmService          ServiceProperty
 	PaymentService      ServiceProperty
+	TmsBillingService   ServiceProperty
 	NotificationService ServiceProperty
 	SalesService        ServiceProperty
 	DiscussService      ServiceProperty

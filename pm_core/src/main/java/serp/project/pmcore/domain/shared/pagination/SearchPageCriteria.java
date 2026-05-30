@@ -25,4 +25,14 @@ public class SearchPageCriteria extends PageCriteria {
         String trimmed = search.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+    public String getSearchPattern() {
+        String search = getSearch();
+        return search != null ? "%" + search + "%" : null;
+    }
+
+    public String getSearchPatternLower() {
+        String search = getSearch();
+        return search != null ? "%" + search.toLowerCase() + "%" : null;
+    }
 }

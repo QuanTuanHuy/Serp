@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.second_mile.domain.Order;
+import serp.project.second_mile.enums.OrderSyncEventSource;
 import serp.project.second_mile.kafka.event.OrderSyncEvent;
 import serp.project.second_mile.repository.OrderRepository;
 import serp.project.second_mile.service.OrderSyncService;
@@ -26,6 +27,11 @@ public class OrderSyncServiceImpl implements OrderSyncService {
     public void syncOrder(OrderSyncEvent orderSyncEvent) {
         if (orderSyncEvent == null || orderSyncEvent.getOrderCode() == null) {
             log.warn("Received invalid OrderSyncEvent");
+            return;
+        }
+        if (orderSyncEvent.getEventSource() == OrderSyncEventSource.SECOND_MILE) {
+            log.debug("Skip sync-order consume: event originated from second-mile orderCode={}",
+                    orderSyncEvent.getOrderCode());
             return;
         }
 

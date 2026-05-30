@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
-import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import type { PickupShift } from '../../../../types';
 import type {
   DispatchOptimizationEffortOption,
@@ -86,10 +86,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   businessHandlers,
   onPreviewPlan,
   onAutoAssign,
-  onRefreshCandidateOrders,
   isOptimizing,
   isAutoAssigning,
-  isFetchingOrders,
   activeAction,
   isTmsAdmin,
 }) => {
@@ -338,15 +336,6 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
               <CheckCircle2 className='mr-2 h-4 w-4' />
             )}
             Auto assign
-          </Button>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={onRefreshCandidateOrders}
-            disabled={isFetchingOrders}
-          >
-            <RefreshCw className='mr-2 h-4 w-4' />
-            Refresh candidate orders
           </Button>
         </div>
 

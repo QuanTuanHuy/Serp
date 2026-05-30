@@ -15,12 +15,15 @@ import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.domain.TripOrder;
+import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
+import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.TripStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PickupCheckinRepository;
@@ -28,7 +31,9 @@ import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
+import serp.project.first_mile.service.OrderTimelineService;
 import serp.project.first_mile.service.PickupTrackingService;
+import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -54,6 +59,14 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             TripStatus.IN_PROGRESS,
             TripStatus.COMPLETED
     );
+    private static final List<OrderStatus> RETURNABLE_ORDER_STATUSES = List.of(
+            OrderStatus.PICKING_UP,
+            OrderStatus.PICKED_UP
+    );
+    private static final List<OrderStatus> AUTO_PICKUP_FAILED_CANDIDATE_STATUSES = List.of(
+            OrderStatus.ASSIGNED_TO_PICKUP,
+            OrderStatus.PICKING_UP
+    );
 
     private final FirstMileAccessUtils firstMileAccessUtils;
     private final TripRepository tripRepository;
@@ -62,6 +75,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     private final PickupCheckinRepository pickupCheckinRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
+    private final OrderTimelineService orderTimelineService;
+    private final SyncOrder syncOrder;
 
     @Override
     public PickupTrackingOverviewResponse getPickupTrackingOverview(
@@ -278,6 +293,351 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 pickupFailedOrders,
                 tripResponses,
                 orderResponses
+        );
+    }
+
+    @Override
+    public PickupCheckinDetailResponse getPickupCheckinDetail(Long orderId, Long tenantId) {
+        if (orderId == null || orderId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "orderId must be greater than 0.");
+        }
+
+        PickupCheckin pickupCheckin = pickupCheckinRepository
+                .findByTenantIdAndOrderId(tenantId, orderId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.ORDER_NOT_FOUND,
+                        "Pickup check-in not found for this order."
+                ));
+
+        Order order = orderRepository.findByIdAndTenantId(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        Trip trip = tripRepository.findByIdAndTenantId(pickupCheckin.getTripId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip is invalid."));
+
+        ensureCanViewPickupCheckin(tenantId, trip, pickupCheckin);
+
+        PostOffice postOffice = trip.getPostOfficeId() == null
+                ? null
+                : postOfficeRepository.findByIdAndTenantId(trip.getPostOfficeId(), tenantId).orElse(null);
+
+        PostOfficeStaff courier = pickupCheckin.getCourierStaffId() == null
+                ? null
+                : postOfficeStaffRepository
+                        .findByIdAndTenantId(pickupCheckin.getCourierStaffId(), tenantId)
+                        .orElse(null);
+
+        Point senderLocation = order.getSenderLocation();
+        Point checkinLocation = pickupCheckin.getCheckinLocation();
+
+        return new PickupCheckinDetailResponse(
+                pickupCheckin.getId(),
+                order.getId(),
+                order.getOrderCode(),
+                order.getCustomerOrderCode(),
+                order.getStatus(),
+                trip.getId(),
+                trip.getTripCode(),
+                trip.getStatus(),
+                pickupCheckin.getCourierStaffId(),
+                courier == null ? null : courier.getCode(),
+                courier == null ? null : courier.getFullName(),
+                trip.getPostOfficeId(),
+                postOffice == null ? null : postOffice.getCode(),
+                postOffice == null ? null : postOffice.getName(),
+                order.getSenderName(),
+                order.getSenderPhone(),
+                order.getSenderAddressDetail(),
+                getLatitude(senderLocation),
+                getLongitude(senderLocation),
+                pickupCheckin.getCheckinTime(),
+                getLatitude(checkinLocation),
+                getLongitude(checkinLocation),
+                pickupCheckin.getPhotoUrl(),
+                pickupCheckin.getDistanceM(),
+                pickupCheckin.getAllowedRadiusM()
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PickupTripLifecycleResponse completeTrip(Long tripId, Long tenantId) {
+        Trip trip = resolveTripForLifecycle(tripId, tenantId);
+        ensureCanManageTrip(tenantId, trip);
+
+        if (TripStatus.CANCELLED.equals(trip.getStatus())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Cancelled trip cannot be completed.");
+        }
+
+        markUncheckedOrdersAsPickupFailed(trip, tenantId);
+
+        if (!TripStatus.COMPLETED.equals(trip.getStatus())) {
+            trip.setStatus(TripStatus.COMPLETED);
+            tripRepository.save(trip);
+        }
+
+        return buildTripLifecycleResponse(trip, tenantId);
+    }
+
+    private void markUncheckedOrdersAsPickupFailed(Trip trip, Long tenantId) {
+        List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
+        if (tripOrders.isEmpty()) {
+            return;
+        }
+
+        List<Long> tripOrderIds = tripOrders.stream()
+                .map(TripOrder::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Set<Long> checkedInTripOrderIds = tripOrderIds.isEmpty()
+                ? Set.of()
+                : pickupCheckinRepository.findByTenantIdAndTripOrderIdIn(tenantId, tripOrderIds).stream()
+                .map(PickupCheckin::getTripOrderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Long> uncheckedOrderIds = tripOrders.stream()
+                .filter(tripOrder -> tripOrder.getId() != null && !checkedInTripOrderIds.contains(tripOrder.getId()))
+                .map(TripOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (uncheckedOrderIds.isEmpty()) {
+            return;
+        }
+
+        Map<Long, Order> orderById = orderRepository.findByTenantIdAndIdInWithLock(tenantId, uncheckedOrderIds).stream()
+                .collect(Collectors.toMap(Order::getId, order -> order));
+
+        PostOffice postOffice = trip.getPostOfficeId() == null
+                ? null
+                : postOfficeRepository.findByIdAndTenantId(trip.getPostOfficeId(), tenantId).orElse(null);
+        PostOfficeStaff courier = trip.getCourierStaffId() == null
+                ? null
+                : postOfficeStaffRepository.findByIdAndTenantId(trip.getCourierStaffId(), tenantId).orElse(null);
+
+        List<Order> changedOrders = new ArrayList<>();
+        for (Long uncheckedOrderId : uncheckedOrderIds) {
+            Order order = orderById.get(uncheckedOrderId);
+            if (order == null || order.getStatus() == null) {
+                continue;
+            }
+            if (!AUTO_PICKUP_FAILED_CANDIDATE_STATUSES.contains(order.getStatus())) {
+                continue;
+            }
+
+            order.setStatus(OrderStatus.PICKUP_FAILED);
+            changedOrders.add(order);
+        }
+
+        if (changedOrders.isEmpty()) {
+            return;
+        }
+
+        orderRepository.saveAll(changedOrders);
+
+        for (Order changedOrder : changedOrders) {
+            orderTimelineService.recordStatusEvent(
+                    changedOrder,
+                    OrderStatus.PICKUP_FAILED,
+                    "Pickup failed because trip was completed before this order was checked in.",
+                    new OrderTimelineContext(
+                            null,
+                            trip.getId(),
+                            trip.getTripCode(),
+                            trip.getPostOfficeId(),
+                            postOffice == null ? null : postOffice.getCode(),
+                            postOffice == null ? null : postOffice.getName(),
+                            trip.getCourierStaffId(),
+                            courier == null ? null : courier.getCode(),
+                            courier == null ? null : courier.getFullName(),
+                            trip.getVehicleId(),
+                            null,
+                            null,
+                            null,
+                            "Trip completion without check-in"
+                    )
+            );
+            syncOrder.sendOrderEvent(changedOrder);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PickupTripLifecycleResponse returnTripToPostOffice(Long tripId, Long tenantId) {
+        Trip trip = resolveTripForLifecycle(tripId, tenantId);
+        ensureCanManageTrip(tenantId, trip);
+
+        if (!TripStatus.COMPLETED.equals(trip.getStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Trip must be completed before returning shipment to post office."
+            );
+        }
+
+        List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
+        if (tripOrders.isEmpty()) {
+            return buildTripLifecycleResponse(trip, tenantId);
+        }
+
+        List<Long> orderIds = tripOrders.stream()
+                .map(TripOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (orderIds.isEmpty()) {
+            return buildTripLifecycleResponse(trip, tenantId);
+        }
+
+        Map<Long, Order> orderById = orderRepository.findByTenantIdAndIdInWithLock(tenantId, orderIds).stream()
+                .collect(Collectors.toMap(Order::getId, order -> order));
+
+        PostOffice postOffice = trip.getPostOfficeId() == null
+                ? null
+                : postOfficeRepository.findByIdAndTenantId(trip.getPostOfficeId(), tenantId).orElse(null);
+        PostOfficeStaff courier = trip.getCourierStaffId() == null
+                ? null
+                : postOfficeStaffRepository.findByIdAndTenantId(trip.getCourierStaffId(), tenantId).orElse(null);
+
+        List<Order> changedOrders = new ArrayList<>();
+        for (TripOrder tripOrder : tripOrders) {
+            Order order = orderById.get(tripOrder.getOrderId());
+            if (order == null || order.getStatus() == null || !RETURNABLE_ORDER_STATUSES.contains(order.getStatus())) {
+                continue;
+            }
+
+            order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+            order.setIsConfirm(true);
+            if (order.getOriginPostOfficeCode() == null && postOffice != null) {
+                order.setOriginPostOfficeCode(postOffice.getCode());
+            }
+            changedOrders.add(order);
+        }
+
+        if (changedOrders.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "No pickup orders are ready to return to post office.");
+        }
+
+        orderRepository.saveAll(changedOrders);
+
+        for (Order changedOrder : changedOrders) {
+            orderTimelineService.recordStatusEvent(
+                    changedOrder,
+                    OrderStatus.AT_ORIGIN_POST_OFFICE,
+                    "Courier returned shipment to origin post office.",
+                    new OrderTimelineContext(
+                            null,
+                            trip.getId(),
+                            trip.getTripCode(),
+                            trip.getPostOfficeId(),
+                            postOffice == null ? null : postOffice.getCode(),
+                            postOffice == null ? null : postOffice.getName(),
+                            trip.getCourierStaffId(),
+                            courier == null ? null : courier.getCode(),
+                            courier == null ? null : courier.getFullName(),
+                            trip.getVehicleId(),
+                            null,
+                            null,
+                            null,
+                            "Origin post office"
+                    )
+            );
+            syncOrder.sendOrderEvent(changedOrder);
+        }
+
+        return buildTripLifecycleResponse(trip, tenantId);
+    }
+
+    private void ensureCanViewPickupCheckin(Long tenantId, Trip trip, PickupCheckin pickupCheckin) {
+        if (firstMileAccessUtils.isAdmin()) {
+            return;
+        }
+
+        if (firstMileAccessUtils.isPostOfficerManager()) {
+            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
+            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            return;
+        }
+
+        if (firstMileAccessUtils.isCourier()) {
+            Long currentCourierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
+                    tenantId,
+                    PostOfficeStaffRole.COURIER
+            );
+            if (!Objects.equals(currentCourierStaffId, pickupCheckin.getCourierStaffId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            return;
+        }
+
+        throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private Trip resolveTripForLifecycle(Long tripId, Long tenantId) {
+        if (tripId == null || tripId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "tripId must be greater than 0.");
+        }
+        return tripRepository.findByIdAndTenantIdForUpdate(tripId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip not found."));
+    }
+
+    private void ensureCanManageTrip(Long tenantId, Trip trip) {
+        if (firstMileAccessUtils.isAdmin()) {
+            return;
+        }
+
+        if (firstMileAccessUtils.isPostOfficerManager()) {
+            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
+            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            return;
+        }
+
+        if (firstMileAccessUtils.isCourier()) {
+            Long currentCourierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
+                    tenantId,
+                    PostOfficeStaffRole.COURIER
+            );
+            if (!Objects.equals(currentCourierStaffId, trip.getCourierStaffId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            return;
+        }
+
+        throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private PickupTripLifecycleResponse buildTripLifecycleResponse(Trip trip, Long tenantId) {
+        List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
+        int totalOrders = tripOrders.size();
+        int checkedInOrders = (int) pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+
+        List<Long> orderIds = tripOrders.stream()
+                .map(TripOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        int returnedToPostOfficeOrders = orderIds.isEmpty()
+                ? 0
+                : (int) orderRepository.findByIdInAndTenantId(orderIds, tenantId).stream()
+                .filter(order -> OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus()))
+                .count();
+
+        int pendingCheckinOrders = Math.max(0, totalOrders - checkedInOrders);
+        return new PickupTripLifecycleResponse(
+                trip.getId(),
+                trip.getTripCode(),
+                trip.getStatus(),
+                totalOrders,
+                checkedInOrders,
+                pendingCheckinOrders,
+                returnedToPostOfficeOrders,
+                totalOrders > 0 && checkedInOrders >= totalOrders
         );
     }
 

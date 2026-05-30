@@ -21,6 +21,7 @@ public class PaymentCreateOrderRequest {
     private Long amount;
     private String description;
     private List<Item> items;
+    private EmbedData embedData;
     private String title;
     private String email;
     private Long tenantId;
@@ -36,5 +37,14 @@ public class PaymentCreateOrderRequest {
         private String itemName;
         private Long itemPrice;
         private Integer itemQuantity;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EmbedData {
+        private String redirectUrl;
+        private String merchantInfo;
     }
 }

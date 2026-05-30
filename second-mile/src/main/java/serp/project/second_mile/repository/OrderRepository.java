@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 import serp.project.second_mile.domain.Order;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,4 +17,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     Optional<Order> findByOrderCodeAndTenantId(String orderCode, Long tenantId);
 
     Optional<Order> findByOrderCodeIgnoreCaseAndTenantId(String orderCode, Long tenantId);
+
+    Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
+
+    List<Order> findByTenantIdAndOrderCodeIn(Long tenantId, List<String> orderCodes);
 }

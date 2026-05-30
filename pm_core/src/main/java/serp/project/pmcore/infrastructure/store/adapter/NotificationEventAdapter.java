@@ -33,4 +33,12 @@ public class NotificationEventAdapter implements INotificationEventPort {
         return notificationEventRepository.findByIdAndTenantIdOrSystemTenant(eventId, tenantId)
                 .map(notificationEventMapper::toEntity);
     }
+
+    @Override
+    public Optional<NotificationEventEntity> getNotificationEventByEventKeyIncludingSystem(String eventKey, Long tenantId) {
+        return notificationEventRepository.findByEventKeyAndTenantIdOrSystemTenant(eventKey, tenantId)
+                .stream()
+                .findFirst()
+                .map(notificationEventMapper::toEntity);
+    }
 }

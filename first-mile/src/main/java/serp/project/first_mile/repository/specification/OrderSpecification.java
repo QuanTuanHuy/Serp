@@ -122,11 +122,7 @@ public final class OrderSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("createdBy"), createdByUserId));
             }
 
-            if (managedOriginPostOfficeCodes != null) {
-                if (managedOriginPostOfficeCodes.isEmpty()) {
-                    return criteriaBuilder.disjunction();
-                }
-
+            if (managedOriginPostOfficeCodes != null && !managedOriginPostOfficeCodes.isEmpty()) {
                 Set<String> normalizedCodes = new HashSet<>();
                 for (String code : managedOriginPostOfficeCodes) {
                     if (hasText(code)) {
@@ -134,11 +130,12 @@ public final class OrderSpecification {
                     }
                 }
 
-                if (normalizedCodes.isEmpty()) {
-                    return criteriaBuilder.disjunction();
+                if (!normalizedCodes.isEmpty()) {
+                    predicates.add(criteriaBuilder.lower(root.get("originPostOfficeCode")).in(normalizedCodes));
                 }
-
-                predicates.add(criteriaBuilder.lower(root.get("originPostOfficeCode")).in(normalizedCodes));
+            } else if (managedOriginPostOfficeCodes != null) {
+                // Post-office manager with no active assignments should not see any orders.
+                return criteriaBuilder.disjunction();
             }
 
             if (courierStaffId != null) {

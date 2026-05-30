@@ -25,16 +25,23 @@ public interface IProjectRoleActorService {
                                                Long userId);
 
     void removeActor(Long tenantId,
-                     Long projectId,
-                     Long roleId,
-                     String subjectType,
-                     String subjectId,
-                     Long userId);
+                      Long projectId,
+                      Long roleId,
+                      String subjectType,
+                      String subjectId,
+                      Long userId);
+
+    void removeUserActorsByProject(Long tenantId,
+                                   Long projectId,
+                                   String subjectId,
+                                   Long userId);
 
     List<ProjectRoleActorEntity> getActorsByProjectAndRole(Long projectId, Long roleId, Long tenantId);
 
+    List<ProjectRoleActorEntity> getActorsByProject(Long projectId, Long tenantId);
+
     boolean hasRoleAssignment(Long tenantId,
-                              Long projectId,
+                               Long projectId,
                               Long roleId,
                               String subjectType,
                               String subjectId);

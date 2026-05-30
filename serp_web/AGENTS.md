@@ -10,11 +10,16 @@ This guide is for agentic coding tools working inside `serp_web/`; it complement
 - Feature code lives in `src/modules/`; route entry points live in `src/app/`.
 - Shared UI, hooks, providers, and helpers live in `src/shared/`; store setup and the RTK Query base slice live in `src/lib/store/`.
 
+## TMS (First-Mile / Second-Mile)
+
+Transport Management UI lives in `src/modules/first-mile/` (routes under `/first-mile/*`).
+For TMS-specific API wiring, English UI policy, and conventions, read **`src/modules/first-mile/AGENTS.md`** first.
+
 ## Key Directories
 
 ```text
 src/app/                # App Router pages, layouts, route wrappers
-src/modules/            # Feature modules: account, admin, crm, logistics, ptm, sales, settings, subscription
+src/modules/            # Feature modules: account, admin, crm, first-mile (TMS), logistics, ptm, sales, settings, subscription
 src/shared/             # Shared UI, hooks, providers, utils, types
 src/lib/store/          # Redux store, middleware, RTK Query base API
 package.json            # Scripts and dependencies

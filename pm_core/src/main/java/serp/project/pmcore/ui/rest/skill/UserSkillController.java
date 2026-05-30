@@ -11,12 +11,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.pmcore.application.skill.UserSkillView;
 import serp.project.pmcore.application.skill.command.user.replace.ReplaceUserSkillsCommand;
 import serp.project.pmcore.application.skill.command.user.replace.ReplaceUserSkillsCommandHandler;
+import serp.project.pmcore.application.skill.query.user.batch.ListUsersSkillsQuery;
+import serp.project.pmcore.application.skill.query.user.batch.ListUsersSkillsQueryHandler;
 import serp.project.pmcore.application.skill.query.user.list.ListUserSkillsQuery;
 import serp.project.pmcore.application.skill.query.user.list.ListUserSkillsQueryHandler;
 import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
@@ -28,17 +31,19 @@ import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
 import serp.project.pmcore.ui.rest.skill.dto.request.ReplaceUserSkillsRequest;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping(PathConstants.USER_SKILLS)
+@RequestMapping(PathConstants.USERS)
 @RequiredArgsConstructor
 public class UserSkillController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final ListUserSkillsQueryHandler listUserSkillsQueryHandler;
+    private final ListUsersSkillsQueryHandler listUsersSkillsQueryHandler;
     private final ReplaceUserSkillsCommandHandler replaceUserSkillsCommandHandler;
 
-    @GetMapping
+    @GetMapping("/{userId}/skills")
     public ResponseEntity<GeneralResponse<List<UserSkillView>>> listUserSkills(@PathVariable Long userId) {
         return ResponseEntity.ok(responseUtils.success(
                 listUserSkillsQueryHandler.handle(new ListUserSkillsQuery(
@@ -48,7 +53,18 @@ public class UserSkillController {
         ));
     }
 
-    @PutMapping
+    @GetMapping("/skills")
+    public ResponseEntity<GeneralResponse<Map<Long, List<UserSkillView>>>> listUsersSkills(
+            @RequestParam List<Long> userIds) {
+        return ResponseEntity.ok(responseUtils.success(
+                listUsersSkillsQueryHandler.handle(new ListUsersSkillsQuery(
+                        userIds,
+                        requireTenantId()
+                ))
+        ));
+    }
+
+    @PutMapping("/{userId}/skills")
     public ResponseEntity<GeneralResponse<List<UserSkillView>>> replaceUserSkills(
             @PathVariable Long userId,
             @Valid @RequestBody ReplaceUserSkillsRequest request) {
