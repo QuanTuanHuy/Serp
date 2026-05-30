@@ -8,17 +8,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  AlertCircle,
   ArrowLeft,
-  Check,
   CircleSlash,
   History,
-  ListChecks,
-  PenLine,
   PlayCircle,
   ShieldAlert,
   Sparkles,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
@@ -31,15 +26,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Checkbox,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  ScrollArea,
-  Separator,
   Tabs,
   TabsContent,
   TabsList,
@@ -52,6 +38,9 @@ import {
   useGetPmOptimizationRunQuery,
   useUpdatePmOptimizationRunItemDecisionMutation,
 } from '../api';
+import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
+import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
+import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunApi,
@@ -62,13 +51,6 @@ interface PMProjectOptimizationRunPageProps {
   projectId: string;
   runId: string;
 }
-
-const DECISION_LABELS: Record<PMOptimizationDecision, string> = {
-  ACCEPTED: 'Accept',
-  REJECTED: 'Reject',
-  OVERRIDDEN: 'Override',
-  PENDING: 'Pending',
-};
 
 function formatDate(value?: number | null) {
   if (!value) return '-';
@@ -81,11 +63,6 @@ function formatValue(value?: string | number | null) {
   return String(value);
 }
 
-function toDateInputValue(value?: number | null) {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
-}
-
 function dateInputToEpoch(value: string, endOfDay = false) {
   if (!value) return undefined;
   const date = new Date(`${value}T00:00:00`);
@@ -94,6 +71,11 @@ function dateInputToEpoch(value: string, endOfDay = false) {
     date.setHours(23, 59, 59, 999);
   }
   return date.getTime();
+}
+
+function toDateInputValue(value?: number | null) {
+  if (!value) return '';
+  return new Date(value).toISOString().slice(0, 10);
 }
 
 function metricValue(value?: number | null) {
@@ -109,6 +91,7 @@ export function PMProjectOptimizationRunPage({
   const numericProjectId = Number(projectId);
   const numericRunId = Number(runId);
   const [selectedApplyIds, setSelectedApplyIds] = useState<number[]>([]);
+  const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
   const [reviewItem, setReviewItem] = useState<PMOptimizationRunItemApi | null>(
     null
   );
@@ -121,14 +104,13 @@ export function PMProjectOptimizationRunPage({
   const [overridePlannedEnd, setOverridePlannedEnd] = useState('');
   const [activeTab, setActiveTab] = useState('summary');
 
-  const { data, isLoading, isFetching, error, refetch } =
-    useGetPmOptimizationRunQuery(
-      { projectId: numericProjectId, runId: numericRunId },
-      {
-        skip:
-          !Number.isFinite(numericProjectId) || !Number.isFinite(numericRunId),
-      }
-    );
+  const { data, isLoading, error, refetch } = useGetPmOptimizationRunQuery(
+    { projectId: numericProjectId, runId: numericRunId },
+    {
+      skip:
+        !Number.isFinite(numericProjectId) || !Number.isFinite(numericRunId),
+    }
+  );
   const { data: usersResponse } = useGetOrganizationUsersQuery(
     {
       organizationId: organizationId as number,
@@ -144,10 +126,16 @@ export function PMProjectOptimizationRunPage({
   const [discardRun, discardState] = useDiscardPmOptimizationRunMutation();
 
   useEffect(() => {
-    if (data?.items?.length) {
+    setHasInitializedSelection(false);
+    setSelectedApplyIds([]);
+  }, [numericRunId]);
+
+  useEffect(() => {
+    if (data?.items?.length && !hasInitializedSelection) {
       setSelectedApplyIds(data.items.map((item) => item.workItemId));
+      setHasInitializedSelection(true);
     }
-  }, [data?.items]);
+  }, [data?.items, hasInitializedSelection]);
 
   const users = useMemo(
     () =>
@@ -162,6 +150,11 @@ export function PMProjectOptimizationRunPage({
   );
 
   const run = data as PMOptimizationRunApi | undefined;
+  const warnings = run?.warnings || [];
+  const items = run?.items || [];
+  const summary = run?.summary;
+  const canEditAssignment = run?.changeScope !== 'SCHEDULE_ONLY';
+  const canEditSchedule = run?.changeScope !== 'ASSIGNMENT_ONLY';
 
   const handleToggleApply = (workItemId: number) => {
     setSelectedApplyIds((current) =>
@@ -231,8 +224,8 @@ export function PMProjectOptimizationRunPage({
         projectId: numericProjectId,
         runId: numericRunId,
         body: {
-          applyAssignment: true,
-          applySchedule: true,
+          applyAssignment: canEditAssignment,
+          applySchedule: canEditSchedule,
           workItemIds: selectedApplyIds,
         },
       }).unwrap();
@@ -299,9 +292,8 @@ export function PMProjectOptimizationRunPage({
     );
   }
 
-  const warnings = run.warnings || [];
-  const items = run.items || [];
-  const summary = run.summary;
+  const assignmentTabDisabled = !canEditAssignment;
+  const scheduleTabDisabled = !canEditSchedule;
 
   return (
     <div className='space-y-6'>
@@ -322,13 +314,22 @@ export function PMProjectOptimizationRunPage({
             <div className='flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
               <Sparkles className='h-5 w-5' />
             </div>
-            <div>
+            <div className='space-y-1'>
               <h1 className='text-3xl font-bold tracking-tight'>
                 Optimization run
               </h1>
               <p className='text-sm text-muted-foreground'>
                 #{run.id} · {run.status || 'GENERATED'}
               </p>
+              <div className='flex flex-wrap gap-2'>
+                <Badge variant='secondary'>{formatValue(run.objective)}</Badge>
+                <Badge variant='secondary'>
+                  {formatValue(run.changeScope)}
+                </Badge>
+                <Badge variant='secondary'>
+                  {formatValue(run.algorithmKey)}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -354,24 +355,17 @@ export function PMProjectOptimizationRunPage({
         </div>
       </div>
 
-      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-        <Metric title='Scope' value={metricValue(summary?.scopeSize)} />
-        <Metric
-          title='Suggestions'
-          value={metricValue(summary?.assignmentSuggestionCount)}
-        />
-        <Metric title='Warnings' value={metricValue(summary?.warningsCount)} />
-        <Metric
-          title='Confidence'
-          value={summary?.confidenceLevel || 'UNKNOWN'}
-        />
-      </div>
+      <PMOptimizationRunOverview run={run} summary={summary} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className='grid w-full grid-cols-5'>
           <TabsTrigger value='summary'>Summary</TabsTrigger>
-          <TabsTrigger value='assignment'>Assignment</TabsTrigger>
-          <TabsTrigger value='schedule'>Schedule</TabsTrigger>
+          <TabsTrigger value='assignment' disabled={assignmentTabDisabled}>
+            Assignment
+          </TabsTrigger>
+          <TabsTrigger value='schedule' disabled={scheduleTabDisabled}>
+            Schedule
+          </TabsTrigger>
           <TabsTrigger value='risks'>Risks</TabsTrigger>
           <TabsTrigger value='history'>History</TabsTrigger>
         </TabsList>
@@ -380,32 +374,7 @@ export function PMProjectOptimizationRunPage({
           <div className='grid gap-4 xl:grid-cols-2'>
             <Card className='shadow-sm'>
               <CardHeader>
-                <CardTitle className='text-base'>Run metadata</CardTitle>
-              </CardHeader>
-              <CardContent className='grid gap-3 md:grid-cols-2'>
-                <Field label='Mode' value={run.mode || '-'} />
-                <Field label='Status' value={run.status || '-'} />
-                <Field
-                  label='Planning start'
-                  value={formatDate(run.planningStart)}
-                />
-                <Field
-                  label='Planning end'
-                  value={formatDate(run.planningEnd)}
-                />
-                <Field
-                  label='Allow reassignment'
-                  value={run.allowReassignment ? 'Yes' : 'No'}
-                />
-                <Field
-                  label='Allow schedule changes'
-                  value={run.allowScheduleChanges ? 'Yes' : 'No'}
-                />
-              </CardContent>
-            </Card>
-            <Card className='shadow-sm'>
-              <CardHeader>
-                <CardTitle className='text-base'>Summary</CardTitle>
+                <CardTitle className='text-base'>Before / after</CardTitle>
               </CardHeader>
               <CardContent className='grid gap-3 md:grid-cols-2'>
                 <Field
@@ -426,12 +395,26 @@ export function PMProjectOptimizationRunPage({
                 />
               </CardContent>
             </Card>
+            <Card className='shadow-sm'>
+              <CardHeader>
+                <CardTitle className='text-base'>Key highlights</CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-2 text-sm text-muted-foreground'>
+                <p>Scope size: {metricValue(summary?.scopeSize)}</p>
+                <p>
+                  Suggestions: {metricValue(summary?.assignmentSuggestionCount)}
+                </p>
+                <p>Warnings: {metricValue(summary?.warningsCount)}</p>
+                <p>Confidence: {formatValue(summary?.confidenceLevel)}</p>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value='assignment' className='space-y-4'>
-          <RunItemTable
+          <PMOptimizationRunItemTable
             title='Assignment suggestions'
+            mode='assignment'
             items={items}
             selectedIds={selectedApplyIds}
             onToggleApply={handleToggleApply}
@@ -442,13 +425,19 @@ export function PMProjectOptimizationRunPage({
               handleDecision(item, { assignmentDecision: 'REJECTED' })
             }
             onOverride={openOverride}
-            mode='assignment'
+            disabled={assignmentTabDisabled}
+            disabledMessage={
+              assignmentTabDisabled
+                ? 'This run was generated as schedule-only, so assignment changes are not editable.'
+                : undefined
+            }
           />
         </TabsContent>
 
         <TabsContent value='schedule' className='space-y-4'>
-          <RunItemTable
+          <PMOptimizationRunItemTable
             title='Schedule suggestions'
+            mode='schedule'
             items={items}
             selectedIds={selectedApplyIds}
             onToggleApply={handleToggleApply}
@@ -459,7 +448,12 @@ export function PMProjectOptimizationRunPage({
               handleDecision(item, { scheduleDecision: 'REJECTED' })
             }
             onOverride={openOverride}
-            mode='schedule'
+            disabled={scheduleTabDisabled}
+            disabledMessage={
+              scheduleTabDisabled
+                ? 'This run was generated as assignment-only, so schedule changes are not editable.'
+                : undefined
+            }
           />
         </TabsContent>
 
@@ -520,132 +514,25 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
       </Tabs>
 
-      <Dialog
+      <PMOptimizationRunOverrideDialog
         open={Boolean(reviewItem)}
-        onOpenChange={(open) => !open && setReviewItem(null)}
-      >
-        <DialogContent className='max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Override suggestion</DialogTitle>
-          </DialogHeader>
-          {reviewItem ? (
-            <div className='space-y-4'>
-              <div className='grid gap-3 md:grid-cols-2'>
-                <label className='space-y-1'>
-                  <span className='text-sm font-medium'>
-                    Assignment decision
-                  </span>
-                  <select
-                    value={overrideAssignmentDecision}
-                    onChange={(event) =>
-                      setOverrideAssignmentDecision(
-                        event.target.value as PMOptimizationDecision
-                      )
-                    }
-                    className='h-10 w-full rounded-md border bg-background px-3 text-sm'
-                  >
-                    <option value='OVERRIDDEN'>Override</option>
-                    <option value='ACCEPTED'>Accept</option>
-                    <option value='REJECTED'>Reject</option>
-                    <option value='PENDING'>Pending</option>
-                  </select>
-                </label>
-                <label className='space-y-1'>
-                  <span className='text-sm font-medium'>Schedule decision</span>
-                  <select
-                    value={overrideScheduleDecision}
-                    onChange={(event) =>
-                      setOverrideScheduleDecision(
-                        event.target.value as PMOptimizationDecision
-                      )
-                    }
-                    className='h-10 w-full rounded-md border bg-background px-3 text-sm'
-                  >
-                    <option value='OVERRIDDEN'>Override</option>
-                    <option value='ACCEPTED'>Accept</option>
-                    <option value='REJECTED'>Reject</option>
-                    <option value='PENDING'>Pending</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className='space-y-1'>
-                <span className='text-sm font-medium'>Assignee</span>
-                <select
-                  value={overrideAssigneeId}
-                  onChange={(event) =>
-                    setOverrideAssigneeId(event.target.value)
-                  }
-                  className='h-10 w-full rounded-md border bg-background px-3 text-sm'
-                >
-                  <option value=''>No override</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className='grid gap-3 md:grid-cols-2'>
-                <label className='space-y-1'>
-                  <span className='text-sm font-medium'>Planned start</span>
-                  <Input
-                    type='date'
-                    value={overridePlannedStart}
-                    onChange={(event) =>
-                      setOverridePlannedStart(event.target.value)
-                    }
-                  />
-                </label>
-                <label className='space-y-1'>
-                  <span className='text-sm font-medium'>Planned end</span>
-                  <Input
-                    type='date'
-                    value={overridePlannedEnd}
-                    onChange={(event) =>
-                      setOverridePlannedEnd(event.target.value)
-                    }
-                  />
-                </label>
-              </div>
-
-              <Separator />
-              <div className='text-sm text-muted-foreground'>
-                {reviewItem.workItemId}
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => setReviewItem(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type='button'
-              onClick={saveOverride}
-              disabled={updateState.isLoading}
-            >
-              Save override
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        item={reviewItem}
+        users={users}
+        assignmentDecision={overrideAssignmentDecision}
+        scheduleDecision={overrideScheduleDecision}
+        overrideAssigneeId={overrideAssigneeId}
+        overridePlannedStart={overridePlannedStart}
+        overridePlannedEnd={overridePlannedEnd}
+        onAssignmentDecisionChange={setOverrideAssignmentDecision}
+        onScheduleDecisionChange={setOverrideScheduleDecision}
+        onOverrideAssigneeIdChange={setOverrideAssigneeId}
+        onOverridePlannedStartChange={setOverridePlannedStart}
+        onOverridePlannedEndChange={setOverridePlannedEnd}
+        onSave={saveOverride}
+        onClose={() => setReviewItem(null)}
+        isSaving={updateState.isLoading}
+      />
     </div>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <Card className='shadow-sm'>
-      <CardHeader className='pb-2'>
-        <CardTitle className='text-sm text-muted-foreground'>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className='text-2xl font-semibold'>{value}</CardContent>
-    </Card>
   );
 }
 
@@ -656,145 +543,6 @@ function Field({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className='mt-1 text-sm font-medium'>{value}</p>
-    </div>
-  );
-}
-
-function RunItemTable({
-  title,
-  items,
-  selectedIds,
-  onToggleApply,
-  onAccept,
-  onReject,
-  onOverride,
-  mode,
-}: {
-  title: string;
-  items: PMOptimizationRunItemApi[];
-  selectedIds: number[];
-  onToggleApply: (workItemId: number) => void;
-  onAccept: (item: PMOptimizationRunItemApi) => void;
-  onReject: (item: PMOptimizationRunItemApi) => void;
-  onOverride: (item: PMOptimizationRunItemApi) => void;
-  mode: 'assignment' | 'schedule';
-}) {
-  return (
-    <Card className='shadow-sm'>
-      <CardHeader className='border-b'>
-        <CardTitle className='text-base'>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className='p-0'>
-        <ScrollArea className='h-[640px]'>
-          <div className='divide-y'>
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className='grid gap-3 px-4 py-3 xl:grid-cols-[28px_minmax(0,1fr)_240px_220px_180px]'
-              >
-                <div className='pt-1'>
-                  <Checkbox
-                    checked={selectedIds.includes(item.workItemId)}
-                    onCheckedChange={() => onToggleApply(item.workItemId)}
-                  />
-                </div>
-                <div className='min-w-0'>
-                  <div className='flex items-center gap-2'>
-                    <span className='text-xs font-semibold text-primary'>
-                      #{item.workItemId}
-                    </span>
-                    <Badge variant='secondary'>
-                      {mode === 'assignment'
-                        ? DECISION_LABELS[item.assignmentDecision || 'PENDING']
-                        : DECISION_LABELS[item.scheduleDecision || 'PENDING']}
-                    </Badge>
-                  </div>
-                  <div className='mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground'>
-                    <span>Score {formatValue(item.score)}</span>
-                    <span>Cost {formatValue(item.cost)}</span>
-                    <span>Confidence {formatValue(item.confidence)}</span>
-                  </div>
-                </div>
-                <div className='text-sm text-muted-foreground'>
-                  {mode === 'assignment'
-                    ? `Current ${formatValue(item.currentAssigneeId)}`
-                    : `Current ${formatDate(item.currentPlannedStart)} → ${formatDate(item.currentPlannedEnd)}`}
-                </div>
-                <div className='text-sm text-muted-foreground'>
-                  {mode === 'assignment'
-                    ? `Suggested ${formatValue(item.suggestedAssigneeId)}`
-                    : `Suggested ${formatDate(item.suggestedPlannedStart)} → ${formatDate(item.suggestedPlannedEnd)}`}
-                </div>
-                <div className='flex flex-wrap gap-2'>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='outline'
-                    onClick={() => onAccept(item)}
-                  >
-                    <Check className='mr-2 h-4 w-4' />
-                    Accept
-                  </Button>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='outline'
-                    onClick={() => onReject(item)}
-                  >
-                    <X className='mr-2 h-4 w-4' />
-                    Reject
-                  </Button>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='ghost'
-                    onClick={() => onOverride(item)}
-                  >
-                    <PenLine className='mr-2 h-4 w-4' />
-                    Override
-                  </Button>
-                </div>
-                <div className='xl:col-span-4'>
-                  <div className='grid gap-2 md:grid-cols-2'>
-                    <DetailList
-                      title='Reasons'
-                      items={item.assignmentReasons || []}
-                    />
-                    <DetailList
-                      title='Violations'
-                      items={item.violations || []}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DetailList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className='rounded-md border bg-muted/20 p-3'>
-      <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
-        {title}
-        <Badge variant='secondary' className='h-5 px-1.5'>
-          {items.length}
-        </Badge>
-      </div>
-      <div className='space-y-1 text-sm'>
-        {items.length ? (
-          items.slice(0, 4).map((item) => (
-            <div key={item} className='truncate text-muted-foreground'>
-              {item}
-            </div>
-          ))
-        ) : (
-          <div className='text-muted-foreground'>-</div>
-        )}
-      </div>
     </div>
   );
 }
