@@ -49,7 +49,7 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
           }
         `}
       </style>
-      <DynamicSidebar moduleCode='SCHOOL_BUS' />
+      <DynamicSidebar moduleCode='SCHOOLBUS' />
       <div
         className={cn(
           'flex min-h-screen flex-1 flex-col transition-all duration-300',
@@ -58,7 +58,7 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
       >
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
-            <RouteGuard moduleCode='SCHOOL_BUS'>{children}</RouteGuard>
+            <RouteGuard moduleCode='SCHOOLBUS'>{children}</RouteGuard>
           </div>
         </main>
       </div>

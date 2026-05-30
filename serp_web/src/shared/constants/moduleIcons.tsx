@@ -33,6 +33,7 @@ export type ModuleCode =
   | 'TMS'
   | 'FIRST_MILE'
   | 'SCHOOL_BUS'
+  | 'SCHOOLBUS'
   | 'MARKETING'
   | 'PM'
   | 'PTM'
@@ -149,8 +150,13 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
   },
   SCHOOL_BUS: {
     icon: Bus,
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-50 dark:bg-yellow-950',
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50 dark:bg-rose-950',
+  },
+  SCHOOLBUS: {
+    icon: Bus,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50 dark:bg-rose-950',
   },
 
   // Finance
@@ -235,22 +241,20 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (canonicalCode === 'TTCRS') {
     return '/ttcrs/dispatcher/locations';
   }
+  if (canonicalCode === 'SCHOOLBUS') {
+    return '/school-bus';
+  }
 
   const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();
   return `/${normalizedCode.replace(/_/g, '-')}`;
-  if (moduleCode === 'ADMIN') return '/admin';
-  if (moduleCode === 'SETTINGS') return '/settings';
-  if (moduleCode === 'PTM') return '/ptm/dashboard';
-  if (moduleCode === 'CRM') return '/crm/dashboard';
-  if (moduleCode === 'SCHOOL_BUS') return '/bds/dashboard';
-  return `/${moduleCode.toLowerCase()}`;
 };
 
 export const getModuleRootRoute = (moduleCode: string): string => {
-  if (moduleCode === 'ADMIN') return '/admin';
-  if (moduleCode === 'SETTINGS') return '/settings';
-  if (moduleCode === 'PTM') return '/ptm';
-  if (moduleCode === 'CRM') return '/crm';
-  if (moduleCode === 'SCHOOL_BUS') return '/bds';
+  const canonicalCode = toCanonicalModuleCode(moduleCode);
+  if (canonicalCode === 'ADMIN') return '/admin';
+  if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'PTM') return '/ptm';
+  if (canonicalCode === 'CRM') return '/crm';
+  if (canonicalCode === 'SCHOOLBUS') return '/school-bus';
   return `/${moduleCode.toLowerCase()}`;
 };
