@@ -17,8 +17,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -29,7 +27,7 @@ import {
   CardContent,
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
-import { useAppSelector } from '@/shared/hooks';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemByIdQuery,
@@ -66,7 +64,6 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const organizationId = useAppSelector(selectOrganizationId);
   const view = parseViewMode(searchParams.get('view'));
   const selectedIssueId = parseIssueId(searchParams.get('issueId'));
   const parentId = parseIssueId(searchParams.get('parentId'));
@@ -107,31 +104,21 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const items = searchQuery.data?.data.items ?? [];
   const totalItems = searchQuery.data?.data.totalItems ?? 0;
   const visibleItemIds = useMemo(() => items.map((item) => item.id), [items]);
-  const { data: usersResponse, isLoading: isUsersLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId }
-    );
+  const { data: projectPeople = [], isLoading: isUsersLoading } =
+    useGetPmProjectPeopleQuery(projectId);
 
   const { data: meta, isFetching: isMetaFetching } =
     useGetPmWorkItemCreateMetaQuery({ projectId });
 
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
-    return [...(usersResponse?.data.items || [])]
-      .map((user) => {
+    return projectPeople
+      .map((person) => {
         const label =
-          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-          user.email ||
-          `User #${user.id}`;
-        return { value: user.id, label };
+          person.name || person.email || `User #${person.userId}`;
+        return { value: person.userId, label };
       })
       .sort((left, right) => left.label.localeCompare(right.label));
-  }, [usersResponse]);
+  }, [projectPeople]);
 
   const priorityOptions = useMemo<ComboboxItem[]>(
     () =>

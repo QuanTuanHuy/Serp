@@ -11,8 +11,6 @@ import { Loader2, PlusSquare } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useAppSelector } from '@/shared/hooks';
 import {
   Alert,
   AlertDescription,
@@ -60,7 +58,6 @@ export function CreateWorkItemDialog({
   onOpenChange,
   initialProjectId,
 }: CreateWorkItemDialogProps) {
-  const organizationId = useAppSelector(selectOrganizationId);
   const [projectSearch, setProjectSearch] = useState('');
   const [parentSearch, setParentSearch] = useState('');
   const [createPmWorkItem] = useCreatePmWorkItemMutation();
@@ -92,7 +89,6 @@ export function CreateWorkItemDialog({
     projectItems,
   } = useCreateWorkItemOptions({
     open,
-    organizationId,
     projectSearch,
     parentSearch,
     selectedProjectId,

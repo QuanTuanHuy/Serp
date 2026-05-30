@@ -8,8 +8,6 @@
 import type React from 'react';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Badge,
   Button,
@@ -21,8 +19,8 @@ import {
   ScrollArea,
   Separator,
 } from '@/shared/components/ui';
-import { useAppSelector } from '@/shared/hooks';
 import { cn } from '@/shared/utils';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
@@ -59,7 +57,6 @@ export function PMWorkItemListFilters({
   onUpdate,
   onClear,
 }: PMWorkItemListFiltersProps) {
-  const organizationId = useAppSelector(selectOrganizationId);
   const [selectedCriterion, setSelectedCriterion] =
     useState<FilterCriterion>('parent');
   const [parentSearch, setParentSearch] = useState('');
@@ -99,20 +96,11 @@ export function PMWorkItemListFilters({
     { skip: !open || selectedCriterion !== 'workType' }
   );
 
-  const { data: usersResponse } = useGetOrganizationUsersQuery(
-    {
-      organizationId: organizationId as number,
-      page: 0,
-      pageSize: 100,
-      status: 'ACTIVE',
-    },
-    {
-      skip:
-        !open ||
-        !organizationId ||
-        (selectedCriterion !== 'assignee' && selectedCriterion !== 'reporter'),
-    }
-  );
+  const { data: projectPeople = [] } = useGetPmProjectPeopleQuery(projectId, {
+    skip:
+      !open ||
+      (selectedCriterion !== 'assignee' && selectedCriterion !== 'reporter'),
+  });
 
   const { data: parentResponse, isFetching: isParentFetching } =
     useSearchPmWorkItemsQuery(
@@ -132,14 +120,13 @@ export function PMWorkItemListFilters({
 
   const users = useMemo(
     () =>
-      [...(usersResponse?.data.items || [])].sort((left, right) => {
-        const leftName =
-          `${left.firstName || ''} ${left.lastName || ''}`.trim();
-        const rightName =
-          `${right.firstName || ''} ${right.lastName || ''}`.trim();
-        return leftName.localeCompare(rightName);
-      }),
-    [usersResponse]
+      projectPeople
+        .map((person) => ({
+          id: person.userId,
+          label: person.name || person.email || `User #${person.userId}`,
+        }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    [projectPeople]
   );
 
   const activeCount = [
@@ -292,13 +279,7 @@ export function PMWorkItemListFilters({
             {selectedCriterion === 'assignee' ? (
               <CriterionPane title='Assignee'>
                 <ValueList
-                  items={users.map((user) => ({
-                    id: Number(user.id),
-                    label:
-                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                      user.email ||
-                      `User #${user.id}`,
-                  }))}
+                  items={users}
                   values={assigneeIds}
                   onToggle={(id) =>
                     toggleListValue('assigneeIds', assigneeIds, id)
@@ -353,13 +334,7 @@ export function PMWorkItemListFilters({
             {selectedCriterion === 'reporter' ? (
               <CriterionPane title='Reporter'>
                 <ValueList
-                  items={users.map((user) => ({
-                    id: Number(user.id),
-                    label:
-                      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                      user.email ||
-                      `User #${user.id}`,
-                  }))}
+                  items={users}
                   values={reporterIds}
                   onToggle={(id) =>
                     toggleListValue('reporterIds', reporterIds, id)

@@ -27,8 +27,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -49,8 +47,8 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
-import { useAppSelector } from '@/shared/hooks';
 import { PMWorkItemSkillPanel } from '../../skills';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
   useGetPmWorkItemActivitiesQuery,
   useGetPmWorkItemByIdQuery,
@@ -388,21 +386,12 @@ function PMWorkItemDetailSidebar({
   workItemId?: number;
   item: WorkItemDetailModel;
 }) {
-  const organizationId = useAppSelector(selectOrganizationId);
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
 
-  const { data: usersResponse, isLoading: isUserLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId || !workItemId }
-    );
+  const { data: projectPeople = [], isLoading: isUserLoading } =
+    useGetPmProjectPeopleQuery(projectId, { skip: !workItemId });
 
   const { data: meta, isFetching: isMetaFetching } =
     useGetPmWorkItemCreateMetaQuery(
@@ -419,16 +408,13 @@ function PMWorkItemDetailSidebar({
       { skip: !workItemId }
     );
 
-  const userItems = usersResponse?.data.items;
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
-    const options =
-      userItems?.map((user) => {
-        const name =
-          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-          user.email ||
-          `User #${user.id}`;
-        return { value: user.id, label: name };
-      }) || [];
+    const options = projectPeople
+      .map((person) => ({
+        value: person.userId,
+        label: person.name || person.email || `User #${person.userId}`,
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
 
     if (
       item.assigneeId &&
@@ -439,7 +425,7 @@ function PMWorkItemDetailSidebar({
     }
 
     return options;
-  }, [item.assigneeId, item.assigneeName, userItems]);
+  }, [item.assigneeId, item.assigneeName, projectPeople]);
 
   const priorities = meta?.priorities;
   const priorityOptions = useMemo<ComboboxItem[]>(() => {

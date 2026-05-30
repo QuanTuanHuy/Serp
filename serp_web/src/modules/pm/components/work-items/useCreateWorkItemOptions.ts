@@ -4,8 +4,10 @@
  */
 
 import { useMemo } from 'react';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
-import { useGetPmProjectsQuery } from '../../api/projectApi';
+import {
+  useGetPmProjectPeopleQuery,
+  useGetPmProjectsQuery,
+} from '../../api/projectApi';
 import {
   useGetPmWorkItemCreateMetaQuery,
   useSearchPmWorkItemsQuery,
@@ -17,7 +19,6 @@ import {
 
 interface UseCreateWorkItemOptionsArgs {
   open: boolean;
-  organizationId?: number | null;
   projectSearch: string;
   parentSearch: string;
   selectedProjectId: string;
@@ -26,7 +27,6 @@ interface UseCreateWorkItemOptionsArgs {
 
 export function useCreateWorkItemOptions({
   open,
-  organizationId,
   projectSearch,
   parentSearch,
   selectedProjectId,
@@ -59,35 +59,20 @@ export function useCreateWorkItemOptions({
       }
     );
 
-  const { data: usersResponse, isLoading: isUserLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId || !open }
-    );
+  const { data: projectPeople = [], isLoading: isUserLoading } =
+    useGetPmProjectPeopleQuery(Number(selectedProjectId), {
+      skip: !open || !selectedProjectId,
+    });
 
   const assigneeOptions = useMemo(
     () =>
-      [...(usersResponse?.data.items || [])]
-        .sort((left, right) => {
-          const leftName =
-            `${left.firstName || ''} ${left.lastName || ''}`.trim();
-          const rightName =
-            `${right.firstName || ''} ${right.lastName || ''}`.trim();
-          return leftName.localeCompare(rightName);
-        })
-        .map((user) => ({
-          id: String(user.id),
-          label:
-            `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-            user.email ||
-            `User #${user.id}`,
-        })),
-    [usersResponse]
+      projectPeople
+        .map((person) => ({
+          id: String(person.userId),
+          label: person.name || person.email || `User #${person.userId}`,
+        }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    [projectPeople]
   );
 
   const { data: parentResponse, isFetching: isParentFetching } =
