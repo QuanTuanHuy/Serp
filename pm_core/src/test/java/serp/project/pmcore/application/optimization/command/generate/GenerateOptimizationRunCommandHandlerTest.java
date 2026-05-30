@@ -35,6 +35,7 @@ import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithmRegistry;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.optimization.service.OptimizationSolutionValidator;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.math.BigDecimal;
@@ -62,6 +63,8 @@ class GenerateOptimizationRunCommandHandlerTest {
     @Mock
     private OptimizationRunReviewAssembler optimizationRunReviewAssembler;
     @Mock
+    private OptimizationSolutionValidator optimizationSolutionValidator;
+    @Mock
     private JsonUtils jsonUtils;
 
     @InjectMocks
@@ -84,6 +87,7 @@ class GenerateOptimizationRunCommandHandlerTest {
 
         when(optimizationProjectModelBuilder.build(any())).thenReturn(projectModel);
         when(optimizationAlgorithmRegistry.resolve(OptimizationAlgorithmKeys.GREEDY_BALANCED)).thenReturn(algorithm);
+        when(optimizationSolutionValidator.validate(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
         when(jsonUtils.toJson(any())).thenReturn("{}");
         when(optimizationRunPort.save(any())).thenReturn(savedRun);
         when(optimizationRunItemPort.saveAll(any())).thenReturn(List.of());

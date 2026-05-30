@@ -37,6 +37,7 @@ import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithmRegistry;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.optimization.service.OptimizationSolutionValidator;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
@@ -58,6 +59,7 @@ public class GenerateOptimizationRunCommandHandler
     private final IOptimizationRunItemPort optimizationRunItemPort;
     private final IOptimizationRunWarningPort optimizationRunWarningPort;
     private final OptimizationRunReviewAssembler optimizationRunReviewAssembler;
+    private final OptimizationSolutionValidator optimizationSolutionValidator;
     private final JsonUtils jsonUtils;
 
     @Override
@@ -87,6 +89,7 @@ public class GenerateOptimizationRunCommandHandler
                         command.allowScheduleChanges()
                 )
         );
+        solution = optimizationSolutionValidator.validate(new OptimizationProblem(projectModel, input), solution);
 
         long now = System.currentTimeMillis();
         OptimizationRunEntity run = OptimizationRunEntity.builder()
@@ -200,7 +203,7 @@ public class GenerateOptimizationRunCommandHandler
 
     private String severityOf(OptimizationConstraintViolation warning) {
         return switch (warning.code()) {
-            case DEPENDENCY_CYCLE, NO_ELIGIBLE_ASSIGNEE, OVER_CAPACITY -> "ERROR";
+            case DEPENDENCY_CYCLE, DEPENDENCY_VIOLATION, NO_ELIGIBLE_ASSIGNEE, OVER_CAPACITY -> "ERROR";
             case EXTERNAL_DEPENDENCY -> "INFO";
             default -> "WARN";
         };
