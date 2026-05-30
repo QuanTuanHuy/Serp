@@ -6,14 +6,17 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
 
 	"github.com/serp/notification-service/src/core/domain/constant"
+	"github.com/serp/notification-service/src/core/domain/dto/message"
 	"github.com/serp/notification-service/src/core/domain/dto/request"
 	"github.com/serp/notification-service/src/core/domain/entity"
 	"github.com/serp/notification-service/src/core/domain/enum"
+	"github.com/serp/notification-service/src/kernel/utils"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -200,6 +203,91 @@ func TestCreateSetsUserStatusAndInvalidates(t *testing.T) {
 	}
 	if len(rStub.deleteCalls) != 1 {
 		t.Fatalf("expected cache invalidation once, got %d", len(rStub.deleteCalls))
+	}
+}
+
+func TestCreateFromPMCoreKafkaEnvelopePreservesInAppDeliveryContract(t *testing.T) {
+	envelope := []byte(`{
+		"meta": {
+			"id": "pm-event-7000",
+			"type": "notification.create.requested",
+			"source": "pm_core",
+			"v": "1.0",
+			"ts": 1710000000000,
+			"traceId": "trace-1",
+			"tenantId": 1,
+			"actorId": 99,
+			"aggregateType": "WORK_ITEM",
+			"aggregateId": "20"
+		},
+		"data": {
+			"userId": 22,
+			"tenantId": 1,
+			"title": "SERP-1 Assigned",
+			"message": "Assigned: Build notification integration",
+			"type": "INFO",
+			"category": "PTM",
+			"priority": "MEDIUM",
+			"sourceService": "pm_core",
+			"sourceEventId": "7000",
+			"entityType": "WORK_ITEM",
+			"entityId": 20,
+			"deliveryChannels": ["IN_APP"],
+			"metadata": {
+				"notificationEventKey": "work_item.assigned",
+				"workItemId": 20
+			}
+		}
+	}`)
+
+	var baseMessage message.BaseKafkaMessage
+	if err := json.Unmarshal(envelope, &baseMessage); err != nil {
+		t.Fatalf("unexpected envelope decode error: %v", err)
+	}
+	if baseMessage.Meta.EventType != "notification.create.requested" || baseMessage.Meta.Source != "pm_core" {
+		t.Fatalf("unexpected envelope meta: %+v", baseMessage.Meta)
+	}
+
+	var req request.CreateNotificationRequest
+	if err := utils.BindKafkaMessageData(&baseMessage, &req); err != nil {
+		t.Fatalf("unexpected data bind error: %v", err)
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1) // invalidate cache goroutine
+	rStub := &redisPortStub{wg: wg}
+	var captured *entity.NotificationEntity
+	nStub := &notificationPortStub{
+		createFn: func(ctx context.Context, tx *gorm.DB, n *entity.NotificationEntity) (*entity.NotificationEntity, error) {
+			captured = n
+			return n, nil
+		},
+	}
+	svc := newService(nStub, rStub)
+
+	_, err := svc.Create(context.Background(), nil, req.UserID, &req)
+	wg.Wait()
+
+	if err != nil {
+		t.Fatalf("unexpected create error: %v", err)
+	}
+	if captured == nil {
+		t.Fatal("expected notification to be created")
+	}
+	if captured.UserID != 22 || captured.TenantID != 1 {
+		t.Fatalf("unexpected recipient context: user=%d tenant=%d", captured.UserID, captured.TenantID)
+	}
+	if captured.SourceService != "pm_core" || captured.SourceEventID == nil || *captured.SourceEventID != "7000" {
+		t.Fatalf("unexpected source fields: service=%s event=%v", captured.SourceService, captured.SourceEventID)
+	}
+	if captured.EntityType == nil || *captured.EntityType != "WORK_ITEM" || captured.EntityID == nil || *captured.EntityID != 20 {
+		t.Fatalf("unexpected entity fields: type=%v id=%v", captured.EntityType, captured.EntityID)
+	}
+	if len(captured.DeliveryChannels) != 1 || captured.DeliveryChannels[0] != enum.ChannelInApp {
+		t.Fatalf("expected IN_APP delivery channel, got %+v", captured.DeliveryChannels)
+	}
+	if captured.Metadata["notificationEventKey"] != "work_item.assigned" {
+		t.Fatalf("unexpected metadata: %+v", captured.Metadata)
 	}
 }
 

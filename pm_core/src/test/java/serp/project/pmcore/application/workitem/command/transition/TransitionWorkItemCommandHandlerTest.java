@@ -17,6 +17,8 @@ import serp.project.pmcore.application.workitem.command.transition.support.Trans
 import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.notification.dto.WorkItemStatusChangeNotificationContext;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -94,6 +96,8 @@ class TransitionWorkItemCommandHandlerTest {
     private TransitionWorkItemStatusValidator transitionWorkItemStatusValidator;
     @Mock
     private WorkItemHistoryRecorder workItemHistoryRecorder;
+    @Mock
+    private IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     private TransitionWorkItemCommandHandler handler;
 
@@ -113,7 +117,8 @@ class TransitionWorkItemCommandHandlerTest {
                 outboxEventService,
                 jsonUtils,
                 transitionWorkItemStatusValidator,
-                workItemHistoryRecorder
+                workItemHistoryRecorder,
+                notificationOutboxPublisher
         );
     }
 
@@ -180,6 +185,11 @@ class TransitionWorkItemCommandHandlerTest {
             workItem.setUpdatedBy(USER_ID);
             return workItem;
         });
+        when(outboxEventService.saveEvent(any())).thenAnswer(invocation -> {
+            OutboxEventEntity event = invocation.getArgument(0);
+            event.setId(7000L);
+            return event;
+        });
         when(jsonUtils.toJson(any())).thenReturn("{}");
 
         TransitionWorkItemStatusResult result = handler.handle(command);
@@ -203,6 +213,14 @@ class TransitionWorkItemCommandHandlerTest {
                 any(),
                 any(),
                 eq(List.of("resolution_id", "workflow_step_id", "status_id"))
+        );
+        verify(notificationOutboxPublisher).publishWorkItemStatusChangedNotifications(
+                eq(project),
+                eq(workItem),
+                eq(TENANT_ID),
+                eq(USER_ID),
+                eq(7000L),
+                any(WorkItemStatusChangeNotificationContext.class)
         );
     }
 

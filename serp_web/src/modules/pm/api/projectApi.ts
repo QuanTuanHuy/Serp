@@ -16,12 +16,15 @@ import type {
   PMDeleteProjectComponentResponse,
   PMListProjectsParams,
   PMListProjectComponentsParams,
+  PMProjectPersonApi,
+  PMProjectRoleApi,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
   PMProjectComponentApi,
   PMProjectSummaryDashboardApi,
   PMProjectSummaryApi,
   PMProjectDetailApi,
+  PMReplaceProjectPersonRolesRequest,
   PMProjectSummaryFilterParams,
   PMUpdateProjectComponentRequest,
   PMUpdateProjectRequest,
@@ -74,6 +77,25 @@ export const pmProjectApi = api.injectEndpoints({
       transformResponse: createPaginatedTransform<PMProjectCategoryApi>(),
     }),
 
+    getPmProjectRoles: builder.query<
+      PaginatedResponse<PMProjectRoleApi>,
+      { page?: number; pageSize?: number; search?: string; isSystem?: boolean }
+    >({
+      query: ({ page = 0, pageSize = 100, search, isSystem } = {}) => ({
+        url: '/roles',
+        method: 'GET',
+        params: {
+          page,
+          pageSize,
+          ...(search ? { search } : {}),
+          ...(typeof isSystem === 'boolean' ? { isSystem } : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMProjectRoleApi>(),
+      providesTags: [{ type: 'pm/ProjectRole' as const, id: 'LIST' }],
+    }),
+
     getPmProjects: builder.query<
       PaginatedResponse<PMProjectSummaryApi>,
       PMListProjectsParams
@@ -122,6 +144,18 @@ export const pmProjectApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMProjectSummaryDashboardApi>(),
       providesTags: (_result, _error, { projectId }) => [
         { type: 'pm/ProjectSummary' as const, id: projectId },
+      ],
+    }),
+
+    getPmProjectPeople: builder.query<PMProjectPersonApi[], number>({
+      query: (projectId) => ({
+        url: `/projects/${projectId}/people`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectPersonApi[]>(),
+      providesTags: (_result, _error, projectId) => [
+        { type: 'pm/ProjectPeople' as const, id: projectId },
       ],
     }),
 
@@ -224,6 +258,39 @@ export const pmProjectApi = api.injectEndpoints({
       ],
     }),
 
+    replacePmProjectPersonRoles: builder.mutation<
+      void,
+      {
+        projectId: number;
+        userId: number;
+        body: PMReplaceProjectPersonRolesRequest;
+      }
+    >({
+      query: ({ projectId, userId, body }) => ({
+        url: `/projects/${projectId}/people/${userId}/roles`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/ProjectPeople' as const, id: projectId },
+      ],
+    }),
+
+    removePmProjectPerson: builder.mutation<
+      void,
+      { projectId: number; userId: number }
+    >({
+      query: ({ projectId, userId }) => ({
+        url: `/projects/${projectId}/people/${userId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/ProjectPeople' as const, id: projectId },
+      ],
+    }),
+
     deletePmProjectComponent: builder.mutation<
       PMDeleteProjectComponentResponse,
       { projectId: number; componentId: number }
@@ -273,14 +340,18 @@ export const pmProjectApi = api.injectEndpoints({
 export const {
   useGetProjectBlueprintsQuery,
   useGetProjectCategoriesQuery,
+  useGetPmProjectRolesQuery,
   useGetPmProjectsQuery,
   useGetPmProjectByIdQuery,
   useGetPmProjectSummaryQuery,
+  useGetPmProjectPeopleQuery,
   useGetPmProjectComponentsQuery,
   useCreatePmProjectMutation,
   useCreatePmProjectComponentMutation,
   useUpdatePmProjectMutation,
   useUpdatePmProjectComponentMutation,
+  useReplacePmProjectPersonRolesMutation,
+  useRemovePmProjectPersonMutation,
   useDeletePmProjectComponentMutation,
   useArchivePmProjectMutation,
   useUnarchivePmProjectMutation,

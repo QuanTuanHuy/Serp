@@ -20,6 +20,8 @@ import serp.project.pmcore.domain.customfield.entity.CustomFieldEntity;
 import serp.project.pmcore.domain.customfield.dto.ResolvedCustomFields;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.notification.dto.WorkItemStatusChangeNotificationContext;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -81,6 +83,7 @@ public class TransitionWorkItemCommandHandler
     private final JsonUtils jsonUtils;
     private final TransitionWorkItemStatusValidator transitionWorkItemStatusValidator;
     private final WorkItemHistoryRecorder workItemHistoryRecorder;
+    private final IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -196,13 +199,21 @@ public class TransitionWorkItemCommandHandler
                 snapshotTrackedFields(updatedWorkItem),
                 changedFields
         );
-        persistStatusChangedOutboxEvent(
+        OutboxEventEntity sourceEvent = persistStatusChangedOutboxEvent(
                 updatedWorkItem,
                 project.getId(),
                 execution,
                 changedFields,
                 tenantId,
                 userId
+        );
+        notificationOutboxPublisher.publishWorkItemStatusChangedNotifications(
+                project,
+                updatedWorkItem,
+                tenantId,
+                userId,
+                sourceEvent == null ? null : sourceEvent.getId(),
+                buildStatusChangeNotificationContext(execution, updatedWorkItem)
         );
 
         log.info("Transitioned work item id={} projectId={} transitionId={} fromStepId={} toStepId={}",
@@ -626,12 +637,12 @@ public class TransitionWorkItemCommandHandler
         workItemCustomFieldValuePort.saveAll(values);
     }
 
-    private void persistStatusChangedOutboxEvent(WorkItemEntity updatedWorkItem,
-                                                 Long projectId,
-                                                 ResolvedTransitionExecution execution,
-                                                 List<String> changedFields,
-                                                 Long tenantId,
-                                                 Long userId) {
+    private OutboxEventEntity persistStatusChangedOutboxEvent(WorkItemEntity updatedWorkItem,
+                                                              Long projectId,
+                                                              ResolvedTransitionExecution execution,
+                                                              List<String> changedFields,
+                                                              Long tenantId,
+                                                              Long userId) {
         WorkItemEventPayload payload = WorkItemEventPayload.builder()
                 .workItemId(updatedWorkItem.getId())
                 .workItemKey(updatedWorkItem.getKey())
@@ -662,7 +673,23 @@ public class TransitionWorkItemCommandHandler
                 .createdAt(eventTime)
                 .updatedAt(eventTime)
                 .build();
-        outboxEventService.saveEvent(outboxEvent);
+        return outboxEventService.saveEvent(outboxEvent);
+    }
+
+    private WorkItemStatusChangeNotificationContext buildStatusChangeNotificationContext(ResolvedTransitionExecution execution,
+                                                                                        WorkItemEntity updatedWorkItem) {
+        return new WorkItemStatusChangeNotificationContext(
+                execution.transition() == null ? null : execution.transition().getId(),
+                execution.transition() == null ? null : execution.transition().getName(),
+                execution.currentStep() == null ? null : execution.currentStep().getId(),
+                execution.targetStep() == null ? null : execution.targetStep().getId(),
+                execution.targetStatus() == null ? null : execution.targetStatus().getId(),
+                execution.targetStatus() == null ? null : execution.targetStatus().getStatusKey(),
+                execution.targetStatus() == null ? null : execution.targetStatus().getName(),
+                execution.targetStatusCategory() == null ? null : execution.targetStatusCategory().getKey(),
+                execution.targetStatusCategory() == null ? null : execution.targetStatusCategory().getName(),
+                updatedWorkItem.getResolutionId()
+        );
     }
 
 }

@@ -47,9 +47,9 @@ public interface IIssueTypeRepository extends JpaRepository<IssueTypeModel, Long
               AND (:hierarchyLevel IS NULL OR i.hierarchyLevel = :hierarchyLevel)
               AND (:isSystem IS NULL OR i.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(i.typeKey) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(i.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(i.typeKey) LIKE :searchPattern
+                    OR LOWER(i.name) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -59,13 +59,13 @@ public interface IIssueTypeRepository extends JpaRepository<IssueTypeModel, Long
               AND (:hierarchyLevel IS NULL OR i.hierarchyLevel = :hierarchyLevel)
               AND (:isSystem IS NULL OR i.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(i.typeKey) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(i.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(i.typeKey) LIKE :searchPattern
+                    OR LOWER(i.name) LIKE :searchPattern
               )
             """)
     Page<IssueTypeModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                   @Param("search") String search,
+                                                   @Param("searchPattern") String searchPattern,
                                                    @Param("hierarchyLevel") Integer hierarchyLevel,
                                                    @Param("isSystem") Boolean isSystem,
                                                    Pageable pageable);

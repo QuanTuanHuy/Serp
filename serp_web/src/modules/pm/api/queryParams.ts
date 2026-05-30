@@ -55,6 +55,7 @@ export function buildProjectScopedListParams(
   return {
     ...optionalNumber('projectId', params?.projectId),
     ...optionalString('search', params?.search),
+    ...optionalBoolean('isSystem', params?.isSystem),
     page: params?.page ?? 0,
     pageSize: params?.pageSize ?? 20,
     ...optionalString('sortBy', params?.sortBy),

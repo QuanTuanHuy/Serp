@@ -45,6 +45,9 @@ import serp.project.pmcore.application.workflow.command.updatetransition.UpdateW
 import serp.project.pmcore.application.workflow.command.updatetransition.UpdateWorkflowTransitionCommandHandler;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQuery;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQueryHandler;
+import serp.project.pmcore.application.workflow.query.editor.GetWorkflowEditorQuery;
+import serp.project.pmcore.application.workflow.query.editor.GetWorkflowEditorQueryHandler;
+import serp.project.pmcore.application.workflow.query.editor.WorkflowEditorView;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQuery;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQueryHandler;
 import serp.project.pmcore.application.workflow.query.listtransitions.ListWorkflowTransitionsQuery;
@@ -76,6 +79,7 @@ public class WorkflowController {
     private final CreateWorkflowCommandHandler createWorkflowCommandHandler;
     private final UpdateWorkflowCommandHandler updateWorkflowCommandHandler;
     private final GetWorkflowByIdQueryHandler getWorkflowByIdQueryHandler;
+    private final GetWorkflowEditorQueryHandler getWorkflowEditorQueryHandler;
     private final ListWorkflowsQueryHandler listWorkflowsQueryHandler;
     private final AddWorkflowStepCommandHandler addWorkflowStepCommandHandler;
     private final RemoveWorkflowStepCommandHandler removeWorkflowStepCommandHandler;
@@ -125,6 +129,13 @@ public class WorkflowController {
     public ResponseEntity<GeneralResponse<WorkflowView>> getWorkflowById(@PathVariable Long id) {
         Long tenantId = requireCurrentTenantId();
         WorkflowView response = getWorkflowByIdQueryHandler.handle(new GetWorkflowByIdQuery(id, tenantId));
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/{id}/editor")
+    public ResponseEntity<GeneralResponse<WorkflowEditorView>> getWorkflowEditor(@PathVariable Long id) {
+        Long tenantId = requireCurrentTenantId();
+        WorkflowEditorView response = getWorkflowEditorQueryHandler.handle(new GetWorkflowEditorQuery(id, tenantId));
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
