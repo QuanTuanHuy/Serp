@@ -17,6 +17,7 @@ import type {
   PMCreateStatusRequest,
   PMDeleteWorkItemLinkResponse,
   PMGetWorkItemBoardParams,
+  PMGetWorkItemCalendarParams,
   PMGetWorkItemTimelineParams,
   PMIssueLinkTypeApi,
   PMIssueTypeApi,
@@ -37,6 +38,7 @@ import type {
   PMWorkItemCreateMetaResponse,
   PMWorkItemDetailApi,
   PMWorkItemLinkApi,
+  PMWorkItemScheduleCalendarResponse,
   PMWorkItemTimelineResponse,
   PMWorkItemTransitionApi,
   PMWorkItemSearchApi,
@@ -45,6 +47,7 @@ import type {
 } from '../types/api';
 import {
   buildProjectScopedListParams,
+  buildWorkItemCalendarParams,
   buildWorkItemBoardParams,
   buildWorkItemSearchParams,
   buildWorkItemTimelineParams,
@@ -623,6 +626,30 @@ export const pmWorkItemApi = api.injectEndpoints({
             ]
           : [{ type: 'pm/WorkItem', id: 'LIST' }],
     }),
+
+    getPmWorkItemScheduleCalendar: builder.query<
+      PMWorkItemScheduleCalendarResponse,
+      { projectId: number; params?: PMGetWorkItemCalendarParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/calendar/schedule-allocations`,
+        method: 'GET',
+        params: buildWorkItemCalendarParams(params),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMWorkItemScheduleCalendarResponse>(),
+      providesTags: (result) =>
+        result?.items.length
+          ? [
+              ...result.items.map(({ workItemId }) => ({
+                type: 'pm/WorkItem' as const,
+                id: workItemId,
+              })),
+              { type: 'pm/WorkItem', id: 'LIST' },
+            ]
+          : [{ type: 'pm/WorkItem', id: 'LIST' }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -652,6 +679,7 @@ export const {
   useGetPmStatusCategoriesQuery,
   useGetPmStatusesQuery,
   useGetPmWorkItemTimelineQuery,
+  useGetPmWorkItemScheduleCalendarQuery,
   useSearchPmWorkItemsQuery,
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemCommentMutation,

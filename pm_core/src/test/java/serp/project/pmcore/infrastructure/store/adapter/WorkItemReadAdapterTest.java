@@ -17,7 +17,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryActivityProjection;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
+import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleCalendarCriteria;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,6 +56,7 @@ class WorkItemReadAdapterTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -67,7 +71,7 @@ class WorkItemReadAdapterTest {
         when(jdbcTemplate.query(
                 anyString(),
                 any(MapSqlParameterSource.class),
-                any(RowMapper.class)
+                nullable(RowMapper.class)
         )).thenReturn(List.of());
         when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
                 .thenReturn(0L);
@@ -79,7 +83,7 @@ class WorkItemReadAdapterTest {
         verify(jdbcTemplate).query(
                 dataSqlCaptor.capture(),
                 any(MapSqlParameterSource.class),
-                any(RowMapper.class)
+                nullable(RowMapper.class)
         );
         verify(jdbcTemplate).queryForObject(
                 countSqlCaptor.capture(),
@@ -98,6 +102,44 @@ class WorkItemReadAdapterTest {
         assertTrue(countSql.startsWith("WITH filtered_items AS"));
         assertTrue(countSql.contains("SELECT COUNT(*) FROM activity"));
         assertFalse(countSql.startsWith("SELECT COUNT(*) WITH"));
+    }
+
+    @Test
+    void listScheduleAllocationCalendarItemsShouldFilterByAllocationOverlapAndAssignee() {
+        WorkItemScheduleCalendarCriteria criteria = WorkItemScheduleCalendarCriteria.builder()
+                .projectId(10L)
+                .viewportStart(1000L)
+                .viewportEnd(2000L)
+                .assigneeIds(List.of(5L))
+                .build();
+        when(jdbcTemplate.query(
+                anyString(),
+                any(MapSqlParameterSource.class),
+                nullable(RowMapper.class)
+        )).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(0L);
+
+        adapter.listScheduleAllocationCalendarItems(1L, criteria);
+
+        ArgumentCaptor<String> dataSqlCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<MapSqlParameterSource> paramsCaptor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(jdbcTemplate).query(
+                dataSqlCaptor.capture(),
+                paramsCaptor.capture(),
+                nullable(RowMapper.class)
+        );
+
+        String dataSql = normalizeSql(dataSqlCaptor.getValue());
+        MapSqlParameterSource params = paramsCaptor.getValue();
+
+        assertTrue(dataSql.contains("FROM work_item_plan_allocations a"));
+        assertTrue(dataSql.contains("a.end_time > :scheduleViewportStart"));
+        assertTrue(dataSql.contains("a.start_time < :scheduleViewportEnd"));
+        assertTrue(dataSql.contains("a.assignee_id IN (:assigneeIds)"));
+        assertFalse(dataSql.contains("w.assignee_id IN (:assigneeIds)"));
+        assertEquals(new Timestamp(1000L), params.getValue("scheduleViewportStart"));
+        assertEquals(new Timestamp(2000L), params.getValue("scheduleViewportEnd"));
     }
 
     private String normalizeSql(String sql) {

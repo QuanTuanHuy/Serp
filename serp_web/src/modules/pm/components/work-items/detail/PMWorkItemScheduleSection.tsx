@@ -41,6 +41,27 @@ export function PMWorkItemScheduleSection({
               {formatDetailDate(schedule.plannedStart)} to{' '}
               {formatDetailDate(schedule.plannedEnd)}
             </div>
+            {schedule.allocations?.length ? (
+              <div className='space-y-1.5 pt-1'>
+                {schedule.allocations.map((allocation, index) => (
+                  <div
+                    key={`${allocation.start ?? index}-${allocation.end ?? index}`}
+                    className='rounded-md border bg-muted/20 px-2 py-1.5 text-xs'
+                  >
+                    <div className='font-medium'>
+                      {formatDetailDateTime(allocation.start)} to{' '}
+                      {formatDetailDateTime(allocation.end)}
+                    </div>
+                    <div className='mt-0.5 text-muted-foreground'>
+                      {formatEffort(allocation.effortMillis)}
+                      {allocation.assigneeId
+                        ? ` / User #${allocation.assigneeId}`
+                        : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : (
           <span className='text-muted-foreground'>Unscheduled</span>
@@ -53,4 +74,26 @@ export function PMWorkItemScheduleSection({
       </DetailField>
     </DetailSection>
   );
+}
+
+function formatDetailDateTime(value?: number | string | null): string {
+  if (!value) return 'None';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'None';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatEffort(value?: number | null): string {
+  if (!value) return '0m';
+  const minutes = Math.round(value / 60000);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }

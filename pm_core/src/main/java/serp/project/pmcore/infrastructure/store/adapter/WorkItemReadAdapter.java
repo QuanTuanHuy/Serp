@@ -17,6 +17,8 @@ import serp.project.pmcore.domain.workitem.dto.ProjectSummaryBreakdownProjection
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryMetricsProjection;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryParentOptionProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleAllocationCalendarProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleCalendarCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardItemProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemBoardStatusProjection;
@@ -36,6 +38,7 @@ import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardItemRowMappe
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemBoardStatusRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemChildRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemLinkRowMapper;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemScheduleAllocationCalendarRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineDependencyRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemTimelineItemRowMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemMapper;
@@ -68,6 +71,7 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
     private final WorkItemChildRowMapper childRowMapper;
     private final WorkItemLinkRowMapper linkRowMapper;
     private final WorkItemActivityRowMapper activityRowMapper;
+    private final WorkItemScheduleAllocationCalendarRowMapper scheduleAllocationCalendarRowMapper;
 
     @Override
     public Optional<WorkItemEntity> getWorkItemById(Long id, Long tenantId) {
@@ -438,6 +442,60 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                 .addValue("workItemIds", workItemIds);
 
         return jdbcTemplate.query(sql, params, timelineDependencyRowMapper);
+    }
+
+    @Override
+    public PageResult<WorkItemScheduleAllocationCalendarProjection> listScheduleAllocationCalendarItems(
+            Long tenantId,
+            WorkItemScheduleCalendarCriteria criteria
+    ) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", tenantId)
+                .addValue("projectId", criteria.getProjectId())
+                .addValue("limit", criteria.getPageSize())
+                .addValue("offset", criteria.getPage() * criteria.getPageSize());
+
+        String fromSql = buildScheduleCalendarFromSql();
+        String whereSql = buildScheduleCalendarWhereSql(criteria, params);
+        String dataSql = """
+                SELECT
+                    a.id AS allocation_id,
+                    a.work_item_plan_id,
+                    a.work_item_id,
+                    a.project_id,
+                    w.key,
+                    w.summary,
+                    a.assignee_id,
+                    CAST(NULL AS VARCHAR) AS assignee_name,
+                    CAST(NULL AS VARCHAR) AS assignee_avatar_url,
+                    a.start_time,
+                    a.end_time,
+                    a.effort_millis,
+                    a.source,
+                    a.source_run_id,
+                    a.source_run_item_id,
+                    it.id AS issue_type_id,
+                    it.name AS issue_type_name,
+                    it.icon_url AS issue_type_icon_url,
+                    it.hierarchy_level AS issue_type_hierarchy_level,
+                    st.id AS status_id,
+                    st.name AS status_name,
+                    pr.id AS priority_id,
+                    pr.name AS priority_name,
+                    pr.color AS priority_color
+                """ + fromSql + whereSql + """
+                 ORDER BY a.start_time ASC, a.end_time ASC, w.rank ASC NULLS LAST, a.id ASC
+                 LIMIT :limit OFFSET :offset
+                """;
+        String countSql = "SELECT COUNT(*) " + fromSql + whereSql;
+
+        List<WorkItemScheduleAllocationCalendarProjection> items = jdbcTemplate.query(
+                dataSql,
+                params,
+                scheduleAllocationCalendarRowMapper
+        );
+        Long total = jdbcTemplate.queryForObject(countSql, params, Long.class);
+        return new PageResult<>(items, total != null ? total : 0L);
     }
 
     @Override
@@ -1048,6 +1106,71 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                       AND scoped.depth < :depth
                 )
                 """;
+    }
+
+    private String buildScheduleCalendarFromSql() {
+        return """
+                FROM work_item_plan_allocations a
+                JOIN work_item_plans p
+                  ON p.id = a.work_item_plan_id
+                 AND p.tenant_id = a.tenant_id
+                 AND p.project_id = a.project_id
+                 AND p.work_item_id = a.work_item_id
+                 AND p.deleted_at IS NULL
+                JOIN work_items w
+                  ON w.id = a.work_item_id
+                 AND w.tenant_id = a.tenant_id
+                 AND w.project_id = a.project_id
+                 AND w.deleted_at IS NULL
+                LEFT JOIN issue_types it ON it.id = w.issue_type_id AND it.deleted_at IS NULL
+                LEFT JOIN statuses st ON st.id = w.status_id AND st.deleted_at IS NULL
+                LEFT JOIN priorities pr ON pr.id = w.priority_id AND pr.deleted_at IS NULL
+                """;
+    }
+
+    private String buildScheduleCalendarWhereSql(WorkItemScheduleCalendarCriteria criteria,
+                                                 MapSqlParameterSource params) {
+        StringBuilder whereSql = new StringBuilder("""
+                WHERE a.tenant_id = :tenantId
+                  AND a.project_id = :projectId
+                """);
+
+        appendInFilter(whereSql, params, "w.status_id", "statusIds", criteria.getStatusIds());
+        appendInFilter(whereSql, params, "a.assignee_id", "assigneeIds", criteria.getAssigneeIds());
+        appendInFilter(whereSql, params, "w.issue_type_id", "issueTypeIds", criteria.getIssueTypeIds());
+        appendKeywordFilter(whereSql, params, "w", criteria.getKeyword());
+        appendScheduleCalendarViewportFilter(whereSql, params, criteria);
+        return whereSql.toString();
+    }
+
+    private void appendKeywordFilter(StringBuilder whereSql,
+                                     MapSqlParameterSource params,
+                                     String workItemAlias,
+                                     String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return;
+        }
+        params.addValue("keyword", "%" + keyword.trim().toLowerCase() + "%");
+        whereSql.append("\n  AND (LOWER(")
+                .append(workItemAlias)
+                .append(".key) LIKE :keyword OR LOWER(")
+                .append(workItemAlias)
+                .append(".summary) LIKE :keyword)");
+    }
+
+    private void appendScheduleCalendarViewportFilter(StringBuilder whereSql,
+                                                      MapSqlParameterSource params,
+                                                      WorkItemScheduleCalendarCriteria criteria) {
+        Timestamp viewportStart = toTimestamp(criteria.getViewportStart());
+        Timestamp viewportEnd = toTimestamp(criteria.getViewportEnd());
+        if (viewportStart != null) {
+            params.addValue("scheduleViewportStart", viewportStart);
+            whereSql.append("\n  AND a.end_time > :scheduleViewportStart");
+        }
+        if (viewportEnd != null) {
+            params.addValue("scheduleViewportEnd", viewportEnd);
+            whereSql.append("\n  AND a.start_time < :scheduleViewportEnd");
+        }
     }
 
     private String buildTimelineFromSql(WorkItemTimelineCriteria criteria) {

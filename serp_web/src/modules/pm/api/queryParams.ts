@@ -5,6 +5,7 @@
 
 import type {
   PMGetWorkItemBoardParams,
+  PMGetWorkItemCalendarParams,
   PMGetWorkItemTimelineParams,
   PMListProjectsParams,
   PMProjectSummaryFilterParams,
@@ -127,6 +128,21 @@ export function buildWorkItemTimelineParams(
     ...optionalString('keyword', params?.keyword),
     page: params?.page ?? 0,
     pageSize: params?.pageSize ?? 200,
+  };
+}
+
+export function buildWorkItemCalendarParams(
+  params?: PMGetWorkItemCalendarParams
+): QueryParams {
+  return {
+    ...optionalNumber('viewportStart', params?.viewportStart),
+    ...optionalNumber('viewportEnd', params?.viewportEnd),
+    ...optionalNumberList('statusIds', params?.statusIds),
+    ...optionalNumberList('assigneeIds', params?.assigneeIds),
+    ...optionalNumberList('issueTypeIds', params?.issueTypeIds),
+    ...optionalString('keyword', params?.keyword),
+    page: params?.page ?? 0,
+    pageSize: params?.pageSize ?? 500,
   };
 }
 
