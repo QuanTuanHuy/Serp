@@ -12,6 +12,7 @@ import serp.project.pmcore.application.optimization.query.get.OptimizationRunRev
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
 import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
@@ -215,7 +216,8 @@ public class UpdateOptimizationRunItemDecisionCommandHandler
                 run.getPlanningEnd(),
                 run.getAllowReassignment(),
                 run.getAllowScheduleChanges(),
-                mode
+                mode,
+                OptimizationAlgorithmKeys.GREEDY_BALANCED
         ));
     }
 

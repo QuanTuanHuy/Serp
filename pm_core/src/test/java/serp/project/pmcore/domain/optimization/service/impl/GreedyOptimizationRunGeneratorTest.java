@@ -6,6 +6,7 @@
 package serp.project.pmcore.domain.optimization.service.impl;
 
 import org.junit.jupiter.api.Test;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
@@ -168,7 +169,8 @@ class GreedyOptimizationRunGeneratorTest {
     }
 
     private OptimizationBuilderInput input(boolean allowReassignment, boolean allowSchedule, OptimizationMode mode) {
-        return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END, allowReassignment, allowSchedule, mode);
+        return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END,
+                allowReassignment, allowSchedule, mode, OptimizationAlgorithmKeys.GREEDY_BALANCED);
     }
 
     private OptimizationProjectModel model(List<OptimizationWorkItem> items, OptimizationDependencyGraph graph) {

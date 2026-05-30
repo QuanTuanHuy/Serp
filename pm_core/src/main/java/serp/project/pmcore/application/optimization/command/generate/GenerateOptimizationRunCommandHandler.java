@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
@@ -67,7 +68,8 @@ public class GenerateOptimizationRunCommandHandler
                 command.planningEnd(),
                 command.allowReassignment(),
                 command.allowScheduleChanges(),
-                command.mode()
+                command.mode(),
+                OptimizationAlgorithmKeys.GREEDY_BALANCED
         );
         OptimizationProjectModel projectModel = optimizationProjectModelBuilder.build(input);
         OptimizationGenerationResult generation = optimizationRunGenerator.generate(projectModel, input);

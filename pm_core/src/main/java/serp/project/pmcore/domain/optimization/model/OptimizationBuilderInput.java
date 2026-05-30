@@ -17,6 +17,7 @@ public record OptimizationBuilderInput(
         Long planningEnd,
         Boolean allowReassignment,
         Boolean allowScheduleChanges,
-        OptimizationMode mode
+        OptimizationMode mode,
+        String algorithmKey
 ) {
 }

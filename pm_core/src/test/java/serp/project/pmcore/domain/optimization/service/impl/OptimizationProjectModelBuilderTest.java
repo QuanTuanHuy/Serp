@@ -15,6 +15,7 @@ import serp.project.pmcore.domain.issuelink.entity.IssueLinkTypeEntity;
 import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkPort;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkTypePort;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
@@ -268,7 +269,7 @@ class OptimizationProjectModelBuilderTest {
 
     private OptimizationBuilderInput input(List<Long> ids) {
         return new OptimizationBuilderInput(1L, 100L, ids, 1_714_876_800_000L, 1_715_481_600_000L,
-                true, true, OptimizationMode.BALANCED_WORKLOAD);
+                true, true, OptimizationMode.BALANCED_WORKLOAD, OptimizationAlgorithmKeys.GREEDY_BALANCED);
     }
 
     private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {
