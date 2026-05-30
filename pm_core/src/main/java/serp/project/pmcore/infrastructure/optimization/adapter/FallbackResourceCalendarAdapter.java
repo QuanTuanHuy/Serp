@@ -17,6 +17,7 @@ import serp.project.pmcore.domain.optimization.port.IResourceCalendarPort;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -24,6 +25,8 @@ import java.util.List;
 
 @Component
 public class FallbackResourceCalendarAdapter implements IResourceCalendarPort {
+    private static final ZoneOffset VIETNAM_ZONE = ZoneOffset.ofHours(7);
+
     @Override
     public CalendarCapacityResult resolveWorkingCapacity(Long tenantId,
                                                          List<Long> userIds,
@@ -35,15 +38,17 @@ public class FallbackResourceCalendarAdapter implements IResourceCalendarPort {
         }
         List<Long> uniqueUserIds = new ArrayList<>(new LinkedHashSet<>(userIds));
         List<ResourceCapacitySlot> slots = new ArrayList<>();
-        LocalDate start = Instant.ofEpochMilli(planningStart).atZone(ZoneOffset.UTC).toLocalDate();
-        LocalDate end = Instant.ofEpochMilli(planningEnd).atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate start = Instant.ofEpochMilli(planningStart).atZone(VIETNAM_ZONE).toLocalDate();
+        LocalDate end = Instant.ofEpochMilli(planningEnd).atZone(VIETNAM_ZONE).toLocalDate();
         for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
             DayOfWeek dow = day.getDayOfWeek();
             if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
                 continue;
             }
-            long slotStart = day.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli();
-            long slotEnd = slotStart + OptimizationConstants.DAY_MILLIS;
+            long slotStart = day.atTime(LocalTime.of(OptimizationConstants.FALLBACK_WORKDAY_START_HOUR_UTC_PLUS_7, 0))
+                    .toInstant(VIETNAM_ZONE)
+                    .toEpochMilli();
+            long slotEnd = slotStart + OptimizationConstants.DAILY_CAPACITY_MILLIS;
             for (Long userId : uniqueUserIds) {
                 slots.add(new ResourceCapacitySlot(userId, slotStart, slotEnd, OptimizationConstants.DAILY_CAPACITY_MILLIS));
             }

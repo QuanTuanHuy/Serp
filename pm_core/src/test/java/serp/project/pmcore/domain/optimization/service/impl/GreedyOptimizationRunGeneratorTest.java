@@ -174,6 +174,38 @@ class GreedyOptimizationRunGeneratorTest {
     }
 
     @Test
+    void generateShouldBackfillUnusedCapacityBeforeMidSlotReservation() {
+        WorkItemEntity delayedHighPriority = workItem(10L, 100L, null);
+        WorkItemEntity normalPriority = workItem(20L, 100L, null);
+        OptimizationProjectModel model = model(
+                List.of(
+                        optimizationItem(delayedHighPriority,
+                                List.of(candidate(delayedHighPriority, 100L, 1D, true, null)),
+                                4 * HOUR,
+                                100D),
+                        optimizationItem(normalPriority,
+                                List.of(candidate(normalPriority, 100L, 1D, true, null)),
+                                4 * HOUR,
+                                1D)
+                ),
+                graphWithoutDependencies(List.of(10L, 20L)),
+                capacityResolution(List.of(new ResourceCapacitySlot(100L, START, START + 8 * HOUR, 8 * HOUR))),
+                Map.of(10L, START + 4 * HOUR)
+        );
+
+        OptimizationGenerationResult result = generator.generate(model,
+                options(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                        new BalancedOptimizationAssignmentScoringStrategy()));
+
+        OptimizationScheduleSuggestion delayedSchedule = result.scheduleSuggestions().get(10L);
+        OptimizationScheduleSuggestion normalSchedule = result.scheduleSuggestions().get(20L);
+        assertEquals(START + 4 * HOUR, delayedSchedule.plannedStart());
+        assertEquals(START + 8 * HOUR, delayedSchedule.plannedEnd());
+        assertEquals(START, normalSchedule.plannedStart());
+        assertEquals(START + 4 * HOUR, normalSchedule.plannedEnd());
+    }
+
+    @Test
     void generateShouldUseRequiredSkillMatchToBeatProjectMemberFallback() {
         WorkItemEntity item = workItem(10L, 100L, null);
         OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(

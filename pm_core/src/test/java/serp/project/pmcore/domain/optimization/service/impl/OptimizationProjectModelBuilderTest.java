@@ -144,6 +144,22 @@ class OptimizationProjectModelBuilderTest {
     }
 
     @Test
+    void buildShouldConvertMinuteEstimateToDurationMillis() {
+        stubProject();
+        WorkItemEntity item = item(10L);
+        item.setTimeOriginalEstimate(300L);
+        when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
+        when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
+        stubResourcePorts(List.of(10L), List.of(100L));
+
+        OptimizationProjectModel model = builder.build(input(List.of(10L)));
+
+        assertEquals(18_000_000L, model.workItems().get(0).duration().durationMillis());
+    }
+
+    @Test
     void buildShouldResolveCandidateAssigneesDeterministically() {
         stubProject();
         WorkItemEntity item = item(10L);

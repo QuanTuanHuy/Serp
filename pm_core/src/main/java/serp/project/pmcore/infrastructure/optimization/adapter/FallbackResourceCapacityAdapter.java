@@ -6,6 +6,7 @@
 package serp.project.pmcore.infrastructure.optimization.adapter;
 
 import org.springframework.stereotype.Component;
+import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
@@ -68,7 +69,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         CalendarCapacityResult calendar = resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd);
         List<ResourceCapacitySlot> calendarSlots = calendar.slots();
         if (calendarSlots.isEmpty()) {
-            return new CapacityResolutionResult(List.of(), CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+            return new CapacityResolutionResult(List.of(), CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
                     calendar.coverageStatus(), CapacityCoverageStatus.NOT_REQUIRED, calendar.fallbackUserIds(), calendar.fetchedAt(),
                     System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
@@ -83,19 +84,36 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 LocalDateTime.ofInstant(Instant.ofEpochMilli(planningEnd), ZoneOffset.UTC),
                 safeExcludedIds
         );
-        if (planModels.isEmpty()) {
-            return new CapacityResolutionResult(calendarSlots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+        List<WorkItemModel> unplannedWorkItems = workItemRepository.findActiveUnplannedWorkloadItems(
+                tenantId,
+                userIds,
+                safeExcludedIds,
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningStart), ZoneOffset.UTC),
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningEnd), ZoneOffset.UTC)
+        );
+        if (planModels.isEmpty() && unplannedWorkItems.isEmpty()) {
+            return new CapacityResolutionResult(calendarSlots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
                     calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(), calendar.fetchedAt(),
                     System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
-        Map<Long, WorkItemModel> workItemsById = workItemRepository.findAllByTenantIdAndIdIn(
-                        tenantId,
-                        planModels.stream().map(WorkItemPlanModel::getWorkItemId).distinct().toList()
-                )
-                .stream()
-                .filter(item -> item.getAssigneeId() != null && userIds.contains(item.getAssigneeId()))
-                .filter(item -> item.getResolutionId() == null)
-                .collect(Collectors.toMap(WorkItemModel::getId, item -> item, (left, right) -> left));
+        Map<Long, WorkItemModel> workItemsById = planModels.isEmpty()
+                ? Map.of()
+                : workItemRepository.findAllByTenantIdAndIdIn(
+                                tenantId,
+                                planModels.stream().map(WorkItemPlanModel::getWorkItemId).distinct().toList()
+                        )
+                        .stream()
+                        .filter(item -> item.getAssigneeId() != null && userIds.contains(item.getAssigneeId()))
+                        .filter(item -> item.getResolutionId() == null)
+                        .collect(Collectors.toMap(WorkItemModel::getId, item -> item, (left, right) -> left));
+        Map<Long, Long> sameProjectUnplannedByAssignee = unplannedWorkItems.stream()
+                .filter(item -> Objects.equals(item.getProjectId(), projectId))
+                .collect(Collectors.groupingBy(WorkItemModel::getAssigneeId,
+                        Collectors.summingLong(this::remainingEstimateMillis)));
+        Map<Long, Long> crossProjectUnplannedByAssignee = unplannedWorkItems.stream()
+                .filter(item -> !Objects.equals(item.getProjectId(), projectId))
+                .collect(Collectors.groupingBy(WorkItemModel::getAssigneeId,
+                        Collectors.summingLong(this::remainingEstimateMillis)));
 
         Map<BucketKey, BucketAccumulator> bucketAccumulators = new HashMap<>();
         List<ResourceCapacitySlot> netSlots = new ArrayList<>();
@@ -121,6 +139,11 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                     crossProject += overlap;
                 }
             }
+            long remainingCapacity = Math.max(0L, slot.capacityMillis() - sameProject - crossProject);
+            long unplannedSameProject = consumeWorkload(sameProjectUnplannedByAssignee, slot.assigneeId(), remainingCapacity);
+            sameProject += unplannedSameProject;
+            remainingCapacity = Math.max(0L, remainingCapacity - unplannedSameProject);
+            crossProject += consumeWorkload(crossProjectUnplannedByAssignee, slot.assigneeId(), remainingCapacity);
             long reserved = sameProject + crossProject;
             if (reserved > slot.capacityMillis()) {
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.CAPACITY_RESERVATION_EXCEEDS_AVAILABILITY,
@@ -145,10 +168,27 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         long sameProjectMillis = buckets.stream().mapToLong(CapacityWorkloadBucket::sameProjectOutsideScopeReservedMillis).sum();
         long crossProjectMillis = buckets.stream().mapToLong(CapacityWorkloadBucket::crossProjectReservedMillis).sum();
         return new CapacityResolutionResult(netSlots,
-                sameProjectMillis + crossProjectMillis > 0 ? CapacitySourceMode.FALLBACK_WITH_WORKLOAD : CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
+                sameProjectMillis + crossProjectMillis > 0 ? CapacitySourceMode.FALLBACK_WITH_WORKLOAD : CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
                 calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(),
                 calendar.fetchedAt(), System.currentTimeMillis(), sameProjectMillis + crossProjectMillis,
                 sameProjectMillis, crossProjectMillis, buckets, warnings);
+    }
+
+    private long consumeWorkload(Map<Long, Long> workloadByAssignee, Long assigneeId, long capacityMillis) {
+        long remainingWorkload = workloadByAssignee.getOrDefault(assigneeId, 0L);
+        if (remainingWorkload <= 0 || capacityMillis <= 0) {
+            return 0L;
+        }
+        long consumed = Math.min(remainingWorkload, capacityMillis);
+        workloadByAssignee.put(assigneeId, remainingWorkload - consumed);
+        return consumed;
+    }
+
+    private long remainingEstimateMillis(WorkItemModel item) {
+        Long estimate = item.getTimeRemainingEstimate() != null
+                ? item.getTimeRemainingEstimate()
+                : item.getTimeOriginalEstimate();
+        return estimate == null || estimate <= 0 ? 0L : Math.multiplyExact(estimate, OptimizationConstants.MINUTE_MILLIS);
     }
 
     private long overlapMillis(Long startA, Long endA, Long startB, Long endB) {

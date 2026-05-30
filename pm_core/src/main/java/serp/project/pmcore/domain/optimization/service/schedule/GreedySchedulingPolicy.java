@@ -51,7 +51,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                 .collect(Collectors.groupingBy(ResourceCapacitySlot::assigneeId));
         slotsByAssignee.values().forEach(slots -> slots.sort(Comparator.comparing(ResourceCapacitySlot::slotStart)));
 
-        Map<SlotKey, Long> usedBySlot = new HashMap<>();
+        Map<SlotKey, List<TimeRange>> reservationsBySlot = new HashMap<>();
         Map<Long, Long> scheduledEndByWorkItem = new HashMap<>();
         Map<Long, OptimizationScheduleSuggestion> schedules = new LinkedHashMap<>();
         Queue<Long> ready = readyQueue(projectModel, itemById, options.schedulingPriorityStrategy());
@@ -86,7 +86,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                     item.duration().durationMillis(),
                     projectModel.planningEnd(),
                     slotsByAssignee.getOrDefault(assigneeId, List.of()),
-                    usedBySlot
+                    reservationsBySlot
             );
             List<OptimizationConstraintViolation> violations = new ArrayList<>();
             List<String> reasons = new ArrayList<>();
@@ -209,7 +209,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                                               long durationMillis,
                                               long planningEnd,
                                               List<ResourceCapacitySlot> slots,
-                                              Map<SlotKey, Long> usedBySlot) {
+                                              Map<SlotKey, List<TimeRange>> reservationsBySlot) {
         long remaining = durationMillis;
         Long plannedStart = null;
         long plannedEnd = earliestStart;
@@ -221,25 +221,57 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
             if (slot.slotEnd() <= earliestStart) {
                 continue;
             }
-            SlotKey key = new SlotKey(assigneeId, slot.slotStart());
-            long used = usedBySlot.getOrDefault(key, 0L);
-            long slotAvailableStart = Math.max(slot.slotStart() + used, earliestStart);
-            if (slotAvailableStart >= slot.slotEnd()) {
+            long slotCapacityEnd = Math.min(slot.slotEnd(), slot.slotStart() + slot.capacityMillis());
+            long cursor = Math.max(slot.slotStart(), earliestStart);
+            if (cursor >= slotCapacityEnd) {
                 continue;
             }
-            long available = Math.max(0L, slot.slotEnd() - slotAvailableStart);
-            long capacityRemaining = Math.max(0L, slot.capacityMillis() - used);
-            available = Math.min(available, capacityRemaining);
-            if (available == 0) {
-                continue;
+
+            SlotKey key = new SlotKey(assigneeId, slot.slotStart(), slot.slotEnd());
+            List<TimeRange> reservations = reservationsBySlot.getOrDefault(key, List.of()).stream()
+                    .sorted(Comparator.comparing(TimeRange::start))
+                    .toList();
+            List<TimeRange> newReservations = new ArrayList<>();
+            for (TimeRange reservation : reservations) {
+                if (remaining <= 0) {
+                    break;
+                }
+                if (reservation.end() <= cursor) {
+                    continue;
+                }
+                if (reservation.start() > cursor) {
+                    long chunkEnd = allocateChunk(cursor, Math.min(reservation.start(), slotCapacityEnd), remaining,
+                            newReservations);
+                    if (chunkEnd > cursor) {
+                        if (plannedStart == null) {
+                            plannedStart = cursor;
+                        }
+                        plannedEnd = chunkEnd;
+                        remaining -= chunkEnd - cursor;
+                        cursor = chunkEnd;
+                    }
+                }
+                cursor = Math.max(cursor, reservation.end());
+                if (cursor >= slotCapacityEnd) {
+                    break;
+                }
             }
-            long chunk = Math.min(remaining, available);
-            if (plannedStart == null) {
-                plannedStart = slotAvailableStart;
+            if (remaining > 0 && cursor < slotCapacityEnd) {
+                long chunkEnd = allocateChunk(cursor, slotCapacityEnd, remaining, newReservations);
+                if (chunkEnd > cursor) {
+                    if (plannedStart == null) {
+                        plannedStart = cursor;
+                    }
+                    plannedEnd = chunkEnd;
+                    remaining -= chunkEnd - cursor;
+                }
             }
-            plannedEnd = slotAvailableStart + chunk;
-            usedBySlot.put(key, used + chunk);
-            remaining -= chunk;
+            if (!newReservations.isEmpty()) {
+                List<TimeRange> updated = new ArrayList<>(reservationsBySlot.getOrDefault(key, List.of()));
+                updated.addAll(newReservations);
+                updated.sort(Comparator.comparing(TimeRange::start));
+                reservationsBySlot.put(key, updated);
+            }
         }
 
         if (plannedStart == null) {
@@ -251,6 +283,20 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         return new ScheduleWindow(plannedStart, plannedEnd);
     }
 
+    private long allocateChunk(long start,
+                               long end,
+                               long remaining,
+                               List<TimeRange> newReservations) {
+        long available = Math.max(0L, end - start);
+        if (available == 0) {
+            return start;
+        }
+        long chunk = Math.min(remaining, available);
+        long chunkEnd = start + chunk;
+        newReservations.add(new TimeRange(start, chunkEnd));
+        return chunkEnd;
+    }
+
     private OptimizationConfidence confidenceFor(OptimizationWorkItem item, List<OptimizationConstraintViolation> violations) {
         if (!violations.isEmpty()) {
             return OptimizationConfidence.LOW;
@@ -258,7 +304,10 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         return item.duration().confidence();
     }
 
-    private record SlotKey(Long assigneeId, Long slotStart) {
+    private record SlotKey(Long assigneeId, Long slotStart, Long slotEnd) {
+    }
+
+    private record TimeRange(long start, long end) {
     }
 
     private record ScheduleWindow(Long plannedStart, Long plannedEnd) {

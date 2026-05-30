@@ -9,9 +9,11 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class OptimizationConstants {
+    public static final long MINUTE_MILLIS = 60_000L;
     public static final long HOUR_MILLIS = 3_600_000L;
     public static final long DAY_MILLIS = 86_400_000L;
     public static final long DAILY_CAPACITY_MILLIS = 8 * HOUR_MILLIS;
+    public static final int FALLBACK_WORKDAY_START_HOUR_UTC_PLUS_7 = 9;
 
     public static final int MAX_SELECTED_WORK_ITEM_IDS = 50;
     public static final int SCORE_DECIMAL_SCALE = 6;
@@ -27,7 +29,7 @@ public class OptimizationConstants {
     public static final double DEFAULT_ESTIMATE_PENALTY = -0.2D;
     public static final int DEFAULT_DURATION_SUBTASK_HOURS = 2;
     public static final int DEFAULT_DURATION_EPIC_DAYS = 3;
-    public static final String FALLBACK_CAPACITY_DETAILS = "8h weekday UTC slots";
+    public static final String FALLBACK_CAPACITY_DETAILS = "8h weekday UTC+7 slots";
 
     public static final double BASE_ASSIGNMENT_COST = 10D;
     public static final double CURRENT_ASSIGNEE_DISCOUNT = 3D;
