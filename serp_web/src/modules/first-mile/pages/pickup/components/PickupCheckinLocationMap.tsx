@@ -172,7 +172,10 @@ export const PickupCheckinLocationMap: React.FC<
   return (
     <div
       ref={containerRef}
-      className={cn('h-64 w-full rounded-md border', className)}
+      className={cn(
+        'relative isolate z-0 h-64 w-full rounded-md border',
+        className
+      )}
     />
   );
 };

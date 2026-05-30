@@ -16,6 +16,7 @@ import type {
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
   ConfirmOrderPaymentRequest,
+  FirstMileApiResponse,
   FirstMileOrderDetail,
   FirstMileOrderListFilters,
   FirstMileOrderTimelineItem,
@@ -61,6 +62,11 @@ import type {
   SecondMileRouteListFilters,
   SecondMileCreateRouteRequest,
   SecondMileUpdateRouteRequest,
+  HandoverManifest,
+  HandoverManifestListFilters,
+  CreateHandoverManifestRequest,
+  SecondMileOrder,
+  SecondMileOrderListFilters,
   Vehicle,
   VehicleImportItem,
   UpdateVehicleRequest,
@@ -68,6 +74,11 @@ import type {
 } from '../types';
 import {
   normalizeSecondMileHubImportHistory,
+  normalizeHubPostOfficeMapping,
+  normalizeHubPostOfficeMappingPage,
+  normalizeHandoverManifest,
+  normalizeHandoverManifestPage,
+  normalizeSecondMileOrderPage,
   unwrapFirstMilePageResult,
   unwrapFirstMilePageResultOrRaw,
   unwrapFirstMileResult,
@@ -149,7 +160,7 @@ export const firstMileApi = api.injectEndpoints({
         params: { page, size },
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMilePageResult<HubPostOfficeMapping>,
+      transformResponse: normalizeHubPostOfficeMappingPage,
     }),
 
     assignPostOfficeToHub: builder.mutation<
@@ -162,7 +173,8 @@ export const firstMileApi = api.injectEndpoints({
         body: request,
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<HubPostOfficeMapping>,
+      transformResponse: (response: FirstMileApiResponse<HubPostOfficeMapping>) =>
+        normalizeHubPostOfficeMapping(unwrapFirstMileResult(response)),
     }),
 
     removePostOfficeFromHub: builder.mutation<
@@ -466,6 +478,125 @@ export const firstMileApi = api.injectEndpoints({
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: { message?: string }) =>
         response?.message || 'Deleted successfully',
+    }),
+
+    getHandoverManifests: builder.query<
+      FirstMilePaginatedData<HandoverManifest>,
+      { page?: number; size?: number } & HandoverManifestListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        originPostOfficeCode,
+        targetHubId,
+        vehicleId,
+        status,
+      }) => ({
+        url: '/handover-manifests',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(originPostOfficeCode
+            ? { origin_post_office_code: originPostOfficeCode }
+            : {}),
+          ...(targetHubId !== undefined ? { target_hub_id: targetHubId } : {}),
+          ...(vehicleId !== undefined ? { vehicle_id: vehicleId } : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeHandoverManifestPage,
+      providesTags: [{ type: 'HandoverManifest', id: 'LIST' }],
+    }),
+
+    getHandoverManifestById: builder.query<HandoverManifest, number>({
+      query: (id) => ({
+        url: `/handover-manifests/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
+        normalizeHandoverManifest(unwrapFirstMileResult(response)),
+      providesTags: (_result, _error, id) => [
+        { type: 'HandoverManifest', id: String(id) },
+      ],
+    }),
+
+    createHandoverManifest: builder.mutation<
+      HandoverManifest,
+      CreateHandoverManifestRequest
+    >({
+      query: (body) => ({
+        url: '/handover-manifests',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
+        normalizeHandoverManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: [{ type: 'HandoverManifest', id: 'LIST' }],
+    }),
+
+    confirmHandoverManifestOutbound: builder.mutation<HandoverManifest, number>({
+      query: (manifestId) => ({
+        url: `/handover-manifests/${manifestId}/confirm-outbound`,
+        method: 'POST',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
+        normalizeHandoverManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'HandoverManifest', id: 'LIST' },
+        { type: 'HandoverManifest', id: String(id) },
+      ],
+    }),
+
+    confirmHandoverManifestInbound: builder.mutation<
+      HandoverManifest,
+      { manifestId: number; orderCodes?: string[] }
+    >({
+      query: ({ manifestId, orderCodes }) => ({
+        url: `/handover-manifests/${manifestId}/confirm-inbound`,
+        method: 'POST',
+        body: orderCodes?.length ? { order_codes: orderCodes } : undefined,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
+        normalizeHandoverManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { manifestId }) => [
+        { type: 'HandoverManifest', id: 'LIST' },
+        { type: 'HandoverManifest', id: String(manifestId) },
+      ],
+    }),
+
+    getSecondMileOrders: builder.query<
+      FirstMilePaginatedData<SecondMileOrder>,
+      { page?: number; size?: number } & SecondMileOrderListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        orderCode,
+        originPostOfficeCode,
+        status,
+      }) => ({
+        url: '/orders',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(orderCode ? { order_code: orderCode } : {}),
+          ...(originPostOfficeCode
+            ? { origin_post_office_code: originPostOfficeCode }
+            : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeSecondMileOrderPage,
     }),
 
     getPostOffices: builder.query<
@@ -1208,6 +1339,12 @@ export const {
   useCreateSecondMileRouteMutation,
   useUpdateSecondMileRouteMutation,
   useDeleteSecondMileRouteMutation,
+  useGetHandoverManifestsQuery,
+  useGetHandoverManifestByIdQuery,
+  useCreateHandoverManifestMutation,
+  useConfirmHandoverManifestOutboundMutation,
+  useConfirmHandoverManifestInboundMutation,
+  useGetSecondMileOrdersQuery,
   useGetPostOfficesQuery,
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,

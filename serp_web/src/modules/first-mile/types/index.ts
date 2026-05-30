@@ -367,6 +367,83 @@ export type SecondMileUpdateRouteRequest = SecondMileCreateRouteRequest & {
   status: SecondMileRouteStatus;
 };
 
+export type HandoverManifestStatus =
+  | 'CREATED'
+  | 'OUTBOUND_CONFIRMED'
+  | 'INBOUND_CONFIRMED'
+  | 'CANCELLED';
+
+export interface HandoverManifestOrderItem {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  scanOutTime?: string;
+  scanInTime?: string;
+}
+
+export interface HandoverManifest {
+  id: number;
+  manifestCode?: string;
+  originPostOfficeCode?: string;
+  targetHubId?: number;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  routeId?: number;
+  routeCode?: string;
+  status?: HandoverManifestStatus;
+  orders?: HandoverManifestOrderItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HandoverManifestListFilters {
+  originPostOfficeCode?: string;
+  targetHubId?: number;
+  vehicleId?: number;
+  status?: HandoverManifestStatus;
+}
+
+export interface CreateHandoverManifestRequest {
+  origin_post_office_code: string;
+  target_hub_id: number;
+  vehicle_id: number;
+  route_id?: number;
+  order_codes: string[];
+}
+
+export type SecondMileOrderStatus =
+  | 'CREATED'
+  | 'ASSIGNED_TO_PICKUP'
+  | 'PICKING_UP'
+  | 'PICKUP_FAILED'
+  | 'PICKED_UP'
+  | 'AT_ORIGIN_POST_OFFICE'
+  | 'OUTBOUND_READY_FROM_PO'
+  | 'INBOUND_AT_ORIGIN_HUB'
+  | 'BAGGING_IN_PROGRESS'
+  | 'BAGGED'
+  | 'BAG_SEALED'
+  | 'CANCELLED'
+  | 'LOST_OR_DAMAGED';
+
+export interface SecondMileOrder {
+  id: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  originPostOfficeCode?: string;
+  destinationPostOfficeCode?: string;
+  status?: SecondMileOrderStatus;
+  totalWeight?: number;
+  totalVolume?: number;
+}
+
+export interface SecondMileOrderListFilters {
+  keyword?: string;
+  orderCode?: string;
+  originPostOfficeCode?: string;
+  status?: SecondMileOrderStatus;
+}
+
 export type FirstMileOrderStatus =
   | 'CREATED'
   | 'ASSIGNED_TO_PICKUP'
@@ -838,6 +915,7 @@ export interface PickupTrackingTrip {
   totalOrders?: number;
   checkedInOrders?: number;
   pendingCheckinOrders?: number;
+  returnableToPostOfficeOrders?: number;
 }
 
 export interface PickupTrackingOrder {

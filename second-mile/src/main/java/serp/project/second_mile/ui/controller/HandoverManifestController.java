@@ -13,11 +13,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.second_mile.dto.ApiResponse;
+import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
 import serp.project.second_mile.dto.request.CreateHandoverManifestRequest;
+import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
+import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.exception.MessageService;
 import serp.project.second_mile.service.HandoverManifestService;
 
@@ -27,6 +31,28 @@ import serp.project.second_mile.service.HandoverManifestService;
 public class HandoverManifestController {
     private final HandoverManifestService handoverManifestService;
     private final MessageService messageService;
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<PageResponse<HandoverManifestResponse>> listManifests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(name = "origin_post_office_code", required = false) String originPostOfficeCode,
+            @RequestParam(name = "target_hub_id", required = false) Long targetHubId,
+            @RequestParam(name = "vehicle_id", required = false) Long vehicleId,
+            @RequestParam(required = false) HandoverManifestStatus status
+    ) {
+        HandoverManifestFilterRequest filterRequest = HandoverManifestFilterRequest.builder()
+                .originPostOfficeCode(originPostOfficeCode)
+                .targetHubId(targetHubId)
+                .vehicleId(vehicleId)
+                .status(status)
+                .build();
+        return ApiResponse.<PageResponse<HandoverManifestResponse>>builder()
+                .message(messageService.getMessage("success.handover_manifests.list"))
+                .result(handoverManifestService.listManifests(page, size, filterRequest))
+                .build();
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
