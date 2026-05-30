@@ -34,6 +34,8 @@ public interface ISkillService {
 
     List<UserSkillEntity> listUserSkills(Long tenantId, Long userId);
 
+    List<UserSkillEntity> listUsersSkills(Long tenantId, List<Long> userIds);
+
     List<UserSkillEntity> replaceUserSkills(
             Long tenantId,
             Long targetUserId,

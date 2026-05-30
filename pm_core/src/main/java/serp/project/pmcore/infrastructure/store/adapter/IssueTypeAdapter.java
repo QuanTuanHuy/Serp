@@ -86,7 +86,7 @@ public class IssueTypeAdapter implements IIssueTypePort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<IssueTypeModel> result = issueTypeRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPatternLower(),
                 criteria.getHierarchyLevel(),
                 criteria.getIsSystem(),
                 pageable

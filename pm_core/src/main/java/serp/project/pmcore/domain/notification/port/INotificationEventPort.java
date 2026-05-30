@@ -13,4 +13,6 @@ public interface INotificationEventPort {
     Optional<NotificationEventEntity> getNotificationEventById(Long eventId, Long tenantId);
 
     Optional<NotificationEventEntity> getNotificationEventByIdIncludingSystem(Long eventId, Long tenantId);
+
+    Optional<NotificationEventEntity> getNotificationEventByEventKeyIncludingSystem(String eventKey, Long tenantId);
 }

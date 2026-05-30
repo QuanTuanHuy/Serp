@@ -50,6 +50,7 @@ import {
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
 import { useAppSelector } from '@/shared/hooks';
+import { PMWorkItemSkillPanel } from '../../skills';
 import {
   useGetPmWorkItemActivitiesQuery,
   useGetPmWorkItemByIdQuery,
@@ -646,6 +647,8 @@ function PMWorkItemDetailSidebar({
           </DetailField>
         </div>
       </section>
+
+      <PMWorkItemSkillPanel projectId={projectId} workItemId={workItemId} />
 
       <CollapsedPanel
         title='Development'

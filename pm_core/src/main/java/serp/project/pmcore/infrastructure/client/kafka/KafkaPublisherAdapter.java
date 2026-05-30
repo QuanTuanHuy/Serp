@@ -16,6 +16,7 @@ import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
 
 @Component
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class KafkaPublisherAdapter implements IKafkaPublisher {
     public <T> void sendMessageAsync(String key, T message, String topic, KafkaSendCallback callback) {
         String jsonMessage;
         try {
-            jsonMessage = jsonUtils.toJson(message);
+            jsonMessage = toKafkaPayload(message);
         } catch (Exception e) {
             log.error("Error serializing message to JSON for topic {}: {}", topic, e.getMessage(), e);
             if (callback != null) {
@@ -66,7 +67,7 @@ public class KafkaPublisherAdapter implements IKafkaPublisher {
 
     @Override
     public <T> void sendMessageSync(String key, T message, String topic) throws Exception {
-        String jsonMessage = jsonUtils.toJson(message);
+        String jsonMessage = toKafkaPayload(message);
         log.debug("Sending sync message to Kafka topic {} with key {}", topic, key);
         try {
             SendResult<String, String> result = kafkaTemplate.send(topic, key, jsonMessage)
@@ -79,5 +80,15 @@ public class KafkaPublisherAdapter implements IKafkaPublisher {
                     topic, key, e.getMessage(), e);
             throw e;
         }
+    }
+
+    private <T> String toKafkaPayload(T message) {
+        if (message instanceof String stringMessage) {
+            return stringMessage;
+        }
+        if (message instanceof byte[] bytesMessage) {
+            return new String(bytesMessage, StandardCharsets.UTF_8);
+        }
+        return jsonUtils.toJson(message);
     }
 }

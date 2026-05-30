@@ -78,7 +78,7 @@ public class PriorityAdapter implements IPriorityPort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<PriorityModel> result = priorityRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPatternLower(),
                 criteria.getIsSystem(),
                 pageable
         );

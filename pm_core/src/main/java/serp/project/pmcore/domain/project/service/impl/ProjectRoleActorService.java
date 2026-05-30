@@ -82,8 +82,18 @@ public class ProjectRoleActorService implements IProjectRoleActorService {
     }
 
     @Override
+    public void removeUserActorsByProject(Long tenantId, Long projectId, String subjectId, Long userId) {
+        projectRoleActorPort.softDeleteActiveUserAssignmentsByProject(tenantId, projectId, subjectId, userId);
+    }
+
+    @Override
     public List<ProjectRoleActorEntity> getActorsByProjectAndRole(Long projectId, Long roleId, Long tenantId) {
         return projectRoleActorPort.getProjectRoleActorsByProjectIdAndRoleId(projectId, roleId, tenantId);
+    }
+
+    @Override
+    public List<ProjectRoleActorEntity> getActorsByProject(Long projectId, Long tenantId) {
+        return projectRoleActorPort.getProjectRoleActorsByProjectId(projectId, tenantId);
     }
 
     @Override
