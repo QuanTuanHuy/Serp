@@ -9,4 +9,8 @@ public interface OptimizationAssignmentScoringStrategy {
     double requiredSkillMultiplier();
 
     double preferredSkillMultiplier();
+
+    double reassignmentPenalty();
+
+    double currentAssigneeBonus();
 }

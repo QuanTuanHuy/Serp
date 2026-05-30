@@ -13,17 +13,21 @@ import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
 import serp.project.pmcore.domain.optimization.service.assignment.scoring.OptimizationAssignmentScoringStrategy;
+import serp.project.pmcore.domain.optimization.service.schedule.priority.OptimizationSchedulingPriorityStrategy;
 
 import java.util.Set;
 
 public abstract class AbstractGreedyOptimizationAlgorithm implements IOptimizationAlgorithm {
     private final GreedyOptimizationRunGenerator greedyOptimizationRunGenerator;
     private final OptimizationAssignmentScoringStrategy assignmentScoringStrategy;
+    private final OptimizationSchedulingPriorityStrategy schedulingPriorityStrategy;
 
     protected AbstractGreedyOptimizationAlgorithm(GreedyOptimizationRunGenerator greedyOptimizationRunGenerator,
-                                                  OptimizationAssignmentScoringStrategy assignmentScoringStrategy) {
+                                                  OptimizationAssignmentScoringStrategy assignmentScoringStrategy,
+                                                  OptimizationSchedulingPriorityStrategy schedulingPriorityStrategy) {
         this.greedyOptimizationRunGenerator = greedyOptimizationRunGenerator;
         this.assignmentScoringStrategy = assignmentScoringStrategy;
+        this.schedulingPriorityStrategy = schedulingPriorityStrategy;
     }
 
     @Override
@@ -39,7 +43,8 @@ public abstract class AbstractGreedyOptimizationAlgorithm implements IOptimizati
     public final OptimizationSolution solve(OptimizationProblem problem) {
         OptimizationAlgorithmOptions options = new OptimizationAlgorithmOptions(
                 problem.input().intent(),
-                assignmentScoringStrategy
+                assignmentScoringStrategy,
+                schedulingPriorityStrategy
         );
         return OptimizationSolution.fromGenerationResult(
                 greedyOptimizationRunGenerator.generate(problem.projectModel(), options),

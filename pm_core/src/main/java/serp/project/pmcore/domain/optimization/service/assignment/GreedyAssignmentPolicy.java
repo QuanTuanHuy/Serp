@@ -8,7 +8,6 @@ package serp.project.pmcore.domain.optimization.service.assignment;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
-import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
@@ -131,13 +130,12 @@ public class GreedyAssignmentPolicy implements OptimizationAssignmentPolicy {
         long capacity = capacityByAssignee.getOrDefault(candidate.candidateId(), 0L);
         long overload = Math.max(0L, projectedLoad - capacity);
         double cost = candidate.baseCost();
+        OptimizationAssignmentScoringStrategy scoringStrategy = options.assignmentScoringStrategy();
         if (!Objects.equals(candidate.candidateId(), item.workItem().getAssigneeId())) {
-            cost += options.intent().objective() == OptimizationObjective.MINIMAL_REASSIGNMENT
-                    ? OptimizationConstants.MINIMAL_REASSIGNMENT_PENALTY
-                    : OptimizationConstants.STANDARD_REASSIGNMENT_PENALTY;
+            cost += scoringStrategy.reassignmentPenalty();
         }
-        if (candidate.currentAssignee() && options.intent().objective() == OptimizationObjective.MINIMAL_REASSIGNMENT) {
-            cost -= OptimizationConstants.MINIMAL_REASSIGNMENT_CURRENT_ASSIGNEE_BONUS;
+        if (candidate.currentAssignee()) {
+            cost -= scoringStrategy.currentAssigneeBonus();
         }
         if (overload > 0) {
             cost += OptimizationConstants.OVERLOAD_BASE_PENALTY

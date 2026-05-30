@@ -15,6 +15,7 @@ import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
+import serp.project.pmcore.domain.optimization.service.schedule.priority.OptimizationSchedulingPriorityStrategy;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
 import java.util.ArrayList;
@@ -53,7 +54,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         Map<SlotKey, Long> usedBySlot = new HashMap<>();
         Map<Long, Long> scheduledEndByWorkItem = new HashMap<>();
         Map<Long, OptimizationScheduleSuggestion> schedules = new LinkedHashMap<>();
-        Queue<Long> ready = readyQueue(projectModel, itemById);
+        Queue<Long> ready = readyQueue(projectModel, itemById, options.schedulingPriorityStrategy());
         Map<Long, Integer> remainingPredecessors = remainingPredecessors(projectModel, itemById.keySet());
 
         while (!ready.isEmpty()) {
@@ -147,8 +148,10 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         return reasons;
     }
 
-    private Queue<Long> readyQueue(OptimizationProjectModel projectModel, Map<Long, OptimizationWorkItem> itemById) {
-        PriorityQueue<Long> ready = new PriorityQueue<>(scheduleComparator(itemById));
+    private Queue<Long> readyQueue(OptimizationProjectModel projectModel,
+                                   Map<Long, OptimizationWorkItem> itemById,
+                                   OptimizationSchedulingPriorityStrategy schedulingPriorityStrategy) {
+        PriorityQueue<Long> ready = new PriorityQueue<>(schedulingPriorityStrategy.readyWorkItemComparator(itemById));
         projectModel.dependencyGraph().predecessorsByWorkItemId().entrySet().stream()
                 .filter(entry -> entry.getValue().isEmpty())
                 .map(Map.Entry::getKey)
@@ -180,15 +183,6 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                 ready.add(successor);
             }
         }
-    }
-
-    private Comparator<Long> scheduleComparator(Map<Long, OptimizationWorkItem> itemById) {
-        return Comparator.<Long, Boolean>comparing(id -> itemById.get(id).criticalPath()).reversed()
-                .thenComparing(id -> itemById.get(id).priorityScore().score(), Comparator.reverseOrder())
-                .thenComparing(id -> itemById.get(id).workItem().getDueDate(), Comparator.nullsLast(Long::compareTo))
-                .thenComparing(id -> itemById.get(id).duration().durationMillis())
-                .thenComparing(id -> itemById.get(id).workItem().getRank(), Comparator.nullsLast(String::compareTo))
-                .thenComparing(id -> id);
     }
 
     private Long resolveScheduleAssignee(OptimizationWorkItem item, Map<Long, OptimizationAssignmentSuggestion> assignments) {

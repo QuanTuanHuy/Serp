@@ -30,8 +30,11 @@ import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.service.assignment.GreedyAssignmentPolicy;
 import serp.project.pmcore.domain.optimization.service.assignment.scoring.BalancedOptimizationAssignmentScoringStrategy;
+import serp.project.pmcore.domain.optimization.service.assignment.scoring.MinimalReassignmentOptimizationAssignmentScoringStrategy;
 import serp.project.pmcore.domain.optimization.service.assignment.scoring.SkillFirstOptimizationAssignmentScoringStrategy;
 import serp.project.pmcore.domain.optimization.service.schedule.GreedySchedulingPolicy;
+import serp.project.pmcore.domain.optimization.service.schedule.priority.BalancedOptimizationSchedulingPriorityStrategy;
+import serp.project.pmcore.domain.optimization.service.schedule.priority.DeadlineFirstOptimizationSchedulingPriorityStrategy;
 import serp.project.pmcore.domain.optimization.service.summary.OptimizationSummaryBuilder;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
@@ -218,7 +221,7 @@ class GreedyOptimizationRunGeneratorTest {
     }
 
     @Test
-    void generateShouldKeepCurrentAssigneeInMinimalReassignmentWhenSkillDeltaIsSmall() {
+    void generateShouldKeepCurrentAssigneeWhenReassignmentDoesNotImproveCost() {
         WorkItemEntity item = workItem(10L, 100L, null);
         OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
                 candidate(item, 100L, 1D, true, fullPreferredFit(item.getId(), 100L)),
@@ -226,8 +229,23 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                options(OptimizationObjective.MINIMAL_REASSIGNMENT, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                options(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
                         new BalancedOptimizationAssignmentScoringStrategy()));
+
+        assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+    }
+
+    @Test
+    void generateShouldKeepCurrentAssigneeInMinimalReassignmentStrategy() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
+                candidate(item, 100L, 5D, true, null),
+                candidate(item, 200L, 1D, false, null)
+        ))), graphWithoutDependencies(List.of(10L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                options(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                        new MinimalReassignmentOptimizationAssignmentScoringStrategy()));
 
         assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
@@ -247,12 +265,44 @@ class GreedyOptimizationRunGeneratorTest {
         assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
 
+    @Test
+    void generateShouldScheduleEarlierDueDateFirstInDeadlineFirstStrategy() {
+        WorkItemEntity highPriorityLaterDue = workItem(10L, 100L, START + 8 * HOUR);
+        WorkItemEntity lowPriorityEarlierDue = workItem(20L, 100L, START + 4 * HOUR);
+        OptimizationProjectModel model = model(List.of(
+                optimizationItem(highPriorityLaterDue,
+                        List.of(candidate(highPriorityLaterDue, 100L, 1D, true, null)),
+                        4 * HOUR,
+                        100D),
+                optimizationItem(lowPriorityEarlierDue,
+                        List.of(candidate(lowPriorityEarlierDue, 100L, 1D, true, null)),
+                        4 * HOUR,
+                        1D)
+        ), graphWithoutDependencies(List.of(10L, 20L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                options(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                        new BalancedOptimizationAssignmentScoringStrategy(),
+                        new DeadlineFirstOptimizationSchedulingPriorityStrategy()));
+
+        assertEquals(START, result.scheduleSuggestions().get(20L).plannedStart());
+        assertEquals(START + 4 * HOUR, result.scheduleSuggestions().get(10L).plannedStart());
+    }
+
     private OptimizationAlgorithmOptions options(OptimizationObjective objective,
                                                  OptimizationChangeScope changeScope,
                                                  serp.project.pmcore.domain.optimization.service.assignment.scoring.OptimizationAssignmentScoringStrategy scoringStrategy) {
+        return options(objective, changeScope, scoringStrategy, new BalancedOptimizationSchedulingPriorityStrategy());
+    }
+
+    private OptimizationAlgorithmOptions options(OptimizationObjective objective,
+                                                 OptimizationChangeScope changeScope,
+                                                 serp.project.pmcore.domain.optimization.service.assignment.scoring.OptimizationAssignmentScoringStrategy scoringStrategy,
+                                                 serp.project.pmcore.domain.optimization.service.schedule.priority.OptimizationSchedulingPriorityStrategy schedulingPriorityStrategy) {
         return new OptimizationAlgorithmOptions(
                 new OptimizationRunIntent(OptimizationAlgorithmKeys.GREEDY_BALANCED, objective, changeScope),
-                scoringStrategy
+                scoringStrategy,
+                schedulingPriorityStrategy
         );
     }
 
@@ -354,11 +404,18 @@ class GreedyOptimizationRunGeneratorTest {
     private OptimizationWorkItem optimizationItem(WorkItemEntity workItem,
                                                   List<OptimizationCandidateAssignee> candidates,
                                                   long durationMillis) {
+        return optimizationItem(workItem, candidates, durationMillis, 1D);
+    }
+
+    private OptimizationWorkItem optimizationItem(WorkItemEntity workItem,
+                                                  List<OptimizationCandidateAssignee> candidates,
+                                                  long durationMillis,
+                                                  double priorityScore) {
         return new OptimizationWorkItem(
                 workItem,
                 null,
                 new OptimizationDuration(workItem.getId(), durationMillis, OptimizationConfidence.HIGH, "TEST"),
-                new OptimizationPriorityScore(workItem.getId(), 1D, false),
+                new OptimizationPriorityScore(workItem.getId(), priorityScore, false),
                 candidates,
                 false,
                 false

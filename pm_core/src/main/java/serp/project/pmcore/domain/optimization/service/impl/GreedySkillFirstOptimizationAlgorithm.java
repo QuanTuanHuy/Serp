@@ -8,12 +8,14 @@ package serp.project.pmcore.domain.optimization.service.impl;
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.service.assignment.scoring.SkillFirstOptimizationAssignmentScoringStrategy;
+import serp.project.pmcore.domain.optimization.service.schedule.priority.BalancedOptimizationSchedulingPriorityStrategy;
 
 @Service
 public class GreedySkillFirstOptimizationAlgorithm extends AbstractGreedyOptimizationAlgorithm {
     public GreedySkillFirstOptimizationAlgorithm(GreedyOptimizationRunGenerator greedyOptimizationRunGenerator,
-                                                 SkillFirstOptimizationAssignmentScoringStrategy assignmentScoringStrategy) {
-        super(greedyOptimizationRunGenerator, assignmentScoringStrategy);
+                                                 SkillFirstOptimizationAssignmentScoringStrategy assignmentScoringStrategy,
+                                                 BalancedOptimizationSchedulingPriorityStrategy schedulingPriorityStrategy) {
+        super(greedyOptimizationRunGenerator, assignmentScoringStrategy, schedulingPriorityStrategy);
     }
 
     @Override
