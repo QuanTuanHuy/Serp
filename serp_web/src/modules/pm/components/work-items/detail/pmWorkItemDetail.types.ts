@@ -5,6 +5,7 @@
 
 import type {
   PMWorkItemBoardCardApi,
+  PMWorkItemPlanSummaryApi,
   PMWorkItemSearchApi,
 } from '../../../types/api';
 
@@ -39,6 +40,7 @@ export type WorkItemDetailModel = {
   dueDate?: number | string | null;
   timeOriginalEstimate?: number | null;
   timeRemainingEstimate?: number | null;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   createdAt?: number | string | null;
   updatedAt?: number | string | null;
   subtaskTotal?: number;

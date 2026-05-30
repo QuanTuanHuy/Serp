@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -26,6 +27,7 @@ import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.user.service.IUserService;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemCommentReadPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
@@ -43,6 +45,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
 
     private final IWorkItemReadPort workItemReadPort;
     private final IWorkItemCommentReadPort workItemCommentReadPort;
+    private final IWorkItemPlanPort workItemPlanPort;
 
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService permissionEvaluationService;
@@ -85,11 +88,16 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         WorkItemDetailView.CommentStatsView commentStats = new WorkItemDetailView.CommentStatsView(
                 workItemCommentReadPort.countByWorkItemId(workItem.getId(), query.tenantId())
         );
+        WorkItemDetailView.ScheduleSummaryView schedule = workItemPlanPort
+                .getActivePlanByWorkItemId(query.tenantId(), workItem.getId())
+                .map(GetWorkItemByIdQueryHandler::toScheduleView)
+                .orElse(null);
 
         return WorkItemDetailView.from(
                 workItem,
                 userSummaryOrId(users, workItem.getAssigneeId()),
                 userSummaryOrId(users, workItem.getReporterId()),
+                schedule,
                 components,
                 subtaskStats,
                 linkStats,
@@ -118,6 +126,19 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
             log.warn("[GetWorkItemByIdQueryHandler] Failed to resolve user profiles: {}", e.getMessage());
             return Map.of();
         }
+    }
+
+    private static WorkItemDetailView.ScheduleSummaryView toScheduleView(WorkItemPlanEntity plan) {
+        if (plan == null) {
+            return null;
+        }
+        return new WorkItemDetailView.ScheduleSummaryView(
+                plan.getPlannedStart(),
+                plan.getPlannedEnd(),
+                plan.getSource() == null ? null : plan.getSource().name(),
+                plan.getLocked(),
+                plan.getSourceRunId()
+        );
     }
 
     private static UserSummary userSummaryOrId(Map<Long, UserSummary> map,

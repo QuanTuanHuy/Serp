@@ -10,6 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
+import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectService;
@@ -42,6 +45,8 @@ class ListWorkItemTimelineQueryHandlerTest {
     private IProjectService projectService;
     @Mock
     private IProjectPermissionEvaluationService projectPermissionEvaluationService;
+    @Mock
+    private IWorkItemPlanPort workItemPlanPort;
 
     private ListWorkItemTimelineQueryHandler handler;
 
@@ -50,7 +55,8 @@ class ListWorkItemTimelineQueryHandlerTest {
         handler = new ListWorkItemTimelineQueryHandler(
                 workItemReadPort,
                 projectService,
-                projectPermissionEvaluationService
+                projectPermissionEvaluationService,
+                workItemPlanPort
         );
     }
 
@@ -128,6 +134,27 @@ class ListWorkItemTimelineQueryHandlerTest {
                         .description("blocks")
                         .build()
         ));
+        when(workItemPlanPort.listActivePlansByWorkItemIds(TENANT_ID, List.of(101L, 102L))).thenReturn(List.of(
+                WorkItemPlanEntity.builder()
+                        .tenantId(TENANT_ID)
+                        .projectId(PROJECT_ID)
+                        .workItemId(101L)
+                        .plannedStart(1_700_000_000_000L)
+                        .plannedEnd(1_710_000_000_000L)
+                        .source(WorkItemPlanSource.OPTIMIZATION)
+                        .sourceRunId(501L)
+                        .locked(false)
+                        .build(),
+                WorkItemPlanEntity.builder()
+                        .tenantId(TENANT_ID)
+                        .projectId(PROJECT_ID)
+                        .workItemId(102L)
+                        .plannedStart(1_720_000_000_000L)
+                        .plannedEnd(1_730_000_000_000L)
+                        .source(WorkItemPlanSource.MANUAL)
+                        .locked(true)
+                        .build()
+        ));
 
         WorkItemTimelinePageView result = handler.handle(query);
 
@@ -136,6 +163,9 @@ class ListWorkItemTimelineQueryHandlerTest {
         assertEquals(2, result.totalItems());
         assertEquals(1, result.totalPages());
         assertEquals("SERP-101", result.items().getFirst().key());
+        assertEquals(1_700_000_000_000L, result.items().getFirst().schedule().plannedStart());
+        assertEquals(1_710_000_000_000L, result.items().getFirst().schedule().plannedEnd());
+        assertEquals("OPTIMIZATION", result.items().getFirst().schedule().source());
         assertEquals(500L, result.dependencies().getFirst().linkId());
         verify(projectPermissionEvaluationService).checkPermission(any(), any(), eq(ProjectPermissionKeys.BROWSE_PROJECTS));
         verify(workItemReadPort).listTimelineDependencies(TENANT_ID, PROJECT_ID, List.of(101L, 102L));

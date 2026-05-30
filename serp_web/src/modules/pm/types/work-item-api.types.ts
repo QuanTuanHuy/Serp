@@ -355,6 +355,14 @@ export interface PMWorkItemSubtaskStatsApi extends PMWorkItemCountStatsApi {
   done: number;
 }
 
+export interface PMWorkItemPlanSummaryApi {
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  source?: string | null;
+  locked?: boolean | null;
+  sourceRunId?: number | null;
+}
+
 export interface PMWorkItemDetailApi {
   id: number;
   projectId: number;
@@ -377,6 +385,7 @@ export interface PMWorkItemDetailApi {
   timeOriginalEstimate?: number;
   timeRemainingEstimate?: number;
   timeSpent?: number;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   issueType?: PMWorkItemDetailIssueTypeApi | null;
   assignee?: PMWorkItemDetailUserApi | null;
   reporter?: PMWorkItemDetailUserApi | null;
@@ -698,6 +707,7 @@ export interface PMWorkItemTimelineItemApi {
   isUnscheduled: boolean;
   hasChildren: boolean;
   rank: string;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   issueType?: PMWorkItemTimelineIssueTypeApi | null;
   status?: PMWorkItemTimelineStatusApi | null;
   priority?: PMWorkItemTimelinePriorityApi | null;

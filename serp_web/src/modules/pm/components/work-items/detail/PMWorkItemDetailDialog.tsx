@@ -80,6 +80,7 @@ import {
   UserValue,
 } from './PMWorkItemDetailPrimitives';
 import { PMWorkItemDetailSkeleton } from './PMWorkItemDetailStates';
+import { PMWorkItemScheduleSection } from './PMWorkItemScheduleSection';
 import {
   InlineComboboxField,
   InlineDateField,
@@ -690,6 +691,7 @@ function PMWorkItemDetailSidebar({
       </section>
 
       <PMWorkItemSkillPanel projectId={projectId} workItemId={workItemId} />
+      <PMWorkItemScheduleSection item={item} />
 
       <CollapsedPanel
         title='Development'

@@ -73,6 +73,7 @@ export function toDetailModel(
     dueDate: data?.dueDate ?? fallbackItem?.dueDate,
     timeOriginalEstimate: data?.timeOriginalEstimate ?? null,
     timeRemainingEstimate: data?.timeRemainingEstimate ?? null,
+    schedule: data?.schedule ?? null,
     createdAt: data?.createdAt ?? searchItem?.createdAt,
     updatedAt: data?.updatedAt ?? searchItem?.updatedAt,
     subtaskTotal: data?.subtaskStats?.total,

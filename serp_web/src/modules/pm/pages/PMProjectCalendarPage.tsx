@@ -51,37 +51,51 @@ type PMProjectCalendarEvent = {
   resource: PMWorkItemTimelineItemApi;
 };
 
+type PMProjectCalendarMode = 'schedule' | 'deadline';
+
 function toDateOrNull(value?: number | null) {
   if (typeof value !== 'number') return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function getEventRange(item: PMWorkItemTimelineItemApi) {
-  const start = toDateOrNull(item.startDate);
-  const due = toDateOrNull(item.dueDate);
+function getScheduleEventRange(item: PMWorkItemTimelineItemApi) {
+  const start = toDateOrNull(item.schedule?.plannedStart ?? null);
+  const end = toDateOrNull(item.schedule?.plannedEnd ?? null);
 
-  if (start && due && start.getTime() <= due.getTime()) {
-    return { start, end: due, allDay: false };
-  }
-
-  if (start) {
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+  if (start && end && start.getTime() <= end.getTime()) {
     return { start, end, allDay: false };
   }
 
+  return null;
+}
+
+function getDeadlineEventRange(item: PMWorkItemTimelineItemApi) {
+  const due = toDateOrNull(item.dueDate);
+
   if (due) {
-    return { start: due, end: due, allDay: true };
+    return {
+      start: due,
+      end: new Date(due.getTime() + 60 * 60 * 1000),
+      allDay: false,
+    };
   }
 
-  const now = new Date();
-  return { start: now, end: now, allDay: true };
+  return null;
 }
 
 function mapTimelineItemToEvent(
-  item: PMWorkItemTimelineItemApi
-): PMProjectCalendarEvent {
-  const range = getEventRange(item);
+  item: PMWorkItemTimelineItemApi,
+  mode: PMProjectCalendarMode
+): PMProjectCalendarEvent | null {
+  const range =
+    mode === 'schedule'
+      ? getScheduleEventRange(item)
+      : getDeadlineEventRange(item);
+
+  if (!range) {
+    return null;
+  }
   return {
     id: item.id,
     title: `${item.key} ${item.summary}`,
@@ -93,13 +107,19 @@ function mapTimelineItemToEvent(
 }
 
 function getEventTone(item: PMWorkItemTimelineItemApi) {
-  if (item.isUnscheduled) return 'border-l-slate-500 bg-slate-500/10';
+  if (!item.schedule) return 'border-l-slate-500 bg-slate-500/10';
+  if (item.schedule.locked) return 'border-l-amber-500 bg-amber-500/10';
+  if (item.schedule.source === 'OPTIMIZATION')
+    return 'border-l-primary bg-primary/10';
   if (item.priority?.color) return 'border-l-primary bg-primary/10';
   if (item.status?.id) return 'border-l-blue-500 bg-blue-500/10';
   return 'border-l-muted-foreground bg-muted/60';
 }
 
-function CalendarEventCard({ event }: EventProps<PMProjectCalendarEvent>) {
+function CalendarEventCard({
+  event,
+  mode,
+}: EventProps<PMProjectCalendarEvent> & { mode: PMProjectCalendarMode }) {
   const resource = event.resource;
 
   return (
@@ -111,9 +131,13 @@ function CalendarEventCard({ event }: EventProps<PMProjectCalendarEvent>) {
     >
       <div className='flex items-center gap-2'>
         <span className='font-semibold'>{resource.key}</span>
-        {resource.isUnscheduled ? (
+        {mode === 'schedule' && !resource.schedule ? (
           <Badge variant='secondary' className='h-5 px-1.5 text-[10px]'>
             Unscheduled
+          </Badge>
+        ) : mode === 'deadline' ? (
+          <Badge variant='secondary' className='h-5 px-1.5 text-[10px]'>
+            Due date
           </Badge>
         ) : null}
       </div>
@@ -129,6 +153,8 @@ export function PMProjectCalendarPage() {
   const projectId = Array.isArray(params.projectId)
     ? params.projectId[0]
     : params.projectId;
+  const [calendarMode, setCalendarMode] =
+    useState<PMProjectCalendarMode>('schedule');
   const [view, setView] = useState<View>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [keyword, setKeyword] = useState('');
@@ -173,13 +199,13 @@ export function PMProjectCalendarPage() {
   const calendarEvents = useMemo(
     () =>
       (response?.items || [])
-        .filter((item) => !item.isUnscheduled)
-        .map(mapTimelineItemToEvent),
-    [response]
+        .map((item) => mapTimelineItemToEvent(item, calendarMode))
+        .filter((event): event is PMProjectCalendarEvent => Boolean(event)),
+    [calendarMode, response]
   );
 
   const unscheduledItems = useMemo(
-    () => (response?.items || []).filter((item) => item.isUnscheduled),
+    () => (response?.items || []).filter((item) => !item.schedule),
     [response]
   );
 
@@ -197,7 +223,7 @@ export function PMProjectCalendarPage() {
   const eventStyleGetter = (event: PMProjectCalendarEvent) => ({
     className: cn(
       'overflow-hidden border-transparent text-foreground',
-      event.resource.isUnscheduled && 'opacity-80'
+      !event.resource.schedule && 'opacity-80'
     ),
     style: {
       backgroundColor: 'transparent',
@@ -221,8 +247,7 @@ export function PMProjectCalendarPage() {
             <div>
               <h1 className='text-3xl font-bold tracking-tight'>Calendar</h1>
               <p className='text-sm text-muted-foreground'>
-                Track scheduled work, scan unscheduled items, and move tasks by
-                date.
+                Track planned work and scan deadlines.
               </p>
             </div>
           </div>
@@ -232,6 +257,24 @@ export function PMProjectCalendarPage() {
             </span>
             <span>•</span>
             <span>{response?.totalItems ?? 0} items</span>
+          </div>
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button
+              type='button'
+              variant={calendarMode === 'schedule' ? 'default' : 'outline'}
+              size='sm'
+              onClick={() => setCalendarMode('schedule')}
+            >
+              Schedule
+            </Button>
+            <Button
+              type='button'
+              variant={calendarMode === 'deadline' ? 'default' : 'outline'}
+              size='sm'
+              onClick={() => setCalendarMode('deadline')}
+            >
+              Deadline
+            </Button>
           </div>
         </div>
 
@@ -344,7 +387,9 @@ export function PMProjectCalendarPage() {
                     style={{ height: '100%' }}
                     components={{
                       toolbar: () => null,
-                      event: CalendarEventCard,
+                      event: (props) => (
+                        <CalendarEventCard {...props} mode={calendarMode} />
+                      ),
                     }}
                     eventPropGetter={eventStyleGetter}
                     popup
@@ -362,7 +407,7 @@ export function PMProjectCalendarPage() {
           <CardHeader className='border-b pb-4'>
             <CardTitle className='text-lg'>Unscheduled work</CardTitle>
             <p className='text-sm text-muted-foreground'>
-              Work items without schedule stay here until phase 4 drop flow.
+              Work items without an active plan stay here.
             </p>
           </CardHeader>
           <CardContent className='p-0'>

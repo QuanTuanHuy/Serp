@@ -7,6 +7,7 @@ package serp.project.pmcore.application.workitem.query.timeline;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record WorkItemTimelineItemView(
@@ -21,12 +22,14 @@ public record WorkItemTimelineItemView(
         boolean isUnscheduled,
         boolean hasChildren,
         String rank,
+        ScheduleSummaryView schedule,
         IssueTypeSummaryView issueType,
         StatusSummaryView status,
         PrioritySummaryView priority
 ) {
 
-    public static WorkItemTimelineItemView from(WorkItemTimelineItemProjection projection) {
+    public static WorkItemTimelineItemView from(WorkItemTimelineItemProjection projection,
+                                                WorkItemPlanEntity plan) {
         return new WorkItemTimelineItemView(
                 projection.id(),
                 projection.projectId(),
@@ -36,9 +39,16 @@ public record WorkItemTimelineItemView(
                 projection.assigneeId(),
                 projection.startDate(),
                 projection.dueDate(),
-                projection.unscheduled(),
+                plan == null,
                 projection.hasChildren(),
                 projection.rank(),
+                plan == null ? null : new ScheduleSummaryView(
+                        plan.getPlannedStart(),
+                        plan.getPlannedEnd(),
+                        plan.getSource() == null ? null : plan.getSource().name(),
+                        plan.getLocked(),
+                        plan.getSourceRunId()
+                ),
                 new IssueTypeSummaryView(
                         projection.issueTypeId(),
                         projection.issueTypeName(),
@@ -75,6 +85,16 @@ public record WorkItemTimelineItemView(
             Long id,
             String name,
             String color
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ScheduleSummaryView(
+            Long plannedStart,
+            Long plannedEnd,
+            String source,
+            Boolean locked,
+            Long sourceRunId
     ) {
     }
 }

@@ -1,9 +1,6 @@
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
-/**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project
  */
 
 package serp.project.pmcore.application.workitem.query.get;
@@ -46,6 +43,7 @@ public record WorkItemDetailView(
         Long timeRemainingEstimate,
         Long timeSpent,
 
+        ScheduleSummaryView schedule,
         IssueTypeSummaryView issueType,
         UserSummary assignee,
         UserSummary reporter,
@@ -67,10 +65,11 @@ public record WorkItemDetailView(
     public static WorkItemDetailView from(WorkItemDetailProjection workItem,
                                           UserSummary assignee,
                                           UserSummary reporter,
-                                           List<WorkItemComponentView> components,
-                                           SubtaskStatsView subtaskStats,
-                                           LinkStatsView linkStats,
-                                           CommentStatsView commentStats) {
+                                          ScheduleSummaryView schedule,
+                                          List<WorkItemComponentView> components,
+                                          SubtaskStatsView subtaskStats,
+                                          LinkStatsView linkStats,
+                                          CommentStatsView commentStats) {
 
         return WorkItemDetailView.builder()
                 .id(workItem.getId())
@@ -88,6 +87,7 @@ public record WorkItemDetailView(
                 .timeOriginalEstimate(workItem.getTimeOriginalEstimate())
                 .timeRemainingEstimate(workItem.getTimeRemainingEstimate())
                 .timeSpent(workItem.getTimeSpent())
+                .schedule(schedule)
 
                 .issueType(workItem.getIssueTypeId() != null ?
                         new WorkItemDetailView.IssueTypeSummaryView(
@@ -186,6 +186,16 @@ public record WorkItemDetailView(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record CommentStatsView(
             long total
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ScheduleSummaryView(
+            Long plannedStart,
+            Long plannedEnd,
+            String source,
+            Boolean locked,
+            Long sourceRunId
     ) {
     }
 }
