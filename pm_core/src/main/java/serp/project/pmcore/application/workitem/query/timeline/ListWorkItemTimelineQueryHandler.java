@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageViews;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanAllocationPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -19,7 +21,6 @@ import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationSe
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
-import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 
@@ -37,6 +38,7 @@ public class ListWorkItemTimelineQueryHandler implements IQueryHandler<ListWorkI
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService projectPermissionEvaluationService;
     private final IWorkItemPlanPort workItemPlanPort;
+    private final IWorkItemPlanAllocationPort workItemPlanAllocationPort;
 
     @Override
     @Transactional(readOnly = true)
@@ -56,8 +58,21 @@ public class ListWorkItemTimelineQueryHandler implements IQueryHandler<ListWorkI
                 .listActivePlansByWorkItemIds(query.tenantId(), workItemIds)
                 .stream()
                 .collect(Collectors.toMap(WorkItemPlanEntity::getWorkItemId, Function.identity(), (left, right) -> left));
+        Map<Long, List<WorkItemPlanAllocationEntity>> allocationsByPlanId = workItemPlanAllocationPort
+                .listByPlanIds(query.tenantId(), plansByWorkItemId.values().stream()
+                        .map(WorkItemPlanEntity::getId)
+                        .filter(java.util.Objects::nonNull)
+                        .toList())
+                .stream()
+                .collect(Collectors.groupingBy(WorkItemPlanAllocationEntity::getWorkItemPlanId));
         List<WorkItemTimelineItemView> items = itemsResult.items().stream()
-                .map(item -> WorkItemTimelineItemView.from(item, plansByWorkItemId.get(item.id())))
+                .map(item -> {
+                    WorkItemPlanEntity plan = plansByWorkItemId.get(item.id());
+                    List<WorkItemPlanAllocationEntity> allocations = plan == null
+                            ? List.of()
+                            : allocationsByPlanId.getOrDefault(plan.getId(), List.of());
+                    return WorkItemTimelineItemView.from(item, plan, allocations);
+                })
                 .toList();
 
         List<WorkItemTimelineDependencyView> dependencies = query.includeDependencies()

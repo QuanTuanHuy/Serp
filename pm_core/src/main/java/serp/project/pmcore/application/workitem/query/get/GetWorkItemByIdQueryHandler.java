@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.application.shared.cqrs.query.IQueryHandler;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -27,6 +28,7 @@ import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
 import serp.project.pmcore.domain.user.service.IUserService;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanAllocationPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemCommentReadPort;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
@@ -46,6 +48,7 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
     private final IWorkItemReadPort workItemReadPort;
     private final IWorkItemCommentReadPort workItemCommentReadPort;
     private final IWorkItemPlanPort workItemPlanPort;
+    private final IWorkItemPlanAllocationPort workItemPlanAllocationPort;
 
     private final IProjectService projectService;
     private final IProjectPermissionEvaluationService permissionEvaluationService;
@@ -88,10 +91,10 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         WorkItemDetailView.CommentStatsView commentStats = new WorkItemDetailView.CommentStatsView(
                 workItemCommentReadPort.countByWorkItemId(workItem.getId(), query.tenantId())
         );
-        WorkItemDetailView.ScheduleSummaryView schedule = workItemPlanPort
+        WorkItemPlanEntity activePlan = workItemPlanPort
                 .getActivePlanByWorkItemId(query.tenantId(), workItem.getId())
-                .map(GetWorkItemByIdQueryHandler::toScheduleView)
                 .orElse(null);
+        WorkItemDetailView.ScheduleSummaryView schedule = toScheduleView(query.tenantId(), activePlan);
 
         return WorkItemDetailView.from(
                 workItem,
@@ -128,16 +131,32 @@ public class GetWorkItemByIdQueryHandler implements IQueryHandler<GetWorkItemByI
         }
     }
 
-    private static WorkItemDetailView.ScheduleSummaryView toScheduleView(WorkItemPlanEntity plan) {
+    private WorkItemDetailView.ScheduleSummaryView toScheduleView(Long tenantId, WorkItemPlanEntity plan) {
         if (plan == null) {
             return null;
         }
+        List<WorkItemDetailView.ScheduleAllocationView> allocations = plan.getId() == null
+                ? List.of()
+                : workItemPlanAllocationPort.listByPlanIds(tenantId, List.of(plan.getId()))
+                        .stream()
+                        .map(GetWorkItemByIdQueryHandler::toAllocationView)
+                        .toList();
         return new WorkItemDetailView.ScheduleSummaryView(
                 plan.getPlannedStart(),
                 plan.getPlannedEnd(),
                 plan.getSource() == null ? null : plan.getSource().name(),
                 plan.getLocked(),
-                plan.getSourceRunId()
+                plan.getSourceRunId(),
+                allocations
+        );
+    }
+
+    private static WorkItemDetailView.ScheduleAllocationView toAllocationView(WorkItemPlanAllocationEntity allocation) {
+        return new WorkItemDetailView.ScheduleAllocationView(
+                allocation.getAssigneeId(),
+                allocation.getStartTime(),
+                allocation.getEndTime(),
+                allocation.getEffortMillis()
         );
     }
 

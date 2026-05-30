@@ -19,12 +19,15 @@ import serp.project.pmcore.domain.optimization.port.IResourceCalendarPort;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemPlanMapper;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
+import serp.project.pmcore.infrastructure.store.model.WorkItemPlanAllocationModel;
 import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
+import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanAllocationRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,15 +43,18 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
     private final IWorkItemRepository workItemRepository;
     private final WorkItemPlanMapper workItemPlanMapper;
     private final IResourceCalendarPort resourceCalendarPort;
+    private final IWorkItemPlanAllocationRepository workItemPlanAllocationRepository;
 
     public FallbackResourceCapacityAdapter(IWorkItemPlanRepository workItemPlanRepository,
                                            IWorkItemRepository workItemRepository,
                                            WorkItemPlanMapper workItemPlanMapper,
-                                           IResourceCalendarPort resourceCalendarPort) {
+                                           IResourceCalendarPort resourceCalendarPort,
+                                           IWorkItemPlanAllocationRepository workItemPlanAllocationRepository) {
         this.workItemPlanRepository = workItemPlanRepository;
         this.workItemRepository = workItemRepository;
         this.workItemPlanMapper = workItemPlanMapper;
         this.resourceCalendarPort = resourceCalendarPort;
+        this.workItemPlanAllocationRepository = workItemPlanAllocationRepository;
     }
 
     @Override
@@ -106,6 +112,18 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                         .filter(item -> item.getAssigneeId() != null && userIds.contains(item.getAssigneeId()))
                         .filter(item -> item.getResolutionId() == null)
                         .collect(Collectors.toMap(WorkItemModel::getId, item -> item, (left, right) -> left));
+        List<Long> planIds = planModels.stream()
+                .map(WorkItemPlanModel::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<WorkItemPlanAllocationModel> allocationModels = planIds.isEmpty()
+                ? List.of()
+                : workItemPlanAllocationRepository.findAllByTenantIdAndWorkItemPlanIdIn(tenantId, planIds);
+        Map<Long, List<WorkItemPlanAllocationModel>> allocationsByPlanId = allocationModels == null
+                ? Map.of()
+                : allocationModels.stream()
+                        .collect(Collectors.groupingBy(WorkItemPlanAllocationModel::getWorkItemPlanId));
         Map<Long, Long> sameProjectUnplannedByAssignee = unplannedWorkItems.stream()
                 .filter(item -> Objects.equals(item.getProjectId(), projectId))
                 .collect(Collectors.groupingBy(WorkItemModel::getAssigneeId,
@@ -126,10 +144,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 if (item == null || !Objects.equals(item.getAssigneeId(), slot.assigneeId())) {
                     continue;
                 }
-                var planEntity = workItemPlanMapper.toEntity(plan);
-                Long planStart = planEntity.getPlannedStart();
-                Long planEnd = planEntity.getPlannedEnd();
-                long overlap = overlapMillis(slot.slotStart(), slot.slotEnd(), planStart, planEnd);
+                long overlap = plannedOverlapMillis(slot, plan, allocationsByPlanId.getOrDefault(plan.getId(), List.of()));
                 if (overlap <= 0) {
                     continue;
                 }
@@ -197,6 +212,37 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 ? item.getTimeRemainingEstimate()
                 : item.getTimeOriginalEstimate();
         return estimate == null || estimate <= 0 ? 0L : Math.multiplyExact(estimate, OptimizationConstants.MINUTE_MILLIS);
+    }
+
+    private long plannedOverlapMillis(ResourceCapacitySlot slot,
+                                      WorkItemPlanModel plan,
+                                      List<WorkItemPlanAllocationModel> allocations) {
+        if (allocations != null && !allocations.isEmpty()) {
+            return allocations.stream()
+                    .filter(allocation -> Objects.equals(allocation.getAssigneeId(), slot.assigneeId()))
+                    .mapToLong(allocation -> allocationOverlapMillis(slot, allocation))
+                    .sum();
+        }
+        var planEntity = workItemPlanMapper.toEntity(plan);
+        return overlapMillis(slot.slotStart(), slot.slotEnd(), planEntity.getPlannedStart(), planEntity.getPlannedEnd());
+    }
+
+    private long allocationOverlapMillis(ResourceCapacitySlot slot, WorkItemPlanAllocationModel allocation) {
+        Long allocationStart = localDateTimeToLong(allocation.getStartTime());
+        Long allocationEnd = localDateTimeToLong(allocation.getEndTime());
+        long overlap = overlapMillis(slot.slotStart(), slot.slotEnd(), allocationStart, allocationEnd);
+        if (overlap <= 0) {
+            return 0L;
+        }
+        Long effortMillis = allocation.getEffortMillis();
+        return effortMillis == null || effortMillis <= 0 ? overlap : Math.min(overlap, effortMillis);
+    }
+
+    private Long localDateTimeToLong(LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return null;
+        }
+        return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     private long overlapMillis(Long startA, Long endA, Long startB, Long endB) {

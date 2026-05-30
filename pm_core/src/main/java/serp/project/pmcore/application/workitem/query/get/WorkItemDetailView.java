@@ -195,7 +195,17 @@ public record WorkItemDetailView(
             Long plannedEnd,
             String source,
             Boolean locked,
-            Long sourceRunId
+            Long sourceRunId,
+            List<ScheduleAllocationView> allocations
+    ) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record ScheduleAllocationView(
+            Long assigneeId,
+            Long start,
+            Long end,
+            Long effortMillis
     ) {
     }
 }

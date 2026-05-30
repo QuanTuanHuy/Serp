@@ -12,8 +12,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.application.workitem.WorkItemComponentView;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanAllocationPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
@@ -55,6 +57,8 @@ class GetWorkItemByIdQueryHandlerTest {
     private IUserService userService;
     @Mock
     private IWorkItemPlanPort workItemPlanPort;
+    @Mock
+    private IWorkItemPlanAllocationPort workItemPlanAllocationPort;
 
     private GetWorkItemByIdQueryHandler handler;
 
@@ -64,6 +68,7 @@ class GetWorkItemByIdQueryHandlerTest {
                 workItemReadPort,
                 workItemCommentReadPort,
                 workItemPlanPort,
+                workItemPlanAllocationPort,
                 projectService,
                 permissionEvaluationService,
                 userService
@@ -86,6 +91,7 @@ class GetWorkItemByIdQueryHandlerTest {
         when(workItemCommentReadPort.countByWorkItemId(WORK_ITEM_ID, TENANT_ID)).thenReturn(0L);
         when(workItemPlanPort.getActivePlanByWorkItemId(TENANT_ID, WORK_ITEM_ID)).thenReturn(Optional.of(
                 WorkItemPlanEntity.builder()
+                        .id(901L)
                         .tenantId(TENANT_ID)
                         .projectId(PROJECT_ID)
                         .workItemId(WORK_ITEM_ID)
@@ -94,6 +100,16 @@ class GetWorkItemByIdQueryHandlerTest {
                         .source(WorkItemPlanSource.OPTIMIZATION)
                         .sourceRunId(501L)
                         .locked(false)
+                        .build()
+        ));
+        when(workItemPlanAllocationPort.listByPlanIds(TENANT_ID, List.of(901L))).thenReturn(List.of(
+                WorkItemPlanAllocationEntity.builder()
+                        .workItemPlanId(901L)
+                        .workItemId(WORK_ITEM_ID)
+                        .assigneeId(100L)
+                        .startTime(1_700_000_000_000L)
+                        .endTime(1_700_003_600_000L)
+                        .effortMillis(3_600_000L)
                         .build()
         ));
 
@@ -112,6 +128,9 @@ class GetWorkItemByIdQueryHandlerTest {
         assertEquals("OPTIMIZATION", result.schedule().source());
         assertEquals(Boolean.FALSE, result.schedule().locked());
         assertEquals(501L, result.schedule().sourceRunId());
+        assertEquals(1, result.schedule().allocations().size());
+        assertEquals(100L, result.schedule().allocations().getFirst().assigneeId());
+        assertEquals(1_700_003_600_000L, result.schedule().allocations().getFirst().end());
         verify(workItemPlanPort).getActivePlanByWorkItemId(TENANT_ID, WORK_ITEM_ID);
         verify(permissionEvaluationService).checkPermission(any(), any(), any());
     }

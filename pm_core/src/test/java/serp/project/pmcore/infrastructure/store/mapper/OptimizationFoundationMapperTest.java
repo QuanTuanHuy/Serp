@@ -11,6 +11,7 @@ import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
@@ -22,6 +23,7 @@ import serp.project.pmcore.infrastructure.store.model.IssueLinkTypeModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunItemModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunWarningModel;
+import serp.project.pmcore.infrastructure.store.model.WorkItemPlanAllocationModel;
 import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
 
 import java.math.BigDecimal;
@@ -143,6 +145,37 @@ class OptimizationFoundationMapperTest {
         assertThat(mapped.getScore()).isEqualByComparingTo(BigDecimal.valueOf(12.5));
         assertThat(mapped.getConfidence()).isEqualTo("HIGH");
         assertThat(mapped.getAllocationChunksJson()).isEqualTo("[{\"start\":1000,\"end\":2000}]");
+    }
+
+    @Test
+    void workItemPlanAllocationMapperShouldMapPlanningBlockFields() {
+        WorkItemPlanAllocationMapper mapper = new WorkItemPlanAllocationMapper();
+        WorkItemPlanAllocationEntity entity = WorkItemPlanAllocationEntity.builder()
+                .id(40L)
+                .tenantId(2L)
+                .projectId(3L)
+                .workItemPlanId(4L)
+                .workItemId(5L)
+                .assigneeId(6L)
+                .startTime(1_700_000_000_000L)
+                .endTime(1_700_003_600_000L)
+                .effortMillis(3_600_000L)
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(7L)
+                .sourceRunItemId(8L)
+                .build();
+
+        WorkItemPlanAllocationModel model = mapper.toModel(entity);
+        WorkItemPlanAllocationEntity mapped = mapper.toEntity(model);
+
+        assertThat(mapped.getWorkItemPlanId()).isEqualTo(4L);
+        assertThat(mapped.getWorkItemId()).isEqualTo(5L);
+        assertThat(mapped.getAssigneeId()).isEqualTo(6L);
+        assertThat(mapped.getStartTime()).isEqualTo(1_700_000_000_000L);
+        assertThat(mapped.getEndTime()).isEqualTo(1_700_003_600_000L);
+        assertThat(mapped.getEffortMillis()).isEqualTo(3_600_000L);
+        assertThat(mapped.getSourceRunId()).isEqualTo(7L);
+        assertThat(mapped.getSourceRunItemId()).isEqualTo(8L);
     }
 
     @Test
