@@ -14,14 +14,33 @@ export const PM_OPTIMIZATION_ALGORITHM_OPTIONS = [
   {
     value: 'greedy-balanced',
     label: 'Greedy balanced',
-    description: 'Default assignment and schedule heuristic.',
+    description: 'Default balanced assignment and schedule heuristic.',
   },
   {
     value: 'greedy-skill-first',
     label: 'Greedy skill first',
     description: 'Bias assignment toward skill fit.',
   },
+  {
+    value: 'greedy-deadline-first',
+    label: 'Greedy deadline first',
+    description: 'Prioritize earlier due dates when scheduling ready work.',
+  },
+  {
+    value: 'greedy-minimal-reassignment',
+    label: 'Greedy minimal reassignment',
+    description: 'Prefer current assignees unless reassignment clearly wins.',
+  },
 ] as const;
+
+export function getPmOptimizationAlgorithmLabel(value?: string | null) {
+  if (!value) return '-';
+
+  return (
+    PM_OPTIMIZATION_ALGORITHM_OPTIONS.find((option) => option.value === value)
+      ?.label || value
+  );
+}
 
 export type PMOptimizationObjectiveOption = {
   value: PMOptimizationObjective;

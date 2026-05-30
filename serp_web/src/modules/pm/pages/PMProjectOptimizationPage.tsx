@@ -11,7 +11,10 @@ import { ArrowLeft, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { Badge, Button, Card, CardContent } from '@/shared/components/ui';
-import { PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY } from '../constants/optimization';
+import {
+  PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY,
+  getPmOptimizationAlgorithmLabel,
+} from '../constants/optimization';
 import {
   useGeneratePmOptimizationRunMutation,
   useSearchPmWorkItemsQuery,
@@ -302,7 +305,10 @@ export function PMProjectOptimizationPage({
               </div>
 
               <div className='grid min-w-0 gap-3 md:grid-cols-2'>
-                <SummaryField label='Algorithm' value={algorithmKey} />
+                <SummaryField
+                  label='Algorithm'
+                  value={getPmOptimizationAlgorithmLabel(algorithmKey)}
+                />
                 <SummaryField label='Objective' value={objective} />
                 <SummaryField label='Change scope' value={changeScope} />
                 <SummaryField

@@ -41,6 +41,7 @@ import {
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
 import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
+import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunApi,
@@ -327,7 +328,7 @@ export function PMProjectOptimizationRunPage({
                   {formatValue(run.changeScope)}
                 </Badge>
                 <Badge variant='secondary'>
-                  {formatValue(run.algorithmKey)}
+                  {getPmOptimizationAlgorithmLabel(run.algorithmKey)}
                 </Badge>
               </div>
             </div>

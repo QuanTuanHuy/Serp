@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui';
+import { getPmOptimizationAlgorithmLabel } from '../../constants/optimization';
 import type {
   PMOptimizationRunApi,
   PMOptimizationRunSummaryApi,
@@ -43,7 +44,10 @@ export function PMOptimizationRunOverview({
         <CardContent className='grid gap-3 md:grid-cols-2'>
           <Field label='Objective' value={formatValue(run.objective)} />
           <Field label='Change scope' value={formatValue(run.changeScope)} />
-          <Field label='Algorithm' value={formatValue(run.algorithmKey)} />
+          <Field
+            label='Algorithm'
+            value={getPmOptimizationAlgorithmLabel(run.algorithmKey)}
+          />
           <Field label='Version' value={formatValue(run.algorithmVersion)} />
           <Field label='Solver status' value={formatValue(run.solverStatus)} />
           <Field
