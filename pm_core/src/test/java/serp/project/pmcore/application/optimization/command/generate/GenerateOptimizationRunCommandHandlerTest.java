@@ -24,7 +24,6 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
-import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyGraph;
 import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
@@ -185,7 +184,7 @@ class GenerateOptimizationRunCommandHandlerTest {
             }
 
             @Override
-            public OptimizationSolution solve(OptimizationProblem problem, OptimizationAlgorithmOptions options) {
+            public OptimizationSolution solve(OptimizationProblem problem) {
                 return new OptimizationSolution(
                         Map.of(),
                         Map.of(),

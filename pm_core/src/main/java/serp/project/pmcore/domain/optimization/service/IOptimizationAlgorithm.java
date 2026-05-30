@@ -6,12 +6,11 @@
 package serp.project.pmcore.domain.optimization.service;
 
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
-import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 
 public interface IOptimizationAlgorithm {
     OptimizationAlgorithmDescriptor descriptor();
 
-    OptimizationSolution solve(OptimizationProblem problem, OptimizationAlgorithmOptions options);
+    OptimizationSolution solve(OptimizationProblem problem);
 }

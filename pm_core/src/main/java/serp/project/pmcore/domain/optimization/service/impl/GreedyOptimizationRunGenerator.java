@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
-import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.OptimizationGenerationResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
@@ -33,9 +32,8 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
     private final OptimizationSummaryBuilder summaryBuilder;
 
     @Override
-    public OptimizationGenerationResult generate(OptimizationProjectModel projectModel, OptimizationBuilderInput input) {
+    public OptimizationGenerationResult generate(OptimizationProjectModel projectModel, OptimizationAlgorithmOptions options) {
         List<OptimizationConstraintViolation> warnings = new ArrayList<>(projectModel.warnings());
-        OptimizationAlgorithmOptions options = new OptimizationAlgorithmOptions(input.intent());
         Map<Long, OptimizationAssignmentSuggestion> assignments = assignmentPolicy.generateAssignments(
                 projectModel, options, warnings);
         Map<Long, OptimizationScheduleSuggestion> schedules = schedulingPolicy.generateSchedules(

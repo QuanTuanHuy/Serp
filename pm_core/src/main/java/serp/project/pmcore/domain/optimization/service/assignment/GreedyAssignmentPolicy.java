@@ -6,7 +6,6 @@
 package serp.project.pmcore.domain.optimization.service.assignment;
 
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
@@ -20,6 +19,7 @@ import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.domain.optimization.service.assignment.scoring.OptimizationAssignmentScoringStrategy;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -151,10 +151,9 @@ public class GreedyAssignmentPolicy implements OptimizationAssignmentPolicy {
         if (skillFit == null) {
             return 0D;
         }
-        boolean skillFirst = options.intent().objective() == OptimizationObjective.SKILL_FIRST
-                || OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST.equals(options.intent().algorithmKey());
-        double requiredMultiplier = skillFirst ? 1.5D : 1D;
-        double preferredMultiplier = skillFirst ? 1.25D : 1D;
+        OptimizationAssignmentScoringStrategy scoringStrategy = options.assignmentScoringStrategy();
+        double requiredMultiplier = scoringStrategy.requiredSkillMultiplier();
+        double preferredMultiplier = scoringStrategy.preferredSkillMultiplier();
         double cost = 0D;
         cost -= skillFit.matchedRequiredSkillCount() * OptimizationConstants.REQUIRED_SKILL_MATCH_BONUS * requiredMultiplier;
         cost -= skillFit.matchedPreferredSkillCount() * OptimizationConstants.PREFERRED_SKILL_MATCH_BONUS * preferredMultiplier;

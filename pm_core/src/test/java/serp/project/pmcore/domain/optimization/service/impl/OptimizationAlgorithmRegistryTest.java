@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.enums.OptimizationCapability;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
-import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
@@ -65,7 +64,7 @@ class OptimizationAlgorithmRegistryTest {
             }
 
             @Override
-            public OptimizationSolution solve(OptimizationProblem problem, OptimizationAlgorithmOptions options) {
+            public OptimizationSolution solve(OptimizationProblem problem) {
                 return null;
             }
         };

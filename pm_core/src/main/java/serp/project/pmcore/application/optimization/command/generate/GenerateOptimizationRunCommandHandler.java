@@ -24,7 +24,6 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
-import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
@@ -86,10 +85,7 @@ public class GenerateOptimizationRunCommandHandler
         OptimizationProjectModel projectModel = optimizationProjectModelBuilder.build(input);
         IOptimizationAlgorithm algorithm = optimizationAlgorithmRegistry.resolve(algorithmKey);
         validateCapabilities(intent, algorithm.descriptor());
-        OptimizationSolution solution = algorithm.solve(
-                new OptimizationProblem(projectModel, input),
-                new OptimizationAlgorithmOptions(intent)
-        );
+        OptimizationSolution solution = algorithm.solve(new OptimizationProblem(projectModel, input));
         solution = optimizationSolutionValidator.validate(new OptimizationProblem(projectModel, input), solution);
 
         long now = System.currentTimeMillis();
