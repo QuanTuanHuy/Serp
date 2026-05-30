@@ -58,6 +58,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HandoverManifestServiceImpl implements HandoverManifestService {
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final List<HandoverManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
+            HandoverManifestStatus.CREATED,
+            HandoverManifestStatus.OUTBOUND_CONFIRMED
+    );
 
     private final HandoverManifestRepository handoverManifestRepository;
     private final HandoverManifestOrderRepository handoverManifestOrderRepository;
@@ -84,6 +88,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
         validatePostOfficeMappedToHub(tenantId, normalizedOriginPostOfficeCode, request.getTargetHubId());
         Vehicle vehicle = validateVehicleForManifest(tenantId, request.getTargetHubId(), request.getVehicleId());
+        validateVehicleHasAssignedDriver(vehicle);
         Route route = validateRouteForManifest(
                 tenantId,
                 request.getTargetHubId(),
@@ -118,6 +123,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             }
             order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
         }
+        validateVehicleCapacity(vehicle, orders);
+        validateVehicleScheduleAvailability(tenantId, vehicle.getId());
 
         String manifestCode = generateManifestCode(tenantId, request.getTargetHubId());
         HandoverManifest manifest = HandoverManifest.builder()
@@ -131,13 +138,12 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 .build();
         HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
 
-        LocalDateTime now = LocalDateTime.now();
         List<HandoverManifestOrder> manifestOrders = new ArrayList<>();
         for (Order order : orders) {
             HandoverManifestOrder manifestOrder = HandoverManifestOrder.builder()
                     .manifest(savedManifest)
                     .order(order)
-                    .scanOutTime(now)
+                    .scanOutTime(null)
                     .tenantId(tenantId)
                     .build();
             manifestOrders.add(manifestOrder);
@@ -194,23 +200,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        if (manifest.getStatus() == HandoverManifestStatus.CANCELLED
-                || manifest.getStatus() == HandoverManifestStatus.INBOUND_CONFIRMED) {
-            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
-        }
-        if (manifest.getVehicleId() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Manifest must have an assigned vehicle before departure.");
-        }
-
-        manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
-        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
-        List<HandoverManifestOrder> manifestOrders = findManifestOrders(savedManifest.getId(), savedManifest.getTenantId());
-        return toResponse(
-                savedManifest,
-                manifestOrders,
-                loadVehicle(savedManifest.getVehicleId()),
-                loadRoute(savedManifest.getRouteId())
-        );
+        return processOutboundCheckin(manifest, false);
     }
 
     @Override
@@ -220,61 +210,27 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        if (manifest.getStatus() == HandoverManifestStatus.CANCELLED) {
-            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
-        }
+        return processInboundCheckin(manifest, request, false);
+    }
 
-        Long tenantId = manifest.getTenantId();
-        List<HandoverManifestOrder> targets;
-        if (request == null || request.getOrderCodes() == null || request.getOrderCodes().isEmpty()) {
-            targets = findManifestOrders(manifest.getId(), tenantId);
-        } else {
-            List<String> normalizedCodes = normalizeOrderCodes(request.getOrderCodes());
-            targets = handoverManifestOrderRepository.findByManifest_IdAndOrder_OrderCodeInAndTenantId(
-                    manifest.getId(),
-                    normalizedCodes,
-                    tenantId
-            );
-            if (targets.size() != normalizedCodes.size()) {
-                throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes are not present in this manifest.");
-            }
-        }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public HandoverManifestResponse driverCheckinStart(Long manifestId) {
+        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
-        if (targets.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
+        HandoverManifest manifest = getManifestOrThrow(manifestId);
+        return processOutboundCheckin(manifest, true);
+    }
 
-        LocalDateTime now = LocalDateTime.now();
-        for (HandoverManifestOrder target : targets) {
-            target.setScanInTime(now);
-        }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public HandoverManifestResponse driverCheckinEnd(Long manifestId) {
+        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
-        Map<Long, Order> orderById = targets.stream()
-                .map(HandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Order::getId, Function.identity(), (left, right) -> left));
-
-        for (Order order : orderById.values()) {
-            order.setStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB);
-        }
-        orderRepository.saveAll(orderById.values());
-        handoverManifestOrderRepository.saveAll(targets);
-        orderSyncEventPublisher.publishAll(orderById.values());
-
-        List<HandoverManifestOrder> allManifestOrders = findManifestOrders(manifest.getId(), tenantId);
-        boolean allInboundScanned = allManifestOrders.stream().allMatch(item -> item.getScanInTime() != null);
-        if (allInboundScanned) {
-            manifest.setStatus(HandoverManifestStatus.INBOUND_CONFIRMED);
-        } else {
-            manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
-        }
-        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
-        return toResponse(
-                savedManifest,
-                allManifestOrders,
-                loadVehicle(savedManifest.getVehicleId()),
-                loadRoute(savedManifest.getRouteId())
-        );
+        HandoverManifest manifest = getManifestOrThrow(manifestId);
+        return processInboundCheckin(manifest, null, true);
     }
 
     @Override
@@ -333,6 +289,65 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             );
         }
         return vehicle;
+    }
+
+    private void validateVehicleHasAssignedDriver(Vehicle vehicle) {
+        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(vehicle.getAssignedStaffId());
+    }
+
+    private void validateVehicleCapacity(Vehicle vehicle, List<Order> orders) {
+        if (vehicle == null || orders == null || orders.isEmpty()) {
+            return;
+        }
+        double totalWeight = orders.stream()
+                .map(Order::getTotalWeight)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+        double totalVolume = orders.stream()
+                .map(Order::getTotalVolume)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
+        if (vehicle.getMaxWeight() > 0 && totalWeight > vehicle.getMaxWeight()) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    String.format(
+                            Locale.ROOT,
+                            "Vehicle weight capacity exceeded: %.2f > %.2f",
+                            totalWeight,
+                            vehicle.getMaxWeight()
+                    )
+            );
+        }
+        if (vehicle.getMaxVolume() > 0 && totalVolume > vehicle.getMaxVolume()) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    String.format(
+                            Locale.ROOT,
+                            "Vehicle volume capacity exceeded: %.2f > %.2f",
+                            totalVolume,
+                            vehicle.getMaxVolume()
+                    )
+            );
+        }
+    }
+
+    private void validateVehicleScheduleAvailability(Long tenantId, Long vehicleId) {
+        if (vehicleId == null) {
+            return;
+        }
+        boolean hasActiveManifest = handoverManifestRepository.existsByTenantIdAndVehicleIdAndStatusIn(
+                tenantId,
+                vehicleId,
+                ACTIVE_MANIFEST_STATUSES
+        );
+        if (hasActiveManifest) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    "Vehicle is already assigned to another active handover manifest."
+            );
+        }
     }
 
     private Route validateRouteForManifest(
@@ -422,6 +437,121 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             }
         }
         return new ArrayList<>(normalized);
+    }
+
+    private HandoverManifestResponse processOutboundCheckin(HandoverManifest manifest, boolean driverOnly) {
+        if (manifest.getStatus() != HandoverManifestStatus.CREATED) {
+            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
+        }
+        if (manifest.getVehicleId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Manifest must have an assigned vehicle before departure.");
+        }
+        Vehicle vehicle = loadVehicle(manifest.getVehicleId());
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        validateVehicleHasAssignedDriver(vehicle);
+        if (driverOnly) {
+            secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+        }
+
+        List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
+        if (manifestOrders.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Manifest has no orders.");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (HandoverManifestOrder item : manifestOrders) {
+            if (item.getScanOutTime() == null) {
+                item.setScanOutTime(now);
+            }
+        }
+        handoverManifestOrderRepository.saveAll(manifestOrders);
+
+        manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
+        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+        return toResponse(
+                savedManifest,
+                manifestOrders,
+                vehicle,
+                loadRoute(savedManifest.getRouteId())
+        );
+    }
+
+    private HandoverManifestResponse processInboundCheckin(
+            HandoverManifest manifest,
+            ConfirmHandoverInboundRequest request,
+            boolean driverOnly
+    ) {
+        if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
+            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
+        }
+        if (manifest.getVehicleId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Manifest must have an assigned vehicle.");
+        }
+
+        Vehicle vehicle = loadVehicle(manifest.getVehicleId());
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        validateVehicleHasAssignedDriver(vehicle);
+        if (driverOnly) {
+            secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+        }
+
+        Long tenantId = manifest.getTenantId();
+        List<HandoverManifestOrder> targets;
+        if (request == null || request.getOrderCodes() == null || request.getOrderCodes().isEmpty()) {
+            targets = findManifestOrders(manifest.getId(), tenantId);
+        } else {
+            List<String> normalizedCodes = normalizeOrderCodes(request.getOrderCodes());
+            targets = handoverManifestOrderRepository.findByManifest_IdAndOrder_OrderCodeInAndTenantId(
+                    manifest.getId(),
+                    normalizedCodes,
+                    tenantId
+            );
+            if (targets.size() != normalizedCodes.size()) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes are not present in this manifest.");
+            }
+        }
+
+        if (targets.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (HandoverManifestOrder target : targets) {
+            target.setScanInTime(now);
+            if (target.getScanOutTime() == null) {
+                target.setScanOutTime(now);
+            }
+        }
+
+        Map<Long, Order> orderById = targets.stream()
+                .map(HandoverManifestOrder::getOrder)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Order::getId, Function.identity(), (left, right) -> left));
+
+        for (Order order : orderById.values()) {
+            order.setStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB);
+        }
+        orderRepository.saveAll(orderById.values());
+        handoverManifestOrderRepository.saveAll(targets);
+        orderSyncEventPublisher.publishAll(orderById.values());
+
+        List<HandoverManifestOrder> allManifestOrders = findManifestOrders(manifest.getId(), tenantId);
+        boolean allInboundScanned = allManifestOrders.stream().allMatch(item -> item.getScanInTime() != null);
+        if (allInboundScanned) {
+            manifest.setStatus(HandoverManifestStatus.INBOUND_CONFIRMED);
+        } else {
+            manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
+        }
+        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+        return toResponse(
+                savedManifest,
+                allManifestOrders,
+                vehicle,
+                loadRoute(savedManifest.getRouteId())
+        );
     }
 
     private HandoverManifestResponse toResponse(

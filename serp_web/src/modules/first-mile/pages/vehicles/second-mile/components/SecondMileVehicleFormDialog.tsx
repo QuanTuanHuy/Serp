@@ -51,6 +51,8 @@ interface SecondMileVehicleFormDialogProps {
   isSaving: boolean;
   hubOptions: VehicleSelectOption[];
   isLoadingHubs: boolean;
+  driverOptions: VehicleSelectOption[];
+  isLoadingDrivers: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
   onUpdateField: UpdateVehicleFormField;
@@ -65,6 +67,8 @@ export const SecondMileVehicleFormDialog: React.FC<
   isSaving,
   hubOptions,
   isLoadingHubs,
+  driverOptions,
+  isLoadingDrivers,
   onOpenChange,
   onSubmit,
   onUpdateField,
@@ -186,9 +190,15 @@ export const SecondMileVehicleFormDialog: React.FC<
             <Label htmlFor='sm-vehicle-hub'>Hub *</Label>
             <Select
               value={formValues.hubId.trim() || NONE_VALUE}
-              onValueChange={(value) =>
-                onUpdateField('hubId', value === NONE_VALUE ? '' : value)
-              }
+              onValueChange={(value) => {
+                const nextHubId = value === NONE_VALUE ? '' : value;
+
+                onUpdateField('hubId', nextHubId);
+
+                if (nextHubId !== formValues.hubId) {
+                  onUpdateField('assignedStaffId', '');
+                }
+              }}
               disabled={isSaving || isLoadingHubs}
             >
               <SelectTrigger id='sm-vehicle-hub' className='w-full'>
@@ -212,19 +222,49 @@ export const SecondMileVehicleFormDialog: React.FC<
           </div>
 
           <div className='space-y-2 sm:col-span-2'>
-            <Label htmlFor='sm-vehicle-driver-id'>Driver staff ID</Label>
-            <Input
-              id='sm-vehicle-driver-id'
-              type='number'
-              min={1}
-              step={1}
-              value={formValues.assignedStaffId}
-              onChange={(event) =>
-                onUpdateField('assignedStaffId', event.target.value)
+            <Label htmlFor='sm-vehicle-driver'>Driver</Label>
+            <Select
+              value={formValues.assignedStaffId.trim() || NONE_VALUE}
+              onValueChange={(value) =>
+                onUpdateField(
+                  'assignedStaffId',
+                  value === NONE_VALUE ? '' : value
+                )
               }
-              disabled={isSaving}
-              placeholder='Optional — hub staff with DRIVER role'
-            />
+              disabled={
+                isSaving || !formValues.hubId.trim() || isLoadingDrivers
+              }
+            >
+              <SelectTrigger id='sm-vehicle-driver' className='w-full'>
+                <SelectValue
+                  placeholder={
+                    !formValues.hubId.trim()
+                      ? 'Select hub first'
+                      : isLoadingDrivers
+                        ? 'Loading drivers...'
+                        : 'Select driver'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>Not assigned</SelectItem>
+                {formValues.hubId.trim() ? (
+                  driverOptions.length > 0 ? (
+                    driverOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
+                      {isLoadingDrivers
+                        ? 'Loading drivers...'
+                        : 'No drivers assigned to this hub.'}
+                    </p>
+                  )
+                ) : null}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

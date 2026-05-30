@@ -6,6 +6,8 @@ Description: Part of Serp Project
 package serp.project.first_mile.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
@@ -29,6 +31,26 @@ public interface PostOfficeStaffRepository extends JpaRepository<PostOfficeStaff
             Long tenantId,
             PostOfficeStaffRole role,
             PostOfficeStaffStatus status
+    );
+
+    @Query("""
+            select s
+            from PostOfficeStaff s
+            where s.tenantId = :tenantId
+                and s.role = :role
+                and s.status = :status
+                and (
+                    :keyword is null
+                    or lower(coalesce(s.code, '')) like concat('%', lower(:keyword), '%')
+                    or lower(coalesce(s.fullName, '')) like concat('%', lower(:keyword), '%')
+                )
+            order by s.fullName asc
+            """)
+    List<PostOfficeStaff> findAssignableByTenantIdAndRoleAndStatusAndKeyword(
+            @Param("tenantId") Long tenantId,
+            @Param("role") PostOfficeStaffRole role,
+            @Param("status") PostOfficeStaffStatus status,
+            @Param("keyword") String keyword
     );
 
     List<PostOfficeStaff> findByTenantIdAndIdIn(Long tenantId, Collection<Long> ids);

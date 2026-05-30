@@ -38,9 +38,9 @@ import {
 import { useNotification } from '@/shared/hooks';
 import { Plus, RefreshCw, Truck } from 'lucide-react';
 import {
-  useConfirmHandoverManifestInboundMutation,
-  useConfirmHandoverManifestOutboundMutation,
   useCreateHandoverManifestMutation,
+  useDriverCheckinHandoverManifestEndMutation,
+  useDriverCheckinHandoverManifestStartMutation,
   useGetHandoverManifestsQuery,
   useGetHubPostOfficesQuery,
   useGetHubsQuery,
@@ -170,10 +170,10 @@ export function HandoverManifestListPage() {
 
   const [createManifest, { isLoading: isCreating }] =
     useCreateHandoverManifestMutation();
-  const [confirmOutbound, { isLoading: isConfirmingOutbound }] =
-    useConfirmHandoverManifestOutboundMutation();
-  const [confirmInbound, { isLoading: isConfirmingInbound }] =
-    useConfirmHandoverManifestInboundMutation();
+  const [driverCheckinStart, { isLoading: isConfirmingOutbound }] =
+    useDriverCheckinHandoverManifestStartMutation();
+  const [driverCheckinEnd, { isLoading: isConfirmingInbound }] =
+    useDriverCheckinHandoverManifestEndMutation();
 
   const hubOptions = hubsData?.items ?? [];
   const postOfficeOptions = hubPostOfficesData?.items ?? [];
@@ -264,11 +264,11 @@ export function HandoverManifestListPage() {
       return;
     }
     try {
-      await confirmOutbound(manifest.id).unwrap();
-      notification.success('Vehicle departure confirmed.');
+      await driverCheckinStart(manifest.id).unwrap();
+      notification.success('Driver check-in at post office completed.');
       void refetch();
     } catch (error) {
-      notification.error('Failed to confirm vehicle departure.', {
+      notification.error('Failed to complete departure check-in.', {
         description: getErrorMessage(error),
       });
     }
@@ -279,11 +279,11 @@ export function HandoverManifestListPage() {
       return;
     }
     try {
-      await confirmInbound({ manifestId: manifest.id }).unwrap();
-      notification.success('Orders received at hub.');
+      await driverCheckinEnd(manifest.id).unwrap();
+      notification.success('Driver check-in at hub completed.');
       void refetch();
     } catch (error) {
-      notification.error('Failed to confirm hub receipt.', {
+      notification.error('Failed to complete arrival check-in.', {
         description: getErrorMessage(error),
       });
     }
@@ -449,7 +449,7 @@ export function HandoverManifestListPage() {
                               disabled={isConfirmingOutbound}
                               onClick={() => void handleConfirmOutbound(manifest)}
                             >
-                              Confirm departure
+                              Driver check-in start
                             </Button>
                           ) : null}
                           {manifest.status === 'CREATED' ||
@@ -459,7 +459,7 @@ export function HandoverManifestListPage() {
                               disabled={isConfirmingInbound}
                               onClick={() => void handleConfirmInbound(manifest)}
                             >
-                              Confirm hub receipt
+                              Driver check-in end
                             </Button>
                           ) : null}
                         </div>

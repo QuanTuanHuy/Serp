@@ -14,6 +14,9 @@ import type {
   ImportHistory,
   ImportHistoryStatus,
   ImportType,
+  PostOfficeStaffAssignment,
+  SecondMileHubStaffAssignment,
+  SecondMileHubStaff,
   SecondMileOrder,
 } from '../types';
 
@@ -38,6 +41,67 @@ export const normalizeHubPostOfficeMapping = (
     ),
     createdAt: readField<string>(record, 'created_at', 'createdAt'),
     updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileHubStaffAssignment = (
+  raw: unknown
+): SecondMileHubStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    hubId: readField<number>(record, 'hub_id', 'hubId'),
+    hubCode: readField<string>(record, 'hub_code', 'hubCode'),
+    hubName: readField<string>(record, 'hub_name', 'hubName'),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    staffStatus: readField(record, 'staff_status', 'staffStatus'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
+export const normalizeSecondMileHubStaff = (raw: unknown): SecondMileHubStaff => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    code: readField<string>(record, 'code', 'code'),
+    fullName: readField<string>(record, 'full_name', 'fullName'),
+    role: readField(record, 'role', 'role'),
+    status: readField(record, 'status', 'status'),
+  };
+};
+
+export const normalizePostOfficeStaffAssignment = (
+  raw: unknown
+): PostOfficeStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    postOfficeId: readField<number>(record, 'post_office_id', 'postOfficeId'),
+    postOfficeCode: readField<string>(record, 'post_office_code', 'postOfficeCode'),
+    postOfficeName: readField<string>(record, 'post_office_name', 'postOfficeName'),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    shiftStartTime: readField<string>(record, 'shift_start_time', 'shiftStartTime'),
+    shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
     tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
   };
 };

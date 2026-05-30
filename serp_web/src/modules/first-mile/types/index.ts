@@ -116,6 +116,36 @@ export interface HubPostOfficeMapping {
   tenantId?: number;
 }
 
+export type SecondMileHubStaffRole = 'MANAGER' | 'EMPLOYEE' | 'DRIVER';
+
+export type SecondMileHubStaffStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
+
+export interface SecondMileHubStaffAssignment {
+  id: number;
+  hubId?: number;
+  hubCode?: string;
+  hubName?: string;
+  staffId?: number;
+  staffCode?: string;
+  staffFullName?: string;
+  staffRole?: SecondMileHubStaffRole;
+  staffStatus?: SecondMileHubStaffStatus;
+  assignedFrom?: string;
+  assignedTo?: string;
+  isPrimary?: boolean;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SecondMileHubStaff {
+  id: number;
+  code?: string;
+  fullName?: string;
+  role?: SecondMileHubStaffRole;
+  status?: SecondMileHubStaffStatus;
+}
+
 export interface AssignHubPostOfficeRequest {
   post_office_code: string;
 }
@@ -194,6 +224,37 @@ export interface PostOfficeStaff {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+}
+
+export interface PostOfficeStaffAssignment {
+  id: number;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  staffId?: number;
+  staffCode?: string;
+  staffFullName?: string;
+  staffRole?: PostOfficeStaffRole;
+  assignedFrom?: string;
+  assignedTo?: string;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
+  isPrimary?: boolean;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface UpdatePostOfficeStaffAssignmentRequest {
+  assigned_from?: string;
+  assigned_to?: string;
+  shift_start_time?: string;
+  shift_end_time?: string;
+  is_primary?: boolean;
+  notes?: string;
 }
 
 export type VehicleStatus =

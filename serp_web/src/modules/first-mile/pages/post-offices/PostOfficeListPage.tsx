@@ -15,10 +15,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
-import { Plus, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert, UserCog } from 'lucide-react';
 import type { TmsFilterMode } from '../../components/list';
 import {
   useCreatePostOfficeMutation,
@@ -26,6 +33,11 @@ import {
   useGetHubsQuery,
   useGetPostOfficesQuery,
   useGetWardsByProvinceCodeQuery,
+  useGetPostOfficeStaffAssignmentsByPostOfficeQuery,
+  useGetAssignablePostOfficeStaffsQuery,
+  useAssignCourierToPostOfficeMutation,
+  useAssignManagerToPostOfficeMutation,
+  useUnassignPostOfficeStaffAssignmentMutation,
   useImportPostOfficesMutation,
   useLazyExportPostOfficeTemplateQuery,
   useUpdatePostOfficeMutation,
@@ -37,6 +49,7 @@ import type {
   PostOffice,
   PostOfficeImportItem,
   PostOfficeListFilters,
+  PostOfficeStaffRole,
   ValidateImportFileResponse,
   Ward,
 } from '../../types';
@@ -101,6 +114,16 @@ export const PostOfficeListPage: React.FC = () => {
     );
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
+  const [manageStaffPostOffice, setManageStaffPostOffice] =
+    React.useState<PostOffice | null>(null);
+  const [staffDialogOpen, setStaffDialogOpen] = React.useState(false);
+  const [staffRoleFilter, setStaffRoleFilter] = React.useState<
+    'ALL' | PostOfficeStaffRole
+  >('ALL');
+  const [staffRoleToAssign, setStaffRoleToAssign] =
+    React.useState<PostOfficeStaffRole>('COURIER');
+  const [staffSearchKeyword, setStaffSearchKeyword] = React.useState('');
+  const [selectedStaffIdToAssign, setSelectedStaffIdToAssign] = React.useState('');
 
   const { data, isLoading, isFetching, refetch } = useGetPostOfficesQuery({
     page,
@@ -174,6 +197,35 @@ export const PostOfficeListPage: React.FC = () => {
     useValidatePostOfficeImportMutation();
   const [importPostOfficeFile, { isLoading: isImportingPostOffices }] =
     useImportPostOfficesMutation();
+  const [assignCourierToPostOffice, { isLoading: isAssigningCourier }] =
+    useAssignCourierToPostOfficeMutation();
+  const [assignManagerToPostOffice, { isLoading: isAssigningManager }] =
+    useAssignManagerToPostOfficeMutation();
+  const [unassignPostOfficeStaffAssignment, { isLoading: isUnassigningStaff }] =
+    useUnassignPostOfficeStaffAssignmentMutation();
+
+  const {
+    data: staffAssignments,
+    isFetching: isFetchingStaffAssignments,
+    refetch: refetchStaffAssignments,
+  } = useGetPostOfficeStaffAssignmentsByPostOfficeQuery(
+    {
+      postOfficeId: manageStaffPostOffice?.id ?? 0,
+      ...(staffRoleFilter !== 'ALL' ? { role: staffRoleFilter } : {}),
+    },
+    { skip: !manageStaffPostOffice }
+  );
+
+  const { data: assignablePostOfficeStaffs, isFetching: isFetchingAssignableStaffs } =
+    useGetAssignablePostOfficeStaffsQuery(
+      {
+        role: staffRoleToAssign,
+        ...(staffSearchKeyword.trim()
+          ? { keyword: staffSearchKeyword.trim() }
+          : {}),
+      },
+      { skip: !manageStaffPostOffice }
+    );
 
   const isSaving = isCreating || isUpdating;
   const isImportFlowBusy =
@@ -473,6 +525,75 @@ export const PostOfficeListPage: React.FC = () => {
     setDetailTarget(postOffice);
   };
 
+  const handleOpenManageStaff = (postOffice: PostOffice) => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can manage post office staff assignments.');
+      return;
+    }
+    setManageStaffPostOffice(postOffice);
+    setStaffRoleFilter('ALL');
+    setStaffRoleToAssign('COURIER');
+    setStaffSearchKeyword('');
+    setSelectedStaffIdToAssign('');
+    setStaffDialogOpen(true);
+  };
+
+  const handleAssignStaffToPostOffice = async () => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can assign post office staff.');
+      return;
+    }
+    if (!manageStaffPostOffice?.id) {
+      return;
+    }
+    const staffId = Number(selectedStaffIdToAssign);
+    if (!Number.isInteger(staffId) || staffId <= 0) {
+      notification.error('Select a staff from dropdown.');
+      return;
+    }
+
+    try {
+      if (staffRoleToAssign === 'MANAGER') {
+        await assignManagerToPostOffice({
+          staffId,
+          postOfficeId: manageStaffPostOffice.id,
+        }).unwrap();
+      } else {
+        await assignCourierToPostOffice({
+          staffId,
+          postOfficeId: manageStaffPostOffice.id,
+        }).unwrap();
+      }
+      notification.success('Staff assignment updated successfully.');
+      setSelectedStaffIdToAssign('');
+      void refetchStaffAssignments();
+    } catch (error) {
+      notification.error('Failed to assign staff to post office.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleUnassignStaffFromPostOffice = async (assignmentId?: number) => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can unassign post office staff.');
+      return;
+    }
+    if (!assignmentId) {
+      return;
+    }
+
+    try {
+      await unassignPostOfficeStaffAssignment(assignmentId).unwrap();
+      notification.success('Staff unassigned successfully.');
+      void refetchStaffAssignments();
+    } catch (error) {
+      notification.error('Failed to unassign staff.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
   const handleDeletePostOffice = async () => {
     if (!deleteTarget) {
       return;
@@ -705,8 +826,179 @@ export const PostOfficeListPage: React.FC = () => {
                   </p>
                 )}
               </div>
+
+              {isTmsAdmin ? (
+                <div className='flex justify-end border-t pt-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => {
+                      if (detailTarget) {
+                        handleOpenManageStaff(detailTarget);
+                      }
+                    }}
+                  >
+                    <UserCog className='h-4 w-4 mr-1' />
+                    Manage staff assignments
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={staffDialogOpen}
+        onOpenChange={(open) => {
+          setStaffDialogOpen(open);
+          if (!open) {
+            setManageStaffPostOffice(null);
+          }
+        }}
+      >
+        <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>
+              Post office staff assignments — {manageStaffPostOffice?.name} (
+              {manageStaffPostOffice?.code})
+            </DialogTitle>
+            <DialogDescription>
+              Assign or unassign manager/courier for this post office.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='po-staff-role-filter'>Role filter</Label>
+                <Select
+                  value={staffRoleFilter}
+                  onValueChange={(value) =>
+                    setStaffRoleFilter(value as 'ALL' | PostOfficeStaffRole)
+                  }
+                >
+                  <SelectTrigger id='po-staff-role-filter'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='ALL'>All roles</SelectItem>
+                    <SelectItem value='MANAGER'>Manager</SelectItem>
+                    <SelectItem value='COURIER'>Courier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='po-staff-role-assign'>Assign role</Label>
+                <Select
+                  value={staffRoleToAssign}
+                  onValueChange={(value) =>
+                    setStaffRoleToAssign(value as PostOfficeStaffRole)
+                  }
+                >
+                  <SelectTrigger id='po-staff-role-assign'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='MANAGER'>Manager</SelectItem>
+                    <SelectItem value='COURIER'>Courier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='po-staff-search'>Search staff (code/name)</Label>
+              <Input
+                id='po-staff-search'
+                placeholder='e.g. USR_123_COURIER or Nguyen Van A'
+                value={staffSearchKeyword}
+                onChange={(event) => setStaffSearchKeyword(event.target.value)}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='po-staff-select'>Staff</Label>
+              <div className='flex gap-2'>
+                <Select
+                  value={selectedStaffIdToAssign || undefined}
+                  onValueChange={setSelectedStaffIdToAssign}
+                >
+                  <SelectTrigger id='po-staff-select' className='w-full'>
+                    <SelectValue
+                      placeholder={
+                        isFetchingAssignableStaffs
+                          ? 'Loading staffs...'
+                          : 'Select staff'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(assignablePostOfficeStaffs ?? []).length === 0 ? (
+                      <SelectItem value='__empty__' disabled>
+                        No staffs found
+                      </SelectItem>
+                    ) : (
+                      (assignablePostOfficeStaffs ?? []).map((staff) => (
+                        <SelectItem key={staff.id} value={String(staff.id)}>
+                          {(staff.fullName || staff.code || `#${staff.id}`) +
+                            (staff.code ? ` (${staff.code})` : '')}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => void handleAssignStaffToPostOffice()}
+                  disabled={
+                    isAssigningCourier ||
+                    isAssigningManager ||
+                    !selectedStaffIdToAssign
+                  }
+                >
+                  {isAssigningCourier || isAssigningManager ? 'Assigning...' : 'Assign'}
+                </Button>
+              </div>
+            </div>
+
+            {isFetchingStaffAssignments ? (
+              <p className='text-sm text-muted-foreground'>Loading assignments...</p>
+            ) : (staffAssignments ?? []).length === 0 ? (
+              <p className='text-sm text-muted-foreground'>
+                No active staff assignments for this post office.
+              </p>
+            ) : (
+              <div className='space-y-2'>
+                {(staffAssignments ?? []).map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className='flex items-center justify-between gap-2 rounded-md border p-3'
+                  >
+                    <div className='text-sm'>
+                      <p className='font-medium'>
+                        {assignment.staffFullName || assignment.staffCode || `#${assignment.staffId}`}
+                      </p>
+                      <p className='text-muted-foreground'>
+                        Role: {assignment.staffRole || '--'} · From:{' '}
+                        {assignment.assignedFrom || '--'}
+                      </p>
+                    </div>
+                    <Button
+                      size='sm'
+                      variant='destructive'
+                      disabled={isUnassigningStaff}
+                      onClick={() =>
+                        void handleUnassignStaffFromPostOffice(assignment.id)
+                      }
+                    >
+                      Unassign
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

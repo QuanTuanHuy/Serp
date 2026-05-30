@@ -24,5 +24,9 @@ public interface HandoverManifestService {
 
     HandoverManifestResponse confirmInbound(Long manifestId, ConfirmHandoverInboundRequest request);
 
+    HandoverManifestResponse driverCheckinStart(Long manifestId);
+
+    HandoverManifestResponse driverCheckinEnd(Long manifestId);
+
     HandoverManifestResponse getManifest(Long manifestId);
 }

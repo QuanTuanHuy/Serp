@@ -84,6 +84,24 @@ public class HandoverManifestController {
                 .build();
     }
 
+    @PostMapping("/{manifestId}/driver-checkin-start")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<HandoverManifestResponse> driverCheckinStart(@PathVariable Long manifestId) {
+        return ApiResponse.<HandoverManifestResponse>builder()
+                .message(messageService.getMessage("success.handover_manifests.driver_checkin_start"))
+                .result(handoverManifestService.driverCheckinStart(manifestId))
+                .build();
+    }
+
+    @PostMapping("/{manifestId}/driver-checkin-end")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<HandoverManifestResponse> driverCheckinEnd(@PathVariable Long manifestId) {
+        return ApiResponse.<HandoverManifestResponse>builder()
+                .message(messageService.getMessage("success.handover_manifests.driver_checkin_end"))
+                .result(handoverManifestService.driverCheckinEnd(manifestId))
+                .build();
+    }
+
     @GetMapping("/{manifestId}")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
     public ApiResponse<HandoverManifestResponse> getManifest(@PathVariable Long manifestId) {
