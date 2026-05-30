@@ -28,6 +28,9 @@ import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
+import serp.project.pmcore.domain.optimization.service.assignment.GreedyAssignmentPolicy;
+import serp.project.pmcore.domain.optimization.service.schedule.GreedySchedulingPolicy;
+import serp.project.pmcore.domain.optimization.service.summary.OptimizationSummaryBuilder;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 
@@ -45,7 +48,11 @@ class GreedyOptimizationRunGeneratorTest {
     private static final long END = START + 5 * 86_400_000L;
     private static final long HOUR = 3_600_000L;
 
-    private final GreedyOptimizationRunGenerator generator = new GreedyOptimizationRunGenerator();
+    private final GreedyOptimizationRunGenerator generator = new GreedyOptimizationRunGenerator(
+            new GreedyAssignmentPolicy(),
+            new GreedySchedulingPolicy(),
+            new OptimizationSummaryBuilder()
+    );
 
     @Test
     void generateShouldRespectNoReassignment() {

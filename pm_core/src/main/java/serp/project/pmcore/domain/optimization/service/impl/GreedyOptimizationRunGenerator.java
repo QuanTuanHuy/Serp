@@ -5,8 +5,9 @@
 
 package serp.project.pmcore.domain.optimization.service.impl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
@@ -25,23 +26,11 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator {
     private final GreedyAssignmentPolicy assignmentPolicy;
     private final GreedySchedulingPolicy schedulingPolicy;
     private final OptimizationSummaryBuilder summaryBuilder;
-
-    public GreedyOptimizationRunGenerator() {
-        this(new GreedyAssignmentPolicy(), new GreedySchedulingPolicy(), new OptimizationSummaryBuilder());
-    }
-
-    @Autowired
-    public GreedyOptimizationRunGenerator(GreedyAssignmentPolicy assignmentPolicy,
-                                          GreedySchedulingPolicy schedulingPolicy,
-                                          OptimizationSummaryBuilder summaryBuilder) {
-        this.assignmentPolicy = assignmentPolicy;
-        this.schedulingPolicy = schedulingPolicy;
-        this.summaryBuilder = summaryBuilder;
-    }
 
     @Override
     public OptimizationGenerationResult generate(OptimizationProjectModel projectModel, OptimizationBuilderInput input) {
