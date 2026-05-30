@@ -111,6 +111,49 @@ class GreedyOptimizationRunGeneratorTest {
     }
 
     @Test
+    void generateShouldTrackEffortSeparatelyFromCalendarWindowAcrossSlots() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(
+                List.of(optimizationItem(item, List.of(candidate(item, 100L, 1D, true, null)), 10 * HOUR)),
+                graphWithoutDependencies(List.of(10L)),
+                capacityResolution(List.of(
+                        new ResourceCapacitySlot(100L, START, START + 8 * HOUR, 8 * HOUR),
+                        new ResourceCapacitySlot(100L, START + 24 * HOUR, START + 32 * HOUR, 8 * HOUR)
+                ))
+        );
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        OptimizationScheduleSuggestion schedule = result.scheduleSuggestions().get(10L);
+        assertEquals(10 * HOUR, schedule.allocatedEffortMillis());
+        assertTrue(schedule.plannedEnd() - schedule.plannedStart() > schedule.allocatedEffortMillis());
+        assertEquals(0, result.summary().getOverloadedAssigneeCountAfter());
+    }
+
+    @Test
+    void generateShouldNotUseCapacityBeforeMidSlotEarliestStart() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(
+                List.of(optimizationItem(item, List.of(candidate(item, 100L, 1D, true, null)), 6 * HOUR)),
+                graphWithoutDependencies(List.of(10L)),
+                capacityResolution(List.of(
+                        new ResourceCapacitySlot(100L, START, START + 8 * HOUR, 8 * HOUR),
+                        new ResourceCapacitySlot(100L, START + 24 * HOUR, START + 32 * HOUR, 8 * HOUR)
+                )),
+                Map.of(10L, START + 4 * HOUR)
+        );
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+
+        OptimizationScheduleSuggestion schedule = result.scheduleSuggestions().get(10L);
+        assertEquals(START + 4 * HOUR, schedule.plannedStart());
+        assertEquals(6 * HOUR, schedule.allocatedEffortMillis());
+        assertEquals(START + 26 * HOUR, schedule.plannedEnd());
+    }
+
+    @Test
     void generateShouldUseRequiredSkillMatchToBeatProjectMemberFallback() {
         WorkItemEntity item = workItem(10L, 100L, null);
         OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
@@ -180,6 +223,13 @@ class GreedyOptimizationRunGeneratorTest {
     private OptimizationProjectModel model(List<OptimizationWorkItem> items,
                                            OptimizationDependencyGraph graph,
                                            CapacityResolutionResult capacityResolution) {
+        return model(items, graph, capacityResolution, Map.of());
+    }
+
+    private OptimizationProjectModel model(List<OptimizationWorkItem> items,
+                                           OptimizationDependencyGraph graph,
+                                           CapacityResolutionResult capacityResolution,
+                                           Map<Long, Long> earliestStartByWorkItemId) {
         return new OptimizationProjectModel(
                 1L,
                 100L,
@@ -191,14 +241,18 @@ class GreedyOptimizationRunGeneratorTest {
                 capacityResolution.slots(),
                 capacityResolution,
                 List.of(),
-                Map.of()
+                earliestStartByWorkItemId
         );
     }
 
     private CapacityResolutionResult capacityResolution() {
+        return capacityResolution(List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
+                new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)));
+    }
+
+    private CapacityResolutionResult capacityResolution(List<ResourceCapacitySlot> slots) {
         return new CapacityResolutionResult(
-                List.of(new ResourceCapacitySlot(100L, START, START + 86_400_000L, 8 * HOUR),
-                        new ResourceCapacitySlot(200L, START, START + 86_400_000L, 8 * HOUR)),
+                slots,
                 CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC,
                 CapacityCoverageStatus.MISSING,
                 CapacityCoverageStatus.NOT_REQUIRED,
@@ -254,10 +308,16 @@ class GreedyOptimizationRunGeneratorTest {
     }
 
     private OptimizationWorkItem optimizationItem(WorkItemEntity workItem, List<OptimizationCandidateAssignee> candidates) {
+        return optimizationItem(workItem, candidates, HOUR);
+    }
+
+    private OptimizationWorkItem optimizationItem(WorkItemEntity workItem,
+                                                  List<OptimizationCandidateAssignee> candidates,
+                                                  long durationMillis) {
         return new OptimizationWorkItem(
                 workItem,
                 null,
-                new OptimizationDuration(workItem.getId(), HOUR, OptimizationConfidence.HIGH, "TEST"),
+                new OptimizationDuration(workItem.getId(), durationMillis, OptimizationConfidence.HIGH, "TEST"),
                 new OptimizationPriorityScore(workItem.getId(), 1D, false),
                 candidates,
                 false,

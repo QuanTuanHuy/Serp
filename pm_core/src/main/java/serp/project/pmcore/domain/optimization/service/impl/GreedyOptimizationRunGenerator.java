@@ -338,8 +338,15 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
             }
             // Confidence is reduced when constraint violations are present
             OptimizationConfidence confidence = confidenceFor(item, violations);
-            schedules.put(workItemId, new OptimizationScheduleSuggestion(workItemId, assigneeId, window.plannedStart(), window.plannedEnd(),
-                    confidence, reasons, violations));
+            schedules.put(workItemId, new OptimizationScheduleSuggestion(
+                    workItemId,
+                    assigneeId,
+                    window.plannedStart(),
+                    window.plannedEnd(),
+                    item.duration().durationMillis(),
+                    confidence,
+                    reasons,
+                    violations));
             scheduledEndByWorkItem.put(workItemId, window.plannedEnd());
             // Unblock successor items now that this item is scheduled
             markSuccessorsReady(workItemId, projectModel, remainingPredecessors, ready);
@@ -458,17 +465,21 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
             }
             SlotKey key = new SlotKey(assigneeId, slot.slotStart());
             long used = usedBySlot.getOrDefault(key, 0L);
-            long available = Math.max(0L, slot.capacityMillis() - used);
+            long slotAvailableStart = Math.max(slot.slotStart() + used, earliestStart);
+            if (slotAvailableStart >= slot.slotEnd()) {
+                continue;
+            }
+            long available = Math.max(0L, slot.slotEnd() - slotAvailableStart);
+            long capacityRemaining = Math.max(0L, slot.capacityMillis() - used);
+            available = Math.min(available, capacityRemaining);
             if (available == 0) {
                 continue;
             }
-            // Allocation starts after any already-used portion of this slot, respecting the earliest start constraint
-            long allocationStart = Math.max(slot.slotStart() + used, earliestStart);
             long chunk = Math.min(remaining, available);
             if (plannedStart == null) {
-                plannedStart = allocationStart;
+                plannedStart = slotAvailableStart;
             }
-            plannedEnd = allocationStart + chunk;
+            plannedEnd = slotAvailableStart + chunk;
             usedBySlot.put(key, used + chunk);
             remaining -= chunk;
         }
@@ -643,7 +654,7 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
         Map<Long, Long> scheduledByAssignee = new HashMap<>();
         schedules.values().forEach(schedule -> scheduledByAssignee.merge(
                 schedule.assigneeId(),
-                schedule.plannedEnd() - schedule.plannedStart(),
+                schedule.allocatedEffortMillis() == null ? 0L : schedule.allocatedEffortMillis(),
                 Long::sum
         ));
         Map<Long, Long> capacityByAssignee = totalCapacityByAssignee(projectModel.capacitySlots());

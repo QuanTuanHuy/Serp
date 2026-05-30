@@ -229,6 +229,7 @@ class OptimizationSolutionValidatorTest {
                 assigneeId,
                 plannedStart,
                 plannedEnd,
+                plannedEnd - plannedStart,
                 OptimizationConfidence.HIGH,
                 List.of(),
                 List.of()
