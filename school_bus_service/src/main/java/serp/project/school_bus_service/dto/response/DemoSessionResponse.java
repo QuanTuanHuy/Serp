@@ -18,6 +18,12 @@ public class DemoSessionResponse extends BaseResponse {
     private Double currentLatitude;
     private Double currentLongitude;
     private Double progressPercent;
+    private Integer durationSeconds;
+    private Boolean autoAdvanceStops;
+    private Boolean autoAttendance;
+    private LocalDateTime lastTickAt;
+    private String lastEventType;
+    private String errorMessage;
     private LocalDateTime startedAt;
     private LocalDateTime pausedAt;
     private LocalDateTime completedAt;

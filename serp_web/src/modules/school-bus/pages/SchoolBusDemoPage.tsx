@@ -5,14 +5,15 @@ import { Gauge, Pause, Play, RotateCcw, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import {
-  useGetDemoTripEventsQuery,
-  useGetDemoTripStateQuery,
+  useCreateDemoSessionMutation,
+  useGetDemoSessionByTripQuery,
+  useGetDemoSessionEventsQuery,
   useGetTripsQuery,
-  usePauseDemoTripMutation,
-  useResumeDemoTripMutation,
-  useSetDemoTripSpeedMutation,
-  useStartDemoTripMutation,
-  useStopDemoTripMutation,
+  usePauseDemoSessionMutation,
+  useResumeDemoSessionMutation,
+  useStartDemoSessionMutation,
+  useStopDemoSessionMutation,
+  useTickDemoSessionMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -21,7 +22,7 @@ import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { schoolBusUi } from '../theme';
-import { formatDateTime, getPageItems } from '../utils';
+import { getPageItems } from '../utils';
 import { SchoolBusTimeline, mapDemoEventsToTimeline } from '../components/history';
 
 export function SchoolBusDemoPage() {
@@ -39,30 +40,43 @@ export function SchoolBusDemoPage() {
     }
   }, [selectedTripId, trips]);
 
-  const { data: stateData } = useGetDemoTripStateQuery(selectedTripId as number, {
+  const { data: sessionData } = useGetDemoSessionByTripQuery(selectedTripId as number, {
     skip: !selectedTripId,
   });
-  const { data: eventsData } = useGetDemoTripEventsQuery(selectedTripId as number, {
-    skip: !selectedTripId,
+  const demo = sessionData?.data;
+  const sessionId = demo?.id;
+
+  const { data: eventsData } = useGetDemoSessionEventsQuery(sessionId as number, {
+    skip: !sessionId,
   });
-  const [startDemo] = useStartDemoTripMutation();
-  const [pauseDemo] = usePauseDemoTripMutation();
-  const [resumeDemo] = useResumeDemoTripMutation();
-  const [stopDemo] = useStopDemoTripMutation();
-  const [setSpeed] = useSetDemoTripSpeedMutation();
-  const demo = stateData?.data;
   const events = eventsData?.data || demo?.events || [];
 
+  const [createSession] = useCreateDemoSessionMutation();
+  const [startDemo] = useStartDemoSessionMutation();
+  const [pauseDemo] = usePauseDemoSessionMutation();
+  const [resumeDemo] = useResumeDemoSessionMutation();
+  const [stopDemo] = useStopDemoSessionMutation();
+  const [tickDemo] = useTickDemoSessionMutation();
+
   const action = async (label: string, fn: () => Promise<any>) => {
-    if (!selectedTripId) {
-      return;
-    }
     try {
       const response = await fn();
       toast.success(response.message || `${label} completed`);
     } catch (error: any) {
       toast.error(error?.data?.message || `${label} failed`);
     }
+  };
+
+  const handleStart = async () => {
+    if (!selectedTripId) return;
+    // Create session if none exists or current is terminated
+    if (!sessionId || demo?.status === 'COMPLETED' || demo?.status === 'STOPPED') {
+      await action('Create session', () =>
+        createSession({ tripId: selectedTripId }).unwrap()
+      );
+      return;
+    }
+    await action('Start demo', () => startDemo(sessionId).unwrap());
   };
 
   return (
@@ -147,60 +161,45 @@ export function SchoolBusDemoPage() {
             <div className='flex flex-wrap gap-2'>
               <Button
                 disabled={!selectedTripId}
-                onClick={() =>
-                  action('Start demo', () => startDemo(selectedTripId as number).unwrap())
-                }
+                onClick={handleStart}
               >
                 <Play className='mr-2 h-4 w-4' />
-                Start
+                {!sessionId || demo?.status === 'COMPLETED' || demo?.status === 'STOPPED'
+                  ? 'New Session'
+                  : 'Start'}
               </Button>
               <Button
                 variant='outline'
-                disabled={!selectedTripId}
-                onClick={() =>
-                  action('Pause demo', () => pauseDemo(selectedTripId as number).unwrap())
-                }
+                disabled={!sessionId || demo?.status !== 'RUNNING'}
+                onClick={() => action('Pause demo', () => pauseDemo(sessionId!).unwrap())}
               >
                 <Pause className='mr-2 h-4 w-4' />
                 Pause
               </Button>
               <Button
                 variant='outline'
-                disabled={!selectedTripId}
-                onClick={() =>
-                  action('Resume demo', () => resumeDemo(selectedTripId as number).unwrap())
-                }
+                disabled={!sessionId || demo?.status !== 'PAUSED'}
+                onClick={() => action('Resume demo', () => resumeDemo(sessionId!).unwrap())}
               >
                 <RotateCcw className='mr-2 h-4 w-4' />
                 Resume
               </Button>
               <Button
                 variant='outline'
-                disabled={!selectedTripId}
-                onClick={() =>
-                  action('Stop demo', () => stopDemo(selectedTripId as number).unwrap())
-                }
+                disabled={!sessionId || demo?.status === 'COMPLETED' || demo?.status === 'STOPPED'}
+                onClick={() => action('Stop demo', () => stopDemo(sessionId!).unwrap())}
               >
                 <Square className='mr-2 h-4 w-4' />
                 Stop
               </Button>
-              {[1, 2, 5, 10].map((speed) => (
-                <Button
-                  key={speed}
-                  variant={demo?.speedMultiplier === speed ? 'default' : 'outline'}
-                  disabled={!selectedTripId}
-                  onClick={() =>
-                    action('Set speed', () =>
-                      setSpeed({
-                        tripId: selectedTripId as number,
-                        body: { speedMultiplier: speed },
-                      }).unwrap()
-                    )
-                  }
-                >
-                  x{speed}
-                </Button>
-              ))}
+              <Button
+                variant='outline'
+                disabled={!sessionId || demo?.status !== 'RUNNING'}
+                onClick={() => action('Tick', () => tickDemo(sessionId!).unwrap())}
+              >
+                <RotateCcw className='mr-2 h-4 w-4' />
+                Tick
+              </Button>
             </div>
 
             <div className='rounded-[24px] border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-sky-50 p-6'>

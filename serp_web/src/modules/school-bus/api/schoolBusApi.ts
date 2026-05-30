@@ -8,7 +8,7 @@ import type {
   SchoolBusCapacityUtilization,
   SchoolBusDemoEvent,
   SchoolBusDemoSession,
-  SchoolBusDemoSpeedRequest,
+  CreateDemoSessionRequest,
   SchoolBusAttendance,
   SchoolBusListParams,
   SchoolBusMapLocation,
@@ -1337,55 +1337,72 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
       ],
     }),
-    startDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/start`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    pauseDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/pause`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    resumeDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/resume`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    stopDemoTrip: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/stop`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    setDemoTripSpeed: builder.mutation<
+
+    // ===== Demo Sessions (session-centric API) =====
+    createDemoSession: builder.mutation<
       ApiResponse<SchoolBusDemoSession>,
-      { tripId: number; body: SchoolBusDemoSpeedRequest }
+      { tripId: number; body?: CreateDemoSessionRequest }
     >({
       query: ({ tripId, body }) => ({
-        url: `/demo/trips/${tripId}/speed`,
+        url: `/demo-sessions/from-trip/${tripId}`,
         method: 'POST',
-        body,
+        body: body ?? {},
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusDemoSession>(),
       invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
     }),
-    getDemoTripState: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/state`, method: 'GET' }),
+    getDemoSession: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      providesTags: (_result, _error, sessionId) => [
+        { type: 'schoolBus/TripHistory', id: `DEMO-${sessionId}` },
+      ],
+    }),
+    getDemoSessionByTrip: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (tripId) => ({ url: `/demo-sessions/by-trip/${tripId}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusDemoSession>(),
       providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
     }),
-    getDemoTripEvents: builder.query<ApiResponse<SchoolBusDemoEvent[]>, number>({
-      query: (tripId) => ({ url: `/demo/trips/${tripId}/events`, method: 'GET' }),
+    startDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/start`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    pauseDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/pause`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    resumeDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/resume`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    tickDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/tick`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    stopDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/stop`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
+    getDemoSessionEvents: builder.query<ApiResponse<SchoolBusDemoEvent[]>, number>({
+      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/events`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusDemoEvent[]>(),
       providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
     }),
+
     getTripHistory: builder.query<
       ApiResponse<PagedResponse<SchoolBusTripHistory>>,
       SchoolBusListParams | void
@@ -1861,13 +1878,15 @@ export const {
   useDropoffTripStudentMutation,
   useAbsentTripStudentMutation,
   useNoShowTripStudentMutation,
-  useStartDemoTripMutation,
-  usePauseDemoTripMutation,
-  useResumeDemoTripMutation,
-  useStopDemoTripMutation,
-  useSetDemoTripSpeedMutation,
-  useGetDemoTripStateQuery,
-  useGetDemoTripEventsQuery,
+  useCreateDemoSessionMutation,
+  useGetDemoSessionQuery,
+  useGetDemoSessionByTripQuery,
+  useStartDemoSessionMutation,
+  usePauseDemoSessionMutation,
+  useResumeDemoSessionMutation,
+  useTickDemoSessionMutation,
+  useStopDemoSessionMutation,
+  useGetDemoSessionEventsQuery,
   useGetAttendanceQuery,
   useGetTripHistoryQuery,
   // School Schedule

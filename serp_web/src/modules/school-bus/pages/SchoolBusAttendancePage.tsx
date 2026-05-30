@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
+import { Button } from '@/shared/components/ui';
 import { formatDate, getPageItems } from '../utils';
 
 // ─── page ─────────────────────────────────────────────────────────────────────
@@ -139,6 +140,7 @@ export function SchoolBusAttendancePage() {
                   <TableHead>Bus / Driver</TableHead>
                   <TableHead>Attendant</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className='w-[140px] text-right'>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,6 +184,20 @@ export function SchoolBusAttendancePage() {
                     </TableCell>
                     <TableCell>
                       <SchoolBusStatusBadge status={trip.status} />
+                    </TableCell>
+                    <TableCell className='text-right'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='h-8 rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/school-bus/attendance/${trip.id}`);
+                        }}
+                      >
+                        <ClipboardCheck className='mr-1.5 h-3.5 w-3.5' />
+                        Attendance
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

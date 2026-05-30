@@ -45,6 +45,24 @@ public class DemoSessionEntity extends BaseModel {
     @Column(name = "progress_percent", nullable = false)
     private Double progressPercent = 0D;
 
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
+    @Column(name = "auto_advance_stops", nullable = false)
+    private Boolean autoAdvanceStops = Boolean.FALSE;
+
+    @Column(name = "auto_attendance", nullable = false)
+    private Boolean autoAttendance = Boolean.FALSE;
+
+    @Column(name = "last_tick_at")
+    private LocalDateTime lastTickAt;
+
+    @Column(name = "last_event_type", length = 50)
+    private String lastEventType;
+
+    @Column(name = "error_message", columnDefinition = "TEXT")
+    private String errorMessage;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
 

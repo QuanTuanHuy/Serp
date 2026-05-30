@@ -43,6 +43,12 @@ public class OperationsMapper extends BaseMapper {
         r.setCurrentLatitude(entity.getCurrentLatitude());
         r.setCurrentLongitude(entity.getCurrentLongitude());
         r.setProgressPercent(entity.getProgressPercent());
+        r.setDurationSeconds(entity.getDurationSeconds());
+        r.setAutoAdvanceStops(entity.getAutoAdvanceStops());
+        r.setAutoAttendance(entity.getAutoAttendance());
+        r.setLastTickAt(entity.getLastTickAt());
+        r.setLastEventType(entity.getLastEventType());
+        r.setErrorMessage(entity.getErrorMessage());
         r.setStartedAt(entity.getStartedAt());
         r.setPausedAt(entity.getPausedAt());
         r.setCompletedAt(entity.getCompletedAt());
@@ -53,7 +59,7 @@ public class OperationsMapper extends BaseMapper {
     public DemoEventLogResponse toDemoEventLogResponse(DemoEventLogEntity entity) {
         DemoEventLogResponse r = enrich(new DemoEventLogResponse(), entity);
         r.setDemoSessionId(entity.getDemoSession().getId());
-        r.setEventType(entity.getEventType());
+        r.setEventType(entity.getEventType().name());
         r.setEventTime(entity.getEventTime());
         r.setPayloadJson(entity.getPayloadJson());
         return r;

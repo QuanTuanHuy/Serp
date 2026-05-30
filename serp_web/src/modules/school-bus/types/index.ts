@@ -501,6 +501,12 @@ export interface SchoolBusDemoSession extends SchoolBusBaseRecord {
   currentLatitude?: number | null;
   currentLongitude?: number | null;
   progressPercent: number;
+  durationSeconds?: number | null;
+  autoAdvanceStops?: boolean | null;
+  autoAttendance?: boolean | null;
+  lastTickAt?: string | null;
+  lastEventType?: string | null;
+  errorMessage?: string | null;
   startedAt?: string | null;
   pausedAt?: string | null;
   completedAt?: string | null;
@@ -779,9 +785,10 @@ export interface SchoolBusTripAttendanceActionRequest {
   isActive?: boolean;
 }
 
-export interface SchoolBusDemoSpeedRequest {
-  speedMultiplier: number;
-  isActive?: boolean;
+export interface CreateDemoSessionRequest {
+  durationSeconds?: number | null;
+  autoAdvanceStops?: boolean | null;
+  autoAttendance?: boolean | null;
 }
 
 export interface SchoolBusMapAddressParts {

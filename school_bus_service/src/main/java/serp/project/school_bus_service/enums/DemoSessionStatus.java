@@ -5,6 +5,7 @@ public enum DemoSessionStatus {
     RUNNING,
     PAUSED,
     COMPLETED,
-    STOPPED
+    STOPPED,
+    ERROR
 }
 
