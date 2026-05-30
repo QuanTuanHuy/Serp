@@ -59,6 +59,23 @@ public interface PostOfficeStaffAssignmentRepository extends JpaRepository<PostO
     }
 
     @Query("""
+        select a
+        from PostOfficeStaffAssignment a
+        join fetch a.staff s
+        join fetch a.postOffice p
+        where a.staff.id = :staffId
+        and a.tenantId = :tenantId
+        and a.assignedFrom <= :today
+        and (a.assignedTo is null or a.assignedTo >= :today)
+        order by a.id desc
+        """)
+    List<PostOfficeStaffAssignment> findActiveAssignmentsByStaffIdAndTenantId(
+        @Param("staffId") Long staffId,
+        @Param("tenantId") Long tenantId,
+        @Param("today") LocalDate today
+    );
+
+    @Query("""
         select distinct a.postOffice.id
         from PostOfficeStaffAssignment a
         where a.staff.id = :staffId
@@ -142,6 +159,25 @@ public interface PostOfficeStaffAssignmentRepository extends JpaRepository<PostO
         @Param("today") LocalDate today,
         @Param("role") PostOfficeStaffRole role
     );
+
+    @Query("""
+        select a
+        from PostOfficeStaffAssignment a
+        join fetch a.staff s
+        join fetch a.postOffice p
+        where a.postOffice.id = :postOfficeId
+            and a.tenantId = :tenantId
+            and a.assignedFrom <= :today
+            and (a.assignedTo is null or a.assignedTo >= :today)
+        order by s.role asc, s.fullName asc
+        """)
+    List<PostOfficeStaffAssignment> findActiveAssignmentsByPostOfficeIdAndTenantId(
+        @Param("postOfficeId") Long postOfficeId,
+        @Param("tenantId") Long tenantId,
+        @Param("today") LocalDate today
+    );
+
+    Optional<PostOfficeStaffAssignment> findByIdAndTenantIdAndAssignedToIsNull(Long id, Long tenantId);
 
     @Query("""
         select distinct s.code as code, s.fullName as name

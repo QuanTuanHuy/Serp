@@ -24,6 +24,7 @@ import {
   useCreateSecondMileVehicleMutation,
   useDeleteSecondMileVehicleMutation,
   useGetHubsQuery,
+  useGetSecondMileHubStaffAssignmentsQuery,
   useGetSecondMileVehicleByIdQuery,
   useGetSecondMileVehiclesQuery,
   useImportSecondMileVehiclesMutation,
@@ -35,6 +36,7 @@ import {
 import type {
   Hub,
   ImportHistory,
+  SecondMileHubStaffAssignment,
   SecondMileVehicle,
   SecondMileVehicleImportItem,
   ValidateImportFileResponse,
@@ -51,6 +53,7 @@ import {
   IMPORT_PREVIEW_LIMIT,
   mapVehicleToFormState,
   PAGE_SIZE,
+  parseOptionalPositiveInteger,
   validateVehicleForm,
   type VehicleFormMode,
   type VehicleFormState,
@@ -117,6 +120,82 @@ export function SecondMileVehicleListPage() {
       })),
     [hubsData?.items]
   );
+
+  const selectedHubNumericId = React.useMemo(
+    () => parseOptionalPositiveInteger(formValues.hubId),
+    [formValues.hubId]
+  );
+
+  const {
+    data: hubDriverAssignments,
+    isFetching: isFetchingHubDrivers,
+  } = useGetSecondMileHubStaffAssignmentsQuery(
+    { hubId: selectedHubNumericId ?? 0, role: 'DRIVER' },
+    {
+      skip: !isTmsAdmin || !isFormOpen || selectedHubNumericId === undefined,
+    }
+  );
+
+  const formatDriverOptionLabel = React.useCallback(
+    (assignment: SecondMileHubStaffAssignment & { staffId: number }) => {
+      const staffCode = assignment.staffCode?.trim();
+      const staffFullName = assignment.staffFullName?.trim();
+
+      if (staffCode && staffFullName) {
+        return `${staffCode} - ${staffFullName}`;
+      }
+
+      if (staffFullName) {
+        return staffFullName;
+      }
+
+      if (staffCode) {
+        return staffCode;
+      }
+
+      return `Driver #${assignment.staffId}`;
+    },
+    []
+  );
+
+  const driverOptions = React.useMemo(() => {
+    const options = (hubDriverAssignments ?? [])
+      .filter(
+        (
+          assignment
+        ): assignment is SecondMileHubStaffAssignment & { staffId: number } =>
+          Number.isInteger(assignment.staffId) && (assignment.staffId as number) > 0
+      )
+      .map((assignment) => ({
+        value: String(assignment.staffId),
+        label: formatDriverOptionLabel(assignment),
+      }))
+      .sort((a, b) =>
+        a.label.localeCompare(b.label, 'en-US', {
+          sensitivity: 'base',
+        })
+      );
+
+    const selectedDriverStaffId = parseOptionalPositiveInteger(
+      formValues.assignedStaffId
+    );
+
+    if (
+      selectedDriverStaffId &&
+      !options.some((option) => option.value === String(selectedDriverStaffId))
+    ) {
+      options.unshift({
+        value: String(selectedDriverStaffId),
+        label: `Driver #${selectedDriverStaffId}`,
+      });
+    }
+
+    return options;
+  }, [
+    formValues.assignedStaffId,
+    formatDriverOptionLabel,
+    hubDriverAssignments,
+  ]);
 
   const [createVehicle, { isLoading: isCreating }] =
     useCreateSecondMileVehicleMutation();
@@ -344,6 +423,8 @@ export function SecondMileVehicleListPage() {
         isSaving={isSaving}
         hubOptions={hubOptions}
         isLoadingHubs={isFetchingHubs}
+        driverOptions={driverOptions}
+        isLoadingDrivers={isFetchingHubDrivers}
         onOpenChange={(open) => {
           if (!open && !isSaving) {
             setIsFormOpen(false);

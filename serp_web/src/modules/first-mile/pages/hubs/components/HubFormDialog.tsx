@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LocateFixed } from 'lucide-react';
 import { CoordinatePickerMap } from '../../../components';
 import type { Province, Ward } from '../../../types';
 import {
@@ -36,6 +36,7 @@ interface HubFormDialogProps {
   open: boolean;
   formMode: HubFormMode;
   isSaving: boolean;
+  isGeocodingAddress: boolean;
   formValues: HubFormState;
   selectedProvinceCode: string;
   selectedWardCode: string;
@@ -44,6 +45,7 @@ interface HubFormDialogProps {
   isFetchingWardsForForm: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
+  onGeocodeAddress: () => Promise<void>;
   updateFormField: UpdateHubFormField;
 }
 
@@ -51,6 +53,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
   open,
   formMode,
   isSaving,
+  isGeocodingAddress,
   formValues,
   selectedProvinceCode,
   selectedWardCode,
@@ -59,6 +62,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
   isFetchingWardsForForm,
   onOpenChange,
   onSubmit,
+  onGeocodeAddress,
   updateFormField,
 }) => {
   const latNum = Number(formValues.latitude);
@@ -311,7 +315,28 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label>Location map</Label>
+            <div className='flex items-center justify-between gap-2'>
+              <Label>Location map</Label>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                disabled={isSaving || isGeocodingAddress}
+                onClick={() => void onGeocodeAddress()}
+              >
+                {isGeocodingAddress ? (
+                  <>
+                    <Loader2 className='h-4 w-4 mr-1 animate-spin' />
+                    Geocoding...
+                  </>
+                ) : (
+                  <>
+                    <LocateFixed className='h-4 w-4 mr-1' />
+                    Geocode from address
+                  </>
+                )}
+              </Button>
+            </div>
             <CoordinatePickerMap
               latitude={mapLat}
               longitude={mapLng}

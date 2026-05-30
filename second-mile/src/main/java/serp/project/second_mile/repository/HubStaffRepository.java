@@ -22,6 +22,8 @@ import java.util.Optional;
 public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSpecificationExecutor<HubStaff> {
     Optional<HubStaff> findByCode(String code);
 
+    Optional<HubStaff> findByIdAndTenantId(Long id, Long tenantId);
+
     @Query("""
             select s.code as code, s.fullName as name
             from HubStaff s
@@ -42,10 +44,44 @@ public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSp
             HubStaffStatus status
     );
 
+    @Query("""
+            select s
+            from HubStaff s
+            where s.tenantId = :tenantId
+                and s.role = :role
+                and s.status = :status
+                and (
+                    lower(coalesce(s.code, '')) like concat('%', lower(cast(:keyword as string)), '%')
+                    or lower(coalesce(s.fullName, '')) like concat('%', lower(cast(:keyword as string)), '%')
+                )
+            order by s.fullName asc
+            """)
+    List<HubStaff> findAssignableByTenantIdAndRoleAndStatusAndKeyword(
+            @Param("tenantId") Long tenantId,
+            @Param("role") HubStaffRole role,
+            @Param("status") HubStaffStatus status,
+            @Param("keyword") String keyword
+    );
+
     boolean existsByTenantIdAndUserIdAndRoleInAndStatus(
             Long tenantId,
             Long userId,
             List<HubStaffRole> roles,
+            HubStaffStatus status
+    );
+
+    boolean existsByTenantIdAndIdAndRoleAndStatus(
+            Long tenantId,
+            Long id,
+            HubStaffRole role,
+            HubStaffStatus status
+    );
+
+    boolean existsByTenantIdAndIdAndUserIdAndRoleAndStatus(
+            Long tenantId,
+            Long id,
+            Long userId,
+            HubStaffRole role,
             HubStaffStatus status
     );
 }

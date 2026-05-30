@@ -17,6 +17,7 @@ import serp.project.first_mile.dto.request.UpdatePostOfficeStaffAssignmentReques
 import serp.project.first_mile.dto.request.UpdatePostOfficeStaffRequest;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
+import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.exception.MessageService;
 import serp.project.first_mile.service.PostOfficeStaffService;
 
@@ -38,6 +39,18 @@ public class PostOfficeStaffController {
         return ApiResponse.<PostOfficeStaffResponse>builder()
                 .message(messageService.getMessage("success.post_office_staffs.by_id"))
                 .result(postOfficeStaffService.getPostOfficeStaffById(id))
+                .build();
+    }
+
+    @GetMapping("/assignable")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<List<PostOfficeStaffResponse>> getAssignableStaffByRole(
+            @RequestParam PostOfficeStaffRole role,
+            @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.<List<PostOfficeStaffResponse>>builder()
+                .message(messageService.getMessage("success.post_office_staffs.assignable"))
+                .result(postOfficeStaffService.getAssignableStaffByRole(role, keyword))
                 .build();
     }
 
@@ -97,6 +110,29 @@ public class PostOfficeStaffController {
         return ApiResponse.<PostOfficeStaffAssignmentResponse>builder()
                 .message(messageService.getMessage("success.post_office_staffs.assignments.update"))
                 .result(postOfficeStaffService.updateCourierAssignmentDetails(assignmentId, request))
+                .build();
+    }
+
+    @GetMapping("/post-offices/{postOfficeId}/assignments")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<List<PostOfficeStaffAssignmentResponse>> getActiveAssignmentsByPostOffice(
+            @PathVariable Long postOfficeId,
+            @RequestParam(required = false) PostOfficeStaffRole role
+    ) {
+        return ApiResponse.<List<PostOfficeStaffAssignmentResponse>>builder()
+                .message(messageService.getMessage("success.post_office_staffs.assignments.by_post_office"))
+                .result(postOfficeStaffService.getActiveAssignmentsByPostOffice(postOfficeId, role))
+                .build();
+    }
+
+    @PutMapping("/assignments/{assignmentId}/unassign")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<PostOfficeStaffAssignmentResponse> unassignStaffFromPostOffice(
+            @PathVariable Long assignmentId
+    ) {
+        return ApiResponse.<PostOfficeStaffAssignmentResponse>builder()
+                .message(messageService.getMessage("success.post_office_staffs.assignments.unassign"))
+                .result(postOfficeStaffService.unassignStaffFromPostOffice(assignmentId))
                 .build();
     }
 
