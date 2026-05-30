@@ -46,12 +46,7 @@ public class GreedyOptimizationRunGenerator implements IOptimizationRunGenerator
     @Override
     public OptimizationGenerationResult generate(OptimizationProjectModel projectModel, OptimizationBuilderInput input) {
         List<OptimizationConstraintViolation> warnings = new ArrayList<>(projectModel.warnings());
-        OptimizationAlgorithmOptions options = new OptimizationAlgorithmOptions(
-                input.algorithmKey(),
-                input.mode(),
-                input.allowReassignment(),
-                input.allowScheduleChanges()
-        );
+        OptimizationAlgorithmOptions options = new OptimizationAlgorithmOptions(input.intent());
         Map<Long, OptimizationAssignmentSuggestion> assignments = assignmentPolicy.generateAssignments(
                 projectModel, options, warnings);
         Map<Long, OptimizationScheduleSuggestion> schedules = schedulingPolicy.generateSchedules(

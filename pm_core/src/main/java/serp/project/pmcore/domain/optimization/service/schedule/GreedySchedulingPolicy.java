@@ -7,7 +7,6 @@ package serp.project.pmcore.domain.optimization.service.schedule;
 
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
@@ -38,7 +37,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
             OptimizationAlgorithmOptions options,
             Map<Long, OptimizationAssignmentSuggestion> assignments,
             List<OptimizationConstraintViolation> warnings) {
-        if (!Boolean.TRUE.equals(options.allowScheduleChanges()) || options.mode() == OptimizationMode.ASSIGNMENT_ONLY) {
+        if (!options.intent().changeScope().includesScheduling()) {
             return Map.of();
         }
         if (projectModel.dependencyGraph().hasCycles()) {

@@ -5,8 +5,6 @@
 
 package serp.project.pmcore.domain.optimization.model;
 
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
-
 import java.util.List;
 
 public record OptimizationBuilderInput(
@@ -15,9 +13,6 @@ public record OptimizationBuilderInput(
         List<Long> selectedWorkItemIds,
         Long planningStart,
         Long planningEnd,
-        Boolean allowReassignment,
-        Boolean allowScheduleChanges,
-        OptimizationMode mode,
-        String algorithmKey
+        OptimizationRunIntent intent
 ) {
 }

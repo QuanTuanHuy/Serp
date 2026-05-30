@@ -83,8 +83,9 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
 
     @Override
     public OptimizationProjectModel build(OptimizationBuilderInput input) {
-        log.info("Building optimization project model: tenantId={}, projectId={}, selectedCount={}, mode={}",
-                input.tenantId(), input.projectId(), input.selectedWorkItemIds().size(), input.mode());
+        log.info("Building optimization project model: tenantId={}, projectId={}, selectedCount={}, objective={}, changeScope={}",
+                input.tenantId(), input.projectId(), input.selectedWorkItemIds().size(),
+                input.intent().objective(), input.intent().changeScope());
         // Load project and validate existence
         ProjectEntity project = projectReadPort.getProjectById(input.projectId(), input.tenantId())
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + input.projectId()));

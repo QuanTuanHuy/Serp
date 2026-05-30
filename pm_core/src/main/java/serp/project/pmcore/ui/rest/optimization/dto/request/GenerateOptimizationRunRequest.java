@@ -16,7 +16,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 
 import java.util.List;
 
@@ -31,20 +32,17 @@ public class GenerateOptimizationRunRequest {
     @Builder.Default
     private String algorithmKey = OptimizationAlgorithmKeys.GREEDY_BALANCED;
 
-    @NotNull(message = "Optimization mode is required")
-    private OptimizationMode mode;
+    @NotNull(message = "Optimization objective is required")
+    private OptimizationObjective objective;
+
+    @NotNull(message = "Optimization change scope is required")
+    private OptimizationChangeScope changeScope;
 
     @NotNull(message = "Planning start is required")
     private Long planningStart;
 
     @NotNull(message = "Planning end is required")
     private Long planningEnd;
-
-    @NotNull(message = "Allow reassignment flag is required")
-    private Boolean allowReassignment;
-
-    @NotNull(message = "Allow schedule changes flag is required")
-    private Boolean allowScheduleChanges;
 
     @NotEmpty(message = "Selected work item ids are required")
     @Size(

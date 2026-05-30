@@ -13,7 +13,9 @@ import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
 import serp.project.pmcore.infrastructure.store.model.IssueLinkTypeModel;
@@ -81,12 +83,11 @@ class OptimizationFoundationMapperTest {
                 .tenantId(2L)
                 .projectId(3L)
                 .scope("SELECTED_WORK_ITEMS")
-                .mode("BALANCED_WORKLOAD")
+                .objective(OptimizationObjective.BALANCED_WORKLOAD.name())
+                .changeScope(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name())
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(1715523600000L)
                 .planningEnd(1716733200000L)
-                .allowReassignment(true)
-                .allowScheduleChanges(true)
                 .selectedWorkItemCount(3)
                 .summaryJson("{}")
                 .algorithmKey("greedy-balanced")
@@ -99,7 +100,8 @@ class OptimizationFoundationMapperTest {
         OptimizationRunEntity mapped = mapper.toEntity(model);
 
         assertThat(mapped.getStatus()).isEqualTo(OptimizationRunStatus.GENERATED);
-        assertThat(mapped.getAllowReassignment()).isTrue();
+        assertThat(mapped.getObjective()).isEqualTo(OptimizationObjective.BALANCED_WORKLOAD.name());
+        assertThat(mapped.getChangeScope()).isEqualTo(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name());
         assertThat(mapped.getSelectedWorkItemCount()).isEqualTo(3);
         assertThat(model.getAlgorithmKey()).isEqualTo("greedy-balanced");
         assertThat(model.getAlgorithmVersion()).isEqualTo("v1");

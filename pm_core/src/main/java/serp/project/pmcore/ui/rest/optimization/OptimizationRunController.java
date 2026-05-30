@@ -64,11 +64,10 @@ public class OptimizationRunController {
                 projectId,
                 request.getScope(),
                 request.getAlgorithmKey(),
-                request.getMode(),
+                request.getObjective(),
+                request.getChangeScope(),
                 request.getPlanningStart(),
                 request.getPlanningEnd(),
-                request.getAllowReassignment(),
-                request.getAllowScheduleChanges(),
                 request.getSelectedWorkItemIds()
         ));
 

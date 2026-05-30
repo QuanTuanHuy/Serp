@@ -18,11 +18,13 @@ import serp.project.pmcore.domain.issuelink.port.IIssueLinkTypePort;
 import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
@@ -269,7 +271,11 @@ class OptimizationProjectModelBuilderTest {
 
     private OptimizationBuilderInput input(List<Long> ids) {
         return new OptimizationBuilderInput(1L, 100L, ids, 1_714_876_800_000L, 1_715_481_600_000L,
-                true, true, OptimizationMode.BALANCED_WORKLOAD, OptimizationAlgorithmKeys.GREEDY_BALANCED);
+                new OptimizationRunIntent(
+                        OptimizationAlgorithmKeys.GREEDY_BALANCED,
+                        OptimizationObjective.BALANCED_WORKLOAD,
+                        OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE
+                ));
     }
 
     private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {

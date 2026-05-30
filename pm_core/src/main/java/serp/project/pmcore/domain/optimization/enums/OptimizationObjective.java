@@ -5,9 +5,9 @@
 
 package serp.project.pmcore.domain.optimization.enums;
 
-public enum OptimizationMode {
+public enum OptimizationObjective {
     BALANCED_WORKLOAD,
     MINIMAL_REASSIGNMENT,
-    ASSIGNMENT_ONLY,
-    SCHEDULE_ONLY
+    SKILL_FIRST,
+    DEADLINE_FIRST
 }

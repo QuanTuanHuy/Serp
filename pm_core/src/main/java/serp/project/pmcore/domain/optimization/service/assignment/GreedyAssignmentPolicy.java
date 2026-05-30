@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
@@ -41,8 +41,7 @@ public class GreedyAssignmentPolicy implements OptimizationAssignmentPolicy {
         Map<Long, Long> assignedLoadByAssignee = new HashMap<>();
         Map<Long, Long> capacityByAssignee = totalCapacityByAssignee(projectModel.capacitySlots());
 
-        boolean assignmentEnabled = Boolean.TRUE.equals(options.allowReassignment())
-                && options.mode() != OptimizationMode.SCHEDULE_ONLY;
+        boolean assignmentEnabled = options.intent().changeScope().includesAssignment();
 
         for (OptimizationWorkItem item : projectModel.workItems()) {
             WorkItemEntity workItem = item.workItem();
@@ -133,11 +132,11 @@ public class GreedyAssignmentPolicy implements OptimizationAssignmentPolicy {
         long overload = Math.max(0L, projectedLoad - capacity);
         double cost = candidate.baseCost();
         if (!Objects.equals(candidate.candidateId(), item.workItem().getAssigneeId())) {
-            cost += options.mode() == OptimizationMode.MINIMAL_REASSIGNMENT
+            cost += options.intent().objective() == OptimizationObjective.MINIMAL_REASSIGNMENT
                     ? OptimizationConstants.MINIMAL_REASSIGNMENT_PENALTY
                     : OptimizationConstants.STANDARD_REASSIGNMENT_PENALTY;
         }
-        if (candidate.currentAssignee() && options.mode() == OptimizationMode.MINIMAL_REASSIGNMENT) {
+        if (candidate.currentAssignee() && options.intent().objective() == OptimizationObjective.MINIMAL_REASSIGNMENT) {
             cost -= OptimizationConstants.MINIMAL_REASSIGNMENT_CURRENT_ASSIGNEE_BONUS;
         }
         if (overload > 0) {
@@ -152,7 +151,8 @@ public class GreedyAssignmentPolicy implements OptimizationAssignmentPolicy {
         if (skillFit == null) {
             return 0D;
         }
-        boolean skillFirst = OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST.equals(options.algorithmKey());
+        boolean skillFirst = options.intent().objective() == OptimizationObjective.SKILL_FIRST
+                || OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST.equals(options.intent().algorithmKey());
         double requiredMultiplier = skillFirst ? 1.5D : 1D;
         double preferredMultiplier = skillFirst ? 1.25D : 1D;
         double cost = 0D;

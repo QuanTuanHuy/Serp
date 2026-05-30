@@ -10,8 +10,10 @@ import org.junit.jupiter.api.Test;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunSummary;
@@ -59,6 +61,8 @@ class OptimizationRunReviewAssemblerTest {
         assertEquals(1, view.getSummary().getItemsWithSkillRequirements());
         assertEquals(OptimizationConfidence.HIGH.name(), view.getSummary().getSkillRankingConfidence());
         assertEquals("greedy-balanced", view.getAlgorithmKey());
+        assertEquals(OptimizationObjective.BALANCED_WORKLOAD.name(), view.getObjective());
+        assertEquals(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name(), view.getChangeScope());
         assertEquals("v1", view.getAlgorithmVersion());
         assertEquals("FEASIBLE", view.getSolverStatus());
         assertEquals(0, BigDecimal.valueOf(5.250000).compareTo(view.getObjectiveScore()));
@@ -76,12 +80,11 @@ class OptimizationRunReviewAssemblerTest {
                 .tenantId(1L)
                 .projectId(100L)
                 .scope("SELECTED_WORK_ITEMS")
-                .mode("BALANCED_WORKLOAD")
+                .objective(OptimizationObjective.BALANCED_WORKLOAD.name())
+                .changeScope(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name())
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(1L)
                 .planningEnd(2L)
-                .allowReassignment(true)
-                .allowScheduleChanges(true)
                 .selectedWorkItemCount(2)
                 .summaryJson(jsonUtils.toJson(summary))
                 .algorithmKey("greedy-balanced")

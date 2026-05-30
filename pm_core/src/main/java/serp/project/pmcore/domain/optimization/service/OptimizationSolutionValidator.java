@@ -6,7 +6,6 @@
 package serp.project.pmcore.domain.optimization.service;
 
 import org.springframework.stereotype.Service;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
@@ -65,8 +64,7 @@ public class OptimizationSolutionValidator {
                                      Map<Long, OptimizationAssignmentSuggestion> assignments,
                                      Map<Long, OptimizationWorkItem> itemById,
                                      List<OptimizationConstraintViolation> warnings) {
-        boolean allowReassignment = Boolean.TRUE.equals(problem.input().allowReassignment())
-                && problem.input().mode() != OptimizationMode.SCHEDULE_ONLY;
+        boolean assignmentChangesAllowed = problem.input().intent().changeScope().includesAssignment();
         for (Map.Entry<Long, OptimizationAssignmentSuggestion> entry : assignments.entrySet()) {
             OptimizationWorkItem item = itemById.get(entry.getKey());
             if (item == null) {
@@ -80,7 +78,7 @@ public class OptimizationSolutionValidator {
             }
             Long currentAssigneeId = item.workItem().getAssigneeId();
             Long suggestedAssigneeId = entry.getValue().suggestedAssigneeId();
-            if (!allowReassignment && !Objects.equals(currentAssigneeId, suggestedAssigneeId)) {
+            if (!assignmentChangesAllowed && !Objects.equals(currentAssigneeId, suggestedAssigneeId)) {
                 warnings.add(new OptimizationConstraintViolation(
                         OptimizationWarningCode.INVALID_OVERRIDE,
                         entry.getKey(),
@@ -107,9 +105,8 @@ public class OptimizationSolutionValidator {
     private void validateSchedules(OptimizationProblem problem,
                                    Map<Long, OptimizationScheduleSuggestion> schedules,
                                    List<OptimizationConstraintViolation> warnings) {
-        boolean allowScheduleChanges = Boolean.TRUE.equals(problem.input().allowScheduleChanges())
-                && problem.input().mode() != OptimizationMode.ASSIGNMENT_ONLY;
-        if (!allowScheduleChanges && !schedules.isEmpty()) {
+        boolean scheduleChangesAllowed = problem.input().intent().changeScope().includesScheduling();
+        if (!scheduleChangesAllowed && !schedules.isEmpty()) {
             schedules.keySet().forEach(workItemId -> warnings.add(new OptimizationConstraintViolation(
                     OptimizationWarningCode.INVALID_OVERRIDE,
                     workItemId,

@@ -18,16 +18,19 @@ import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
+import serp.project.pmcore.domain.optimization.enums.OptimizationCapability;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
+import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
@@ -67,27 +70,25 @@ public class GenerateOptimizationRunCommandHandler
     public OptimizationRunReviewView handle(GenerateOptimizationRunCommand command) {
         validate(command);
         String algorithmKey = normalizeAlgorithmKey(command.algorithmKey());
+        OptimizationRunIntent intent = new OptimizationRunIntent(
+                algorithmKey,
+                command.objective(),
+                command.changeScope()
+        );
         OptimizationBuilderInput input = new OptimizationBuilderInput(
                 command.tenantId(),
                 command.projectId(),
                 command.selectedWorkItemIds(),
                 command.planningStart(),
                 command.planningEnd(),
-                command.allowReassignment(),
-                command.allowScheduleChanges(),
-                command.mode(),
-                algorithmKey
+                intent
         );
         OptimizationProjectModel projectModel = optimizationProjectModelBuilder.build(input);
         IOptimizationAlgorithm algorithm = optimizationAlgorithmRegistry.resolve(algorithmKey);
+        validateCapabilities(intent, algorithm.descriptor());
         OptimizationSolution solution = algorithm.solve(
                 new OptimizationProblem(projectModel, input),
-                new OptimizationAlgorithmOptions(
-                        algorithmKey,
-                        command.mode(),
-                        command.allowReassignment(),
-                        command.allowScheduleChanges()
-                )
+                new OptimizationAlgorithmOptions(intent)
         );
         solution = optimizationSolutionValidator.validate(new OptimizationProblem(projectModel, input), solution);
 
@@ -96,12 +97,11 @@ public class GenerateOptimizationRunCommandHandler
                 .tenantId(command.tenantId())
                 .projectId(command.projectId())
                 .scope(normalizeScope(command.scope()))
-                .mode(command.mode().name())
+                .objective(command.objective().name())
+                .changeScope(command.changeScope().name())
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(command.planningStart())
                 .planningEnd(command.planningEnd())
-                .allowReassignment(command.allowReassignment())
-                .allowScheduleChanges(command.allowScheduleChanges())
                 .selectedWorkItemCount(command.selectedWorkItemIds().size())
                 .summaryJson(jsonUtils.toJson(solution.summary()))
                 .algorithmKey(solution.algorithm().key())
@@ -224,6 +224,17 @@ public class GenerateOptimizationRunCommandHandler
                 : algorithmKey;
     }
 
+    private void validateCapabilities(OptimizationRunIntent intent, OptimizationAlgorithmDescriptor descriptor) {
+        if (intent.changeScope().includesAssignment()
+                && !descriptor.capabilities().contains(OptimizationCapability.ASSIGNMENT)) {
+            throw new IllegalArgumentException("Optimization algorithm does not support assignment: " + descriptor.key());
+        }
+        if (intent.changeScope().includesScheduling()
+                && !descriptor.capabilities().contains(OptimizationCapability.SCHEDULING)) {
+            throw new IllegalArgumentException("Optimization algorithm does not support scheduling: " + descriptor.key());
+        }
+    }
+
     private void validate(GenerateOptimizationRunCommand command) {
         if (command == null) {
             throw new IllegalArgumentException("Generate optimization run command is required");
@@ -254,6 +265,12 @@ public class GenerateOptimizationRunCommandHandler
         }
         if (command.selectedWorkItemIds().stream().anyMatch(id -> id == null || id <= 0)) {
             throw new IllegalArgumentException("selectedWorkItemIds must contain positive numbers only");
+        }
+        if (command.objective() == null) {
+            throw new IllegalArgumentException("objective is required");
+        }
+        if (command.changeScope() == null) {
+            throw new IllegalArgumentException("changeScope is required");
         }
     }
 }

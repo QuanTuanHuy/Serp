@@ -12,7 +12,8 @@ import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationCapability;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
@@ -28,6 +29,7 @@ import serp.project.pmcore.domain.optimization.model.OptimizationPriorityScore;
 import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunSummary;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
@@ -45,7 +47,7 @@ class OptimizationSolutionValidatorTest {
     @Test
     void validateShouldWarnWhenReassignmentDisabledButAssigneeChanges() {
         OptimizationProblem problem = problem(
-                input(false, true, OptimizationMode.BALANCED_WORKLOAD),
+                input(OptimizationChangeScope.SCHEDULE_ONLY),
                 graph(List.of(10L), List.of()),
                 Map.of(),
                 item(10L, 100L, List.of(candidate(10L, 200L)))
@@ -66,7 +68,7 @@ class OptimizationSolutionValidatorTest {
     @Test
     void validateShouldWarnWhenScheduleChangesDisabledButScheduleExists() {
         OptimizationProblem problem = problem(
-                input(true, false, OptimizationMode.BALANCED_WORKLOAD),
+                input(OptimizationChangeScope.ASSIGNMENT_ONLY),
                 graph(List.of(10L), List.of()),
                 Map.of(),
                 item(10L, 100L, List.of(candidate(10L, 100L)))
@@ -87,7 +89,7 @@ class OptimizationSolutionValidatorTest {
     @Test
     void validateShouldWarnWhenScheduleRangeIsInvalid() {
         OptimizationProblem problem = problem(
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD),
+                input(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE),
                 graph(List.of(10L), List.of()),
                 Map.of(),
                 item(10L, 100L, List.of(candidate(10L, 100L)))
@@ -109,7 +111,7 @@ class OptimizationSolutionValidatorTest {
     void validateShouldWarnWhenSuccessorStartsBeforePredecessorEnds() {
         OptimizationDependencyEdge edge = new OptimizationDependencyEdge(10L, 20L, 1L, 2L, false);
         OptimizationProblem problem = problem(
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD),
+                input(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE),
                 graph(List.of(10L, 20L), List.of(edge)),
                 Map.of(),
                 item(10L, 100L, List.of(candidate(10L, 100L))),
@@ -131,19 +133,18 @@ class OptimizationSolutionValidatorTest {
                         && warning.message().contains("before predecessor finishes"));
     }
 
-    private OptimizationBuilderInput input(boolean allowReassignment,
-                                           boolean allowScheduleChanges,
-                                           OptimizationMode mode) {
+    private OptimizationBuilderInput input(OptimizationChangeScope changeScope) {
         return new OptimizationBuilderInput(
                 1L,
                 100L,
                 List.of(10L, 20L),
                 1_000L,
                 10_000L,
-                allowReassignment,
-                allowScheduleChanges,
-                mode,
-                OptimizationAlgorithmKeys.GREEDY_BALANCED
+                new OptimizationRunIntent(
+                        OptimizationAlgorithmKeys.GREEDY_BALANCED,
+                        OptimizationObjective.BALANCED_WORKLOAD,
+                        changeScope
+                )
         );
     }
 

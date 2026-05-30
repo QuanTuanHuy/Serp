@@ -10,7 +10,8 @@ import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKey
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.CapacityWorkloadBucket;
@@ -23,6 +24,7 @@ import serp.project.pmcore.domain.optimization.model.OptimizationDuration;
 import serp.project.pmcore.domain.optimization.model.OptimizationGenerationResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationPriorityScore;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
@@ -51,7 +53,7 @@ class GreedyOptimizationRunGeneratorTest {
         OptimizationProjectModel model = model(List.of(optimizationItem(item, 200L)), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(false, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.SCHEDULE_ONLY));
 
         assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
@@ -64,7 +66,7 @@ class GreedyOptimizationRunGeneratorTest {
         OptimizationProjectModel model = model(List.of(optimizationItem(predecessor, 100L), optimizationItem(successor, 100L)), graph);
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         OptimizationScheduleSuggestion predecessorSchedule = result.scheduleSuggestions().get(10L);
         OptimizationScheduleSuggestion successorSchedule = result.scheduleSuggestions().get(20L);
@@ -89,7 +91,7 @@ class GreedyOptimizationRunGeneratorTest {
         OptimizationProjectModel model = model(List.of(optimizationItem(first, 100L), optimizationItem(second, 100L)), graph);
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         assertTrue(result.scheduleSuggestions().isEmpty());
     }
@@ -101,7 +103,7 @@ class GreedyOptimizationRunGeneratorTest {
                 capacityResolutionWithWorkload());
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         List<String> reasons = result.scheduleSuggestions().get(10L).reasons();
         assertTrue(reasons.contains("Fallback calendar capacity used for assignee"));
@@ -123,7 +125,7 @@ class GreedyOptimizationRunGeneratorTest {
         );
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         OptimizationScheduleSuggestion schedule = result.scheduleSuggestions().get(10L);
         assertEquals(10 * HOUR, schedule.allocatedEffortMillis());
@@ -145,7 +147,7 @@ class GreedyOptimizationRunGeneratorTest {
         );
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         OptimizationScheduleSuggestion schedule = result.scheduleSuggestions().get(10L);
         assertEquals(START + 4 * HOUR, schedule.plannedStart());
@@ -162,7 +164,7 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
         assertTrue(result.assignmentSuggestions().get(10L).reasons().contains("Candidate matches 1/1 required skills"));
@@ -176,7 +178,7 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
         assertTrue(result.assignmentSuggestions().get(10L).violations().stream()
@@ -192,7 +194,7 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)), capacityForAssignees(40 * HOUR, 0L));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD));
+                input(OptimizationObjective.BALANCED_WORKLOAD, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
@@ -206,7 +208,7 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.MINIMAL_REASSIGNMENT));
+                input(OptimizationObjective.MINIMAL_REASSIGNMENT, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE));
 
         assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
@@ -220,21 +222,21 @@ class GreedyOptimizationRunGeneratorTest {
         ))), graphWithoutDependencies(List.of(10L)));
 
         OptimizationGenerationResult result = generator.generate(model,
-                input(true, true, OptimizationMode.BALANCED_WORKLOAD, OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST));
+                input(OptimizationObjective.SKILL_FIRST, OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                        OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST));
 
         assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
 
-    private OptimizationBuilderInput input(boolean allowReassignment, boolean allowSchedule, OptimizationMode mode) {
-        return input(allowReassignment, allowSchedule, mode, OptimizationAlgorithmKeys.GREEDY_BALANCED);
+    private OptimizationBuilderInput input(OptimizationObjective objective, OptimizationChangeScope changeScope) {
+        return input(objective, changeScope, OptimizationAlgorithmKeys.GREEDY_BALANCED);
     }
 
-    private OptimizationBuilderInput input(boolean allowReassignment,
-                                           boolean allowSchedule,
-                                           OptimizationMode mode,
+    private OptimizationBuilderInput input(OptimizationObjective objective,
+                                           OptimizationChangeScope changeScope,
                                            String algorithmKey) {
         return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END,
-                allowReassignment, allowSchedule, mode, algorithmKey);
+                new OptimizationRunIntent(algorithmKey, objective, changeScope));
     }
 
     private OptimizationProjectModel model(List<OptimizationWorkItem> items, OptimizationDependencyGraph graph) {

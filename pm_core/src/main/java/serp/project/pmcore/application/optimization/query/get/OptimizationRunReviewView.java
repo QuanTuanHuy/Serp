@@ -24,12 +24,11 @@ public class OptimizationRunReviewView {
     private Long tenantId;
     private Long projectId;
     private String scope;
-    private String mode;
+    private String objective;
+    private String changeScope;
     private OptimizationRunStatus status;
     private Long planningStart;
     private Long planningEnd;
-    private Boolean allowReassignment;
-    private Boolean allowScheduleChanges;
     private Integer selectedWorkItemCount;
     private OptimizationRunSummary summary;
     private String algorithmKey;

@@ -36,8 +36,10 @@ public class OptimizationRunModel extends BaseModel {
     private Long projectId;
     @Column(name = "scope", nullable = false, length = 50)
     private String scope;
-    @Column(name = "mode", nullable = false, length = 50)
-    private String mode;
+    @Column(name = "objective", nullable = false, length = 50)
+    private String objective;
+    @Column(name = "change_scope", nullable = false, length = 50)
+    private String changeScope;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private OptimizationRunStatus status;
@@ -45,10 +47,6 @@ public class OptimizationRunModel extends BaseModel {
     private LocalDateTime planningStart;
     @Column(name = "planning_end", nullable = false)
     private LocalDateTime planningEnd;
-    @Column(name = "allow_reassignment", nullable = false)
-    private Boolean allowReassignment;
-    @Column(name = "allow_schedule_changes", nullable = false)
-    private Boolean allowScheduleChanges;
     @Column(name = "selected_work_item_count", nullable = false)
     private Integer selectedWorkItemCount;
     @Column(name = "summary_json", columnDefinition = "TEXT")
