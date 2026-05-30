@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import serp.project.school_bus_service.dto.domain.PlaybackPosition;
 import serp.project.school_bus_service.dto.response.DemoSessionResponse;
 import serp.project.school_bus_service.dto.response.RoutePathCoordinateResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
@@ -16,6 +17,7 @@ import serp.project.school_bus_service.repository.DemoSessionRepository;
 import serp.project.school_bus_service.service.IDemoEventLogService;
 import serp.project.school_bus_service.service.IDemoPlaybackService;
 import serp.project.school_bus_service.service.IDemoSessionService;
+import serp.project.school_bus_service.service.IDemoWebSocketPublisher;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.domain.IRouteGeometryService;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -35,17 +37,20 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
     private final IDemoEventLogService demoEventLogService;
     private final IRouteGeometryService routeGeometryService;
     private final IRouteStopService routeStopService;
+    private final IDemoWebSocketPublisher webSocketPublisher;
 
     public DemoPlaybackServiceImpl(DemoSessionRepository demoSessionRepository,
                                    IDemoSessionService demoSessionService,
                                    IDemoEventLogService demoEventLogService,
                                    IRouteGeometryService routeGeometryService,
-                                   IRouteStopService routeStopService) {
+                                   IRouteStopService routeStopService,
+                                   IDemoWebSocketPublisher webSocketPublisher) {
         this.demoSessionRepository = demoSessionRepository;
         this.demoSessionService = demoSessionService;
         this.demoEventLogService = demoEventLogService;
         this.routeGeometryService = routeGeometryService;
         this.routeStopService = routeStopService;
+        this.webSocketPublisher = webSocketPublisher;
     }
 
     @Override
@@ -61,7 +66,9 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         session.markUpdated(actorId.toString());
         demoSessionRepository.save(session);
 
-        demoEventLogService.record(session, DemoEventType.DEMO_STARTED, null, tenantId, actorId);
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_STARTED, null, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_STARTED);
         return demoSessionService.toResponse(session);
     }
 
@@ -77,7 +84,9 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         session.markUpdated(actorId.toString());
         demoSessionRepository.save(session);
 
-        demoEventLogService.record(session, DemoEventType.DEMO_PAUSED, null, tenantId, actorId);
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_PAUSED, null, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_PAUSED);
         return demoSessionService.toResponse(session);
     }
 
@@ -93,7 +102,9 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         session.markUpdated(actorId.toString());
         demoSessionRepository.save(session);
 
-        demoEventLogService.record(session, DemoEventType.DEMO_RESUMED, null, tenantId, actorId);
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_RESUMED, null, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_RESUMED);
         return demoSessionService.toResponse(session);
     }
 
@@ -133,13 +144,17 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
                 session.setLastEventType(DemoEventType.DEMO_COMPLETED.name());
                 session.markUpdated(actorId.toString());
                 demoSessionRepository.save(session);
-                demoEventLogService.record(session, DemoEventType.DEMO_COMPLETED,
+                var event = demoEventLogService.record(session, DemoEventType.DEMO_COMPLETED,
                         buildTickPayload(session), tenantId, actorId);
+                webSocketPublisher.publishEvent(session, event);
+                webSocketPublisher.publishPosition(session, DemoEventType.DEMO_COMPLETED);
             } else {
                 session.markUpdated(actorId.toString());
                 demoSessionRepository.save(session);
-                demoEventLogService.record(session, DemoEventType.DEMO_TICK,
+                var event = demoEventLogService.record(session, DemoEventType.DEMO_TICK,
                         buildTickPayload(session), tenantId, actorId);
+                webSocketPublisher.publishEvent(session, event);
+                webSocketPublisher.publishPosition(session, DemoEventType.DEMO_TICK);
             }
         } catch (Exception e) {
             log.error("Tick failed for session {}: {}", sessionId, e.getMessage(), e);
@@ -150,6 +165,7 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
             demoSessionRepository.save(session);
             demoEventLogService.record(session, DemoEventType.DEMO_ERROR,
                     "{\"error\":\"" + escapeJson(e.getMessage()) + "\"}", tenantId, actorId);
+            webSocketPublisher.publishError(session, e.getMessage());
         }
 
         return demoSessionService.toResponse(session);
@@ -170,7 +186,106 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         session.markUpdated(actorId.toString());
         demoSessionRepository.save(session);
 
-        demoEventLogService.record(session, DemoEventType.DEMO_STOPPED, null, tenantId, actorId);
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_STOPPED, null, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_STOPPED);
+        return demoSessionService.toResponse(session);
+    }
+
+    // ─── Jump methods ──────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public DemoSessionResponse jumpToStop(Long sessionId, Integer stopOrder, Long tenantId, Long actorId) {
+        DemoSessionEntity session = demoSessionService.getById(sessionId, tenantId);
+        validateJumpAllowed(session);
+
+        PlaybackPosition position = computeJumpToStop(session, stopOrder);
+        double fromProgress = session.getProgressPercent() != null ? session.getProgressPercent() : 0;
+        Integer fromStopOrder = session.getCurrentStopOrder();
+
+        applyJump(session, position, actorId);
+
+        String payload = buildJumpPayload(fromProgress, position.getProgressPercent(),
+                fromStopOrder, stopOrder, position.getLatitude(), position.getLongitude(), "JUMP_TO_STOP");
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+
+        return demoSessionService.toResponse(session);
+    }
+
+    @Override
+    @Transactional
+    public DemoSessionResponse jumpToProgress(Long sessionId, Double progressPercent, Long tenantId, Long actorId) {
+        DemoSessionEntity session = demoSessionService.getById(sessionId, tenantId);
+        validateJumpAllowed(session);
+
+        double clamped = Math.max(0, Math.min(100, progressPercent));
+        PlaybackPosition position = computeJumpToProgress(session, clamped);
+        double fromProgress = session.getProgressPercent() != null ? session.getProgressPercent() : 0;
+        Integer fromStopOrder = session.getCurrentStopOrder();
+
+        applyJump(session, position, actorId);
+
+        String payload = buildJumpPayload(fromProgress, position.getProgressPercent(),
+                fromStopOrder, position.getCurrentStopOrder(), position.getLatitude(), position.getLongitude(), "JUMP_TO_PROGRESS");
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+
+        return demoSessionService.toResponse(session);
+    }
+
+    @Override
+    @Transactional
+    public DemoSessionResponse jumpToStart(Long sessionId, Long tenantId, Long actorId) {
+        DemoSessionEntity session = demoSessionService.getById(sessionId, tenantId);
+        validateJumpAllowed(session);
+
+        List<RouteStopEntity> stops = getOrderedStops(session);
+        if (stops.isEmpty()) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "No route stops found for jump");
+        }
+        Integer firstStopOrder = stops.get(0).getStopOrder();
+        PlaybackPosition position = computeJumpToStop(session, firstStopOrder);
+        double fromProgress = session.getProgressPercent() != null ? session.getProgressPercent() : 0;
+        Integer fromStopOrder = session.getCurrentStopOrder();
+
+        applyJump(session, position, actorId);
+
+        String payload = buildJumpPayload(fromProgress, position.getProgressPercent(),
+                fromStopOrder, firstStopOrder, position.getLatitude(), position.getLongitude(), "JUMP_TO_START");
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+
+        return demoSessionService.toResponse(session);
+    }
+
+    @Override
+    @Transactional
+    public DemoSessionResponse jumpToEnd(Long sessionId, Long tenantId, Long actorId) {
+        DemoSessionEntity session = demoSessionService.getById(sessionId, tenantId);
+        validateJumpAllowed(session);
+
+        List<RouteStopEntity> stops = getOrderedStops(session);
+        if (stops.isEmpty()) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "No route stops found for jump");
+        }
+        Integer lastStopOrder = stops.get(stops.size() - 1).getStopOrder();
+        PlaybackPosition position = computeJumpToStop(session, lastStopOrder);
+        double fromProgress = session.getProgressPercent() != null ? session.getProgressPercent() : 0;
+        Integer fromStopOrder = session.getCurrentStopOrder();
+
+        applyJump(session, position, actorId);
+
+        String payload = buildJumpPayload(fromProgress, position.getProgressPercent(),
+                fromStopOrder, lastStopOrder, position.getLatitude(), position.getLongitude(), "JUMP_TO_END");
+        var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
+        webSocketPublisher.publishEvent(session, event);
+        webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+
         return demoSessionService.toResponse(session);
     }
 
@@ -312,5 +427,142 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return 6371.0 * c;
+    }
+
+    // ─── Jump helpers ─────────────────────────────────────────────────
+
+    private void validateJumpAllowed(DemoSessionEntity session) {
+        DemoSessionStatus status = session.getStatus();
+        if (status == DemoSessionStatus.COMPLETED || status == DemoSessionStatus.STOPPED) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Cannot jump in terminated session (status: " + status + ")");
+        }
+    }
+
+    private List<RouteStopEntity> getOrderedStops(DemoSessionEntity session) {
+        TripExecutionEntity trip = session.getTrip();
+        if (trip.getRoute() == null) return List.of();
+        List<RouteStopEntity> stops = routeStopService.findByRoute(trip.getRoute().getId(), trip.getTenantId());
+        stops.sort(Comparator.comparingInt(RouteStopEntity::getStopOrder));
+        return stops;
+    }
+
+    private PlaybackPosition computeJumpToStop(DemoSessionEntity session, Integer targetStopOrder) {
+        List<RouteStopEntity> stops = getOrderedStops(session);
+        RouteStopEntity targetStop = stops.stream()
+                .filter(s -> s.getStopOrder().equals(targetStopOrder))
+                .findFirst()
+                .orElseThrow(() -> new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                        "Stop with order " + targetStopOrder + " not found"));
+
+        Double stopLat = targetStop.getLatitude();
+        Double stopLon = targetStop.getLongitude();
+        if (stopLat == null || stopLon == null) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Stop order " + targetStopOrder + " has no coordinates");
+        }
+
+        List<RoutePathCoordinateResponse> path = resolveGeometryPath(session.getTrip());
+
+        if (path.size() >= 2) {
+            // Find closest point on polyline to the stop coordinate
+            double[] cumDist = computeCumulativeDistances(path);
+            double totalDist = cumDist[path.size() - 1];
+
+            double minDist = Double.MAX_VALUE;
+            double snapProgress = 0;
+            double snapLat = stopLat;
+            double snapLon = stopLon;
+
+            for (int i = 0; i < path.size(); i++) {
+                double d = haversineKm(stopLat, stopLon,
+                        path.get(i).getLatitude(), path.get(i).getLongitude());
+                if (d < minDist) {
+                    minDist = d;
+                    snapProgress = totalDist > 0 ? (cumDist[i] / totalDist) * 100.0 : 0;
+                    snapLat = path.get(i).getLatitude();
+                    snapLon = path.get(i).getLongitude();
+                }
+            }
+
+            return new PlaybackPosition(snapLat, snapLon, snapProgress, targetStopOrder, false);
+        }
+
+        // Fallback: estimate progress by stop index
+        int stopIndex = 0;
+        for (int i = 0; i < stops.size(); i++) {
+            if (stops.get(i).getStopOrder().equals(targetStopOrder)) {
+                stopIndex = i;
+                break;
+            }
+        }
+        double fallbackProgress = stops.size() > 1 ? (stopIndex * 100.0) / (stops.size() - 1) : 0;
+        return new PlaybackPosition(stopLat, stopLon, fallbackProgress, targetStopOrder, true);
+    }
+
+    private PlaybackPosition computeJumpToProgress(DemoSessionEntity session, double progressPercent) {
+        List<RoutePathCoordinateResponse> path = resolveGeometryPath(session.getTrip());
+        double fraction = progressPercent / 100.0;
+
+        Double lat = null;
+        Double lon = null;
+        boolean fallback = false;
+
+        if (path.size() >= 2) {
+            RoutePathCoordinateResponse pos = interpolatePosition(path, fraction);
+            lat = pos.getLatitude();
+            lon = pos.getLongitude();
+        } else {
+            fallback = true;
+        }
+
+        // Determine stop order at this progress
+        List<RouteStopEntity> stops = getOrderedStops(session);
+        Integer stopOrder = null;
+        if (!stops.isEmpty()) {
+            int stopIndex = (int) Math.floor(fraction * stops.size());
+            stopIndex = Math.min(stopIndex, stops.size() - 1);
+            stopOrder = stops.get(stopIndex).getStopOrder();
+            if (lat == null && stops.get(stopIndex).getLatitude() != null) {
+                lat = stops.get(stopIndex).getLatitude();
+                lon = stops.get(stopIndex).getLongitude();
+            }
+        }
+
+        return new PlaybackPosition(lat, lon, progressPercent, stopOrder, fallback);
+    }
+
+    private void applyJump(DemoSessionEntity session, PlaybackPosition position, Long actorId) {
+        session.setProgressPercent(position.getProgressPercent());
+        session.setCurrentLatitude(position.getLatitude());
+        session.setCurrentLongitude(position.getLongitude());
+        session.setCurrentStopOrder(position.getCurrentStopOrder());
+        session.setLastTickAt(LocalDateTime.now());
+        session.setLastEventType(DemoEventType.DEMO_JUMPED.name());
+        session.markUpdated(actorId.toString());
+        demoSessionRepository.save(session);
+    }
+
+    private double[] computeCumulativeDistances(List<RoutePathCoordinateResponse> path) {
+        double[] cumDist = new double[path.size()];
+        cumDist[0] = 0;
+        for (int i = 1; i < path.size(); i++) {
+            cumDist[i] = cumDist[i - 1] + haversineKm(
+                    path.get(i - 1).getLatitude(), path.get(i - 1).getLongitude(),
+                    path.get(i).getLatitude(), path.get(i).getLongitude());
+        }
+        return cumDist;
+    }
+
+    private String buildJumpPayload(double fromProgress, Double toProgress,
+                                    Integer fromStopOrder, Integer targetStopOrder,
+                                    Double latitude, Double longitude, String reason) {
+        return "{\"fromProgressPercent\":" + fromProgress
+                + ",\"toProgressPercent\":" + toProgress
+                + ",\"fromStopOrder\":" + fromStopOrder
+                + ",\"targetStopOrder\":" + targetStopOrder
+                + ",\"latitude\":" + latitude
+                + ",\"longitude\":" + longitude
+                + ",\"reason\":\"" + reason + "\"}";
     }
 }

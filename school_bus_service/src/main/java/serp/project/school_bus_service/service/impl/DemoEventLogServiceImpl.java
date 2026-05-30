@@ -27,7 +27,7 @@ public class DemoEventLogServiceImpl implements IDemoEventLogService {
 
     @Override
     @Transactional
-    public void record(DemoSessionEntity session, DemoEventType eventType, String payloadJson,
+    public DemoEventLogEntity record(DemoSessionEntity session, DemoEventType eventType, String payloadJson,
                        Long tenantId, Long actorId) {
         DemoEventLogEntity event = new DemoEventLogEntity();
         event.markCreated(tenantId, actorId.toString());
@@ -35,7 +35,7 @@ public class DemoEventLogServiceImpl implements IDemoEventLogService {
         event.setEventType(eventType);
         event.setEventTime(LocalDateTime.now());
         event.setPayloadJson(payloadJson);
-        demoEventLogRepository.save(event);
+        return demoEventLogRepository.save(event);
     }
 
     @Override

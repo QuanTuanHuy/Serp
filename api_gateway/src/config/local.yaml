@@ -99,6 +99,7 @@ external:
       host: localhost
       port: "8094"
       timeout: 15s
+      webSocketPath: /school-bus/api/v1/ws/school-bus
     firstMileService:
       host: localhost
       port: "8093"

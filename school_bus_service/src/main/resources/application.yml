@@ -50,3 +50,7 @@ map:
     osrm:
       base-url: ${MAP_ROUTING_OSRM_BASE_URL:https://router.project-osrm.org}
       profile: ${MAP_ROUTING_OSRM_PROFILE:driving}
+
+websocket:
+  endpoint: ${WS_ENDPOINT:/ws/school-bus}
+  allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,https://serp.texkis.com}

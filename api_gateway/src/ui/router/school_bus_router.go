@@ -13,10 +13,16 @@ import (
 
 func RegisterSchoolBusRoutes(
 	group *gin.RouterGroup,
+	wsProxyController *common.WebSocketProxyController,
 	genericProxyController *common.GenericProxyController,
 	jwtMiddleware *middleware.JWTMiddleware,
 	rateLimitMiddleware *middleware.RateLimitMiddleware,
 ) {
+	schoolBusWSGroup := group.Group("ws/school-bus")
+	{
+		schoolBusWSGroup.GET("", wsProxyController.ProxyHandler("school-bus"))
+	}
+
 	schoolBusGroup := group.Group("/school-bus/api/v1")
 	{
 		schoolBusGroup.Use(

@@ -126,6 +126,7 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterSchoolBusRoutes(
 		group,
+		p.WebSocketProxyController,
 		p.GenericProxyController,
 		p.JWTMiddleware,
 		p.RateLimitMiddleware,

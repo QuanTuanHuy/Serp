@@ -13,6 +13,7 @@ import serp.project.school_bus_service.repository.DemoSessionRepository;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDemoEventLogService;
 import serp.project.school_bus_service.service.IDemoSessionService;
+import serp.project.school_bus_service.service.IDemoWebSocketPublisher;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.shared.code.SchoolBusCode;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -27,17 +28,20 @@ public class DemoSessionServiceImpl implements IDemoSessionService {
     private final IDemoEventLogService demoEventLogService;
     private final ITripExecutionService tripExecutionService;
     private final ICodeGeneratorService codeGeneratorService;
+    private final IDemoWebSocketPublisher webSocketPublisher;
     private final SchoolBusMapper mapper;
 
     public DemoSessionServiceImpl(DemoSessionRepository demoSessionRepository,
                                   IDemoEventLogService demoEventLogService,
                                   ITripExecutionService tripExecutionService,
                                   ICodeGeneratorService codeGeneratorService,
+                                  IDemoWebSocketPublisher webSocketPublisher,
                                   SchoolBusMapper mapper) {
         this.demoSessionRepository = demoSessionRepository;
         this.demoEventLogService = demoEventLogService;
         this.tripExecutionService = tripExecutionService;
         this.codeGeneratorService = codeGeneratorService;
+        this.webSocketPublisher = webSocketPublisher;
         this.mapper = mapper;
     }
 
@@ -69,7 +73,13 @@ public class DemoSessionServiceImpl implements IDemoSessionService {
         session.setAutoAdvanceStops(autoAdvanceStops != null ? autoAdvanceStops : Boolean.FALSE);
         session.setAutoAttendance(autoAttendance != null ? autoAttendance : Boolean.FALSE);
 
-        return demoSessionRepository.save(session);
+        DemoSessionEntity saved = demoSessionRepository.save(session);
+
+        var event = demoEventLogService.record(saved, DemoEventType.DEMO_CREATED, null, tenantId, actorId);
+        webSocketPublisher.publishEvent(saved, event);
+        webSocketPublisher.publishPosition(saved, DemoEventType.DEMO_CREATED);
+
+        return saved;
     }
 
     @Override

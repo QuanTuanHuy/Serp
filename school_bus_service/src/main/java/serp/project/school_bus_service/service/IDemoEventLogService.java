@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface IDemoEventLogService {
 
-    void record(DemoSessionEntity session, DemoEventType eventType, String payloadJson,
+    DemoEventLogEntity record(DemoSessionEntity session, DemoEventType eventType, String payloadJson,
                 Long tenantId, Long actorId);
 
     List<DemoEventLogResponse> getEvents(Long sessionId, Long tenantId);

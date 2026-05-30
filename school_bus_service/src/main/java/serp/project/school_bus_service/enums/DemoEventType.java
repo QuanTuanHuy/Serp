@@ -6,6 +6,7 @@ public enum DemoEventType {
     DEMO_PAUSED,
     DEMO_RESUMED,
     DEMO_TICK,
+    DEMO_JUMPED,
     DEMO_COMPLETED,
     DEMO_STOPPED,
     DEMO_ERROR

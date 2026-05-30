@@ -13,4 +13,12 @@ public interface IDemoPlaybackService {
     DemoSessionResponse tick(Long sessionId, Long tenantId, Long actorId);
 
     DemoSessionResponse stop(Long sessionId, Long tenantId, Long actorId);
+
+    DemoSessionResponse jumpToStop(Long sessionId, Integer stopOrder, Long tenantId, Long actorId);
+
+    DemoSessionResponse jumpToProgress(Long sessionId, Double progressPercent, Long tenantId, Long actorId);
+
+    DemoSessionResponse jumpToStart(Long sessionId, Long tenantId, Long actorId);
+
+    DemoSessionResponse jumpToEnd(Long sessionId, Long tenantId, Long actorId);
 }

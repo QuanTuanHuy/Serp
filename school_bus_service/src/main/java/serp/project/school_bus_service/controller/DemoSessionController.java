@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.request.CreateDemoSessionRequest;
+import serp.project.school_bus_service.dto.request.JumpToProgressRequest;
 import serp.project.school_bus_service.dto.response.DemoEventLogResponse;
 import serp.project.school_bus_service.dto.response.DemoSessionResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.entity.DemoSessionEntity;
-import serp.project.school_bus_service.enums.DemoEventType;
 import serp.project.school_bus_service.service.IDemoEventLogService;
 import serp.project.school_bus_service.service.IDemoPlaybackService;
 import serp.project.school_bus_service.service.IDemoSessionService;
@@ -52,8 +52,6 @@ public class DemoSessionController extends AbstractBaseController {
                 req.getAutoAttendance(),
                 getCurrentTenantId(),
                 getCurrentUserId());
-        demoEventLogService.record(session, DemoEventType.DEMO_CREATED, null,
-                getCurrentTenantId(), getCurrentUserId());
         return ok("Demo session created", demoSessionService.toResponse(session));
     }
 
@@ -97,5 +95,29 @@ public class DemoSessionController extends AbstractBaseController {
     @GetMapping("/{id}/events")
     public ResponseEntity<GeneralResponse<List<DemoEventLogResponse>>> events(@PathVariable Long id) {
         return ok("Fetched demo events", demoEventLogService.getEvents(id, getCurrentTenantId()));
+    }
+
+    // ─── Jump endpoints ────────────────────────────────────────────────
+
+    @PostMapping("/{id}/jump-to-stop/{stopOrder}")
+    public ResponseEntity<GeneralResponse<DemoSessionResponse>> jumpToStop(
+            @PathVariable Long id, @PathVariable Integer stopOrder) {
+        return ok("Jumped to stop", demoPlaybackService.jumpToStop(id, stopOrder, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/jump-to-progress")
+    public ResponseEntity<GeneralResponse<DemoSessionResponse>> jumpToProgress(
+            @PathVariable Long id, @Valid @RequestBody JumpToProgressRequest request) {
+        return ok("Jumped to progress", demoPlaybackService.jumpToProgress(id, request.getProgressPercent(), getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/jump-to-start")
+    public ResponseEntity<GeneralResponse<DemoSessionResponse>> jumpToStart(@PathVariable Long id) {
+        return ok("Jumped to start", demoPlaybackService.jumpToStart(id, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/jump-to-end")
+    public ResponseEntity<GeneralResponse<DemoSessionResponse>> jumpToEnd(@PathVariable Long id) {
+        return ok("Jumped to end", demoPlaybackService.jumpToEnd(id, getCurrentTenantId(), getCurrentUserId()));
     }
 }
