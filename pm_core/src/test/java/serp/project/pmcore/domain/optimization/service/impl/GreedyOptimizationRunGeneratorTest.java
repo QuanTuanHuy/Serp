@@ -211,9 +211,30 @@ class GreedyOptimizationRunGeneratorTest {
         assertEquals(100L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
     }
 
+    @Test
+    void generateShouldPreferRequiredSkillMatchInSkillFirstAlgorithm() {
+        WorkItemEntity item = workItem(10L, 100L, null);
+        OptimizationProjectModel model = model(List.of(optimizationItem(item, List.of(
+                candidate(item, 100L, 1D, true, null),
+                candidate(item, 200L, 32D, false, fullRequiredFit(item.getId(), 200L))
+        ))), graphWithoutDependencies(List.of(10L)));
+
+        OptimizationGenerationResult result = generator.generate(model,
+                input(true, true, OptimizationMode.BALANCED_WORKLOAD, OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST));
+
+        assertEquals(200L, result.assignmentSuggestions().get(10L).suggestedAssigneeId());
+    }
+
     private OptimizationBuilderInput input(boolean allowReassignment, boolean allowSchedule, OptimizationMode mode) {
+        return input(allowReassignment, allowSchedule, mode, OptimizationAlgorithmKeys.GREEDY_BALANCED);
+    }
+
+    private OptimizationBuilderInput input(boolean allowReassignment,
+                                           boolean allowSchedule,
+                                           OptimizationMode mode,
+                                           String algorithmKey) {
         return new OptimizationBuilderInput(1L, 100L, List.of(10L, 20L), START, END,
-                allowReassignment, allowSchedule, mode, OptimizationAlgorithmKeys.GREEDY_BALANCED);
+                allowReassignment, allowSchedule, mode, algorithmKey);
     }
 
     private OptimizationProjectModel model(List<OptimizationWorkItem> items, OptimizationDependencyGraph graph) {

@@ -43,6 +43,16 @@ class OptimizationAlgorithmRegistryTest {
                 .hasMessageContaining("Unsupported optimization algorithm");
     }
 
+    @Test
+    void resolveShouldReturnSkillFirstAlgorithmByKey() {
+        IOptimizationAlgorithm algorithm = stubAlgorithm(OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST);
+        OptimizationAlgorithmRegistry registry = new OptimizationAlgorithmRegistry(List.of(algorithm));
+
+        IOptimizationAlgorithm resolved = registry.resolve(OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST);
+
+        assertThat(resolved).isSameAs(algorithm);
+    }
+
     private IOptimizationAlgorithm stubAlgorithm(String key) {
         return new IOptimizationAlgorithm() {
             @Override
