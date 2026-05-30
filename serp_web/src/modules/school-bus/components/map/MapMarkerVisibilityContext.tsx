@@ -13,7 +13,7 @@ interface MapMarkerVisibilityContextValue {
 }
 
 const ALL_KINDS: MarkerKind[] = [
-  'school', 'depot', 'pickup', 'dropoff', 'start', 'end', 'bus', 'student',
+  'school', 'depot', 'pickup', 'dropoff', 'bus', 'student',
 ];
 
 const MapMarkerVisibilityContext = React.createContext<MapMarkerVisibilityContextValue>({

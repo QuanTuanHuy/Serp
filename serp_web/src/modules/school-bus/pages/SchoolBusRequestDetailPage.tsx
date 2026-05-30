@@ -212,8 +212,8 @@ export function SchoolBusRequestDetailPage({
         </div>
 
         <SchoolBusSection
-          title='Lịch sử yêu cầu'
-          description='Toàn bộ thay đổi trạng thái và ghi chú liên quan đến yêu cầu này.'
+          title='Request history'
+          description='All status transitions and notes associated with this transport request.'
         >
           <SchoolBusTimeline
             events={mapRequestHistoryToTimeline(historyData?.data ?? [])}

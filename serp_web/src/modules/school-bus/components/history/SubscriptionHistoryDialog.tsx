@@ -47,17 +47,17 @@ export function SubscriptionHistoryDialog({
         size='sm'
         variant='outline'
         onClick={() => setOpen(true)}
-        title='Xem lịch sử'
+        title='View history'
       >
         <History className='mr-1 h-3.5 w-3.5' />
-        Lịch sử
+        History
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className='max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Lịch sử đăng ký {subscriptionCode}</DialogTitle>
+            <DialogTitle>Subscription History — {subscriptionCode}</DialogTitle>
             <DialogDescription>
-              Toàn bộ sự kiện thay đổi và tạm dừng cho đăng ký này.
+              Complete history of changes and pause periods for this subscription.
             </DialogDescription>
           </DialogHeader>
           <SchoolBusTimeline

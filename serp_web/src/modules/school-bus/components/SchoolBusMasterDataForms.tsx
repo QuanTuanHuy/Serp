@@ -453,15 +453,23 @@ export function DepotFormDialog({
           })
         }
       >
+        {/* ── Section: Depot information ── */}
+        <FormSectionHeader title='Depot information' />
         <TextField form={form} name='name' label='Depot name *' />
         {initialData?.code ? (
           <ReadOnlyField label='Depot code' value={initialData.code} />
         ) : null}
         <TextField form={form} name='contactPhone' label='Contact phone' />
         <TextareaField form={form} name='address' label='Address' />
+        <TextareaField form={form} name='description' label='Description' />
+
+        {/* ── Section: Coordinates ── */}
+        <FormSectionHeader title='Coordinates' />
         <TextField form={form} name='latitude' label='Latitude' />
         <TextField form={form} name='longitude' label='Longitude' />
-        <TextareaField form={form} name='description' label='Description' />
+
+        {/* ── Section: Map picker ── */}
+        <FormSectionHeader title='Map picker' />
         <div className='md:col-span-2'>
           <LocationPickerMap
             value={{
@@ -575,20 +583,22 @@ export function ParentFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
+        {/* ── Section: Linked account ── */}
+        <FormSectionHeader title='Linked account' />
         <SelectField
           form={form}
           name='userId'
-          label='Account user *'
+          label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
             isEditMode
               ? 'Account user is locked after the profile is linked.'
               : accountUsers.length === 0
-                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
                   ? `Selected #${selectedUser.id} - ${selectedUser.email}`
-                  : 'Select an account user already granted School Bus access.'
+                  : 'This links the parent profile to a platform login account.'
           }
           placeholder={
             isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
@@ -599,9 +609,15 @@ export function ParentFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
+
+        {/* ── Section: Contact information ── */}
+        <FormSectionHeader title='Contact information' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone *' />
         <TextField form={form} name='email' label='Email' />
+
+        {/* ── Section: Address ── */}
+        <FormSectionHeader title='Address' />
         <TextareaField form={form} name='address' label='Address' />
       </SimpleForm>
     </SchoolBusFormDialog>
@@ -768,6 +784,8 @@ export function StudentFormDialog({
           })
         }
       >
+        {/* ── Section: Basic information ── */}
+        <FormSectionHeader title='Basic information' />
         <SelectField
           form={form}
           name='schoolId'
@@ -775,15 +793,6 @@ export function StudentFormDialog({
           options={schools.map((school) => ({
             value: String(school.id),
             label: school.name,
-          }))}
-        />
-        <SelectField
-          form={form}
-          name='parentProfileId'
-          label='Parent *'
-          options={parents.map((parent) => ({
-            value: String(parent.id),
-            label: parent.fullName,
           }))}
         />
         <TextField form={form} name='fullName' label='Student name *' />
@@ -809,6 +818,25 @@ export function StudentFormDialog({
             ]}
           />
         </div>
+
+        {/* ── Section: Parent & contact ── */}
+        <FormSectionHeader title='Parent & contact' />
+        <SelectField
+          form={form}
+          name='parentProfileId'
+          label='Parent *'
+          options={parents.map((parent) => ({
+            value: String(parent.id),
+            label: parent.fullName,
+          }))}
+        />
+        <div className='grid grid-cols-2 gap-4'>
+          <TextField form={form} name='emergencyContactName' label='Emergency contact name' />
+          <TextField form={form} name='emergencyContactPhone' label='Emergency contact phone' />
+        </div>
+
+        {/* ── Section: Transport defaults ── */}
+        <FormSectionHeader title='Transport defaults' />
         <SelectField
           form={form}
           name='pickupPointId'
@@ -828,10 +856,9 @@ export function StudentFormDialog({
           disabled={noSchoolSelected}
         />
         <TextareaField form={form} name='homeAddress' label='Home address' />
-        <div className='grid grid-cols-2 gap-4'>
-          <TextField form={form} name='emergencyContactName' label='Emergency contact name' />
-          <TextField form={form} name='emergencyContactPhone' label='Emergency contact phone' />
-        </div>
+
+        {/* ── Section: Notes ── */}
+        <FormSectionHeader title='Notes' />
         <TextareaField form={form} name='specialNote' label='Special note' />
       </SimpleForm>
     </SchoolBusFormDialog>
@@ -962,6 +989,8 @@ export function BusFormDialog({
           })
         }
       >
+        {/* ── Section: Bus information ── */}
+        <FormSectionHeader title='Bus information' />
         <TextField form={form} name='plateNumber' label='Plate number *' />
         <SelectField
           form={form}
@@ -994,6 +1023,23 @@ export function BusFormDialog({
               : 'Capacity is auto-filled from the selected bus type.'
           }
         />
+
+        {/* ── Section: Assignment defaults ── */}
+        <FormSectionHeader title='Assignment defaults' />
+        <SelectField
+          form={form}
+          name='homeDepotId'
+          label='Home depot'
+          allowEmpty
+          emptyLabel='No home depot'
+          options={depots.map((depot) => ({
+            value: String(depot.id),
+            label: `${depot.name}${depot.code ? ` (${depot.code})` : ''}`,
+          }))}
+        />
+
+        {/* ── Section: Operational status ── */}
+        <FormSectionHeader title='Operational status' />
         <SelectField
           form={form}
           name='status'
@@ -1001,17 +1047,6 @@ export function BusFormDialog({
           options={BUS_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
-          }))}
-        />
-        <SelectField
-          form={form}
-          name='homeDepotId'
-          label='Home depot *'
-          allowEmpty
-          emptyLabel='No home depot'
-          options={depots.map((depot) => ({
-            value: String(depot.id),
-            label: `${depot.name}${depot.code ? ` (${depot.code})` : ''}`,
           }))}
         />
       </SimpleForm>
@@ -1104,20 +1139,22 @@ export function DriverFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
+        {/* ── Section: Account link ── */}
+        <FormSectionHeader title='Account link' />
         <SelectField
           form={form}
           name='userId'
-          label='Account user *'
+          label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
             isEditMode
               ? 'Account user is locked after the driver profile is linked.'
               : accountUsers.length === 0
-                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
                   ? `Selected #${selectedUser.id} - ${selectedUser.email}`
-                  : 'Select an account user already granted School Bus access.'
+                  : 'Choose an existing user account if this driver can log in.'
           }
           placeholder={
             isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
@@ -1128,11 +1165,20 @@ export function DriverFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
+
+        {/* ── Section: Driver information ── */}
+        <FormSectionHeader title='Driver information' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
+
+        {/* ── Section: License information ── */}
+        <FormSectionHeader title='License information' />
         <TextField form={form} name='licenseNumber' label='License number *' />
         <TextField form={form} name='licenseClass' label='License class *' />
         <TextField form={form} name='licenseExpiryDate' label='License expiry date *' description='Format: YYYY-MM-DD' />
+
+        {/* ── Section: Operational status ── */}
+        <FormSectionHeader title='Operational status' />
         <SelectField
           form={form}
           name='status'
@@ -1226,20 +1272,22 @@ export function AttendantFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
+        {/* ── Section: Account link ── */}
+        <FormSectionHeader title='Account link' />
         <SelectField
           form={form}
           name='userId'
-          label='Account user *'
+          label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
           description={
             isEditMode
               ? 'Account user is locked after the attendant profile is linked.'
               : accountUsers.length === 0
-                ? 'No School Bus account users available. Create and grant module access in Account first.'
+                ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
                   ? `Selected #${selectedUser.id} - ${selectedUser.email}`
-                  : 'Select an account user already granted School Bus access.'
+                  : 'Choose an existing user account if this attendant can log in.'
           }
           placeholder={
             isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
@@ -1250,8 +1298,14 @@ export function AttendantFormDialog({
           }))}
           onChange={handleAccountUserChange}
         />
+
+        {/* ── Section: Attendant information ── */}
+        <FormSectionHeader title='Attendant information' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
+
+        {/* ── Section: Operational status ── */}
+        <FormSectionHeader title='Operational status' />
         <SelectField
           form={form}
           name='status'
@@ -1347,6 +1401,14 @@ function TextField({
   );
 }
 
+function FormSectionHeader({ title }: { title: string }) {
+  return (
+    <div className='col-span-full border-b border-slate-100 pb-1 pt-2'>
+      <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>{title}</p>
+    </div>
+  );
+}
+
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className='space-y-2'>
@@ -1412,11 +1474,13 @@ function SelectField({
         <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
           <Select
-            onValueChange={(value) =>
-              onChange
-                ? onChange(value === emptyValue ? '' : value)
-                : field.onChange(value === emptyValue ? '' : value)
-            }
+            onValueChange={(value) => {
+              const val = value === emptyValue ? '' : value;
+              field.onChange(val);
+              if (onChange) {
+                onChange(val);
+              }
+            }}
             value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
             disabled={disabled}
           >

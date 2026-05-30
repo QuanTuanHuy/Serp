@@ -100,7 +100,7 @@ function resolveStyle(event: TimelineEvent): EventStyle {
 
 function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   } catch {
     return iso;
   }
@@ -108,7 +108,7 @@ function formatTime(iso: string): string {
 
 function formatFullDateTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString('vi-VN', {
+    return new Date(iso).toLocaleString('en-US', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
@@ -124,9 +124,9 @@ function dayLabel(iso: string): string {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const diff = (today.getTime() - target.getTime()) / 86400000;
-    if (diff === 0) return 'Hôm nay';
-    if (diff === 1) return 'Hôm qua';
-    return d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
   } catch {
     return iso;
   }
@@ -235,7 +235,7 @@ function TimelineCard({
                 onClick={() => setExpanded(!expanded)}
                 className='inline-flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700'
               >
-                {expanded ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                {expanded ? 'Hide details' : 'Show details'}
                 {expanded ? <ChevronUp className='h-3 w-3' /> : <ChevronDown className='h-3 w-3' />}
               </button>
               {expanded && (
@@ -266,8 +266,8 @@ function TimelineEmpty() {
       <div className='flex h-14 w-14 items-center justify-center rounded-full bg-slate-100'>
         <Settings className='h-6 w-6 text-slate-400' />
       </div>
-      <p className='mt-4 text-sm font-semibold text-slate-700'>Chưa có lịch sử</p>
-      <p className='mt-1 text-xs text-slate-400'>Các sự kiện sẽ xuất hiện khi có thay đổi.</p>
+      <p className='mt-4 text-sm font-semibold text-slate-700'>No history available</p>
+      <p className='mt-1 text-xs text-slate-400'>Events will appear when changes occur.</p>
     </div>
   );
 }
@@ -302,8 +302,8 @@ function TimelineError({ message }: { message?: string }) {
       <div className='flex h-14 w-14 items-center justify-center rounded-full bg-rose-100'>
         <XCircle className='h-6 w-6 text-rose-500' />
       </div>
-      <p className='mt-4 text-sm font-semibold text-rose-700'>Không thể tải lịch sử</p>
-      <p className='mt-1 text-xs text-slate-400'>{message || 'Vui lòng thử lại sau.'}</p>
+      <p className='mt-4 text-sm font-semibold text-rose-700'>Failed to load history</p>
+      <p className='mt-1 text-xs text-slate-400'>{message || 'Please try again later.'}</p>
     </div>
   );
 }

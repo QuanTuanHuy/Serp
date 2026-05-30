@@ -155,7 +155,7 @@ export default function LocationPickerMapClient({
               <Marker
                 position={selectedLocation}
                 draggable
-                icon={createSchoolBusMarkerIcon('start')}
+                icon={createSchoolBusMarkerIcon('pickup')}
                 eventHandlers={{
                   dragend: (event) => {
                     const next = event.target.getLatLng();

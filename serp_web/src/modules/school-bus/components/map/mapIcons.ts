@@ -7,8 +7,6 @@ type MarkerKind =
   | 'depot'
   | 'pickup'
   | 'dropoff'
-  | 'start'
-  | 'end'
   | 'bus'
   | 'student';
 
@@ -29,12 +27,7 @@ const markerSvgPaths: Record<MarkerKind, string> = {
   // lucide: MapPinCheck (pin with check)
   dropoff:
     '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><path d="m9 10 2 2 4-4"/>',
-  // lucide: Flag
-  start:
-    '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
-  // lucide: FlagTriangleRight
-  end:
-    '<path d="M7 22V2l10 5-10 5"/>',
+
   // lucide: Bus
   bus:
     '<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>',
@@ -51,8 +44,7 @@ const markerColors: Record<
   depot: { bg: '#fffbeb', border: '#b45309', stroke: '#b45309' },
   pickup: { bg: '#eff6ff', border: '#0369a1', stroke: '#0369a1' },
   dropoff: { bg: '#ecfdf5', border: '#047857', stroke: '#047857' },
-  start: { bg: '#fff1f2', border: '#9f1239', stroke: '#9f1239' },
-  end: { bg: '#ffe4e6', border: '#e11d48', stroke: '#e11d48' },
+
   bus: { bg: '#eef2ff', border: '#4338ca', stroke: '#4338ca' },
   student: { bg: '#faf5ff', border: '#7c3aed', stroke: '#7c3aed' },
 };

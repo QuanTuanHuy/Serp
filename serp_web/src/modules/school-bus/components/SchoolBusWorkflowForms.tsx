@@ -7,6 +7,8 @@ import {
   useForm,
 } from 'react-hook-form';
 import { z } from 'zod';
+import { cn } from '@/shared/utils';
+import { Plus } from 'lucide-react';
 import {
   Button,
   Form,
@@ -59,6 +61,63 @@ import { OperationsMap } from './map/OperationsMap';
 import { SchoolBusMapLegend } from './map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from './map/SchoolBusMapWorkspace';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
+
+interface SchoolBusFormSectionProps {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function SchoolBusFormSection({
+  title,
+  description,
+  children,
+  className,
+}: SchoolBusFormSectionProps) {
+  return (
+    <div className={cn('space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm', className)}>
+      <div>
+        <h4 className='text-sm font-semibold text-slate-900'>{title}</h4>
+        {description && <p className='mt-0.5 text-xs text-slate-500'>{description}</p>}
+      </div>
+      <div className='pt-1'>{children}</div>
+    </div>
+  );
+}
+
+function getRowReadiness(sv: any, needsTarget: boolean) {
+  if (!sv.studentId || Number(sv.studentId) === 0) return 'missing-student';
+  
+  const opt = (sv.tripOption || '').toUpperCase();
+  const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP' || opt === '';
+  const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+  
+  if (needsPickup && (!sv.pickupPointId || sv.pickupPointId === '__none__')) return 'missing-pickup';
+  if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__')) return 'missing-dropoff';
+  if (!sv.schoolScheduleId || sv.schoolScheduleId === '__none__') return 'missing-schedule';
+  if (needsTarget && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
+  
+  return 'ready';
+}
+
+function ReadinessBadge({ readiness }: { readiness: string }) {
+  const configs: Record<string, { label: string; className: string }> = {
+    'missing-student': { label: 'Missing student', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+    'missing-pickup': { label: 'Missing pickup', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    'missing-dropoff': { label: 'Missing drop-off', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    'missing-schedule': { label: 'Missing schedule', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    'missing-target': { label: 'Missing subscription', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  };
+  const cfg = configs[readiness] || configs.ready;
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ring-1', cfg.className)}>
+      {cfg.label}
+    </span>
+  );
+}
+
 
 const transportRequestSchema = z.object({
   parentProfileId: z.coerce.number().min(1, 'Parent is required'),
@@ -134,6 +193,23 @@ interface TransportRequestFormProps {
   submitLabel?: string;
 }
 
+const EMPTY_STUDENT = {
+  studentId: 0,
+  pickupPointId: '',
+  dropoffPointId: '',
+  schoolScheduleId: '',
+  tripOption: '',
+  monday: true,
+  tuesday: true,
+  wednesday: true,
+  thursday: true,
+  friday: true,
+  saturday: false,
+  sunday: false,
+  targetSubscriptionId: '',
+  studentNote: '',
+};
+
 export function TransportRequestForm({
   initialData,
   parents,
@@ -144,7 +220,7 @@ export function TransportRequestForm({
   onCancel,
   submitLabel = 'Save request',
 }: TransportRequestFormProps) {
-  const mapStudentDefaults = (items: typeof initialData extends undefined ? never : NonNullable<typeof initialData>['students']) =>
+  const mapStudentDefaults = React.useCallback((items: any[]) =>
     items.map((item) => ({
       studentId: item.studentId,
       pickupPointId: item.pickupPointId ? String(item.pickupPointId) : '',
@@ -160,13 +236,7 @@ export function TransportRequestForm({
       sunday: item.sunday ?? false,
       targetSubscriptionId: item.targetSubscriptionId ? String(item.targetSubscriptionId) : '',
       studentNote: item.studentNote || '',
-    }));
-
-  const emptyStudent = {
-    studentId: 0, pickupPointId: '', dropoffPointId: '', schoolScheduleId: '',
-    tripOption: '', monday: true, tuesday: true, wednesday: true, thursday: true,
-    friday: true, saturday: false, sunday: false, targetSubscriptionId: '', studentNote: '',
-  };
+    })), []);
 
   const form = useForm<TransportRequestFormValues>({
     resolver: zodResolver(transportRequestSchema) as any,
@@ -182,7 +252,7 @@ export function TransportRequestForm({
       changeReason: initialData?.request.changeReason || '',
       students: initialData?.students
         ? mapStudentDefaults(initialData.students)
-        : [emptyStudent],
+        : [EMPTY_STUDENT],
       isActive: initialData?.request.isActive ?? true,
     },
   });
@@ -200,10 +270,10 @@ export function TransportRequestForm({
       changeReason: initialData?.request.changeReason || '',
       students: initialData?.students
         ? mapStudentDefaults(initialData.students)
-        : [emptyStudent],
+        : [EMPTY_STUDENT],
       isActive: initialData?.request.isActive ?? true,
     });
-  }, [form, initialData, parents, schools]);
+  }, [form, initialData, parents, schools, mapStudentDefaults]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -212,12 +282,32 @@ export function TransportRequestForm({
   const [activeStudentIndex, setActiveStudentIndex] = React.useState(0);
 
   const schoolId = form.watch('schoolId');
+  const parentProfileId = form.watch('parentProfileId');
   const requestType = form.watch('requestType');
   const needsTarget = requestType !== 'NEW_SERVICE';
-  const filteredStudents = React.useMemo(
-    () => students.filter((student) => student.schoolId === Number(schoolId)),
-    [students, schoolId]
-  );
+
+  const filteredStudents = React.useMemo(() => {
+    return students.filter(
+      (student) =>
+        student.schoolId === Number(schoolId) &&
+        student.parentProfileId === Number(parentProfileId)
+    );
+  }, [students, schoolId, parentProfileId]);
+
+  // When schoolId or parentProfileId changes, reset the students field array to avoid invalid/mismatched rows
+  const prevSchoolParentRef = React.useRef({ schoolId, parentProfileId });
+  React.useEffect(() => {
+    const prev = prevSchoolParentRef.current;
+    if (
+      (prev.schoolId !== schoolId || prev.parentProfileId !== parentProfileId) &&
+      prev.schoolId !== 0 &&
+      prev.parentProfileId !== 0
+    ) {
+      form.setValue('students', [EMPTY_STUDENT], { shouldDirty: true });
+      setActiveStudentIndex(0);
+    }
+    prevSchoolParentRef.current = { schoolId, parentProfileId };
+  }, [schoolId, parentProfileId, form]);
 
   // ── Load linked pickup points reactively per school ───────────────
   const { data: linkedPPData } = useGetActiveSchoolPickupPointsQuery(
@@ -339,6 +429,13 @@ export function TransportRequestForm({
     [activeStudentId, filteredStudents]
   );
 
+  const [fitAllKey, setFitAllKey] = React.useState(0);
+  const [fitSelectedKey, setFitSelectedKey] = React.useState(0);
+
+  const handleFitAll = () => setFitAllKey((k) => k + 1);
+  const handleFitSelected = () => setFitSelectedKey((k) => k + 1);
+
+
   // ── Filter linked pickup points by usage type per trip option ─────
   const pickupCapablePoints = React.useMemo(
     () => linkedPickupPoints.filter((lp) => {
@@ -391,6 +488,9 @@ export function TransportRequestForm({
     return markers;
   }, [allStudentValues, filteredStudents, linkedPickupPoints]);
 
+  const canFitAll = Boolean(selectedSchool || mapPickupPoints.length > 0 || studentMarkers.length > 0);
+  const canFitSelected = Boolean(selectedSchool?.id || selectedPickupPointId || selectedDropoffPointId);
+
   // ── Smart point selection handler from map click ──────────────────
   const handleMapPointSelect = React.useCallback((pickupPointId: number) => {
     const opt = (activeTripOption || '').toUpperCase();
@@ -401,6 +501,41 @@ export function TransportRequestForm({
       form.setValue(`students.${activeStudentIndex}.pickupPointId`, String(pickupPointId), { shouldDirty: true });
     }
   }, [form, activeStudentIndex, activeTripOption]);
+
+  const validationSummary = React.useMemo(() => {
+    let missingStudentCount = 0;
+    let missingPickupCount = 0;
+    let missingDropoffCount = 0;
+    let missingScheduleCount = 0;
+    let missingTargetCount = 0;
+    let readyCount = 0;
+
+    allStudentValues.forEach((sv) => {
+      const state = getRowReadiness(sv, needsTarget);
+      if (state === 'missing-student') missingStudentCount++;
+      else if (state === 'missing-pickup') missingPickupCount++;
+      else if (state === 'missing-dropoff') missingDropoffCount++;
+      else if (state === 'missing-schedule') missingScheduleCount++;
+      else if (state === 'missing-target') missingTargetCount++;
+      else if (state === 'ready') readyCount++;
+    });
+
+    const messages: string[] = [];
+    if (missingStudentCount > 0) messages.push(`${missingStudentCount} row(s) missing student selection`);
+    if (missingPickupCount > 0) messages.push(`${missingPickupCount} student(s) missing pickup point`);
+    if (missingDropoffCount > 0) messages.push(`${missingDropoffCount} student(s) missing drop-off point`);
+    if (missingScheduleCount > 0) messages.push(`${missingScheduleCount} student(s) missing schedule`);
+    if (missingTargetCount > 0) messages.push(`${missingTargetCount} student(s) missing target subscription`);
+
+    const isAllReady = readyCount === allStudentValues.length;
+
+    return {
+      messages,
+      isAllReady,
+      readyCount,
+      totalCount: allStudentValues.length,
+    };
+  }, [allStudentValues, needsTarget]);
 
   return (
     <Form {...form}>
@@ -435,281 +570,339 @@ export function TransportRequestForm({
         )}
         className='space-y-6'
       >
-        <div className='grid gap-4 md:grid-cols-2'>
-          <SelectField
-            form={form}
-            name='parentProfileId'
-            label='Parent'
-            options={parents.map((parent) => ({
-              value: String(parent.id),
-              label: parent.fullName,
-            }))}
-          />
-          <SelectField
-            form={form}
-            name='schoolId'
-            label='School'
-            options={schools.map((school) => ({
-              value: String(school.id),
-              label: school.name,
-            }))}
-          />
-          <SelectField
-            form={form}
-            name='requestType'
-            label='Request type'
-            options={REQUEST_TYPE_OPTIONS.map((option) => ({
-              value: option.value,
-              label: option.label,
-            }))}
-          />
-          <TextField
-            form={form}
-            name='effectiveFrom'
-            label='Effective from'
-            type='date'
-          />
-          <TextField
-            form={form}
-            name='effectiveTo'
-            label='Effective to'
-            type='date'
-          />
-        </div>
+        <div className='grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]'>
+          {/* Left panel: Info & Students & Validation */}
+          <div className='space-y-6 flex flex-col'>
+            <SchoolBusFormSection
+              title='Request Information'
+              description='Effective dates define when this demand can be used for planning.'
+            >
+              <div className='grid gap-4 grid-cols-1 md:grid-cols-3'>
+                <SelectField
+                  form={form}
+                  name='parentProfileId'
+                  label='Parent'
+                  options={parents.map((parent) => ({
+                    value: String(parent.id),
+                    label: parent.fullName,
+                  }))}
+                />
+                <SelectField
+                  form={form}
+                  name='schoolId'
+                  label='School'
+                  options={schools.map((school) => ({
+                    value: String(school.id),
+                    label: school.name,
+                  }))}
+                />
+                <SelectField
+                  form={form}
+                  name='requestType'
+                  label='Request type'
+                  options={REQUEST_TYPE_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                />
+              </div>
 
-        <FormField
-          control={form.control}
-          name='notes'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              <div className='grid gap-4 grid-cols-1 md:grid-cols-2 mt-4'>
+                <TextField
+                  form={form}
+                  name='effectiveFrom'
+                  label='Effective from'
+                  type='date'
+                />
+                <TextField
+                  form={form}
+                  name='effectiveTo'
+                  label='Effective to'
+                  type='date'
+                />
+              </div>
 
-        <div className='grid gap-6 xl:grid-cols-[1.1fr_0.9fr]'>
-          <div className='space-y-3'>
-            <div className='flex items-center justify-between'>
-              <h3 className='text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
-                Requested students
-              </h3>
-              <Button
-                type='button'
-                variant='outline'
-                className={schoolBusUi.outlineButton}
-                onClick={() => append(emptyStudent)}
-              >
-                Add student
-              </Button>
-            </div>
+              <div className='mt-4 max-w-xl'>
+                <FormField
+                  control={form.control}
+                  name='notes'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} value={field.value ?? ''} rows={2} className='text-sm' />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </SchoolBusFormSection>
 
-            <div className='space-y-4'>
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className={`space-y-3 ${schoolBusUi.interactiveCard} ${
-                    activeStudentIndex === index
-                      ? 'border-rose-300 bg-rose-50/70'
-                      : ''
-                  }`}
-                  onClick={() => setActiveStudentIndex(index)}
+            <SchoolBusFormSection
+              title='Requested Students'
+              description='Add students and specify their schedules and locations.'
+            >
+              <div className='flex items-center justify-between mb-4 border-b border-slate-100 pb-3'>
+                <span className='text-xs text-muted-foreground font-medium'>
+                  Row count: {fields.length}
+                </span>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='rounded-full h-8 border-rose-200 text-rose-700 hover:bg-rose-50'
+                  onClick={() => append(EMPTY_STUDENT)}
                 >
-                  <div className='grid gap-4 md:grid-cols-[1fr_1fr_auto]'>
-                    <SelectField
-                      form={form}
-                      name={`students.${index}.studentId`}
-                      label='Student'
-                      options={filteredStudents.map((student) => ({
-                        value: String(student.id),
-                        label: student.fullName,
-                      }))}
-                    />
-                    <SelectField
-                      form={form}
-                      name={`students.${index}.tripOption`}
-                      label='Trip option'
-                      allowEmpty
-                      emptyValue='__none__'
-                      emptyLabel='Default (round trip)'
-                      options={TRIP_OPTION_OPTIONS.map((o) => ({
-                        value: o.value,
-                        label: o.label,
-                      }))}
-                    />
-                    <div className='flex items-end'>
+                  <Plus className='h-3.5 w-3.5 mr-1.5' /> Add student
+                </Button>
+              </div>
+
+              <div className='space-y-4 max-h-[600px] overflow-y-auto pr-1'>
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className={cn(
+                      'p-4 border rounded-2xl space-y-4 transition-all cursor-pointer relative',
+                      activeStudentIndex === index
+                        ? 'border-rose-300 bg-rose-50/20 shadow-sm ring-1 ring-rose-300/30'
+                        : 'border-slate-100 bg-white hover:border-slate-200'
+                    )}
+                    onClick={() => setActiveStudentIndex(index)}
+                  >
+                    <div className='flex items-center justify-between border-b border-slate-50 pb-2 mb-2'>
+                      <div className='flex items-center gap-2'>
+                        <span className='inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600'>
+                          {index + 1}
+                        </span>
+                        <span className='font-semibold text-slate-800 text-xs'>Student details</span>
+                        <ReadinessBadge readiness={getRowReadiness(allStudentValues[index] || {}, needsTarget)} />
+                      </div>
                       <Button
                         type='button'
                         variant='ghost'
-                        className={`w-full ${schoolBusUi.ghostButton}`}
+                        size='sm'
+                        className='h-6 rounded-full text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2'
                         disabled={fields.length === 1}
-                        onClick={() => remove(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          remove(index);
+                          if (activeStudentIndex === index) {
+                            setActiveStudentIndex(Math.max(0, index - 1));
+                          }
+                        }}
                       >
                         Remove
                       </Button>
                     </div>
-                  </div>
-                  <div className='grid gap-4 md:grid-cols-2'>
-                    {(() => {
-                      const rowOpt = (form.watch(`students.${index}.tripOption`) || '').toUpperCase();
-                      const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP' || rowOpt === '';
-                      const dropoffRequired = rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
-                      return (
-                        <>
-                          <SelectField
-                            form={form}
-                            name={`students.${index}.pickupPointId`}
-                            label={pickupRequired ? 'Pickup point *' : 'Pickup point'}
-                            allowEmpty
-                            emptyValue='__none__'
-                            emptyLabel='No pickup point'
-                            options={pickupCapablePoints.map((pp) => ({
-                              value: String(pp.pickupPointId),
-                              label: pp.pickupPointName,
-                            }))}
-                          />
-                          <SelectField
-                            form={form}
-                            name={`students.${index}.dropoffPointId`}
-                            label={dropoffRequired ? 'Drop-off point *' : 'Drop-off point'}
-                            allowEmpty
-                            emptyValue='__none__'
-                            emptyLabel='Same as pickup'
-                            options={dropoffCapablePoints.map((pp) => ({
-                              value: String(pp.pickupPointId),
-                              label: pp.pickupPointName,
-                            }))}
-                          />
-                        </>
-                      );
-                    })()}
-                  </div>
-                  <div className='grid gap-4 md:grid-cols-2'>
-                    <SelectField
-                      form={form}
-                      name={`students.${index}.schoolScheduleId`}
-                      label='School schedule'
-                      allowEmpty
-                      emptyValue='__none__'
-                      emptyLabel='No schedule'
-                      options={filteredSchedules.map((s) => ({
-                        value: String(s.id),
-                        label: s.scheduleName || `Schedule #${s.id}`,
-                      }))}
-                    />
-                    {needsTarget ? (
+
+                    <div className='grid gap-4 md:grid-cols-2'>
                       <SelectField
                         form={form}
-                        name={`students.${index}.targetSubscriptionId`}
-                        label='Target subscription'
-                        allowEmpty
-                        emptyValue='__none__'
-                        emptyLabel='No target'
-                        options={filteredSubscriptions.map((s) => ({
-                          value: String(s.id),
-                          label: `${s.subscriptionCode} — ${s.studentName}`,
+                        name={`students.${index}.studentId`}
+                        label='Student *'
+                        options={filteredStudents.map((student) => ({
+                          value: String(student.id),
+                          label: student.fullName,
                         }))}
                       />
-                    ) : null}
-                  </div>
-                  <div>
-                    {(() => {
-                      const rowScheduleId = form.watch(`students.${index}.schoolScheduleId`) ?? '';
-                      const schedDays = getScheduleDays(rowScheduleId);
-                      const scheduleSelected = schedDays.size > 0;
+                      <SelectField
+                        form={form}
+                        name={`students.${index}.tripOption`}
+                        label='Trip option'
+                        allowEmpty
+                        emptyValue='__none__'
+                        emptyLabel='Default (round trip)'
+                        options={TRIP_OPTION_OPTIONS.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                        }))}
+                      />
+                    </div>
 
-                      if (!scheduleSelected) {
+                    <div className='grid gap-4 md:grid-cols-2'>
+                      {(() => {
+                        const rowOpt = (form.watch(`students.${index}.tripOption`) || '').toUpperCase();
+                        const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP' || rowOpt === '';
+                        const dropoffRequired = rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
                         return (
-                          <div className='flex items-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2'>
-                            <span className='text-xs text-slate-400'>
-                              📅 Select a school schedule above to configure days of week
-                            </span>
+                          <>
+                            <SelectField
+                              form={form}
+                              name={`students.${index}.pickupPointId`}
+                              label={pickupRequired ? 'Pickup point *' : 'Pickup point'}
+                              allowEmpty
+                              emptyValue='__none__'
+                              emptyLabel='No pickup point'
+                              options={pickupCapablePoints.map((pp) => ({
+                                value: String(pp.pickupPointId),
+                                label: pp.pickupPointName,
+                              }))}
+                            />
+                            <SelectField
+                              form={form}
+                              name={`students.${index}.dropoffPointId`}
+                              label={dropoffRequired ? 'Drop-off point *' : 'Drop-off point'}
+                              allowEmpty
+                              emptyValue='__none__'
+                              emptyLabel='Same as pickup'
+                              options={dropoffCapablePoints.map((pp) => ({
+                                value: String(pp.pickupPointId),
+                                label: pp.pickupPointName,
+                              }))}
+                            />
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    <div className='grid gap-4 md:grid-cols-2'>
+                      <SelectField
+                        form={form}
+                        name={`students.${index}.schoolScheduleId`}
+                        label='School schedule *'
+                        allowEmpty
+                        emptyValue='__none__'
+                        emptyLabel='No schedule'
+                        options={filteredSchedules.map((s) => ({
+                          value: String(s.id),
+                          label: s.scheduleName || `Schedule #${s.id}`,
+                        }))}
+                      />
+                      {needsTarget ? (
+                        <SelectField
+                          form={form}
+                          name={`students.${index}.targetSubscriptionId`}
+                          label='Target subscription *'
+                          allowEmpty
+                          emptyValue='__none__'
+                          emptyLabel='No target'
+                          options={filteredSubscriptions.map((s) => ({
+                            value: String(s.id),
+                            label: `${s.subscriptionCode} — ${s.studentName}`,
+                          }))}
+                        />
+                      ) : null}
+                    </div>
+
+                    <div>
+                      {(() => {
+                        const rowScheduleId = form.watch(`students.${index}.schoolScheduleId`) ?? '';
+                        const schedDays = getScheduleDays(rowScheduleId);
+                        const scheduleSelected = schedDays.size > 0;
+
+                        if (!scheduleSelected) {
+                          return (
+                            <div className='flex items-center gap-2 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2'>
+                              <span className='text-[11px] text-slate-400'>
+                                📅 Select a school schedule above to configure days of week
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        const DAY_KEYS = [
+                          { field: 'monday'    as const, key: 'MONDAY',    label: 'Mon' },
+                          { field: 'tuesday'   as const, key: 'TUESDAY',   label: 'Tue' },
+                          { field: 'wednesday' as const, key: 'WEDNESDAY', label: 'Wed' },
+                          { field: 'thursday'  as const, key: 'THURSDAY',  label: 'Thu' },
+                          { field: 'friday'    as const, key: 'FRIDAY',    label: 'Fri' },
+                          { field: 'saturday'  as const, key: 'SATURDAY',  label: 'Sat' },
+                          { field: 'sunday'    as const, key: 'SUNDAY',    label: 'Sun' },
+                        ];
+
+                        return (
+                          <div className='space-y-1.5'>
+                            <FormLabel className='block text-[11px] font-semibold text-slate-700 uppercase tracking-wider'>
+                              Days of week (from schedule)
+                            </FormLabel>
+                            <div className='flex flex-wrap gap-1.5'>
+                              {DAY_KEYS.map(({ field, key, label }) => {
+                                const isAllowed = schedDays.has(key);
+                                return (
+                                  <FormField
+                                    key={field}
+                                    control={form.control}
+                                    name={`students.${index}.${field}`}
+                                    render={({ field: dayField }) => (
+                                      <label
+                                        title={!isAllowed ? 'Not part of this schedule' : undefined}
+                                        className={cn(
+                                          'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition-colors',
+                                          isAllowed
+                                            ? 'cursor-pointer border-rose-100 bg-white text-slate-700 hover:border-rose-300 hover:bg-rose-50/50'
+                                            : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+                                        )}
+                                      >
+                                        <input
+                                          type='checkbox'
+                                          checked={Boolean(dayField.value)}
+                                          disabled={!isAllowed}
+                                          onChange={(e) => {
+                                            if (isAllowed) {
+                                              dayField.onChange(e.target.checked);
+                                            }
+                                          }}
+                                          className='accent-rose-500 disabled:opacity-0 h-3.5 w-3.5 rounded border-slate-300'
+                                        />
+                                        {label}
+                                      </label>
+                                    )}
+                                  />
+                                );
+                              })}
+                            </div>
                           </div>
                         );
-                      }
+                      })()}
+                    </div>
 
-                      const DAY_KEYS = [
-                        { field: 'monday'    as const, key: 'MONDAY',    label: 'Mon' },
-                        { field: 'tuesday'   as const, key: 'TUESDAY',   label: 'Tue' },
-                        { field: 'wednesday' as const, key: 'WEDNESDAY', label: 'Wed' },
-                        { field: 'thursday'  as const, key: 'THURSDAY',  label: 'Thu' },
-                        { field: 'friday'    as const, key: 'FRIDAY',    label: 'Fri' },
-                        { field: 'saturday'  as const, key: 'SATURDAY',  label: 'Sat' },
-                        { field: 'sunday'    as const, key: 'SUNDAY',    label: 'Sun' },
-                      ];
-
-                      return (
-                        <div className='space-y-1.5'>
-                          <FormLabel className='block text-xs font-medium text-slate-700'>
-                            Days of week
-                            <span className='ml-1.5 font-normal text-slate-400'>
-                              (based on selected schedule)
-                            </span>
-                          </FormLabel>
-                          <div className='flex flex-wrap gap-2'>
-                            {DAY_KEYS.map(({ field, key, label }) => {
-                              const isAllowed = schedDays.has(key);
-                              return (
-                                <FormField
-                                  key={field}
-                                  control={form.control}
-                                  name={`students.${index}.${field}`}
-                                  render={({ field: dayField }) => (
-                                    <label
-                                      title={!isAllowed ? 'Not part of this schedule' : undefined}
-                                      className={[
-                                        'inline-flex select-none items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-                                        isAllowed
-                                          ? 'cursor-pointer border-rose-200 bg-white text-slate-700 hover:border-rose-400 hover:bg-rose-50'
-                                          : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400',
-                                      ].join(' ')}
-                                    >
-                                      <input
-                                        type='checkbox'
-                                        checked={Boolean(dayField.value)}
-                                        disabled={!isAllowed}
-                                        onChange={(e) => {
-                                          if (isAllowed) dayField.onChange(e.target.checked);
-                                        }}
-                                        className='accent-rose-500 disabled:opacity-0'
-                                      />
-                                      {label}
-                                    </label>
-                                  )}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    <FormField
+                      control={form.control}
+                      name={`students.${index}.studentNote`}
+                      render={({ field: noteField }) => (
+                        <FormItem>
+                          <FormLabel>Student note</FormLabel>
+                          <FormControl>
+                            <Input {...noteField} value={noteField.value ?? ''} placeholder='Optional note for this student' className='text-xs' />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
                   </div>
+                ))}
+              </div>
 
-                  <FormField
-                    control={form.control}
-                    name={`students.${index}.studentNote`}
-                    render={({ field: noteField }) => (
-                      <FormItem>
-                        <FormLabel>Student note</FormLabel>
-                        <FormControl>
-                          <Input {...noteField} value={noteField.value ?? ''} placeholder='Optional note for this student' />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+              {/* Validation Summary */}
+              <div className={cn(
+                'rounded-xl p-4 text-xs border mt-4',
+                validationSummary.isAllReady
+                  ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800'
+                  : 'bg-amber-50/50 border-amber-100 text-amber-800'
+              )}>
+                <div className='flex items-center justify-between font-semibold'>
+                  <span>Validation summary:</span>
+                  <span>{validationSummary.readyCount} / {validationSummary.totalCount} Ready</span>
                 </div>
-              ))}
-            </div>
+                {validationSummary.messages.length > 0 ? (
+                  <ul className='list-disc list-inside mt-2 space-y-1 text-[11px] opacity-90'>
+                    {validationSummary.messages.map((msg, i) => (
+                      <li key={i}>{msg}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className='mt-1.5 text-[11px] opacity-90'>All requested students are ready for transport planning.</p>
+                )}
+              </div>
+            </SchoolBusFormSection>
           </div>
 
-          <div className={`space-y-3 ${schoolBusUi.subtlePanel}`}>
-            <div>
-              <p className='text-sm font-semibold text-slate-950'>Pickup point map</p>
-              <p className='mt-1 text-xs text-slate-500'>
-                Select a student row, then click a marker to assign that point.
+          {/* Right panel: Map & Active Context */}
+          <div className='space-y-4'>
+            <div className='space-y-1.5 px-1'>
+              <h4 className='text-sm font-semibold text-slate-900'>Pickup point map</h4>
+              <p className='text-xs text-slate-500 leading-relaxed'>
+                Select a student row on the left, then click a map marker to assign that point.
                 {activeTripOption?.toUpperCase() === 'AFTERNOON'
                   ? ' Click sets drop-off point.'
                   : ' Click sets pickup point.'}
@@ -717,7 +910,12 @@ export function TransportRequestForm({
             </div>
             <SchoolBusMapWorkspace
               defaultPreset='map-focus'
-              mapHeightClassName='h-[380px]'
+              mapHeightClassName='h-[420px]'
+              onFitAll={handleFitAll}
+              onFitRoute={handleFitSelected}
+              canFitAll={canFitAll}
+              canFitRoute={canFitSelected}
+              fitRouteLabel='Fit Selected'
               map={
                 <OperationsMap
                   schools={selectedSchool ? [selectedSchool] : []}
@@ -728,60 +926,79 @@ export function TransportRequestForm({
                     selectedPickupPointId ? Number(selectedPickupPointId) : null
                   }
                   onPickupPointSelect={handleMapPointSelect}
+                  fitAllKey={fitAllKey}
+                  fitSelectedKey={fitSelectedKey}
                   className='h-full w-full'
                 />
               }
               legend={<SchoolBusMapLegend />}
               panel={
-                <div className='space-y-3'>
-                  <p className='text-sm font-semibold text-slate-950'>
-                    Active row context
-                  </p>
-                  <p className='text-xs text-slate-500'>
-                    Student:{' '}
-                    {activeStudent?.fullName || 'Select student in the active row'}
-                  </p>
-                  <p className='text-xs text-slate-500'>
-                    Trip option:{' '}
-                    {activeTripOption || 'ROUND_TRIP (default)'}
-                  </p>
-                  <p className='text-xs text-slate-500'>
-                    Pickup:{' '}
-                    {selectedPickupPointId
-                      ? linkedPickupPoints.find(
-                          (lp) => lp.pickupPointId === Number(selectedPickupPointId)
-                        )?.pickupPointName || 'Unknown'
-                      : 'Not selected'}
-                  </p>
-                  <p className='text-xs text-slate-500'>
-                    Drop-off:{' '}
-                    {selectedDropoffPointId
-                      ? linkedPickupPoints.find(
-                          (lp) => lp.pickupPointId === Number(selectedDropoffPointId)
-                        )?.pickupPointName || 'Unknown'
-                      : 'Not selected'}
-                  </p>
-                  <p className='text-xs text-slate-500'>
-                    Available points: {linkedPickupPoints.length}
-                  </p>
+                <div className='space-y-4 text-xs'>
+                  <div>
+                    <p className='text-sm font-semibold text-slate-900 border-b border-slate-100 pb-1.5 mb-2'>
+                      Active student row context
+                    </p>
+                    {activeStudentIndex !== null && activeStudentIndex >= 0 && activeStudentIndex < allStudentValues.length ? (
+                      <div className='space-y-2.5'>
+                        <div>
+                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Selected student</span>
+                          <span className='font-medium text-slate-800 text-xs'>
+                            {activeStudent?.fullName || <span className='text-rose-500 italic'>Not selected</span>}
+                          </span>
+                        </div>
+                        <div>
+                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Trip option</span>
+                          <span className='font-medium text-slate-700 text-xs'>
+                            {activeTripOption || 'ROUND_TRIP (Default)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Pickup point</span>
+                          <span className='font-medium text-slate-700 text-xs'>
+                            {selectedPickupPointId && selectedPickupPointId !== '__none__'
+                              ? linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedPickupPointId)?.pickupPointName || 'Selected'
+                              : <span className='text-amber-600 italic'>Not selected</span>}
+                          </span>
+                        </div>
+                        <div>
+                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Drop-off point</span>
+                          <span className='font-medium text-slate-700 text-xs'>
+                            {selectedDropoffPointId && selectedDropoffPointId !== '__none__'
+                              ? linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedDropoffPointId)?.pickupPointName || 'Selected'
+                              : <span className='text-amber-600 italic'>Not selected</span>}
+                          </span>
+                        </div>
+                        <div className='pt-1.5 border-t border-slate-100'>
+                          <p className='text-[10px] text-slate-400 italic leading-relaxed'>
+                            💡 Click a map marker to assign it to this row as {activeTripOption === 'AFTERNOON' ? 'Drop-off' : 'Pickup'}.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='py-6 text-center text-slate-400 italic'>
+                        Select a student row on the left to assign points using the map.
+                      </div>
+                    )}
+                  </div>
                 </div>
               }
             />
 
             {!selectedSchool?.latitude || !selectedSchool?.longitude ? (
-              <p className='text-xs text-amber-700'>
-                Missing coordinates: this school is not pinned yet, so only pickup points with coordinates will appear on the map.
-              </p>
+              <div className='rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 leading-relaxed shadow-sm'>
+                ⚠️ Missing coordinates: this school is not pinned yet, so only pickup points with coordinates will appear on the map.
+              </div>
             ) : null}
           </div>
         </div>
 
-        <div className='flex justify-end gap-2 border-t pt-4'>
+        {/* Sticky/Clear bottom action bar */}
+        <div className='flex justify-end gap-2 border-t pt-4 bg-white sticky bottom-0 z-10 py-3 border-slate-200'>
           {onCancel ? (
             <Button
               type='button'
               variant='outline'
-              className={schoolBusUi.outlineButton}
+              className='rounded-full border-slate-300'
               onClick={onCancel}
             >
               Cancel
@@ -789,7 +1006,7 @@ export function TransportRequestForm({
           ) : null}
           <Button
             type='submit'
-            className={schoolBusUi.primaryButton}
+            className='rounded-full bg-rose-600 hover:bg-rose-700 text-white'
             disabled={isLoading}
           >
             {isLoading ? 'Saving...' : submitLabel}
@@ -1330,6 +1547,8 @@ function SelectField({
   disabled = false,
   description,
   placeholder,
+  onChange,
+  className,
 }: {
   form: any;
   name: string;
@@ -1341,35 +1560,49 @@ function SelectField({
   disabled?: boolean;
   description?: string;
   placeholder?: string;
+  onChange?: (value: string) => void;
+  className?: string;
 }) {
   return (
     <FormField
       control={form.control}
       name={name as any}
       render={({ field }) => (
-        <FormItem>
+        <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
           <Select
-            onValueChange={(value) =>
-              field.onChange(value === emptyValue ? '' : value)
-            }
+            onValueChange={(value) => {
+              const val = value === emptyValue ? '' : value;
+              field.onChange(val);
+              if (onChange) {
+                onChange(val);
+              }
+            }}
             value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
             disabled={disabled}
           >
             <FormControl>
-              <SelectTrigger>
+              <SelectTrigger className='h-11 w-full min-w-0 max-w-full rounded-xl border-slate-200 bg-white px-3 text-left shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
                 <SelectValue
                   placeholder={placeholder || `Select ${label.toLowerCase()}`}
                 />
               </SelectTrigger>
             </FormControl>
-            <SelectContent>
+            <SelectContent className='z-[120] max-h-72 w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[min(860px,calc(100vw-2rem))] overflow-x-hidden rounded-xl border-slate-200 bg-white'>
               {allowEmpty ? (
-                <SelectItem value={emptyValue}>{emptyLabel}</SelectItem>
+                <SelectItem value={emptyValue} className='max-w-full pr-10'>
+                  <span className='block max-w-full truncate'>{emptyLabel}</span>
+                </SelectItem>
               ) : null}
               {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className='max-w-full pr-10'
+                >
+                  <span className='block max-w-full truncate'>
+                    {option.label}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>

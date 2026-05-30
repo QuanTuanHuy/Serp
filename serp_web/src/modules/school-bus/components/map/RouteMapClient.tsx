@@ -15,7 +15,7 @@ import type {
   SchoolBusRoutePath,
   SchoolBusRouteStop,
 } from '../../types';
-import { createSchoolBusMarkerIcon, createStopNumberIcon } from './mapIcons';
+import { createSchoolBusMarkerIcon, createStopNumberIcon, type MarkerKind } from './mapIcons';
 
 // ── Auto-fit bounds ───────────────────────────────────────────────────────────
 
@@ -147,9 +147,9 @@ export default function RouteMapClient({
   const initialZoom =
     allPositions.length > 0 ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
 
-  const startIcon =
+  const startIcon: MarkerKind =
     route.startLocationType === 'DEPOT' ? 'depot' : 'school';
-  const endIcon =
+  const endIcon: MarkerKind =
     route.endLocationType === 'DEPOT' ? 'depot' : 'school';
 
   const markerContent = (

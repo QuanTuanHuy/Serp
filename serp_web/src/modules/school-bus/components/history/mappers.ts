@@ -29,12 +29,12 @@ export function mapRequestHistoryToTimeline(
 
 function buildRequestTitle(newStatus: string | null | undefined): string {
   switch (newStatus?.toUpperCase()) {
-    case 'SUBMITTED': return 'Yêu cầu đã được gửi';
-    case 'APPROVED':  return 'Yêu cầu đã được duyệt';
-    case 'REJECTED':  return 'Yêu cầu bị từ chối';
-    case 'CANCELLED': return 'Yêu cầu đã bị hủy';
-    case 'DRAFT':     return 'Bản nháp đã tạo';
-    default:          return `Trạng thái: ${newStatus || 'N/A'}`;
+    case 'SUBMITTED': return 'Request submitted';
+    case 'APPROVED':  return 'Request approved';
+    case 'REJECTED':  return 'Request rejected';
+    case 'CANCELLED': return 'Request cancelled';
+    case 'DRAFT':     return 'Draft created';
+    default:          return `Status: ${newStatus || 'N/A'}`;
   }
 }
 
@@ -44,9 +44,9 @@ function buildStatusTransition(
   reason: string | null | undefined
 ): Record<string, string> | undefined {
   const meta: Record<string, string> = {};
-  if (oldStatus) meta['Trạng thái cũ'] = oldStatus;
-  if (newStatus) meta['Trạng thái mới'] = newStatus;
-  if (reason)    meta['Lý do'] = reason;
+  if (oldStatus) meta['Previous status'] = oldStatus;
+  if (newStatus) meta['New status'] = newStatus;
+  if (reason)    meta['Reason'] = reason;
   return Object.keys(meta).length > 0 ? meta : undefined;
 }
 
@@ -70,24 +70,24 @@ export function mapSubscriptionHistoryToTimeline(
 
 function buildSubTitle(changeType: string): string {
   switch (changeType?.toUpperCase()) {
-    case 'CREATED':   return 'Đăng ký mới được tạo';
-    case 'CHANGED':   return 'Đăng ký đã được cập nhật';
-    case 'PAUSED':    return 'Đăng ký tạm dừng';
-    case 'RESUMED':   return 'Đăng ký đã khôi phục';
-    case 'STOPPED':   return 'Đăng ký đã dừng';
-    case 'RENEWED':   return 'Đăng ký đã gia hạn';
-    case 'EXPIRED':   return 'Đăng ký đã hết hạn';
-    default:          return `Thay đổi: ${changeType}`;
+    case 'CREATED':   return 'New subscription created';
+    case 'CHANGED':   return 'Subscription updated';
+    case 'PAUSED':    return 'Subscription paused';
+    case 'RESUMED':   return 'Subscription resumed';
+    case 'STOPPED':   return 'Subscription stopped';
+    case 'RENEWED':   return 'Subscription renewed';
+    case 'EXPIRED':   return 'Subscription expired';
+    default:          return `Change: ${changeType}`;
   }
 }
 
 function buildSubMeta(h: SchoolBusSubscriptionHistory): Record<string, string> | undefined {
   const meta: Record<string, string> = {};
-  if (h.oldStatus) meta['Trạng thái cũ'] = h.oldStatus;
-  if (h.newStatus) meta['Trạng thái mới'] = h.newStatus;
-  if (h.oldTripOption) meta['Trip option cũ'] = h.oldTripOption;
-  if (h.newTripOption) meta['Trip option mới'] = h.newTripOption;
-  if (h.reason) meta['Lý do'] = h.reason;
+  if (h.oldStatus) meta['Previous status'] = h.oldStatus;
+  if (h.newStatus) meta['New status'] = h.newStatus;
+  if (h.oldTripOption) meta['Previous trip option'] = h.oldTripOption;
+  if (h.newTripOption) meta['New trip option'] = h.newTripOption;
+  if (h.reason) meta['Reason'] = h.reason;
   return Object.keys(meta).length > 0 ? meta : undefined;
 }
 
@@ -99,7 +99,7 @@ export function mapPausePeriodsToTimeline(
   return items.map((p) => ({
     id: p.id,
     occurredAt: p.createdAt || p.pauseFrom,
-    title: `Tạm dừng: ${p.pauseFrom}${p.pauseTo ? ` → ${p.pauseTo}` : ''}`,
+    title: `Paused: ${p.pauseFrom}${p.pauseTo ? ` → ${p.pauseTo}` : ''}`,
     description: p.reason || undefined,
     category: 'PAUSED',
     status: p.status,
@@ -115,15 +115,15 @@ export function mapTripHistoryToTimeline(
   return items.map((t) => ({
     id: t.id,
     occurredAt: t.completedAt || t.startedAt || t.createdAt || '',
-    title: `Chuyến ${t.routeCode || '#' + t.id}`,
-    description: t.driverName ? `Tài xế: ${t.driverName}` : undefined,
+    title: `Trip ${t.routeCode || '#' + t.id}`,
+    description: t.driverName ? `Driver: ${t.driverName}` : undefined,
     category: t.status === 'COMPLETED' ? 'COMPLETED' : 'TRIP',
     status: t.status,
     badgeLabel: t.status,
     metadata: {
-      'Ngày phục vụ': t.serviceDate || 'N/A',
-      'Trạng thái': t.status,
-      ...(t.busPlateNumber ? { 'Biển số': t.busPlateNumber } : {}),
+      'Service date': t.serviceDate || 'N/A',
+      'Status': t.status,
+      ...(t.busPlateNumber ? { 'Plate number': t.busPlateNumber } : {}),
     },
   }));
 }

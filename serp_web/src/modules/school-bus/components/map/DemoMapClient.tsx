@@ -9,7 +9,7 @@ import {
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
 import type { SchoolBusRoutePath, SchoolBusRouteStop } from '../../types';
-import { createSchoolBusMarkerIcon, createStopNumberIcon } from './mapIcons';
+import { createSchoolBusMarkerIcon, createStopNumberIcon, type MarkerKind } from './mapIcons';
 
 // ── Auto-fit bounds ───────────────────────────────────────────────────────────
 
@@ -118,7 +118,7 @@ export default function DemoMapClient({
   const initialZoom = allPositions.length > 0 ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
 
   // Determine icon for terminal stops
-  const terminalIcon = (s: SchoolBusRouteStop) =>
+  const terminalIcon = (s: SchoolBusRouteStop): MarkerKind =>
     s.locationType === 'DEPOT' ? 'depot' : 'school';
 
   return (
@@ -138,7 +138,7 @@ export default function DemoMapClient({
       {startCoord && startStop && (
         <Marker
           position={startCoord}
-          icon={createSchoolBusMarkerIcon(terminalIcon(startStop) as any, 30)}
+          icon={createSchoolBusMarkerIcon(terminalIcon(startStop), 30)}
         >
           <Popup>
             <div className='space-y-1'>
@@ -156,7 +156,7 @@ export default function DemoMapClient({
       {endCoord && endStop && (
         <Marker
           position={endCoord}
-          icon={createSchoolBusMarkerIcon(terminalIcon(endStop) as any, 30)}
+          icon={createSchoolBusMarkerIcon(terminalIcon(endStop), 30)}
         >
           <Popup>
             <div className='space-y-1'>
