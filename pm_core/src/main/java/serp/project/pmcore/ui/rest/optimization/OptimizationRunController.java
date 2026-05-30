@@ -63,6 +63,7 @@ public class OptimizationRunController {
                 userId,
                 projectId,
                 request.getScope(),
+                request.getAlgorithmKey(),
                 request.getMode(),
                 request.getPlanningStart(),
                 request.getPlanningEnd(),

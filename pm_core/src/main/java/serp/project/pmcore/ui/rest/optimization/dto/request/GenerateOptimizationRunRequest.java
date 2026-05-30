@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 
@@ -26,6 +27,9 @@ import java.util.List;
 public class GenerateOptimizationRunRequest {
     @Builder.Default
     private String scope = OptimizationConstants.DEFAULT_SCOPE;
+
+    @Builder.Default
+    private String algorithmKey = OptimizationAlgorithmKeys.GREEDY_BALANCED;
 
     @NotNull(message = "Optimization mode is required")
     private OptimizationMode mode;

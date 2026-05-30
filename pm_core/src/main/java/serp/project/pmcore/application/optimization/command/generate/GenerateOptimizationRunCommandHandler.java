@@ -21,18 +21,22 @@ import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
+import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
+import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOptions;
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
-import serp.project.pmcore.domain.optimization.model.OptimizationGenerationResult;
+import serp.project.pmcore.domain.optimization.model.OptimizationProblem;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
+import serp.project.pmcore.domain.optimization.model.OptimizationSolution;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
+import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
+import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithmRegistry;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
-import serp.project.pmcore.domain.optimization.service.IOptimizationRunGenerator;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
@@ -49,7 +53,7 @@ import java.util.Objects;
 public class GenerateOptimizationRunCommandHandler
         implements ICommandHandler<GenerateOptimizationRunCommand, OptimizationRunReviewView> {
     private final IOptimizationProjectModelBuilder optimizationProjectModelBuilder;
-    private final IOptimizationRunGenerator optimizationRunGenerator;
+    private final IOptimizationAlgorithmRegistry optimizationAlgorithmRegistry;
     private final IOptimizationRunPort optimizationRunPort;
     private final IOptimizationRunItemPort optimizationRunItemPort;
     private final IOptimizationRunWarningPort optimizationRunWarningPort;
@@ -60,6 +64,7 @@ public class GenerateOptimizationRunCommandHandler
     @Transactional(rollbackFor = Exception.class)
     public OptimizationRunReviewView handle(GenerateOptimizationRunCommand command) {
         validate(command);
+        String algorithmKey = normalizeAlgorithmKey(command.algorithmKey());
         OptimizationBuilderInput input = new OptimizationBuilderInput(
                 command.tenantId(),
                 command.projectId(),
@@ -69,10 +74,19 @@ public class GenerateOptimizationRunCommandHandler
                 command.allowReassignment(),
                 command.allowScheduleChanges(),
                 command.mode(),
-                OptimizationAlgorithmKeys.GREEDY_BALANCED
+                algorithmKey
         );
         OptimizationProjectModel projectModel = optimizationProjectModelBuilder.build(input);
-        OptimizationGenerationResult generation = optimizationRunGenerator.generate(projectModel, input);
+        IOptimizationAlgorithm algorithm = optimizationAlgorithmRegistry.resolve(algorithmKey);
+        OptimizationSolution solution = algorithm.solve(
+                new OptimizationProblem(projectModel, input),
+                new OptimizationAlgorithmOptions(
+                        algorithmKey,
+                        command.mode(),
+                        command.allowReassignment(),
+                        command.allowScheduleChanges()
+                )
+        );
 
         long now = System.currentTimeMillis();
         OptimizationRunEntity run = OptimizationRunEntity.builder()
@@ -86,14 +100,20 @@ public class GenerateOptimizationRunCommandHandler
                 .allowReassignment(command.allowReassignment())
                 .allowScheduleChanges(command.allowScheduleChanges())
                 .selectedWorkItemCount(command.selectedWorkItemIds().size())
-                .summaryJson(jsonUtils.toJson(generation.summary()))
+                .summaryJson(jsonUtils.toJson(solution.summary()))
+                .algorithmKey(solution.algorithm().key())
+                .algorithmVersion(solution.algorithm().version())
+                .solverStatus(solution.solverStatus() == null
+                        ? OptimizationSolverStatus.FEASIBLE.name()
+                        : solution.solverStatus().name())
+                .objectiveScore(solution.objectiveScore())
                 .build();
         run.applyCreate(command.userId(), now);
         OptimizationRunEntity savedRun = optimizationRunPort.save(run);
 
-        List<OptimizationRunItemEntity> items = buildRunItems(command, savedRun.getId(), projectModel, generation, now);
+        List<OptimizationRunItemEntity> items = buildRunItems(command, savedRun.getId(), projectModel, solution, now);
         List<OptimizationRunItemEntity> savedItems = optimizationRunItemPort.saveAll(items);
-        List<OptimizationRunWarningEntity> warnings = buildWarnings(command, savedRun.getId(), generation.warnings(), now);
+        List<OptimizationRunWarningEntity> warnings = buildWarnings(command, savedRun.getId(), solution.warnings(), now);
         List<OptimizationRunWarningEntity> savedWarnings = warnings.isEmpty()
                 ? List.of()
                 : optimizationRunWarningPort.saveAll(warnings);
@@ -106,14 +126,14 @@ public class GenerateOptimizationRunCommandHandler
     private List<OptimizationRunItemEntity> buildRunItems(GenerateOptimizationRunCommand command,
                                                           Long runId,
                                                           OptimizationProjectModel projectModel,
-                                                          OptimizationGenerationResult generation,
+                                                          OptimizationSolution solution,
                                                           long now) {
         List<OptimizationRunItemEntity> items = new ArrayList<>();
         for (OptimizationWorkItem item : projectModel.workItems()) {
             WorkItemEntity workItem = item.workItem();
             WorkItemPlanEntity activePlan = item.activePlan();
-            OptimizationAssignmentSuggestion assignment = generation.assignmentSuggestions().get(workItem.getId());
-            OptimizationScheduleSuggestion schedule = generation.scheduleSuggestions().get(workItem.getId());
+            OptimizationAssignmentSuggestion assignment = solution.assignmentSuggestions().get(workItem.getId());
+            OptimizationScheduleSuggestion schedule = solution.scheduleSuggestions().get(workItem.getId());
             Long suggestedAssigneeId = assignment == null ? workItem.getAssigneeId() : assignment.suggestedAssigneeId();
             List<String> violations = new ArrayList<>();
             if (assignment != null) {
@@ -193,6 +213,12 @@ public class GenerateOptimizationRunCommandHandler
 
     private String normalizeScope(String scope) {
         return scope == null || scope.isBlank() ? OptimizationConstants.DEFAULT_SCOPE : scope;
+    }
+
+    private String normalizeAlgorithmKey(String algorithmKey) {
+        return algorithmKey == null || algorithmKey.isBlank()
+                ? OptimizationAlgorithmKeys.GREEDY_BALANCED
+                : algorithmKey;
     }
 
     private void validate(GenerateOptimizationRunCommand command) {
