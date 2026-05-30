@@ -100,4 +100,27 @@ public class DemoSessionServiceImpl implements IDemoSessionService {
                 session.getId(), session.getTenantId());
         return mapper.toDemoSessionResponse(session, events);
     }
+
+    @Override
+    @Transactional
+    public DemoSessionResponse updateAutomationSettings(Long sessionId, Boolean autoAdvanceStops,
+                                                         Boolean autoAttendance, Long tenantId, Long actorId) {
+        DemoSessionEntity session = getById(sessionId, tenantId);
+        if (session.getStatus() == DemoSessionStatus.COMPLETED || session.getStatus() == DemoSessionStatus.STOPPED) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Cannot update settings on terminated session");
+        }
+        // autoAttendance requires autoAdvanceStops
+        if (Boolean.TRUE.equals(autoAttendance) && Boolean.FALSE.equals(autoAdvanceStops)) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "autoAttendance requires autoAdvanceStops to be enabled");
+        }
+        if (autoAdvanceStops != null) session.setAutoAdvanceStops(autoAdvanceStops);
+        if (autoAttendance != null) session.setAutoAttendance(autoAttendance);
+        // If autoAttendance=true, force autoAdvanceStops=true
+        if (Boolean.TRUE.equals(autoAttendance)) session.setAutoAdvanceStops(true);
+        session.markUpdated(actorId.toString());
+        demoSessionRepository.save(session);
+        return toResponse(session);
+    }
 }

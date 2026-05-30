@@ -14,6 +14,7 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.enums.DemoEventType;
 import serp.project.school_bus_service.enums.DemoSessionStatus;
 import serp.project.school_bus_service.repository.DemoSessionRepository;
+import serp.project.school_bus_service.service.IDemoAutomationService;
 import serp.project.school_bus_service.service.IDemoEventLogService;
 import serp.project.school_bus_service.service.IDemoPlaybackService;
 import serp.project.school_bus_service.service.IDemoSessionService;
@@ -38,19 +39,22 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
     private final IRouteGeometryService routeGeometryService;
     private final IRouteStopService routeStopService;
     private final IDemoWebSocketPublisher webSocketPublisher;
+    private final IDemoAutomationService demoAutomationService;
 
     public DemoPlaybackServiceImpl(DemoSessionRepository demoSessionRepository,
                                    IDemoSessionService demoSessionService,
                                    IDemoEventLogService demoEventLogService,
                                    IRouteGeometryService routeGeometryService,
                                    IRouteStopService routeStopService,
-                                   IDemoWebSocketPublisher webSocketPublisher) {
+                                   IDemoWebSocketPublisher webSocketPublisher,
+                                   IDemoAutomationService demoAutomationService) {
         this.demoSessionRepository = demoSessionRepository;
         this.demoSessionService = demoSessionService;
         this.demoEventLogService = demoEventLogService;
         this.routeGeometryService = routeGeometryService;
         this.routeStopService = routeStopService;
         this.webSocketPublisher = webSocketPublisher;
+        this.demoAutomationService = demoAutomationService;
     }
 
     @Override
@@ -148,6 +152,8 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
                         buildTickPayload(session), tenantId, actorId);
                 webSocketPublisher.publishEvent(session, event);
                 webSocketPublisher.publishPosition(session, DemoEventType.DEMO_COMPLETED);
+                // Final automation: ensure last stop departed if autoAdvanceStops
+                demoAutomationService.processAfterTick(session, tenantId, actorId);
             } else {
                 session.markUpdated(actorId.toString());
                 demoSessionRepository.save(session);
@@ -155,6 +161,8 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
                         buildTickPayload(session), tenantId, actorId);
                 webSocketPublisher.publishEvent(session, event);
                 webSocketPublisher.publishPosition(session, DemoEventType.DEMO_TICK);
+                // Process automation after tick
+                demoAutomationService.processAfterTick(session, tenantId, actorId);
             }
         } catch (Exception e) {
             log.error("Tick failed for session {}: {}", sessionId, e.getMessage(), e);
@@ -211,6 +219,7 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
         webSocketPublisher.publishEvent(session, event);
         webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+        demoAutomationService.processAfterTick(session, tenantId, actorId);
 
         return demoSessionService.toResponse(session);
     }
@@ -233,6 +242,7 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
         webSocketPublisher.publishEvent(session, event);
         webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+        demoAutomationService.processAfterTick(session, tenantId, actorId);
 
         return demoSessionService.toResponse(session);
     }
@@ -259,6 +269,7 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
         webSocketPublisher.publishEvent(session, event);
         webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+        demoAutomationService.processAfterTick(session, tenantId, actorId);
 
         return demoSessionService.toResponse(session);
     }
@@ -285,6 +296,7 @@ public class DemoPlaybackServiceImpl implements IDemoPlaybackService {
         var event = demoEventLogService.record(session, DemoEventType.DEMO_JUMPED, payload, tenantId, actorId);
         webSocketPublisher.publishEvent(session, event);
         webSocketPublisher.publishPosition(session, DemoEventType.DEMO_JUMPED);
+        demoAutomationService.processAfterTick(session, tenantId, actorId);
 
         return demoSessionService.toResponse(session);
     }

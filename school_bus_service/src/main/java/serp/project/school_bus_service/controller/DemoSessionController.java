@@ -3,6 +3,7 @@ package serp.project.school_bus_service.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.request.CreateDemoSessionRequest;
 import serp.project.school_bus_service.dto.request.JumpToProgressRequest;
+import serp.project.school_bus_service.dto.request.UpdateDemoAutomationSettingsRequest;
 import serp.project.school_bus_service.dto.response.DemoEventLogResponse;
 import serp.project.school_bus_service.dto.response.DemoSessionResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
@@ -95,6 +97,16 @@ public class DemoSessionController extends AbstractBaseController {
     @GetMapping("/{id}/events")
     public ResponseEntity<GeneralResponse<List<DemoEventLogResponse>>> events(@PathVariable Long id) {
         return ok("Fetched demo events", demoEventLogService.getEvents(id, getCurrentTenantId()));
+    }
+
+    // ─── Automation settings ──────────────────────────────────────────
+
+    @PatchMapping("/{id}/automation-settings")
+    public ResponseEntity<GeneralResponse<DemoSessionResponse>> updateAutomationSettings(
+            @PathVariable Long id, @Valid @RequestBody UpdateDemoAutomationSettingsRequest request) {
+        return ok("Automation settings updated",
+                demoSessionService.updateAutomationSettings(id, request.getAutoAdvanceStops(),
+                        request.getAutoAttendance(), getCurrentTenantId(), getCurrentUserId()));
     }
 
     // ─── Jump endpoints ────────────────────────────────────────────────

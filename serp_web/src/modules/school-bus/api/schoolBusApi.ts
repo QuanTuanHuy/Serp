@@ -1420,6 +1420,12 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusDemoSession>(),
       invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
     }),
+    updateDemoAutomationSettings: builder.mutation<ApiResponse<SchoolBusDemoSession>, { sessionId: number; autoAdvanceStops?: boolean; autoAttendance?: boolean }>({
+      query: ({ sessionId, ...body }) => ({ url: `/demo-sessions/${sessionId}/automation-settings`, method: 'PATCH', body }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
+      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
+    }),
     getDemoSessionEvents: builder.query<ApiResponse<SchoolBusDemoEvent[]>, number>({
       query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/events`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
@@ -1914,6 +1920,7 @@ export const {
   useJumpDemoSessionToProgressMutation,
   useJumpDemoSessionToStartMutation,
   useJumpDemoSessionToEndMutation,
+  useUpdateDemoAutomationSettingsMutation,
   useGetDemoSessionEventsQuery,
   useGetAttendanceQuery,
   useGetTripHistoryQuery,

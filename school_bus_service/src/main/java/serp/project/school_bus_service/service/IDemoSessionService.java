@@ -14,4 +14,7 @@ public interface IDemoSessionService {
     DemoSessionEntity getByTripId(Long tripId, Long tenantId);
 
     DemoSessionResponse toResponse(DemoSessionEntity session);
+
+    DemoSessionResponse updateAutomationSettings(Long sessionId, Boolean autoAdvanceStops,
+                                                  Boolean autoAttendance, Long tenantId, Long actorId);
 }

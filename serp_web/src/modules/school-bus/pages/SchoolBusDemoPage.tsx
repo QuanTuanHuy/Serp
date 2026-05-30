@@ -36,6 +36,7 @@ import {
   useStartDemoSessionMutation,
   useStopDemoSessionMutation,
   useTickDemoSessionMutation,
+  useUpdateDemoAutomationSettingsMutation,
 } from '../api/schoolBusApi';
 import {
   connectSchoolBusDemoSocket,
@@ -59,9 +60,15 @@ const EVENT_COLORS: Record<string, string> = {
   DEMO_TICK: 'bg-slate-100 text-slate-600',
   DEMO_PAUSED: 'bg-amber-100 text-amber-700',
   DEMO_RESUMED: 'bg-blue-100 text-blue-700',
+  DEMO_JUMPED: 'bg-violet-100 text-violet-700',
   DEMO_COMPLETED: 'bg-green-100 text-green-700',
   DEMO_STOPPED: 'bg-red-100 text-red-700',
   DEMO_ERROR: 'bg-red-100 text-red-700',
+  DEMO_AUTO_ARRIVED_STOP: 'bg-teal-100 text-teal-700',
+  DEMO_AUTO_DEPARTED_STOP: 'bg-indigo-100 text-indigo-700',
+  DEMO_AUTO_ATTENDANCE: 'bg-purple-100 text-purple-700',
+  DEMO_AUTOMATION_SKIPPED: 'bg-orange-100 text-orange-700',
+  DEMO_AUTOMATION_ERROR: 'bg-rose-100 text-rose-700',
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -180,6 +187,7 @@ export function SchoolBusDemoPage() {
   const [jumpToStart] = useJumpDemoSessionToStartMutation();
   const [jumpToEnd] = useJumpDemoSessionToEndMutation();
   const [jumpToStop] = useJumpDemoSessionToStopMutation();
+  const [updateAutomation] = useUpdateDemoAutomationSettingsMutation();
 
   const action = async (label: string, fn: () => Promise<any>) => {
     try {
@@ -466,7 +474,7 @@ export function SchoolBusDemoPage() {
                 Quick Navigation
               </p>
               <p className='mb-2 text-[10px] text-slate-400'>
-                Jump only moves the bus marker. Stop lifecycle &amp; attendance are handled in Phase 6.
+                Jump moves the bus marker. If auto stops/attendance are on, trip lifecycle will also trigger.
               </p>
               <div className='flex flex-wrap gap-2'>
                 <Button
@@ -505,6 +513,58 @@ export function SchoolBusDemoPage() {
                   End
                   <ChevronsRight className='ml-1 h-3.5 w-3.5' />
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Automation settings */}
+          {sessionId && (
+            <div className='rounded-2xl border border-slate-200 bg-white p-4'>
+              <p className='mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500'>
+                Automation Settings
+              </p>
+              <p className='mb-2 text-[10px] text-slate-400'>
+                Auto stops/attendance will mutate trip stop logs and attendance records.
+              </p>
+              <div className='flex flex-col gap-2'>
+                <label className='flex items-center gap-2 text-xs cursor-pointer'>
+                  <input
+                    type='checkbox'
+                    checked={!!demo?.autoAdvanceStops}
+                    disabled={currentStatus === 'COMPLETED' || currentStatus === 'STOPPED'}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      updateAutomation({
+                        sessionId: sessionId!,
+                        autoAdvanceStops: val,
+                        autoAttendance: val ? demo?.autoAttendance ?? false : false,
+                      });
+                    }}
+                    className='rounded border-slate-300'
+                  />
+                  <span className='text-slate-700'>Auto advance stops</span>
+                </label>
+                <label className='flex items-center gap-2 text-xs cursor-pointer'>
+                  <input
+                    type='checkbox'
+                    checked={!!demo?.autoAttendance}
+                    disabled={
+                      currentStatus === 'COMPLETED' ||
+                      currentStatus === 'STOPPED' ||
+                      !demo?.autoAdvanceStops
+                    }
+                    onChange={(e) => {
+                      updateAutomation({
+                        sessionId: sessionId!,
+                        autoAttendance: e.target.checked,
+                      });
+                    }}
+                    className='rounded border-slate-300'
+                  />
+                  <span className={cn('text-slate-700', !demo?.autoAdvanceStops && 'opacity-50')}>
+                    Auto attendance
+                  </span>
+                </label>
               </div>
             </div>
           )}
