@@ -35,9 +35,9 @@ public interface IStatusCategoryRepository extends JpaRepository<StatusCategoryM
             WHERE (c.tenantId = :tenantId OR c.tenantId = 0)
               AND (:isSystem IS NULL OR c.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(c.key) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR c.name LIKE :searchPattern
+                    OR c.key LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -46,13 +46,13 @@ public interface IStatusCategoryRepository extends JpaRepository<StatusCategoryM
             WHERE (c.tenantId = :tenantId OR c.tenantId = 0)
               AND (:isSystem IS NULL OR c.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(c.key) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR c.name LIKE :searchPattern
+                    OR c.key LIKE :searchPattern
               )
             """)
     Page<StatusCategoryModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                        @Param("search") String search,
+                                                        @Param("searchPattern") String searchPattern,
                                                         @Param("isSystem") Boolean isSystem,
                                                         Pageable pageable);
 

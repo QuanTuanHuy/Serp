@@ -62,7 +62,7 @@ public class StatusCategoryAdapter implements IStatusCategoryPort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<StatusCategoryModel> result = statusCategoryRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPattern(),
                 criteria.getIsSystem(),
                 pageable
         );

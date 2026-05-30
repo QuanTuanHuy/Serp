@@ -116,6 +116,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
     page: 0,
     pageSize: STATUS_PICKER_PAGE_SIZE,
     sortBy: 'name',
+    isSystem: false,
     sortDirection: 'asc',
   });
   const [addStep, addStepState] = useAddPmWorkflowStepMutation();
