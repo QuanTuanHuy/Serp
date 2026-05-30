@@ -57,6 +57,7 @@ import {
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemTransitionsQuery,
   useGetPmWorkItemLinksQuery,
+  useDeletePmWorkItemLinkMutation,
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemMutation,
 } from '../../../api/workItemApi';
@@ -90,6 +91,9 @@ import {
   WorkItemChildrenList,
   WorkItemLinksList,
 } from './PMWorkItemRelationLists';
+import { PMWorkItemSubtaskActions } from './PMWorkItemSubtaskActions';
+import { PMWorkItemLinkActions } from './PMWorkItemLinkActions';
+import { PMWorkItemWorklogPanel } from './PMWorkItemWorklogPanel';
 import {
   formatRelativeTime,
   getActivityType,
@@ -286,6 +290,9 @@ function PMWorkItemDetailMain({
   onActivityTabChange: (value: ActivityTab) => void;
 }) {
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
+  const [deleteWorkItemLink, deleteWorkItemLinkState] =
+    useDeletePmWorkItemLinkMutation();
+  const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
 
   const handleUpdate = async (body: PMUpdateWorkItemRequest) => {
     if (!workItemId) return;
@@ -298,6 +305,26 @@ function PMWorkItemDetailMain({
         description: getErrorMessage(error),
       });
       throw error;
+    }
+  };
+
+  const handleDeleteLink = async (linkId: number) => {
+    if (!workItemId) return;
+
+    setDeletingLinkId(linkId);
+    try {
+      await deleteWorkItemLink({
+        projectId,
+        workItemId,
+        linkId,
+      }).unwrap();
+      toast.success('Link removed.');
+    } catch (error) {
+      toast.error('Failed to delete link', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setDeletingLinkId(null);
     }
   };
 
@@ -331,13 +358,39 @@ function PMWorkItemDetailMain({
         <DetailSection
           title={`Subtasks${item.subtaskTotal !== undefined ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})` : ''}`}
         >
+          <div className='flex items-center justify-between gap-3'>
+            <p className='text-sm text-muted-foreground'>
+              Add child issues under this work item.
+            </p>
+            <PMWorkItemSubtaskActions
+              projectId={projectId}
+              workItemId={workItemId}
+            />
+          </div>
           <WorkItemChildrenList query={childrenQuery} />
         </DetailSection>
 
         <DetailSection
           title={`Linked work items${item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}`}
         >
-          <WorkItemLinksList query={linksQuery} />
+          <PMWorkItemLinkActions
+            projectId={projectId}
+            workItemId={workItemId}
+          />
+          <WorkItemLinksList
+            query={linksQuery}
+            onDeleteLink={handleDeleteLink}
+            deletingLinkId={
+              deleteWorkItemLinkState.isLoading ? deletingLinkId : null
+            }
+          />
+        </DetailSection>
+
+        <DetailSection title='Work logs'>
+          <PMWorkItemWorklogPanel
+            projectId={projectId}
+            workItemId={workItemId}
+          />
         </DetailSection>
 
         <DetailSection

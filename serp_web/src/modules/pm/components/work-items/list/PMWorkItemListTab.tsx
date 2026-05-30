@@ -113,8 +113,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
     return projectPeople
       .map((person) => {
-        const label =
-          person.name || person.email || `User #${person.userId}`;
+        const label = person.name || person.email || `User #${person.userId}`;
         return { value: person.userId, label };
       })
       .sort((left, right) => left.label.localeCompare(right.label));

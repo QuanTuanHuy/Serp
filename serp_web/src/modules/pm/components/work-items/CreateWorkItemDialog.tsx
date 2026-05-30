@@ -39,6 +39,7 @@ import {
 } from '@/shared/components/ui';
 import { Combobox } from '@/shared/components/ui/combobox';
 import { useCreatePmWorkItemMutation } from '../../api/workItemApi';
+import type { PMCreateWorkItemResponse } from '../../types/api';
 import {
   buildCreateWorkItemRequest,
   createWorkItemSchema,
@@ -51,12 +52,20 @@ interface CreateWorkItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialProjectId?: number;
+  initialParentId?: number;
+  lockProject?: boolean;
+  lockParent?: boolean;
+  onCreated?: (item: PMCreateWorkItemResponse) => void;
 }
 
 export function CreateWorkItemDialog({
   open,
   onOpenChange,
   initialProjectId,
+  initialParentId,
+  lockProject,
+  lockParent,
+  onCreated,
 }: CreateWorkItemDialogProps) {
   const [projectSearch, setProjectSearch] = useState('');
   const [parentSearch, setParentSearch] = useState('');
@@ -64,7 +73,10 @@ export function CreateWorkItemDialog({
 
   const form = useForm<CreateWorkItemFormValues>({
     resolver: zodResolver(createWorkItemSchema),
-    defaultValues: getCreateWorkItemDefaultValues(initialProjectId),
+    defaultValues: getCreateWorkItemDefaultValues(
+      initialProjectId,
+      initialParentId
+    ),
   });
 
   const selectedProjectId = form.watch('projectId');
@@ -72,11 +84,13 @@ export function CreateWorkItemDialog({
 
   useEffect(() => {
     if (open) {
-      form.reset(getCreateWorkItemDefaultValues(initialProjectId));
+      form.reset(
+        getCreateWorkItemDefaultValues(initialProjectId, initialParentId)
+      );
       setProjectSearch('');
       setParentSearch('');
     }
-  }, [form, initialProjectId, open]);
+  }, [form, initialParentId, initialProjectId, open]);
 
   const {
     assigneeOptions,
@@ -153,6 +167,7 @@ export function CreateWorkItemDialog({
       }).unwrap();
 
       toast.success(`Work item ${created.key} created successfully.`);
+      onCreated?.(created);
       onOpenChange(false);
     } catch (error) {
       toast.error('Failed to create work item', {
@@ -198,6 +213,7 @@ export function CreateWorkItemDialog({
                         emptyText='No projects found'
                         loading={isProjectLoading}
                         onSearch={setProjectSearch}
+                        disabled={lockProject}
                       />
                     </FormControl>
                     <FormDescription>
@@ -383,7 +399,7 @@ export function CreateWorkItemDialog({
                         emptyText='No work items found'
                         loading={isParentFetching}
                         onSearch={setParentSearch}
-                        disabled={!selectedProjectId}
+                        disabled={!selectedProjectId || lockParent}
                       />
                     </FormControl>
                     <FormDescription>

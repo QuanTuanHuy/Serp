@@ -12,9 +12,13 @@ import type { PaginatedResponse } from '@/lib/store/api/types';
 import type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
+  PMCreateWorkItemLinkRequest,
+  PMCreateWorkItemLinkResponse,
   PMCreateStatusRequest,
+  PMDeleteWorkItemLinkResponse,
   PMGetWorkItemBoardParams,
   PMGetWorkItemTimelineParams,
+  PMIssueLinkTypeApi,
   PMIssueTypeApi,
   PMPriorityApi,
   PMProjectScopedListParams,
@@ -25,6 +29,7 @@ import type {
   PMTransitionWorkItemStatusResponse,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,
+  PMUpsertWorklogRequest,
   PMWorkItemActivityApi,
   PMWorkItemBoardResponse,
   PMWorkItemChildApi,
@@ -35,6 +40,8 @@ import type {
   PMWorkItemTimelineResponse,
   PMWorkItemTransitionApi,
   PMWorkItemSearchApi,
+  PMWorklogDetailApi,
+  PMWorklogListResponse,
 } from '../types/api';
 import {
   buildProjectScopedListParams,
@@ -42,6 +49,22 @@ import {
   buildWorkItemSearchParams,
   buildWorkItemTimelineParams,
 } from './queryParams';
+
+const buildIssueLinkTypeParams = (params?: {
+  search?: string;
+  isSystem?: boolean;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}) => ({
+  search: params?.search,
+  isSystem: params?.isSystem,
+  page: params?.page ?? 0,
+  pageSize: params?.pageSize ?? 20,
+  sortBy: params?.sortBy,
+  sortDirection: params?.sortDirection,
+});
 
 export const pmWorkItemApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -71,7 +94,16 @@ export const pmWorkItemApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'pm' },
       transformResponse: createDataTransform<PMCreateWorkItemResponse>(),
-      invalidatesTags: [{ type: 'pm/WorkItem', id: 'LIST' }],
+      invalidatesTags: (_result, _error, { body }) => [
+        { type: 'pm/WorkItem', id: 'LIST' },
+        ...(body.parentId
+          ? [
+              { type: 'pm/WorkItem' as const, id: body.parentId },
+              { type: 'pm/WorkItemChildren' as const, id: body.parentId },
+              { type: 'pm/WorkItemActivities' as const, id: body.parentId },
+            ]
+          : []),
+      ],
     }),
 
     searchPmWorkItems: builder.query<
@@ -199,6 +231,174 @@ export const pmWorkItemApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMWorkItemLinkApi[]>(),
       providesTags: (_result, _error, { workItemId }) => [
         { type: 'pm/WorkItemLinks', id: workItemId },
+      ],
+    }),
+
+    getPmIssueLinkTypes: builder.query<
+      PaginatedResponse<PMIssueLinkTypeApi>,
+      {
+        search?: string;
+        isSystem?: boolean;
+        page?: number;
+        pageSize?: number;
+        sortBy?: string;
+        sortDirection?: 'asc' | 'desc';
+      } | void
+    >({
+      query: (params) => ({
+        url: '/issue-link-types',
+        method: 'GET',
+        params: buildIssueLinkTypeParams(params || undefined),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMIssueLinkTypeApi>(),
+    }),
+
+    createPmWorkItemLink: builder.mutation<
+      PMCreateWorkItemLinkResponse,
+      {
+        projectId: number;
+        workItemId: number;
+        body: PMCreateWorkItemLinkRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/links`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMCreateWorkItemLinkResponse>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItemLinks', id: workItemId },
+        { type: 'pm/WorkItemActivities', id: workItemId },
+      ],
+    }),
+
+    deletePmWorkItemLink: builder.mutation<
+      PMDeleteWorkItemLinkResponse,
+      { projectId: number; workItemId: number; linkId: number }
+    >({
+      query: ({ projectId, workItemId, linkId }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/links/${linkId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeleteWorkItemLinkResponse>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItemLinks', id: workItemId },
+        { type: 'pm/WorkItemActivities', id: workItemId },
+      ],
+    }),
+
+    getPmWorkItemWorklogs: builder.query<
+      PMWorklogListResponse,
+      {
+        projectId: number;
+        workItemId: number;
+        authorId?: number;
+        page?: number;
+        pageSize?: number;
+        sortBy?: string;
+        sortDirection?: 'asc' | 'desc';
+      }
+    >({
+      query: ({
+        projectId,
+        workItemId,
+        authorId,
+        page = 0,
+        pageSize = 20,
+        sortBy,
+        sortDirection,
+      }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/worklogs`,
+        method: 'GET',
+        params: {
+          ...(authorId ? { authorId } : {}),
+          page,
+          pageSize,
+          ...(sortBy ? { sortBy } : {}),
+          ...(sortDirection ? { sortDirection } : {}),
+        },
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorklogListResponse>(),
+      providesTags: (result, _error, { workItemId }) =>
+        result?.items.length
+          ? [
+              ...result.items.map(({ id }) => ({
+                type: 'pm/WorkItemWorklogs' as const,
+                id,
+              })),
+              { type: 'pm/WorkItemWorklogs', id: workItemId },
+            ]
+          : [{ type: 'pm/WorkItemWorklogs', id: workItemId }],
+    }),
+
+    createPmWorkItemWorklog: builder.mutation<
+      PMWorklogDetailApi,
+      {
+        projectId: number;
+        workItemId: number;
+        body: PMUpsertWorklogRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/worklogs`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorklogDetailApi>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItemWorklogs', id: workItemId },
+        { type: 'pm/WorkItemActivities', id: workItemId },
+      ],
+    }),
+
+    updatePmWorkItemWorklog: builder.mutation<
+      PMWorklogDetailApi,
+      {
+        projectId: number;
+        workItemId: number;
+        worklogId: number;
+        body: PMUpsertWorklogRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, worklogId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/worklogs/${worklogId}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorklogDetailApi>(),
+      invalidatesTags: (_result, _error, { workItemId, worklogId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItemWorklogs', id: workItemId },
+        { type: 'pm/WorkItemWorklogs', id: worklogId },
+        { type: 'pm/WorkItemActivities', id: workItemId },
+      ],
+    }),
+
+    deletePmWorkItemWorklog: builder.mutation<
+      PMWorklogDetailApi,
+      { projectId: number; workItemId: number; worklogId: number }
+    >({
+      query: ({ projectId, workItemId, worklogId }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/worklogs/${worklogId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorklogDetailApi>(),
+      invalidatesTags: (_result, _error, { workItemId, worklogId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItemWorklogs', id: workItemId },
+        { type: 'pm/WorkItemWorklogs', id: worklogId },
+        { type: 'pm/WorkItemActivities', id: workItemId },
       ],
     }),
 
@@ -428,10 +628,15 @@ export const pmWorkItemApi = api.injectEndpoints({
 });
 
 export const {
+  useCreatePmWorkItemLinkMutation,
   useCreatePmStatusMutation,
   useCreatePmWorkItemCommentMutation,
   useCreatePmWorkItemMutation,
+  useCreatePmWorkItemWorklogMutation,
+  useDeletePmWorkItemLinkMutation,
   useDeletePmWorkItemCommentMutation,
+  useDeletePmWorkItemWorklogMutation,
+  useGetPmIssueLinkTypesQuery,
   useGetPmWorkItemActivitiesQuery,
   useGetPmWorkItemByIdQuery,
   useGetPmWorkItemBoardQuery,
@@ -439,6 +644,7 @@ export const {
   useGetPmWorkItemCommentsQuery,
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemLinksQuery,
+  useGetPmWorkItemWorklogsQuery,
   useGetPmWorkItemTransitionsQuery,
   useLazyGetPmWorkItemTransitionsQuery,
   useGetPmIssueTypesQuery,
@@ -450,4 +656,5 @@ export const {
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemCommentMutation,
   useUpdatePmWorkItemMutation,
+  useUpdatePmWorkItemWorklogMutation,
 } = pmWorkItemApi;

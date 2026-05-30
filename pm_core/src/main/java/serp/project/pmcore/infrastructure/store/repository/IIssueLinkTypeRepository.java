@@ -39,4 +39,12 @@ public interface IIssueLinkTypeRepository extends JpaRepository<IssueLinkTypeMod
                                                                       @Param("normalizedName") String normalizedName);
 
     List<IssueLinkTypeModel> findAllByTenantIdOrderByNameAsc(Long tenantId);
+
+    @Query("""
+            SELECT ilt
+              FROM IssueLinkTypeModel ilt
+             WHERE ilt.tenantId = :tenantId OR ilt.tenantId = 0
+             ORDER BY ilt.name ASC
+            """)
+    List<IssueLinkTypeModel> findByTenantIdOrSystemTenantOrderByNameAsc(@Param("tenantId") Long tenantId);
 }

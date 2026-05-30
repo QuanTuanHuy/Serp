@@ -428,6 +428,80 @@ export interface PMWorkItemLinkApi {
   workItem?: PMWorkItemLinkTargetApi | null;
 }
 
+export interface PMIssueLinkTypeApi {
+  id: number;
+  tenantId?: number | null;
+  name: string;
+  outwardDescription?: string | null;
+  inwardDescription?: string | null;
+  isSystem?: boolean;
+  readOnly?: boolean;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMCreateWorkItemLinkRequest {
+  targetId: number;
+  linkTypeId: number;
+}
+
+export interface PMCreateWorkItemLinkResponse {
+  id: number;
+  sourceId: number;
+  targetId: number;
+  linkTypeId: number;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMDeleteWorkItemLinkResponse {
+  id?: number | null;
+  sourceId?: number | null;
+  targetId?: number | null;
+  linkTypeId?: number | null;
+  deletedAt?: number | string | null;
+  deletedBy?: number | null;
+}
+
+export interface PMWorklogApi {
+  id: number;
+  workItemId: number;
+  authorId?: number | null;
+  comment?: string | null;
+  startDate: number;
+  timeSpent: number;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMWorklogDetailApi extends PMWorklogApi {
+  workItemTimeSpent?: number | null;
+  workItemTimeRemainingEstimate?: number | null;
+}
+
+export interface PMWorklogListResponse {
+  items: PMWorklogApi[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  workItemId: number;
+  workItemTimeSpent?: number | null;
+  workItemTimeRemainingEstimate?: number | null;
+}
+
+export interface PMUpsertWorklogRequest {
+  timeSpent: number;
+  startDate: number;
+  comment?: string | null;
+}
+
 export interface PMWorkItemCommentApi {
   id: number;
   body: string;
