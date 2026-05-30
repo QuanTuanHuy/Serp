@@ -147,6 +147,13 @@ class GreedyOptimizationRunGeneratorTest {
         OptimizationScheduleSuggestion schedule = result.scheduleSuggestions().get(10L);
         assertEquals(10 * HOUR, schedule.allocatedEffortMillis());
         assertTrue(schedule.plannedEnd() - schedule.plannedStart() > schedule.allocatedEffortMillis());
+        assertEquals(2, schedule.allocations().size());
+        assertEquals(START, schedule.allocations().get(0).start());
+        assertEquals(START + 8 * HOUR, schedule.allocations().get(0).end());
+        assertEquals(8 * HOUR, schedule.allocations().get(0).effortMillis());
+        assertEquals(START + 24 * HOUR, schedule.allocations().get(1).start());
+        assertEquals(START + 26 * HOUR, schedule.allocations().get(1).end());
+        assertEquals(2 * HOUR, schedule.allocations().get(1).effortMillis());
         assertEquals(0, result.summary().getOverloadedAssigneeCountAfter());
     }
 

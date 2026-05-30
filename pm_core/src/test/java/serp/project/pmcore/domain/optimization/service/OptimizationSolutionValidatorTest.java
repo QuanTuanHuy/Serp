@@ -231,6 +231,7 @@ class OptimizationSolutionValidatorTest {
                 plannedStart,
                 plannedEnd,
                 plannedEnd - plannedStart,
+                List.of(),
                 OptimizationConfidence.HIGH,
                 List.of(),
                 List.of()

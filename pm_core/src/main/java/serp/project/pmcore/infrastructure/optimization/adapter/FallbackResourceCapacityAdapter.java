@@ -69,7 +69,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         CalendarCapacityResult calendar = resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd);
         List<ResourceCapacitySlot> calendarSlots = calendar.slots();
         if (calendarSlots.isEmpty()) {
-            return new CapacityResolutionResult(List.of(), CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
+            return new CapacityResolutionResult(List.of(), capacitySourceMode(calendar.coverageStatus(), false),
                     calendar.coverageStatus(), CapacityCoverageStatus.NOT_REQUIRED, calendar.fallbackUserIds(), calendar.fetchedAt(),
                     System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
@@ -92,7 +92,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 LocalDateTime.ofInstant(Instant.ofEpochMilli(planningEnd), ZoneOffset.UTC)
         );
         if (planModels.isEmpty() && unplannedWorkItems.isEmpty()) {
-            return new CapacityResolutionResult(calendarSlots, CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
+            return new CapacityResolutionResult(calendarSlots, capacitySourceMode(calendar.coverageStatus(), false),
                     calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(), calendar.fetchedAt(),
                     System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
@@ -167,11 +167,19 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                 .toList();
         long sameProjectMillis = buckets.stream().mapToLong(CapacityWorkloadBucket::sameProjectOutsideScopeReservedMillis).sum();
         long crossProjectMillis = buckets.stream().mapToLong(CapacityWorkloadBucket::crossProjectReservedMillis).sum();
-        return new CapacityResolutionResult(netSlots,
-                sameProjectMillis + crossProjectMillis > 0 ? CapacitySourceMode.FALLBACK_WITH_WORKLOAD : CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7,
+        return new CapacityResolutionResult(netSlots, capacitySourceMode(calendar.coverageStatus(), sameProjectMillis + crossProjectMillis > 0),
                 calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(),
                 calendar.fetchedAt(), System.currentTimeMillis(), sameProjectMillis + crossProjectMillis,
                 sameProjectMillis, crossProjectMillis, buckets, warnings);
+    }
+
+    private CapacitySourceMode capacitySourceMode(CapacityCoverageStatus calendarCoverageStatus, boolean workloadDeducted) {
+        boolean hasRealCalendar = calendarCoverageStatus == CapacityCoverageStatus.FULL
+                || calendarCoverageStatus == CapacityCoverageStatus.PARTIAL;
+        if (hasRealCalendar) {
+            return workloadDeducted ? CapacitySourceMode.REAL_CALENDAR_WITH_WORKLOAD : CapacitySourceMode.REAL_CALENDAR_ONLY;
+        }
+        return workloadDeducted ? CapacitySourceMode.FALLBACK_WITH_WORKLOAD : CapacitySourceMode.FALLBACK_WEEKDAY_8H_UTC_PLUS_7;
     }
 
     private long consumeWorkload(Map<Long, Long> workloadByAssignee, Long assigneeId, long capacityMillis) {

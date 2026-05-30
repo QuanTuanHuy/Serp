@@ -74,6 +74,22 @@ class OptimizationRunReviewAssemblerTest {
         assertNull(view.getItems().get(1).getCandidateSkillFit());
     }
 
+    @Test
+    void toViewShouldExposeScheduleAllocationChunks() {
+        OptimizationRunItemEntity item = item(10L, 200L);
+        item.setAllocationChunksJson("""
+                [{"assigneeId":200,"start":1000,"end":2000,"effortMillis":1000},
+                 {"assigneeId":200,"start":3000,"end":4000,"effortMillis":1000}]
+                """);
+
+        OptimizationRunReviewView view = assembler.toView(run(OptimizationRunSummary.builder().build()), List.of(item), List.of());
+
+        assertEquals(2, view.getItems().get(0).getAllocationChunks().size());
+        assertEquals(200L, view.getItems().get(0).getAllocationChunks().get(0).getAssigneeId());
+        assertEquals(1000L, view.getItems().get(0).getAllocationChunks().get(0).getStart());
+        assertEquals(4000L, view.getItems().get(0).getAllocationChunks().get(1).getEnd());
+    }
+
     private OptimizationRunEntity run(OptimizationRunSummary summary) {
         return OptimizationRunEntity.builder()
                 .id(1L)

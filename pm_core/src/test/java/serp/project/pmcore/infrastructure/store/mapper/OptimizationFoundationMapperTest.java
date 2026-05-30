@@ -132,6 +132,7 @@ class OptimizationFoundationMapperTest {
                 .assignmentReasonsJson("[]")
                 .scheduleReasonsJson("[]")
                 .violationsJson("[]")
+                .allocationChunksJson("[{\"start\":1000,\"end\":2000}]")
                 .build();
 
         OptimizationRunItemModel model = mapper.toModel(entity);
@@ -141,6 +142,7 @@ class OptimizationFoundationMapperTest {
         assertThat(mapped.getScheduleDecision()).isEqualTo(OptimizationDecision.ACCEPTED);
         assertThat(mapped.getScore()).isEqualByComparingTo(BigDecimal.valueOf(12.5));
         assertThat(mapped.getConfidence()).isEqualTo("HIGH");
+        assertThat(mapped.getAllocationChunksJson()).isEqualTo("[{\"start\":1000,\"end\":2000}]");
     }
 
     @Test

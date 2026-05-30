@@ -12,6 +12,7 @@ import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmOption
 import serp.project.pmcore.domain.optimization.model.OptimizationAssignmentSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationScheduleAllocation;
 import serp.project.pmcore.domain.optimization.model.OptimizationScheduleSuggestion;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
@@ -123,6 +124,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                     window.plannedStart(),
                     window.plannedEnd(),
                     item.duration().durationMillis(),
+                    window.allocations(),
                     confidence,
                     reasons,
                     violations));
@@ -213,6 +215,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         long remaining = durationMillis;
         Long plannedStart = null;
         long plannedEnd = earliestStart;
+        List<OptimizationScheduleAllocation> allocations = new ArrayList<>();
 
         for (ResourceCapacitySlot slot : slots) {
             if (remaining <= 0) {
@@ -241,7 +244,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                 }
                 if (reservation.start() > cursor) {
                     long chunkEnd = allocateChunk(cursor, Math.min(reservation.start(), slotCapacityEnd), remaining,
-                            newReservations);
+                            assigneeId, newReservations, allocations);
                     if (chunkEnd > cursor) {
                         if (plannedStart == null) {
                             plannedStart = cursor;
@@ -257,7 +260,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
                 }
             }
             if (remaining > 0 && cursor < slotCapacityEnd) {
-                long chunkEnd = allocateChunk(cursor, slotCapacityEnd, remaining, newReservations);
+                long chunkEnd = allocateChunk(cursor, slotCapacityEnd, remaining, assigneeId, newReservations, allocations);
                 if (chunkEnd > cursor) {
                     if (plannedStart == null) {
                         plannedStart = cursor;
@@ -278,15 +281,19 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
             plannedStart = earliestStart;
         }
         if (remaining > 0) {
-            plannedEnd = Math.max(plannedEnd, Math.max(earliestStart, planningEnd)) + remaining;
+            long overflowStart = Math.max(plannedEnd, Math.max(earliestStart, planningEnd));
+            plannedEnd = overflowStart + remaining;
+            allocations.add(new OptimizationScheduleAllocation(assigneeId, overflowStart, plannedEnd, remaining));
         }
-        return new ScheduleWindow(plannedStart, plannedEnd);
+        return new ScheduleWindow(plannedStart, plannedEnd, allocations);
     }
 
     private long allocateChunk(long start,
                                long end,
                                long remaining,
-                               List<TimeRange> newReservations) {
+                               Long assigneeId,
+                               List<TimeRange> newReservations,
+                               List<OptimizationScheduleAllocation> allocations) {
         long available = Math.max(0L, end - start);
         if (available == 0) {
             return start;
@@ -294,6 +301,7 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
         long chunk = Math.min(remaining, available);
         long chunkEnd = start + chunk;
         newReservations.add(new TimeRange(start, chunkEnd));
+        allocations.add(new OptimizationScheduleAllocation(assigneeId, start, chunkEnd, chunk));
         return chunkEnd;
     }
 
@@ -310,6 +318,6 @@ public class GreedySchedulingPolicy implements OptimizationSchedulingPolicy {
     private record TimeRange(long start, long end) {
     }
 
-    private record ScheduleWindow(Long plannedStart, Long plannedEnd) {
+    private record ScheduleWindow(Long plannedStart, Long plannedEnd, List<OptimizationScheduleAllocation> allocations) {
     }
 }

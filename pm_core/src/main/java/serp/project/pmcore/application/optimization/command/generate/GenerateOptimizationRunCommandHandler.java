@@ -169,6 +169,7 @@ public class GenerateOptimizationRunCommandHandler
                     .assignmentReasonsJson(jsonUtils.toJson(assignment == null ? List.of() : assignment.reasons()))
                     .scheduleReasonsJson(jsonUtils.toJson(schedule == null ? List.of() : schedule.reasons()))
                     .violationsJson(jsonUtils.toJson(violations))
+                    .allocationChunksJson(jsonUtils.toJson(schedule == null ? List.of() : schedule.allocations()))
                     .build();
             runItem.applyCreate(command.userId(), now);
             items.add(runItem);
