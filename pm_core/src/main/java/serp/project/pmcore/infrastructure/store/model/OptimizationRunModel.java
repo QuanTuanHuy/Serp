@@ -18,6 +18,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -52,6 +53,14 @@ public class OptimizationRunModel extends BaseModel {
     private Integer selectedWorkItemCount;
     @Column(name = "summary_json", columnDefinition = "TEXT")
     private String summaryJson;
+    @Column(name = "algorithm_key", nullable = false, length = 100)
+    private String algorithmKey;
+    @Column(name = "algorithm_version", nullable = false, length = 50)
+    private String algorithmVersion;
+    @Column(name = "solver_status", nullable = false, length = 50)
+    private String solverStatus;
+    @Column(name = "objective_score", precision = 18, scale = 6)
+    private BigDecimal objectiveScore;
     @Column(name = "applied_at")
     private LocalDateTime appliedAt;
     @Column(name = "applied_by")

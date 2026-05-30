@@ -58,6 +58,10 @@ class OptimizationRunReviewAssemblerTest {
 
         assertEquals(1, view.getSummary().getItemsWithSkillRequirements());
         assertEquals(OptimizationConfidence.HIGH.name(), view.getSummary().getSkillRankingConfidence());
+        assertEquals("greedy-balanced", view.getAlgorithmKey());
+        assertEquals("v1", view.getAlgorithmVersion());
+        assertEquals("FEASIBLE", view.getSolverStatus());
+        assertEquals(0, BigDecimal.valueOf(5.250000).compareTo(view.getObjectiveScore()));
         OptimizationRunItemView first = view.getItems().get(0);
         assertNotNull(first.getCandidateSkillFit());
         assertEquals(200L, first.getCandidateSkillFit().getSuggestedAssigneeId());
@@ -80,6 +84,10 @@ class OptimizationRunReviewAssemblerTest {
                 .allowScheduleChanges(true)
                 .selectedWorkItemCount(2)
                 .summaryJson(jsonUtils.toJson(summary))
+                .algorithmKey("greedy-balanced")
+                .algorithmVersion("v1")
+                .solverStatus("FEASIBLE")
+                .objectiveScore(BigDecimal.valueOf(5.250000))
                 .build();
     }
 

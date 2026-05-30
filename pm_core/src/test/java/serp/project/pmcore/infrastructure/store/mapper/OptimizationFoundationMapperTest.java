@@ -89,6 +89,10 @@ class OptimizationFoundationMapperTest {
                 .allowScheduleChanges(true)
                 .selectedWorkItemCount(3)
                 .summaryJson("{}")
+                .algorithmKey("greedy-balanced")
+                .algorithmVersion("v1")
+                .solverStatus("FEASIBLE")
+                .objectiveScore(BigDecimal.valueOf(12.345678))
                 .build();
 
         OptimizationRunModel model = mapper.toModel(entity);
@@ -97,6 +101,14 @@ class OptimizationFoundationMapperTest {
         assertThat(mapped.getStatus()).isEqualTo(OptimizationRunStatus.GENERATED);
         assertThat(mapped.getAllowReassignment()).isTrue();
         assertThat(mapped.getSelectedWorkItemCount()).isEqualTo(3);
+        assertThat(model.getAlgorithmKey()).isEqualTo("greedy-balanced");
+        assertThat(model.getAlgorithmVersion()).isEqualTo("v1");
+        assertThat(model.getSolverStatus()).isEqualTo("FEASIBLE");
+        assertThat(model.getObjectiveScore()).isEqualByComparingTo("12.345678");
+        assertThat(mapped.getAlgorithmKey()).isEqualTo("greedy-balanced");
+        assertThat(mapped.getAlgorithmVersion()).isEqualTo("v1");
+        assertThat(mapped.getSolverStatus()).isEqualTo("FEASIBLE");
+        assertThat(mapped.getObjectiveScore()).isEqualByComparingTo("12.345678");
     }
 
     @Test
