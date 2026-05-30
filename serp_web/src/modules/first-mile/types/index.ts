@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - First-mile module types
  */
 
+export * from './billing.types';
+
 export interface FirstMileApiResponse<T> {
   code: number;
   message: string;
@@ -444,6 +446,13 @@ export interface FirstMileOrderDetail {
   totalWeight?: number;
   totalValue?: number;
   totalVolume?: number;
+  dimensionLengthCm?: number;
+  dimensionWidthCm?: number;
+  dimensionHeightCm?: number;
+  baseShippingFee?: number;
+  codFee?: number;
+  extraFee?: number;
+  totalShippingFee?: number;
   originPostOfficeCode?: string;
   destinationPostOfficeCode?: string;
   note?: string;
@@ -453,6 +462,30 @@ export interface FirstMileOrderDetail {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+}
+
+export interface FirstMileOrderTimelineItem {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  description?: string;
+  eventTime?: string;
+  recordedBy?: string;
+  tripId?: number;
+  tripCode?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
 }
 
 export interface FirstMileOrderListFilters {
@@ -532,6 +565,33 @@ export interface OrderConfirmationResponse {
   status: FirstMileOrderStatus;
   alreadyConfirmed: boolean;
   originPostOffice?: OrderConfirmationOriginPostOffice | null;
+}
+
+export interface InitiateOrderPaymentRequest {
+  amount?: number;
+}
+
+export interface OrderPaymentInitResponse {
+  orderId: number;
+  orderCode: string;
+  amount: number;
+  appTransId: string;
+  paymentUrl?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface ConfirmOrderPaymentRequest {
+  appTransId: string;
+}
+
+export interface OrderPaymentConfirmResponse {
+  orderId: number;
+  orderCode: string;
+  paymentStatus: FirstMilePaymentStatus;
+  appTransId: string;
+  gatewayStatus?: string;
+  message?: string;
 }
 
 export interface OrderDropOffPostOfficeSuggestion {
@@ -630,6 +690,7 @@ export interface ManualAssignPickupOrdersRequest {
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
+  force_assign?: boolean;
 }
 
 export interface PickupOptimizationStop {
@@ -832,7 +893,7 @@ export interface PickupTrackingOverviewResponse {
 }
 
 export interface PickupCheckinResponse {
-  id?: number;
+  checkinId?: number;
   orderId?: number;
   orderCode?: string;
   orderStatus?: FirstMileOrderStatus;
@@ -845,8 +906,47 @@ export interface PickupCheckinResponse {
   checkinLongitude?: number;
   pickupLatitude?: number;
   pickupLongitude?: number;
-  distanceM?: number;
-  allowedRadiusM?: number;
+  distanceMeters?: number;
+  allowedRadiusMeters?: number;
+}
+
+export interface PickupCheckinDetailResponse {
+  checkinId?: number;
+  orderId?: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  tripId?: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  senderName?: string;
+  senderPhone?: string;
+  senderAddressDetail?: string;
+  pickupLatitude?: number;
+  pickupLongitude?: number;
+  checkinTime?: string;
+  checkinLatitude?: number;
+  checkinLongitude?: number;
+  photoUrl?: string;
+  distanceMeters?: number;
+  allowedRadiusMeters?: number;
+}
+
+export interface PickupTripLifecycleResponse {
+  tripId?: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  totalOrders?: number;
+  checkedInOrders?: number;
+  pendingCheckinOrders?: number;
+  returnedToPostOfficeOrders?: number;
+  allOrdersCheckedIn?: boolean;
 }
 
 export interface HubListFilters {

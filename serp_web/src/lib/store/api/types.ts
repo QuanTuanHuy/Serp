@@ -41,6 +41,7 @@ export interface ApiError {
   code: number;
   status: string;
   message: string;
+  detail?: string;
   data?: {
     errors?: Record<string, string[]>;
     details?: any;

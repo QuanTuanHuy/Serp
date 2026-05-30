@@ -45,6 +45,8 @@ app:
     topics:
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-user: ${SYNC_USER_TOPIC:SYNC_USER}
+    order-sync:
+      consumer-group-id: ${KAFKA_SECOND_MILE_ORDER_SYNC_GROUP:second-mile-sync-order}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_SECOND_MILE_HUB_PO_GROUP:second-mile-sync-hub-post-office}

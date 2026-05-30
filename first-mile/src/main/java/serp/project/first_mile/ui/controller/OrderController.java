@@ -15,6 +15,7 @@ import serp.project.first_mile.dto.request.CancelOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmDropOffOrderRequest;
 import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.first_mile.dto.request.CreateOrderRequest;
+import serp.project.first_mile.dto.request.InitiateOrderPaymentRequest;
 import serp.project.first_mile.dto.request.OrderFilterRequest;
 import serp.project.first_mile.dto.request.OrderImportDTO;
 import serp.project.first_mile.dto.request.UpdateOrderRequest;
@@ -24,6 +25,7 @@ import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDetailResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
+import serp.project.first_mile.dto.response.OrderTimelineResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.enums.OrderStatus;
@@ -185,6 +187,16 @@ public class OrderController {
         return orderService.getOrderById(orderId, tenantId);
     }
 
+    @GetMapping("/{orderId}/timeline")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    public List<OrderTimelineResponse> getOrderTimeline(@PathVariable Long orderId) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+        log.info("REST request to get Order timeline {} for tenant {}", orderId, tenantId);
+        return orderService.getOrderTimeline(orderId, tenantId);
+    }
+
     @PutMapping("/{orderId}")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
     public OrderDetailResponse updateOrder(
@@ -210,12 +222,15 @@ public class OrderController {
 
     @PostMapping("/{orderId}/payment/initiate")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
-    public OrderPaymentInitResponse initiateOrderPayment(@PathVariable Long orderId) {
+    public OrderPaymentInitResponse initiateOrderPayment(
+            @PathVariable Long orderId,
+            @RequestBody(required = false) InitiateOrderPaymentRequest request
+    ) {
         Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
                 () -> new AppException(ErrorCode.UNAUTHORIZED)
         );
         log.info("REST request to initiate payment for Order {} tenant {}", orderId, tenantId);
-        return orderService.initiateOrderPayment(orderId, tenantId);
+        return orderService.initiateOrderPayment(orderId, tenantId, request);
     }
 
     @PostMapping("/{orderId}/payment/confirm")

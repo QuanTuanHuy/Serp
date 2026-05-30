@@ -9,6 +9,8 @@ import type {
   PickupOptimizationResponse,
   PickupShift,
   PostOffice,
+  Province,
+  Ward,
 } from '../../../../types';
 
 export type DispatcherAccessScope =
@@ -83,10 +85,8 @@ export interface DispatchSetupCardProps {
   businessHandlers: DispatchSetupBusinessHandlers;
   onPreviewPlan: () => void;
   onAutoAssign: () => void;
-  onRefreshCandidateOrders: () => void;
   isOptimizing: boolean;
   isAutoAssigning: boolean;
-  isFetchingOrders: boolean;
   activeAction: DispatchActionType;
   isTmsAdmin: boolean;
 }
@@ -108,10 +108,22 @@ export interface CandidateOrderItemProps {
 }
 
 export interface ManualDispatchCardProps {
+  provinceOptions: Province[];
+  wardOptions: Ward[];
+  selectedProvinceCode: string;
+  onProvinceChange: (value: string) => void;
+  selectedWardCode: string;
+  onWardChange: (value: string) => void;
+  isLoadingProvinces: boolean;
+  isLoadingWards: boolean;
+  postOfficeOptions: PostOffice[];
   selectedPostOfficeId: string;
-  orderKeywordInput: string;
-  onOrderKeywordInputChange: (value: string) => void;
-  onApplyOrderFilters: (event: React.FormEvent) => void;
+  onPostOfficeChange: (value: string) => void;
+  isLoadingPostOffices: boolean;
+  shift: PickupShift;
+  onShiftChange: (value: PickupShift) => void;
+  tripDate: string;
+  onTripDateChange: (value: string) => void;
   courierOptions: DispatchCourierOption[];
   selectedManualCourierId: string;
   onManualCourierIdChange: (value: string) => void;
@@ -121,17 +133,8 @@ export interface ManualDispatchCardProps {
   isLoadingOrders: boolean;
   candidateOrders: FirstMileOrderDetail[];
   selectedOrderIds: number[];
-  selectedOrderIdSet: Set<number>;
-  onToggleOrder: (orderId: number, checked: boolean) => void;
-  onSelectAllCurrentOrders: () => void;
+  onOrderSelectionChange: (orderIds: number[]) => void;
   onClearSelectedOrders: () => void;
-  currentPage: number;
-  totalPages: number;
-  hasPrevious: boolean;
-  hasNext: boolean;
-  isFetchingOrders: boolean;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
   onManualAssign: () => void;
   isManualAssigning: boolean;
   activeAction: DispatchActionType;

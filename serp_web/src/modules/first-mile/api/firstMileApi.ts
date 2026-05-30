@@ -15,14 +15,17 @@ import type {
   CreateVehicleRequest,
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
+  ConfirmOrderPaymentRequest,
   FirstMileOrderDetail,
   FirstMileOrderListFilters,
+  FirstMileOrderTimelineItem,
   FirstMilePaginatedData,
   GeocodeAddressRequest,
   GeocodeAddressResponse,
   Hub,
   HubListFilters,
   HubPostOfficeMapping,
+  InitiateOrderPaymentRequest,
   ImportHistory,
   ImportType,
   ManualAssignPickupOrdersRequest,
@@ -30,13 +33,17 @@ import type {
   OrderConfirmationResponse,
   OrderDropOffPostOfficeSuggestion,
   OrderImportItem,
+  OrderPaymentConfirmResponse,
+  OrderPaymentInitResponse,
   PostOffice,
   PostOfficeGeocodeBatchResponse,
   PostOfficeStaff,
   PostOfficeImportItem,
   PostOfficeListFilters,
   PickupAssignmentResponse,
+  PickupCheckinDetailResponse,
   PickupCheckinResponse,
+  PickupTripLifecycleResponse,
   PickupTrackingOverviewResponse,
   PickupOptimizationResponse,
   ProductType,
@@ -899,6 +906,15 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
+    getOrderTimeline: builder.query<FirstMileOrderTimelineItem[], number>({
+      query: (orderId) => ({
+        url: `/orders/${orderId}/timeline`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderTimelineItem[]>,
+    }),
+
     createOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
       query: (body) => ({
         url: '/orders',
@@ -942,6 +958,33 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: FIRST_MILE_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
+    }),
+
+    initiateOrderPayment: builder.mutation<
+      OrderPaymentInitResponse,
+      { orderId: number; body?: InitiateOrderPaymentRequest }
+    >({
+      query: ({ orderId, body }) => ({
+        url: `/orders/${orderId}/payment/initiate`,
+        method: 'POST',
+        ...(body ? { body } : {}),
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<OrderPaymentInitResponse>,
+    }),
+
+    confirmOrderPayment: builder.mutation<
+      OrderPaymentConfirmResponse,
+      { orderId: number; body: ConfirmOrderPaymentRequest }
+    >({
+      query: ({ orderId, body }) => ({
+        url: `/orders/${orderId}/payment/confirm`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<OrderPaymentConfirmResponse>,
     }),
 
     getDropOffPostOfficeSuggestions: builder.query<
@@ -1027,6 +1070,7 @@ export const firstMileApi = api.injectEndpoints({
       query: (body) => ({
         url: '/pickup-optimization/manual-assign',
         method: 'POST',
+        params: body.force_assign ? { force_assign: true } : undefined,
         body,
       }),
       extraOptions: FIRST_MILE_SERVICE,
@@ -1062,6 +1106,42 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: FIRST_MILE_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<PickupCheckinResponse>,
+    }),
+
+    getPickupCheckinDetail: builder.query<
+      PickupCheckinDetailResponse,
+      number
+    >({
+      query: (orderId) => ({
+        url: `/pickup-tracking/orders/${orderId}/checkin`,
+        method: 'GET',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupCheckinDetailResponse>,
+    }),
+
+    completePickupTrip: builder.mutation<PickupTripLifecycleResponse, number>({
+      query: (tripId) => ({
+        url: `/pickup-tracking/trips/${tripId}/complete`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupTripLifecycleResponse>,
+    }),
+
+    returnPickupTripToPostOffice: builder.mutation<
+      PickupTripLifecycleResponse,
+      number
+    >({
+      query: (tripId) => ({
+        url: `/pickup-tracking/trips/${tripId}/return-to-post-office`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupTripLifecycleResponse>,
     }),
 
     exportOrderTemplate: builder.query<Blob, void>({
@@ -1160,10 +1240,13 @@ export const {
   useGetOrdersQuery,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
+  useLazyGetOrderTimelineQuery,
   useCreateOrderMutation,
   useUpdateOrderMutation,
   useCancelOrderMutation,
   useConfirmOrderMutation,
+  useInitiateOrderPaymentMutation,
+  useConfirmOrderPaymentMutation,
   useGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useConfirmDropOffOrderAtPostOfficeMutation,
@@ -1173,6 +1256,9 @@ export const {
   useAutoAssignPickupPlanMutation,
   useManualAssignPickupOrdersMutation,
   useGetPickupTrackingOverviewQuery,
+  useLazyGetPickupCheckinDetailQuery,
+  useCompletePickupTripMutation,
+  useReturnPickupTripToPostOfficeMutation,
   usePickupCheckinOrderMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,

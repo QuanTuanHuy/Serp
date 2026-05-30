@@ -60,6 +60,8 @@ app:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
+    order-sync:
+      consumer-group-id: ${KAFKA_FIRST_MILE_ORDER_SYNC_GROUP:first-mile-sync-order}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     dlq:
@@ -73,6 +75,9 @@ payment:
     gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
     create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
     query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
+    redirect-url: ${PAYMENT_REDIRECT_URL:http://localhost:3000/payment/result}
+  webhook:
+    secret: ${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

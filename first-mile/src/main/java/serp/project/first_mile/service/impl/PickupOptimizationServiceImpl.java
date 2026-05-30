@@ -43,6 +43,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.PickupOptimizationService;
+import serp.project.first_mile.service.OrderTimelineService;
 import serp.project.first_mile.service.dto.*;
 
 import java.time.LocalDate;
@@ -141,6 +142,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
+    private final OrderTimelineService orderTimelineService;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -356,6 +358,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 request.getPlanningEndTime()
         );
 
+        if (Boolean.TRUE.equals(request.getForceAssign())) {
+            return forceManualAssignPickupOrders(request, tenantId, shiftPlanningWindow);
+        }
+
         PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
         validatePostOfficeOperational(
                 postOffice,
@@ -519,6 +525,180 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
     }
 
+    private PickupAssignmentResponse forceManualAssignPickupOrders(
+            ManualAssignPickupOrdersRequest request,
+            Long tenantId,
+            ShiftPlanningWindow shiftPlanningWindow
+    ) {
+        PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
+        PostOfficeStaff courier = postOfficeStaffRepository.findByIdAndTenantId(request.getCourierStaffId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_STAFF_NOT_FOUND));
+
+        Set<Long> requestedOrderIds = normalizeDistinctOrderIds(request.getOrderIds());
+        lockOrderIdsForAssignment(requestedOrderIds, tenantId);
+        loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+
+        Trip trip = tripRepository.findFirstByTenantIdAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                courier.getId(),
+                shiftPlanningWindow.tripDate(),
+                request.getShift(),
+                REPLANNABLE_TRIP_STATUSES
+        ).orElse(null);
+        boolean createdTrip = trip == null;
+        if (trip == null) {
+            trip = new Trip();
+        }
+        if (trip.getTripCode() == null || trip.getTripCode().isBlank()) {
+            trip.setTripCode(generateTripCode(shiftPlanningWindow.tripDate(), request.getShift(), courier.getCode()));
+        }
+
+        List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                List.of(VehicleStatus.ACTIVE)
+        );
+        if (trip.getVehicleId() == null) {
+            trip.setVehicleId(resolveForceVehicleId(activeVehicles, courier.getId()));
+        }
+        String vehicleLicensePlate = resolveVehicleLicensePlate(activeVehicles, trip.getVehicleId());
+
+        LinkedHashSet<Long> finalTripOrderIds = new LinkedHashSet<>();
+        if (trip.getId() != null) {
+            List<TripOrder> existingTripOrders =
+                    tripOrderRepository.findByTrip_IdOrderBySequenceNoAsc(trip.getId());
+            for (TripOrder existingTripOrder : existingTripOrders) {
+                if (existingTripOrder.getOrderId() != null) {
+                    finalTripOrderIds.add(existingTripOrder.getOrderId());
+                }
+            }
+        }
+        finalTripOrderIds.addAll(requestedOrderIds);
+
+        trip.setTenantId(tenantId);
+        trip.setPostOfficeId(postOffice.getId());
+        trip.setCourierStaffId(courier.getId());
+        trip.setShift(request.getShift());
+        trip.setTripDate(shiftPlanningWindow.tripDate());
+        trip.setPlannedStartTime(shiftPlanningWindow.planningStartTime());
+        trip.setPlannedEndTime(shiftPlanningWindow.planningEndTime());
+        trip.setStatus(TripStatus.PLANNED);
+        trip.setTotalOrders(finalTripOrderIds.size());
+        trip.setTotalDistanceKm(0.0);
+        trip.setTotalTravelMinutes(0L);
+        Trip savedTrip = tripRepository.save(trip);
+
+        tripOrderRepository.deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
+                tenantId,
+                requestedOrderIds,
+                ACTIVE_ASSIGNMENT_TRIP_STATUSES,
+                savedTrip.getId()
+        );
+
+        tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
+        List<TripOrder> forceTripOrders = new ArrayList<>();
+        int sequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            TripOrder tripOrder = new TripOrder();
+            tripOrder.setTenantId(tenantId);
+            tripOrder.setTrip(savedTrip);
+            tripOrder.setOrderId(orderId);
+            tripOrder.setSequenceNo(sequence++);
+            forceTripOrders.add(tripOrder);
+        }
+        if (!forceTripOrders.isEmpty()) {
+            tripOrderRepository.saveAll(forceTripOrders);
+        }
+
+        List<Order> assignedOrders = orderRepository.findByIdInAndTenantId(requestedOrderIds, tenantId);
+        for (Order assignedOrder : assignedOrders) {
+            assignedOrder.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
+        }
+        orderRepository.saveAll(assignedOrders);
+        for (Order assignedOrder : assignedOrders) {
+            if (assignedOrder == null || assignedOrder.getId() == null) {
+                continue;
+            }
+
+            Point senderLocation = assignedOrder.getSenderLocation();
+            OrderTimelineContext context = new OrderTimelineContext(
+                    LocalDateTime.now(),
+                    savedTrip.getId(),
+                    savedTrip.getTripCode(),
+                    postOffice.getId(),
+                    postOffice.getCode(),
+                    postOffice.getName(),
+                    courier.getId(),
+                    courier.getCode(),
+                    courier.getFullName(),
+                    savedTrip.getVehicleId(),
+                    vehicleLicensePlate,
+                    senderLocation == null ? null : senderLocation.getY(),
+                    senderLocation == null ? null : senderLocation.getX(),
+                    assignedOrder.getSenderName()
+            );
+            orderTimelineService.recordStatusEvent(
+                    assignedOrder,
+                    OrderStatus.ASSIGNED_TO_PICKUP,
+                    "Order force assigned to pickup trip by manual confirmation.",
+                    context
+            );
+        }
+
+        Map<Long, Order> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
+        List<PickupAssignmentResponse.AssignedStopResponse> stopResponses = new ArrayList<>();
+        int stopSequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            Order order = finalOrderById.get(orderId);
+            stopResponses.add(new PickupAssignmentResponse.AssignedStopResponse(
+                    stopSequence++,
+                    orderId,
+                    order == null ? null : order.getOrderCode(),
+                    order == null ? null : order.getCustomerOrderCode(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            ));
+        }
+
+        PickupAssignmentResponse.AssignedTripResponse assignedTripResponse =
+                new PickupAssignmentResponse.AssignedTripResponse(
+                        savedTrip.getId(),
+                        savedTrip.getTripCode(),
+                        courier.getId(),
+                        courier.getCode(),
+                        courier.getFullName(),
+                        savedTrip.getVehicleId(),
+                        vehicleLicensePlate,
+                        stopResponses.size(),
+                        round3(savedTrip.getTotalDistanceKm()),
+                        savedTrip.getTotalTravelMinutes(),
+                        0L,
+                        0L,
+                        savedTrip.getPlannedStartTime(),
+                        savedTrip.getPlannedEndTime(),
+                        stopResponses
+                );
+
+        return new PickupAssignmentResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                request.getShift(),
+                shiftPlanningWindow.tripDate(),
+                requestedOrderIds.size(),
+                requestedOrderIds.size(),
+                0,
+                createdTrip ? 1 : 0,
+                List.of(assignedTripResponse),
+                List.of()
+        );
+    }
+
     private AssignmentPersistResult persistAssignments(
             PostOffice postOffice,
             PickupShift shift,
@@ -530,6 +710,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     ) {
         Set<Long> previousAssignedOrderIds = loadAssignedOrderIdsFromTrips(existingTripByCourier.values());
         Set<Long> assignedOrderIds = extractAssignedOrderIds(solution.routes());
+        Map<Long, OrderTimelineContext> assignmentContextByOrderId = new HashMap<>();
 
         List<PickupAssignmentResponse.AssignedTripResponse> tripResponses = new ArrayList<>();
         for (int routeIndex = 0; routeIndex < solution.routes().size(); routeIndex++) {
@@ -579,11 +760,41 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
             tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
             saveTripOrders(savedTrip, routeEvaluation.stopDetails(), tenantId);
+            for (StopEvaluationData stopDetail : routeEvaluation.stopDetails()) {
+                if (stopDetail == null || stopDetail.order() == null || stopDetail.order().orderId() == null) {
+                    continue;
+                }
+
+                assignmentContextByOrderId.put(
+                        stopDetail.order().orderId(),
+                        new OrderTimelineContext(
+                                LocalDateTime.now(),
+                                savedTrip.getId(),
+                                savedTrip.getTripCode(),
+                                postOffice.getId(),
+                                postOffice.getCode(),
+                                postOffice.getName(),
+                                route.courierStaffId(),
+                                route.courierCode(),
+                                route.courierName(),
+                                route.vehicleId(),
+                                route.vehicleLicensePlate(),
+                                stopDetail.order().latitude(),
+                                stopDetail.order().longitude(),
+                                stopDetail.order().senderName()
+                        )
+                );
+            }
 
             tripResponses.add(toAssignedTripResponse(savedTrip, route, routeEvaluation));
         }
 
-        syncOrderStatuses(previousAssignedOrderIds, assignedOrderIds, tenantId);
+        syncOrderStatuses(
+                previousAssignedOrderIds,
+                assignedOrderIds,
+                assignmentContextByOrderId,
+                tenantId
+        );
         return new AssignmentPersistResult(tripResponses, assignedOrderIds);
     }
 
@@ -713,13 +924,33 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         tripOrderRepository.saveAll(tripOrders);
     }
 
-    private void syncOrderStatuses(Set<Long> previousAssignedOrderIds, Set<Long> assignedOrderIds, Long tenantId) {
+    private void syncOrderStatuses(
+            Set<Long> previousAssignedOrderIds,
+            Set<Long> assignedOrderIds,
+            Map<Long, OrderTimelineContext> assignmentContextByOrderId,
+            Long tenantId
+    ) {
         if (!assignedOrderIds.isEmpty()) {
             List<Order> assignedOrders = orderRepository.findByIdInAndTenantId(assignedOrderIds, tenantId);
             for (Order assignedOrder : assignedOrders) {
                 assignedOrder.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
             }
             orderRepository.saveAll(assignedOrders);
+            for (Order assignedOrder : assignedOrders) {
+                if (assignedOrder == null || assignedOrder.getId() == null) {
+                    continue;
+                }
+
+                OrderTimelineContext context = assignmentContextByOrderId == null
+                        ? null
+                        : assignmentContextByOrderId.get(assignedOrder.getId());
+                orderTimelineService.recordStatusEvent(
+                        assignedOrder,
+                        OrderStatus.ASSIGNED_TO_PICKUP,
+                        "Order assigned to pickup trip.",
+                        context
+                );
+            }
         }
 
         Set<Long> releasedOrderIds = new HashSet<>(previousAssignedOrderIds);
@@ -742,6 +973,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             );
             if (!stillAssignedToActiveTrip && OrderStatus.ASSIGNED_TO_PICKUP.equals(releasedOrder.getStatus())) {
                 releasedOrder.setStatus(OrderStatus.CREATED);
+                orderTimelineService.recordStatusEvent(
+                        releasedOrder,
+                        OrderStatus.CREATED,
+                        "Order released from pickup trip and moved back to CREATED.",
+                        OrderTimelineContext.empty()
+                );
             }
         }
         orderRepository.saveAll(releasedOrders);
@@ -1291,13 +1528,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
     }
 
-    private PostOffice getPostOfficeAndValidateScope(Long postOfficeId, Long tenantId) {
-        PostOffice postOffice = postOfficeRepository.findByIdAndTenantId(postOfficeId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
-        validateManagerScope(postOffice.getId(), tenantId);
-        return postOffice;
-    }
-
     private PostOffice lockPostOfficeAndValidateScope(Long postOfficeId, Long tenantId) {
         PostOffice postOffice = postOfficeRepository.findByIdAndTenantIdForUpdate(postOfficeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
@@ -1505,6 +1735,46 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             AlgorithmConfig config
     ) {
         return pickupOptimizationEngine.buildTravelMetricProvider(assignableOrders, depotLatitude, depotLongitude, config);
+    }
+
+    private Long resolveForceVehicleId(List<Vehicle> activeVehicles, Long courierStaffId) {
+        if (activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (courierStaffId != null && Objects.equals(vehicle.getPostOfficeStaffId(), courierStaffId)) {
+                return vehicle.getId();
+            }
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle != null && vehicle.getId() != null) {
+                return vehicle.getId();
+            }
+        }
+
+        return null;
+    }
+
+    private String resolveVehicleLicensePlate(List<Vehicle> activeVehicles, Long vehicleId) {
+        if (vehicleId == null || activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (Objects.equals(vehicle.getId(), vehicleId)) {
+                return vehicle.getLicensePlate();
+            }
+        }
+
+        return null;
     }
 
     private List<RouteState> initializeRoutes(

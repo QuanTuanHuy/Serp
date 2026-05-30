@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import serp.project.second_mile.domain.Dimension;
 import serp.project.second_mile.enums.OrderProductCategory;
 import serp.project.second_mile.enums.OrderStatus;
+import serp.project.second_mile.enums.OrderSyncEventSource;
 import serp.project.second_mile.enums.OrderType;
 
 import java.time.LocalDateTime;
@@ -69,4 +70,7 @@ public class OrderSyncEvent {
 
     @JsonProperty("tenant_id")
     private Long tenantId;
+
+    @JsonProperty("event_source")
+    private OrderSyncEventSource eventSource;
 }

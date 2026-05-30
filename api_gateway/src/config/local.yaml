@@ -111,6 +111,10 @@ external:
       host: localhost
       port: "8096"
       timeout: 15s
+    tmsBillingService:
+      host: localhost
+      port: "8097"
+      timeout: 15s
     notificationService:
       host: localhost
       port: "8090"
