@@ -9,7 +9,7 @@ import com.example.ttcrs.algorithm.vrp.VarRoutesVR;
 import com.example.ttcrs.algorithm.vrp.entities.Point;
 import com.example.ttcrs.algorithm.vrp.invariants.EarliestArrivalTimeVR;
 import com.example.ttcrs.algorithm.vrp.VRManager;
-
+// Constraint về thời gian đến sớm nhất (earliest arrival time) tại mỗi điểm. Nó kiểm tra xem thời gian đến sớm nhất có vượt quá thời gian cho phép hay không và tính toán số lượng vi phạm dựa trên sự chênh lệch giữa thời gian đến sớm nhất và thời gian cho phép. Khi có các di chuyển được thực hiện trên các tuyến đường, constraint này sẽ cập nhật lại thời gian đến sớm nhất và số lượng vi phạm tương ứng.
 public class CEarliestArrivalTimeVR implements IConstraintVR {
 	
 	private HashMap<Point, Integer> latestAllowedArrivalTime;
@@ -53,7 +53,7 @@ public class CEarliestArrivalTimeVR implements IConstraintVR {
 	public void initPropagation() {
 		// TODO Auto-generated method stub
 		violations = 0;
-		vio = new HashMap<Point, Integer>();
+		vio = new HashMap<Point, Integer>(); // lưu số lượng vi phạm tại mỗi điểm, được tính dựa trên thời gian đến sớm nhất và thời gian cho phép. Nó được cập nhật sau mỗi move để phản ánh sự thay đổi trong giải pháp.
 		t_next = new HashMap<Point, Point>();
 		int nr = XR.getNbRoutes();
 		for(int k = 1; k <= nr; ++k)
@@ -71,7 +71,7 @@ public class CEarliestArrivalTimeVR implements IConstraintVR {
 			//System.out.println();
 		}
 	}
-
+	// Phương thức propagate được sử dụng để cập nhật số lượng vi phạm sau khi một move được thực hiện. Nó lặp qua tất cả các điểm trên tuyến đường k và cập nhật số lượng vi phạm dựa trên thời gian đến sớm nhất mới được tính toán sau move.
 	private void propagate(int k)
 	{
 		for(Point v = XR.getStartingPointOfRoute(k); v!= XR.getTerminatingPointOfRoute(k); v = XR.oldNext(v))

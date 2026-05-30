@@ -484,7 +484,7 @@ export function RequestDetailPage({ requestId }: Props) {
             </div>
 
             {/* Weight + Container Size */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="rd-weight">Weight (kg)</Label>
                 <Input
@@ -516,7 +516,7 @@ export function RequestDetailPage({ requestId }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </div> */}
 
             {/* Time windows */}
             {isPending ? (

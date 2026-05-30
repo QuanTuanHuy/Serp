@@ -3,7 +3,18 @@ package com.example.ttcrs.algorithm.vrp.entities;
 import java.util.ArrayList;
 
 import com.example.ttcrs.algorithm.vrp.CBLSVR;
-
+// Lớp này đại diện cho một tập hợp các giá trị đa mục tiêu
+// (multi-objective values) được sử dụng trong các thuật toán 
+// tối ưu hóa đa mục tiêu. Nó chứa một ArrayList để lưu trữ các
+// giá trị, và cung cấp các phương thức để thực hiện các phép 
+// toán như cộng hai tập giá trị, so sánh hai tập giá trị theo 
+// thứ tự từ điển (lexicographical order), và kiểm tra sự bằng 
+// nhau giữa hai tập giá trị. 
+// Các phương thức lt, leq, và eq được sử dụng để so sánh các 
+// tập giá trị, trong đó lt kiểm tra xem một tập giá trị có 
+// nhỏ hơn tập giá trị khác hay không, leq kiểm tra xem một tập 
+// giá trị có nhỏ hơn hoặc bằng tập giá trị khác hay không, và 
+// eq kiểm tra xem hai tập giá trị có bằng nhau hay không. 
 public class LexMultiValues {
 	private ArrayList<Double> values;
 	public LexMultiValues(){
@@ -49,6 +60,7 @@ public class LexMultiValues {
 			A.add(get(i) + mv.get(i));
 		return new LexMultiValues(A);
 	}
+	// So sánh 2 LexMultiValues theo thứ tự từ điển (lexicographical order). Phương thức này sẽ trả về true nếu đối tượng hiện tại nhỏ hơn đối tượng V, và false nếu ngược lại. So sánh được thực hiện bằng cách duyệt qua từng giá trị trong hai đối tượng, so sánh chúng với nhau. Nếu có một cặp giá trị nào đó không bằng nhau, phương thức sẽ trả về kết quả của phép so sánh giữa hai giá trị đó. Nếu tất cả các cặp giá trị đều bằng nhau, phương thức sẽ trả về false, vì trong trường hợp này hai đối tượng được coi là bằng nhau chứ không phải là một cái nhỏ hơn cái kia.
 	public boolean lt(LexMultiValues V){
 		for(int i = 0; i < values.size(); i++){
 			double x = values.get(i);

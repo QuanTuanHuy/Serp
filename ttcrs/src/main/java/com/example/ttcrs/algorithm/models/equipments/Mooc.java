@@ -13,7 +13,7 @@ public class Mooc {
 	private String depotMoocCode;
 	private String depotMoocLocationCode;
 	private String[] returnDepotCodes;// possible depots when finishing services
-	private Intervals[] intervals;
+	private Intervals[] intervals; // time intervals
 	
 	public Mooc(int id, String code, String category, int categoryId,
 			double weight, String status, int statusId,

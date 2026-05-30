@@ -318,7 +318,7 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
 
           {/* Cargo info */}
           <div className="grid grid-cols-3 gap-4">
-            <Field
+            {/* <Field
               label="Weight"
               value={request.weight != null ? `${request.weight} kg` : null}
             />
@@ -329,7 +329,7 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
                   ? (containerSizeLabel[request.containerSize] ?? request.containerSize)
                   : null
               }
-            />
+            /> */}
             <Field
               label="Drop Trailer"
               value={request.dropTrailerRequired ? 'Required' : 'Not required'}

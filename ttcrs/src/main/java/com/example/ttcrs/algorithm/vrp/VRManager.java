@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Lớp điều phối cho việc thao tác và cập nhật các route. Áp dụng các move lên cấu trúc tuyến (VarRoutesVR) rồi lan truyền (propagate) các thay đổi đến các invariant/constraint.
 public class VRManager {
 
-	private ArrayList<InvariantVR> invariants;
+	private ArrayList<InvariantVR> invariants; // danh sách các invariants/rules cần được cập nhật sau mỗi move. Ví dụ: ràng buộc về thời gian, ràng buộc về trọng lượng, ...
 	private VarRoutesVR X;
 	private ArrayList<ConstraintSystemVR> constraintSystem;
 
@@ -76,7 +76,7 @@ public class VRManager {
     
     		
     }
-
+	// remove all client points from the routes, only depot points are left
 	public void performRemoveAllClientPoints() {
 		for (int k = 1; k <= X.getNbRoutes(); k++) {
 			Point p = X.next(X.startPoint(k));
@@ -158,9 +158,9 @@ public class VRManager {
 	}
 
 	// move of type c [Groer et al., 2010]
-	// x and y are on different routes and are not depots
+	// x and y are on different routes and are not depots 
 	// remove (x,next[x]) and (y,next[y])
-	// insert (x,next[y]) and (y,next[x])
+	// insert (x,next[y]) and (y,next[x]) tức là đổi chỗ phần sau x với phần sau y
 	public void performTwoOptMove5(Point x, Point y) {
 		X.performTwoOptMove5(x, y);
 		for (InvariantVR f : invariants) {
