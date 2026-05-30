@@ -55,6 +55,28 @@ export interface PMStatusApi {
   updatedBy?: number;
 }
 
+export interface PMStatusCategoryApi {
+  id: number;
+  tenantId: number;
+  name: string;
+  key: string;
+  color?: string | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
+}
+
+export interface PMCreateStatusRequest {
+  statusKey: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  statusCategoryId: number;
+}
+
 export interface PMPriorityApi {
   id: number;
   tenantId: number;

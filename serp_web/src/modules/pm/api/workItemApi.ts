@@ -12,6 +12,7 @@ import type { PaginatedResponse } from '@/lib/store/api/types';
 import type {
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
+  PMCreateStatusRequest,
   PMGetWorkItemBoardParams,
   PMGetWorkItemTimelineParams,
   PMIssueTypeApi,
@@ -19,6 +20,7 @@ import type {
   PMProjectScopedListParams,
   PMSearchWorkItemsParams,
   PMStatusApi,
+  PMStatusCategoryApi,
   PMTransitionWorkItemStatusRequest,
   PMTransitionWorkItemStatusResponse,
   PMUpdateWorkItemRequest,
@@ -324,6 +326,29 @@ export const pmWorkItemApi = api.injectEndpoints({
       transformResponse: createPaginatedTransform<PMStatusApi>(),
     }),
 
+    getPmStatusCategories: builder.query<
+      PaginatedResponse<PMStatusCategoryApi>,
+      PMProjectScopedListParams | void
+    >({
+      query: (params) => ({
+        url: '/status-categories',
+        method: 'GET',
+        params: buildProjectScopedListParams(params || undefined),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMStatusCategoryApi>(),
+    }),
+
+    createPmStatus: builder.mutation<PMStatusApi, PMCreateStatusRequest>({
+      query: (body) => ({
+        url: '/statuses',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMStatusApi>(),
+    }),
+
     getPmPriorities: builder.query<
       PaginatedResponse<PMPriorityApi>,
       PMProjectScopedListParams | void
@@ -403,6 +428,7 @@ export const pmWorkItemApi = api.injectEndpoints({
 });
 
 export const {
+  useCreatePmStatusMutation,
   useCreatePmWorkItemCommentMutation,
   useCreatePmWorkItemMutation,
   useDeletePmWorkItemCommentMutation,
@@ -417,6 +443,7 @@ export const {
   useLazyGetPmWorkItemTransitionsQuery,
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
+  useGetPmStatusCategoriesQuery,
   useGetPmStatusesQuery,
   useGetPmWorkItemTimelineQuery,
   useSearchPmWorkItemsQuery,

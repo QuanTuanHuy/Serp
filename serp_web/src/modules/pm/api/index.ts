@@ -19,6 +19,7 @@ export {
 } from './projectApi';
 export {
   pmWorkItemApi,
+  useCreatePmStatusMutation,
   useCreatePmWorkItemCommentMutation,
   useCreatePmWorkItemMutation,
   useDeletePmWorkItemCommentMutation,
@@ -31,6 +32,7 @@ export {
   useGetPmWorkItemLinksQuery,
   useGetPmIssueTypesQuery,
   useGetPmPrioritiesQuery,
+  useGetPmStatusCategoriesQuery,
   useGetPmStatusesQuery,
   useGetPmWorkItemTimelineQuery,
   useSearchPmWorkItemsQuery,
@@ -99,6 +101,7 @@ export type {
   PMCreateProjectComponentRequest,
   PMCreateProjectResponse,
   PMApplyOptimizationRunRequest,
+  PMCreateStatusRequest,
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
   PMGenerateOptimizationRunRequest,
@@ -131,6 +134,7 @@ export type {
   PMSearchWorkItemsParams,
   PMCreateSkillRequest,
   PMStatusApi,
+  PMStatusCategoryApi,
   PMReplaceUserSkillsRequest,
   PMReplaceWorkItemSkillsRequest,
   PMSkillApi,
