@@ -44,7 +44,6 @@ const KNOWN_APP_ROOT_SEGMENTS = new Set([
   'subscription',
   'tms',
   'school-bus',
-  'bds',
 ]);
 
 export const normalizePath = (path: string): string => {

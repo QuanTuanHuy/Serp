@@ -32,7 +32,6 @@ export type ModuleCode =
   | 'LOGISTICS2'
   | 'TMS'
   | 'FIRST_MILE'
-  | 'SCHOOL_BUS'
   | 'SCHOOLBUS'
   | 'MARKETING'
   | 'PM'
@@ -147,11 +146,6 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: MapPin,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-950',
-  },
-  SCHOOL_BUS: {
-    icon: Bus,
-    color: 'text-rose-600',
-    bgColor: 'bg-rose-50 dark:bg-rose-950',
   },
   SCHOOLBUS: {
     icon: Bus,
