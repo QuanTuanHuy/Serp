@@ -127,6 +127,7 @@ export function SchoolBusReportsPage() {
 
           <SchoolBusTableTabs
             defaultValue='trips'
+            flatContent
             tabs={[
               {
                 value: 'trips',

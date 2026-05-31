@@ -21,8 +21,11 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
+import { cn } from '@/shared/utils';
 import { BUS_STATUS_OPTIONS, PROFILE_STATUS_OPTIONS, STAFF_STATUS_OPTIONS } from '../constants';
 import { schoolBusUi } from '../theme';
+import { SchoolBusSelect } from './ui/SchoolBusSelect';
+import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
 import type {
   SchoolBusAttendant,
   SchoolBusAccountUser,
@@ -198,6 +201,7 @@ export function SchoolFormDialog({
       onOpenChange={onOpenChange}
       title={initialData ? 'Edit school' : 'Create school'}
       description='Manage school identity and contact details for the tenant.'
+      stickyFooter
     >
       <SimpleForm
         form={form}
@@ -214,17 +218,25 @@ export function SchoolFormDialog({
           })
         }
         onCancel={() => onOpenChange(false)}
+        stickyFooter
       >
-        <TextField form={form} name='name' label='School name *' />
+        <FormSectionHeader title='1. School information' />
+        <TextField form={form} name='name' label='School name *' className='md:col-span-2' />
         {initialData?.code ? (
-          <ReadOnlyField label='School code' value={initialData.code} />
+          <ReadOnlyField label='School code' value={initialData.code} className='md:col-span-1' />
         ) : null}
+
+        <FormSectionHeader title='2. Contact details' />
+        <TextField form={form} name='contactPhone' label='Contact phone' className='md:col-span-1' />
+        <TextField form={form} name='contactEmail' label='Contact email' className='md:col-span-1' />
         <TextareaField form={form} name='address' label='Address' />
-        <TextField form={form} name='contactPhone' label='Contact phone' />
-        <TextField form={form} name='contactEmail' label='Contact email' />
+
+        <FormSectionHeader title='3. Coordinates' />
         <TextField form={form} name='latitude' label='Latitude' />
         <TextField form={form} name='longitude' label='Longitude' />
-        <div className='md:col-span-2'>
+
+        <FormSectionHeader title='4. School location map' />
+        <div className='col-span-full'>
           <LocationPickerMap
             value={{
               latitude: form.watch('latitude')
@@ -312,6 +324,7 @@ export function PickupPointFormDialog({
       onOpenChange={onOpenChange}
       title={initialData ? 'Edit pickup point' : 'Create pickup point'}
       description='Register boarding locations for request intake and route planning.'
+      stickyFooter
     >
       <SimpleForm
         form={form}
@@ -329,12 +342,13 @@ export function PickupPointFormDialog({
             isActive: values.isActive,
           })
         }
+        stickyFooter
       >
-        <TextField form={form} name='name' label='Pickup point name *' />
-        <TextareaField form={form} name='address' label='Address *' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
-        <TextField form={form} name='zoneCode' label='Zone code' />
+        <FormSectionHeader title='1. Pickup point information' />
+        <TextField form={form} name='name' label='Pickup point name *' className='md:col-span-2' />
+        <TextField form={form} name='zoneCode' label='Zone code' className='md:col-span-1' />
+
+        <FormSectionHeader title='2. Usage details' />
         <SelectField
           form={form}
           name='usageType'
@@ -344,11 +358,19 @@ export function PickupPointFormDialog({
           options={[
             { value: 'PICKUP_ONLY', label: 'Pickup only' },
             { value: 'DROPOFF_ONLY', label: 'Drop-off only' },
-            { value: 'PICKUP_DROPOFF', label: 'Both (pickup & drop-off)' },
+            { value: 'PICKUP_DROPOFF', label: 'Pickup & drop-off' },
           ]}
+          className='md:col-span-1'
         />
         <TextareaField form={form} name='pickupInstruction' label='Pickup instruction' />
-        <div className='md:col-span-2'>
+        <TextareaField form={form} name='address' label='Address *' />
+
+        <FormSectionHeader title='3. Coordinates' />
+        <TextField form={form} name='latitude' label='Latitude' />
+        <TextField form={form} name='longitude' label='Longitude' />
+
+        <FormSectionHeader title='4. Pickup point location map' />
+        <div className='col-span-full'>
           <LocationPickerMap
             value={{
               latitude: form.watch('latitude')
@@ -760,11 +782,13 @@ export function StudentFormDialog({
       onOpenChange={onOpenChange}
       title={initialData ? 'Edit student' : 'Create student'}
       description='Manage the roster used by transport requests, routing, and attendance.'
+      stickyFooter
     >
       <SimpleForm
         form={form}
         isLoading={isLoading}
         onCancel={() => onOpenChange(false)}
+        stickyFooter
         onSubmit={async (values) =>
           onSubmit({
             schoolId: values.schoolId,
@@ -786,25 +810,27 @@ export function StudentFormDialog({
       >
         {/* ── Section: Basic information ── */}
         <FormSectionHeader title='Basic information' />
-        <SelectField
-          form={form}
-          name='schoolId'
-          label='School *'
-          options={schools.map((school) => ({
-            value: String(school.id),
-            label: school.name,
-          }))}
-        />
-        <TextField form={form} name='fullName' label='Student name *' />
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <SelectField
+            form={form}
+            name='schoolId'
+            label='School *'
+            options={schools.map((school) => ({
+              value: String(school.id),
+              label: school.name,
+            }))}
+          />
+          <TextField form={form} name='fullName' label='Student name *' />
+        </div>
         {initialData?.studentCode ? (
           <ReadOnlyField label='Student code' value={initialData.studentCode} />
         ) : null}
-        <div className='grid grid-cols-2 gap-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <TextField form={form} name='grade' label='Grade' />
           <TextField form={form} name='className' label='Class name' />
         </div>
-        <div className='grid grid-cols-2 gap-4'>
-          <TextField form={form} name='dateOfBirth' label='Date of birth' description='Format: YYYY-MM-DD' />
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <TextField form={form} name='dateOfBirth' label='Date of birth' type='date' />
           <SelectField
             form={form}
             name='gender'
@@ -830,31 +856,33 @@ export function StudentFormDialog({
             label: parent.fullName,
           }))}
         />
-        <div className='grid grid-cols-2 gap-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <TextField form={form} name='emergencyContactName' label='Emergency contact name' />
           <TextField form={form} name='emergencyContactPhone' label='Emergency contact phone' />
         </div>
 
         {/* ── Section: Transport defaults ── */}
         <FormSectionHeader title='Transport defaults' />
-        <SelectField
-          form={form}
-          name='pickupPointId'
-          label='Default pickup point'
-          allowEmpty
-          emptyLabel={noSchoolSelected ? 'Select a school first' : 'No pickup point'}
-          options={pickupOptions}
-          disabled={noSchoolSelected}
-        />
-        <SelectField
-          form={form}
-          name='defaultDropoffPointId'
-          label='Default drop-off point'
-          allowEmpty
-          emptyLabel={noSchoolSelected ? 'Select a school first' : 'No drop-off point'}
-          options={dropoffOptions}
-          disabled={noSchoolSelected}
-        />
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <SelectField
+            form={form}
+            name='pickupPointId'
+            label='Default pickup point'
+            allowEmpty
+            emptyLabel={noSchoolSelected ? 'Select a school first' : 'No pickup point'}
+            options={pickupOptions}
+            disabled={noSchoolSelected}
+          />
+          <SelectField
+            form={form}
+            name='defaultDropoffPointId'
+            label='Default drop-off point'
+            allowEmpty
+            emptyLabel={noSchoolSelected ? 'Select a school first' : 'No drop-off point'}
+            options={dropoffOptions}
+            disabled={noSchoolSelected}
+          />
+        </div>
         <TextareaField form={form} name='homeAddress' label='Home address' />
 
         {/* ── Section: Notes ── */}
@@ -1175,7 +1203,7 @@ export function DriverFormDialog({
         <FormSectionHeader title='License information' />
         <TextField form={form} name='licenseNumber' label='License number *' />
         <TextField form={form} name='licenseClass' label='License class *' />
-        <TextField form={form} name='licenseExpiryDate' label='License expiry date *' description='Format: YYYY-MM-DD' />
+        <TextField form={form} name='licenseExpiryDate' label='License expiry date *' type='date' />
 
         {/* ── Section: Operational status ── */}
         <FormSectionHeader title='Operational status' />
@@ -1326,6 +1354,7 @@ interface SimpleFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   children: React.ReactNode;
+  stickyFooter?: boolean;
 }
 
 function SimpleForm({
@@ -1334,7 +1363,40 @@ function SimpleForm({
   onCancel,
   isLoading = false,
   children,
+  stickyFooter = false,
 }: SimpleFormProps) {
+  if (stickyFooter) {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+          {/* Form Body - Scrollable */}
+          <div className='flex-1 overflow-y-auto px-6 py-2 sm:px-8 min-h-0'>
+            <div className='grid gap-4 md:grid-cols-2 pb-4'>{children}</div>
+          </div>
+          {/* Form Footer - Sticky */}
+          <div className='flex justify-end gap-2 border-t px-6 py-4 sm:px-8 bg-white shrink-0'>
+            <Button
+              type='button'
+              variant='outline'
+              className={schoolBusUi.outlineButton}
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type='submit'
+              className={schoolBusUi.primaryButton}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    );
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -1375,21 +1437,31 @@ function TextField({
   type = 'text',
   disabled = false,
   description,
-}: FieldProps & { type?: string; disabled?: boolean; description?: string }) {
+  className,
+}: FieldProps & { type?: string; disabled?: boolean; description?: string; className?: string }) {
   return (
     <FormField
       control={form.control}
       name={name as any}
       render={({ field }) => (
-        <FormItem>
+        <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input
-              {...field}
-              type={type}
-              value={(field.value as string) ?? ''}
-              disabled={disabled}
-            />
+            {type === 'date' ? (
+              <SchoolBusDatePicker
+                fullWidth
+                value={field.value}
+                onChange={field.onChange}
+                disabled={disabled}
+              />
+            ) : (
+              <Input
+                {...field}
+                type={type}
+                value={(field.value as string) ?? ''}
+                disabled={disabled}
+              />
+            )}
           </FormControl>
           {description ? (
             <FormDescription>{description}</FormDescription>
@@ -1409,9 +1481,9 @@ function FormSectionHeader({ title }: { title: string }) {
   );
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function ReadOnlyField({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className='space-y-2'>
+    <div className={cn('space-y-2', className)}>
       <FormLabel>{label}</FormLabel>
       <div className='rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm font-semibold text-slate-700'>
         {value}
@@ -1455,6 +1527,7 @@ function SelectField({
   placeholder,
   onChange,
   className,
+  searchable,
 }: FieldProps & {
   options: Array<{ value: string; label: string }>;
   allowEmpty?: boolean;
@@ -1465,7 +1538,18 @@ function SelectField({
   placeholder?: string;
   onChange?: (value: string) => void;
   className?: string;
+  searchable?: boolean;
 }) {
+  const selectOptions = React.useMemo(() => {
+    const list = options.map((opt) => ({ label: opt.label, value: opt.value }));
+    if (allowEmpty) {
+      list.unshift({ label: emptyLabel, value: emptyValue });
+    }
+    return list;
+  }, [options, allowEmpty, emptyLabel, emptyValue]);
+
+  const isSearchable = searchable ?? (options.length > 6);
+
   return (
     <FormField
       control={form.control}
@@ -1473,43 +1557,25 @@ function SelectField({
       render={({ field }) => (
         <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
-          <Select
-            onValueChange={(value) => {
-              const val = value === emptyValue ? '' : value;
-              field.onChange(val);
-              if (onChange) {
-                onChange(val);
-              }
-            }}
-            value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
-            disabled={disabled}
-          >
-            <FormControl>
-              <SelectTrigger className='h-11 w-full min-w-0 max-w-full rounded-xl border-slate-200 bg-white px-3 text-left shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
-                <SelectValue
-                  placeholder={placeholder || `Select ${label.toLowerCase()}`}
-                />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent className='z-[120] max-h-72 w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[min(860px,calc(100vw-2rem))] overflow-x-hidden rounded-xl border-slate-200 bg-white'>
-              {allowEmpty ? (
-                <SelectItem value={emptyValue} className='max-w-full pr-10'>
-                  <span className='block max-w-full truncate'>{emptyLabel}</span>
-                </SelectItem>
-              ) : null}
-              {options.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className='max-w-full pr-10'
-                >
-                  <span className='block max-w-full truncate'>
-                    {option.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SchoolBusSelect
+              fullWidth
+              size='md'
+              className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+              disabled={disabled}
+              value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+              onChange={(value) => {
+                const val = value === emptyValue ? '' : value;
+                field.onChange(val);
+                if (onChange) {
+                  onChange(val);
+                }
+              }}
+              placeholder={placeholder || `Select ${label.toLowerCase()}`}
+              options={selectOptions}
+              searchable={isSearchable}
+            />
+          </FormControl>
           {description ? (
             <FormDescription>{description}</FormDescription>
           ) : null}

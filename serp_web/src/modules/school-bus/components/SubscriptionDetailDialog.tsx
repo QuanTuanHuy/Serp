@@ -150,7 +150,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                         className={cn(
                           'rounded-lg px-2.5 py-0.5 text-xs font-semibold',
                           sub[key as keyof typeof sub]
-                            ? 'bg-slate-900 text-white font-medium'
+                            ? 'bg-[#C81E3A] text-white font-medium'
                             : 'bg-slate-100 text-slate-400 line-through'
                         )}
                       >

@@ -453,7 +453,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                         className={[
                           'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
                           isCurrent
-                            ? 'bg-slate-900 text-white'
+                            ? 'bg-[#C81E3A] text-white'
                             : isDone
                               ? 'bg-emerald-100 text-emerald-600'
                               : 'bg-slate-100 text-slate-500',
@@ -673,13 +673,18 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                               isDoneStatus ? 'opacity-60' : '',
                             ].join(' ')}
                           >
-                            <div className='min-w-0'>
-                              <p className='font-medium text-slate-900'>
-                                {student.studentName ?? `Student #${student.studentId}`}
-                              </p>
-                              {student.studentCode && (
-                                <p className='text-xs text-slate-400'>{student.studentCode}</p>
-                              )}
+                            <div className='flex items-center gap-3 min-w-0'>
+                              <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-[#7C3AED] ring-1 ring-inset ring-[#7C3AED]/10'>
+                                <User className='h-4.5 w-4.5' />
+                              </div>
+                              <div className='min-w-0'>
+                                <p className='font-semibold text-slate-900 truncate'>
+                                  {student.studentName ?? `Student #${student.studentId}`}
+                                </p>
+                                {student.studentCode && (
+                                  <p className='text-xs text-slate-500 mt-0.5'>{student.studentCode}</p>
+                                )}
+                              </div>
                             </div>
 
                             <div className='flex flex-wrap items-center gap-2'>

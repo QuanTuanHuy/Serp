@@ -7,9 +7,9 @@ import {
   GraduationCap,
   Pencil,
   Plus,
-  School,
   Search,
   Trash2,
+  User,
   Users,
 } from 'lucide-react';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -26,26 +26,18 @@ import {
   useGetStudentsQuery,
   useUpdateStudentMutation,
 } from '../api/schoolBusApi';
-import { SchoolBusFilterSelect } from '../components/SchoolBusFilterSelect';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import { StudentFormDialog } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
-import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
+import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type { SchoolBusStudent } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/components/ui/table';
 
 // ── Readiness helpers ─────────────────────────────────────────────────────────
 
@@ -162,6 +154,213 @@ export function SchoolBusStudentsPage() {
     } catch (error: any) { toast.error(error?.data?.message || 'Failed to delete student'); }
   };
 
+  const studentColumns: SchoolBusTableColumn<SchoolBusStudent>[] = [
+    {
+      key: 'student',
+      header: 'Student',
+      className: 'pl-6',
+      headerClassName: 'pl-6',
+      render: (student) => (
+        <div className='flex items-center gap-3'>
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-[#7C3AED] ring-1 ring-inset ring-[#7C3AED]/10'>
+            <User className='h-4.5 w-4.5' />
+          </div>
+          <div className='flex flex-col min-w-0'>
+            <p className='font-semibold text-slate-900 truncate'>{student.fullName}</p>
+            <p className='text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-0.5'>
+              {student.studentCode ? (
+                <span className='inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-700/10'>
+                  {student.studentCode}
+                </span>
+              ) : (
+                <span className='text-slate-400'>No code</span>
+              )}
+              <span className='text-slate-300'>•</span>
+              <span>{[student.grade, student.className].filter(Boolean).join(' / ') || 'No grade'}</span>
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'school',
+      header: 'School',
+      render: (student) => {
+        const schoolObj = schools.find((s) => s.id === student.schoolId);
+        const schoolCode = schoolObj?.code;
+        return (
+          <div className='flex flex-col gap-1 items-start'>
+            <span className='font-medium text-slate-700'>{student.schoolName || '—'}</span>
+            {schoolCode && (
+              <span className='inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-[#C81E3A]/10'>
+                {schoolCode}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'parent',
+      header: 'Parent / Contact',
+      render: (student) => (
+        <div>
+          <p className='text-sm font-medium text-slate-700'>{student.parentProfileName || <UnassignedBadge />}</p>
+          {student.homeAddress && <p className='text-xs text-muted-foreground truncate max-w-[160px]'>{student.homeAddress}</p>}
+        </div>
+      ),
+    },
+    {
+      key: 'pickup',
+      header: 'Default pickup',
+      render: (student) => student.pickupPointName ? (
+        <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
+          {student.pickupPointName}
+        </span>
+      ) : (
+        <span className='inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200'>
+          Missing pickup
+        </span>
+      ),
+    },
+    {
+      key: 'dropoff',
+      header: 'Default drop-off',
+      render: (student) => student.defaultDropoffPointName ? (
+        <span className='inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-700/10'>
+          {student.defaultDropoffPointName}
+        </span>
+      ) : (
+        <span className='inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200'>
+          Missing drop-off
+        </span>
+      ),
+    },
+    {
+      key: 'readiness',
+      header: 'Readiness',
+      render: (student) => <ReadinessBadge readiness={getStudentReadiness(student)} />,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (student) => <SchoolBusStatusBadge status={student.isActive ? 'ACTIVE' : 'INACTIVE'} />,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'pr-6 text-right',
+      headerClassName: 'pr-6 text-right',
+      render: (student) => (
+        <div className='flex justify-end gap-2'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
+            onClick={() => { setEditingStudent(student); setDialogOpen(true); }}
+          >
+            <Pencil className='h-4 w-4' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border-slate-200'
+            onClick={() => setDeletingStudent(student)}
+          >
+            <Trash2 className='h-4 w-4' />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const toolbar = (
+    <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+      {/* Search */}
+      <div className='relative flex-1 min-w-[200px] max-w-xs'>
+        <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+        <input
+          type='text'
+          placeholder='Search by name or code...'
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+        />
+      </div>
+      <SchoolBusSelect
+        value={filterSchool}
+        onChange={setFilterSchool}
+        placeholder='All schools'
+        options={schoolNames.map((name) => {
+          const count = students.filter((s) => s.schoolName === name).length;
+          return {
+            label: name,
+            value: name,
+            badge: (
+              <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
+                {count}
+              </span>
+            )
+          };
+        })}
+        clearable
+        searchable
+      />
+      <SchoolBusSelect
+        value={filterReadiness}
+        onChange={setFilterReadiness}
+        placeholder='All readiness'
+        options={[
+          {
+            label: 'Ready',
+            value: 'ready',
+            badge: (
+              <span className='inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600'>
+                {students.filter((s) => getStudentReadiness(s) === 'ready').length}
+              </span>
+            )
+          },
+          {
+            label: 'Missing transport',
+            value: 'missing',
+            badge: (
+              <span className='inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-600'>
+                {students.filter((s) => getStudentReadiness(s) !== 'ready').length}
+              </span>
+            )
+          },
+        ]}
+        clearable
+      />
+      <SchoolBusSelect
+        value={filterStatus}
+        onChange={setFilterStatus}
+        placeholder='All statuses'
+        options={[
+          {
+            label: 'Active',
+            value: 'active',
+            badge: (
+              <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
+                {students.filter((s) => s.isActive !== false).length}
+              </span>
+            )
+          },
+          {
+            label: 'Inactive',
+            value: 'inactive',
+            badge: (
+              <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
+                {students.filter((s) => s.isActive === false).length}
+              </span>
+            )
+          },
+        ]}
+        clearable
+      />
+    </div>
+  );
+
   return (
     <>
       <SchoolBusPageShell
@@ -174,148 +373,45 @@ export function SchoolBusStudentsPage() {
           ]} />
         }
         actions={
-          <Button className='rounded-full' onClick={() => { setEditingStudent(null); setDialogOpen(true); }}>
+          <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingStudent(null); setDialogOpen(true); }}>
             <Plus className='h-4 w-4' /> Add student
           </Button>
         }
       >
-        {/* Stats */}
-        <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-          <SchoolBusMetricCard label='Students' value={students.length} icon={GraduationCap} tone='info' />
-          <SchoolBusMetricCard label='Schools' value={uniqueSchools} icon={School} tone='success' />
-          <SchoolBusMetricCard label='Linked parents' value={linkedParents} icon={Users} tone='default' />
-          <SchoolBusMetricCard
-            label='Missing transport'
-            value={missingTransport}
-            icon={AlertTriangle}
-            tone={missingTransport > 0 ? 'warning' : 'success'}
-            hint={missingTransport > 0 ? 'Students without pickup or drop-off' : 'All transport assigned'}
-          />
-        </div>
-
-        {/* Search & Filter bar */}
-        <div className='flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm'>
-          {/* Search */}
-          <div className='relative flex-1 min-w-[200px]'>
-            <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
-            <input
-              type='text'
-              placeholder='Search by name or code...'
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+        <div className='flex flex-col gap-6'>
+          {/* Stats */}
+          <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
+            <SchoolBusMetricCard label='Students' value={students.length} icon={User} tone='student' />
+            <SchoolBusMetricCard label='Schools' value={uniqueSchools} icon={GraduationCap} tone='school' />
+            <SchoolBusMetricCard label='Linked parents' value={linkedParents} icon={Users} tone='default' />
+            <SchoolBusMetricCard
+              label='Missing transport'
+              value={missingTransport}
+              icon={AlertTriangle}
+              tone={missingTransport > 0 ? 'warning' : 'success'}
+              hint={missingTransport > 0 ? 'Students without pickup or drop-off' : 'All transport assigned'}
             />
           </div>
-          <SchoolBusFilterSelect
-            value={filterSchool}
-            onChange={setFilterSchool}
-            placeholder='All schools'
-            icon={School}
-            options={schoolNames.map((name) => ({ label: name, value: name }))}
-          />
-          <SchoolBusFilterSelect
-            value={filterReadiness}
-            onChange={setFilterReadiness}
-            placeholder='All readiness'
-            icon={AlertTriangle}
-            options={[
-              { label: 'Ready', value: 'ready' },
-              { label: 'Missing transport', value: 'missing' },
-            ]}
-          />
-          <SchoolBusFilterSelect
-            value={filterStatus}
-            onChange={setFilterStatus}
-            placeholder='All statuses'
-            options={[
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-            ]}
+
+          <SchoolBusDataTable
+            title='Student roster'
+            description='Manage student profiles, parent associations, and default transport windows.'
+            toolbar={toolbar}
+            data={filteredStudents}
+            columns={studentColumns}
+            isLoading={isLoading}
+            pagination={{ page: data?.data, onPageChange: pagination.setPage }}
+            stickyFirstColumn
+            stickyActionColumn
+            emptyIcon={User}
+            emptyTitle={students.length === 0 ? 'No students yet' : 'No students match your filters'}
+            emptyDescription={
+              students.length === 0
+                ? 'Create students and link them to parents and transport defaults.'
+                : 'Try adjusting your search query or clear the active filters.'
+            }
           />
         </div>
-
-        {/* Table */}
-        {isLoading ? (
-          <p className='text-sm text-muted-foreground'>Loading students...</p>
-        ) : filteredStudents.length === 0 ? (
-          <SchoolBusEmptyState
-            title='No students found'
-            description={students.length === 0
-              ? 'Add student master data so transport requests and attendance can become operational.'
-              : 'No students match the current filters. Try adjusting your search criteria.'}
-            icon={GraduationCap}
-          />
-        ) : (
-          <SchoolBusScrollableTable footer={<SchoolBusPaginationBar page={data?.data} onPageChange={pagination.setPage} />}>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Parent / Contact</TableHead>
-                  <TableHead>Default pickup</TableHead>
-                  <TableHead>Default drop-off</TableHead>
-                  <TableHead>Readiness</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div>
-                        <p className='font-medium'>{student.fullName}</p>
-                        <p className='text-xs text-muted-foreground'>
-                          {student.studentCode || 'No code'} — {[student.grade, student.className].filter(Boolean).join(' / ') || 'No grade'}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className='text-sm'>{student.schoolName || '—'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className='text-sm'>{student.parentProfileName || <UnassignedBadge />}</p>
-                        {student.homeAddress && <p className='text-xs text-muted-foreground truncate max-w-[140px]'>{student.homeAddress}</p>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {student.pickupPointName ? (
-                        <span className='text-sm'>{student.pickupPointName}</span>
-                      ) : (
-                        <UnassignedBadge />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {student.defaultDropoffPointName ? (
-                        <span className='text-sm'>{student.defaultDropoffPointName}</span>
-                      ) : (
-                        <UnassignedBadge />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <ReadinessBadge readiness={getStudentReadiness(student)} />
-                    </TableCell>
-                    <TableCell>
-                      <SchoolBusStatusBadge status={student.isActive ? 'ACTIVE' : 'INACTIVE'} />
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <div className='flex justify-end gap-2'>
-                        <Button size='icon' variant='outline' onClick={() => { setEditingStudent(student); setDialogOpen(true); }}>
-                          <Pencil className='h-4 w-4' />
-                        </Button>
-                        <Button size='icon' variant='outline' onClick={() => setDeletingStudent(student)}>
-                          <Trash2 className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </SchoolBusScrollableTable>
-        )}
       </SchoolBusPageShell>
 
       <StudentFormDialog

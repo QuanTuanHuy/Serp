@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Button,
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -22,6 +21,9 @@ import {
 } from '@/shared/components/ui';
 import { SHIFT_TYPE_OPTIONS } from '../../constants';
 import { schoolBusUi } from '../../theme';
+import { SchoolBusSelect } from '../ui/SchoolBusSelect';
+import { SchoolBusCheckbox } from '../ui/SchoolBusCheckbox';
+import { SchoolBusDatePicker } from '../ui/SchoolBusDatePicker';
 import type {
   SchoolBusSchedule,
   SchoolBusScheduleUpsertRequest,
@@ -158,20 +160,18 @@ export function ScheduleFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Shift type *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className='h-11 rounded-xl border-slate-200 bg-white shadow-sm'>
-                        <SelectValue placeholder='Select shift' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className='z-[120] rounded-xl border-slate-200 bg-white'>
-                      {SHIFT_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SchoolBusSelect
+                    fullWidth
+                    size='md'
+                    className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder='Select shift'
+                    options={SHIFT_TYPE_OPTIONS.map((option) => ({
+                      label: option.label,
+                      value: option.value,
+                    }))}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -235,7 +235,11 @@ export function ScheduleFormDialog({
                 <FormItem>
                   <FormLabel>Effective from *</FormLabel>
                   <FormControl>
-                    <Input {...field} type='date' value={field.value ?? ''} />
+                    <SchoolBusDatePicker
+                      fullWidth
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -248,7 +252,11 @@ export function ScheduleFormDialog({
                 <FormItem>
                   <FormLabel>Effective to</FormLabel>
                   <FormControl>
-                    <Input {...field} type='date' value={field.value ?? ''} />
+                    <SchoolBusDatePicker
+                      fullWidth
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -271,11 +279,11 @@ export function ScheduleFormDialog({
                         key={day.value}
                         className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                           checked
-                            ? 'border-slate-900 bg-slate-900 text-white font-medium'
+                            ? 'border-[#C81E3A] bg-[#C81E3A] text-white font-medium'
                             : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                         }`}
                       >
-                        <Checkbox
+                        <SchoolBusCheckbox
                           checked={checked}
                           onCheckedChange={(c) => {
                             const current = field.value || [];
@@ -285,7 +293,7 @@ export function ScheduleFormDialog({
                                 : current.filter((d: string) => d !== day.value)
                             );
                           }}
-                          className='h-3.5 w-3.5'
+                          className='h-3.5 w-3.5 border-white/50 data-[state=checked]:border-white data-[state=checked]:bg-transparent'
                         />
                         {day.label}
                       </label>

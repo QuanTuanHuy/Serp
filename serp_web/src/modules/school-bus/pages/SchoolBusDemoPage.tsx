@@ -49,6 +49,8 @@ import {
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
+import { SchoolBusCheckbox } from '../components/ui/SchoolBusCheckbox';
 import { DemoMap } from '../components/map/DemoMap';
 import { getPageItems } from '../utils';
 
@@ -297,18 +299,16 @@ export function SchoolBusDemoPage() {
       {/* ── Header bar ─────────────────────────────────────────── */}
       <div className='flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3'>
         {/* Trip selector */}
-        <select
-          className='rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800'
+        <SchoolBusSelect
           value={selectedTripId ?? ''}
-          onChange={(e) => setSelectedTripId(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value=''>Select trip...</option>
-          {trips.map((trip) => (
-            <option key={trip.id} value={trip.id}>
-              {trip.tripCode} — {trip.routeCode} ({trip.routeDirection})
-            </option>
-          ))}
-        </select>
+          onChange={(val) => setSelectedTripId(val ? Number(val) : null)}
+          placeholder='Select trip...'
+          options={trips.map((trip) => ({
+            label: `${trip.tripCode} — ${trip.routeCode} (${trip.routeDirection})`,
+            value: trip.id
+          }))}
+          searchable
+        />
 
         {selectedTrip && (
           <>
@@ -459,7 +459,7 @@ export function SchoolBusDemoPage() {
                 </div>
                 <div className='mt-1 h-2 overflow-hidden rounded-full bg-slate-200'>
                   <div
-                    className='h-full rounded-full bg-slate-900 transition-all duration-300'
+                    className='h-full rounded-full bg-[#C81E3A] transition-all duration-300'
                     style={{ width: `${Math.min(100, currentProgress)}%` }}
                   />
                 </div>
@@ -527,41 +527,37 @@ export function SchoolBusDemoPage() {
                 Auto stops/attendance will mutate trip stop logs and attendance records.
               </p>
               <div className='flex flex-col gap-2'>
-                <label className='flex items-center gap-2 text-xs cursor-pointer'>
-                  <input
-                    type='checkbox'
+                <label className='flex items-center gap-2 text-xs cursor-pointer select-none'>
+                  <SchoolBusCheckbox
                     checked={!!demo?.autoAdvanceStops}
                     disabled={currentStatus === 'COMPLETED' || currentStatus === 'STOPPED'}
-                    onChange={(e) => {
-                      const val = e.target.checked;
+                    onCheckedChange={(checked) => {
+                      const val = Boolean(checked);
                       updateAutomation({
                         sessionId: sessionId!,
                         autoAdvanceStops: val,
                         autoAttendance: val ? demo?.autoAttendance ?? false : false,
                       });
                     }}
-                    className='rounded border-slate-300'
                   />
-                  <span className='text-slate-700'>Auto advance stops</span>
+                  <span className='text-slate-700 font-medium'>Auto advance stops</span>
                 </label>
-                <label className='flex items-center gap-2 text-xs cursor-pointer'>
-                  <input
-                    type='checkbox'
+                <label className='flex items-center gap-2 text-xs cursor-pointer select-none'>
+                  <SchoolBusCheckbox
                     checked={!!demo?.autoAttendance}
                     disabled={
                       currentStatus === 'COMPLETED' ||
                       currentStatus === 'STOPPED' ||
                       !demo?.autoAdvanceStops
                     }
-                    onChange={(e) => {
+                    onCheckedChange={(checked) => {
                       updateAutomation({
                         sessionId: sessionId!,
-                        autoAttendance: e.target.checked,
+                        autoAttendance: Boolean(checked),
                       });
                     }}
-                    className='rounded border-slate-300'
                   />
-                  <span className={cn('text-slate-700', !demo?.autoAdvanceStops && 'opacity-50')}>
+                  <span className={cn('text-slate-700 font-medium', !demo?.autoAdvanceStops && 'opacity-50')}>
                     Auto attendance
                   </span>
                 </label>
@@ -619,7 +615,7 @@ export function SchoolBusDemoPage() {
                         key={stop.id}
                         className={cn(
                           'flex items-center gap-2 rounded-lg px-2 py-1 text-xs',
-                          isCurrent && 'bg-slate-100 font-medium text-slate-900',
+                          isCurrent && 'bg-red-50/70 font-medium text-[#C81E3A]',
                           isPassed && 'text-slate-400',
                           !isCurrent && !isPassed && 'text-slate-600'
                         )}
@@ -627,7 +623,7 @@ export function SchoolBusDemoPage() {
                         <Circle
                           className={cn(
                             'h-2.5 w-2.5 shrink-0',
-                            isCurrent && 'fill-slate-900 text-slate-900',
+                            isCurrent && 'fill-[#C81E3A] text-[#C81E3A]',
                             isPassed && 'fill-slate-300 text-slate-300',
                             !isCurrent && !isPassed && 'text-slate-300'
                           )}

@@ -11,6 +11,11 @@ export const schoolBusBrand = {
   sky: '#0284c7',
   amber: '#d97706',
   emerald: '#059669',
+  primary: '#C81E3A',
+  primaryHover: '#B31B34',
+  primaryActive: '#99182D',
+  primarySoft: '#FDECEF',
+  primaryBorder: '#F6CDD5',
 } as const;
 
 export const schoolBusThemeStyle = {
@@ -20,20 +25,20 @@ export const schoolBusThemeStyle = {
   '--card-foreground': schoolBusBrand.ink,
   '--popover': schoolBusBrand.white,
   '--popover-foreground': schoolBusBrand.ink,
-  '--primary': schoolBusBrand.ink,
+  '--primary': schoolBusBrand.primary,
   '--primary-foreground': schoolBusBrand.white,
   '--secondary': schoolBusBrand.slateSoft,
   '--secondary-foreground': schoolBusBrand.ink,
   '--muted': '#f1f5f9',
   '--muted-foreground': '#64748b',
-  '--accent': '#f1f5f9',
-  '--accent-foreground': schoolBusBrand.ink,
+  '--accent': schoolBusBrand.primarySoft,
+  '--accent-foreground': schoolBusBrand.primary,
   '--border': schoolBusBrand.border,
   '--input': '#cbd5e1',
-  '--ring': schoolBusBrand.ink,
-  '--sidebar-accent': '#f1f5f9',
-  '--sidebar-accent-foreground': schoolBusBrand.ink,
-  '--sidebar-primary': schoolBusBrand.ink,
+  '--ring': schoolBusBrand.primary,
+  '--sidebar-accent': schoolBusBrand.primarySoft,
+  '--sidebar-accent-foreground': schoolBusBrand.primary,
+  '--sidebar-primary': schoolBusBrand.primary,
   '--sidebar-primary-foreground': schoolBusBrand.white,
 } as CSSProperties;
 
@@ -51,7 +56,7 @@ export const schoolBusUi = {
   interactiveCard:
     'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-sm',
   primaryButton:
-    'rounded-lg bg-slate-900 text-white shadow-sm hover:bg-slate-800 transition',
+    'rounded-lg bg-[#C81E3A] text-white shadow-sm hover:bg-[#B31B34] active:bg-[#99182D] transition',
   outlineButton:
     'rounded-lg border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 transition',
   ghostButton:

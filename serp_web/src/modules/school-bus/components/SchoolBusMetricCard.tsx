@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { schoolBusUi } from '../theme';
 
-type MetricTone = 'default' | 'info' | 'success' | 'warning';
+type MetricTone = 'default' | 'info' | 'success' | 'warning' | 'school' | 'pickup' | 'linked' | 'student';
 
 interface SchoolBusMetricCardProps {
   label: string;
@@ -21,6 +21,10 @@ const toneClasses: Record<MetricTone, string> = {
   info: 'bg-blue-50 text-blue-700 ring-blue-100/70',
   success: 'bg-emerald-50 text-emerald-700 ring-emerald-100/70',
   warning: 'bg-amber-50 text-amber-700 ring-amber-100/70',
+  school: 'bg-red-50 text-[#C81E3A] ring-red-100/70',
+  pickup: 'bg-blue-50 text-blue-700 ring-blue-100/70',
+  linked: 'bg-indigo-50 text-indigo-700 ring-indigo-100/70',
+  student: 'bg-violet-50 text-violet-700 ring-violet-100/70',
 };
 
 export function SchoolBusMetricCard({
@@ -33,21 +37,21 @@ export function SchoolBusMetricCard({
 }: SchoolBusMetricCardProps) {
   if (variant === 'compact') {
     return (
-      <Card className='py-0 shadow-sm border border-slate-200/80 rounded-2xl bg-white'>
-        <CardContent className='flex items-center gap-3 p-3'>
+      <Card className='py-0 shadow-none border border-slate-200 rounded-[20px] bg-white'>
+        <CardContent className='flex items-center gap-3 px-4 py-3'>
           {Icon ? (
             <div
               className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1',
                 toneClasses[tone]
               )}
             >
-              <Icon className='h-4 w-4' />
+              <Icon className='h-3.5 w-3.5' />
             </div>
           ) : null}
           <div className='min-w-0 flex-1 leading-none'>
             <p className={cn('text-[11px] truncate', schoolBusUi.mutedText)}>{label}</p>
-            <p className={cn('text-lg font-bold mt-1', schoolBusUi.heading)}>{value}</p>
+            <p className={cn('text-lg font-bold mt-1.5', schoolBusUi.heading)}>{value}</p>
           </div>
         </CardContent>
       </Card>

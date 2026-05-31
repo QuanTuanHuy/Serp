@@ -8,7 +8,7 @@ import {
 } from 'react-hook-form';
 import { z } from 'zod';
 import { cn } from '@/shared/utils';
-import { Plus } from 'lucide-react';
+import { Plus, User } from 'lucide-react';
 import {
   Button,
   Form,
@@ -34,6 +34,9 @@ import {
   TRIP_OPTION_OPTIONS,
 } from '../constants';
 import { schoolBusUi } from '../theme';
+import { SchoolBusSelect } from './ui/SchoolBusSelect';
+import { SchoolBusCheckbox } from './ui/SchoolBusCheckbox';
+import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
 import type {
   SchoolBusAttendant,
   SchoolBusBus,
@@ -65,6 +68,7 @@ import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 interface SchoolBusFormSectionProps {
   title: string;
   description?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }
@@ -72,14 +76,18 @@ interface SchoolBusFormSectionProps {
 export function SchoolBusFormSection({
   title,
   description,
+  action,
   children,
   className,
 }: SchoolBusFormSectionProps) {
   return (
     <div className={cn('space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm', className)}>
-      <div>
-        <h4 className='text-sm font-semibold text-slate-900'>{title}</h4>
-        {description && <p className='mt-0.5 text-xs text-slate-500'>{description}</p>}
+      <div className='flex items-start justify-between gap-4 border-b border-slate-100 pb-3.5'>
+        <div>
+          <h4 className='text-sm font-semibold text-slate-900'>{title}</h4>
+          {description && <p className='mt-0.5 text-xs text-slate-500'>{description}</p>}
+        </div>
+        {action && <div className='shrink-0'>{action}</div>}
       </div>
       <div className='pt-1'>{children}</div>
     </div>
@@ -640,39 +648,35 @@ export function TransportRequestForm({
             </SchoolBusFormSection>
 
             <SchoolBusFormSection
-              title='Requested Students'
+              title={`Requested Students (${validationSummary.readyCount} / ${validationSummary.totalCount} ready)`}
               description='Add students and specify their schedules and locations.'
-            >
-              <div className='flex items-center justify-between mb-4 border-b border-slate-100 pb-3'>
-                <span className='text-xs text-muted-foreground font-medium'>
-                  Row count: {fields.length}
-                </span>
+              action={
                 <Button
                   type='button'
                   variant='outline'
                   size='sm'
-                  className='rounded-lg h-8 border-slate-200 text-slate-800 hover:bg-slate-50'
+                  className='rounded-lg h-8 border-slate-200 text-slate-800 hover:bg-slate-50 shadow-none'
                   onClick={() => append(EMPTY_STUDENT)}
                 >
                   <Plus className='h-3.5 w-3.5 mr-1.5' /> Add student
                 </Button>
-              </div>
-
-              <div className='space-y-4 max-h-[600px] overflow-y-auto pr-1'>
+              }
+            >
+              <div className='space-y-4 max-h-[600px] overflow-y-auto pr-1 mt-4'>
                 {fields.map((field, index) => (
                   <div
                     key={field.id}
                     className={cn(
                       'p-4 border rounded-2xl space-y-4 transition-all cursor-pointer relative',
                       activeStudentIndex === index
-                        ? 'border-slate-300 bg-slate-50 shadow-sm ring-1 ring-slate-300/20'
+                        ? 'border-slate-300 bg-slate-50/50 shadow-sm ring-1 ring-slate-300/20'
                         : 'border-slate-100 bg-white hover:border-slate-200'
                     )}
                     onClick={() => setActiveStudentIndex(index)}
                   >
-                    <div className='flex items-center justify-between border-b border-slate-50 pb-2 mb-2'>
+                    <div className='flex items-center justify-between border-b border-slate-100/50 pb-2 mb-2'>
                       <div className='flex items-center gap-2'>
-                        <span className='inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600'>
+                        <span className='inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700'>
                           {index + 1}
                         </span>
                         <span className='font-semibold text-slate-800 text-xs'>Student details</span>
@@ -831,19 +835,19 @@ export function TransportRequestForm({
                                           'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition-colors',
                                           isAllowed
                                             ? 'cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                                            : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+                                            : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400',
+                                          isAllowed && dayField.value && 'border-[#C81E3A] bg-[#FDECEF]/60 text-[#C81E3A] font-semibold'
                                         )}
                                       >
-                                        <input
-                                          type='checkbox'
+                                        <SchoolBusCheckbox
                                           checked={Boolean(dayField.value)}
                                           disabled={!isAllowed}
-                                          onChange={(e) => {
+                                          onCheckedChange={(checked) => {
                                             if (isAllowed) {
-                                              dayField.onChange(e.target.checked);
+                                              dayField.onChange(checked);
                                             }
                                           }}
-                                          className='accent-slate-900 disabled:opacity-0 h-3.5 w-3.5 rounded border-slate-300'
+                                          className='h-3.5 w-3.5'
                                         />
                                         {label}
                                       </label>
@@ -898,7 +902,7 @@ export function TransportRequestForm({
           </div>
 
           {/* Right panel: Map & Active Context */}
-          <div className='space-y-4'>
+          <div className='space-y-4 lg:sticky lg:top-6 lg:self-start'>
             <div className='space-y-1.5 px-1'>
               <h4 className='text-sm font-semibold text-slate-900'>Pickup point map</h4>
               <p className='text-xs text-slate-500 leading-relaxed'>
@@ -910,7 +914,7 @@ export function TransportRequestForm({
             </div>
             <SchoolBusMapWorkspace
               defaultPreset='map-focus'
-              mapHeightClassName='h-[420px]'
+              mapHeightClassName='h-[500px]'
               onFitAll={handleFitAll}
               onFitRoute={handleFitSelected}
               canFitAll={canFitAll}
@@ -935,47 +939,63 @@ export function TransportRequestForm({
               panel={
                 <div className='space-y-4 text-xs'>
                   <div>
-                    <p className='text-sm font-semibold text-slate-900 border-b border-slate-100 pb-1.5 mb-2'>
+                    <p className='text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-3 flex items-center gap-1.5'>
+                      <User className='h-4 w-4 text-slate-400' />
                       Active student row context
                     </p>
                     {activeStudentIndex !== null && activeStudentIndex >= 0 && activeStudentIndex < allStudentValues.length ? (
-                      <div className='space-y-2.5'>
+                      <div className='space-y-3.5 bg-slate-50/40 p-4 rounded-xl border border-slate-100'>
                         <div>
-                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Selected student</span>
-                          <span className='font-medium text-slate-800 text-xs'>
-                            {activeStudent?.fullName || <span className='text-slate-400 italic'>Not selected</span>}
-                          </span>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Selected student</span>
+                          {activeStudent ? (
+                            <span className='inline-flex items-center gap-1.5 font-semibold text-slate-800 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
+                              <User className='h-3.5 w-3.5 text-slate-400' />
+                              {activeStudent.fullName}
+                            </span>
+                          ) : (
+                            <span className='inline-flex items-center text-amber-600 italic font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100/50'>Not selected</span>
+                          )}
                         </div>
                         <div>
-                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Trip option</span>
-                          <span className='font-medium text-slate-700 text-xs'>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Trip option</span>
+                          <span className='inline-flex items-center font-semibold text-slate-700 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
                             {activeTripOption || 'ROUND_TRIP (Default)'}
                           </span>
                         </div>
                         <div>
-                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Pickup point</span>
-                          <span className='font-medium text-slate-700 text-xs'>
-                            {selectedPickupPointId && selectedPickupPointId !== '__none__'
-                              ? linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedPickupPointId)?.pickupPointName || 'Selected'
-                              : <span className='text-amber-600 italic'>Not selected</span>}
-                          </span>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Pickup point</span>
+                          {selectedPickupPointId && selectedPickupPointId !== '__none__' ? (
+                            <span className='inline-flex items-center gap-1.5 font-semibold text-sky-700 text-xs bg-sky-50 px-2.5 py-1 rounded-md border border-sky-100'>
+                              <span className='h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse' />
+                              {linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedPickupPointId)?.pickupPointName || 'Selected'}
+                            </span>
+                          ) : (
+                            <span className='inline-flex items-center gap-1 text-amber-600 italic font-medium bg-amber-50 px-2 py-1 rounded-md border border-amber-100/50'>
+                              Not selected
+                            </span>
+                          )}
                         </div>
                         <div>
-                          <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Drop-off point</span>
-                          <span className='font-medium text-slate-700 text-xs'>
-                            {selectedDropoffPointId && selectedDropoffPointId !== '__none__'
-                              ? linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedDropoffPointId)?.pickupPointName || 'Selected'
-                              : <span className='text-amber-600 italic'>Not selected</span>}
-                          </span>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Drop-off point</span>
+                          {selectedDropoffPointId && selectedDropoffPointId !== '__none__' ? (
+                            <span className='inline-flex items-center gap-1.5 font-semibold text-emerald-700 text-xs bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100'>
+                              <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse' />
+                              {linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedDropoffPointId)?.pickupPointName || 'Selected'}
+                            </span>
+                          ) : (
+                            <span className='inline-flex items-center gap-1 text-slate-400 italic font-medium bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
+                              Same as pickup
+                            </span>
+                          )}
                         </div>
-                        <div className='pt-1.5 border-t border-slate-100'>
+                        <div className='pt-2.5 border-t border-slate-100'>
                           <p className='text-[10px] text-slate-400 italic leading-relaxed'>
                             💡 Click a map marker to assign it to this row as {activeTripOption === 'AFTERNOON' ? 'Drop-off' : 'Pickup'}.
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <div className='py-6 text-center text-slate-400 italic'>
+                      <div className='py-8 text-center text-slate-400 italic bg-slate-50/50 rounded-xl border border-slate-100 border-dashed'>
                         Select a student row on the left to assign points using the map.
                       </div>
                     )}
@@ -992,13 +1012,13 @@ export function TransportRequestForm({
           </div>
         </div>
 
-        {/* Sticky/Clear bottom action bar */}
-        <div className='flex justify-end gap-2 border-t pt-4 bg-white sticky bottom-0 z-10 py-3 border-slate-200'>
+        {/* Sticky bottom action bar */}
+        <div className='flex justify-end gap-3 border-t bg-white sticky bottom-0 z-20 -mx-5 -mb-5 px-5 py-4 border-slate-200/80 rounded-b-2xl shadow-[0_-4px_12px_rgba(0,0,0,0.03)]'>
           {onCancel ? (
             <Button
               type='button'
               variant='outline'
-              className='rounded-full border-slate-300'
+              className='rounded-full border-slate-300 hover:bg-slate-50'
               onClick={onCancel}
             >
               Cancel
@@ -1006,7 +1026,7 @@ export function TransportRequestForm({
           ) : null}
           <Button
             type='submit'
-            className='rounded-full bg-slate-900 hover:bg-slate-800 text-white font-medium'
+            className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-semibold shadow-sm'
             disabled={isLoading}
           >
             {isLoading ? 'Saving...' : submitLabel}
@@ -1516,7 +1536,15 @@ function TextField({
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input {...field} type={type} value={(field.value as string) ?? ''} />
+            {type === 'date' ? (
+              <SchoolBusDatePicker
+                fullWidth
+                value={field.value}
+                onChange={field.onChange}
+              />
+            ) : (
+              <Input {...field} type={type} value={(field.value as string) ?? ''} />
+            )}
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -1549,6 +1577,7 @@ function SelectField({
   placeholder,
   onChange,
   className,
+  searchable,
 }: {
   form: any;
   name: string;
@@ -1562,7 +1591,18 @@ function SelectField({
   placeholder?: string;
   onChange?: (value: string) => void;
   className?: string;
+  searchable?: boolean;
 }) {
+  const selectOptions = React.useMemo(() => {
+    const list = options.map((opt) => ({ label: opt.label, value: opt.value }));
+    if (allowEmpty) {
+      list.unshift({ label: emptyLabel, value: emptyValue });
+    }
+    return list;
+  }, [options, allowEmpty, emptyLabel, emptyValue]);
+
+  const isSearchable = searchable ?? (options.length > 6);
+
   return (
     <FormField
       control={form.control}
@@ -1570,43 +1610,25 @@ function SelectField({
       render={({ field }) => (
         <FormItem className={className}>
           <FormLabel>{label}</FormLabel>
-          <Select
-            onValueChange={(value) => {
-              const val = value === emptyValue ? '' : value;
-              field.onChange(val);
-              if (onChange) {
-                onChange(val);
-              }
-            }}
-            value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
-            disabled={disabled}
-          >
-            <FormControl>
-              <SelectTrigger className='h-11 w-full min-w-0 max-w-full rounded-xl border-slate-200 bg-white px-3 text-left shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
-                <SelectValue
-                  placeholder={placeholder || `Select ${label.toLowerCase()}`}
-                />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent className='z-[120] max-h-72 w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] max-w-[min(860px,calc(100vw-2rem))] overflow-x-hidden rounded-xl border-slate-200 bg-white'>
-              {allowEmpty ? (
-                <SelectItem value={emptyValue} className='max-w-full pr-10'>
-                  <span className='block max-w-full truncate'>{emptyLabel}</span>
-                </SelectItem>
-              ) : null}
-              {options.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className='max-w-full pr-10'
-                >
-                  <span className='block max-w-full truncate'>
-                    {option.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SchoolBusSelect
+              fullWidth
+              size='md'
+              className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+              disabled={disabled}
+              value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+              onChange={(value) => {
+                const val = value === emptyValue ? '' : value;
+                field.onChange(val);
+                if (onChange) {
+                  onChange(val);
+                }
+              }}
+              placeholder={placeholder || `Select ${label.toLowerCase()}`}
+              options={selectOptions}
+              searchable={isSearchable}
+            />
+          </FormControl>
           {description ? (
             <FormDescription>{description}</FormDescription>
           ) : null}

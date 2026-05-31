@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  BusFront,
-  ClipboardList,
+  Bus,
+  FileText,
   GraduationCap,
   Route,
-  School,
+  User,
   Users,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
@@ -103,8 +103,8 @@ export function SchoolBusDashboardPage() {
               label='Schools onboarded'
               value={summary.schoolCount}
               hint='Tenant campuses currently active in the module'
-              icon={School}
-              tone='info'
+              icon={GraduationCap}
+              tone='school'
             />
             <SchoolBusMetricCard
               label='Parents linked'
@@ -117,14 +117,14 @@ export function SchoolBusDashboardPage() {
               label='Students managed'
               value={summary.studentCount}
               hint='Students currently available for requests and routing'
-              icon={GraduationCap}
-              tone='success'
+              icon={User}
+              tone='student'
             />
             <SchoolBusMetricCard
               label='Pending requests'
               value={summary.pendingRequestCount}
               hint='Approval workload requiring dispatcher action'
-              icon={ClipboardList}
+              icon={FileText}
               tone='warning'
             />
           </div>
@@ -139,8 +139,8 @@ export function SchoolBusDashboardPage() {
                   label='Fleet registered'
                   value={summary.busCount}
                   hint='Vehicles available to be assigned'
-                  icon={BusFront}
-                  tone='default'
+                  icon={Bus}
+                  tone='linked'
                 />
                 <SchoolBusMetricCard
                   label='Assigned routes'
@@ -217,7 +217,7 @@ export function SchoolBusDashboardPage() {
                 <SchoolBusEmptyState
                   title='No pending transport requests'
                   description='All current requests have already been processed.'
-                  icon={ClipboardList}
+                  icon={FileText}
                   className='min-h-[180px]'
                 />
               ) : (
@@ -282,7 +282,7 @@ export function SchoolBusDashboardPage() {
               <SchoolBusEmptyState
                 title='Attendance feed is still empty'
                 description='Attendance appears here after route operations record events.'
-                icon={ClipboardList}
+                icon={FileText}
                 className='min-h-[180px]'
               />
             ) : (

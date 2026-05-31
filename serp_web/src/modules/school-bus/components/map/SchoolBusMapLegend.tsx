@@ -69,10 +69,18 @@ export function SchoolBusMapLegend({
         }}
         title={isCollapsed ? 'Click to show legend' : 'Click to hide legend'}
       >
-        <span>Map legend</span>
-        <span className='ml-1 text-[9px] font-normal normal-case tracking-normal text-slate-400'>
-          {isCollapsed ? '(show)' : '(hide)'}
-        </span>
+        {isCollapsed ? (
+          <span className='normal-case tracking-normal text-slate-600 hover:text-slate-950'>
+            Map legend <span className='text-slate-400'>· show</span>
+          </span>
+        ) : (
+          <>
+            <span>Map legend</span>
+            <span className='ml-1 text-[9px] font-normal normal-case tracking-normal text-slate-400'>
+              (hide)
+            </span>
+          </>
+        )}
       </div>
 
       {!isCollapsed && (

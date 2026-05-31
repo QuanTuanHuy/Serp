@@ -13,12 +13,14 @@ interface SchoolBusMapWorkspaceProps {
   allowFullscreen?: boolean;
   mapHeightClassName?: string;
   className?: string;
+  panelClassName?: string;
   onFitAll?: () => void;
   onFitRoute?: () => void;
   canFitAll?: boolean;
   canFitRoute?: boolean;
   fitRouteLabel?: string;
   compact?: boolean;
+  flat?: boolean;
   // Legacy / backward compatibility props
   defaultPreset?: any;
   defaultShowLegend?: boolean;
@@ -31,12 +33,14 @@ export function SchoolBusMapWorkspace({
   allowFullscreen = true,
   mapHeightClassName,
   className,
+  panelClassName,
   onFitAll,
   onFitRoute,
   canFitAll,
   canFitRoute,
   fitRouteLabel = 'Fit Selected',
   compact,
+  flat = false,
 }: SchoolBusMapWorkspaceProps) {
   const [expanded, setExpanded] = React.useState(false);
   const [expandKey, setExpandKey] = React.useState(0);
@@ -55,10 +59,14 @@ export function SchoolBusMapWorkspace({
       <MapMarkerVisibilityProvider>
         <div
           className={cn(
-            'rounded-[24px] border border-slate-200 bg-white overflow-hidden shadow-[0_14px_36px_rgba(15,23,42,0.05)] flex flex-col',
             expanded
-              ? 'fixed inset-4 z-[900] flex flex-col bg-white shadow-[0_24px_60px_rgba(15,23,42,0.24)] border-slate-300'
-              : className
+              ? 'fixed inset-4 z-[900] flex flex-col bg-white shadow-[0_24px_60px_rgba(15,23,42,0.24)] border border-slate-300 rounded-[24px] overflow-hidden'
+              : cn(
+                  flat
+                    ? 'flex flex-col overflow-hidden w-full h-full'
+                    : 'rounded-[24px] border border-slate-200 bg-white overflow-hidden shadow-[0_14px_36px_rgba(15,23,42,0.05)] flex flex-col',
+                  className
+                )
           )}
         >
           {/* Main workspace area */}
@@ -99,7 +107,8 @@ export function SchoolBusMapWorkspace({
             {panel && (
               <div
                 className={cn(
-                  'w-[300px] shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-4',
+                  'shrink-0 overflow-y-auto border-l border-slate-200 bg-white',
+                  panelClassName ?? 'w-[300px] p-4',
                   expanded ? 'h-full' : 'min-h-0'
                 )}
               >
