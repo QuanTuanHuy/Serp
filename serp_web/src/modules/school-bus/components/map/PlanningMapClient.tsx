@@ -14,6 +14,7 @@ import {
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
 import type { SchoolBusRoutePath, SchoolBusRouteStop } from '../../types';
+import { useMapMarkerVisibility } from './MapMarkerVisibilityContext';
 
 // ── Auto-fit bounds when markers / fitKey change ──────────────────────────────
 
@@ -109,6 +110,8 @@ export default function PlanningMapClient({
   fitTarget,
   fitKey,
 }: PlanningMapClientProps) {
+  const { isVisible } = useMapMarkerVisibility();
+
   // Build list of all known positions for auto-fit ("fit all")
   const allPositions: [number, number][] = [];
 
@@ -127,7 +130,6 @@ export default function PlanningMapClient({
   }
 
   // Route stop positions (in order) — used for polyline + "fit route"
-  // Uses displayName coordinates (new terminal model) or legacy pickupPoint coords
   const sortedStops = [...selectedRouteStops]
     .filter((s) => {
       const lat = typeof s.pickupPointLatitude === 'number'
@@ -177,7 +179,7 @@ export default function PlanningMapClient({
   const markerContent = (
     <>
       {/* School marker */}
-      {typeof school?.latitude === 'number' && typeof school?.longitude === 'number' && (
+      {isVisible('school') && typeof school?.latitude === 'number' && typeof school?.longitude === 'number' && (
         <Marker
           position={[school.latitude, school.longitude]}
           icon={createSchoolBusMarkerIcon('school', 30)}
@@ -192,7 +194,7 @@ export default function PlanningMapClient({
       )}
 
       {/* Depot markers */}
-      {depots.map((d) => {
+      {isVisible('depot') && depots.map((d) => {
         if (typeof d.latitude !== 'number' || typeof d.longitude !== 'number') return null;
         return (
           <Marker
@@ -212,7 +214,7 @@ export default function PlanningMapClient({
       })}
 
       {/* Pickup point markers — with student-count badge */}
-      {pickupPoints.map((pp) => {
+      {isVisible('pickup') && pickupPoints.map((pp) => {
         if (typeof pp.latitude !== 'number' || typeof pp.longitude !== 'number') return null;
         return (
           <Marker
@@ -231,8 +233,8 @@ export default function PlanningMapClient({
         );
       })}
 
-      {/* Selected route: numbered stop markers (indigo, size 26 — distinct from pickup sky blue) */}
-      {sortedStops.map((stop, idx) => (
+      {/* Selected route: numbered stop markers (indigo, size 26) */}
+      {isVisible('pickup') && sortedStops.map((stop, idx) => (
         <Marker
           key={`stop-${stop.id}`}
           position={[stop.pickupPointLatitude as number, stop.pickupPointLongitude as number]}

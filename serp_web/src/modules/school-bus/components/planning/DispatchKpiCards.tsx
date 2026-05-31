@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/shared/utils';
+import { Users, CheckCircle2, AlertTriangle, Route } from 'lucide-react';
 
 interface DispatchKpiCardsProps {
   eligible: number;
@@ -21,27 +22,37 @@ export function DispatchKpiCards({
   return (
     <div
       className={cn(
-        'flex items-center gap-0 divide-x divide-slate-200 border-b border-slate-200 bg-white',
+        'flex items-center gap-0 divide-x divide-slate-100 border-b border-slate-250 bg-white sticky top-0 z-10 h-11 shrink-0',
         className
       )}
     >
-      <KpiItem label='Eligible' value={eligible} color='text-slate-700' />
+      <KpiItem
+        label='Eligible'
+        value={eligible}
+        icon={Users}
+        color='text-violet-600'
+        bgColor='bg-violet-50/20'
+      />
       <KpiItem
         label='Planned'
         value={planned}
+        icon={CheckCircle2}
         color='text-emerald-600'
-        highlight={planned > 0 && planned === eligible}
+        bgColor='bg-emerald-50/20'
       />
       <KpiItem
         label='Unassigned'
         value={unassigned}
+        icon={AlertTriangle}
         color={unassigned > 0 ? 'text-amber-600' : 'text-slate-400'}
-        warn={unassigned > 0}
+        bgColor={unassigned > 0 ? 'bg-amber-50/30' : undefined}
       />
       <KpiItem
         label='Routes'
         value={routes}
-        color={routes > 0 ? 'text-sky-600' : 'text-slate-400'}
+        icon={Route}
+        color='text-blue-600'
+        bgColor='bg-blue-50/20'
       />
     </div>
   );
@@ -50,30 +61,32 @@ export function DispatchKpiCards({
 function KpiItem({
   label,
   value,
+  icon: Icon,
   color,
-  warn,
-  highlight,
+  bgColor,
 }: {
   label: string;
   value: number;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
-  warn?: boolean;
-  highlight?: boolean;
+  bgColor?: string;
 }) {
   return (
     <div
       className={cn(
-        'flex flex-1 flex-col items-center justify-center px-3 py-2',
-        warn && 'bg-amber-50/60',
-        highlight && 'bg-emerald-50/60'
+        'flex flex-1 items-center justify-center gap-2 h-full px-3 py-1 transition-colors duration-200',
+        bgColor
       )}
     >
-      <span className={cn('text-lg font-extrabold leading-none tabular-nums', color)}>
-        {value}
-      </span>
-      <span className='mt-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400'>
-        {label}
-      </span>
+      <Icon className={cn('h-4 w-4 shrink-0', color)} />
+      <div className='flex items-baseline gap-1.5 min-w-0'>
+        <span className={cn('text-sm font-extrabold leading-none tabular-nums', color)}>
+          {value}
+        </span>
+        <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate'>
+          {label}
+        </span>
+      </div>
     </div>
   );
 }

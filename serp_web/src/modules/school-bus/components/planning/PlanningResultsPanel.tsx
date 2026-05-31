@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
@@ -281,6 +282,8 @@ function SessionRouteCard({
   onSelect: (id: number) => void;
   isSelected: boolean;
 }) {
+  const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
+
   return (
     <div
       onClick={() => onSelect(route.id)}
@@ -296,19 +299,62 @@ function SessionRouteCard({
           <p className='text-xs font-bold text-slate-900 truncate'>{route.routeName}</p>
           <p className='text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1.5'>
             <span className='px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-indigo-700 text-[9px]'>{route.routeCode}</span>
-            <span>{route.routeDirection}</span>
+            <span>{route.routeDirection === 'RETURN' ? 'Chiều về' : 'Chiều đi'}</span>
           </p>
         </div>
-        <span className={cn(
-          'rounded-full px-2.5 py-0.5 text-[10px] font-semibold border shadow-none shrink-0',
-          route.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-250' :
-          route.status === 'CANCELLED' ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-250'
-        )}>{route.status === 'PUBLISHED' ? 'Published' : route.status === 'CANCELLED' ? 'Cancelled' : 'Draft'}</span>
+        <div className='flex flex-col items-end gap-1.5 shrink-0'>
+          <span className={cn(
+            'rounded-full px-2.5 py-0.5 text-[10px] font-semibold border shadow-none text-center',
+            route.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-250' :
+            route.status === 'CANCELLED' ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-250'
+          )}>{route.status === 'PUBLISHED' ? 'Published' : route.status === 'CANCELLED' ? 'Cancelled' : 'Draft'}</span>
+          <span className={cn(
+            'rounded-full px-2 py-0.5 text-[9px] font-bold border shadow-none text-center',
+            isAssigned
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border-amber-200'
+          )}>
+            {isAssigned ? 'Ready for trip' : 'Needs assignment'}
+          </span>
+        </div>
       </div>
       <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
         <span>{route.serviceDate}</span>
         {isSelected && <span className='font-extrabold text-[#C81E3A] flex items-center gap-1'>▶ Selected</span>}
       </div>
+
+      {isSelected && (
+        <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
+          <Button
+            size='sm'
+            variant='outline'
+            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+            asChild
+          >
+            <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
+              Assign resources
+            </Link>
+          </Button>
+          <Button
+            size='sm'
+            variant='outline'
+            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+            asChild
+          >
+            <Link href={`/school-bus/dispatch/${route.id}`}>
+              View route detail
+            </Link>
+          </Button>
+          <Button
+            size='sm'
+            variant='ghost'
+            className='rounded-full h-8 text-xs font-semibold text-slate-500 hover:bg-slate-100'
+            onClick={() => onSelect(route.id)}
+          >
+            Continue planning
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -337,6 +383,8 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
   const score = route.qualityScore ?? 0;
   const scoreColor = score >= 80 ? 'text-emerald-600 border-emerald-350 bg-emerald-50/50' : score >= 50 ? 'text-amber-600 border-amber-350 bg-amber-50/50' : 'text-red-600 border-red-350 bg-red-50/50';
 
+  const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
+
   return (
     <div onClick={() => onSelect(route.routeId)}
       className={cn(
@@ -348,12 +396,24 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
       <div className='flex items-start justify-between gap-3'>
         <div className='min-w-0'>
           <p className='text-xs font-bold text-slate-900 truncate'>{route.routeName}</p>
-          <p className='text-[10px] font-bold text-slate-550 mt-0.5 flex items-center gap-1.5'>
+          <p className='text-[10px] font-bold text-slate-555 mt-0.5 flex items-center gap-1.5'>
             <span className='px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-indigo-700 text-[9px]'>{route.routeCode}</span>
           </p>
         </div>
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm', scoreColor)}>
-          {score.toFixed(0)}
+        <div className='flex items-center gap-2'>
+          <div className='flex flex-col items-end gap-1 shrink-0'>
+            <span className={cn(
+              'rounded-full px-2 py-0.5 text-[9px] font-bold border shadow-none text-center',
+              isAssigned
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+            )}>
+              {isAssigned ? 'Ready for trip' : 'Needs assignment'}
+            </span>
+          </div>
+          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm', scoreColor)}>
+            {score.toFixed(0)}
+          </div>
         </div>
       </div>
       
@@ -398,8 +458,35 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
       )}
       
       {isSelected && (
-        <div className='flex items-center justify-end text-[10px] font-extrabold text-[#C81E3A] border-t border-slate-100/50 pt-2'>
-          <span>▶ Selected — detail below</span>
+        <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
+          <Button
+            size='sm'
+            variant='outline'
+            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+            asChild
+          >
+            <Link href={`/school-bus/dispatch/${route.routeId}?assign=true`}>
+              Assign resources
+            </Link>
+          </Button>
+          <Button
+            size='sm'
+            variant='outline'
+            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+            asChild
+          >
+            <Link href={`/school-bus/dispatch/${route.routeId}`}>
+              View route detail
+            </Link>
+          </Button>
+          <Button
+            size='sm'
+            variant='ghost'
+            className='rounded-full h-8 text-xs font-semibold text-slate-500 hover:bg-slate-100'
+            onClick={() => onSelect(route.routeId)}
+          >
+            Continue planning
+          </Button>
         </div>
       )}
     </div>
