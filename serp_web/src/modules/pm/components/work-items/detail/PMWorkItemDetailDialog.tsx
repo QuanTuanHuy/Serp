@@ -48,6 +48,7 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { cn } from '@/shared/utils';
 import { PMWorkItemSkillPanel } from '../../skills';
 import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
@@ -118,6 +119,14 @@ interface PMWorkItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+export interface PMWorkItemDetailContentProps {
+  projectId: number;
+  workItemId?: number;
+  fallbackItem?: PMWorkItemDetailFallback;
+  onClose?: () => void;
+  className?: string;
+}
+
 export function PMWorkItemDetailDialog({
   projectId,
   workItemId,
@@ -125,8 +134,36 @@ export function PMWorkItemDetailDialog({
   fallbackItem,
   onOpenChange,
 }: PMWorkItemDetailDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className='h-[min(860px,calc(100vh-6rem))] w-[calc(100vw-1rem)] !max-w-[1280px] gap-0 overflow-hidden p-0 sm:rounded-xl lg:w-[min(1280px,calc(100vw-2rem))]'
+        showCloseButton={false}
+      >
+        <DialogTitle className='sr-only'>Work item detail</DialogTitle>
+        <DialogDescription className='sr-only'>
+          Work item detail dialog
+        </DialogDescription>
+        <PMWorkItemDetailContent
+          projectId={projectId}
+          workItemId={workItemId}
+          fallbackItem={fallbackItem}
+          onClose={() => onOpenChange(false)}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function PMWorkItemDetailContent({
+  projectId,
+  workItemId,
+  fallbackItem,
+  onClose,
+  className,
+}: PMWorkItemDetailContentProps) {
   const [activityTab, setActivityTab] = useState<ActivityTab>('comments');
-  const shouldFetch = open && Boolean(workItemId);
+  const shouldFetch = Boolean(workItemId);
   const showComments = shouldFetch && activityTab === 'comments';
   const showHistory = shouldFetch && activityTab === 'history';
 
@@ -159,57 +196,54 @@ export function PMWorkItemDetailDialog({
 
   const item = toDetailModel(workItemId, detailQuery.data, fallbackItem);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className='h-[min(860px,calc(100vh-6rem))] w-[calc(100vw-1rem)] !max-w-[1280px] gap-0 overflow-hidden p-0 sm:rounded-xl lg:w-[min(1280px,calc(100vw-2rem))]'
-        showCloseButton={false}
-      >
-        <DialogTitle className='sr-only'>{item.summary}</DialogTitle>
-        <DialogDescription className='sr-only'>
-          Work item detail dialog
-        </DialogDescription>
+  if (detailQuery.isLoading && !fallbackItem) {
+    return <PMWorkItemDetailSkeleton />;
+  }
 
-        {detailQuery.isLoading && !fallbackItem ? (
-          <PMWorkItemDetailSkeleton />
-        ) : detailQuery.error ? (
-          <div className='p-6'>
-            <Alert variant='destructive'>
-              <AlertTitle>Detail unavailable</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(detailQuery.error)}
-              </AlertDescription>
-            </Alert>
-          </div>
-        ) : (
-          <div className='flex h-full min-h-0 flex-col bg-background text-foreground'>
-            <PMWorkItemDetailHeader
-              item={item}
-              isFetching={detailQuery.isFetching}
-              onClose={() => onOpenChange(false)}
-            />
-            <div className='grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_432px]'>
-              <PMWorkItemDetailMain
-                projectId={projectId}
-                workItemId={workItemId}
-                item={item}
-                activityTab={activityTab}
-                activitiesQuery={activitiesQuery}
-                childrenQuery={childrenQuery}
-                commentsQuery={commentsQuery}
-                linksQuery={linksQuery}
-                onActivityTabChange={setActivityTab}
-              />
-              <PMWorkItemDetailSidebar
-                projectId={projectId}
-                workItemId={workItemId}
-                item={item}
-              />
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+  if (detailQuery.error) {
+    return (
+      <div className='p-6'>
+        <Alert variant='destructive'>
+          <AlertTitle>Detail unavailable</AlertTitle>
+          <AlertDescription>{getErrorMessage(detailQuery.error)}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-0 flex-col bg-background text-foreground',
+        className
+      )}
+    >
+      <h1 className='sr-only'>{item.summary}</h1>
+      <p className='sr-only'>Work item detail</p>
+      <PMWorkItemDetailHeader
+        item={item}
+        isFetching={detailQuery.isFetching}
+        onClose={onClose}
+      />
+      <div className='grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_432px]'>
+        <PMWorkItemDetailMain
+          projectId={projectId}
+          workItemId={workItemId}
+          item={item}
+          activityTab={activityTab}
+          activitiesQuery={activitiesQuery}
+          childrenQuery={childrenQuery}
+          commentsQuery={commentsQuery}
+          linksQuery={linksQuery}
+          onActivityTabChange={setActivityTab}
+        />
+        <PMWorkItemDetailSidebar
+          projectId={projectId}
+          workItemId={workItemId}
+          item={item}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -220,7 +254,7 @@ function PMWorkItemDetailHeader({
 }: {
   item: WorkItemDetailModel;
   isFetching: boolean;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   return (
     <header className='flex h-16 shrink-0 items-center justify-between gap-3 border-b px-4 sm:px-6'>
@@ -257,14 +291,16 @@ function PMWorkItemDetailHeader({
         >
           <Maximize2 className='h-4 w-4' />
         </Button>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-8 w-8'
-          onClick={onClose}
-        >
-          <X className='h-4 w-4' />
-        </Button>
+        {onClose ? (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='h-8 w-8'
+            onClick={onClose}
+          >
+            <X className='h-4 w-4' />
+          </Button>
+        ) : null}
       </div>
     </header>
   );
