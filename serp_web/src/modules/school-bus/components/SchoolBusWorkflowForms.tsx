@@ -103,7 +103,7 @@ function getRowReadiness(sv: any, needsTarget: boolean) {
 
 function ReadinessBadge({ readiness }: { readiness: string }) {
   const configs: Record<string, { label: string; className: string }> = {
-    'missing-student': { label: 'Missing student', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+    'missing-student': { label: 'Missing student', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-pickup': { label: 'Missing pickup', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
     'missing-dropoff': { label: 'Missing drop-off', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
     'missing-schedule': { label: 'Missing schedule', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
@@ -651,7 +651,7 @@ export function TransportRequestForm({
                   type='button'
                   variant='outline'
                   size='sm'
-                  className='rounded-full h-8 border-rose-200 text-rose-700 hover:bg-rose-50'
+                  className='rounded-lg h-8 border-slate-200 text-slate-800 hover:bg-slate-50'
                   onClick={() => append(EMPTY_STUDENT)}
                 >
                   <Plus className='h-3.5 w-3.5 mr-1.5' /> Add student
@@ -665,7 +665,7 @@ export function TransportRequestForm({
                     className={cn(
                       'p-4 border rounded-2xl space-y-4 transition-all cursor-pointer relative',
                       activeStudentIndex === index
-                        ? 'border-rose-300 bg-rose-50/20 shadow-sm ring-1 ring-rose-300/30'
+                        ? 'border-slate-300 bg-slate-50 shadow-sm ring-1 ring-slate-300/20'
                         : 'border-slate-100 bg-white hover:border-slate-200'
                     )}
                     onClick={() => setActiveStudentIndex(index)}
@@ -682,7 +682,7 @@ export function TransportRequestForm({
                         type='button'
                         variant='ghost'
                         size='sm'
-                        className='h-6 rounded-full text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2'
+                        className='h-6 rounded-lg text-[11px] text-red-500 hover:text-red-700 hover:bg-red-50 px-2'
                         disabled={fields.length === 1}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -830,7 +830,7 @@ export function TransportRequestForm({
                                         className={cn(
                                           'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition-colors',
                                           isAllowed
-                                            ? 'cursor-pointer border-rose-100 bg-white text-slate-700 hover:border-rose-300 hover:bg-rose-50/50'
+                                            ? 'cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                                             : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
                                         )}
                                       >
@@ -843,7 +843,7 @@ export function TransportRequestForm({
                                               dayField.onChange(e.target.checked);
                                             }
                                           }}
-                                          className='accent-rose-500 disabled:opacity-0 h-3.5 w-3.5 rounded border-slate-300'
+                                          className='accent-slate-900 disabled:opacity-0 h-3.5 w-3.5 rounded border-slate-300'
                                         />
                                         {label}
                                       </label>
@@ -943,7 +943,7 @@ export function TransportRequestForm({
                         <div>
                           <span className='font-semibold text-slate-400 block uppercase tracking-wider text-[9px]'>Selected student</span>
                           <span className='font-medium text-slate-800 text-xs'>
-                            {activeStudent?.fullName || <span className='text-rose-500 italic'>Not selected</span>}
+                            {activeStudent?.fullName || <span className='text-slate-400 italic'>Not selected</span>}
                           </span>
                         </div>
                         <div>
@@ -1006,7 +1006,7 @@ export function TransportRequestForm({
           ) : null}
           <Button
             type='submit'
-            className='rounded-full bg-rose-600 hover:bg-rose-700 text-white'
+            className='rounded-full bg-slate-900 hover:bg-slate-800 text-white font-medium'
             disabled={isLoading}
           >
             {isLoading ? 'Saving...' : submitLabel}
@@ -1529,7 +1529,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className='space-y-2'>
       <FormLabel>{label}</FormLabel>
-      <div className='rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2 text-sm font-semibold text-rose-700'>
+      <div className='rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm font-semibold text-slate-700'>
         {value}
       </div>
     </div>

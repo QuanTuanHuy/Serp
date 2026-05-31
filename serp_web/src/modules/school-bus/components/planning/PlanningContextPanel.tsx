@@ -35,7 +35,7 @@ interface PlanningContextPanelProps {
 }
 
 const fieldLabel = 'block text-xs font-medium text-slate-500 mb-1.5 mt-3 first:mt-0';
-const fieldInput = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100 disabled:bg-slate-50 disabled:text-slate-400';
+const fieldInput = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400';
 
 export function PlanningContextPanel({
   form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive, depots,
@@ -105,7 +105,7 @@ export function PlanningContextPanel({
                 ))}
               </select>
               {form.depotId === '' && (
-                <p className='mt-1 text-[11px] text-rose-500'>Depot is required for greedy generation.</p>
+                <p className='mt-1 text-[11px] text-red-500'>Depot is required for greedy generation.</p>
               )}
             </>
           )}

@@ -21,11 +21,11 @@ export function SchoolBusEmptyState({
   return (
     <div
       className={cn(
-        'flex min-h-[220px] flex-col items-center justify-center rounded-[28px] border border-dashed border-rose-200 bg-rose-50/40 px-6 text-center',
+        'flex min-h-[220px] flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-slate-50/40 px-6 text-center',
         className
       )}
     >
-      <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm ring-1 ring-rose-100'>
+      <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-100'>
         <Icon className='h-5 w-5' />
       </div>
       <div className='mt-4 space-y-2'>

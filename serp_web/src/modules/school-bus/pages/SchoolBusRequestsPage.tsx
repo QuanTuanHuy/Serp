@@ -221,12 +221,12 @@ export function SchoolBusRequestsPage() {
                 {pendingRequests.map((request) => (
                   <div
                     key={request.id}
-                    className={`${schoolBusUi.interactiveCard} p-4 flex flex-col gap-3 border border-slate-100 hover:border-rose-200 hover:shadow-md transition-all shadow-sm rounded-2xl bg-white`}
+                    className={`${schoolBusUi.interactiveCard} p-4 flex flex-col gap-3 border border-slate-100 hover:shadow-md transition-all shadow-sm rounded-2xl bg-white`}
                   >
                     <div className='flex items-start justify-between gap-4'>
                       <div className='space-y-1'>
                         <div className='flex items-center gap-2 flex-wrap'>
-                          <span className='inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-rose-200/50'>
+                          <span className='inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200/50'>
                             {request.requestType}
                           </span>
                           <span className='text-[11px] text-muted-foreground font-mono'>
@@ -252,7 +252,7 @@ export function SchoolBusRequestsPage() {
                         <Button
                           size='sm'
                           variant='outline'
-                          className='rounded-full text-xs h-7 px-3 border-rose-200 text-rose-700 hover:bg-rose-50'
+                          className='rounded-full text-xs h-7 px-3 border-red-200 text-red-700 hover:bg-red-50'
                           disabled={rejecting && processingId === request.id}
                           onClick={() => setRejectingRequest(request)}
                         >
@@ -260,7 +260,7 @@ export function SchoolBusRequestsPage() {
                         </Button>
                         <Button
                           size='sm'
-                          className='rounded-full text-xs h-7 px-3 bg-rose-600 hover:bg-rose-700 text-white'
+                          className='rounded-full text-xs h-7 px-3 bg-slate-900 hover:bg-slate-800 text-white'
                           disabled={approving && processingId === request.id}
                           onClick={() => handleApprove(request.id)}
                         >
@@ -305,7 +305,7 @@ export function SchoolBusRequestsPage() {
                   placeholder='Search by parent, school or code...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+                  className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
                 />
               </div>
 
@@ -393,7 +393,7 @@ export function SchoolBusRequestsPage() {
                                 Approved: {formatDateTime(request.approvedAt)}
                               </p>
                             ) : request.rejectionReason ? (
-                              <p className='text-[10px] text-rose-600 truncate max-w-[150px]' title={request.rejectionReason}>
+                              <p className='text-[10px] text-red-600 truncate max-w-[150px]' title={request.rejectionReason}>
                                 Reason: {request.rejectionReason}
                               </p>
                             ) : null}
@@ -426,7 +426,7 @@ export function SchoolBusRequestsPage() {
                                 <Button
                                   size='sm'
                                   variant='outline'
-                                  className='h-8 text-rose-700 hover:bg-rose-50 border-rose-200'
+                                  className='h-8 text-red-700 hover:bg-red-50 border-red-200'
                                   disabled={rejecting && processingId === request.id}
                                   onClick={() => setRejectingRequest(request)}
                                 >
@@ -434,7 +434,7 @@ export function SchoolBusRequestsPage() {
                                 </Button>
                                 <Button
                                   size='sm'
-                                  className='h-8 bg-rose-600 text-white hover:bg-rose-700'
+                                  className='h-8 bg-slate-900 text-white hover:bg-slate-800'
                                   disabled={approving && processingId === request.id}
                                   onClick={() => handleApprove(request.id)}
                                 >

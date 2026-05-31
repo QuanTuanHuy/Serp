@@ -135,8 +135,8 @@ export default function RouteMapClient({
     routePath?.geometrySource === 'STRAIGHT_LINE_ESTIMATE' ||
     (routePath != null && actualPathCoords.length < 2);
 
-  // Direction colour: rose for OUTBOUND, emerald for RETURN
-  const lineColor = isOutbound ? '#e11d48' : '#059669';
+  // Direction colour: sky/blue for OUTBOUND, emerald for RETURN
+  const lineColor = isOutbound ? '#0284c7' : '#059669';
 
   const defaultCenter: [number, number] = [
     SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
@@ -195,7 +195,7 @@ export default function RouteMapClient({
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='text-xs font-semibold text-rose-700'>
+              <p className='text-xs font-semibold text-slate-700'>
                 {route.endLocationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
               </p>
               <p className='font-medium'>{route.endLocationName}</p>

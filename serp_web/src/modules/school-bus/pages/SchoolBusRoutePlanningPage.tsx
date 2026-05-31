@@ -82,7 +82,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                   s.done
                     ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-rose-50 text-rose-500 ring-1 ring-rose-200'
+                    : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
                 }`}
               >
                 {s.done ? '✓' : i + 1}
@@ -351,8 +351,8 @@ export default function SchoolBusRoutePlanningPage() {
         <div className='fixed inset-0 z-[900] flex overflow-hidden bg-slate-900/10 backdrop-blur-[1px]'>
           {/* Left panel — own scroll, no page scroll */}
           <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl'>
-            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-4 py-3'>
-              <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>Bus Dispatch System</p>
+            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3'>
+              <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>School Bus Platform</p>
               <h2 className='mt-0.5 text-base font-bold text-slate-900'>Route Planning</h2>
             </div>
             {/* Scrollable inner area */}
@@ -442,8 +442,8 @@ export default function SchoolBusRoutePlanningPage() {
       >
         {/* ── Left panel: Context + Session (340px) ──────────────────────── */}
         <div className='flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
-          <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-4 py-2.5'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>
+          <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
+            <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>
               Planning Context
             </p>
           </div>

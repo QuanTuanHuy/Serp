@@ -200,7 +200,7 @@ export function SchoolBusDashboardPage() {
                           {link.description}
                         </p>
                       </div>
-                      <ArrowRight className='mt-1 h-4 w-4 text-rose-500' />
+                      <ArrowRight className='mt-1 h-4 w-4 text-slate-400' />
                     </div>
                   </Link>
                 ))}

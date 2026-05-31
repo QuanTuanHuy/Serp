@@ -62,7 +62,7 @@ const readinessConfig: Record<Readiness, { label: string; className: string }> =
   ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   'missing-pickup': { label: 'Missing pickup', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   'missing-dropoff': { label: 'Missing drop-off', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'missing-parent': { label: 'Missing parent', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  'missing-parent': { label: 'Missing parent', className: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
 function ReadinessBadge({ readiness }: { readiness: Readiness }) {
@@ -203,7 +203,7 @@ export function SchoolBusStudentsPage() {
               placeholder='Search by name or code...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
             />
           </div>
           <SchoolBusFilterSelect

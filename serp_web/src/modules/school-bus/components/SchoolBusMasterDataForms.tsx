@@ -1413,7 +1413,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className='space-y-2'>
       <FormLabel>{label}</FormLabel>
-      <div className='rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2 text-sm font-semibold text-rose-700'>
+      <div className='rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm font-semibold text-slate-700'>
         {value}
       </div>
     </div>

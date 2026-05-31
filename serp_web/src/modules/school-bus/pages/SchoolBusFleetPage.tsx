@@ -331,7 +331,7 @@ export function SchoolBusFleetPage() {
             placeholder='Search plate or depot...'
             value={busSearch}
             onChange={(e) => setBusSearch(e.target.value)}
-            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
           />
         </div>
         <SchoolBusFilterSelect
@@ -417,7 +417,7 @@ export function SchoolBusFleetPage() {
             placeholder='Search name or license...'
             value={driverSearch}
             onChange={(e) => setDriverSearch(e.target.value)}
-            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
           />
         </div>
         <SchoolBusFilterSelect
@@ -465,7 +465,7 @@ export function SchoolBusFleetPage() {
                     {driver.licenseExpiryDate ? (
                       <span className={cn(
                         'text-xs',
-                        isLicenseExpired(driver.licenseExpiryDate) && 'font-semibold text-rose-600',
+                        isLicenseExpired(driver.licenseExpiryDate) && 'font-semibold text-red-600',
                         isLicenseExpiringSoon(driver.licenseExpiryDate) && !isLicenseExpired(driver.licenseExpiryDate) && 'font-semibold text-amber-600',
                       )}>
                         {driver.licenseExpiryDate}
@@ -510,7 +510,7 @@ export function SchoolBusFleetPage() {
             placeholder='Search attendant name...'
             value={attendantSearch}
             onChange={(e) => setAttendantSearch(e.target.value)}
-            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
           />
         </div>
         <SchoolBusFilterSelect
@@ -582,7 +582,7 @@ export function SchoolBusFleetPage() {
             placeholder='Search depot name or address...'
             value={depotSearch}
             onChange={(e) => setDepotSearch(e.target.value)}
-            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+            className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
           />
         </div>
       </div>
@@ -613,7 +613,7 @@ export function SchoolBusFleetPage() {
                   <TableCell>
                     <div>
                       <p className='font-medium'>{depot.name}</p>
-                      {depot.code && <p className='text-xs font-mono text-rose-700'>{depot.code}</p>}
+                      {depot.code && <p className='text-xs font-mono text-slate-700'>{depot.code}</p>}
                     </div>
                   </TableCell>
                   <TableCell>

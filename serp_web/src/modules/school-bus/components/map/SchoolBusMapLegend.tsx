@@ -89,10 +89,10 @@ export function SchoolBusMapLegend({
           </div>
           {showRouteLines && (
             <div className='mt-2.5 space-y-1 text-xs border-t border-slate-100 pt-2'>
-              <p className='flex items-center gap-2 text-rose-700'>
+              <p className='flex items-center gap-2 text-sky-700'>
                 <span
                   className='block h-[2px] w-8 rounded-full'
-                  style={{ backgroundColor: schoolBusBrand.rose }}
+                  style={{ backgroundColor: schoolBusBrand.sky }}
                 />
                 Outbound route
               </p>

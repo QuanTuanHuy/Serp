@@ -147,7 +147,7 @@ export function ScheduleFormDialog({
             {initialData?.scheduleCode ? (
               <div className='space-y-2'>
                 <FormLabel>Schedule code</FormLabel>
-                <div className='rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2 text-sm font-semibold text-rose-700'>
+                <div className='rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm font-semibold text-slate-700'>
                   {initialData.scheduleCode}
                 </div>
               </div>
@@ -271,7 +271,7 @@ export function ScheduleFormDialog({
                         key={day.value}
                         className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                           checked
-                            ? 'border-rose-300 bg-rose-50 text-rose-700 font-medium'
+                            ? 'border-slate-900 bg-slate-900 text-white font-medium'
                             : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                         }`}
                       >

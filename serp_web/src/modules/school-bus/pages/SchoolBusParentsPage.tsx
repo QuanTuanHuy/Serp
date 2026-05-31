@@ -63,7 +63,7 @@ const contactReadinessConfig: Record<ContactReadiness, { label: string; classNam
   reachable: { label: 'Reachable', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   'missing-phone': { label: 'Missing phone', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   'missing-email': { label: 'Missing email', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'no-linked-student': { label: 'No linked student', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  'no-linked-student': { label: 'No linked student', className: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
 function ContactReadinessBadge({ readiness }: { readiness: ContactReadiness }) {
@@ -216,7 +216,7 @@ export function SchoolBusParentsPage() {
               placeholder='Search by name, phone, or email...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
             />
           </div>
           <SchoolBusFilterSelect

@@ -124,10 +124,10 @@ export function SchoolBusSubscriptionsPage() {
                 {subscriptions.map((subscription) => (
                   <TableRow
                     key={subscription.id}
-                    className='cursor-pointer select-none transition-colors hover:bg-rose-50/40'
+                    className='cursor-pointer select-none transition-colors hover:bg-slate-50'
                     onDoubleClick={() => setSelectedId(subscription.id)}
                   >
-                    <TableCell className='font-semibold text-rose-700'>
+                    <TableCell className='font-semibold text-slate-900'>
                       {subscription.subscriptionCode}
                     </TableCell>
                     <TableCell>{subscription.studentName}</TableCell>

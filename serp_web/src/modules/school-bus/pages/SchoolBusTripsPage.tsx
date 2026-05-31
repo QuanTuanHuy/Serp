@@ -128,7 +128,7 @@ export function SchoolBusTripsPage() {
                   );
                   return (
                     <TableRow key={trip.id}>
-                      <TableCell className='font-semibold text-rose-700'>
+                      <TableCell className='font-semibold text-slate-900'>
                         {trip.tripCode}
                       </TableCell>
                       <TableCell>
@@ -157,7 +157,7 @@ export function SchoolBusTripsPage() {
                         <div className='space-y-1'>
                           <SchoolBusStatusBadge status={trip.status} />
                           {trip.status === 'CANCELLED' && trip.cancellationReason && (
-                            <p className='text-xs text-rose-600' title={trip.cancellationReason}>
+                            <p className='text-xs text-red-600' title={trip.cancellationReason}>
                               {trip.cancellationReason.length > 40
                                 ? trip.cancellationReason.slice(0, 40) + '…'
                                 : trip.cancellationReason}

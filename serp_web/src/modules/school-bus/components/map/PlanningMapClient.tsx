@@ -184,7 +184,7 @@ export default function PlanningMapClient({
         >
           <Popup>
             <div>
-              <p className='text-xs font-semibold text-rose-700'>🎓 School</p>
+              <p className='text-xs font-semibold text-slate-700'>🎓 School</p>
               <p className='font-medium'>{school.name ?? 'School'}</p>
             </div>
           </Popup>

@@ -331,7 +331,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                     />
                     <Button
                       size='sm'
-                      className='rounded-full bg-rose-600 px-3 text-white hover:bg-rose-700'
+                      className='rounded-full bg-red-600 px-3 text-white hover:bg-red-700'
                       onClick={handleCancel}
                       disabled={!cancelReason.trim() || isActing}
                     >
@@ -345,7 +345,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                   <Button
                     size='sm'
                     variant='outline'
-                    className='rounded-full border-rose-200 px-4 text-rose-600 hover:bg-rose-50'
+                    className='rounded-full border-red-200 px-4 text-red-600 hover:bg-red-50'
                     onClick={() => setShowCancelForm(true)}
                     disabled={isActing}
                   >
@@ -371,8 +371,8 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                     { label: 'Planned', value: summary.planned, color: 'text-amber-600' },
                     { label: 'Boarded', value: summary.boarded, color: 'text-emerald-600' },
                     { label: 'Dropped', value: summary.droppedOff, color: 'text-emerald-700' },
-                    { label: 'Absent', value: summary.absent, color: 'text-rose-600' },
-                    { label: 'No-show', value: summary.noShow, color: 'text-rose-500' },
+                    { label: 'Absent', value: summary.absent, color: 'text-red-600' },
+                    { label: 'No-show', value: summary.noShow, color: 'text-red-500' },
                     { label: 'Not served', value: summary.notServed, color: 'text-slate-400' },
                   ] as const
                 ).map((item) => (
@@ -443,7 +443,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                     className={[
                       'w-full rounded-xl border px-3 py-2.5 text-left transition',
                       isCurrent
-                        ? 'border-rose-200 bg-rose-50 shadow-sm'
+                        ? 'border-slate-300 bg-slate-50 shadow-sm'
                         : 'border-transparent hover:bg-slate-50',
                       isDone ? 'opacity-50' : '',
                     ].join(' ')}
@@ -453,7 +453,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                         className={[
                           'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
                           isCurrent
-                            ? 'bg-rose-600 text-white'
+                            ? 'bg-slate-900 text-white'
                             : isDone
                               ? 'bg-emerald-100 text-emerald-600'
                               : 'bg-slate-100 text-slate-500',
@@ -509,7 +509,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                               ? 'bg-slate-100 text-slate-500'
                               : currentStop.locationType === 'SCHOOL'
                                 ? 'bg-indigo-100 text-indigo-700'
-                                : 'bg-rose-100 text-rose-700',
+                                : 'bg-slate-100 text-slate-700',
                           ].join(' ')}
                         >
                           {(currentStop.stopOrder ?? 0) + 1}
@@ -719,7 +719,7 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
                                 <Button
                                   size='sm'
                                   variant='outline'
-                                  className='h-7 rounded-full border-rose-200 px-3 text-xs text-rose-700 hover:bg-rose-50'
+                                  className='h-7 rounded-full border-red-200 px-3 text-xs text-red-700 hover:bg-red-50'
                                   onClick={() => handleNoShow(student)}
                                   disabled={isActing}
                                 >

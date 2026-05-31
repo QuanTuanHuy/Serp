@@ -54,8 +54,8 @@ export function SchoolBusFilterSelect({
           className={cn(
             'inline-flex items-center gap-1.5 rounded-lg border bg-slate-50 text-slate-700 outline-none transition-all',
             'hover:border-slate-300 hover:bg-white',
-            'focus:border-rose-300 focus:ring-1 focus:ring-rose-200',
-            hasValue && 'border-rose-200 bg-rose-50/60 text-rose-700',
+            'focus:border-slate-900 focus:ring-1 focus:ring-slate-900/10',
+            hasValue && 'border-slate-300 bg-slate-100 text-slate-950 font-semibold',
             size === 'sm' && 'px-2.5 py-1.5 text-xs',
             size === 'md' && 'px-3 py-2 text-sm',
             className,
@@ -128,7 +128,7 @@ function FilterItem({
         size === 'sm' && 'py-1.5 text-xs',
         size === 'md' && 'py-2 text-sm',
         selected
-          ? 'bg-rose-50 font-medium text-rose-700'
+          ? 'bg-slate-100 font-semibold text-slate-900'
           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         disabled && 'pointer-events-none opacity-40',
       )}
@@ -140,7 +140,7 @@ function FilterItem({
       {count !== undefined && (
         <span className={cn(
           'ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none',
-          selected ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500',
+          selected ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-500',
         )}>
           {count}
         </span>

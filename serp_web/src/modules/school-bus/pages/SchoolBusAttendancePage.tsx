@@ -147,11 +147,11 @@ export function SchoolBusAttendancePage() {
                 {sortedTrips.map((trip) => (
                   <TableRow
                     key={trip.id}
-                    className='cursor-pointer transition-colors hover:bg-rose-50/60'
+                    className='cursor-pointer transition-colors hover:bg-slate-50'
                     onClick={() => router.push(`/school-bus/attendance/${trip.id}`)}
                   >
                     <TableCell>
-                      <span className='font-semibold text-rose-700'>
+                      <span className='font-semibold text-slate-900'>
                         {trip.tripCode}
                       </span>
                     </TableCell>
@@ -189,7 +189,7 @@ export function SchoolBusAttendancePage() {
                       <Button
                         variant='outline'
                         size='sm'
-                        className='h-8 rounded-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800'
+                        className='h-8 rounded-full border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/school-bus/attendance/${trip.id}`);

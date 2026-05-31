@@ -158,7 +158,7 @@ export function SchoolBusRouteDetailPage({
                     const el = document.getElementById(s.id);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
-                  className='text-[12px] text-slate-400 transition-colors duration-150 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500'
+                  className='text-[12px] text-slate-400 transition-colors duration-150 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950'
                 >
                   {s.label}
                 </button>
@@ -438,7 +438,7 @@ function ActionCard({
   return (
     <div className={schoolBusUi.interactiveCard}>
       <div className='flex items-start gap-3'>
-        <div className='rounded-full bg-rose-50 p-2 text-rose-600 ring-1 ring-rose-100'>
+        <div className='rounded-full bg-slate-100 p-2 text-slate-700 ring-1 ring-slate-200'>
           <Icon className='h-4 w-4' />
         </div>
         <div>

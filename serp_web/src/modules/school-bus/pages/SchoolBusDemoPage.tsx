@@ -68,7 +68,7 @@ const EVENT_COLORS: Record<string, string> = {
   DEMO_AUTO_DEPARTED_STOP: 'bg-indigo-100 text-indigo-700',
   DEMO_AUTO_ATTENDANCE: 'bg-purple-100 text-purple-700',
   DEMO_AUTOMATION_SKIPPED: 'bg-orange-100 text-orange-700',
-  DEMO_AUTOMATION_ERROR: 'bg-rose-100 text-rose-700',
+  DEMO_AUTOMATION_ERROR: 'bg-red-100 text-red-700',
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -459,7 +459,7 @@ export function SchoolBusDemoPage() {
                 </div>
                 <div className='mt-1 h-2 overflow-hidden rounded-full bg-slate-200'>
                   <div
-                    className='h-full rounded-full bg-rose-500 transition-all duration-300'
+                    className='h-full rounded-full bg-slate-900 transition-all duration-300'
                     style={{ width: `${Math.min(100, currentProgress)}%` }}
                   />
                 </div>
@@ -619,7 +619,7 @@ export function SchoolBusDemoPage() {
                         key={stop.id}
                         className={cn(
                           'flex items-center gap-2 rounded-lg px-2 py-1 text-xs',
-                          isCurrent && 'bg-rose-50 font-medium text-rose-700',
+                          isCurrent && 'bg-slate-100 font-medium text-slate-900',
                           isPassed && 'text-slate-400',
                           !isCurrent && !isPassed && 'text-slate-600'
                         )}
@@ -627,7 +627,7 @@ export function SchoolBusDemoPage() {
                         <Circle
                           className={cn(
                             'h-2.5 w-2.5 shrink-0',
-                            isCurrent && 'fill-rose-500 text-rose-500',
+                            isCurrent && 'fill-slate-900 text-slate-900',
                             isPassed && 'fill-slate-300 text-slate-300',
                             !isCurrent && !isPassed && 'text-slate-300'
                           )}

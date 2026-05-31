@@ -172,7 +172,7 @@ export function SchoolBusDispatchPage() {
                   key={route.id}
                   className={`${schoolBusUi.interactiveCard} p-5 ${
                     selectedRouteId === route.id
-                      ? 'border-rose-300 bg-rose-50/70 shadow-[0_18px_48px_rgba(225,29,72,0.14)]'
+                      ? 'border-slate-400 bg-slate-50/70 shadow-md'
                       : ''
                   }`}
                   onClick={() => setSelectedRouteId(route.id)}

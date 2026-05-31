@@ -109,7 +109,7 @@ function CreateRoutePanel({
     setForm(p => ({ ...p, routeName: '', startDepotId: '', endDepotId: '', planningNotes: '' }));
   };
 
-  const inputCls = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300';
+  const inputCls = 'mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900';
   const labelCls = 'text-xs font-medium text-slate-500';
 
   const DepotSelector = ({ field, value }: { field: 'startDepotId' | 'endDepotId'; value: number | '' }) => (
@@ -125,7 +125,7 @@ function CreateRoutePanel({
           <option key={d.id} value={d.id}>{d.name}{d.address ? ` (${d.address})` : ''}</option>
         ))}
       </select>
-      {value === '' && <p className='mt-1 text-[11px] text-rose-500'>Depot selection is required.</p>}
+      {value === '' && <p className='mt-1 text-[11px] text-red-500'>Depot selection is required.</p>}
     </div>
   );
 
@@ -183,7 +183,7 @@ function CreateRoutePanel({
                     value={t}
                     checked={form.startLocationType === t}
                     onChange={() => setForm(p => ({ ...p, startLocationType: t, startDepotId: '' }))}
-                    className='accent-rose-500'
+                    className='accent-slate-900'
                   />
                   {t === 'DEPOT' ? 'Depot' : 'School'}
                 </label>
@@ -194,7 +194,7 @@ function CreateRoutePanel({
               : <p className='text-xs text-slate-400'>Starts at school (ID: {session.schoolId})</p>
             }
           </div>
-
+ 
           {/* End Location */}
           <div className='rounded-xl border border-slate-200 bg-white p-3 space-y-2'>
             <p className='text-xs font-semibold text-slate-600'>🏫 End Location</p>
@@ -207,7 +207,7 @@ function CreateRoutePanel({
                     value={t}
                     checked={form.endLocationType === t}
                     onChange={() => setForm(p => ({ ...p, endLocationType: t, endDepotId: '' }))}
-                    className='accent-rose-500'
+                    className='accent-slate-900'
                   />
                   {t === 'DEPOT' ? 'Depot' : 'School'}
                 </label>
@@ -258,7 +258,7 @@ function SessionRouteCard({
       onClick={() => onSelect(route.id)}
       className={cn(
         'cursor-pointer rounded-2xl border p-4 transition',
-        isSelected ? 'border-rose-300 bg-rose-50/50 shadow-md' : schoolBusUi.interactiveCard
+        isSelected ? 'border-slate-300 bg-slate-50 shadow-sm' : schoolBusUi.interactiveCard
       )}
     >
       <div className='flex items-start justify-between'>
@@ -273,7 +273,7 @@ function SessionRouteCard({
         )}>{route.status}</span>
       </div>
       <p className='mt-1 text-[11px] text-slate-400'>{route.serviceDate}</p>
-      {isSelected && <p className='mt-2 text-[11px] font-semibold text-rose-500'>▶ Selected — detail below</p>}
+      {isSelected && <p className='mt-2 text-[11px] font-semibold text-slate-900'>▶ Selected — detail below</p>}
     </div>
   );
 }
@@ -281,7 +281,7 @@ function SessionRouteCard({
 /* ── Issue badge ────────────────────────────────────────────────── */
 
 const severityStyle: Record<string, string> = {
-  BLOCKING: 'border-rose-200 bg-rose-50 text-rose-700',
+  BLOCKING: 'border-red-200 bg-red-50 text-red-700',
   WARNING: 'border-amber-200 bg-amber-50 text-amber-700',
   INFO: 'border-sky-200 bg-sky-50 text-sky-700',
 };
@@ -300,11 +300,11 @@ function IssueBadge({ issue }: { issue: SchoolBusPlanningIssue }) {
 function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuality; onSelect: (id: number) => void; isSelected: boolean }) {
   const [showIssues, setShowIssues] = useState(false);
   const score = route.qualityScore ?? 0;
-  const scoreColor = score >= 80 ? 'text-emerald-600 border-emerald-300' : score >= 50 ? 'text-amber-600 border-amber-300' : 'text-rose-600 border-rose-300';
-
+  const scoreColor = score >= 80 ? 'text-emerald-600 border-emerald-300' : score >= 50 ? 'text-amber-600 border-amber-300' : 'text-red-600 border-red-300';
+ 
   return (
     <div onClick={() => onSelect(route.routeId)}
-      className={cn('cursor-pointer rounded-2xl border p-4 transition', isSelected ? 'border-rose-300 bg-rose-50/50 shadow-md' : schoolBusUi.interactiveCard)}>
+      className={cn('cursor-pointer rounded-2xl border p-4 transition', isSelected ? 'border-slate-300 bg-slate-50 shadow-sm' : schoolBusUi.interactiveCard)}>
       <div className='flex items-start justify-between'>
         <div>
           <p className='text-sm font-bold text-slate-900'>{route.routeName}</p>
@@ -321,19 +321,19 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
         ] as [string, string | number][]).map(([l, v]) => (
           <div key={l}><span className='text-slate-400'>{l}: </span><span className='font-semibold text-slate-700'>{v}</span></div>
         ))}
-        {route.blockingIssueCount > 0 && <span className='font-semibold text-rose-600'>🚫 {route.blockingIssueCount} blocking</span>}
+        {route.blockingIssueCount > 0 && <span className='font-semibold text-red-600'>🚫 {route.blockingIssueCount} blocking</span>}
         {route.warningIssueCount > 0 && <span className='font-semibold text-amber-600'>⚠️ {route.warningIssueCount} warnings</span>}
       </div>
       {route.issues.length > 0 && (
         <div className='mt-2'>
           <button onClick={e => { e.stopPropagation(); setShowIssues(v => !v); }}
-            className='text-[11px] font-medium text-slate-400 hover:text-rose-600'>
+            className='text-[11px] font-medium text-slate-400 hover:text-slate-900'>
             {showIssues ? '▲ Hide' : '▼ Show'} {route.issues.length} issue(s)
           </button>
           {showIssues && <div className='mt-2 flex flex-col gap-1'>{route.issues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>}
         </div>
       )}
-      {isSelected && <p className='mt-2 text-[11px] font-semibold text-rose-500'>▶ Selected — detail below</p>}
+      {isSelected && <p className='mt-2 text-[11px] font-semibold text-slate-900'>▶ Selected — detail below</p>}
     </div>
   );
 }
@@ -430,7 +430,7 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
               <div key={stop.id} className={cn('flex items-center gap-2 rounded-xl border px-3 py-2', isTerminal ? 'border-blue-200 bg-blue-50/60' : 'border-slate-100 bg-slate-50/60')}>
                 {isTerminal
                   ? <span className='flex h-6 items-center justify-center rounded-full bg-blue-100 px-2 text-[10px] font-bold text-blue-600'>{terminalLabel}</span>
-                  : <span className='flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-[10px] font-bold text-rose-600'>{stop.stopOrder + 1}</span>
+                  : <span className='flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-700'>{stop.stopOrder + 1}</span>
                 }
                 <span className='flex-1 text-sm text-slate-700'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
                 {!isTerminal && <span className='text-[11px] text-slate-400'>{stop.estimatedStudentCount ?? 0} students</span>}
@@ -438,7 +438,7 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
                   <div className='flex gap-0.5'>
                     <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex - 1)} disabled={isFirstMiddle}><ChevronUp className='h-3 w-3' /></Button>
                     <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex + 1)} disabled={isLastMiddle}><ChevronDown className='h-3 w-3' /></Button>
-                    <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
+                    <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
                   </div>
                 )}
               </div>
@@ -454,7 +454,7 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
               <span className='flex-1 text-sm text-slate-700'>{ps.studentName || `Student #${ps.studentId}`}</span>
               <span className='text-[11px] text-slate-400'>{ps.serviceAction} · {ps.stopName ?? '—'}</span>
               {editable && (
-                <Button variant='ghost' size='icon' className='h-6 w-6 text-rose-500 hover:text-rose-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
+                <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
               )}
             </div>
           ))}
@@ -609,7 +609,7 @@ export function PlanningResultsPanel({
             <SchoolBusSection title={`Unassigned Students (${greedyResult.totalUnassignedStudents})`}>
               <div className='space-y-1'>
                 {greedyResult.unassignedStudents.map(s => (
-                  <div key={s.studentId} className='flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/40 px-3 py-2'>
+                  <div key={s.studentId} className='flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2'>
                     <span className='text-sm font-medium text-slate-700'>{s.studentName}</span>
                     <span className='text-[11px] text-slate-400'>{s.specialNote ?? 'No relevant point'}</span>
                   </div>

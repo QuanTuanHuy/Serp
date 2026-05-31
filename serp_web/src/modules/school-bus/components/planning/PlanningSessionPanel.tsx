@@ -67,19 +67,19 @@ export function PlanningSessionPanel({
                 Generate Routes
               </Button>
             )}
-            <Button onClick={onPublish} disabled={!canPublish || publishing} className={cn('rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700')}>
+            <Button onClick={onPublish} disabled={!canPublish || publishing} className={cn('rounded-lg bg-emerald-600 text-white shadow-sm hover:bg-emerald-700')}>
               {publishing ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Rocket className='mr-1.5 h-3.5 w-3.5' />}
               Publish
             </Button>
             <Button onClick={onCancel} disabled={cancelling || activeSession.status === 'CANCELLED'} variant='outline'
-              className='rounded-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700'>
+              className='rounded-lg border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700'>
               {cancelling ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <X className='mr-1.5 h-3.5 w-3.5' />}
               Cancel
             </Button>
           </div>
 
           {blockingTotal > 0 && (
-            <p className='mt-3 text-xs font-medium text-rose-600'>
+            <p className='mt-3 text-xs font-medium text-red-600'>
               🚫 {blockingTotal} blocking issue(s) must be resolved before publishing
             </p>
           )}
@@ -94,7 +94,7 @@ export function PlanningSessionPanel({
                 className={cn(
                   'w-full rounded-xl border px-3 py-2.5 text-left transition',
                   activeSession?.id === s.id
-                    ? 'border-rose-200 bg-rose-50/60'
+                    ? 'border-slate-300 bg-slate-50'
                     : 'border-transparent hover:border-slate-200 hover:bg-slate-50',
                 )}>
                 <div className='flex items-center justify-between'>

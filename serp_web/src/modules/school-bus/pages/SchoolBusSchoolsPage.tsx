@@ -140,11 +140,11 @@ function NetworkDetailPanel({
       <div className='flex h-full flex-col gap-3 p-4'>
         {/* Header */}
         <div className='flex items-start gap-2.5'>
-          <div className='mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-50 ring-1 ring-rose-200'>
-            <Building2 className='h-4 w-4 text-rose-600' />
+          <div className='mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200'>
+            <Building2 className='h-4 w-4 text-slate-600' />
           </div>
           <div className='min-w-0 flex-1'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>School</p>
+            <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>School</p>
             <p className='mt-0.5 text-sm font-semibold leading-tight text-slate-900'>
               {selectedSchool.name}
             </p>
@@ -508,27 +508,27 @@ export function SchoolBusSchoolsPage() {
         >
           {/* Stats row */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-            <SchoolBusMetricCard label='Schools' value={allSchools.length} icon={Building2} tone='info' />
-            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPinned} tone='success' />
-            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='default' />
+            <SchoolBusMetricCard label='Schools' value={allSchools.length} icon={Building2} tone='info' variant='compact' />
+            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPinned} tone='success' variant='compact' />
+            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='default' variant='compact' />
             <SchoolBusMetricCard
               label='Missing coords'
               value={missingCoordsCount}
               icon={AlertTriangle}
               tone={missingCoordsCount > 0 ? 'warning' : 'success'}
-              hint={missingCoordsCount > 0 ? 'Items not visible on map' : 'All items have coordinates'}
+              variant='compact'
             />
           </div>
 
           {/* 3-column workspace */}
           <div
             className='flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
-            style={{ height: 'calc(100vh - 260px)', minHeight: '520px' }}
+            style={{ height: 'calc(100vh - 225px)', minHeight: '520px' }}
           >
             {/* ── Left panel: list ──────────────────────────────── */}
             <div className='flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
-              <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-3 py-2.5'>
-                <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>Network</p>
+              <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5'>
+                <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>Network</p>
               </div>
               {/* Search */}
               <div className='shrink-0 border-b border-slate-100 px-3 py-2'>
@@ -539,7 +539,7 @@ export function SchoolBusSchoolsPage() {
                     placeholder='Filter schools/pickups...'
                     value={networkFilter}
                     onChange={(e) => setNetworkFilter(e.target.value)}
-                    className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+                    className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
                   />
                 </div>
               </div>
@@ -555,8 +555,8 @@ export function SchoolBusSchoolsPage() {
                       key={s.id}
                       type='button'
                       className={cn(
-                        'w-full px-3 py-2 text-left transition-colors hover:bg-rose-50/50',
-                        selectedSchoolId === s.id && !selectedPickupPointId && 'bg-rose-50 border-l-2 border-rose-500'
+                        'w-full px-3 py-2 text-left transition-colors hover:bg-slate-50',
+                        selectedSchoolId === s.id && !selectedPickupPointId && 'bg-slate-50 border-l-2 border-slate-900'
                       )}
                       onClick={() => { setSelectedSchoolId(s.id); setSelectedPickupPointId(null); setFitSelectedKey((k) => k + 1); }}
                     >
@@ -754,7 +754,7 @@ export function SchoolBusSchoolsPage() {
                   </TableCell>
                   <TableCell><span className='text-sm text-slate-600'>{pp.zoneCode || '-'}</span></TableCell>
                   <TableCell>{pp.address}</TableCell>
-                  <TableCell><span className='text-xs font-mono text-rose-700'>{pp.usageType || 'N/A'}</span></TableCell>
+                  <TableCell><span className='text-xs font-mono text-slate-700'>{pp.usageType || 'N/A'}</span></TableCell>
                   <TableCell className='text-right'>
                     <div className='flex justify-end gap-2'>
                       <Button size='icon' variant='outline' onClick={() => { setEditingPickup(pp); setPickupDialogOpen(true); }}><Pencil className='h-4 w-4' /></Button>
@@ -811,7 +811,7 @@ export function SchoolBusSchoolsPage() {
               {schedules.map((schedule) => (
                 <TableRow key={schedule.id}>
                   <TableCell className='font-medium'>{schedule.scheduleName}</TableCell>
-                  <TableCell><span className='text-xs font-mono text-rose-700'>{schedule.scheduleCode || '-'}</span></TableCell>
+                  <TableCell><span className='text-xs font-mono text-slate-700'>{schedule.scheduleCode || '-'}</span></TableCell>
                   <TableCell>{schedule.shiftType}</TableCell>
                   <TableCell>{schedule.daysOfWeek?.length ? schedule.daysOfWeek.join(', ') : 'Mon–Fri'}</TableCell>
                   <TableCell>{schedule.arrivalDeadline || '-'}</TableCell>
@@ -874,7 +874,7 @@ export function SchoolBusSchoolsPage() {
                   <div className='border-t border-slate-100 bg-slate-50/50 px-4 py-3'>
                     <div className='flex items-center justify-between mb-3'>
                       <div className='flex items-center gap-2 text-sm font-medium text-slate-700'>
-                        <Clock className='h-4 w-4 text-rose-500' /> Time windows
+                        <Clock className='h-4 w-4 text-slate-500' /> Time windows
                       </div>
                       <Button size='sm' variant='outline' className='h-7 rounded-full text-xs' onClick={() => { setEditingWindow(null); setWindowDialogOpen(true); }}>
                         <Plus className='h-3 w-3' /> Add window
@@ -906,7 +906,7 @@ export function SchoolBusSchoolsPage() {
                               <TableCell className='text-right'>
                                 <div className='flex items-center justify-end gap-1'>
                                   <Button size='icon' variant='ghost' className='h-7 w-7' onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}><Pencil className='h-3 w-3' /></Button>
-                                  <Button size='icon' variant='ghost' className='h-7 w-7 text-rose-600 hover:text-rose-700' onClick={() => handleDeleteWindow(w.id)}><Trash2 className='h-3 w-3' /></Button>
+                                  <Button size='icon' variant='ghost' className='h-7 w-7 text-red-600 hover:text-red-700' onClick={() => handleDeleteWindow(w.id)}><Trash2 className='h-3 w-3' /></Button>
                                 </div>
                               </TableCell>
                             </TableRow>
