@@ -2,11 +2,11 @@
 
 import type { ReactNode } from 'react';
 import L from 'leaflet';
-// @ts-ignore
+// @ts-expect-error: Leaflet assets do not have TS types in clean build
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-// @ts-ignore
+// @ts-expect-error: Leaflet assets do not have TS types in clean build
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
-// @ts-ignore
+// @ts-expect-error: Leaflet assets do not have TS types in clean build
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { MapContainer, TileLayer } from 'react-leaflet';
 
