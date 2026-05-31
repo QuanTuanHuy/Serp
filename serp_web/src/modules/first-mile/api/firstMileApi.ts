@@ -862,7 +862,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
 
-    getVehicles: builder.query<
+    getFirstMileVehicles: builder.query<
       FirstMilePaginatedData<Vehicle>,
       { page?: number; size?: number; keyword?: string }
     >({
@@ -888,7 +888,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<Vehicle>,
     }),
 
-    createVehicle: builder.mutation<Vehicle, CreateVehicleRequest>({
+    createFirstMileVehicle: builder.mutation<Vehicle, CreateVehicleRequest>({
       query: (body) => ({
         url: '/vehicles',
         method: 'POST',
@@ -898,7 +898,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<Vehicle>,
     }),
 
-    updateVehicle: builder.mutation<
+    updateFirstMileVehicle: builder.mutation<
       Vehicle,
       { id: number; body: UpdateVehicleRequest }
     >({
@@ -1079,7 +1079,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<GeocodeAddressResponse>,
     }),
 
-    getOrders: builder.query<
+    getFirstMileOrders: builder.query<
       FirstMilePaginatedData<FirstMileOrderDetail>,
       { page?: number; size?: number } & FirstMileOrderListFilters
     >({
@@ -1148,7 +1148,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderTimelineItem[]>,
     }),
 
-    createOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
+    createFirstMileOrder: builder.mutation<FirstMileOrderDetail, CreateOrderRequest>({
       query: (body) => ({
         url: '/orders',
         method: 'POST',
@@ -1158,7 +1158,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
-    updateOrder: builder.mutation<
+    updateFirstMileOrder: builder.mutation<
       FirstMileOrderDetail,
       { id: number; body: UpdateOrderRequest }
     >({
@@ -1171,7 +1171,7 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
-    cancelOrder: builder.mutation<
+    cancelFirstMileOrder: builder.mutation<
       FirstMileOrderDetail,
       { id: number; body: CancelOrderRequest }
     >({
@@ -1554,10 +1554,10 @@ export const {
   useLazyExportPostOfficeTemplateQuery,
   useValidatePostOfficeImportMutation,
   useImportPostOfficesMutation,
-  useGetVehiclesQuery,
+  useGetFirstMileVehiclesQuery,
   useGetVehicleByIdQuery,
-  useCreateVehicleMutation,
-  useUpdateVehicleMutation,
+  useCreateFirstMileVehicleMutation,
+  useUpdateFirstMileVehicleMutation,
   useDeleteVehicleMutation,
   useLazyExportVehicleTemplateQuery,
   useValidateVehicleImportMutation,
@@ -1573,13 +1573,13 @@ export const {
   useGetWardsByProvinceCodeQuery,
   useLazyGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
-  useGetOrdersQuery,
+  useGetFirstMileOrdersQuery,
   useGetOrderByIdQuery,
   useLazyGetOrderByIdQuery,
   useLazyGetOrderTimelineQuery,
-  useCreateOrderMutation,
-  useUpdateOrderMutation,
-  useCancelOrderMutation,
+  useCreateFirstMileOrderMutation,
+  useUpdateFirstMileOrderMutation,
+  useCancelFirstMileOrderMutation,
   useConfirmOrderMutation,
   useInitiateOrderPaymentMutation,
   useConfirmOrderPaymentMutation,
@@ -1606,3 +1606,12 @@ export const {
   useValidateOrderImportMutation,
   useImportOrdersMutation,
 } = firstMileApi;
+
+// TMS-local aliases — keep page imports stable without occupying shared WMS endpoint slots.
+export const useGetOrdersQuery = useGetFirstMileOrdersQuery;
+export const useCreateOrderMutation = useCreateFirstMileOrderMutation;
+export const useUpdateOrderMutation = useUpdateFirstMileOrderMutation;
+export const useCancelOrderMutation = useCancelFirstMileOrderMutation;
+export const useGetVehiclesQuery = useGetFirstMileVehiclesQuery;
+export const useCreateVehicleMutation = useCreateFirstMileVehicleMutation;
+export const useUpdateVehicleMutation = useUpdateFirstMileVehicleMutation;
