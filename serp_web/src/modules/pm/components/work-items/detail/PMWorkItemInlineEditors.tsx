@@ -8,6 +8,11 @@ import { CalendarDays, Clock3, Pencil, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, Textarea } from '@/shared/components/ui';
 import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
+import { PMDatePicker } from '../../shared';
+import {
+  fromLocalDateInputValue,
+  toLocalDateInputValue,
+} from '../../../utils/date';
 import { formatDetailDate, toDateInputValue } from './pmWorkItemDetail.utils';
 
 export function InlineSummaryEditor({
@@ -212,16 +217,18 @@ export function InlineDateField({
   }
 
   const save = async () => {
-    await onSave(draft ? new Date(`${draft}T00:00:00`).getTime() : null);
+    await onSave(fromLocalDateInputValue(draft) ?? null);
     setEditing(false);
   };
 
   return (
     <div className='space-y-2'>
-      <Input
-        type='date'
+      <PMDatePicker
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(date) => setDraft(date ? toLocalDateInputValue(date) : '')}
+        showClear={false}
+        className='w-full'
+        buttonClassName='h-8 flex-1'
       />
       <InlineEditorActions
         disabled={disabled}

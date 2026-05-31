@@ -38,6 +38,7 @@ import {
   useGetPmOptimizationRunQuery,
   useUpdatePmOptimizationRunItemDecisionMutation,
 } from '../api';
+import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
 import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
@@ -62,21 +63,6 @@ function formatDate(value?: number | null) {
 function formatValue(value?: string | number | null) {
   if (value === undefined || value === null || value === '') return '-';
   return String(value);
-}
-
-function dateInputToEpoch(value: string, endOfDay = false) {
-  if (!value) return undefined;
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-  return date.getTime();
-}
-
-function toDateInputValue(value?: number | null) {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
 }
 
 function metricValue(value?: number | null) {
@@ -195,8 +181,8 @@ export function PMProjectOptimizationRunPage({
     setOverrideAssignmentDecision(item.assignmentDecision || 'OVERRIDDEN');
     setOverrideScheduleDecision(item.scheduleDecision || 'OVERRIDDEN');
     setOverrideAssigneeId(item.overrideAssigneeId?.toString() || '');
-    setOverridePlannedStart(toDateInputValue(item.overridePlannedStart));
-    setOverridePlannedEnd(toDateInputValue(item.overridePlannedEnd));
+    setOverridePlannedStart(toLocalDateInputValue(item.overridePlannedStart));
+    setOverridePlannedEnd(toLocalDateInputValue(item.overridePlannedEnd));
   };
 
   const saveOverride = async () => {
@@ -208,8 +194,8 @@ export function PMProjectOptimizationRunPage({
       overrideAssigneeId: overrideAssigneeId
         ? Number(overrideAssigneeId)
         : undefined,
-      overridePlannedStart: dateInputToEpoch(overridePlannedStart),
-      overridePlannedEnd: dateInputToEpoch(overridePlannedEnd, true),
+      overridePlannedStart: fromLocalDateInputValue(overridePlannedStart),
+      overridePlannedEnd: fromLocalDateInputValue(overridePlannedEnd, true),
     });
     setReviewItem(null);
   };

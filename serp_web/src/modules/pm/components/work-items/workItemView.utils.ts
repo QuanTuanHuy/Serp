@@ -3,6 +3,8 @@
  * Description: Part of Serp Project - shared PM work item view helpers
  */
 
+import { parseLocalDateValue } from '../../utils/date';
+
 export function parseIssueId(value: string | null): number | undefined {
   if (!value) return undefined;
   const issueId = Number(value);
@@ -30,9 +32,8 @@ export function formatDate(
     year: 'numeric',
   }
 ): string {
-  if (!value) return fallback;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return fallback;
+  const date = parseLocalDateValue(value);
+  if (!date) return fallback;
   return date.toLocaleDateString('en-US', options);
 }
 

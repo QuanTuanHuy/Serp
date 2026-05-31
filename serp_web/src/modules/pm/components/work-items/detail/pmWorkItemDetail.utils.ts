@@ -9,6 +9,10 @@ import type {
   PMWorkItemDetailFallback,
   WorkItemDetailModel,
 } from './pmWorkItemDetail.types';
+import {
+  formatLocalDateLabel,
+  toLocalDateInputValue,
+} from '../../../utils/date';
 
 export function toDetailModel(
   workItemId: number | undefined,
@@ -88,14 +92,7 @@ export function getActivityType(tab: ActivityTab): 'COMMENT' | 'HISTORY' {
 }
 
 export function formatDetailDate(value?: number | string | null): string {
-  if (!value) return 'None';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'None';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatLocalDateLabel(value);
 }
 
 export function formatRelativeTime(value?: number | string | null): string {
@@ -128,8 +125,5 @@ export function getInitials(name?: string | null): string {
 }
 
 export function toDateInputValue(value?: number | string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
+  return toLocalDateInputValue(value);
 }

@@ -11,10 +11,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Input,
   Separator,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { toLocalDateInputValue } from '../../utils/date';
+import { PMDatePicker } from '../shared';
 import {
   PM_OPTIMIZATION_ALGORITHM_OPTIONS,
   PM_OPTIMIZATION_CHANGE_SCOPE_OPTIONS,
@@ -152,18 +153,24 @@ export function PMOptimizationRunIntentPanel({
         <div className='grid gap-3'>
           <label className='space-y-1'>
             <span className='text-sm font-medium'>Planning start</span>
-            <Input
-              type='date'
+            <PMDatePicker
               value={planningStart}
-              onChange={(event) => onPlanningStartChange(event.target.value)}
+              onChange={(date) =>
+                onPlanningStartChange(date ? toLocalDateInputValue(date) : '')
+              }
+              className='w-full'
+              buttonClassName='flex-1'
             />
           </label>
           <label className='space-y-1'>
             <span className='text-sm font-medium'>Planning end</span>
-            <Input
-              type='date'
+            <PMDatePicker
               value={planningEnd}
-              onChange={(event) => onPlanningEndChange(event.target.value)}
+              onChange={(date) =>
+                onPlanningEndChange(date ? toLocalDateInputValue(date) : '')
+              }
+              className='w-full'
+              buttonClassName='flex-1'
             />
           </label>
         </div>

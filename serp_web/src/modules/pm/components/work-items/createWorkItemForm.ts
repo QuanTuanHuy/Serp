@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { toLocalDateEpoch } from '../../utils/date';
 import type {
   PMCreateWorkItemRequest,
   PMProjectSummaryApi,
@@ -94,7 +95,7 @@ export function buildCreateWorkItemRequest(
     priorityId: values.priorityId ? Number(values.priorityId) : undefined,
     assigneeId: values.assigneeId ? Number(values.assigneeId) : undefined,
     parentId: values.parentId ? Number(values.parentId) : undefined,
-    dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
+    dueDate: toLocalDateEpoch(values.dueDate),
     timeOriginalEstimate: values.timeOriginalEstimate
       ? Number(values.timeOriginalEstimate)
       : undefined,
