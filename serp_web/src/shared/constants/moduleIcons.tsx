@@ -17,6 +17,7 @@ import {
   Settings,
   Headphones,
   MapPin,
+  Bus,
   Shield,
   LucideIcon,
   MessageSquare,
@@ -31,6 +32,7 @@ export type ModuleCode =
   | 'LOGISTICS2'
   | 'TMS'
   | 'FIRST_MILE'
+  | 'SCHOOLBUS'
   | 'MARKETING'
   | 'PM'
   | 'PTM'
@@ -145,6 +147,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-950',
   },
+  SCHOOLBUS: {
+    icon: Bus,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50 dark:bg-rose-950',
+  },
 
   // Finance
   ACCOUNTING: {
@@ -228,7 +235,20 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (canonicalCode === 'TTCRS') {
     return '/ttcrs/dispatcher/locations';
   }
+  if (canonicalCode === 'SCHOOLBUS') {
+    return '/school-bus';
+  }
 
   const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();
   return `/${normalizedCode.replace(/_/g, '-')}`;
+};
+
+export const getModuleRootRoute = (moduleCode: string): string => {
+  const canonicalCode = toCanonicalModuleCode(moduleCode);
+  if (canonicalCode === 'ADMIN') return '/admin';
+  if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'PTM') return '/ptm';
+  if (canonicalCode === 'CRM') return '/crm';
+  if (canonicalCode === 'SCHOOLBUS') return '/school-bus';
+  return `/${moduleCode.toLowerCase()}`;
 };

@@ -39,6 +39,7 @@ func NewWebSocketProxyController(
 	services := map[string]properties.ServiceProperty{
 		"discuss":      svcProps.DiscussService,
 		"notification": svcProps.NotificationService,
+		"school-bus":   svcProps.SchoolBusService,
 	}
 
 	routes := make(map[string]*wsRoute, len(services))
