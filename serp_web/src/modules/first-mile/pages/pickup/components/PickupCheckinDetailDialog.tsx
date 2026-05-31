@@ -153,6 +153,7 @@ export const PickupCheckinDetailDialog: React.FC<
                   rel='noreferrer'
                   className='block overflow-hidden rounded-md border'
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={detail.photoUrl}
                     alt={`Pickup check-in for ${titleCode}`}
