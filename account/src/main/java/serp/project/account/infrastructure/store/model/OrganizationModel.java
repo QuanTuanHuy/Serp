@@ -36,6 +36,21 @@ public class OrganizationModel extends BaseModel {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "city")
+    private String city;
+
+    @Column(name = "state")
+    private String state;
+
+    @Column(name = "country")
+    private String country;
+
+    @Column(name = "zip_code")
+    private String zipCode;
+
+    @Column(name = "tax_id")
+    private String taxId;
+
     @Column(name = "owner_id")
     private Long ownerId;
 
@@ -80,6 +95,21 @@ public class OrganizationModel extends BaseModel {
 
     @Column(name = "primary_color")
     private String primaryColor;
+
+    @Column(name = "secondary_color")
+    private String secondaryColor;
+
+    @Column(name = "favicon_url")
+    private String faviconUrl;
+
+    @Column(name = "date_format")
+    private String dateFormat;
+
+    @Column(name = "time_format")
+    private String timeFormat;
+
+    @Column(name = "week_starts_on")
+    private String weekStartsOn;
 
     @Column(name = "website")
     private String website;

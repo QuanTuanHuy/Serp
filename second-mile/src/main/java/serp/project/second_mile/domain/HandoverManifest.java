@@ -44,6 +44,12 @@ public class HandoverManifest extends AbstractAudit {
     @Column(name = "target_hub_id", nullable = false)
     private Long targetHubId;
 
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
+
+    @Column(name = "route_id")
+    private Long routeId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
     private HandoverManifestStatus status;

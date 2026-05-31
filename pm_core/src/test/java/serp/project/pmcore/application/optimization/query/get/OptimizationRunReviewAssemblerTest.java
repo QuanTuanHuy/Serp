@@ -10,8 +10,10 @@ import org.junit.jupiter.api.Test;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
 import serp.project.pmcore.domain.optimization.enums.OptimizationConfidence;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunSummary;
@@ -58,6 +60,12 @@ class OptimizationRunReviewAssemblerTest {
 
         assertEquals(1, view.getSummary().getItemsWithSkillRequirements());
         assertEquals(OptimizationConfidence.HIGH.name(), view.getSummary().getSkillRankingConfidence());
+        assertEquals("greedy-balanced", view.getAlgorithmKey());
+        assertEquals(OptimizationObjective.BALANCED_WORKLOAD.name(), view.getObjective());
+        assertEquals(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name(), view.getChangeScope());
+        assertEquals("v1", view.getAlgorithmVersion());
+        assertEquals("FEASIBLE", view.getSolverStatus());
+        assertEquals(0, BigDecimal.valueOf(5.250000).compareTo(view.getObjectiveScore()));
         OptimizationRunItemView first = view.getItems().get(0);
         assertNotNull(first.getCandidateSkillFit());
         assertEquals(200L, first.getCandidateSkillFit().getSuggestedAssigneeId());
@@ -66,20 +74,39 @@ class OptimizationRunReviewAssemblerTest {
         assertNull(view.getItems().get(1).getCandidateSkillFit());
     }
 
+    @Test
+    void toViewShouldExposeScheduleAllocationChunks() {
+        OptimizationRunItemEntity item = item(10L, 200L);
+        item.setAllocationChunksJson("""
+                [{"assigneeId":200,"start":1000,"end":2000,"effortMillis":1000},
+                 {"assigneeId":200,"start":3000,"end":4000,"effortMillis":1000}]
+                """);
+
+        OptimizationRunReviewView view = assembler.toView(run(OptimizationRunSummary.builder().build()), List.of(item), List.of());
+
+        assertEquals(2, view.getItems().get(0).getAllocationChunks().size());
+        assertEquals(200L, view.getItems().get(0).getAllocationChunks().get(0).getAssigneeId());
+        assertEquals(1000L, view.getItems().get(0).getAllocationChunks().get(0).getStart());
+        assertEquals(4000L, view.getItems().get(0).getAllocationChunks().get(1).getEnd());
+    }
+
     private OptimizationRunEntity run(OptimizationRunSummary summary) {
         return OptimizationRunEntity.builder()
                 .id(1L)
                 .tenantId(1L)
                 .projectId(100L)
                 .scope("SELECTED_WORK_ITEMS")
-                .mode("BALANCED_WORKLOAD")
+                .objective(OptimizationObjective.BALANCED_WORKLOAD.name())
+                .changeScope(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name())
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(1L)
                 .planningEnd(2L)
-                .allowReassignment(true)
-                .allowScheduleChanges(true)
                 .selectedWorkItemCount(2)
                 .summaryJson(jsonUtils.toJson(summary))
+                .algorithmKey("greedy-balanced")
+                .algorithmVersion("v1")
+                .solverStatus("FEASIBLE")
+                .objectiveScore(BigDecimal.valueOf(5.250000))
                 .build();
     }
 

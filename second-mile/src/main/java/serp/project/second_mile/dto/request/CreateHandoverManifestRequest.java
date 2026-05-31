@@ -27,6 +27,13 @@ public class CreateHandoverManifestRequest {
     @NotNull
     private Long targetHubId;
 
+    @JsonProperty("vehicle_id")
+    @NotNull
+    private Long vehicleId;
+
+    @JsonProperty("route_id")
+    private Long routeId;
+
     @JsonProperty("order_codes")
     @NotEmpty
     private List<@NotBlank String> orderCodes;

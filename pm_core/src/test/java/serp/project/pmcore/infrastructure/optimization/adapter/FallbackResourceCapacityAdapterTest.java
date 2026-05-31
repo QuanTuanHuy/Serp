@@ -16,7 +16,9 @@ import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemPlanMapper;
 import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
+import serp.project.pmcore.infrastructure.store.model.WorkItemPlanAllocationModel;
 import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
+import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanAllocationRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanRepository;
 import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 
@@ -35,12 +37,15 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FallbackResourceCapacityAdapterTest {
-    private static final long START = 1_714_953_600_000L;
+    private static final long START = 1_714_960_800_000L;
     private static final long FOUR_HOURS = 14_400_000L;
     private static final long EIGHT_HOURS = 28_800_000L;
 
     @Mock
     private IWorkItemPlanRepository workItemPlanRepository;
+
+    @Mock
+    private IWorkItemPlanAllocationRepository workItemPlanAllocationRepository;
 
     @Mock
     private IWorkItemRepository workItemRepository;
@@ -74,20 +79,65 @@ class FallbackResourceCapacityAdapterTest {
         FallbackResourceCapacityAdapter adapter = adapter();
         when(workItemPlanRepository.findActiveWorkloadPlans(eq(1L), eq(List.of(100L)), any(LocalDateTime.class), any(LocalDateTime.class), eq(List.of(99L))))
                 .thenReturn(List.of());
+        when(workItemRepository.findActiveUnplannedWorkloadItems(eq(1L), eq(List.of(100L)), eq(List.of(99L)), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of());
 
         adapter.resolveCapacity(1L, 100L, List.of(100L), START, START + EIGHT_HOURS, List.of(99L));
 
         verify(workItemPlanRepository).findActiveWorkloadPlans(eq(1L), eq(List.of(100L)), any(LocalDateTime.class), any(LocalDateTime.class), eq(List.of(99L)));
+        verify(workItemRepository).findActiveUnplannedWorkloadItems(eq(1L), eq(List.of(100L)), eq(List.of(99L)), any(LocalDateTime.class), any(LocalDateTime.class));
+    }
+
+    @Test
+    void resolveCapacityShouldDeductUnplannedAssignedWorkItemEstimates() {
+        FallbackResourceCapacityAdapter adapter = adapter();
+        WorkItemModel activeUnplannedItem = workItem(40L, 200L, 100L);
+        activeUnplannedItem.setTimeRemainingEstimate(120L);
+        when(workItemPlanRepository.findActiveWorkloadPlans(eq(1L), eq(List.of(100L)), any(LocalDateTime.class), any(LocalDateTime.class), anyList()))
+                .thenReturn(List.of());
+        when(workItemRepository.findActiveUnplannedWorkloadItems(eq(1L), eq(List.of(100L)), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of(activeUnplannedItem));
+
+        CapacityResolutionResult result = adapter.resolveCapacity(1L, 100L, List.of(100L), START, START + EIGHT_HOURS, List.of());
+
+        assertEquals(6 * 3_600_000L, result.slots().get(0).capacityMillis());
+        assertEquals(2 * 3_600_000L, result.deductedWorkloadMillis());
+        assertEquals(1, result.workloadBuckets().size());
+        assertEquals(2 * 3_600_000L, result.workloadBuckets().get(0).crossProjectReservedMillis());
+    }
+
+    @Test
+    void resolveCapacityShouldDeductAllocationChunksBeforePlanSummaryRange() {
+        FallbackResourceCapacityAdapter adapter = adapter();
+        WorkItemPlanModel multiDayPlan = plan(20L, START, START + 5 * EIGHT_HOURS);
+        multiDayPlan.setId(900L);
+        when(workItemPlanRepository.findActiveWorkloadPlans(eq(1L), eq(List.of(100L)), any(LocalDateTime.class), any(LocalDateTime.class), anyList()))
+                .thenReturn(List.of(multiDayPlan));
+        when(workItemPlanAllocationRepository.findAllByTenantIdAndWorkItemPlanIdIn(eq(1L), eq(List.of(900L))))
+                .thenReturn(List.of(allocation(900L, 20L, START, START + FOUR_HOURS, FOUR_HOURS)));
+        when(workItemRepository.findActiveUnplannedWorkloadItems(eq(1L), eq(List.of(100L)), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of());
+        when(workItemRepository.findAllByTenantIdAndIdIn(eq(1L), anyList()))
+                .thenReturn(List.of(workItem(20L, 200L, 100L)));
+
+        CapacityResolutionResult result = adapter.resolveCapacity(1L, 100L, List.of(100L), START, START + EIGHT_HOURS, List.of());
+
+        assertEquals(FOUR_HOURS, result.slots().get(0).capacityMillis());
+        assertEquals(FOUR_HOURS, result.deductedWorkloadMillis());
+        assertEquals(FOUR_HOURS, result.workloadBuckets().getFirst().crossProjectReservedMillis());
     }
 
     @Test
     void resolveCapacityShouldWarnWhenReservationsExceedAvailability() {
         FallbackResourceCapacityAdapter adapter = adapter();
-        WorkItemPlanModel crossProjectPlan = plan(20L, START, START + 2 * EIGHT_HOURS);
+        WorkItemPlanModel firstCrossProjectPlan = plan(20L, START, START + EIGHT_HOURS);
+        WorkItemPlanModel secondCrossProjectPlan = plan(30L, START, START + EIGHT_HOURS);
         when(workItemPlanRepository.findActiveWorkloadPlans(eq(1L), eq(List.of(100L)), any(LocalDateTime.class), any(LocalDateTime.class), anyList()))
-                .thenReturn(List.of(crossProjectPlan));
+                .thenReturn(List.of(firstCrossProjectPlan, secondCrossProjectPlan));
+        when(workItemRepository.findActiveUnplannedWorkloadItems(eq(1L), eq(List.of(100L)), anyList(), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(List.of());
         when(workItemRepository.findAllByTenantIdAndIdIn(eq(1L), anyList()))
-                .thenReturn(List.of(workItem(20L, 200L, 100L)));
+                .thenReturn(List.of(workItem(20L, 200L, 100L), workItem(30L, 300L, 100L)));
 
         CapacityResolutionResult result = adapter.resolveCapacity(1L, 100L, List.of(100L), START, START + EIGHT_HOURS, List.of());
 
@@ -97,7 +147,7 @@ class FallbackResourceCapacityAdapterTest {
 
     private FallbackResourceCapacityAdapter adapter() {
         return new FallbackResourceCapacityAdapter(workItemPlanRepository, workItemRepository, workItemPlanMapper,
-                new FallbackResourceCalendarAdapter());
+                new FallbackResourceCalendarAdapter(), workItemPlanAllocationRepository);
     }
 
     private WorkItemPlanModel plan(Long workItemId, Long start, Long end) {
@@ -125,6 +175,22 @@ class FallbackResourceCapacityAdapterTest {
                 .priorityId(1L)
                 .reporterId(1L)
                 .assigneeId(assigneeId)
+                .build();
+    }
+
+    private WorkItemPlanAllocationModel allocation(Long planId, Long workItemId, Long start, Long end, Long effortMillis) {
+        return WorkItemPlanAllocationModel.builder()
+                .tenantId(1L)
+                .projectId(200L)
+                .workItemPlanId(planId)
+                .workItemId(workItemId)
+                .assigneeId(100L)
+                .startTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(start), ZoneId.systemDefault()))
+                .endTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(end), ZoneId.systemDefault()))
+                .effortMillis(effortMillis)
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(1L)
+                .sourceRunItemId(2L)
                 .build();
     }
 }

@@ -169,7 +169,9 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const totalItems =
     board?.columns.reduce((total, column) => total + column.total, 0) ?? 0;
   const visibleItemIds = useMemo(
-    () => board?.columns.flatMap((column) => column.items.map((item) => item.id)) ?? [],
+    () =>
+      board?.columns.flatMap((column) => column.items.map((item) => item.id)) ??
+      [],
     [board?.columns]
   );
   const activeFilterCount = getActiveBoardFilterCount({

@@ -12,6 +12,8 @@ import serp.project.pmcore.domain.workitem.dto.ProjectSummaryBreakdownProjection
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryMetricsProjection;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryParentOptionProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleAllocationCalendarProjection;
+import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleCalendarCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineDependencyProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemTimelineItemProjection;
@@ -76,6 +78,11 @@ public interface IWorkItemReadPort {
     PageResult<WorkItemTimelineItemProjection> listTimelineWorkItems(Long tenantId, WorkItemTimelineCriteria criteria);
 
     List<WorkItemTimelineDependencyProjection> listTimelineDependencies(Long tenantId, Long projectId, List<Long> workItemIds);
+
+    PageResult<WorkItemScheduleAllocationCalendarProjection> listScheduleAllocationCalendarItems(
+            Long tenantId,
+            WorkItemScheduleCalendarCriteria criteria
+    );
 
     List<WorkItemBoardStatusProjection> listBoardStatuses(Long tenantId, WorkItemBoardCriteria criteria);
 

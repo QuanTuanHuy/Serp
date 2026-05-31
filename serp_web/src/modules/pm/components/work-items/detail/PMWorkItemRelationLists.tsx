@@ -3,8 +3,8 @@
  * Description: Part of Serp Project - PM work item relation lists
  */
 
-import { CheckSquare, Link2 } from 'lucide-react';
-import { Badge } from '@/shared/components/ui';
+import { CheckSquare, Link2, Loader2, Trash2 } from 'lucide-react';
+import { Badge, Button } from '@/shared/components/ui';
 import type { PMWorkItemChildApi, PMWorkItemLinkApi } from '../../../types/api';
 import { PriorityValue } from './PMWorkItemDetailPrimitives';
 import { InlineError, ListSkeleton } from './PMWorkItemDetailStates';
@@ -61,8 +61,12 @@ export function WorkItemChildrenList({
 
 export function WorkItemLinksList({
   query,
+  onDeleteLink,
+  deletingLinkId,
 }: {
   query: DetailQueryState<PMWorkItemLinkApi[]>;
+  onDeleteLink?: (linkId: number) => void;
+  deletingLinkId?: number | null;
 }) {
   if (query.isLoading) return <ListSkeleton rows={2} />;
   if (query.error) return <InlineError error={query.error} />;
@@ -86,6 +90,22 @@ export function WorkItemLinksList({
               {link.linkType?.description ?? link.linkType?.name ?? 'Linked'}
             </span>
             <Badge variant='outline'>{link.direction}</Badge>
+            {onDeleteLink ? (
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='ml-auto h-7 w-7'
+                onClick={() => onDeleteLink(link.id)}
+                disabled={deletingLinkId === link.id}
+              >
+                {deletingLinkId === link.id ? (
+                  <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                ) : (
+                  <Trash2 className='h-3.5 w-3.5' />
+                )}
+              </Button>
+            ) : null}
           </div>
           <div className='flex items-start justify-between gap-3'>
             <div className='min-w-0'>

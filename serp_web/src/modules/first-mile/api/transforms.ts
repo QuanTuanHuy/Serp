@@ -8,10 +8,209 @@ import type {
   FirstMileApiResponse,
   FirstMilePageResponse,
   FirstMilePaginatedData,
+  HandoverManifest,
+  HandoverManifestOrderItem,
+  HubPostOfficeMapping,
   ImportHistory,
   ImportHistoryStatus,
   ImportType,
+  PostOfficeStaffAssignment,
+  SecondMileHubStaffAssignment,
+  SecondMileHubStaff,
+  SecondMileOrder,
 } from '../types';
+
+const readField = <T>(
+  raw: Record<string, unknown>,
+  snakeKey: string,
+  camelKey: string
+): T | undefined => {
+  const value = raw[snakeKey] ?? raw[camelKey];
+  return value as T | undefined;
+};
+
+export const normalizeHubPostOfficeMapping = (
+  raw: unknown
+): HubPostOfficeMapping => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    hubId: Number(readField(record, 'hub_id', 'hubId') ?? 0),
+    postOfficeCode: String(
+      readField(record, 'post_office_code', 'postOfficeCode') ?? ''
+    ),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileHubStaffAssignment = (
+  raw: unknown
+): SecondMileHubStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    hubId: readField<number>(record, 'hub_id', 'hubId'),
+    hubCode: readField<string>(record, 'hub_code', 'hubCode'),
+    hubName: readField<string>(record, 'hub_name', 'hubName'),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    staffStatus: readField(record, 'staff_status', 'staffStatus'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
+export const normalizeSecondMileHubStaff = (raw: unknown): SecondMileHubStaff => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    code: readField<string>(record, 'code', 'code'),
+    fullName: readField<string>(record, 'full_name', 'fullName'),
+    role: readField(record, 'role', 'role'),
+    status: readField(record, 'status', 'status'),
+  };
+};
+
+export const normalizePostOfficeStaffAssignment = (
+  raw: unknown
+): PostOfficeStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    postOfficeId: readField<number>(record, 'post_office_id', 'postOfficeId'),
+    postOfficeCode: readField<string>(record, 'post_office_code', 'postOfficeCode'),
+    postOfficeName: readField<string>(record, 'post_office_name', 'postOfficeName'),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    shiftStartTime: readField<string>(record, 'shift_start_time', 'shiftStartTime'),
+    shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileOrder = (raw: unknown): SecondMileOrder => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+    customerOrderCode: readField<string>(
+      record,
+      'customer_order_code',
+      'customerOrderCode'
+    ),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    status: readField(record, 'status', 'status'),
+    totalWeight: readField<number>(record, 'total_weight', 'totalWeight'),
+    totalVolume: readField<number>(record, 'total_volume', 'totalVolume'),
+  };
+};
+
+export const normalizeHandoverManifestOrder = (
+  raw: unknown
+): HandoverManifestOrderItem => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: readField<number>(record, 'id', 'id'),
+    orderId: readField<number>(record, 'order_id', 'orderId'),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+    scanOutTime: readField<string>(record, 'scan_out_time', 'scanOutTime'),
+    scanInTime: readField<string>(record, 'scan_in_time', 'scanInTime'),
+  };
+};
+
+export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const ordersRaw = record.orders;
+  const orders = Array.isArray(ordersRaw)
+    ? ordersRaw.map(normalizeHandoverManifestOrder)
+    : undefined;
+
+  return {
+    id: Number(record.id ?? 0),
+    manifestCode: readField<string>(record, 'manifest_code', 'manifestCode'),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    targetHubId: readField<number>(record, 'target_hub_id', 'targetHubId'),
+    vehicleId: readField<number>(record, 'vehicle_id', 'vehicleId'),
+    vehicleLicensePlate: readField<string>(
+      record,
+      'vehicle_license_plate',
+      'vehicleLicensePlate'
+    ),
+    routeId: readField<number>(record, 'route_id', 'routeId'),
+    routeCode: readField<string>(record, 'route_code', 'routeCode'),
+    status: readField(record, 'status', 'status'),
+    orders,
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
+export const normalizeHubPostOfficeMappingPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<HubPostOfficeMapping>>
+    | FirstMilePageResponse<HubPostOfficeMapping>
+): FirstMilePaginatedData<HubPostOfficeMapping> => {
+  const page = unwrapFirstMilePageResultOrRaw<HubPostOfficeMapping>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeHubPostOfficeMapping(item)),
+  };
+};
+
+export const normalizeSecondMileOrderPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileOrder>>
+    | FirstMilePageResponse<SecondMileOrder>
+): FirstMilePaginatedData<SecondMileOrder> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileOrder>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileOrder(item)),
+  };
+};
+
+export const normalizeHandoverManifestPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<HandoverManifest>>
+    | FirstMilePageResponse<HandoverManifest>
+): FirstMilePaginatedData<HandoverManifest> => {
+  const page = unwrapFirstMilePageResultOrRaw<HandoverManifest>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeHandoverManifest(item)),
+  };
+};
 
 export const unwrapFirstMileResult = <T>(
   response: FirstMileApiResponse<T>

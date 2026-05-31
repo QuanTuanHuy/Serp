@@ -15,13 +15,16 @@ import serp.project.pmcore.domain.issuelink.entity.IssueLinkTypeEntity;
 import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkPort;
 import serp.project.pmcore.domain.issuelink.port.IIssueLinkTypePort;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.CapacityResolutionResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
 import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
@@ -138,6 +141,22 @@ class OptimizationProjectModelBuilderTest {
 
         assertEquals(86_400_000L, model.workItems().get(0).duration().durationMillis());
         assertTrue(model.warnings().stream().anyMatch(warning -> warning.code() == OptimizationWarningCode.DEFAULT_DURATION_USED));
+    }
+
+    @Test
+    void buildShouldConvertMinuteEstimateToDurationMillis() {
+        stubProject();
+        WorkItemEntity item = item(10L);
+        item.setTimeOriginalEstimate(300L);
+        when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
+        when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
+        stubResourcePorts(List.of(10L), List.of(100L));
+
+        OptimizationProjectModel model = builder.build(input(List.of(10L)));
+
+        assertEquals(18_000_000L, model.workItems().get(0).duration().durationMillis());
     }
 
     @Test
@@ -268,7 +287,11 @@ class OptimizationProjectModelBuilderTest {
 
     private OptimizationBuilderInput input(List<Long> ids) {
         return new OptimizationBuilderInput(1L, 100L, ids, 1_714_876_800_000L, 1_715_481_600_000L,
-                true, true, OptimizationMode.BALANCED_WORKLOAD);
+                new OptimizationRunIntent(
+                        OptimizationAlgorithmKeys.GREEDY_BALANCED,
+                        OptimizationObjective.BALANCED_WORKLOAD,
+                        OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE
+                ));
     }
 
     private void stubResourcePorts(List<Long> workItemIds, List<Long> memberIds) {

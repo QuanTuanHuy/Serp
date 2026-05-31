@@ -3,11 +3,16 @@
  * Description: Part of Serp Project - PM optimization contract types
  */
 
-export type PMOptimizationMode =
+export type PMOptimizationObjective =
   | 'BALANCED_WORKLOAD'
   | 'MINIMAL_REASSIGNMENT'
+  | 'SKILL_FIRST'
+  | 'DEADLINE_FIRST';
+
+export type PMOptimizationChangeScope =
   | 'ASSIGNMENT_ONLY'
-  | 'SCHEDULE_ONLY';
+  | 'SCHEDULE_ONLY'
+  | 'ASSIGNMENT_AND_SCHEDULE';
 
 export type PMOptimizationRunStatus =
   | 'GENERATED'
@@ -125,11 +130,11 @@ export interface PMOptimizationRunItemApi {
 
 export interface PMGenerateOptimizationRunRequest {
   scope?: string;
-  mode: PMOptimizationMode;
+  algorithmKey?: string;
+  objective: PMOptimizationObjective;
+  changeScope: PMOptimizationChangeScope;
   planningStart: number;
   planningEnd: number;
-  allowReassignment: boolean;
-  allowScheduleChanges: boolean;
   selectedWorkItemIds: number[];
 }
 
@@ -152,14 +157,17 @@ export interface PMOptimizationRunApi {
   tenantId: number;
   projectId: number;
   scope?: string | null;
-  mode?: PMOptimizationMode | string | null;
+  objective?: PMOptimizationObjective | string | null;
+  changeScope?: PMOptimizationChangeScope | string | null;
   status?: PMOptimizationRunStatus | null;
   planningStart?: number | null;
   planningEnd?: number | null;
-  allowReassignment?: boolean | null;
-  allowScheduleChanges?: boolean | null;
   selectedWorkItemCount?: number | null;
   summary?: PMOptimizationRunSummaryApi | null;
+  algorithmKey?: string | null;
+  algorithmVersion?: string | null;
+  solverStatus?: string | null;
+  objectiveScore?: string | null;
   createdAt?: number | null;
   createdBy?: number | null;
   updatedAt?: number | null;

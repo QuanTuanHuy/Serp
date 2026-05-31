@@ -11,6 +11,7 @@ import org.springframework.data.util.Pair;
 
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
+import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 
@@ -22,6 +23,8 @@ public interface IOrganizationService {
     OrganizationEntity updateSubscription(Long organizationId, OrganizationSubscriptionEntity subscription);
 
     OrganizationEntity getOrganizationById(Long organizationId);
+
+    OrganizationEntity updateOrganizationSettings(Long organizationId, UpdateOrganizationSettingsRequest request);
 
     void assignOrganizationToUser(Long organizationId, Long userId, Long roleId, Boolean isDefault);
 

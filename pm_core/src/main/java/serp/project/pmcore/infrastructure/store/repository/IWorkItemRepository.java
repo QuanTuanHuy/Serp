@@ -25,6 +25,26 @@ public interface IWorkItemRepository extends JpaRepository<WorkItemModel, Long> 
 
     List<WorkItemModel> findAllByTenantIdAndIdIn(Long tenantId, List<Long> ids);
 
+    @Query("""
+            SELECT w FROM WorkItemModel w
+            WHERE w.tenantId = :tenantId
+              AND w.assigneeId IN :assigneeIds
+              AND w.resolutionId IS NULL
+              AND w.id NOT IN :excludedWorkItemIds
+              AND NOT EXISTS (
+                  SELECT p.id FROM WorkItemPlanModel p
+                  WHERE p.tenantId = w.tenantId
+                    AND p.workItemId = w.id
+                    AND p.plannedStart < :planningEnd
+                    AND p.plannedEnd > :planningStart
+              )
+            """)
+    List<WorkItemModel> findActiveUnplannedWorkloadItems(@Param("tenantId") Long tenantId,
+                                                          @Param("assigneeIds") List<Long> assigneeIds,
+                                                          @Param("excludedWorkItemIds") List<Long> excludedWorkItemIds,
+                                                          @Param("planningStart") java.time.LocalDateTime planningStart,
+                                                          @Param("planningEnd") java.time.LocalDateTime planningEnd);
+
     List<WorkItemModel> findAllByTenantIdAndIssueTypeId(Long tenantId, Long issueId);
 
     List<WorkItemModel> findAllByTenantIdAndPriorityId(Long tenantId, Long priorityId);

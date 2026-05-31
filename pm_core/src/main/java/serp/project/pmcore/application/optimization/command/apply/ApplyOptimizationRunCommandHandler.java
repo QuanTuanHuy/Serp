@@ -19,15 +19,18 @@ import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
+import serp.project.pmcore.domain.optimization.model.OptimizationScheduleAllocation;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanAllocationPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
@@ -70,6 +73,7 @@ public class ApplyOptimizationRunCommandHandler
     private final IOptimizationRunItemPort optimizationRunItemPort;
     private final IOptimizationRunWarningPort optimizationRunWarningPort;
     private final IWorkItemPlanPort workItemPlanPort;
+    private final IWorkItemPlanAllocationPort workItemPlanAllocationPort;
     private final IWorkItemReadPort workItemReadPort;
     private final IWorkItemService workItemService;
     private final IProjectService projectService;
@@ -265,7 +269,11 @@ public class ApplyOptimizationRunCommandHandler
                     .locked(false)
                     .build();
             plan.applyCreate(command.userId(), now);
-            workItemPlanPort.upsertActivePlan(plan);
+            WorkItemPlanEntity savedPlan = workItemPlanPort.upsertActivePlan(plan);
+            if (savedPlan.getId() != null) {
+                workItemPlanAllocationPort.replaceForPlan(command.tenantId(), savedPlan.getId(),
+                        buildPlanAllocations(command, item, savedPlan));
+            }
             item.setScheduleApplyStatus(OptimizationApplyStatus.APPLIED);
             item.setScheduleSkippedReason(null);
             item.setAppliedAt(now);
@@ -278,6 +286,54 @@ public class ApplyOptimizationRunCommandHandler
 
     private boolean isActionable(OptimizationDecision decision) {
         return decision == OptimizationDecision.ACCEPTED || decision == OptimizationDecision.OVERRIDDEN;
+    }
+
+    private List<WorkItemPlanAllocationEntity> buildPlanAllocations(ApplyOptimizationRunCommand command,
+                                                                    OptimizationRunItemEntity item,
+                                                                    WorkItemPlanEntity plan) {
+        if (item.getScheduleDecision() == OptimizationDecision.OVERRIDDEN
+                || item.getAllocationChunksJson() == null
+                || item.getAllocationChunksJson().isBlank()) {
+            return List.of();
+        }
+        List<OptimizationScheduleAllocation> allocations = jsonUtils.fromJsonToList(
+                item.getAllocationChunksJson(), OptimizationScheduleAllocation.class);
+        if (allocations == null || allocations.isEmpty()) {
+            return List.of();
+        }
+        return allocations.stream()
+                .filter(this::isValidAllocation)
+                .map(allocation -> toPlanAllocation(command, item, plan, allocation))
+                .toList();
+    }
+
+    private boolean isValidAllocation(OptimizationScheduleAllocation allocation) {
+        return allocation != null
+                && allocation.assigneeId() != null
+                && allocation.start() != null
+                && allocation.end() != null
+                && allocation.start() < allocation.end()
+                && allocation.effortMillis() != null
+                && allocation.effortMillis() > 0;
+    }
+
+    private WorkItemPlanAllocationEntity toPlanAllocation(ApplyOptimizationRunCommand command,
+                                                          OptimizationRunItemEntity item,
+                                                          WorkItemPlanEntity plan,
+                                                          OptimizationScheduleAllocation allocation) {
+        return WorkItemPlanAllocationEntity.builder()
+                .tenantId(command.tenantId())
+                .projectId(command.projectId())
+                .workItemPlanId(plan.getId())
+                .workItemId(item.getWorkItemId())
+                .assigneeId(allocation.assigneeId())
+                .startTime(allocation.start())
+                .endTime(allocation.end())
+                .effortMillis(allocation.effortMillis())
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(command.runId())
+                .sourceRunItemId(item.getId())
+                .build();
     }
 
     private boolean isCurrentWorkItemValid(ProjectEntity project, OptimizationRunItemEntity item, WorkItemEntity workItem) {

@@ -60,9 +60,10 @@ public class TransitionConfigurationResolver {
         WorkflowVersionEntity workflowVersion = resolveWorkflowVersion(
                 workflow.getId(), workflow.getCurrentPublishedVersionId(), tenantId);
 
-        WorkflowStepEntity currentStep = resolveWorkflowStep(
+        WorkflowStepEntity currentStep = resolveCurrentWorkflowStep(
                 context.workItemId(),
                 context.workflowStepId(),
+                context.statusId(),
                 workflowVersion.getId(),
                 tenantId
         );
@@ -123,9 +124,10 @@ public class TransitionConfigurationResolver {
         WorkflowVersionEntity workflowVersion = resolveWorkflowVersion(
                 workflow.getId(), workflow.getCurrentPublishedVersionId(), tenantId);
 
-        WorkflowStepEntity currentStep = resolveWorkflowStep(
+        WorkflowStepEntity currentStep = resolveCurrentWorkflowStep(
                 context.workItemId(),
                 context.workflowStepId(),
+                context.statusId(),
                 workflowVersion.getId(),
                 tenantId
         );
@@ -250,6 +252,44 @@ public class TransitionConfigurationResolver {
         }
 
         return step;
+    }
+
+    private WorkflowStepEntity resolveCurrentWorkflowStep(Long workItemId,
+                                                          Long stepId,
+                                                          Long statusId,
+                                                          Long workflowVersionId,
+                                                          Long tenantId) {
+        WorkflowStepEntity step = resolveWorkflowStepById(workItemId, stepId, tenantId);
+        if (Objects.equals(step.getWorkflowVersionId(), workflowVersionId)) {
+            return step;
+        }
+
+        return workflowStepPort.getWorkflowStepsByWorkflowVersionId(workflowVersionId, tenantId)
+                .stream()
+                .filter(candidate -> Objects.equals(candidate.getStatusId(), statusId))
+                .findFirst()
+                .orElseThrow(() -> new DomainValidationException(
+                        DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,
+                        "Workflow step does not belong to effective workflow version: stepId=" + stepId
+                                + ", workflowVersionId=" + workflowVersionId
+                ));
+    }
+
+    private WorkflowStepEntity resolveWorkflowStepById(Long workItemId,
+                                                       Long stepId,
+                                                       Long tenantId) {
+        if (stepId == null) {
+            throw new DomainValidationException(
+                    DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,
+                    "Work item has no workflow_step_id: workItemId=" + workItemId
+            );
+        }
+
+        return workflowStepPort.getWorkflowStepById(stepId, tenantId)
+                .orElseThrow(() -> new DomainValidationException(
+                        DomainErrorCode.WORK_ITEM_WORKFLOW_STATE_INVALID,
+                        "Workflow step not found: stepId=" + stepId
+                ));
     }
 
     private StatusCategoryEntity resolveStatusCategory(Long categoryId, Long statusId, Long tenantId) {

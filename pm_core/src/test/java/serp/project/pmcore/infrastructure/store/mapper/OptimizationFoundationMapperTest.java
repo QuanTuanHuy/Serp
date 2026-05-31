@@ -11,15 +11,19 @@ import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
 import serp.project.pmcore.infrastructure.store.model.IssueLinkTypeModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunItemModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunModel;
 import serp.project.pmcore.infrastructure.store.model.OptimizationRunWarningModel;
+import serp.project.pmcore.infrastructure.store.model.WorkItemPlanAllocationModel;
 import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
 
 import java.math.BigDecimal;
@@ -81,22 +85,34 @@ class OptimizationFoundationMapperTest {
                 .tenantId(2L)
                 .projectId(3L)
                 .scope("SELECTED_WORK_ITEMS")
-                .mode("BALANCED_WORKLOAD")
+                .objective(OptimizationObjective.BALANCED_WORKLOAD.name())
+                .changeScope(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name())
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(1715523600000L)
                 .planningEnd(1716733200000L)
-                .allowReassignment(true)
-                .allowScheduleChanges(true)
                 .selectedWorkItemCount(3)
                 .summaryJson("{}")
+                .algorithmKey("greedy-balanced")
+                .algorithmVersion("v1")
+                .solverStatus("FEASIBLE")
+                .objectiveScore(BigDecimal.valueOf(12.345678))
                 .build();
 
         OptimizationRunModel model = mapper.toModel(entity);
         OptimizationRunEntity mapped = mapper.toEntity(model);
 
         assertThat(mapped.getStatus()).isEqualTo(OptimizationRunStatus.GENERATED);
-        assertThat(mapped.getAllowReassignment()).isTrue();
+        assertThat(mapped.getObjective()).isEqualTo(OptimizationObjective.BALANCED_WORKLOAD.name());
+        assertThat(mapped.getChangeScope()).isEqualTo(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name());
         assertThat(mapped.getSelectedWorkItemCount()).isEqualTo(3);
+        assertThat(model.getAlgorithmKey()).isEqualTo("greedy-balanced");
+        assertThat(model.getAlgorithmVersion()).isEqualTo("v1");
+        assertThat(model.getSolverStatus()).isEqualTo("FEASIBLE");
+        assertThat(model.getObjectiveScore()).isEqualByComparingTo("12.345678");
+        assertThat(mapped.getAlgorithmKey()).isEqualTo("greedy-balanced");
+        assertThat(mapped.getAlgorithmVersion()).isEqualTo("v1");
+        assertThat(mapped.getSolverStatus()).isEqualTo("FEASIBLE");
+        assertThat(mapped.getObjectiveScore()).isEqualByComparingTo("12.345678");
     }
 
     @Test
@@ -118,6 +134,7 @@ class OptimizationFoundationMapperTest {
                 .assignmentReasonsJson("[]")
                 .scheduleReasonsJson("[]")
                 .violationsJson("[]")
+                .allocationChunksJson("[{\"start\":1000,\"end\":2000}]")
                 .build();
 
         OptimizationRunItemModel model = mapper.toModel(entity);
@@ -127,6 +144,38 @@ class OptimizationFoundationMapperTest {
         assertThat(mapped.getScheduleDecision()).isEqualTo(OptimizationDecision.ACCEPTED);
         assertThat(mapped.getScore()).isEqualByComparingTo(BigDecimal.valueOf(12.5));
         assertThat(mapped.getConfidence()).isEqualTo("HIGH");
+        assertThat(mapped.getAllocationChunksJson()).isEqualTo("[{\"start\":1000,\"end\":2000}]");
+    }
+
+    @Test
+    void workItemPlanAllocationMapperShouldMapPlanningBlockFields() {
+        WorkItemPlanAllocationMapper mapper = new WorkItemPlanAllocationMapper();
+        WorkItemPlanAllocationEntity entity = WorkItemPlanAllocationEntity.builder()
+                .id(40L)
+                .tenantId(2L)
+                .projectId(3L)
+                .workItemPlanId(4L)
+                .workItemId(5L)
+                .assigneeId(6L)
+                .startTime(1_700_000_000_000L)
+                .endTime(1_700_003_600_000L)
+                .effortMillis(3_600_000L)
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(7L)
+                .sourceRunItemId(8L)
+                .build();
+
+        WorkItemPlanAllocationModel model = mapper.toModel(entity);
+        WorkItemPlanAllocationEntity mapped = mapper.toEntity(model);
+
+        assertThat(mapped.getWorkItemPlanId()).isEqualTo(4L);
+        assertThat(mapped.getWorkItemId()).isEqualTo(5L);
+        assertThat(mapped.getAssigneeId()).isEqualTo(6L);
+        assertThat(mapped.getStartTime()).isEqualTo(1_700_000_000_000L);
+        assertThat(mapped.getEndTime()).isEqualTo(1_700_003_600_000L);
+        assertThat(mapped.getEffortMillis()).isEqualTo(3_600_000L);
+        assertThat(mapped.getSourceRunId()).isEqualTo(7L);
+        assertThat(mapped.getSourceRunItemId()).isEqualTo(8L);
     }
 
     @Test

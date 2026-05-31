@@ -206,6 +206,9 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             } else {
                 tripSummary.pendingCheckinOrders += 1;
             }
+            if (order.getStatus() != null && RETURNABLE_ORDER_STATUSES.contains(order.getStatus())) {
+                tripSummary.returnableToPostOfficeOrders += 1;
+            }
 
             PostOffice postOffice = postOfficeById.get(trip.getPostOfficeId());
             PostOfficeStaff courier = courierById.get(trip.getCourierStaffId());
@@ -275,7 +278,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                     trip.getPlannedEndTime(),
                     tripSummary.totalOrders,
                     tripSummary.checkedInOrders,
-                    tripSummary.pendingCheckinOrders
+                    tripSummary.pendingCheckinOrders,
+                    tripSummary.returnableToPostOfficeOrders
             ));
         }
 
@@ -795,5 +799,6 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         private int totalOrders;
         private int checkedInOrders;
         private int pendingCheckinOrders;
+        private int returnableToPostOfficeOrders;
     }
 }
