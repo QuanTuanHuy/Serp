@@ -69,6 +69,8 @@ import {
 import {
   useAddPmWorkflowStepMutation,
   useAddPmWorkflowTransitionMutation,
+  useCreatePmStatusMutation,
+  useGetPmStatusCategoriesQuery,
   useGetPmStatusesQuery,
   useGetPmWorkflowEditorQuery,
   usePublishPmWorkflowMutation,
@@ -81,6 +83,7 @@ import {
 } from '../api';
 import type {
   PMStatusApi,
+  PMStatusCategoryApi,
   PMWorkflowStepApi,
   PMWorkflowTransitionApi,
   PMWorkflowValidationApi,
@@ -109,7 +112,15 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
     sortDirection: 'asc',
     isSystem: false,
   });
+  const statusCategoriesQuery = useGetPmStatusCategoriesQuery({
+    page: 0,
+    pageSize: STATUS_PICKER_PAGE_SIZE,
+    sortBy: 'name',
+    isSystem: false,
+    sortDirection: 'asc',
+  });
   const [addStep, addStepState] = useAddPmWorkflowStepMutation();
+  const [createStatus, createStatusState] = useCreatePmStatusMutation();
   const [removeStep, removeStepState] = useRemovePmWorkflowStepMutation();
   const [reorderSteps, reorderStepsState] = useReorderPmWorkflowStepsMutation();
   const [addTransition, addTransitionState] =
@@ -129,9 +140,11 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
   const steps = editor?.steps ?? [];
   const transitions = editor?.transitions ?? [];
   const statuses = statusesQuery.data?.data.items ?? [];
+  const statusCategories = statusCategoriesQuery.data?.data.items ?? [];
   const editable = Boolean(workflow && !workflow.readOnly);
   const isSaving =
     updateWorkflowState.isLoading ||
+    createStatusState.isLoading ||
     addStepState.isLoading ||
     removeStepState.isLoading ||
     reorderStepsState.isLoading ||
@@ -254,25 +267,43 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
       }
 
       try {
+        const statusId =
+          values.mode === 'existing'
+            ? values.statusId
+            : (
+                await createStatus({
+                  statusKey: generateStatusKey(values.name),
+                  name: values.name.trim(),
+                  description: null,
+                  iconUrl: null,
+                  statusCategoryId: values.statusCategoryId,
+                }).unwrap()
+              ).id;
+
         await addStep({
           workflowId,
           body: {
-            statusId: values.statusId,
+            statusId,
             isInitial: values.isInitial,
             isTerminal: values.isTerminal,
           },
         }).unwrap();
-        await editorQuery.refetch().unwrap();
+        await Promise.all([
+          editorQuery.refetch().unwrap(),
+          statusesQuery.refetch().unwrap(),
+        ]);
         setStepDialogOpen(false);
         setValidation(null);
-        toast.success('Status added to workflow.');
+        toast.success(
+          values.mode === 'new' ? 'Status created and added.' : 'Status added.'
+        );
       } catch (error) {
         toast.error('Unable to add status', {
           description: getErrorMessage(error),
         });
       }
     },
-    [addStep, editorQuery, ensureDraft, workflowId]
+    [addStep, createStatus, editorQuery, ensureDraft, statusesQuery, workflowId]
   );
 
   const handleRemoveStep = useCallback(
@@ -553,7 +584,7 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
               type='button'
               variant='outline'
               onClick={handleOpenAddStepDialog}
-              disabled={!editable || availableStatuses.length === 0 || isSaving}
+              disabled={!editable || isSaving}
             >
               <Plus className='mr-2 h-4 w-4' />
               Add status
@@ -596,6 +627,9 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
               steps={steps}
               transitions={transitions}
               stepById={stepById}
+              editable={editable}
+              onEditTransition={handleEditTransition}
+              onRemoveTransition={handleRemoveTransition}
             />
           </div>
         </TabsContent>
@@ -616,7 +650,8 @@ export function PMWorkflowEditorPage({ workflowId }: { workflowId: number }) {
       <AddStepDialog
         open={stepDialogOpen}
         statuses={availableStatuses}
-        isSubmitting={addStepState.isLoading}
+        statusCategories={statusCategories}
+        isSubmitting={addStepState.isLoading || createStatusState.isLoading}
         onOpenChange={setStepDialogOpen}
         onSubmit={handleAddStep}
       />
@@ -694,11 +729,17 @@ function WorkflowInspector({
   steps,
   transitions,
   stepById,
+  editable,
+  onEditTransition,
+  onRemoveTransition,
 }: {
   selectedId: string | null;
   steps: PMWorkflowStepApi[];
   transitions: PMWorkflowTransitionApi[];
   stepById: Map<number, PMWorkflowStepApi>;
+  editable: boolean;
+  onEditTransition: (transition: PMWorkflowTransitionApi) => void;
+  onRemoveTransition: (transition: PMWorkflowTransitionApi) => void;
 }) {
   const selectedStep = selectedId?.startsWith('step-')
     ? steps.find((step) => `step-${step.id}` === selectedId)
@@ -746,6 +787,26 @@ function WorkflowInspector({
               <Badge variant='outline'>
                 Sequence {selectedTransition.sequence ?? '-'}
               </Badge>
+              <div className='flex gap-2 pt-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  disabled={!editable}
+                  onClick={() => onEditTransition(selectedTransition)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  type='button'
+                  variant='destructive'
+                  size='sm'
+                  disabled={!editable}
+                  onClick={() => onRemoveTransition(selectedTransition)}
+                >
+                  Remove
+                </Button>
+              </div>
             </div>
           ) : (
             <p className='text-sm text-muted-foreground'>
@@ -905,40 +966,67 @@ function WorkflowTextView({
 function AddStepDialog({
   open,
   statuses,
+  statusCategories,
   isSubmitting,
   onOpenChange,
   onSubmit,
 }: {
   open: boolean;
   statuses: PMStatusApi[];
+  statusCategories: PMStatusCategoryApi[];
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AddStepValues) => void;
 }) {
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
   const [statusId, setStatusId] = useState('');
+  const [name, setName] = useState('');
+  const [statusCategoryId, setStatusCategoryId] = useState('');
   const [isInitial, setIsInitial] = useState(false);
   const [isTerminal, setIsTerminal] = useState(false);
 
   useEffect(() => {
     if (!open) {
+      setMode('existing');
       setStatusId('');
+      setName('');
+      setStatusCategoryId('');
       setIsInitial(false);
       setIsTerminal(false);
       return;
     }
 
-    if (statuses.length === 1) {
+    if (mode === 'existing' && statuses.length === 1) {
       setStatusId(String(statuses[0].id));
-      return;
     }
 
     if (
+      mode === 'existing' &&
       statusId &&
       statuses.every((status) => String(status.id) !== statusId)
     ) {
       setStatusId('');
     }
-  }, [open, statusId, statuses]);
+
+    if (mode === 'new' && statusCategories.length === 1) {
+      setStatusCategoryId(String(statusCategories[0].id));
+    }
+
+    if (
+      mode === 'new' &&
+      statusCategoryId &&
+      statusCategories.every(
+        (category) => String(category.id) !== statusCategoryId
+      )
+    ) {
+      setStatusCategoryId('');
+    }
+  }, [mode, open, statusCategoryId, statusCategories, statusId, statuses]);
+
+  const canSubmit =
+    mode === 'existing'
+      ? Boolean(statusId)
+      : Boolean(name.trim()) && Boolean(statusCategoryId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -946,25 +1034,74 @@ function AddStepDialog({
         <DialogHeader>
           <DialogTitle>Add status</DialogTitle>
           <DialogDescription>
-            Choose an existing status to add to this workflow draft.
+            Choose an existing status or create a new one for this workflow
+            draft.
           </DialogDescription>
         </DialogHeader>
         <div className='space-y-4'>
-          <div className='space-y-2'>
-            <Label>Status</Label>
-            <Select value={statusId} onValueChange={setStatusId}>
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Select status' />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status.id} value={String(status.id)}>
-                    {status.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className='grid grid-cols-2 gap-2 rounded-md bg-muted p-1'>
+            <Button
+              type='button'
+              variant={mode === 'existing' ? 'secondary' : 'ghost'}
+              onClick={() => setMode('existing')}
+            >
+              Existing
+            </Button>
+            <Button
+              type='button'
+              variant={mode === 'new' ? 'secondary' : 'ghost'}
+              onClick={() => setMode('new')}
+            >
+              New status
+            </Button>
           </div>
+
+          {mode === 'existing' ? (
+            <div className='space-y-2'>
+              <Label>Status</Label>
+              <Select value={statusId} onValueChange={setStatusId}>
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='Select status' />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.id} value={String(status.id)}>
+                      {status.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className='space-y-2'>
+                <Label>Name</Label>
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder='In QA Review'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label>Category</Label>
+                <Select
+                  value={statusCategoryId}
+                  onValueChange={setStatusCategoryId}
+                >
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder='Select category' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusCategories.map((category) => (
+                      <SelectItem key={category.id} value={String(category.id)}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
           <label className='flex items-center gap-2 text-sm'>
             <Checkbox
               checked={isInitial}
@@ -990,19 +1127,28 @@ function AddStepDialog({
           </Button>
           <Button
             type='button'
-            disabled={!statusId || isSubmitting}
+            disabled={!canSubmit || isSubmitting}
             onClick={() => {
+              if (mode === 'existing') {
+                onSubmit({
+                  mode: 'existing',
+                  statusId: Number(statusId),
+                  isInitial,
+                  isTerminal,
+                });
+                return;
+              }
+
               onSubmit({
-                statusId: Number(statusId),
+                mode: 'new',
+                name,
+                statusCategoryId: Number(statusCategoryId),
                 isInitial,
                 isTerminal,
               });
-              setStatusId('');
-              setIsInitial(false);
-              setIsTerminal(false);
             }}
           >
-            Add status
+            {mode === 'new' ? 'Create and add' : 'Add status'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1263,11 +1409,30 @@ function findMatchingTransition(
   );
 }
 
-type AddStepValues = {
-  statusId: number;
-  isInitial: boolean;
-  isTerminal: boolean;
-};
+function generateStatusKey(name: string): string {
+  return name
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+}
+
+type AddStepValues =
+  | {
+      mode: 'existing';
+      statusId: number;
+      isInitial: boolean;
+      isTerminal: boolean;
+    }
+  | {
+      mode: 'new';
+      name: string;
+      statusCategoryId: number;
+      isInitial: boolean;
+      isTerminal: boolean;
+    };
 
 type TransitionValues = {
   name: string;

@@ -32,7 +32,8 @@ export const createWorkItemSchema = z.object({
 export type CreateWorkItemFormValues = z.infer<typeof createWorkItemSchema>;
 
 export function getCreateWorkItemDefaultValues(
-  initialProjectId?: number
+  initialProjectId?: number,
+  initialParentId?: number
 ): CreateWorkItemFormValues {
   return {
     projectId: initialProjectId ? String(initialProjectId) : '',
@@ -41,7 +42,7 @@ export function getCreateWorkItemDefaultValues(
     description: '',
     priorityId: '',
     assigneeId: '',
-    parentId: '',
+    parentId: initialParentId ? String(initialParentId) : '',
     dueDate: '',
     timeOriginalEstimate: '',
     securityLevelId: '',

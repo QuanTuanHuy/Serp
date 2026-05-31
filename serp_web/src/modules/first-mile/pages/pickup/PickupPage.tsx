@@ -42,6 +42,7 @@ import {
   usePickupCheckinOrderMutation,
 } from '../../api';
 import type {
+  FirstMileOrderStatus,
   PickupTrackingOrder,
   PickupTrackingOverviewResponse,
   PickupTrackingTrip,
@@ -181,8 +182,30 @@ const canCompleteTrip = (trip: PickupTrackingTrip): boolean =>
   trip.tripId !== undefined &&
   (trip.tripStatus === 'PLANNED' || trip.tripStatus === 'IN_PROGRESS');
 
-const canReturnTripToPostOffice = (trip: PickupTrackingTrip): boolean =>
-  trip.tripId !== undefined && trip.tripStatus === 'COMPLETED';
+const RETURNABLE_TO_POST_OFFICE_ORDER_STATUSES: FirstMileOrderStatus[] = [
+  'PICKING_UP',
+  'PICKED_UP',
+];
+
+const canReturnTripToPostOffice = (
+  trip: PickupTrackingTrip,
+  orders: PickupTrackingOrder[]
+): boolean => {
+  if (trip.tripId === undefined || trip.tripStatus !== 'COMPLETED') {
+    return false;
+  }
+
+  if (trip.returnableToPostOfficeOrders !== undefined) {
+    return trip.returnableToPostOfficeOrders > 0;
+  }
+
+  return orders.some(
+    (order) =>
+      order.tripId === trip.tripId &&
+      order.orderStatus !== undefined &&
+      RETURNABLE_TO_POST_OFFICE_ORDER_STATUSES.includes(order.orderStatus)
+  );
+};
 
 const resolveOrders = (
   overview?: PickupTrackingOverviewResponse
@@ -957,7 +980,7 @@ export const PickupPage: React.FC = () => {
                                   Complete trip
                                 </Button>
                               ) : null}
-                              {canReturnTripToPostOffice(trip) ? (
+                              {canReturnTripToPostOffice(trip, orders) ? (
                                 <Button
                                   size='sm'
                                   disabled={isCompletingTrip || isReturningTrip}
@@ -969,7 +992,7 @@ export const PickupPage: React.FC = () => {
                                 </Button>
                               ) : null}
                               {!canCompleteTrip(trip) &&
-                              !canReturnTripToPostOffice(trip) ? (
+                              !canReturnTripToPostOffice(trip, orders) ? (
                                 <span className='text-xs text-muted-foreground'>
                                   No actions
                                 </span>

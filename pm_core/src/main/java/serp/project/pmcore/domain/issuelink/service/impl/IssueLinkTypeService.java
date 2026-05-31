@@ -85,7 +85,7 @@ public class IssueLinkTypeService implements IIssueLinkTypeService {
 
     @Override
     public PageResult<IssueLinkTypeEntity> listVisible(Long tenantId, IssueLinkTypeListCriteria criteria) {
-        List<IssueLinkTypeEntity> items = issueLinkTypePort.listByTenant(tenantId).stream()
+        List<IssueLinkTypeEntity> items = issueLinkTypePort.listByTenantIncludingSystem(tenantId).stream()
                 .filter(item -> criteria.getIsSystem() == null || criteria.getIsSystem().equals(item.getIsSystem()))
                 .filter(item -> matchesSearch(item, criteria.getSearch()))
                 .sorted(resolveComparator(criteria))

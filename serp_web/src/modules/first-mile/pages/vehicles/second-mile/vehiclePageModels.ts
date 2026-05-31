@@ -208,7 +208,7 @@ export const validateVehicleForm = (
     values.assignedStaffId.trim() &&
     parseOptionalPositiveInteger(values.assignedStaffId) === undefined
   ) {
-    return 'Assigned staff ID must be a positive integer.';
+    return 'Driver must be selected from the list.';
   }
 
   return null;

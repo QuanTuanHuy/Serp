@@ -16,7 +16,10 @@ import serp.project.pmcore.application.optimization.query.get.OptimizationRunRev
 import serp.project.pmcore.application.optimization.support.OptimizationRunGuard;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
+import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
@@ -103,9 +106,9 @@ class UpdateOptimizationRunItemDecisionCommandHandlerTest {
                 .status(OptimizationRunStatus.GENERATED)
                 .planningStart(1_714_876_800_000L)
                 .planningEnd(1_715_308_800_000L)
-                .mode("BALANCED_WORKLOAD")
-                .allowReassignment(true)
-                .allowScheduleChanges(true)
+                .objective(OptimizationObjective.BALANCED_WORKLOAD.name())
+                .changeScope(OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE.name())
+                .algorithmKey(OptimizationAlgorithmKeys.GREEDY_BALANCED)
                 .build();
     }
 

@@ -74,4 +74,44 @@ public class SecondMileAccessUtils {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
     }
+
+    public void ensureActiveDriverStaffOrThrow(Long staffId) {
+        if (staffId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver is required.");
+        }
+
+        Long tenantId = getCurrentTenantIdOrThrow();
+        boolean activeDriver = hubStaffRepository.existsByTenantIdAndIdAndRoleAndStatus(
+                tenantId,
+                staffId,
+                HubStaffRole.DRIVER,
+                HubStaffStatus.ACTIVE
+        );
+        if (!activeDriver) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Assigned vehicle driver must be an active driver staff."
+            );
+        }
+    }
+
+    public void ensureCurrentUserIsAssignedDriverOrThrow(Long staffId) {
+        ensureActiveDriverStaffOrThrow(staffId);
+        if (isAdmin()) {
+            return;
+        }
+
+        Long tenantId = getCurrentTenantIdOrThrow();
+        Long userId = getCurrentUserIdOrThrow();
+        boolean assignedDriver = hubStaffRepository.existsByTenantIdAndIdAndUserIdAndRoleAndStatus(
+                tenantId,
+                staffId,
+                userId,
+                HubStaffRole.DRIVER,
+                HubStaffStatus.ACTIVE
+        );
+        if (!assignedDriver) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
 }

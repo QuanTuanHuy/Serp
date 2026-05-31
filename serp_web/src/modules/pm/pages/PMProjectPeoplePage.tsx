@@ -51,10 +51,7 @@ import {
   TableRow,
 } from '@/shared/components/ui';
 import { useAppSelector } from '@/shared/hooks';
-import {
-  useGetPmSkillsQuery,
-  useGetPmUsersSkillsQuery,
-} from '../api';
+import { useGetPmSkillsQuery, useGetPmUsersSkillsQuery } from '../api';
 import {
   useGetPmProjectPeopleQuery,
   useGetPmProjectRolesQuery,

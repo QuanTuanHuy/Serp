@@ -16,15 +16,17 @@ import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationChangeScope;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationWarningCode;
 import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
+import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
-import serp.project.pmcore.domain.optimization.enums.OptimizationMode;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
@@ -203,19 +205,21 @@ public class UpdateOptimizationRunItemDecisionCommandHandler
 
     private OptimizationProjectModel buildCurrentProjectModel(OptimizationRunEntity run,
                                                               List<OptimizationRunItemEntity> items) {
-        OptimizationMode mode = OptimizationMode.valueOf(run.getMode());
         List<Long> selectedWorkItemIds = items.stream()
                 .map(OptimizationRunItemEntity::getWorkItemId)
                 .toList();
+        OptimizationRunIntent intent = new OptimizationRunIntent(
+                run.getAlgorithmKey(),
+                OptimizationObjective.valueOf(run.getObjective()),
+                OptimizationChangeScope.valueOf(run.getChangeScope())
+        );
         return optimizationProjectModelBuilder.build(new OptimizationBuilderInput(
                 run.getTenantId(),
                 run.getProjectId(),
                 selectedWorkItemIds,
                 run.getPlanningStart(),
                 run.getPlanningEnd(),
-                run.getAllowReassignment(),
-                run.getAllowScheduleChanges(),
-                mode
+                intent
         ));
     }
 

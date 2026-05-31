@@ -18,6 +18,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,8 +36,10 @@ public class OptimizationRunModel extends BaseModel {
     private Long projectId;
     @Column(name = "scope", nullable = false, length = 50)
     private String scope;
-    @Column(name = "mode", nullable = false, length = 50)
-    private String mode;
+    @Column(name = "objective", nullable = false, length = 50)
+    private String objective;
+    @Column(name = "change_scope", nullable = false, length = 50)
+    private String changeScope;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private OptimizationRunStatus status;
@@ -44,14 +47,18 @@ public class OptimizationRunModel extends BaseModel {
     private LocalDateTime planningStart;
     @Column(name = "planning_end", nullable = false)
     private LocalDateTime planningEnd;
-    @Column(name = "allow_reassignment", nullable = false)
-    private Boolean allowReassignment;
-    @Column(name = "allow_schedule_changes", nullable = false)
-    private Boolean allowScheduleChanges;
     @Column(name = "selected_work_item_count", nullable = false)
     private Integer selectedWorkItemCount;
     @Column(name = "summary_json", columnDefinition = "TEXT")
     private String summaryJson;
+    @Column(name = "algorithm_key", nullable = false, length = 100)
+    private String algorithmKey;
+    @Column(name = "algorithm_version", nullable = false, length = 50)
+    private String algorithmVersion;
+    @Column(name = "solver_status", nullable = false, length = 50)
+    private String solverStatus;
+    @Column(name = "objective_score", precision = 18, scale = 6)
+    private BigDecimal objectiveScore;
     @Column(name = "applied_at")
     private LocalDateTime appliedAt;
     @Column(name = "applied_by")

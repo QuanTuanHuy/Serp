@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,6 +63,24 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
         }
 
         return PostOfficeStaffMapper.toResponse(staff);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostOfficeStaffResponse> getAssignableStaffByRole(PostOfficeStaffRole role, String keyword) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        if (role == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String normalizedKeyword = normalizeText(keyword);
+        List<PostOfficeStaff> staffs = postOfficeStaffRepository.findAssignableByTenantIdAndRoleAndStatusAndKeyword(
+                tenantId,
+                role,
+                PostOfficeStaffStatus.ACTIVE,
+                normalizedKeyword
+        );
+        return staffs.stream().map(PostOfficeStaffMapper::toResponse).toList();
     }
 
     @Override
@@ -149,6 +166,7 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             return PostOfficeStaffMapper.toAssignmentResponse(existingAssignment);
         }
 
+        closeOtherActiveAssignmentsForStaff(courier.getId(), postOffice.getId(), tenantId, today);
         PostOfficeStaffAssignment assignment = buildDefaultAssignment(postOffice, courier, tenantId, today);
         PostOfficeStaffAssignment savedAssignment = postOfficeStaffAssignmentRepository.save(assignment);
         return PostOfficeStaffMapper.toAssignmentResponse(savedAssignment);
@@ -199,6 +217,7 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             postOfficeStaffAssignmentRepository.deleteAll(assignmentsToDelete);
         }
 
+        closeOtherActiveAssignmentsForStaff(manager.getId(), postOffice.getId(), tenantId, today);
         PostOfficeStaffAssignment assignment = buildDefaultAssignment(postOffice, manager, tenantId, today);
         PostOfficeStaffAssignment savedAssignment = postOfficeStaffAssignmentRepository.save(assignment);
         return PostOfficeStaffMapper.toAssignmentResponse(savedAssignment);
@@ -222,6 +241,59 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
 
         applyAssignmentDetailUpdate(assignment, request);
 
+        PostOfficeStaffAssignment updatedAssignment = postOfficeStaffAssignmentRepository.save(assignment);
+        return PostOfficeStaffMapper.toAssignmentResponse(updatedAssignment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostOfficeStaffAssignmentResponse> getActiveAssignmentsByPostOffice(
+            Long postOfficeId,
+            PostOfficeStaffRole role
+    ) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        getPostOfficeByIdAndTenantOrThrow(postOfficeId, tenantId);
+
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessPostOffice(postOfficeId, managedPostOfficeIds);
+        }
+
+        LocalDate today = LocalDate.now();
+        List<PostOfficeStaffAssignment> assignments = role == null
+                ? postOfficeStaffAssignmentRepository.findActiveAssignmentsByPostOfficeIdAndTenantId(
+                        postOfficeId,
+                        tenantId,
+                        today
+                )
+                : postOfficeStaffAssignmentRepository.findActiveAssignmentsByPostOfficeIdAndTenantIdAndStaffRole(
+                        postOfficeId,
+                        tenantId,
+                        today,
+                        role
+                );
+        return assignments.stream().map(PostOfficeStaffMapper::toAssignmentResponse).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PostOfficeStaffAssignmentResponse unassignStaffFromPostOffice(Long assignmentId) {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        PostOfficeStaffAssignment assignment = getAssignmentByIdAndTenantOrThrow(assignmentId, tenantId);
+
+        Long postOfficeId = assignment.getPostOffice() == null ? null : assignment.getPostOffice().getId();
+        if (isManagerScopedAccess()) {
+            Set<Long> managedPostOfficeIds = getManagedPostOfficeIdsOrThrow(tenantId);
+            validateManagerCanAccessPostOffice(postOfficeId, managedPostOfficeIds);
+        }
+
+        LocalDate today = LocalDate.now();
+        if (assignment.getAssignedFrom() != null && assignment.getAssignedFrom().isEqual(today)) {
+            postOfficeStaffAssignmentRepository.delete(assignment);
+            return PostOfficeStaffMapper.toAssignmentResponse(assignment);
+        }
+
+        assignment.setAssignedTo(today.minusDays(1));
         PostOfficeStaffAssignment updatedAssignment = postOfficeStaffAssignmentRepository.save(assignment);
         return PostOfficeStaffMapper.toAssignmentResponse(updatedAssignment);
     }
@@ -263,6 +335,46 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
                 .isPrimary(Boolean.TRUE)
                 .tenantId(tenantId)
                 .build();
+    }
+
+    private void closeOtherActiveAssignmentsForStaff(
+            Long staffId,
+            Long targetPostOfficeId,
+            Long tenantId,
+            LocalDate today
+    ) {
+        List<PostOfficeStaffAssignment> activeAssignments = postOfficeStaffAssignmentRepository
+                .findActiveAssignmentsByStaffIdAndTenantId(staffId, tenantId, today);
+        if (activeAssignments.isEmpty()) {
+            return;
+        }
+
+        List<PostOfficeStaffAssignment> assignmentsToUpdate = new ArrayList<>();
+        List<PostOfficeStaffAssignment> assignmentsToDelete = new ArrayList<>();
+
+        for (PostOfficeStaffAssignment activeAssignment : activeAssignments) {
+            Long activePostOfficeId = activeAssignment.getPostOffice() == null
+                    ? null
+                    : activeAssignment.getPostOffice().getId();
+            if (targetPostOfficeId != null && targetPostOfficeId.equals(activePostOfficeId)) {
+                continue;
+            }
+
+            if (activeAssignment.getAssignedFrom() != null && activeAssignment.getAssignedFrom().isEqual(today)) {
+                assignmentsToDelete.add(activeAssignment);
+                continue;
+            }
+
+            activeAssignment.setAssignedTo(today.minusDays(1));
+            assignmentsToUpdate.add(activeAssignment);
+        }
+
+        if (!assignmentsToUpdate.isEmpty()) {
+            postOfficeStaffAssignmentRepository.saveAll(assignmentsToUpdate);
+        }
+        if (!assignmentsToDelete.isEmpty()) {
+            postOfficeStaffAssignmentRepository.deleteAll(assignmentsToDelete);
+        }
     }
 
     private PostOfficeStaff getPostOfficeStaffByIdAndTenantOrThrow(Long id, Long tenantId) {

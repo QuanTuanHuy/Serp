@@ -42,6 +42,7 @@ import {
   ImageUp,
   RefreshCw,
   ShieldAlert,
+  UserCog,
 } from 'lucide-react';
 import type { TmsFilterMode } from '../../components/list';
 import {
@@ -52,6 +53,11 @@ import {
   useGetPostOfficesQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
+  useGeocodeAddressMutation,
+  useGetSecondMileHubStaffAssignmentsQuery,
+  useGetSecondMileAssignableStaffsQuery,
+  useAssignSecondMileStaffToHubMutation,
+  useUnassignSecondMileHubStaffAssignmentMutation,
   useCreateHubMutation,
   useUpdateHubMutation,
   useDeleteHubMutation,
@@ -66,6 +72,7 @@ import type {
   HubStatus,
   HubImportItem,
   HubListFilters,
+  SecondMileHubStaffRole,
   ImportHistory,
   ValidateImportFileResponse,
   Ward,
@@ -108,9 +115,10 @@ function getHubStatusBadgeVariant(
 
 export function HubListPage() {
   const notification = useNotification();
-  const isTmsAdmin = useAppSelector((state) =>
-    Boolean(state.account.user.profile?.roles?.includes('TMS_ADMIN'))
-  );
+  const roles = useAppSelector((state) => state.account.user.profile?.roles ?? []);
+  const isTmsAdmin = roles.includes('TMS_ADMIN');
+  const canManageHubStaffAssignments =
+    roles.includes('TMS_ADMIN') || roles.includes('TMS_HUB_MANAGER');
 
   const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
   const [filterFormValues, setFilterFormValues] =
@@ -221,6 +229,16 @@ export function HubListPage() {
   const [selectedPostOfficeCode, setSelectedPostOfficeCode] =
     React.useState('');
 
+  const [manageStaffHub, setManageStaffHub] = React.useState<Hub | null>(null);
+  const [staffDialogOpen, setStaffDialogOpen] = React.useState(false);
+  const [staffRoleFilter, setStaffRoleFilter] = React.useState<
+    'ALL' | SecondMileHubStaffRole
+  >('ALL');
+  const [staffRoleToAssign, setStaffRoleToAssign] =
+    React.useState<SecondMileHubStaffRole>('EMPLOYEE');
+  const [staffSearchKeyword, setStaffSearchKeyword] = React.useState('');
+  const [selectedStaffIdToAssign, setSelectedStaffIdToAssign] = React.useState('');
+
   const { data: availablePostOfficesData } = useGetPostOfficesQuery(
     {
       page: 0,
@@ -316,6 +334,38 @@ export function HubListPage() {
   const [validateHubImport, { isLoading: isValidatingImport }] =
     useValidateHubImportMutation();
   const [importHubs, { isLoading: isImportingHubs }] = useImportHubsMutation();
+  const [geocodeAddress, { isLoading: isGeocodingAddress }] =
+    useGeocodeAddressMutation();
+  const [assignSecondMileStaffToHub, { isLoading: isAssigningHubStaff }] =
+    useAssignSecondMileStaffToHubMutation();
+  const [unassignSecondMileHubStaffAssignment, { isLoading: isUnassigningHubStaff }] =
+    useUnassignSecondMileHubStaffAssignmentMutation();
+
+  const {
+    data: hubStaffAssignments,
+    isFetching: isFetchingHubStaffAssignments,
+    refetch: refetchHubStaffAssignments,
+  } =
+    useGetSecondMileHubStaffAssignmentsQuery(
+      {
+        hubId: manageStaffHub?.id ?? 0,
+        ...(staffRoleFilter !== 'ALL' ? { role: staffRoleFilter } : {}),
+      },
+      { skip: !manageStaffHub }
+    );
+
+  const {
+    data: assignableHubStaffs,
+    isFetching: isFetchingAssignableHubStaffs,
+  } = useGetSecondMileAssignableStaffsQuery(
+    {
+      role: staffRoleToAssign,
+      ...(staffSearchKeyword.trim()
+        ? { keyword: staffSearchKeyword.trim() }
+        : {}),
+    },
+    { skip: !manageStaffHub }
+  );
 
   const updateFormField = React.useCallback(
     <K extends keyof HubFormState>(field: K, value: HubFormState[K]) => {
@@ -390,6 +440,57 @@ export function HubListPage() {
       });
     }
   };
+
+  const handleGeocodeHubAddress = React.useCallback(async () => {
+    if (!isTmsAdmin) {
+      notification.error('Only TMS_ADMIN can geocode hub location.');
+      return;
+    }
+
+    const addressDetail = formValues.address_detail.trim();
+    if (!addressDetail) {
+      notification.error('Address detail is required before geocoding.');
+      return;
+    }
+
+    const provinceCode = selectedFormProvinceCode;
+    if (!provinceCode) {
+      notification.error('Select a province before geocoding.');
+      return;
+    }
+
+    const wardCode = selectedFormWardCode;
+    const provinceName =
+      provinceSelectOptions.find((province) => province.provinceCode === provinceCode)
+        ?.name ?? provinceCode;
+    const wardName =
+      wardSelectOptions.find((ward) => ward.wardCode === wardCode)?.name ?? wardCode;
+
+    const query = [addressDetail, wardName, provinceName, 'Vietnam']
+      .filter((part) => Boolean(part))
+      .join(', ');
+
+    try {
+      const geocoded = await geocodeAddress({ address: query }).unwrap();
+      updateFormField('latitude', String(geocoded.latitude));
+      updateFormField('longitude', String(geocoded.longitude));
+      notification.success('Coordinates updated from address geocoding.');
+    } catch (error) {
+      notification.error('Failed to geocode hub address.', {
+        description: getErrorMessage(error),
+      });
+    }
+  }, [
+    formValues.address_detail,
+    geocodeAddress,
+    isTmsAdmin,
+    notification,
+    provinceSelectOptions,
+    selectedFormProvinceCode,
+    selectedFormWardCode,
+    updateFormField,
+    wardSelectOptions,
+  ]);
 
   const handleDeleteHub = async () => {
     if (!deleteTarget || !isTmsAdmin) {
@@ -494,6 +595,15 @@ export function HubListPage() {
     setPostOfficeDialogOpen(true);
   };
 
+  const openHubStaffDialog = (hub: Hub) => {
+    setManageStaffHub(hub);
+    setStaffRoleFilter('ALL');
+    setStaffRoleToAssign('EMPLOYEE');
+    setStaffSearchKeyword('');
+    setSelectedStaffIdToAssign('');
+    setStaffDialogOpen(true);
+  };
+
   const handleAssignPostOffice = async () => {
     if (!isTmsAdmin) {
       notification.error('Only TMS_ADMIN can assign post offices to hubs.');
@@ -539,6 +649,51 @@ export function HubListPage() {
       refetch();
     } catch (error) {
       notification.error('Failed to remove post office.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleAssignHubStaff = async () => {
+    if (!canManageHubStaffAssignments) {
+      notification.error('Only TMS_ADMIN or TMS_HUB_MANAGER can assign staff.');
+      return;
+    }
+    if (!manageStaffHub?.id) {
+      return;
+    }
+    const staffId = Number(selectedStaffIdToAssign);
+    if (!Number.isInteger(staffId) || staffId <= 0) {
+      notification.error('Select a staff from dropdown.');
+      return;
+    }
+
+    try {
+      await assignSecondMileStaffToHub({ staffId, hubId: manageStaffHub.id }).unwrap();
+      notification.success('Hub staff assigned successfully.');
+      setSelectedStaffIdToAssign('');
+      void refetchHubStaffAssignments();
+    } catch (error) {
+      notification.error('Failed to assign hub staff.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleUnassignHubStaff = async (assignmentId?: number) => {
+    if (!canManageHubStaffAssignments) {
+      notification.error('Only TMS_ADMIN or TMS_HUB_MANAGER can unassign staff.');
+      return;
+    }
+    if (!assignmentId) {
+      return;
+    }
+    try {
+      await unassignSecondMileHubStaffAssignment(assignmentId).unwrap();
+      notification.success('Hub staff unassigned successfully.');
+      void refetchHubStaffAssignments();
+    } catch (error) {
+      notification.error('Failed to unassign hub staff.', {
         description: getErrorMessage(error),
       });
     }
@@ -770,6 +925,14 @@ export function HubListPage() {
                         >
                           Post offices
                         </Button>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => openHubStaffDialog(hub)}
+                        >
+                          <UserCog className='h-4 w-4 mr-1' />
+                          Staff
+                        </Button>
                         {isTmsAdmin && (
                           <>
                             <Button
@@ -839,6 +1002,7 @@ export function HubListPage() {
         open={formDialogOpen}
         formMode={formMode}
         isSaving={isCreating || isUpdating}
+        isGeocodingAddress={isGeocodingAddress}
         formValues={formValues}
         selectedProvinceCode={selectedFormProvinceCode}
         selectedWardCode={selectedFormWardCode}
@@ -847,6 +1011,7 @@ export function HubListPage() {
         isFetchingWardsForForm={isFetchingWardsForForm}
         onOpenChange={setFormDialogOpen}
         onSubmit={handleSubmitHubForm}
+        onGeocodeAddress={handleGeocodeHubAddress}
         updateFormField={updateFormField}
       />
 
@@ -1033,6 +1198,160 @@ export function HubListPage() {
                     Next
                   </Button>
                 </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={staffDialogOpen}
+        onOpenChange={(open) => {
+          setStaffDialogOpen(open);
+          if (!open) {
+            setManageStaffHub(null);
+          }
+        }}
+      >
+        <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle>
+              Hub staff assignments — {manageStaffHub?.name} ({manageStaffHub?.code})
+            </DialogTitle>
+            <DialogDescription>
+              Assign or unassign manager/employee/driver for this hub.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='hub-staff-role-filter'>Role filter</Label>
+                <Select
+                  value={staffRoleFilter}
+                  onValueChange={(value) =>
+                    setStaffRoleFilter(value as 'ALL' | SecondMileHubStaffRole)
+                  }
+                >
+                  <SelectTrigger id='hub-staff-role-filter'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='ALL'>All roles</SelectItem>
+                    <SelectItem value='MANAGER'>Manager</SelectItem>
+                    <SelectItem value='EMPLOYEE'>Employee</SelectItem>
+                    <SelectItem value='DRIVER'>Driver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='hub-staff-role-assign'>Assign role</Label>
+                <Select
+                  value={staffRoleToAssign}
+                  onValueChange={(value) =>
+                    setStaffRoleToAssign(value as SecondMileHubStaffRole)
+                  }
+                >
+                  <SelectTrigger id='hub-staff-role-assign'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='MANAGER'>Manager</SelectItem>
+                    <SelectItem value='EMPLOYEE'>Employee</SelectItem>
+                    <SelectItem value='DRIVER'>Driver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='hub-staff-search'>Search staff (code/name)</Label>
+              <Input
+                id='hub-staff-search'
+                placeholder='e.g. USR_123_DRIVER or Nguyen Van A'
+                value={staffSearchKeyword}
+                onChange={(event) => setStaffSearchKeyword(event.target.value)}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='hub-staff-select'>Staff</Label>
+              <div className='flex gap-2'>
+                <Select
+                  value={selectedStaffIdToAssign || undefined}
+                  onValueChange={setSelectedStaffIdToAssign}
+                >
+                  <SelectTrigger id='hub-staff-select' className='w-full'>
+                    <SelectValue
+                      placeholder={
+                        isFetchingAssignableHubStaffs
+                          ? 'Loading staffs...'
+                          : 'Select staff'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(assignableHubStaffs ?? []).length === 0 ? (
+                      <SelectItem value='__empty__' disabled>
+                        No staffs found
+                      </SelectItem>
+                    ) : (
+                      (assignableHubStaffs ?? []).map((staff) => (
+                        <SelectItem key={staff.id} value={String(staff.id)}>
+                          {(staff.fullName || staff.code || `#${staff.id}`) +
+                            (staff.code ? ` (${staff.code})` : '')}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  onClick={() => void handleAssignHubStaff()}
+                  disabled={
+                    !canManageHubStaffAssignments ||
+                    isAssigningHubStaff ||
+                    !selectedStaffIdToAssign
+                  }
+                >
+                  {isAssigningHubStaff ? 'Assigning...' : 'Assign'}
+                </Button>
+              </div>
+            </div>
+
+            {isFetchingHubStaffAssignments ? (
+              <p className='text-sm text-muted-foreground'>Loading assignments...</p>
+            ) : (hubStaffAssignments ?? []).length === 0 ? (
+              <p className='text-sm text-muted-foreground'>
+                No active staff assignments for this hub.
+              </p>
+            ) : (
+              <div className='space-y-2'>
+                {(hubStaffAssignments ?? []).map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className='flex items-center justify-between gap-2 rounded-md border p-3'
+                  >
+                    <div className='text-sm'>
+                      <p className='font-medium'>
+                        {assignment.staffFullName || assignment.staffCode || `#${assignment.staffId}`}
+                      </p>
+                      <p className='text-muted-foreground'>
+                        Role: {assignment.staffRole || '--'} · From:{' '}
+                        {assignment.assignedFrom || '--'}
+                      </p>
+                    </div>
+                    <Button
+                      size='sm'
+                      variant='destructive'
+                      disabled={!canManageHubStaffAssignments || isUnassigningHubStaff}
+                      onClick={() => void handleUnassignHubStaff(assignment.id)}
+                    >
+                      Unassign
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

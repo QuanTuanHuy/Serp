@@ -13,6 +13,7 @@ import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
 import serp.project.pmcore.domain.optimization.model.OptimizationCandidateSkillFit;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunSummary;
+import serp.project.pmcore.domain.optimization.model.OptimizationScheduleAllocation;
 import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.Comparator;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OptimizationRunReviewAssembler {
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {
+    };
+    private static final TypeReference<List<OptimizationScheduleAllocation>> ALLOCATION_LIST = new TypeReference<>() {
     };
 
     private final JsonUtils jsonUtils;
@@ -39,14 +42,17 @@ public class OptimizationRunReviewAssembler {
                 .tenantId(run.getTenantId())
                 .projectId(run.getProjectId())
                 .scope(run.getScope())
-                .mode(run.getMode())
+                .objective(run.getObjective())
+                .changeScope(run.getChangeScope())
                 .status(run.getStatus())
                 .planningStart(run.getPlanningStart())
                 .planningEnd(run.getPlanningEnd())
-                .allowReassignment(run.getAllowReassignment())
-                .allowScheduleChanges(run.getAllowScheduleChanges())
                 .selectedWorkItemCount(run.getSelectedWorkItemCount())
                 .summary(summary)
+                .algorithmKey(run.getAlgorithmKey())
+                .algorithmVersion(run.getAlgorithmVersion())
+                .solverStatus(run.getSolverStatus())
+                .objectiveScore(run.getObjectiveScore())
                 .createdAt(run.getCreatedAt())
                 .createdBy(run.getCreatedBy())
                 .updatedAt(run.getUpdatedAt())
@@ -89,6 +95,7 @@ public class OptimizationRunReviewAssembler {
                 .assignmentReasons(parseStringList(item.getAssignmentReasonsJson()))
                 .scheduleReasons(parseStringList(item.getScheduleReasonsJson()))
                 .violations(parseStringList(item.getViolationsJson()))
+                .allocationChunks(parseAllocationChunks(item.getAllocationChunksJson()))
                 .appliedAt(item.getAppliedAt())
                 .assignmentSkippedReason(item.getAssignmentSkippedReason())
                 .scheduleSkippedReason(item.getScheduleSkippedReason())
@@ -143,5 +150,19 @@ public class OptimizationRunReviewAssembler {
             return List.of();
         }
         return jsonUtils.fromJson(json, STRING_LIST);
+    }
+
+    private List<OptimizationScheduleAllocationView> parseAllocationChunks(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        return jsonUtils.fromJson(json, ALLOCATION_LIST).stream()
+                .map(allocation -> OptimizationScheduleAllocationView.builder()
+                        .assigneeId(allocation.assigneeId())
+                        .start(allocation.start())
+                        .end(allocation.end())
+                        .effortMillis(allocation.effortMillis())
+                        .build())
+                .toList();
     }
 }

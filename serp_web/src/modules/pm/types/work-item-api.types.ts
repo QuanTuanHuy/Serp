@@ -55,6 +55,28 @@ export interface PMStatusApi {
   updatedBy?: number;
 }
 
+export interface PMStatusCategoryApi {
+  id: number;
+  tenantId: number;
+  name: string;
+  key: string;
+  color?: string | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number;
+  createdBy?: number;
+  updatedAt?: number;
+  updatedBy?: number;
+}
+
+export interface PMCreateStatusRequest {
+  statusKey: string;
+  name: string;
+  description?: string | null;
+  iconUrl?: string | null;
+  statusCategoryId: number;
+}
+
 export interface PMPriorityApi {
   id: number;
   tenantId: number;
@@ -333,6 +355,22 @@ export interface PMWorkItemSubtaskStatsApi extends PMWorkItemCountStatsApi {
   done: number;
 }
 
+export interface PMWorkItemPlanSummaryApi {
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  source?: string | null;
+  locked?: boolean | null;
+  sourceRunId?: number | null;
+  allocations?: PMWorkItemPlanAllocationApi[];
+}
+
+export interface PMWorkItemPlanAllocationApi {
+  assigneeId?: number | null;
+  start?: number | null;
+  end?: number | null;
+  effortMillis?: number | null;
+}
+
 export interface PMWorkItemDetailApi {
   id: number;
   projectId: number;
@@ -355,6 +393,7 @@ export interface PMWorkItemDetailApi {
   timeOriginalEstimate?: number;
   timeRemainingEstimate?: number;
   timeSpent?: number;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   issueType?: PMWorkItemDetailIssueTypeApi | null;
   assignee?: PMWorkItemDetailUserApi | null;
   reporter?: PMWorkItemDetailUserApi | null;
@@ -404,6 +443,80 @@ export interface PMWorkItemLinkApi {
   direction: 'OUTWARD' | 'INWARD' | string;
   linkType?: PMWorkItemLinkTypeApi | null;
   workItem?: PMWorkItemLinkTargetApi | null;
+}
+
+export interface PMIssueLinkTypeApi {
+  id: number;
+  tenantId?: number | null;
+  name: string;
+  outwardDescription?: string | null;
+  inwardDescription?: string | null;
+  isSystem?: boolean;
+  readOnly?: boolean;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMCreateWorkItemLinkRequest {
+  targetId: number;
+  linkTypeId: number;
+}
+
+export interface PMCreateWorkItemLinkResponse {
+  id: number;
+  sourceId: number;
+  targetId: number;
+  linkTypeId: number;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMDeleteWorkItemLinkResponse {
+  id?: number | null;
+  sourceId?: number | null;
+  targetId?: number | null;
+  linkTypeId?: number | null;
+  deletedAt?: number | string | null;
+  deletedBy?: number | null;
+}
+
+export interface PMWorklogApi {
+  id: number;
+  workItemId: number;
+  authorId?: number | null;
+  comment?: string | null;
+  startDate: number;
+  timeSpent: number;
+  createdAt?: number | string;
+  createdBy?: number | null;
+  updatedAt?: number | string;
+  updatedBy?: number | null;
+}
+
+export interface PMWorklogDetailApi extends PMWorklogApi {
+  workItemTimeSpent?: number | null;
+  workItemTimeRemainingEstimate?: number | null;
+}
+
+export interface PMWorklogListResponse {
+  items: PMWorklogApi[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  workItemId: number;
+  workItemTimeSpent?: number | null;
+  workItemTimeRemainingEstimate?: number | null;
+}
+
+export interface PMUpsertWorklogRequest {
+  timeSpent: number;
+  startDate: number;
+  comment?: string | null;
 }
 
 export interface PMWorkItemCommentApi {
@@ -602,6 +715,7 @@ export interface PMWorkItemTimelineItemApi {
   isUnscheduled: boolean;
   hasChildren: boolean;
   rank: string;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   issueType?: PMWorkItemTimelineIssueTypeApi | null;
   status?: PMWorkItemTimelineStatusApi | null;
   priority?: PMWorkItemTimelinePriorityApi | null;
@@ -624,6 +738,53 @@ export interface PMWorkItemTimelineResponse {
   pageSize: number;
 }
 
+export interface PMWorkItemCalendarIssueTypeApi {
+  id?: number | null;
+  name?: string | null;
+  iconUrl?: string | null;
+  hierarchyLevel?: number | null;
+}
+
+export interface PMWorkItemCalendarStatusApi {
+  id?: number | null;
+  name?: string | null;
+}
+
+export interface PMWorkItemCalendarPriorityApi {
+  id?: number | null;
+  name?: string | null;
+  color?: string | null;
+}
+
+export interface PMWorkItemScheduleAllocationCalendarItemApi {
+  allocationId: number;
+  workItemPlanId: number;
+  workItemId: number;
+  projectId: number;
+  key: string;
+  summary: string;
+  assigneeId?: number | null;
+  assigneeName?: string | null;
+  assigneeAvatarUrl?: string | null;
+  start?: number | null;
+  end?: number | null;
+  effortMillis?: number | null;
+  source?: string | null;
+  sourceRunId?: number | null;
+  sourceRunItemId?: number | null;
+  issueType?: PMWorkItemCalendarIssueTypeApi | null;
+  status?: PMWorkItemCalendarStatusApi | null;
+  priority?: PMWorkItemCalendarPriorityApi | null;
+}
+
+export interface PMWorkItemScheduleCalendarResponse {
+  items: PMWorkItemScheduleAllocationCalendarItemApi[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
 export interface PMGetWorkItemTimelineParams {
   viewportStart?: number;
   viewportEnd?: number;
@@ -635,6 +796,17 @@ export interface PMGetWorkItemTimelineParams {
   assigneeIds?: number[];
   issueTypeIds?: number[];
   priorityIds?: number[];
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PMGetWorkItemCalendarParams {
+  viewportStart?: number;
+  viewportEnd?: number;
+  statusIds?: number[];
+  assigneeIds?: number[];
+  issueTypeIds?: number[];
   keyword?: string;
   page?: number;
   pageSize?: number;

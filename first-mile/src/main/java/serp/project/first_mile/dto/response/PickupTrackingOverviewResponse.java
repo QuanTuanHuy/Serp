@@ -44,7 +44,8 @@ public record PickupTrackingOverviewResponse(
             LocalDateTime plannedEndTime,
             Integer totalOrders,
             Integer checkedInOrders,
-            Integer pendingCheckinOrders
+            Integer pendingCheckinOrders,
+            Integer returnableToPostOfficeOrders
     ) {
     }
 

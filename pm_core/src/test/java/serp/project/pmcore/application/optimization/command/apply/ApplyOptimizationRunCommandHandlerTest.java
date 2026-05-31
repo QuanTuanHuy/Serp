@@ -17,6 +17,7 @@ import serp.project.pmcore.application.optimization.support.OptimizationRunGuard
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
+import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
@@ -25,6 +26,8 @@ import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
+import serp.project.pmcore.domain.optimization.model.OptimizationScheduleAllocation;
+import serp.project.pmcore.domain.optimization.port.IWorkItemPlanAllocationPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -40,6 +43,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +66,8 @@ class ApplyOptimizationRunCommandHandlerTest {
     private IOptimizationRunWarningPort optimizationRunWarningPort;
     @Mock
     private IWorkItemPlanPort workItemPlanPort;
+    @Mock
+    private IWorkItemPlanAllocationPort workItemPlanAllocationPort;
     @Mock
     private IWorkItemReadPort workItemReadPort;
     @Mock
@@ -87,6 +94,7 @@ class ApplyOptimizationRunCommandHandlerTest {
                 optimizationRunItemPort,
                 optimizationRunWarningPort,
                 workItemPlanPort,
+                workItemPlanAllocationPort,
                 workItemReadPort,
                 workItemService,
                 projectService,
@@ -113,6 +121,24 @@ class ApplyOptimizationRunCommandHandlerTest {
 
         stubCommon(run, item, project, workItem);
         when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of("pm"), 101L, 100L)).thenReturn(actorContext);
+        when(workItemPlanPort.upsertActivePlan(any())).thenReturn(WorkItemPlanEntity.builder()
+                .id(700L)
+                .tenantId(TENANT_ID)
+                .projectId(PROJECT_ID)
+                .workItemId(WORK_ITEM_ID)
+                .plannedStart(1_714_876_800_000L)
+                .plannedEnd(1_714_905_600_000L)
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(RUN_ID)
+                .locked(false)
+                .build());
+        when(jsonUtils.fromJsonToList(anyString(), eq(OptimizationScheduleAllocation.class)))
+                .thenReturn(List.of(new OptimizationScheduleAllocation(
+                        100L,
+                        1_714_876_800_000L,
+                        1_714_878_600_000L,
+                        1_800_000L
+                )));
         when(optimizationRunReviewAssembler.toView(any(), any(), any()))
                 .thenReturn(OptimizationRunReviewView.builder().id(RUN_ID).build());
 
@@ -123,6 +149,12 @@ class ApplyOptimizationRunCommandHandlerTest {
         verify(workItemPlanPort).upsertActivePlan(planCaptor.capture());
         assertEquals(WorkItemPlanSource.OPTIMIZATION, planCaptor.getValue().getSource());
         assertEquals(RUN_ID, planCaptor.getValue().getSourceRunId());
+        ArgumentCaptor<List<WorkItemPlanAllocationEntity>> allocationCaptor = ArgumentCaptor.forClass(List.class);
+        verify(workItemPlanAllocationPort).replaceForPlan(eq(TENANT_ID), eq(700L), allocationCaptor.capture());
+        assertEquals(1, allocationCaptor.getValue().size());
+        assertEquals(WORK_ITEM_ID, allocationCaptor.getValue().getFirst().getWorkItemId());
+        assertEquals(100L, allocationCaptor.getValue().getFirst().getAssigneeId());
+        assertEquals(1_800_000L, allocationCaptor.getValue().getFirst().getEffortMillis());
 
         ArgumentCaptor<List<OptimizationRunItemEntity>> itemCaptor = ArgumentCaptor.forClass(List.class);
         verify(optimizationRunItemPort).saveAll(itemCaptor.capture());
@@ -188,6 +220,7 @@ class ApplyOptimizationRunCommandHandlerTest {
                 .suggestedAssigneeId(100L)
                 .suggestedPlannedStart(1_714_876_800_000L)
                 .suggestedPlannedEnd(1_714_905_600_000L)
+                .allocationChunksJson("[{\"assigneeId\":100,\"start\":1714876800000,\"end\":1714878600000,\"effortMillis\":1800000}]")
                 .assignmentDecision(OptimizationDecision.REJECTED)
                 .scheduleDecision(OptimizationDecision.ACCEPTED)
                 .assignmentApplyStatus(OptimizationApplyStatus.NOT_APPLIED)

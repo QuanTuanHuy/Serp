@@ -47,6 +47,11 @@ public class IssueLinkTypeAdapter implements IIssueLinkTypePort {
     }
 
     @Override
+    public List<IssueLinkTypeEntity> listByTenantIncludingSystem(Long tenantId) {
+        return issueLinkTypeMapper.toEntities(issueLinkTypeRepository.findByTenantIdOrSystemTenantOrderByNameAsc(tenantId));
+    }
+
+    @Override
     public IssueLinkTypeEntity save(IssueLinkTypeEntity issueLinkType) {
         IssueLinkTypeModel saved = issueLinkTypeRepository.save(issueLinkTypeMapper.toModel(issueLinkType));
         return issueLinkTypeMapper.toEntity(saved);
