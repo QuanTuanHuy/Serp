@@ -414,7 +414,7 @@ function PMWorkItemDetailMain({
         </DetailSection>
 
         <section className='space-y-2'>
-          <div className='flex items-center justify-between gap-3'>
+          <div className='flex items-center gap-3'>
             <button
               type='button'
               className='flex min-w-0 items-center gap-2 text-left text-base font-semibold'
@@ -431,20 +431,22 @@ function PMWorkItemDetailMain({
                 {item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}
               </span>
             </button>
-            <PMWorkItemLinkActions
-              projectId={projectId}
-              workItemId={workItemId}
-            />
           </div>
           {linkedItemsOpen ? (
-            <WorkItemLinksList
-              projectId={projectId}
-              query={linksQuery}
-              onDeleteLink={handleDeleteLink}
-              deletingLinkId={
-                deleteWorkItemLinkState.isLoading ? deletingLinkId : null
-              }
-            />
+            <>
+              <PMWorkItemLinkActions
+                projectId={projectId}
+                workItemId={workItemId}
+              />
+              <WorkItemLinksList
+                projectId={projectId}
+                query={linksQuery}
+                onDeleteLink={handleDeleteLink}
+                deletingLinkId={
+                  deleteWorkItemLinkState.isLoading ? deletingLinkId : null
+                }
+              />
+            </>
           ) : null}
         </section>
 
