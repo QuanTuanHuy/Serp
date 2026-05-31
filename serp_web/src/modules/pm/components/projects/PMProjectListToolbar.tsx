@@ -5,7 +5,8 @@
 
 'use client';
 
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import type React from 'react';
+import { Grid2X2, List, Search, SlidersHorizontal, X } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -15,11 +16,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '@/shared/components/ui';
-import type { PMProjectSort } from '../../types/project-list.types';
+import { cn } from '@/shared/utils';
+import type {
+  PMProjectSort,
+  PMProjectViewMode,
+} from '../../types/project-list.types';
 
 export type PMProjectStatusFilter = 'ALL' | 'ACTIVE' | 'ARCHIVED';
 export type PMProjectCategoryFilter = 'ALL' | string;
@@ -33,12 +35,14 @@ interface PMProjectListToolbarProps {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   categoryFilter: PMProjectCategoryFilter;
-  onCategoryFilterChange: (value: PMProjectCategoryFilter) => void;
   categoryOptions: PMProjectCategoryOption[];
   statusFilter: PMProjectStatusFilter;
-  onStatusFilterChange: (value: PMProjectStatusFilter) => void;
   sortBy: PMProjectSort;
   onSortByChange: (value: PMProjectSort) => void;
+  viewMode: PMProjectViewMode;
+  onViewModeChange: (value: PMProjectViewMode) => void;
+  activeFilterCount: number;
+  onOpenFilters: () => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
   resultCount: number;
@@ -49,21 +53,35 @@ export function PMProjectListToolbar({
   searchQuery,
   onSearchQueryChange,
   categoryFilter,
-  onCategoryFilterChange,
   categoryOptions,
   statusFilter,
-  onStatusFilterChange,
   sortBy,
   onSortByChange,
+  viewMode,
+  onViewModeChange,
+  activeFilterCount,
+  onOpenFilters,
   hasActiveFilters,
   onClearFilters,
   resultCount,
   totalCount,
 }: PMProjectListToolbarProps) {
+  const activeCategory = categoryOptions.find(
+    (category) => category.id === categoryFilter
+  );
+  const filterLabel =
+    activeFilterCount === 0
+      ? 'Filters'
+      : [
+          statusFilter !== 'ALL' ? statusFilter.toLowerCase() : undefined,
+          activeCategory?.name,
+        ]
+          .filter(Boolean)
+          .join(' / ');
+
   return (
-    <div className='flex flex-col gap-4 rounded-2xl border border-border/80 bg-card/60 p-4 shadow-sm backdrop-blur-md xl:flex-row xl:items-center xl:justify-between'>
-      {/* Left: Search & Info */}
-      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 flex-1'>
+    <div className='flex flex-col gap-4 rounded-xl border border-border/80 bg-card/60 p-4 shadow-sm backdrop-blur-md xl:flex-row xl:items-center xl:justify-between'>
+      <div className='flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4'>
         <div className='relative w-full sm:max-w-xs'>
           <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
           <Input
@@ -75,7 +93,7 @@ export function PMProjectListToolbar({
           />
         </div>
 
-        <div className='flex items-center gap-2.5 text-xs text-muted-foreground'>
+        <div className='flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground'>
           <Badge
             variant='outline'
             className='rounded-full px-2.5 py-0.5 border-border/50 text-[10px] uppercase tracking-wide bg-background/40'
@@ -91,52 +109,22 @@ export function PMProjectListToolbar({
         </div>
       </div>
 
-      {/* Right: Filters & Clear */}
       <div className='flex flex-wrap items-center gap-3'>
-        {/* Status Segmented Tabs */}
-        <Tabs
-          value={statusFilter}
-          onValueChange={(value) =>
-            onStatusFilterChange(value as PMProjectStatusFilter)
-          }
-          className='w-auto'
+        <Button
+          type='button'
+          variant='outline'
+          onClick={onOpenFilters}
+          className='h-10 gap-2 rounded-lg bg-background/50 border-border/70'
         >
-          <TabsList className='h-10 bg-muted/40 border border-border/60 p-1'>
-            <TabsTrigger value='ALL' className='px-3.5 text-xs h-8'>
-              All
-            </TabsTrigger>
-            <TabsTrigger value='ACTIVE' className='px-3.5 text-xs h-8'>
-              Active
-            </TabsTrigger>
-            <TabsTrigger value='ARCHIVED' className='px-3.5 text-xs h-8'>
-              Archived
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <SlidersHorizontal className='h-4 w-4' />
+          <span className='max-w-[150px] truncate text-sm'>{filterLabel}</span>
+          {activeFilterCount > 0 ? (
+            <Badge variant='secondary' className='ml-0.5'>
+              {activeFilterCount}
+            </Badge>
+          ) : null}
+        </Button>
 
-        {/* Category Dropdown */}
-        <div className='w-[180px]'>
-          <Select
-            value={categoryFilter}
-            onValueChange={(value) =>
-              onCategoryFilterChange(value as PMProjectCategoryFilter)
-            }
-          >
-            <SelectTrigger className='h-10 bg-background/50 border-border/70 focus:ring-primary/30'>
-              <SelectValue placeholder='Category' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='ALL'>All categories</SelectItem>
-              {categoryOptions.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Sort By Dropdown */}
         <div className='w-[180px]'>
           <Select
             value={sortBy}
@@ -153,7 +141,23 @@ export function PMProjectListToolbar({
           </Select>
         </div>
 
-        {/* Clear Filters */}
+        <div className='flex h-10 rounded-lg border border-border/70 bg-background/50 p-1'>
+          <ViewModeButton
+            label='List view'
+            active={viewMode === 'list'}
+            onClick={() => onViewModeChange('list')}
+          >
+            <List className='h-4 w-4' />
+          </ViewModeButton>
+          <ViewModeButton
+            label='Grid view'
+            active={viewMode === 'grid'}
+            onClick={() => onViewModeChange('grid')}
+          >
+            <Grid2X2 className='h-4 w-4' />
+          </ViewModeButton>
+        </div>
+
         {hasActiveFilters && (
           <Button
             type='button'
@@ -168,5 +172,34 @@ export function PMProjectListToolbar({
         )}
       </div>
     </div>
+  );
+}
+
+function ViewModeButton({
+  label,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type='button'
+      variant='ghost'
+      size='icon'
+      onClick={onClick}
+      className={cn(
+        'h-8 w-8 rounded-md text-muted-foreground hover:text-foreground',
+        active && 'bg-card text-foreground shadow-sm'
+      )}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </Button>
   );
 }
