@@ -10,6 +10,7 @@ import {
   Bolt,
   CheckSquare,
   ChevronDown,
+  ChevronRight,
   Eye,
   Flag,
   GitBranch,
@@ -445,6 +446,7 @@ function PMWorkItemDetailSidebar({
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
+  const [detailPanelOpen, setDetailPanelOpen] = useState(true);
 
   const { data: projectPeople = [], isLoading: isUserLoading } =
     useGetPmProjectPeopleQuery(projectId, { skip: !workItemId });
@@ -585,109 +587,121 @@ function PMWorkItemDetailSidebar({
       </div>
 
       <section className='rounded-lg border bg-background'>
-        <div className='flex items-center justify-between border-b px-4 py-3'>
-          <h2 className='flex items-center gap-2 font-semibold'>
-            <ChevronDown className='h-4 w-4' /> Details
-          </h2>
+        <div className='flex items-center justify-between gap-3 border-b px-4 py-3'>
+          <button
+            type='button'
+            className='flex min-w-0 items-center gap-2 text-left font-semibold'
+            aria-expanded={detailPanelOpen}
+            onClick={() => setDetailPanelOpen((current) => !current)}
+          >
+            {detailPanelOpen ? (
+              <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+            ) : (
+              <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+            )}
+            <span>Details</span>
+          </button>
           <SlidersHorizontal className='h-4 w-4 text-muted-foreground' />
         </div>
-        <div className='space-y-5 p-4'>
-          <DetailField label='Assignee'>
-            <InlineComboboxField
-              value={item.assigneeId}
-              display={
-                <UserValue
-                  name={item.assigneeName ?? 'Unassigned'}
-                  avatarUrl={item.assigneeAvatarUrl}
-                />
-              }
-              items={assigneeOptions}
-              placeholder='Unassigned'
-              loading={isUserLoading}
-              disabled={updateState.isLoading}
-              onSave={(assigneeId) => handleUpdate({ assigneeId })}
-            />
-          </DetailField>
-          <DetailField label='Priority'>
-            <InlineComboboxField
-              value={item.priorityId}
-              display={
-                <span className='inline-flex items-center gap-2'>
-                  <Flag
-                    className='h-4 w-4'
-                    style={
-                      item.priorityColor
-                        ? { color: item.priorityColor }
-                        : undefined
-                    }
+        {detailPanelOpen ? (
+          <div className='space-y-5 p-4'>
+            <DetailField label='Assignee'>
+              <InlineComboboxField
+                value={item.assigneeId}
+                display={
+                  <UserValue
+                    name={item.assigneeName ?? 'Unassigned'}
+                    avatarUrl={item.assigneeAvatarUrl}
                   />
-                  {item.priorityName ?? 'None'}
-                </span>
-              }
-              items={priorityOptions}
-              placeholder='None'
-              loading={isMetaFetching}
-              disabled={updateState.isLoading}
-              onSave={(priorityId) => handleUpdate({ priorityId })}
-            />
-          </DetailField>
-          <DetailField label='Parent'>
-            {item.parentId ? (
-              <span className='inline-flex min-w-0 flex-col'>
-                <span className='font-medium'>
-                  {item.parentKey ?? `#${item.parentId}`}
-                </span>
-                {item.parentSummary ? (
-                  <span className='truncate text-xs text-muted-foreground'>
-                    {item.parentSummary}
+                }
+                items={assigneeOptions}
+                placeholder='Unassigned'
+                loading={isUserLoading}
+                disabled={updateState.isLoading}
+                onSave={(assigneeId) => handleUpdate({ assigneeId })}
+              />
+            </DetailField>
+            <DetailField label='Priority'>
+              <InlineComboboxField
+                value={item.priorityId}
+                display={
+                  <span className='inline-flex items-center gap-2'>
+                    <Flag
+                      className='h-4 w-4'
+                      style={
+                        item.priorityColor
+                          ? { color: item.priorityColor }
+                          : undefined
+                      }
+                    />
+                    {item.priorityName ?? 'None'}
                   </span>
-                ) : null}
-              </span>
-            ) : (
-              'None'
-            )}
-          </DetailField>
-          <DetailField label='Due date'>
-            <InlineDateField
-              value={item.dueDate}
-              disabled={updateState.isLoading}
-              onSave={(dueDate) => handleUpdate({ dueDate })}
-            />
-          </DetailField>
-          <DetailField label='Labels'>None</DetailField>
-          <DetailField label='Team'>None</DetailField>
-          <DetailField label='Start date'>
-            <InlineDateField
-              value={item.startDate}
-              disabled={updateState.isLoading}
-              onSave={(startDate) => handleUpdate({ startDate })}
-            />
-          </DetailField>
-          <DetailField label='Original estimate'>
-            <InlineNumberField
-              value={item.timeOriginalEstimate}
-              disabled={updateState.isLoading}
-              onSave={(timeOriginalEstimate) =>
-                handleUpdate({ timeOriginalEstimate })
-              }
-            />
-          </DetailField>
-          <DetailField label='Remaining'>
-            <InlineNumberField
-              value={item.timeRemainingEstimate}
-              disabled={updateState.isLoading}
-              onSave={(timeRemainingEstimate) =>
-                handleUpdate({ timeRemainingEstimate })
-              }
-            />
-          </DetailField>
-          <DetailField label='Reporter'>
-            <UserValue
-              name={item.reporterName ?? 'None'}
-              avatarUrl={item.reporterAvatarUrl}
-            />
-          </DetailField>
-        </div>
+                }
+                items={priorityOptions}
+                placeholder='None'
+                loading={isMetaFetching}
+                disabled={updateState.isLoading}
+                onSave={(priorityId) => handleUpdate({ priorityId })}
+              />
+            </DetailField>
+            <DetailField label='Parent'>
+              {item.parentId ? (
+                <span className='inline-flex min-w-0 flex-col'>
+                  <span className='font-medium'>
+                    {item.parentKey ?? `#${item.parentId}`}
+                  </span>
+                  {item.parentSummary ? (
+                    <span className='truncate text-xs text-muted-foreground'>
+                      {item.parentSummary}
+                    </span>
+                  ) : null}
+                </span>
+              ) : (
+                'None'
+              )}
+            </DetailField>
+            <DetailField label='Due date'>
+              <InlineDateField
+                value={item.dueDate}
+                disabled={updateState.isLoading}
+                onSave={(dueDate) => handleUpdate({ dueDate })}
+              />
+            </DetailField>
+            <DetailField label='Labels'>None</DetailField>
+            <DetailField label='Team'>None</DetailField>
+            <DetailField label='Start date'>
+              <InlineDateField
+                value={item.startDate}
+                disabled={updateState.isLoading}
+                onSave={(startDate) => handleUpdate({ startDate })}
+              />
+            </DetailField>
+            <DetailField label='Original estimate'>
+              <InlineNumberField
+                value={item.timeOriginalEstimate}
+                disabled={updateState.isLoading}
+                onSave={(timeOriginalEstimate) =>
+                  handleUpdate({ timeOriginalEstimate })
+                }
+              />
+            </DetailField>
+            <DetailField label='Remaining'>
+              <InlineNumberField
+                value={item.timeRemainingEstimate}
+                disabled={updateState.isLoading}
+                onSave={(timeRemainingEstimate) =>
+                  handleUpdate({ timeRemainingEstimate })
+                }
+              />
+            </DetailField>
+            <DetailField label='Reporter'>
+              <UserValue
+                name={item.reporterName ?? 'None'}
+                avatarUrl={item.reporterAvatarUrl}
+              />
+            </DetailField>
+          </div>
+        ) : null}
       </section>
 
       <PMWorkItemSkillPanel projectId={projectId} workItemId={workItemId} />

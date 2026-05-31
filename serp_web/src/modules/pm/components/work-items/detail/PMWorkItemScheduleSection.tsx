@@ -5,8 +5,10 @@
 
 'use client';
 
+import { useState } from 'react';
+import { CalendarDays, ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/shared/components/ui';
-import { DetailField, DetailSection } from './PMWorkItemDetailPrimitives';
+import { DetailField } from './PMWorkItemDetailPrimitives';
 import { formatDetailDate } from './pmWorkItemDetail.utils';
 import type { WorkItemDetailModel } from './pmWorkItemDetail.types';
 
@@ -15,64 +17,86 @@ export function PMWorkItemScheduleSection({
 }: {
   item: WorkItemDetailModel;
 }) {
+  const [open, setOpen] = useState(true);
   const schedule = item.schedule;
 
   return (
-    <DetailSection title='Schedule'>
-      <DetailField label='Plan'>
-        {schedule ? (
-          <div className='space-y-2'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <Badge variant='secondary' className='h-6 px-2'>
-                {schedule.source || 'UNKNOWN'}
-              </Badge>
-              {schedule.locked ? (
-                <Badge variant='destructive' className='h-6 px-2'>
-                  Locked
-                </Badge>
-              ) : null}
-              {schedule.sourceRunId ? (
-                <Badge variant='outline' className='h-6 px-2'>
-                  Run #{schedule.sourceRunId}
-                </Badge>
-              ) : null}
-            </div>
-            <div className='font-medium'>
-              {formatDetailDate(schedule.plannedStart)} to{' '}
-              {formatDetailDate(schedule.plannedEnd)}
-            </div>
-            {schedule.allocations?.length ? (
-              <div className='space-y-1.5 pt-1'>
-                {schedule.allocations.map((allocation, index) => (
-                  <div
-                    key={`${allocation.start ?? index}-${allocation.end ?? index}`}
-                    className='rounded-md border bg-muted/20 px-2 py-1.5 text-xs'
-                  >
-                    <div className='font-medium'>
-                      {formatDetailDateTime(allocation.start)} to{' '}
-                      {formatDetailDateTime(allocation.end)}
-                    </div>
-                    <div className='mt-0.5 text-muted-foreground'>
-                      {formatEffort(allocation.effortMillis)}
-                      {allocation.assigneeId
-                        ? ` / User #${allocation.assigneeId}`
-                        : ''}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <span className='text-muted-foreground'>Unscheduled</span>
-        )}
-      </DetailField>
-      <DetailField label='Deadline'>
-        <span className='text-muted-foreground'>
-          {formatDetailDate(item.dueDate)}
+    <section className='mt-3 rounded-lg border bg-background'>
+      <button
+        type='button'
+        className='flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40'
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+      >
+        <span className='inline-flex min-w-0 items-center gap-3 font-semibold'>
+          {open ? (
+            <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+          ) : (
+            <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+          )}
+          <span className='truncate'>Schedule</span>
+          <CalendarDays className='h-4 w-4 shrink-0 text-muted-foreground' />
         </span>
-      </DetailField>
-    </DetailSection>
+      </button>
+
+      {open ? (
+        <div className='space-y-5 border-t p-4'>
+          <DetailField label='Plan'>
+            {schedule ? (
+              <div className='space-y-2'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <Badge variant='secondary' className='h-6 px-2'>
+                    {schedule.source || 'UNKNOWN'}
+                  </Badge>
+                  {schedule.locked ? (
+                    <Badge variant='destructive' className='h-6 px-2'>
+                      Locked
+                    </Badge>
+                  ) : null}
+                  {schedule.sourceRunId ? (
+                    <Badge variant='outline' className='h-6 px-2'>
+                      Run #{schedule.sourceRunId}
+                    </Badge>
+                  ) : null}
+                </div>
+                <div className='font-medium'>
+                  {formatDetailDate(schedule.plannedStart)} to{' '}
+                  {formatDetailDate(schedule.plannedEnd)}
+                </div>
+                {schedule.allocations?.length ? (
+                  <div className='space-y-1.5 pt-1'>
+                    {schedule.allocations.map((allocation, index) => (
+                      <div
+                        key={`${allocation.start ?? index}-${allocation.end ?? index}`}
+                        className='rounded-md border bg-muted/20 px-2 py-1.5 text-xs'
+                      >
+                        <div className='font-medium'>
+                          {formatDetailDateTime(allocation.start)} to{' '}
+                          {formatDetailDateTime(allocation.end)}
+                        </div>
+                        <div className='mt-0.5 text-muted-foreground'>
+                          {formatEffort(allocation.effortMillis)}
+                          {allocation.assigneeId
+                            ? ` / User #${allocation.assigneeId}`
+                            : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <span className='text-muted-foreground'>Unscheduled</span>
+            )}
+          </DetailField>
+          <DetailField label='Deadline'>
+            <span className='text-muted-foreground'>
+              {formatDetailDate(item.dueDate)}
+            </span>
+          </DetailField>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

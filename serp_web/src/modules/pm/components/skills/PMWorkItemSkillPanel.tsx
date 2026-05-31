@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { getErrorMessage } from '@/lib/store/api';
@@ -65,6 +65,7 @@ export function PMWorkItemSkillPanel({
   workItemId,
 }: PMWorkItemSkillPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const skillsQuery = useGetPmSkillsQuery();
   const workItemSkillsQuery = useGetPmWorkItemSkillsQuery(
     { projectId, workItemId: workItemId ?? 0 },
@@ -78,8 +79,20 @@ export function PMWorkItemSkillPanel({
 
   return (
     <section className='rounded-lg border bg-background'>
-      <div className='flex items-center justify-between border-b px-4 py-3'>
-        <h2 className='font-semibold'>Skills</h2>
+      <div className='flex items-center justify-between gap-3 border-b px-4 py-3'>
+        <button
+          type='button'
+          className='flex min-w-0 items-center gap-2 text-left font-semibold'
+          aria-expanded={panelOpen}
+          onClick={() => setPanelOpen((current) => !current)}
+        >
+          {panelOpen ? (
+            <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+          ) : (
+            <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+          )}
+          <span>Skills</span>
+        </button>
         <Button
           type='button'
           variant='ghost'
@@ -90,35 +103,37 @@ export function PMWorkItemSkillPanel({
           Edit
         </Button>
       </div>
-      <div className='space-y-2 p-4'>
-        {workItemSkillsQuery.isLoading ? (
-          <>
-            <Skeleton className='h-10 rounded-md' />
-            <Skeleton className='h-10 rounded-md' />
-          </>
-        ) : requirements.length ? (
-          requirements.map((item) => (
-            <div key={item.id} className='rounded-md border px-3 py-2'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <span className='text-sm font-medium'>
-                  {getSkillLabel(item.skillId, skillsById)}
-                </span>
-                <Badge variant='secondary'>
-                  {getRequirementLabel(item.requirementType)}
-                </Badge>
+      {panelOpen ? (
+        <div className='space-y-2 p-4'>
+          {workItemSkillsQuery.isLoading ? (
+            <>
+              <Skeleton className='h-10 rounded-md' />
+              <Skeleton className='h-10 rounded-md' />
+            </>
+          ) : requirements.length ? (
+            requirements.map((item) => (
+              <div key={item.id} className='rounded-md border px-3 py-2'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='text-sm font-medium'>
+                    {getSkillLabel(item.skillId, skillsById)}
+                  </span>
+                  <Badge variant='secondary'>
+                    {getRequirementLabel(item.requirementType)}
+                  </Badge>
+                </div>
+                <div className='mt-1 text-xs text-muted-foreground'>
+                  Min {getProficiencyLabel(item.minProficiency)} - Weight{' '}
+                  {item.weight}
+                </div>
               </div>
-              <div className='mt-1 text-xs text-muted-foreground'>
-                Min {getProficiencyLabel(item.minProficiency)} - Weight{' '}
-                {item.weight}
-              </div>
+            ))
+          ) : (
+            <div className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
+              No skill requirements.
             </div>
-          ))
-        ) : (
-          <div className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
-            No skill requirements.
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : null}
       <PMWorkItemSkillDialog
         open={dialogOpen}
         projectId={projectId}
