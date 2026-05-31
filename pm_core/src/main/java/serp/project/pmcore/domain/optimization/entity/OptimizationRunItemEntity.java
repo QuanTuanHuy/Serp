@@ -48,6 +48,7 @@ public class OptimizationRunItemEntity extends BaseEntity {
     private String assignmentReasonsJson;
     private String scheduleReasonsJson;
     private String violationsJson;
+    private String allocationChunksJson;
     private Long appliedAt;
     private String assignmentSkippedReason;
     private String scheduleSkippedReason;

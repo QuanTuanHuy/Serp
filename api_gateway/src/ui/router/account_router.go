@@ -121,6 +121,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/roles", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me/settings", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).PUT("/me/settings", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/status", organizationController.UpdateUserStatusInOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/stats", genericProxyController.ProxyHandler("account"))

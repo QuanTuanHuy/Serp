@@ -7,6 +7,7 @@ package serp.project.pmcore.domain.optimization.enums;
 
 public enum OptimizationWarningCode {
     DEPENDENCY_CYCLE,
+    DEPENDENCY_VIOLATION,
     EXTERNAL_DEPENDENCY,
     MISSING_ESTIMATE,
     DEFAULT_DURATION_USED,

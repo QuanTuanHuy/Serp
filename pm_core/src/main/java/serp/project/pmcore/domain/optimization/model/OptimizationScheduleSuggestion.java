@@ -14,6 +14,8 @@ public record OptimizationScheduleSuggestion(
         Long assigneeId,
         Long plannedStart,
         Long plannedEnd,
+        Long allocatedEffortMillis,
+        List<OptimizationScheduleAllocation> allocations,
         OptimizationConfidence confidence,
         List<String> reasons,
         List<OptimizationConstraintViolation> violations

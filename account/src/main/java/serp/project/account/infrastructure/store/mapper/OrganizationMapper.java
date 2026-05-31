@@ -35,6 +35,11 @@ public class OrganizationMapper extends BaseMapper {
                 .code(model.getCode())
                 .description(model.getDescription())
                 .address(model.getAddress())
+                .city(model.getCity())
+                .state(model.getState())
+                .country(model.getCountry())
+                .zipCode(model.getZipCode())
+                .taxId(model.getTaxId())
                 .ownerId(model.getOwnerId())
                 .organizationType(model.getOrganizationType())
                 .industry(model.getIndustry())
@@ -49,6 +54,11 @@ public class OrganizationMapper extends BaseMapper {
                 .language(model.getLanguage())
                 .logoUrl(model.getLogoUrl())
                 .primaryColor(model.getPrimaryColor())
+                .secondaryColor(model.getSecondaryColor())
+                .faviconUrl(model.getFaviconUrl())
+                .dateFormat(model.getDateFormat())
+                .timeFormat(model.getTimeFormat())
+                .weekStartsOn(model.getWeekStartsOn())
                 .website(model.getWebsite())
                 .phoneNumber(model.getPhoneNumber())
                 .email(model.getEmail())
@@ -68,6 +78,11 @@ public class OrganizationMapper extends BaseMapper {
                 .code(entity.getCode())
                 .description(entity.getDescription())
                 .address(entity.getAddress())
+                .city(entity.getCity())
+                .state(entity.getState())
+                .country(entity.getCountry())
+                .zipCode(entity.getZipCode())
+                .taxId(entity.getTaxId())
                 .ownerId(entity.getOwnerId())
                 .organizationType(entity.getOrganizationType())
                 .industry(entity.getIndustry())
@@ -82,6 +97,11 @@ public class OrganizationMapper extends BaseMapper {
                 .language(entity.getLanguage())
                 .logoUrl(entity.getLogoUrl())
                 .primaryColor(entity.getPrimaryColor())
+                .secondaryColor(entity.getSecondaryColor())
+                .faviconUrl(entity.getFaviconUrl())
+                .dateFormat(entity.getDateFormat())
+                .timeFormat(entity.getTimeFormat())
+                .weekStartsOn(entity.getWeekStartsOn())
                 .website(entity.getWebsite())
                 .phoneNumber(entity.getPhoneNumber())
                 .email(entity.getEmail())
@@ -149,6 +169,26 @@ public class OrganizationMapper extends BaseMapper {
             existing.setAddress(update.getAddress());
         }
 
+        if (update.getCity() != null) {
+            existing.setCity(update.getCity());
+        }
+
+        if (update.getState() != null) {
+            existing.setState(update.getState());
+        }
+
+        if (update.getCountry() != null) {
+            existing.setCountry(update.getCountry());
+        }
+
+        if (update.getZipCode() != null) {
+            existing.setZipCode(update.getZipCode());
+        }
+
+        if (update.getTaxId() != null) {
+            existing.setTaxId(update.getTaxId());
+        }
+
         if (update.getOwnerId() != null) {
             existing.setOwnerId(update.getOwnerId());
         }
@@ -203,6 +243,26 @@ public class OrganizationMapper extends BaseMapper {
 
         if (update.getPrimaryColor() != null && !update.getPrimaryColor().trim().isEmpty()) {
             existing.setPrimaryColor(update.getPrimaryColor());
+        }
+
+        if (update.getSecondaryColor() != null) {
+            existing.setSecondaryColor(update.getSecondaryColor());
+        }
+
+        if (update.getFaviconUrl() != null) {
+            existing.setFaviconUrl(update.getFaviconUrl());
+        }
+
+        if (update.getDateFormat() != null) {
+            existing.setDateFormat(update.getDateFormat());
+        }
+
+        if (update.getTimeFormat() != null) {
+            existing.setTimeFormat(update.getTimeFormat());
+        }
+
+        if (update.getWeekStartsOn() != null) {
+            existing.setWeekStartsOn(update.getWeekStartsOn());
         }
 
         if (update.getWebsite() != null && !update.getWebsite().trim().isEmpty()) {

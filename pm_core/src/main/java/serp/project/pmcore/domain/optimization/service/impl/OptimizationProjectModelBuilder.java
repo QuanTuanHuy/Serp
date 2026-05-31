@@ -83,8 +83,9 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
 
     @Override
     public OptimizationProjectModel build(OptimizationBuilderInput input) {
-        log.info("Building optimization project model: tenantId={}, projectId={}, selectedCount={}, mode={}",
-                input.tenantId(), input.projectId(), input.selectedWorkItemIds().size(), input.mode());
+        log.info("Building optimization project model: tenantId={}, projectId={}, selectedCount={}, objective={}, changeScope={}",
+                input.tenantId(), input.projectId(), input.selectedWorkItemIds().size(),
+                input.intent().objective(), input.intent().changeScope());
         // Load project and validate existence
         ProjectEntity project = projectReadPort.getProjectById(input.projectId(), input.tenantId())
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + input.projectId()));
@@ -208,9 +209,11 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         for (WorkItemEntity item : items) {
             // Prefer remaining estimate (highest confidence), fall back to original estimate, then default
             if (positive(item.getTimeRemainingEstimate())) {
-                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeRemainingEstimate(), OptimizationConfidence.HIGH, OptimizationConstants.TIME_REMAINING_ESTIMATE));
+                result.put(item.getId(), new OptimizationDuration(item.getId(), estimateMinutesToMillis(item.getTimeRemainingEstimate()),
+                        OptimizationConfidence.HIGH, OptimizationConstants.TIME_REMAINING_ESTIMATE));
             } else if (positive(item.getTimeOriginalEstimate())) {
-                result.put(item.getId(), new OptimizationDuration(item.getId(), item.getTimeOriginalEstimate(), OptimizationConfidence.MEDIUM, OptimizationConstants.TIME_ORIGINAL_ESTIMATE));
+                result.put(item.getId(), new OptimizationDuration(item.getId(), estimateMinutesToMillis(item.getTimeOriginalEstimate()),
+                        OptimizationConfidence.MEDIUM, OptimizationConstants.TIME_ORIGINAL_ESTIMATE));
             } else {
                 // Use hierarchy-level-based default and warn about low confidence
                 long fallback = defaultDuration(item.getIssueTypeHierarchyLevel());
@@ -226,6 +229,10 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             }
         }
         return result;
+    }
+
+    private long estimateMinutesToMillis(Long estimateMinutes) {
+        return Math.multiplyExact(estimateMinutes, OptimizationConstants.MINUTE_MILLIS);
     }
 
     private Set<Long> resolveCriticalPath(OptimizationDependencyGraph graph, Map<Long, OptimizationDuration> durations) {

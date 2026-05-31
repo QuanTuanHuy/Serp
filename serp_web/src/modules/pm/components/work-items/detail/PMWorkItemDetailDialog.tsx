@@ -10,6 +10,7 @@ import {
   Bolt,
   CheckSquare,
   ChevronDown,
+  ChevronRight,
   Eye,
   Flag,
   GitBranch,
@@ -27,8 +28,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Alert,
   AlertDescription,
@@ -49,8 +48,8 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
-import { useAppSelector } from '@/shared/hooks';
 import { PMWorkItemSkillPanel } from '../../skills';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
   useGetPmWorkItemActivitiesQuery,
   useGetPmWorkItemByIdQuery,
@@ -59,6 +58,7 @@ import {
   useGetPmWorkItemCreateMetaQuery,
   useGetPmWorkItemTransitionsQuery,
   useGetPmWorkItemLinksQuery,
+  useDeletePmWorkItemLinkMutation,
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemMutation,
 } from '../../../api/workItemApi';
@@ -81,6 +81,7 @@ import {
   UserValue,
 } from './PMWorkItemDetailPrimitives';
 import { PMWorkItemDetailSkeleton } from './PMWorkItemDetailStates';
+import { PMWorkItemScheduleSection } from './PMWorkItemScheduleSection';
 import {
   InlineComboboxField,
   InlineDateField,
@@ -92,6 +93,9 @@ import {
   WorkItemChildrenList,
   WorkItemLinksList,
 } from './PMWorkItemRelationLists';
+import { PMWorkItemSubtaskActions } from './PMWorkItemSubtaskActions';
+import { PMWorkItemLinkActions } from './PMWorkItemLinkActions';
+import { PMWorkItemWorklogPanel } from './PMWorkItemWorklogPanel';
 import {
   formatRelativeTime,
   getActivityType,
@@ -123,6 +127,8 @@ export function PMWorkItemDetailDialog({
 }: PMWorkItemDetailDialogProps) {
   const [activityTab, setActivityTab] = useState<ActivityTab>('comments');
   const shouldFetch = open && Boolean(workItemId);
+  const showComments = shouldFetch && activityTab === 'comments';
+  const showHistory = shouldFetch && activityTab === 'history';
 
   const detailQuery = useGetPmWorkItemByIdQuery(
     { projectId, workItemId: workItemId ?? 0 },
@@ -138,7 +144,7 @@ export function PMWorkItemDetailDialog({
   );
   const commentsQuery = useGetPmWorkItemCommentsQuery(
     { projectId, workItemId: workItemId ?? 0, page: 0, size: 20 },
-    { skip: !shouldFetch }
+    { skip: !showComments }
   );
   const activitiesQuery = useGetPmWorkItemActivitiesQuery(
     {
@@ -148,7 +154,7 @@ export function PMWorkItemDetailDialog({
       size: 20,
       type: getActivityType(activityTab),
     },
-    { skip: !shouldFetch }
+    { skip: !showHistory }
   );
 
   const item = toDetailModel(workItemId, detailQuery.data, fallbackItem);
@@ -288,6 +294,9 @@ function PMWorkItemDetailMain({
   onActivityTabChange: (value: ActivityTab) => void;
 }) {
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
+  const [deleteWorkItemLink, deleteWorkItemLinkState] =
+    useDeletePmWorkItemLinkMutation();
+  const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
 
   const handleUpdate = async (body: PMUpdateWorkItemRequest) => {
     if (!workItemId) return;
@@ -300,6 +309,26 @@ function PMWorkItemDetailMain({
         description: getErrorMessage(error),
       });
       throw error;
+    }
+  };
+
+  const handleDeleteLink = async (linkId: number) => {
+    if (!workItemId) return;
+
+    setDeletingLinkId(linkId);
+    try {
+      await deleteWorkItemLink({
+        projectId,
+        workItemId,
+        linkId,
+      }).unwrap();
+      toast.success('Link removed.');
+    } catch (error) {
+      toast.error('Failed to delete link', {
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setDeletingLinkId(null);
     }
   };
 
@@ -333,13 +362,32 @@ function PMWorkItemDetailMain({
         <DetailSection
           title={`Subtasks${item.subtaskTotal !== undefined ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})` : ''}`}
         >
+          <div className='flex items-center justify-between gap-3'>
+            <p className='text-sm text-muted-foreground'>
+              Add child issues under this work item.
+            </p>
+            <PMWorkItemSubtaskActions
+              projectId={projectId}
+              workItemId={workItemId}
+            />
+          </div>
           <WorkItemChildrenList query={childrenQuery} />
         </DetailSection>
 
         <DetailSection
           title={`Linked work items${item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}`}
         >
-          <WorkItemLinksList query={linksQuery} />
+          <PMWorkItemLinkActions
+            projectId={projectId}
+            workItemId={workItemId}
+          />
+          <WorkItemLinksList
+            query={linksQuery}
+            onDeleteLink={handleDeleteLink}
+            deletingLinkId={
+              deleteWorkItemLinkState.isLoading ? deletingLinkId : null
+            }
+          />
         </DetailSection>
 
         <DetailSection
@@ -352,25 +400,32 @@ function PMWorkItemDetailMain({
           >
             <div className='flex items-center justify-between gap-3'>
               <TabsList>
-                <TabsTrigger value='all'>All</TabsTrigger>
                 <TabsTrigger value='comments'>Comments</TabsTrigger>
                 <TabsTrigger value='history'>History</TabsTrigger>
+                <TabsTrigger value='worklogs'>Work logs</TabsTrigger>
               </TabsList>
               <SlidersHorizontal className='h-4 w-4 text-muted-foreground' />
             </div>
-            <CommentComposer
-              projectId={projectId}
-              workItemId={workItemId}
-              reporterName={item.reporterName}
-            />
             {activityTab === 'comments' ? (
-              <CommentsList
+              <>
+                <CommentComposer
+                  projectId={projectId}
+                  workItemId={workItemId}
+                  reporterName={item.reporterName}
+                />
+                <CommentsList
+                  projectId={projectId}
+                  workItemId={workItemId}
+                  query={commentsQuery}
+                />
+              </>
+            ) : activityTab === 'history' ? (
+              <ActivitiesList query={activitiesQuery} />
+            ) : (
+              <PMWorkItemWorklogPanel
                 projectId={projectId}
                 workItemId={workItemId}
-                query={commentsQuery}
               />
-            ) : (
-              <ActivitiesList query={activitiesQuery} />
             )}
           </Tabs>
         </DetailSection>
@@ -388,21 +443,13 @@ function PMWorkItemDetailSidebar({
   workItemId?: number;
   item: WorkItemDetailModel;
 }) {
-  const organizationId = useAppSelector(selectOrganizationId);
   const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
+  const [detailPanelOpen, setDetailPanelOpen] = useState(true);
 
-  const { data: usersResponse, isLoading: isUserLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId || !workItemId }
-    );
+  const { data: projectPeople = [], isLoading: isUserLoading } =
+    useGetPmProjectPeopleQuery(projectId, { skip: !workItemId });
 
   const { data: meta, isFetching: isMetaFetching } =
     useGetPmWorkItemCreateMetaQuery(
@@ -419,16 +466,13 @@ function PMWorkItemDetailSidebar({
       { skip: !workItemId }
     );
 
-  const userItems = usersResponse?.data.items;
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
-    const options =
-      userItems?.map((user) => {
-        const name =
-          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-          user.email ||
-          `User #${user.id}`;
-        return { value: user.id, label: name };
-      }) || [];
+    const options = projectPeople
+      .map((person) => ({
+        value: person.userId,
+        label: person.name || person.email || `User #${person.userId}`,
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
 
     if (
       item.assigneeId &&
@@ -439,7 +483,7 @@ function PMWorkItemDetailSidebar({
     }
 
     return options;
-  }, [item.assigneeId, item.assigneeName, userItems]);
+  }, [item.assigneeId, item.assigneeName, projectPeople]);
 
   const priorities = meta?.priorities;
   const priorityOptions = useMemo<ComboboxItem[]>(() => {
@@ -543,112 +587,125 @@ function PMWorkItemDetailSidebar({
       </div>
 
       <section className='rounded-lg border bg-background'>
-        <div className='flex items-center justify-between border-b px-4 py-3'>
-          <h2 className='flex items-center gap-2 font-semibold'>
-            <ChevronDown className='h-4 w-4' /> Details
-          </h2>
+        <div className='flex items-center justify-between gap-3 border-b px-4 py-3'>
+          <button
+            type='button'
+            className='flex min-w-0 items-center gap-2 text-left font-semibold'
+            aria-expanded={detailPanelOpen}
+            onClick={() => setDetailPanelOpen((current) => !current)}
+          >
+            {detailPanelOpen ? (
+              <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+            ) : (
+              <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+            )}
+            <span>Details</span>
+          </button>
           <SlidersHorizontal className='h-4 w-4 text-muted-foreground' />
         </div>
-        <div className='space-y-5 p-4'>
-          <DetailField label='Assignee'>
-            <InlineComboboxField
-              value={item.assigneeId}
-              display={
-                <UserValue
-                  name={item.assigneeName ?? 'Unassigned'}
-                  avatarUrl={item.assigneeAvatarUrl}
-                />
-              }
-              items={assigneeOptions}
-              placeholder='Unassigned'
-              loading={isUserLoading}
-              disabled={updateState.isLoading}
-              onSave={(assigneeId) => handleUpdate({ assigneeId })}
-            />
-          </DetailField>
-          <DetailField label='Priority'>
-            <InlineComboboxField
-              value={item.priorityId}
-              display={
-                <span className='inline-flex items-center gap-2'>
-                  <Flag
-                    className='h-4 w-4'
-                    style={
-                      item.priorityColor
-                        ? { color: item.priorityColor }
-                        : undefined
-                    }
+        {detailPanelOpen ? (
+          <div className='space-y-5 p-4'>
+            <DetailField label='Assignee'>
+              <InlineComboboxField
+                value={item.assigneeId}
+                display={
+                  <UserValue
+                    name={item.assigneeName ?? 'Unassigned'}
+                    avatarUrl={item.assigneeAvatarUrl}
                   />
-                  {item.priorityName ?? 'None'}
-                </span>
-              }
-              items={priorityOptions}
-              placeholder='None'
-              loading={isMetaFetching}
-              disabled={updateState.isLoading}
-              onSave={(priorityId) => handleUpdate({ priorityId })}
-            />
-          </DetailField>
-          <DetailField label='Parent'>
-            {item.parentId ? (
-              <span className='inline-flex min-w-0 flex-col'>
-                <span className='font-medium'>
-                  {item.parentKey ?? `#${item.parentId}`}
-                </span>
-                {item.parentSummary ? (
-                  <span className='truncate text-xs text-muted-foreground'>
-                    {item.parentSummary}
+                }
+                items={assigneeOptions}
+                placeholder='Unassigned'
+                loading={isUserLoading}
+                disabled={updateState.isLoading}
+                onSave={(assigneeId) => handleUpdate({ assigneeId })}
+              />
+            </DetailField>
+            <DetailField label='Priority'>
+              <InlineComboboxField
+                value={item.priorityId}
+                display={
+                  <span className='inline-flex items-center gap-2'>
+                    <Flag
+                      className='h-4 w-4'
+                      style={
+                        item.priorityColor
+                          ? { color: item.priorityColor }
+                          : undefined
+                      }
+                    />
+                    {item.priorityName ?? 'None'}
                   </span>
-                ) : null}
-              </span>
-            ) : (
-              'None'
-            )}
-          </DetailField>
-          <DetailField label='Due date'>
-            <InlineDateField
-              value={item.dueDate}
-              disabled={updateState.isLoading}
-              onSave={(dueDate) => handleUpdate({ dueDate })}
-            />
-          </DetailField>
-          <DetailField label='Labels'>None</DetailField>
-          <DetailField label='Team'>None</DetailField>
-          <DetailField label='Start date'>
-            <InlineDateField
-              value={item.startDate}
-              disabled={updateState.isLoading}
-              onSave={(startDate) => handleUpdate({ startDate })}
-            />
-          </DetailField>
-          <DetailField label='Original estimate'>
-            <InlineNumberField
-              value={item.timeOriginalEstimate}
-              disabled={updateState.isLoading}
-              onSave={(timeOriginalEstimate) =>
-                handleUpdate({ timeOriginalEstimate })
-              }
-            />
-          </DetailField>
-          <DetailField label='Remaining'>
-            <InlineNumberField
-              value={item.timeRemainingEstimate}
-              disabled={updateState.isLoading}
-              onSave={(timeRemainingEstimate) =>
-                handleUpdate({ timeRemainingEstimate })
-              }
-            />
-          </DetailField>
-          <DetailField label='Reporter'>
-            <UserValue
-              name={item.reporterName ?? 'None'}
-              avatarUrl={item.reporterAvatarUrl}
-            />
-          </DetailField>
-        </div>
+                }
+                items={priorityOptions}
+                placeholder='None'
+                loading={isMetaFetching}
+                disabled={updateState.isLoading}
+                onSave={(priorityId) => handleUpdate({ priorityId })}
+              />
+            </DetailField>
+            <DetailField label='Parent'>
+              {item.parentId ? (
+                <span className='inline-flex min-w-0 flex-col'>
+                  <span className='font-medium'>
+                    {item.parentKey ?? `#${item.parentId}`}
+                  </span>
+                  {item.parentSummary ? (
+                    <span className='truncate text-xs text-muted-foreground'>
+                      {item.parentSummary}
+                    </span>
+                  ) : null}
+                </span>
+              ) : (
+                'None'
+              )}
+            </DetailField>
+            <DetailField label='Due date'>
+              <InlineDateField
+                value={item.dueDate}
+                disabled={updateState.isLoading}
+                onSave={(dueDate) => handleUpdate({ dueDate })}
+              />
+            </DetailField>
+            <DetailField label='Labels'>None</DetailField>
+            <DetailField label='Team'>None</DetailField>
+            <DetailField label='Start date'>
+              <InlineDateField
+                value={item.startDate}
+                disabled={updateState.isLoading}
+                onSave={(startDate) => handleUpdate({ startDate })}
+              />
+            </DetailField>
+            <DetailField label='Original estimate'>
+              <InlineNumberField
+                value={item.timeOriginalEstimate}
+                disabled={updateState.isLoading}
+                onSave={(timeOriginalEstimate) =>
+                  handleUpdate({ timeOriginalEstimate })
+                }
+              />
+            </DetailField>
+            <DetailField label='Remaining'>
+              <InlineNumberField
+                value={item.timeRemainingEstimate}
+                disabled={updateState.isLoading}
+                onSave={(timeRemainingEstimate) =>
+                  handleUpdate({ timeRemainingEstimate })
+                }
+              />
+            </DetailField>
+            <DetailField label='Reporter'>
+              <UserValue
+                name={item.reporterName ?? 'None'}
+                avatarUrl={item.reporterAvatarUrl}
+              />
+            </DetailField>
+          </div>
+        ) : null}
       </section>
 
       <PMWorkItemSkillPanel projectId={projectId} workItemId={workItemId} />
+      <PMWorkItemScheduleSection item={item} />
 
       <CollapsedPanel
         title='Development'

@@ -5,6 +5,7 @@
 
 import type {
   PMWorkItemBoardCardApi,
+  PMWorkItemPlanSummaryApi,
   PMWorkItemSearchApi,
 } from '../../../types/api';
 
@@ -12,7 +13,7 @@ export type PMWorkItemDetailFallback =
   | PMWorkItemSearchApi
   | PMWorkItemBoardCardApi;
 
-export type ActivityTab = 'all' | 'comments' | 'history';
+export type ActivityTab = 'comments' | 'history' | 'worklogs';
 
 export type WorkItemDetailModel = {
   id?: number;
@@ -39,6 +40,7 @@ export type WorkItemDetailModel = {
   dueDate?: number | string | null;
   timeOriginalEstimate?: number | null;
   timeRemainingEstimate?: number | null;
+  schedule?: PMWorkItemPlanSummaryApi | null;
   createdAt?: number | string | null;
   updatedAt?: number | string | null;
   subtaskTotal?: number;

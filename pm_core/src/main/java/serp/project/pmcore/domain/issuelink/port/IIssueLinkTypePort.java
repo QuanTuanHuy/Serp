@@ -19,5 +19,7 @@ public interface IIssueLinkTypePort {
 
     List<IssueLinkTypeEntity> listByTenant(Long tenantId);
 
+    List<IssueLinkTypeEntity> listByTenantIncludingSystem(Long tenantId);
+
     IssueLinkTypeEntity save(IssueLinkTypeEntity issueLinkType);
 }

@@ -73,6 +73,7 @@ export function toDetailModel(
     dueDate: data?.dueDate ?? fallbackItem?.dueDate,
     timeOriginalEstimate: data?.timeOriginalEstimate ?? null,
     timeRemainingEstimate: data?.timeRemainingEstimate ?? null,
+    schedule: data?.schedule ?? null,
     createdAt: data?.createdAt ?? searchItem?.createdAt,
     updatedAt: data?.updatedAt ?? searchItem?.updatedAt,
     subtaskTotal: data?.subtaskStats?.total,
@@ -82,12 +83,8 @@ export function toDetailModel(
   };
 }
 
-export function getActivityType(
-  tab: ActivityTab
-): 'ALL' | 'COMMENT' | 'HISTORY' {
-  if (tab === 'comments') return 'COMMENT';
-  if (tab === 'history') return 'HISTORY';
-  return 'ALL';
+export function getActivityType(tab: ActivityTab): 'COMMENT' | 'HISTORY' {
+  return tab === 'comments' ? 'COMMENT' : 'HISTORY';
 }
 
 export function formatDetailDate(value?: number | string | null): string {
