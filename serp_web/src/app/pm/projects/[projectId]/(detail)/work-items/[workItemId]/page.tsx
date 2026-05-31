@@ -15,9 +15,6 @@ export default async function PMWorkItemDetailRoutePage({
   const { projectId, workItemId } = await params;
 
   return (
-    <PMWorkItemDetailModulePage
-      projectId={projectId}
-      workItemId={workItemId}
-    />
+    <PMWorkItemDetailModulePage projectId={projectId} workItemId={workItemId} />
   );
 }

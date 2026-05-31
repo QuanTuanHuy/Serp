@@ -205,7 +205,9 @@ export function PMWorkItemDetailContent({
       <div className='p-6'>
         <Alert variant='destructive'>
           <AlertTitle>Detail unavailable</AlertTitle>
-          <AlertDescription>{getErrorMessage(detailQuery.error)}</AlertDescription>
+          <AlertDescription>
+            {getErrorMessage(detailQuery.error)}
+          </AlertDescription>
         </Alert>
       </div>
     );
