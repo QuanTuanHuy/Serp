@@ -22,8 +22,8 @@ import serp.project.pmcore.application.optimization.command.discard.DiscardOptim
 import serp.project.pmcore.application.optimization.command.discard.DiscardOptimizationRunCommandHandler;
 import serp.project.pmcore.application.optimization.command.generate.GenerateOptimizationRunCommand;
 import serp.project.pmcore.application.optimization.command.generate.GenerateOptimizationRunCommandHandler;
-import serp.project.pmcore.application.optimization.command.update.UpdateOptimizationRunItemDecisionCommand;
-import serp.project.pmcore.application.optimization.command.update.UpdateOptimizationRunItemDecisionCommandHandler;
+import serp.project.pmcore.application.optimization.command.update.BatchUpdateOptimizationRunItemDecisionsCommand;
+import serp.project.pmcore.application.optimization.command.update.BatchUpdateOptimizationRunItemDecisionsCommandHandler;
 import serp.project.pmcore.application.optimization.query.get.GetOptimizationRunQuery;
 import serp.project.pmcore.application.optimization.query.get.GetOptimizationRunQueryHandler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
@@ -31,11 +31,13 @@ import serp.project.pmcore.domain.shared.exception.AccessDeniedException;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.kernel.utils.AuthUtils;
 import serp.project.pmcore.ui.rest.optimization.dto.request.ApplyOptimizationRunRequest;
+import serp.project.pmcore.ui.rest.optimization.dto.request.BatchUpdateOptimizationRunItemDecisionsRequest;
 import serp.project.pmcore.ui.rest.optimization.dto.request.GenerateOptimizationRunRequest;
-import serp.project.pmcore.ui.rest.optimization.dto.request.UpdateOptimizationRunItemDecisionRequest;
 import serp.project.pmcore.ui.rest.shared.constant.PathConstants;
 import serp.project.pmcore.ui.rest.shared.response.GeneralResponse;
 import serp.project.pmcore.ui.rest.shared.response.ResponseUtils;
+
+import java.util.List;
 
 @RestController
 @RequestMapping(PathConstants.PROJECT_OPTIMIZATION_RUNS)
@@ -45,7 +47,7 @@ public class OptimizationRunController {
     private final ResponseUtils responseUtils;
     private final GenerateOptimizationRunCommandHandler generateOptimizationRunCommandHandler;
     private final GetOptimizationRunQueryHandler getOptimizationRunQueryHandler;
-    private final UpdateOptimizationRunItemDecisionCommandHandler updateOptimizationRunItemDecisionCommandHandler;
+    private final BatchUpdateOptimizationRunItemDecisionsCommandHandler batchUpdateOptimizationRunItemDecisionsCommandHandler;
     private final ApplyOptimizationRunCommandHandler applyOptimizationRunCommandHandler;
     private final DiscardOptimizationRunCommandHandler discardOptimizationRunCommandHandler;
 
@@ -90,29 +92,34 @@ public class OptimizationRunController {
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
-    @PatchMapping("/{runId}/items/{workItemId}")
-    public ResponseEntity<GeneralResponse<OptimizationRunReviewView>> updateOptimizationRunItemDecision(
+    @PatchMapping("/{runId}/items/decisions")
+    public ResponseEntity<GeneralResponse<OptimizationRunReviewView>> updateOptimizationRunItemDecisions(
             @PathVariable Long projectId,
             @PathVariable Long runId,
-            @PathVariable Long workItemId,
-            @Valid @RequestBody UpdateOptimizationRunItemDecisionRequest request) {
+            @Valid @RequestBody BatchUpdateOptimizationRunItemDecisionsRequest request) {
         Long userId = authUtils.getCurrentUserId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
-        OptimizationRunReviewView response = updateOptimizationRunItemDecisionCommandHandler.handle(
-                new UpdateOptimizationRunItemDecisionCommand(
+        List<BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision> items = request.getItems().stream()
+                .map(item -> new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
+                        item.getWorkItemId(),
+                        item.getAssignmentDecision(),
+                        item.getScheduleDecision(),
+                        item.getOverrideAssigneeId(),
+                        item.getOverridePlannedStart(),
+                        item.getOverridePlannedEnd()
+                ))
+                .toList();
+
+        OptimizationRunReviewView response = batchUpdateOptimizationRunItemDecisionsCommandHandler.handle(
+                new BatchUpdateOptimizationRunItemDecisionsCommand(
                         tenantId,
                         userId,
                         projectId,
                         runId,
-                        workItemId,
-                        request.getAssignmentDecision(),
-                        request.getScheduleDecision(),
-                        request.getOverrideAssigneeId(),
-                        request.getOverridePlannedStart(),
-                        request.getOverridePlannedEnd()
+                        items
                 )
         );
 

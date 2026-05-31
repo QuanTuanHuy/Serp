@@ -52,7 +52,7 @@ export {
   useDiscardPmOptimizationRunMutation,
   useGeneratePmOptimizationRunMutation,
   useGetPmOptimizationRunQuery,
-  useUpdatePmOptimizationRunItemDecisionMutation,
+  useUpdatePmOptimizationRunItemDecisionsMutation,
 } from './optimizationApi';
 export {
   pmSkillApi,
@@ -110,6 +110,7 @@ export type {
   PMCreateWorkItemLinkRequest,
   PMCreateWorkItemLinkResponse,
   PMApplyOptimizationRunRequest,
+  PMBatchUpdateOptimizationRunItemDecisionsRequest,
   PMCreateStatusRequest,
   PMCreateWorkItemRequest,
   PMCreateWorkItemResponse,
@@ -126,6 +127,7 @@ export type {
   PMOptimizationApplyStatus,
   PMOptimizationDecision,
   PMOptimizationObjective,
+  PMOptimizationRunDecisionItemRequest,
   PMOptimizationRunApi,
   PMOptimizationRunItemApi,
   PMOptimizationRunStatus,
@@ -156,7 +158,6 @@ export type {
   PMUpdateSkillRequest,
   PMUserSkillApi,
   PMUserSkillsByUserApi,
-  PMUpdateOptimizationRunItemDecisionRequest,
   PMUpdateProjectComponentRequest,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,

@@ -7,9 +7,9 @@ import { api } from '@/lib/store/api';
 import { createDataTransform } from '@/lib/store/api/utils';
 import type {
   PMApplyOptimizationRunRequest,
+  PMBatchUpdateOptimizationRunItemDecisionsRequest,
   PMGenerateOptimizationRunRequest,
   PMOptimizationRunApi,
-  PMUpdateOptimizationRunItemDecisionRequest,
 } from '../types/api';
 
 export const pmOptimizationApi = api.injectEndpoints({
@@ -45,17 +45,16 @@ export const pmOptimizationApi = api.injectEndpoints({
       ],
     }),
 
-    updatePmOptimizationRunItemDecision: builder.mutation<
+    updatePmOptimizationRunItemDecisions: builder.mutation<
       PMOptimizationRunApi,
       {
         projectId: number;
         runId: number;
-        workItemId: number;
-        body: PMUpdateOptimizationRunItemDecisionRequest;
+        body: PMBatchUpdateOptimizationRunItemDecisionsRequest;
       }
     >({
-      query: ({ projectId, runId, workItemId, body }) => ({
-        url: `/projects/${projectId}/optimization-runs/${runId}/items/${workItemId}`,
+      query: ({ projectId, runId, body }) => ({
+        url: `/projects/${projectId}/optimization-runs/${runId}/items/decisions`,
         method: 'PATCH',
         body,
       }),
@@ -105,5 +104,5 @@ export const {
   useDiscardPmOptimizationRunMutation,
   useGeneratePmOptimizationRunMutation,
   useGetPmOptimizationRunQuery,
-  useUpdatePmOptimizationRunItemDecisionMutation,
+  useUpdatePmOptimizationRunItemDecisionsMutation,
 } = pmOptimizationApi;
