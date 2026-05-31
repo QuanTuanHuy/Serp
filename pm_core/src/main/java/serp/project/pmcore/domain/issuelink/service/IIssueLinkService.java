@@ -15,7 +15,7 @@ public interface IIssueLinkService {
 
     IssueLinkEntity getById(Long id, Long tenantId);
 
-    IssueLinkEntity softDelete(IssueLinkEntity issueLink, Long userId, Long deletedAt);
+    IssueLinkEntity delete(IssueLinkEntity issueLink);
 
     List<IssueLinkDetailEntity> listByWorkItemId(Long tenantId, Long workItemId);
 }

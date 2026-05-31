@@ -22,5 +22,4 @@ public class IssueLinkEntity extends BaseEntity {
     private Long sourceId;
     private Long targetId;
     private Long linkTypeId;
-    private Long deletedAt;
 }

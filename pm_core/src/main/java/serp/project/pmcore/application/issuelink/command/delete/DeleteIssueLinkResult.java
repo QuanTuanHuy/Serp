@@ -13,12 +13,12 @@ public record DeleteIssueLinkResult(
         Long deletedAt,
         Long updatedBy
 ) {
-    public static DeleteIssueLinkResult from(IssueLinkEntity entity) {
+    public static DeleteIssueLinkResult from(IssueLinkEntity entity, Long userId, Long deletedAt) {
         return new DeleteIssueLinkResult(
                 entity.getId(),
                 true,
-                entity.getDeletedAt(),
-                entity.getUpdatedBy()
+                deletedAt,
+                userId
         );
     }
 }

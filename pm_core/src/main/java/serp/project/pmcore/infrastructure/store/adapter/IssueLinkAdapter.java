@@ -44,6 +44,11 @@ public class IssueLinkAdapter implements IIssueLinkPort {
     }
 
     @Override
+    public void delete(Long id, Long tenantId) {
+        issueLinkRepository.deleteByIdAndTenantId(id, tenantId);
+    }
+
+    @Override
     public List<IssueLinkDetailEntity> listByWorkItemId(Long tenantId, Long workItemId) {
         return issueLinkMapper.toDetailEntities(issueLinkRepository.findIssueLinkDetailsByWorkItemId(tenantId, workItemId));
     }

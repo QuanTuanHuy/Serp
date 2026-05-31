@@ -34,10 +34,9 @@ public class IssueLinkService implements IIssueLinkService {
         issueLinkPort.getActiveDuplicate(tenantId, draft.getSourceId(), draft.getTargetId(), draft.getLinkTypeId())
                 .ifPresent(existing -> {
                     throw new BusinessRuleViolationException(DomainErrorCode.DUPLICATE_ISSUE_LINK);
-                });
+        });
 
         draft.setTenantId(tenantId);
-        draft.setDeletedAt(null);
         draft.applyCreate(userId, System.currentTimeMillis());
         return issueLinkPort.save(draft);
     }
@@ -49,10 +48,9 @@ public class IssueLinkService implements IIssueLinkService {
     }
 
     @Override
-    public IssueLinkEntity softDelete(IssueLinkEntity issueLink, Long userId, Long deletedAt) {
-        issueLink.setDeletedAt(deletedAt);
-        issueLink.applyUpdate(userId, deletedAt);
-        return issueLinkPort.save(issueLink);
+    public IssueLinkEntity delete(IssueLinkEntity issueLink) {
+        issueLinkPort.delete(issueLink.getId(), issueLink.getTenantId());
+        return issueLink;
     }
 
     @Override

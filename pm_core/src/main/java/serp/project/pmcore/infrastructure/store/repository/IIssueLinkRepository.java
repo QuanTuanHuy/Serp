@@ -6,6 +6,7 @@
 package serp.project.pmcore.infrastructure.store.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,6 +26,14 @@ public interface IIssueLinkRepository extends JpaRepository<IssueLinkModel, Long
             Long targetId,
             Long linkTypeId
     );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            DELETE FROM IssueLinkModel il
+            WHERE il.id = :id
+              AND il.tenantId = :tenantId
+            """)
+    void deleteByIdAndTenantId(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Query(value = """
             SELECT

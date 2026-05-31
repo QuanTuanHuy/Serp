@@ -522,7 +522,7 @@ export function CreateWorkItemDialog({
                     Creating...
                   </span>
                 ) : (
-                  'Create work item'
+                  'Create'
                 )}
               </Button>
             </DialogFooter>

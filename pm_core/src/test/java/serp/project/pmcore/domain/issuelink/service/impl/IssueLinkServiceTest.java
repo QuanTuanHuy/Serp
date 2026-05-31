@@ -89,4 +89,20 @@ class IssueLinkServiceTest {
         assertEquals(55L, result.getId());
         verify(issueLinkPort).save(any(IssueLinkEntity.class));
     }
+
+    @Test
+    void deleteShouldHardDeleteTenantScopedLink() {
+        IssueLinkEntity issueLink = IssueLinkEntity.builder()
+                .id(55L)
+                .tenantId(1L)
+                .sourceId(10L)
+                .targetId(20L)
+                .linkTypeId(1L)
+                .build();
+
+        IssueLinkEntity result = issueLinkService.delete(issueLink);
+
+        assertEquals(55L, result.getId());
+        verify(issueLinkPort).delete(55L, 1L);
+    }
 }
