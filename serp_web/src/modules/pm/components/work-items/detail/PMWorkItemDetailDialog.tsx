@@ -333,6 +333,7 @@ function PMWorkItemDetailMain({
   const [deleteWorkItemLink, deleteWorkItemLinkState] =
     useDeletePmWorkItemLinkMutation();
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
+  const [linkedItemsOpen, setLinkedItemsOpen] = useState(true);
 
   const handleUpdate = async (body: PMUpdateWorkItemRequest) => {
     if (!workItemId) return;
@@ -410,21 +411,40 @@ function PMWorkItemDetailMain({
           <WorkItemChildrenList query={childrenQuery} />
         </DetailSection>
 
-        <DetailSection
-          title={`Linked work items${item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}`}
-        >
-          <PMWorkItemLinkActions
-            projectId={projectId}
-            workItemId={workItemId}
-          />
-          <WorkItemLinksList
-            query={linksQuery}
-            onDeleteLink={handleDeleteLink}
-            deletingLinkId={
-              deleteWorkItemLinkState.isLoading ? deletingLinkId : null
-            }
-          />
-        </DetailSection>
+        <section className='space-y-2'>
+          <div className='flex items-center justify-between gap-3'>
+            <button
+              type='button'
+              className='flex min-w-0 items-center gap-2 text-left text-base font-semibold'
+              aria-expanded={linkedItemsOpen}
+              onClick={() => setLinkedItemsOpen((current) => !current)}
+            >
+              {linkedItemsOpen ? (
+                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+              ) : (
+                <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+              )}
+              <span className='truncate'>
+                Linked work items
+                {item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}
+              </span>
+            </button>
+            <PMWorkItemLinkActions
+              projectId={projectId}
+              workItemId={workItemId}
+            />
+          </div>
+          {linkedItemsOpen ? (
+            <WorkItemLinksList
+              projectId={projectId}
+              query={linksQuery}
+              onDeleteLink={handleDeleteLink}
+              deletingLinkId={
+                deleteWorkItemLinkState.isLoading ? deletingLinkId : null
+              }
+            />
+          ) : null}
+        </section>
 
         <DetailSection
           title={`Activity${item.commentTotal !== undefined ? ` (${item.commentTotal} comments)` : ''}`}
