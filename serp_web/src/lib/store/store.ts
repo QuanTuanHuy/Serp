@@ -32,8 +32,6 @@ import { logistics2Reducer } from '@/modules/logistics2/store';
 import { notificationReducer } from '@/modules/notifications';
 import '@/modules/notifications/services/notificationApi';
 import '@/modules/notifications/services/preferenceApi';
-import '@/modules/first-mile/api/firstMileApi';
-import '@/modules/first-mile/api/billingApi';
 
 // reducer
 const accountReducer = combineReducers({

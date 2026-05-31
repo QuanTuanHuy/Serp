@@ -249,6 +249,25 @@ public enum ModuleEnum {
             "1.0.0",
             List.of()),
 
+    /**
+     * SCHOOL_BUS - School Bus Operations
+     * Quản lý điều phối xe bus trường học, đưa đón, tuyến, điểm danh
+     */
+    SCHOOL_BUS(
+            "SCHOOL_BUS",
+            "School Bus Operations",
+            "serp-school-bus",
+            "Operations",
+            "bus",
+            12,
+            ModuleType.CUSTOM,
+            false,
+            true,
+            PricingModel.PER_ORG,
+            ModuleStatus.ACTIVE,
+            "0.1.0",
+            List.of()),
+
     // ==================== SUPPORT & SERVICE ====================
     /**
      * HELPDESK - Customer Support
