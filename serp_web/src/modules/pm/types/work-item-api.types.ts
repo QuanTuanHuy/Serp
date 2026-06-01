@@ -738,6 +738,68 @@ export interface PMWorkItemTimelineResponse {
   pageSize: number;
 }
 
+export interface PMWorkItemDependencyNodeApi {
+  id: number;
+  projectId: number;
+  key: string;
+  summary: string;
+  statusId?: number | null;
+  statusName?: string | null;
+  issueTypeId?: number | null;
+  issueTypeName?: string | null;
+  priorityId?: number | null;
+  priorityName?: string | null;
+  assigneeId?: number | null;
+  assigneeName?: string | null;
+  dueDate?: number | null;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  outsideFilter: boolean;
+  blockedByCount: number;
+  blocksCount: number;
+  hasCycle: boolean;
+}
+
+export interface PMWorkItemDependencyEdgeApi {
+  linkId: number;
+  id?: number | null;
+  sourceId: number;
+  targetId: number;
+  predecessorId: number;
+  successorId: number;
+  linkTypeId?: number | null;
+  linkTypeName?: string | null;
+  dependencyBehavior?: string | null;
+  outsideFilter: boolean;
+  externalProject: boolean;
+  relatedLink: boolean;
+  cycle: boolean;
+}
+
+export interface PMWorkItemDependencySummaryApi {
+  nodeCount: number;
+  dependencyCount: number;
+  outsideDependencyCount: number;
+  blockerCount: number;
+  blockedItemCount: number;
+  relatedLinkCount: number;
+  cycleCount: number;
+}
+
+export interface PMWorkItemDependenciesResponse {
+  projectId: number;
+  nodes: PMWorkItemDependencyNodeApi[];
+  edges: PMWorkItemDependencyEdgeApi[];
+  summary: PMWorkItemDependencySummaryApi;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  depth: number;
+  includeOutside: boolean;
+  includeRelatedLinks: boolean;
+}
+
 export interface PMWorkItemCalendarIssueTypeApi {
   id?: number | null;
   name?: string | null;
@@ -833,6 +895,21 @@ export interface PMGetWorkItemTimelineParams {
   issueTypeIds?: number[];
   priorityIds?: number[];
   keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PMGetWorkItemDependenciesParams {
+  keyword?: string;
+  statusIds?: number[];
+  assigneeIds?: number[];
+  issueTypeIds?: number[];
+  priorityIds?: number[];
+  parentId?: number;
+  componentIds?: number[];
+  includeOutside?: boolean;
+  includeRelatedLinks?: boolean;
+  depth?: number;
   page?: number;
   pageSize?: number;
 }

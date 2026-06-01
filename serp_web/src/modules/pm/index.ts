@@ -9,6 +9,7 @@ export { CreateWorkItemDialog } from './components/work-items';
 export { PMDashboardPage } from './pages/PMDashboardPage';
 export { PMMyWorkPage } from './pages/PMMyWorkPage';
 export { PMProjectCalendarPage } from './pages/PMProjectCalendarPage';
+export { PMProjectDependenciesPage } from './pages/PMProjectDependenciesPage';
 export { PMProjectOptimizationPage } from './pages/PMProjectOptimizationPage';
 export { PMProjectOptimizationRunPage } from './pages/PMProjectOptimizationRunPage';
 export { PMProjectsPage } from './pages/PMProjectsPage';

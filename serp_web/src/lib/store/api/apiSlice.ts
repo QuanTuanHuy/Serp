@@ -270,6 +270,7 @@ export const api = createApi({
     'pm/WorkItemComments',
     'pm/WorkItemActivities',
     'pm/WorkItemChildren',
+    'pm/WorkItemDependencies',
     'pm/WorkItemLinks',
     'pm/WorkItemWorklogs',
     'pm/Skill',

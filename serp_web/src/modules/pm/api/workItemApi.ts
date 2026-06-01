@@ -18,6 +18,7 @@ import type {
   PMDeleteWorkItemLinkResponse,
   PMGetWorkItemBoardParams,
   PMGetWorkItemCalendarParams,
+  PMGetWorkItemDependenciesParams,
   PMGetWorkItemTimelineParams,
   PMIssueLinkTypeApi,
   PMIssueTypeApi,
@@ -38,6 +39,7 @@ import type {
   PMWorkItemChildApi,
   PMWorkItemCommentApi,
   PMWorkItemCreateMetaResponse,
+  PMWorkItemDependenciesResponse,
   PMWorkItemDetailApi,
   PMWorkItemLinkApi,
   PMWorkItemScheduleCalendarResponse,
@@ -51,6 +53,7 @@ import {
   buildProjectScopedListParams,
   buildWorkItemCalendarParams,
   buildWorkItemBoardParams,
+  buildWorkItemDependencyParams,
   buildWorkItemSearchParams,
   buildWorkItemTimelineParams,
 } from './queryParams';
@@ -629,6 +632,22 @@ export const pmWorkItemApi = api.injectEndpoints({
           : [{ type: 'pm/WorkItem', id: 'LIST' }],
     }),
 
+    getPmWorkItemDependencies: builder.query<
+      PMWorkItemDependenciesResponse,
+      { projectId: number; params?: PMGetWorkItemDependenciesParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/work-items/dependencies`,
+        method: 'GET',
+        params: buildWorkItemDependencyParams(params),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemDependenciesResponse>(),
+      providesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/WorkItemDependencies', id: projectId },
+      ],
+    }),
+
     getPmWorkItemScheduleCalendar: builder.query<
       PMWorkItemScheduleCalendarResponse,
       { projectId: number; params?: PMGetWorkItemCalendarParams }
@@ -694,6 +713,7 @@ export const {
   useGetPmWorkItemChildrenQuery,
   useGetPmWorkItemCommentsQuery,
   useGetPmWorkItemCreateMetaQuery,
+  useGetPmWorkItemDependenciesQuery,
   useGetPmWorkItemLinksQuery,
   useGetPmWorkItemWorklogsQuery,
   useGetPmWorkItemTransitionsQuery,
