@@ -471,16 +471,10 @@ export function CreateWorkItemDialog({
                   <FormItem>
                     <FormLabel>Original estimate</FormLabel>
                     <FormControl>
-                      <Input
-                        type='number'
-                        min='0'
-                        step='1'
-                        placeholder='Minutes'
-                        {...field}
-                      />
+                      <Input placeholder='2w 4d 6h 45m' {...field} />
                     </FormControl>
                     <FormDescription>
-                      Send value in minutes to backend.
+                      Use Jira-style duration. Example: 2w 4d 6h 45m.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
