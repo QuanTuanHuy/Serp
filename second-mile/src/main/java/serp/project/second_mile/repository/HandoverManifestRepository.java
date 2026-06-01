@@ -18,6 +18,8 @@ import java.util.Optional;
 public interface HandoverManifestRepository extends JpaRepository<HandoverManifest, Long>, JpaSpecificationExecutor<HandoverManifest> {
     boolean existsByTenantIdAndManifestCodeIgnoreCase(Long tenantId, String manifestCode);
 
+    Optional<HandoverManifest> findByTenantIdAndManifestCodeIgnoreCase(Long tenantId, String manifestCode);
+
     Optional<HandoverManifest> findByIdAndTenantId(Long id, Long tenantId);
 
     boolean existsByTenantIdAndVehicleIdAndStatusIn(

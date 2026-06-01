@@ -56,7 +56,11 @@ export const normalizeSecondMileHubStaffAssignment = (
     hubName: readField<string>(record, 'hub_name', 'hubName'),
     staffId: readField<number>(record, 'staff_id', 'staffId'),
     staffCode: readField<string>(record, 'staff_code', 'staffCode'),
-    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffFullName: readField<string>(
+      record,
+      'staff_full_name',
+      'staffFullName'
+    ),
     staffRole: readField(record, 'staff_role', 'staffRole'),
     staffStatus: readField(record, 'staff_status', 'staffStatus'),
     assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
@@ -68,7 +72,9 @@ export const normalizeSecondMileHubStaffAssignment = (
   };
 };
 
-export const normalizeSecondMileHubStaff = (raw: unknown): SecondMileHubStaff => {
+export const normalizeSecondMileHubStaff = (
+  raw: unknown
+): SecondMileHubStaff => {
   const record = (raw ?? {}) as Record<string, unknown>;
   return {
     id: Number(record.id ?? 0),
@@ -86,15 +92,31 @@ export const normalizePostOfficeStaffAssignment = (
   return {
     id: Number(record.id ?? 0),
     postOfficeId: readField<number>(record, 'post_office_id', 'postOfficeId'),
-    postOfficeCode: readField<string>(record, 'post_office_code', 'postOfficeCode'),
-    postOfficeName: readField<string>(record, 'post_office_name', 'postOfficeName'),
+    postOfficeCode: readField<string>(
+      record,
+      'post_office_code',
+      'postOfficeCode'
+    ),
+    postOfficeName: readField<string>(
+      record,
+      'post_office_name',
+      'postOfficeName'
+    ),
     staffId: readField<number>(record, 'staff_id', 'staffId'),
     staffCode: readField<string>(record, 'staff_code', 'staffCode'),
-    staffFullName: readField<string>(record, 'staff_full_name', 'staffFullName'),
+    staffFullName: readField<string>(
+      record,
+      'staff_full_name',
+      'staffFullName'
+    ),
     staffRole: readField(record, 'staff_role', 'staffRole'),
     assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
     assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
-    shiftStartTime: readField<string>(record, 'shift_start_time', 'shiftStartTime'),
+    shiftStartTime: readField<string>(
+      record,
+      'shift_start_time',
+      'shiftStartTime'
+    ),
     shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
     isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
     notes: readField<string>(record, 'notes', 'notes'),
@@ -140,6 +162,12 @@ export const normalizeHandoverManifestOrder = (
     id: readField<number>(record, 'id', 'id'),
     orderId: readField<number>(record, 'order_id', 'orderId'),
     orderCode: readField<string>(record, 'order_code', 'orderCode'),
+    customerOrderCode: readField<string>(
+      record,
+      'customer_order_code',
+      'customerOrderCode'
+    ),
+    status: readField(record, 'status', 'status'),
     scanOutTime: readField<string>(record, 'scan_out_time', 'scanOutTime'),
     scanInTime: readField<string>(record, 'scan_in_time', 'scanInTime'),
   };
@@ -155,6 +183,11 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
   return {
     id: Number(record.id ?? 0),
     manifestCode: readField<string>(record, 'manifest_code', 'manifestCode'),
+    originPostOfficeId: readField<number>(
+      record,
+      'origin_post_office_id',
+      'originPostOfficeId'
+    ),
     originPostOfficeCode: readField<string>(
       record,
       'origin_post_office_code',
@@ -170,6 +203,25 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
     routeId: readField<number>(record, 'route_id', 'routeId'),
     routeCode: readField<string>(record, 'route_code', 'routeCode'),
     status: readField(record, 'status', 'status'),
+    totalOrders: readField<number>(record, 'total_orders', 'totalOrders'),
+    scannedOutOrders: readField<number>(
+      record,
+      'scanned_out_orders',
+      'scannedOutOrders'
+    ),
+    scannedInOrders: readField<number>(
+      record,
+      'scanned_in_orders',
+      'scannedInOrders'
+    ),
+    dispatchedAt: readField<string>(record, 'dispatched_at', 'dispatchedAt'),
+    inboundConfirmedAt: readField<string>(
+      record,
+      'inbound_confirmed_at',
+      'inboundConfirmedAt'
+    ),
+    sealCode: readField<string>(record, 'seal_code', 'sealCode'),
+    note: readField<string>(record, 'note', 'note'),
     orders,
     createdAt: readField<string>(record, 'created_at', 'createdAt'),
     updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),

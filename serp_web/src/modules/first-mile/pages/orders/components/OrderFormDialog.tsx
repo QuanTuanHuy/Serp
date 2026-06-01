@@ -21,9 +21,14 @@ import {
   SelectValue,
   Textarea,
 } from '@/shared/components/ui';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { CoordinatePickerMap } from '../../../components';
-import type { Province, Ward } from '../../../types';
+import type {
+  CreateOrderRequest,
+  ProductType,
+  Province,
+  Ward,
+} from '../../../types';
 import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
@@ -35,6 +40,8 @@ import {
   type OrderFormMode,
   type UpdateOrderFormField,
 } from '../orderPageModels';
+
+type OrderProductFormItem = NonNullable<CreateOrderRequest['products']>[number];
 
 interface OrderFormDialogProps {
   open: boolean;
@@ -48,12 +55,16 @@ interface OrderFormDialogProps {
   provinceSelectOptions: Province[];
   senderWardSelectOptions: Ward[];
   receiverWardSelectOptions: Ward[];
+  productTypeOptions: ProductType[];
+  orderProducts: OrderProductFormItem[];
   isFetchingSenderWards: boolean;
   isFetchingReceiverWards: boolean;
+  isFetchingProductTypes: boolean;
   geocodingTarget: LocationTarget | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onFormChange: UpdateOrderFormField;
+  onProductsChange: (products: OrderProductFormItem[]) => void;
   onGeocodeFromAddress: (target: LocationTarget) => void;
   onMapCoordinateChange: (
     target: LocationTarget,
@@ -76,17 +87,59 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
   provinceSelectOptions,
   senderWardSelectOptions,
   receiverWardSelectOptions,
+  productTypeOptions,
+  orderProducts,
   isFetchingSenderWards,
   isFetchingReceiverWards,
+  isFetchingProductTypes,
   geocodingTarget,
   onOpenChange,
   onSubmit,
   onFormChange,
+  onProductsChange,
   onGeocodeFromAddress,
   onMapCoordinateChange,
   normalizeLocationCode,
   parseOptionalNumberInput,
 }) => {
+  const defaultProductTypeId = productTypeOptions[0]?.id ?? 0;
+
+  const handleAddProduct = () => {
+    onProductsChange([
+      ...orderProducts,
+      {
+        name: '',
+        value: 0,
+        quantity: 1,
+        weight_gram: 1,
+        product_type_id: defaultProductTypeId,
+      },
+    ]);
+  };
+
+  const handleProductChange = <K extends keyof OrderProductFormItem>(
+    index: number,
+    field: K,
+    value: OrderProductFormItem[K]
+  ) => {
+    onProductsChange(
+      orderProducts.map((product, productIndex) =>
+        productIndex === index ? { ...product, [field]: value } : product
+      )
+    );
+  };
+
+  const handleRemoveProduct = (index: number) => {
+    onProductsChange(
+      orderProducts.filter((_, productIndex) => productIndex !== index)
+    );
+  };
+
+  const parseProductNumber = (value: string): number => {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : 0;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
@@ -657,6 +710,177 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
             </div>
+          </div>
+
+          <div className='space-y-3 rounded-md border p-3'>
+            <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <h3 className='text-sm font-semibold'>Products</h3>
+                <p className='text-xs text-muted-foreground'>
+                  Add product lines that will be sent with this order.
+                </p>
+              </div>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={handleAddProduct}
+                disabled={
+                  isFetchingProductTypes || productTypeOptions.length === 0
+                }
+              >
+                <Plus className='mr-2 h-4 w-4' />
+                Add product
+              </Button>
+            </div>
+
+            {isFetchingProductTypes ? (
+              <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                <Loader2 className='h-4 w-4 animate-spin' />
+                Loading product types...
+              </div>
+            ) : productTypeOptions.length === 0 ? (
+              <p className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
+                No active product types are available. Create a product type
+                before adding order products.
+              </p>
+            ) : orderProducts.length === 0 ? (
+              <p className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
+                No products added yet.
+              </p>
+            ) : (
+              <div className='space-y-3'>
+                {orderProducts.map((product, index) => (
+                  <div
+                    key={`${index}-${product.product_type_id}`}
+                    className='rounded-md border bg-muted/10 p-3'
+                  >
+                    <div className='mb-3 flex items-center justify-between gap-2'>
+                      <p className='text-sm font-medium'>
+                        Product #{index + 1}
+                      </p>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => handleRemoveProduct(index)}
+                        aria-label={`Remove product ${index + 1}`}
+                      >
+                        <Trash2 className='h-4 w-4 text-destructive' />
+                      </Button>
+                    </div>
+                    <div className='grid gap-3 md:grid-cols-2'>
+                      <div className='space-y-2'>
+                        <Label htmlFor={`product-name-${index}`}>
+                          Product name *
+                        </Label>
+                        <Input
+                          id={`product-name-${index}`}
+                          value={product.name}
+                          onChange={(event) =>
+                            handleProductChange(
+                              index,
+                              'name',
+                              event.target.value
+                            )
+                          }
+                          placeholder='Product name'
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor={`product-type-${index}`}>
+                          Product type *
+                        </Label>
+                        <Select
+                          value={
+                            product.product_type_id > 0
+                              ? String(product.product_type_id)
+                              : undefined
+                          }
+                          onValueChange={(value) =>
+                            handleProductChange(
+                              index,
+                              'product_type_id',
+                              Number(value)
+                            )
+                          }
+                        >
+                          <SelectTrigger id={`product-type-${index}`}>
+                            <SelectValue placeholder='Select product type' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {productTypeOptions.map((productType) => (
+                              <SelectItem
+                                key={productType.id}
+                                value={String(productType.id)}
+                              >
+                                {productType.name} ({productType.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor={`product-value-${index}`}>
+                          Value *
+                        </Label>
+                        <Input
+                          id={`product-value-${index}`}
+                          type='number'
+                          min={0}
+                          step={1}
+                          value={product.value}
+                          onChange={(event) =>
+                            handleProductChange(
+                              index,
+                              'value',
+                              parseProductNumber(event.target.value)
+                            )
+                          }
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor={`product-quantity-${index}`}>
+                          Quantity *
+                        </Label>
+                        <Input
+                          id={`product-quantity-${index}`}
+                          type='number'
+                          min={1}
+                          step={1}
+                          value={product.quantity}
+                          onChange={(event) =>
+                            handleProductChange(
+                              index,
+                              'quantity',
+                              parseProductNumber(event.target.value)
+                            )
+                          }
+                        />
+                      </div>
+                      <div className='space-y-2 md:col-span-2'>
+                        <Label htmlFor={`product-weight-${index}`}>
+                          Weight (gram) *
+                        </Label>
+                        <Input
+                          id={`product-weight-${index}`}
+                          type='number'
+                          min={0}
+                          step='any'
+                          value={product.weight_gram}
+                          onChange={(event) =>
+                            handleProductChange(
+                              index,
+                              'weight_gram',
+                              parseProductNumber(event.target.value)
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DialogFooter>

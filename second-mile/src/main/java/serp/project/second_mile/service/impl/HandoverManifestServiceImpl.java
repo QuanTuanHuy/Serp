@@ -32,7 +32,12 @@ import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
+import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
+import serp.project.second_mile.kafka.HandoverManifestSyncEventPublisher;
 import serp.project.second_mile.kafka.OrderSyncEventPublisher;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncEventType;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
 import serp.project.second_mile.repository.HandoverManifestOrderRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
@@ -71,6 +76,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -247,6 +253,103 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 loadVehicle(manifest.getVehicleId()),
                 loadRoute(manifest.getRouteId())
         );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applyOutboundSync(HandoverManifestSyncEvent event) {
+        if (event == null || !HandoverManifestSyncOrigin.FIRST_MILE.equals(event.getOrigin())) {
+            return;
+        }
+        Long tenantId = event.getTenantId();
+        String manifestCode = normalizeText(event.getManifestCode());
+        String originPostOfficeCode = normalizeText(event.getOriginPostOfficeCode());
+        if (tenantId == null || manifestCode == null || originPostOfficeCode == null || event.getTargetHubId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid handover manifest sync payload.");
+        }
+
+        HandoverManifest existingManifest = handoverManifestRepository
+                .findByTenantIdAndManifestCodeIgnoreCase(tenantId, manifestCode)
+                .orElse(null);
+        if (HandoverManifestSyncEventType.CANCELLED.equals(event.getEventType())) {
+            if (existingManifest != null && existingManifest.getStatus() != HandoverManifestStatus.INBOUND_CONFIRMED) {
+                List<Order> changedOrders = findManifestOrders(existingManifest.getId(), tenantId).stream()
+                        .map(HandoverManifestOrder::getOrder)
+                        .filter(Objects::nonNull)
+                        .filter(order -> OrderStatus.OUTBOUND_READY_FROM_PO.equals(order.getStatus()))
+                        .peek(order -> order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE))
+                        .toList();
+                if (!changedOrders.isEmpty()) {
+                    orderRepository.saveAll(changedOrders);
+                }
+                existingManifest.setStatus(HandoverManifestStatus.CANCELLED);
+                handoverManifestRepository.save(existingManifest);
+            }
+            return;
+        }
+
+        if (!HandoverManifestSyncEventType.OUTBOUND_CONFIRMED.equals(event.getEventType())) {
+            return;
+        }
+
+        validatePostOfficeMappedToHub(tenantId, originPostOfficeCode, event.getTargetHubId());
+        List<String> normalizedOrderCodes = normalizeOrderCodes(event.getOrderCodes());
+        if (normalizedOrderCodes.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Handover manifest sync must include order_codes.");
+        }
+
+        List<Order> orders = orderRepository.findByTenantIdAndUpperOrderCodeIn(tenantId, normalizedOrderCodes);
+        if (orders.size() != normalizedOrderCodes.size()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Some handover manifest orders are not synced yet.");
+        }
+
+        HandoverManifest manifest = existingManifest == null
+                ? HandoverManifest.builder()
+                .manifestCode(manifestCode)
+                .originPostOfficeCode(originPostOfficeCode)
+                .targetHubId(event.getTargetHubId())
+                .status(HandoverManifestStatus.OUTBOUND_CONFIRMED)
+                .tenantId(tenantId)
+                .build()
+                : existingManifest;
+        if (manifest.getStatus() == HandoverManifestStatus.INBOUND_CONFIRMED) {
+            return;
+        }
+        manifest.setOriginPostOfficeCode(originPostOfficeCode);
+        manifest.setTargetHubId(event.getTargetHubId());
+        manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
+        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+
+        LocalDateTime scanOutTime = event.getDispatchedAt() == null ? LocalDateTime.now() : event.getDispatchedAt();
+        List<HandoverManifestOrder> manifestOrders = new ArrayList<>();
+        List<Order> changedOrders = new ArrayList<>();
+        for (Order order : orders) {
+            if (!Objects.equals(originPostOfficeCode, normalizeText(order.getOriginPostOfficeCode()))) {
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "All synced handover orders must match the origin post office."
+                );
+            }
+            if (shouldAdvanceToOutboundReady(order.getStatus())) {
+                order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
+                changedOrders.add(order);
+            }
+            HandoverManifestOrder manifestOrder = handoverManifestOrderRepository
+                    .findByManifest_IdAndOrder_IdAndTenantId(savedManifest.getId(), order.getId(), tenantId)
+                    .orElseGet(() -> HandoverManifestOrder.builder()
+                            .manifest(savedManifest)
+                            .order(order)
+                            .tenantId(tenantId)
+                            .build());
+            if (manifestOrder.getScanOutTime() == null) {
+                manifestOrder.setScanOutTime(scanOutTime);
+            }
+            manifestOrders.add(manifestOrder);
+        }
+        if (!changedOrders.isEmpty()) {
+            orderRepository.saveAll(changedOrders);
+        }
+        handoverManifestOrderRepository.saveAll(manifestOrders);
     }
 
     private HandoverManifest getManifestOrThrow(Long manifestId) {
@@ -485,15 +588,17 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
             throw new AppException(ErrorCode.BAG_STATUS_INVALID);
         }
-        if (manifest.getVehicleId() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Manifest must have an assigned vehicle.");
-        }
 
-        Vehicle vehicle = loadVehicle(manifest.getVehicleId());
-        if (vehicle == null) {
-            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        Vehicle vehicle = null;
+        if (manifest.getVehicleId() != null) {
+            vehicle = loadVehicle(manifest.getVehicleId());
+            if (vehicle == null) {
+                throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+            }
+            validateVehicleHasAssignedDriver(vehicle);
+        } else if (driverOnly) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in requires an assigned vehicle.");
         }
-        validateVehicleHasAssignedDriver(vehicle);
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
         }
@@ -546,12 +651,56 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
         }
         HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+        HandoverManifestSyncEvent syncEvent = toInboundSyncEvent(savedManifest, allManifestOrders, now);
+        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(syncEvent));
         return toResponse(
                 savedManifest,
                 allManifestOrders,
                 vehicle,
                 loadRoute(savedManifest.getRouteId())
         );
+    }
+
+    private boolean shouldAdvanceToOutboundReady(OrderStatus currentStatus) {
+        if (currentStatus == null) {
+            return true;
+        }
+        if (currentStatus == OrderStatus.CANCELLED || currentStatus == OrderStatus.LOST_OR_DAMAGED) {
+            return false;
+        }
+        return currentStatus.ordinal() <= OrderStatus.OUTBOUND_READY_FROM_PO.ordinal();
+    }
+
+    private HandoverManifestSyncEvent toInboundSyncEvent(
+            HandoverManifest manifest,
+            List<HandoverManifestOrder> manifestOrders,
+            LocalDateTime inboundConfirmedAt
+    ) {
+        List<String> orderCodes = manifestOrders.stream()
+                .map(HandoverManifestOrder::getOrder)
+                .filter(Objects::nonNull)
+                .map(Order::getOrderCode)
+                .filter(Objects::nonNull)
+                .toList();
+        List<String> scannedOrderCodes = manifestOrders.stream()
+                .filter(item -> item.getScanInTime() != null)
+                .map(HandoverManifestOrder::getOrder)
+                .filter(Objects::nonNull)
+                .map(Order::getOrderCode)
+                .filter(Objects::nonNull)
+                .toList();
+        return HandoverManifestSyncEvent.builder()
+                .eventType(HandoverManifestSyncEventType.INBOUND_CONFIRMED)
+                .origin(HandoverManifestSyncOrigin.SECOND_MILE)
+                .tenantId(manifest.getTenantId())
+                .manifestCode(manifest.getManifestCode())
+                .originPostOfficeCode(manifest.getOriginPostOfficeCode())
+                .targetHubId(manifest.getTargetHubId())
+                .status(manifest.getStatus())
+                .inboundConfirmedAt(inboundConfirmedAt)
+                .orderCodes(orderCodes)
+                .scannedOrderCodes(scannedOrderCodes)
+                .build();
     }
 
     private HandoverManifestResponse toResponse(

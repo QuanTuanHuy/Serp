@@ -10,6 +10,7 @@ import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
 import serp.project.second_mile.dto.request.CreateHandoverManifestRequest;
 import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 
 public interface HandoverManifestService {
     HandoverManifestResponse createManifest(CreateHandoverManifestRequest request);
@@ -29,4 +30,6 @@ public interface HandoverManifestService {
     HandoverManifestResponse driverCheckinEnd(Long manifestId);
 
     HandoverManifestResponse getManifest(Long manifestId);
+
+    void applyOutboundSync(HandoverManifestSyncEvent event);
 }
