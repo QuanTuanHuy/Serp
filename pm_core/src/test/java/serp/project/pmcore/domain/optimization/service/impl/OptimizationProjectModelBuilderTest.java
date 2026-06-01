@@ -99,7 +99,7 @@ class OptimizationProjectModelBuilderTest {
         stubProject();
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item(10L), item(20L)));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of(link(10L, 20L)));
         when(issueLinkPort.listByWorkItemId(1L, 20L)).thenReturn(List.of(link(10L, 20L)));
         stubResourcePorts(List.of(10L, 20L), List.of(100L));
@@ -117,7 +117,7 @@ class OptimizationProjectModelBuilderTest {
         stubProject();
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item(10L), item(20L)));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of(linkType(IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET)));
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of(link(10L, 20L), link(20L, 10L)));
         when(issueLinkPort.listByWorkItemId(1L, 20L)).thenReturn(List.of(link(10L, 20L), link(20L, 10L)));
         stubResourcePorts(List.of(10L, 20L), List.of(100L));
@@ -133,7 +133,7 @@ class OptimizationProjectModelBuilderTest {
         stubProject();
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item(10L)));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         stubResourcePorts(List.of(10L), List.of(100L));
 
@@ -150,7 +150,7 @@ class OptimizationProjectModelBuilderTest {
         item.setTimeOriginalEstimate(300L);
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         stubResourcePorts(List.of(10L), List.of(100L));
 
@@ -167,7 +167,7 @@ class OptimizationProjectModelBuilderTest {
         item.setReporterId(200L);
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         stubResourcePorts(List.of(10L), List.of(100L));
 
@@ -187,7 +187,7 @@ class OptimizationProjectModelBuilderTest {
         item.setReporterId(200L);
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         when(workItemComponentReadPort.listActiveByWorkItemIds(eq(1L), anyList()))
                 .thenReturn(List.of(new WorkItemComponentLink(10L, 50L)));
@@ -221,7 +221,7 @@ class OptimizationProjectModelBuilderTest {
         item.setAssigneeId(300L);
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         stubResourcePorts(List.of(10L), List.of());
         when(workItemSkillReadPort.listActiveByWorkItemIds(1L, List.of(10L))).thenReturn(List.of(
@@ -254,7 +254,7 @@ class OptimizationProjectModelBuilderTest {
         item.setAssigneeId(300L);
         when(workItemReadPort.listActiveByWorkItemIds(eq(1L), anyList())).thenReturn(List.of(item));
         when(workItemPlanPort.listActivePlansByWorkItemIds(eq(1L), anyList())).thenReturn(List.of());
-        when(issueLinkTypePort.listByTenant(1L)).thenReturn(List.of());
+        when(issueLinkTypePort.listByTenantIncludingSystem(1L)).thenReturn(List.of());
         when(issueLinkPort.listByWorkItemId(1L, 10L)).thenReturn(List.of());
         stubResourcePorts(List.of(10L), List.of());
         when(workItemSkillReadPort.listActiveByWorkItemIds(1L, List.of(10L))).thenReturn(List.of(
