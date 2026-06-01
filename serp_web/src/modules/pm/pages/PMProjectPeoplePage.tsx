@@ -366,7 +366,6 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
                             <DropdownMenuItem
                               onClick={() => setSkillPerson(person)}
                             >
-                              <Sparkles className='mr-2 h-4 w-4' />
                               Edit skills
                             </DropdownMenuItem>
                             <DropdownMenuItem
