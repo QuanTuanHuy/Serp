@@ -101,7 +101,7 @@ export function MapToolbar({
               variant='ghost'
               className='h-8 gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-2.5 shadow-md hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-hidden text-xs font-semibold text-slate-700'
             >
-              <Compass className='h-4 w-4 text-rose-600 animate-pulse' />
+              <Compass className='h-4 w-4 text-slate-600 animate-pulse' />
               <span>Map Actions</span>
             </Button>
           </DropdownMenuTrigger>

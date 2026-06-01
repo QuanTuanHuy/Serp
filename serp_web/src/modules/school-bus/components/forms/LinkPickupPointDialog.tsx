@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { schoolBusUi } from '../../theme';
+import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import type {
   SchoolBusPickupPoint,
   SchoolBusSchoolPickupPointUpsertRequest,
@@ -92,23 +93,19 @@ export function LinkPickupPointDialog({
               render={({ field }) => (
                 <FormItem className='md:col-span-2'>
                   <FormLabel>Pickup point *</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(Number(v))}
-                    value={String(field.value || '')}
-                  >
-                    <FormControl>
-                      <SelectTrigger className='h-11 w-full rounded-xl border-slate-200 bg-white shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
-                        <SelectValue placeholder='Select pickup point' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className='z-[120] max-h-72 rounded-xl border-slate-200 bg-white'>
-                      {pickupPoints.map((pp) => (
-                        <SelectItem key={pp.id} value={String(pp.id)}>
-                          {pp.name} — {pp.address} ({pp.usageType || 'N/A'})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SchoolBusSelect
+                    fullWidth
+                    size='md'
+                    className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+                    value={field.value ? String(field.value) : ''}
+                    onChange={(v) => field.onChange(v ? Number(v) : null)}
+                    placeholder='Select pickup point'
+                    options={pickupPoints.map((pp) => ({
+                      label: `${pp.name} — ${pp.address} (${pp.usageType || 'N/A'})`,
+                      value: String(pp.id),
+                    }))}
+                    searchable
+                  />
                   <FormMessage />
                 </FormItem>
               )}

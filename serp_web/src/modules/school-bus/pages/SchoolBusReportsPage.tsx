@@ -1,34 +1,78 @@
 'use client';
 
-import { Activity, BarChart3, Download, FileText } from 'lucide-react';
-import { Button } from '@/shared/components/ui';
+import * as React from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/components/ui/table';
+  Activity,
+  BarChart3,
+  Download,
+  FileText,
+  Milestone,
+  Route,
+  Fingerprint,
+  GraduationCap,
+  Bus,
+  CheckCircle2,
+  Users,
+  Search,
+  X,
+  Filter,
+  ArrowRight,
+  RotateCcw,
+} from 'lucide-react';
+import { Button } from '@/shared/components/ui';
+import { cn } from '@/shared/utils';
 import {
   useGetSchoolBusReportAttendanceQuery,
   useGetSchoolBusReportCapacityQuery,
   useGetSchoolBusReportQuery,
   useGetSchoolBusReportTripsQuery,
+  useGetSchoolsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
-import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
-import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
-import { SchoolBusTableTabs } from '../components/SchoolBusTableTabs';
+import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
+import { SchoolBusDatePicker } from '../components/ui/SchoolBusDatePicker';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
 
 export function SchoolBusReportsPage() {
+  // ─── Filter States ─────────────────────────────────────────────────────────
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    schoolId: '' as string | number,
+    status: '',
+    direction: '',
+  });
+
+  const [tempFilters, setTempFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    schoolId: '' as string | number,
+    status: '',
+    direction: '',
+  });
+
+  // ─── Keyword / Search States ───────────────────────────────────────────────
+  const [keyword, setKeyword] = useState('');
+  const [debouncedKeyword, setDebouncedKeyword] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(keyword);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [keyword]);
+
+  // ─── Tab Selection State ───────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState('trips');
+
+  // ─── Pagination Hooks ──────────────────────────────────────────────────────
   const tripPagination = useSchoolBusPagination({
     page: 0,
     size: 8,
@@ -47,30 +91,458 @@ export function SchoolBusReportsPage() {
     sortBy: 'serviceDate',
     sortDirection: 'DESC',
   });
-  const { data: summaryData, isLoading } = useGetSchoolBusReportQuery();
-  const { data: tripsData } = useGetSchoolBusReportTripsQuery(tripPagination.params);
-  const { data: attendanceData } = useGetSchoolBusReportAttendanceQuery(
-    attendancePagination.params
-  );
-  const { data: capacityData } = useGetSchoolBusReportCapacityQuery(
-    capacityPagination.params
-  );
+
+  // Reset page when switching tabs
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    setKeyword('');
+  };
+
+  // ─── Query Parameters ──────────────────────────────────────────────────────
+  const summaryParams = useMemo(() => ({
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    schoolId: filters.schoolId || undefined,
+    status: filters.status || undefined,
+    direction: filters.direction || undefined,
+  } as any), [filters]);
+
+  const tripsParams = useMemo(() => ({
+    ...tripPagination.params,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    schoolId: filters.schoolId || undefined,
+    status: filters.status || undefined,
+    direction: filters.direction || undefined,
+    keyword: debouncedKeyword || undefined,
+  } as any), [tripPagination.params, filters, debouncedKeyword]);
+
+  const attendanceParams = useMemo(() => ({
+    ...attendancePagination.params,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    schoolId: filters.schoolId || undefined,
+    status: filters.status || undefined,
+    direction: filters.direction || undefined,
+    keyword: debouncedKeyword || undefined,
+  } as any), [attendancePagination.params, filters, debouncedKeyword]);
+
+  const capacityParams = useMemo(() => ({
+    ...capacityPagination.params,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    schoolId: filters.schoolId || undefined,
+    status: filters.status || undefined,
+    direction: filters.direction || undefined,
+    keyword: debouncedKeyword || undefined,
+  } as any), [capacityPagination.params, filters, debouncedKeyword]);
+
+  // ─── Queries ───────────────────────────────────────────────────────────────
+  const { data: summaryData, isLoading: loadingSummary } = useGetSchoolBusReportQuery(summaryParams);
+  const { data: tripsData, isLoading: loadingTrips } = useGetSchoolBusReportTripsQuery(tripsParams);
+  const { data: attendanceData, isLoading: loadingAttendance } = useGetSchoolBusReportAttendanceQuery(attendanceParams);
+  const { data: capacityData, isLoading: loadingCapacity } = useGetSchoolBusReportCapacityQuery(capacityParams);
+  
+  // School list query for filters dropdown
+  const { data: schoolsData } = useGetSchoolsQuery({
+    page: 0,
+    size: 100,
+    sortBy: 'name',
+    sortDirection: 'ASC',
+  });
+
   const report = summaryData?.data;
   const trips = getPageItems(tripsData?.data);
   const attendance = getPageItems(attendanceData?.data);
   const capacity = getPageItems(capacityData?.data);
+  const schoolsList = getPageItems(schoolsData?.data);
+
+  // ─── Dropdown Options ──────────────────────────────────────────────────────
+  const schoolOptions = useMemo(() => {
+    return [
+      { label: 'All Schools', value: '' },
+      ...schoolsList.map((school) => ({
+        label: school.name,
+        value: school.id,
+      })),
+    ];
+  }, [schoolsList]);
+
+  const statusOptions = [
+    { label: 'All Statuses', value: '' },
+    { label: 'Active', value: 'ACTIVE' },
+    { label: 'Pending', value: 'PENDING' },
+    { label: 'In Progress', value: 'IN_PROGRESS' },
+    { label: 'Completed', value: 'COMPLETED' },
+    { label: 'Cancelled', value: 'CANCELLED' },
+  ];
+
+  const directionOptions = [
+    { label: 'All Directions', value: '' },
+    { label: 'Outbound', value: 'OUTBOUND' },
+    { label: 'Return', value: 'RETURN' },
+  ];
+
+  // ─── Filter Actions ────────────────────────────────────────────────────────
+  const handleApplyFilters = () => {
+    setFilters(tempFilters);
+    tripPagination.setPage(0);
+    attendancePagination.setPage(0);
+    capacityPagination.setPage(0);
+  };
+
+  const handleResetFilters = () => {
+    const cleared = {
+      fromDate: '',
+      toDate: '',
+      schoolId: '',
+      status: '',
+      direction: '',
+    };
+    setTempFilters(cleared);
+    setFilters(cleared);
+    setKeyword('');
+    tripPagination.setPage(0);
+    attendancePagination.setPage(0);
+    capacityPagination.setPage(0);
+  };
 
   const handleExport = () => {
-    window.open(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'}/school-bus/api/v1/reports/operations-summary/export`,
-      '_blank'
-    );
+    const params = new URLSearchParams();
+    if (filters.fromDate) params.append('fromDate', filters.fromDate);
+    if (filters.toDate) params.append('toDate', filters.toDate);
+    if (filters.schoolId) params.append('schoolId', String(filters.schoolId));
+    if (filters.status) params.append('status', filters.status);
+    if (filters.direction) params.append('direction', filters.direction);
+
+    const queryString = params.toString();
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+    const url = `${baseUrl}/school-bus/api/v1/reports/operations-summary/export${
+      queryString ? `?${queryString}` : ''
+    }`;
+    window.open(url, '_blank');
   };
+
+  // ─── Attendance KPI strip calculations ─────────────────────────────────────
+  const boardedCount = useMemo(() => 
+    attendance.filter(a => {
+      const type = (a.eventType || a.attendanceType || '').toUpperCase();
+      return type === 'BOARDED' || type === 'BOARDING';
+    }).length,
+    [attendance]
+  );
+
+  const droppedOffCount = useMemo(() => 
+    attendance.filter(a => {
+      const type = (a.eventType || a.attendanceType || '').toUpperCase();
+      return type === 'DROPOFF' || type === 'DROPOFF_ONLY' || type === 'DROPPED_OFF';
+    }).length,
+    [attendance]
+  );
+
+  const absentCount = useMemo(() => 
+    attendance.filter(a => {
+      const type = (a.eventType || a.attendanceType || '').toUpperCase();
+      return type === 'ABSENT';
+    }).length,
+    [attendance]
+  );
+
+  const noShowCount = useMemo(() => 
+    attendance.filter(a => {
+      const type = (a.eventType || a.attendanceType || '').toUpperCase();
+      return type === 'NO_SHOW';
+    }).length,
+    [attendance]
+  );
+
+  const notServedCount = useMemo(() => 
+    attendance.filter(a => {
+      const type = (a.eventType || a.attendanceType || '').toUpperCase();
+      return type === 'NOT_SERVED';
+    }).length,
+    [attendance]
+  );
+
+  // ─── Table Columns Definitions ─────────────────────────────────────────────
+  const tripColumns = useMemo(() => [
+    {
+      key: 'trip',
+      header: 'Trip',
+      render: (row: any) => (
+        <div className='flex items-center gap-2.5'>
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#C81E3A] border border-red-100/70'>
+            <Milestone className='h-4 w-4' />
+          </div>
+          <span className='font-semibold text-slate-900'>{row.tripCode}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'route',
+      header: 'Route',
+      render: (row: any) => (
+        <div className='flex items-center gap-2'>
+          <Route className='h-4 w-4 text-slate-400 shrink-0' />
+          <span className='font-medium text-slate-700'>{row.routeCode}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'serviceDate',
+      header: 'Service date',
+      render: (row: any) => (
+        <span className='text-slate-600 font-medium'>{formatDate(row.serviceDate)}</span>
+      ),
+    },
+    {
+      key: 'direction',
+      header: 'Direction',
+      render: (row: any) => {
+        const isReturn = row.routeDirection === 'RETURN';
+        return (
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border',
+              isReturn
+                ? 'bg-indigo-50/50 text-indigo-700 border-indigo-200/50'
+                : 'bg-orange-50/50 text-orange-700 border-orange-200/50'
+            )}
+          >
+            {isReturn ? 'Return' : 'Outbound'}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'assignment',
+      header: 'Assignment',
+      render: (row: any) => (
+        <div className='flex flex-col gap-0.5'>
+          <span className='font-semibold text-slate-700 text-xs'>{row.busPlateNumber || 'No bus'}</span>
+          <span className='text-slate-400 text-[11px]'>{row.driverName || 'No driver'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row: any) => <SchoolBusStatusBadge status={row.status} />,
+    },
+  ], []);
+
+  const attendanceColumns = useMemo(() => [
+    {
+      key: 'student',
+      header: 'Student',
+      render: (row: any) => (
+        <div className='flex items-center gap-2.5'>
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 border border-violet-100/70'>
+            <GraduationCap className='h-4 w-4' />
+          </div>
+          <span className='font-semibold text-slate-900'>{row.studentName}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'route',
+      header: 'Route',
+      render: (row: any) => (
+        <div className='flex items-center gap-2'>
+          <Route className='h-4 w-4 text-slate-400 shrink-0' />
+          <span className='font-medium text-slate-700'>{row.routeCode}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'trip',
+      header: 'Trip',
+      render: (row: any) => (
+        <span className='font-medium text-slate-600'>{row.tripId || '—'}</span>
+      ),
+    },
+    {
+      key: 'event',
+      header: 'Event',
+      render: (row: any) => {
+        const evType = (row.eventType || row.attendanceType || 'UNKNOWN').toUpperCase();
+        let colorClass = 'bg-slate-50 text-slate-600 border-slate-200';
+        if (['BOARDED', 'BOARDING'].includes(evType)) {
+          colorClass = 'bg-blue-50/70 text-blue-700 border-blue-200/50';
+        } else if (['DROPPED_OFF', 'DROPOFF', 'DROPOFF_ONLY'].includes(evType)) {
+          colorClass = 'bg-emerald-50/70 text-emerald-700 border-emerald-200/50';
+        } else if (['ABSENT', 'NO_SHOW', 'NOT_SERVED'].includes(evType)) {
+          colorClass = 'bg-rose-50/70 text-rose-700 border-rose-200/50';
+        }
+        return (
+          <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize', colorClass)}>
+            {evType.toLowerCase().replace('_', ' ')}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row: any) => <SchoolBusStatusBadge status={row.status} />,
+    },
+    {
+      key: 'recorded',
+      header: 'Recorded',
+      render: (row: any) => (
+        <span className='text-slate-500 font-medium text-xs'>{formatDateTime(row.recordedAt)}</span>
+      ),
+    },
+  ], []);
+
+  const capacityColumns = useMemo(() => [
+    {
+      key: 'trip',
+      header: 'Trip',
+      render: (row: any) => (
+        <div className='flex items-center gap-2.5'>
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600 border border-slate-200/70'>
+            <Milestone className='h-4 w-4' />
+          </div>
+          <span className='font-semibold text-slate-900'>{row.tripCode}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'route',
+      header: 'Route',
+      render: (row: any) => (
+        <div className='flex items-center gap-2'>
+          <Route className='h-4 w-4 text-slate-400 shrink-0' />
+          <span className='font-medium text-slate-700'>{row.routeCode}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'plannedStudents',
+      header: 'Planned students',
+      render: (row: any) => (
+        <div className='flex items-center gap-1.5 font-medium text-slate-700'>
+          <Users className='h-3.5 w-3.5 text-slate-400 shrink-0' />
+          <span>{row.plannedStudents} students</span>
+        </div>
+      ),
+    },
+    {
+      key: 'busCapacity',
+      header: 'Bus capacity',
+      render: (row: any) => (
+        <div className='flex items-center gap-1.5 font-medium text-slate-700'>
+          <Bus className='h-3.5 w-3.5 text-slate-400 shrink-0' />
+          <span>{row.busCapacity} seats</span>
+        </div>
+      ),
+    },
+    {
+      key: 'utilization',
+      header: 'Utilization',
+      render: (row: any) => {
+        const pct = row.utilizationPercent ?? 0;
+        const displayPct = Math.min(pct, 100);
+        const barColor = pct > 100 
+          ? 'bg-rose-500' 
+          : pct === 100 
+            ? 'bg-emerald-500' 
+            : 'bg-blue-500';
+        return (
+          <div className='flex items-center gap-3 min-w-[130px]'>
+            <div className='w-24 bg-slate-100 h-2 rounded-full overflow-hidden shrink-0 border border-slate-200/20'>
+              <div className={cn('h-full rounded-full transition-all duration-300', barColor)} style={{ width: `${displayPct}%` }} />
+            </div>
+            <span className='text-xs font-bold text-slate-700 whitespace-nowrap'>{pct.toFixed(1)}%</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row: any) => {
+        const pct = row.utilizationPercent ?? 0;
+        if (pct > 100) {
+          return (
+            <span className='inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-200/50'>
+              Over Capacity
+            </span>
+          );
+        }
+        if (pct === 100) {
+          return (
+            <span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200/50'>
+              Optimal (Full)
+            </span>
+          );
+        }
+        return (
+          <span className='inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-200/50'>
+            Under Capacity
+          </span>
+        );
+      },
+    },
+  ], []);
+
+  // ─── Toolbar Content ───────────────────────────────────────────────────────
+  const toolbar = (
+    <div className='flex flex-col gap-4 w-full'>
+      <div className='flex flex-wrap items-center justify-between gap-4'>
+        <div className='relative w-full max-w-xs'>
+          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+          <input
+            type='text'
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder={
+              activeTab === 'trips'
+                ? 'Search trips, routes...'
+                : activeTab === 'attendance'
+                ? 'Search students, routes...'
+                : 'Search trips, buses...'
+            }
+            className='w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all font-medium text-slate-700'
+          />
+        </div>
+        <div className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>
+          Page-level records
+        </div>
+      </div>
+
+      {activeTab === 'attendance' && attendance.length > 0 && (
+        <div className='grid grid-cols-2 sm:grid-cols-5 gap-3 border-t border-slate-100 pt-3.5'>
+          <div className='bg-blue-50/50 border border-blue-100/50 rounded-xl p-2.5 text-center'>
+            <p className='text-[10px] font-bold text-blue-500 uppercase tracking-wider'>Boarded</p>
+            <p className='text-lg font-bold text-blue-700 mt-1'>{boardedCount}</p>
+          </div>
+          <div className='bg-emerald-50/50 border border-emerald-100/50 rounded-xl p-2.5 text-center'>
+            <p className='text-[10px] font-bold text-emerald-500 uppercase tracking-wider'>Dropped off</p>
+            <p className='text-lg font-bold text-emerald-700 mt-1'>{droppedOffCount}</p>
+          </div>
+          <div className='bg-amber-50/50 border border-amber-100/50 rounded-xl p-2.5 text-center'>
+            <p className='text-[10px] font-bold text-amber-500 uppercase tracking-wider'>Absent</p>
+            <p className='text-lg font-bold text-amber-700 mt-1'>{absentCount}</p>
+          </div>
+          <div className='bg-rose-50/50 border border-rose-100/50 rounded-xl p-2.5 text-center'>
+            <p className='text-[10px] font-bold text-rose-500 uppercase tracking-wider'>No-show</p>
+            <p className='text-lg font-bold text-rose-700 mt-1'>{noShowCount}</p>
+          </div>
+          <div className='bg-slate-50 border border-slate-200/50 rounded-xl p-2.5 text-center col-span-2 sm:col-span-1'>
+            <p className='text-[10px] font-bold text-slate-500 uppercase tracking-wider'>Not served</p>
+            <p className='text-lg font-bold text-slate-700 mt-1'>{notServedCount}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <SchoolBusPageShell
       title='Operational reporting'
-      description='Filtered reports for trips, attendance, and capacity utilization. CSV export is available for the operations summary.'
+      description='Review trip execution, attendance activity, and capacity utilization.'
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
@@ -80,23 +552,103 @@ export function SchoolBusReportsPage() {
         />
       }
       actions={
-        <Button onClick={handleExport}>
-          <Download className='mr-2 h-4 w-4' />
+        <Button onClick={handleExport} className='shadow-sm rounded-xl' variant='outline'>
+          <Download className='mr-2 h-4 w-4 text-slate-500' />
           Export CSV
         </Button>
       }
     >
-      {isLoading || !report ? (
-        <SchoolBusEmptyState
-          title='Report summary is loading'
-          description='Operations reporting will appear once the backend responds.'
-          icon={BarChart3}
-        />
-      ) : (
-        <div className='space-y-6'>
+      <div className='space-y-6'>
+        {/* ─── 1. Filters Card ─────────────────────────────────────────────────── */}
+        <div className='bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm space-y-4'>
+          <div className='flex items-center gap-2 border-b border-slate-100 pb-3'>
+            <Filter className='h-4 w-4 text-slate-400' />
+            <h4 className='text-xs font-bold uppercase tracking-wider text-slate-500'>Report Filters</h4>
+          </div>
+          
+          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end'>
+            <SchoolBusDatePicker
+              label='From date'
+              value={tempFilters.fromDate}
+              onChange={(val) => setTempFilters({ ...tempFilters, fromDate: val })}
+              placeholder='Select start date'
+              size='sm'
+              fullWidth
+            />
+            <SchoolBusDatePicker
+              label='To date'
+              value={tempFilters.toDate}
+              onChange={(val) => setTempFilters({ ...tempFilters, toDate: val })}
+              placeholder='Select end date'
+              size='sm'
+              fullWidth
+            />
+            <div className='flex flex-col gap-1.5 w-full'>
+              <label className='text-xs font-semibold text-slate-700'>School</label>
+              <SchoolBusSelect
+                value={tempFilters.schoolId}
+                onChange={(val) => setTempFilters({ ...tempFilters, schoolId: val })}
+                options={schoolOptions}
+                placeholder='Select school'
+                size='sm'
+                searchable
+                fullWidth
+              />
+            </div>
+            <div className='flex flex-col gap-1.5 w-full'>
+              <label className='text-xs font-semibold text-slate-700'>Status</label>
+              <SchoolBusSelect
+                value={tempFilters.status}
+                onChange={(val) => setTempFilters({ ...tempFilters, status: val })}
+                options={statusOptions}
+                placeholder='Select status'
+                size='sm'
+                fullWidth
+              />
+            </div>
+            <div className='flex flex-col gap-1.5 w-full'>
+              <label className='text-xs font-semibold text-slate-700'>Direction</label>
+              <SchoolBusSelect
+                value={tempFilters.direction}
+                onChange={(val) => setTempFilters({ ...tempFilters, direction: val })}
+                options={directionOptions}
+                placeholder='Select direction'
+                size='sm'
+                fullWidth
+              />
+            </div>
+          </div>
+
+          <div className='flex items-center justify-end gap-2 border-t border-slate-100 pt-4'>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={handleResetFilters}
+              className='text-slate-500 hover:bg-slate-50 rounded-lg text-xs font-semibold'
+            >
+              <RotateCcw className='mr-1.5 h-3.5 w-3.5' /> Reset
+            </Button>
+            <Button
+              size='sm'
+              onClick={handleApplyFilters}
+              className='bg-[#C81E3A] text-white hover:bg-[#b01730] active:bg-[#961427] rounded-lg text-xs font-semibold shadow-sm'
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* ─── 2. Operations Summary Metrics ────────────────────────────────── */}
+        {loadingSummary || !report ? (
+          <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className='bg-slate-50/50 border border-slate-100 rounded-[20px] h-28 animate-pulse' />
+            ))}
+          </div>
+        ) : (
           <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
             <SchoolBusMetricCard
-              label='Total requests'
+              label='Transport requests'
               value={report.totalRequests}
               hint='Transport demand records in scope'
               icon={FileText}
@@ -106,176 +658,54 @@ export function SchoolBusReportsPage() {
               label='Approved requests'
               value={report.approvedRequests}
               hint='Released into subscriptions'
-              icon={Activity}
+              icon={CheckCircle2}
               tone='success'
             />
             <SchoolBusMetricCard
-              label='Completed routes'
+              label='Completed trips'
               value={report.completedRoutes}
               hint='Route plans closed'
-              icon={BarChart3}
-              tone='warning'
+              icon={Milestone}
+              tone='success'
             />
             <SchoolBusMetricCard
               label='Attendance events'
               value={report.attendanceEvents}
               hint='Boarding/dropoff/absence events'
-              icon={Activity}
-              tone='default'
+              icon={Fingerprint}
+              tone='info'
             />
           </div>
+        )}
 
-          <SchoolBusTableTabs
-            defaultValue='trips'
-            tabs={[
-              {
-                value: 'trips',
-                label: 'Trips',
-                count: tripsData?.data?.totalElements || 0,
-                content: (
-                  <SchoolBusSection
-                    title='Trip report'
-                    description='Execution records with route, service date, assignment, and status.'
-                  >
-                    <SchoolBusScrollableTable
-                      footer={
-                        <SchoolBusPaginationBar
-                          page={tripsData?.data}
-                          onPageChange={tripPagination.setPage}
-                        />
-                      }
-                    >
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Trip</TableHead>
-                            <TableHead>Route</TableHead>
-                            <TableHead>Service date</TableHead>
-                            <TableHead>Direction</TableHead>
-                            <TableHead>Assignment</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {trips.map((trip) => (
-                            <TableRow key={trip.id}>
-                              <TableCell className='font-semibold text-rose-700'>
-                                {trip.tripCode}
-                              </TableCell>
-                              <TableCell>{trip.routeCode}</TableCell>
-                              <TableCell>{formatDate(trip.serviceDate)}</TableCell>
-                              <TableCell>{trip.routeDirection}</TableCell>
-                              <TableCell>
-                                {trip.busPlateNumber || 'No bus'} /{' '}
-                                {trip.driverName || 'No driver'}
-                              </TableCell>
-                              <TableCell>
-                                <SchoolBusStatusBadge status={trip.status} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </SchoolBusScrollableTable>
-                  </SchoolBusSection>
-                ),
-              },
-              {
-                value: 'attendance',
-                label: 'Attendance',
-                count: attendanceData?.data?.totalElements || 0,
-                content: (
-                  <SchoolBusSection
-                    title='Attendance report'
-                    description='Student-level boarding, dropoff, absent and no-show events.'
-                  >
-                    <SchoolBusScrollableTable
-                      footer={
-                        <SchoolBusPaginationBar
-                          page={attendanceData?.data}
-                          onPageChange={attendancePagination.setPage}
-                        />
-                      }
-                    >
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Student</TableHead>
-                            <TableHead>Route</TableHead>
-                            <TableHead>Trip</TableHead>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Recorded</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {attendance.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.studentName}</TableCell>
-                              <TableCell>{item.routeCode}</TableCell>
-                              <TableCell>{item.tripId || '-'}</TableCell>
-                              <TableCell>{item.eventType || item.attendanceType}</TableCell>
-                              <TableCell>
-                                <SchoolBusStatusBadge status={item.status} />
-                              </TableCell>
-                              <TableCell>{formatDateTime(item.recordedAt)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </SchoolBusScrollableTable>
-                  </SchoolBusSection>
-                ),
-              },
-              {
-                value: 'capacity',
-                label: 'Capacity',
-                count: capacityData?.data?.totalElements || 0,
-                content: (
-                  <SchoolBusSection
-                    title='Capacity utilization'
-                    description='Compare planned student load with assigned bus capacity.'
-                  >
-                    <SchoolBusScrollableTable
-                      footer={
-                        <SchoolBusPaginationBar
-                          page={capacityData?.data}
-                          onPageChange={capacityPagination.setPage}
-                        />
-                      }
-                    >
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Trip</TableHead>
-                            <TableHead>Route</TableHead>
-                            <TableHead>Planned students</TableHead>
-                            <TableHead>Bus capacity</TableHead>
-                            <TableHead>Utilization</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {capacity.map((row) => (
-                            <TableRow key={row.tripId}>
-                              <TableCell>{row.tripCode}</TableCell>
-                              <TableCell>{row.routeCode}</TableCell>
-                              <TableCell>{row.plannedStudents}</TableCell>
-                              <TableCell>{row.busCapacity}</TableCell>
-                              <TableCell>
-                                {row.utilizationPercent.toFixed(1)}%
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </SchoolBusScrollableTable>
-                  </SchoolBusSection>
-                ),
-              },
-            ]}
-          />
-        </div>
-      )}
+        {/* ─── 3. Report Card ────────────────────────────────────────────────── */}
+        <SchoolBusDataTable
+          tabs={[
+            { key: 'trips', label: 'Trips', count: tripsData?.data?.totalElements || 0 },
+            { key: 'attendance', label: 'Attendance', count: attendanceData?.data?.totalElements || 0 },
+            { key: 'capacity', label: 'Capacity', count: capacityData?.data?.totalElements || 0 },
+          ]}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          toolbar={toolbar}
+          data={activeTab === 'trips' ? trips : activeTab === 'attendance' ? attendance : capacity}
+          columns={activeTab === 'trips' ? tripColumns : activeTab === 'attendance' ? attendanceColumns : capacityColumns}
+          isLoading={activeTab === 'trips' ? loadingTrips : activeTab === 'attendance' ? loadingAttendance : loadingCapacity}
+          pagination={{
+            page: activeTab === 'trips' ? tripsData?.data : activeTab === 'attendance' ? attendanceData?.data : capacityData?.data,
+            onPageChange: activeTab === 'trips' ? tripPagination.setPage : activeTab === 'attendance' ? attendancePagination.setPage : capacityPagination.setPage,
+          }}
+          emptyIcon={activeTab === 'trips' ? Milestone : activeTab === 'attendance' ? Fingerprint : BarChart3}
+          emptyTitle={
+            activeTab === 'trips'
+              ? 'No trip records found'
+              : activeTab === 'attendance'
+              ? 'No attendance events found'
+              : 'No capacity records found'
+          }
+          emptyDescription='Adjust filters or select another reporting period.'
+        />
+      </div>
     </SchoolBusPageShell>
   );
 }

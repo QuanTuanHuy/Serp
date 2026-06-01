@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { schoolBusUi } from '../../theme';
+import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import type {
   PickupPointWindowDirection,
   SchoolBusSchedule,
@@ -216,25 +217,18 @@ export function WindowFormDialog({
               render={({ field }) => (
                 <FormItem className='md:col-span-2'>
                   <FormLabel>Schedule *</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(Number(v))}
-                    value={String(field.value || '')}
-                  >
-                    <FormControl>
-                      <SelectTrigger className='h-11 w-full rounded-xl border-slate-200 bg-white shadow-sm [&_[data-slot=select-value]]:block [&_[data-slot=select-value]]:max-w-[calc(100%-1.75rem)] [&_[data-slot=select-value]]:truncate'>
-                        <SelectValue placeholder='Select schedule' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className='z-[120] max-h-72 rounded-xl border-slate-200 bg-white'>
-                      {schedules.map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>
-                          {s.scheduleName} ({s.shiftType})
-                          {s.arrivalDeadline ? ` • Arrival: ${s.arrivalDeadline}` : ''}
-                          {s.departureTime ? ` • Departure: ${s.departureTime}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SchoolBusSelect
+                    fullWidth
+                    size='md'
+                    className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+                    value={field.value ? String(field.value) : ''}
+                    onChange={(v) => field.onChange(v ? Number(v) : null)}
+                    placeholder='Select schedule'
+                    options={schedules.map((s) => ({
+                      label: `${s.scheduleName} (${s.shiftType})${s.arrivalDeadline ? ` • Arrival: ${s.arrivalDeadline}` : ''}${s.departureTime ? ` • Departure: ${s.departureTime}` : ''}`,
+                      value: String(s.id),
+                    }))}
+                  />
                   {/* Show selected schedule deadline/departure as hint */}
                   {selectedSchedule && (
                     <p className='text-xs text-slate-500 mt-1'>
@@ -255,21 +249,18 @@ export function WindowFormDialog({
               render={({ field }) => (
                 <FormItem className='md:col-span-2'>
                   <FormLabel>Direction *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
+                  <SchoolBusSelect
+                    fullWidth
+                    size='md'
+                    className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
                     value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className='h-11 w-full rounded-xl border-slate-200 bg-white shadow-sm'>
-                        <SelectValue placeholder='Select direction' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className='z-[120] rounded-xl border-slate-200 bg-white'>
-                      {directionOptions.map((d) => (
-                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={field.onChange}
+                    placeholder='Select direction'
+                    options={directionOptions.map((d) => ({
+                      label: d.label,
+                      value: d.value,
+                    }))}
+                  />
                   {usageType && usageType !== 'PICKUP_DROPOFF' && (
                     <p className='text-xs text-amber-600 mt-1'>
                       Restricted by usage type: {usageType}

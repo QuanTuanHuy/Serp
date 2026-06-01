@@ -10,6 +10,8 @@ import { PlanningResultsPanel } from '../components/planning/PlanningResultsPane
 import { DispatchKpiCards } from '../components/planning/DispatchKpiCards';
 import { PlanningMap } from '../components/map/PlanningMap';
 import { MapToolbar } from '../components/map/MapToolbar';
+import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
+import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,7 +84,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                   s.done
                     ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-rose-50 text-rose-500 ring-1 ring-rose-200'
+                    : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
                 }`}
               >
                 {s.done ? '✓' : i + 1}
@@ -226,14 +228,22 @@ export default function SchoolBusRoutePlanningPage() {
       setFitTarget('all');
       setFitKey((k) => k + 1);
       toast.success(`Generated ${res.data.routes.length} route(s). ${res.data.totalUnassignedStudents} unassigned.`);
+      if (res.data?.routes && res.data.routes.length > 0) {
+        setSelectedRouteId(res.data.routes[0].routeId);
+      }
     } catch { toast.error('Greedy generation failed'); }
   }, [activeSession, form.defaultBusCapacity, form.depotId, generateGreedy]);
 
   const handleCreateManualRoute = useCallback(async (req: CreateRouteInSessionRequest) => {
     if (!activeSession) return;
     try {
-      await createRouteInSession({ sessionId: activeSession.id, body: req }).unwrap();
+      const res = await createRouteInSession({ sessionId: activeSession.id, body: req }).unwrap();
       toast.success('Route created');
+      if (res.data?.id) {
+        setSelectedRouteId(res.data.id);
+        setFitTarget('route');
+        setFitKey((k) => k + 1);
+      }
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       toast.error(err?.data?.message ?? 'Failed to create route');
@@ -346,17 +356,17 @@ export default function SchoolBusRoutePlanningPage() {
   // ── EXPANDED MODE ──────────────────────────────────────────────────────────
   if (isMapExpanded) {
     return (
-      <>
+      <MapMarkerVisibilityProvider>
         {/* Fixed full-viewport overlay — prevents any body scroll */}
         <div className='fixed inset-0 z-[900] flex overflow-hidden bg-slate-900/10 backdrop-blur-[1px]'>
           {/* Left panel — own scroll, no page scroll */}
           <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl'>
-            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-4 py-3'>
-              <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>Bus Dispatch System</p>
+            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3'>
+              <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>School Bus Platform</p>
               <h2 className='mt-0.5 text-base font-bold text-slate-900'>Route Planning</h2>
             </div>
             {/* Scrollable inner area */}
-            <div className='flex-1 overflow-y-auto p-4 space-y-4'>
+            <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50'>
               <PlanningContextPanel
                 form={form} onFormChange={setForm}
                 onPreview={handlePreview} onCreateSession={handleCreateSession}
@@ -401,6 +411,14 @@ export default function SchoolBusRoutePlanningPage() {
                 onToggleExpand={() => setIsMapExpanded(false)}
               />
             </div>
+
+            {/* Map legend overlay */}
+            {hasMapData && (
+              <div className='absolute left-4 bottom-4 z-[1000]'>
+                <SchoolBusMapLegend defaultCollapsed={false} />
+              </div>
+            )}
+
             <PlanningMap
               school={school}
               pickupPoints={mapPickupPoints}
@@ -415,129 +433,138 @@ export default function SchoolBusRoutePlanningPage() {
           </div>
         </div>
         {cancelDialog}
-      </>
+      </MapMarkerVisibilityProvider>
     );
   }
 
   // ── NORMAL MODE — 3-column dispatch workspace ──────────────────────────────
   return (
-    <SchoolBusPageShell
-      compact
-      title='Route Planning Workspace'
-      description='Preview demand · auto-generate or build routes manually · publish.'
-      breadcrumb={
-        <SchoolBusBreadcrumb
-          items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Dispatch', href: '/school-bus/dispatch' },
-            { label: 'Route Planning', current: true },
-          ]}
-        />
-      }
-    >
-      {/* Workspace container — fills remaining viewport height below the compact hero */}
-      <div
-        className='flex overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
-        style={{ height: 'calc(100vh - 175px)', minHeight: '580px' }}
+    <MapMarkerVisibilityProvider>
+      <SchoolBusPageShell
+        compact
+        title='Route Planning Workspace'
+        description='Preview demand · auto-generate or build routes manually · publish.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Dispatch', href: '/school-bus/dispatch' },
+              { label: 'Route Planning', current: true },
+            ]}
+          />
+        }
       >
-        {/* ── Left panel: Context + Session (340px) ──────────────────────── */}
-        <div className='flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
-          <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-4 py-2.5'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>
-              Planning Context
-            </p>
-          </div>
-          {/* Scrollable inner area — left panel scrolls independently */}
-          <div className='flex-1 overflow-y-auto p-4 space-y-4'>
-            <PlanningContextPanel
-              form={form} onFormChange={setForm}
-              onPreview={handlePreview} onCreateSession={handleCreateSession}
-              previewing={previewing} creating={creating}
-              sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
-              depots={depots}
-            />
-            <PlanningSessionPanel
-              activeSession={activeSession} sessions={sessions}
-              planningMethod={form.planningMethod} blockingTotal={blockingTotal}
-              canPublish={canPublish} generating={generating} publishing={publishing}
-              cancelling={cancelling} hasRoutes={hasRoutes}
-              onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
-              onSelectSession={(s) => setActiveSessionId(s.id)}
-            />
-          </div>
-        </div>
-
-        {/* ── Center: Map (flex-1) ─────────────────────────────────────────── */}
-        <div className='relative flex flex-1 flex-col overflow-hidden'>
-          {/* KPI bar — only when session is active */}
-          {activeSession && (
-            <DispatchKpiCards
-              eligible={activeSession.totalEligibleStudents}
-              planned={activeSession.totalPlannedStudents}
-              unassigned={activeSession.totalUnassignedStudents}
-              routes={activeSession.totalRoutes}
-            />
-          )}
-
-          {/* Map area with toolbar overlay */}
-          <div className='relative flex-1 overflow-hidden'>
-            {/* Toolbar — top-right overlay */}
-            <div className='absolute right-3 top-3 z-[1000]'>
-              <MapToolbar
-                onFitAll={handleFitAll}
-                onFitRoute={handleFitRoute}
-                canFitAll={canFitAll}
-                canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
-                isExpanded={false}
-                onToggleExpand={() => setIsMapExpanded(true)}
+        {/* Workspace container — fills remaining viewport height below the compact hero */}
+        <div
+          className='flex overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.06)]'
+          style={{ height: 'calc(100vh - 175px)', minHeight: '580px' }}
+        >
+          {/* ── Left panel: Context + Session (340px) ──────────────────────── */}
+          <div className='flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
+            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
+              <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
+                Workspace Controls
+              </p>
+            </div>
+            {/* Scrollable inner area — left panel scrolls independently */}
+            <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20'>
+              <PlanningContextPanel
+                form={form} onFormChange={setForm}
+                onPreview={handlePreview} onCreateSession={handleCreateSession}
+                previewing={previewing} creating={creating}
+                sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
+                depots={depots}
+              />
+              <PlanningSessionPanel
+                activeSession={activeSession} sessions={sessions}
+                planningMethod={form.planningMethod} blockingTotal={blockingTotal}
+                canPublish={canPublish} generating={generating} publishing={publishing}
+                cancelling={cancelling} hasRoutes={hasRoutes}
+                onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
+                onSelectSession={(s) => setActiveSessionId(s.id)}
               />
             </div>
+          </div>
 
-            {/* Map is always rendered so Leaflet initialises; empty-state overlays when no data yet */}
-            <PlanningMap
-              school={school}
-              pickupPoints={mapPickupPoints}
-              selectedRouteStops={selectedRouteStops}
-              selectedRoutePath={selectedRoutePath}
-              depots={depots}
-              fitTarget={fitTarget}
-              fitKey={fitKey}
-              isMapExpanded={false}
-              className='h-full w-full'
-            />
-            {!hasMapData && (
-              <div className='absolute inset-0 z-[500]'>
-                <MapEmptyState step={mapEmptyStep} />
-              </div>
+          {/* ── Center: Map (flex-1) ─────────────────────────────────────────── */}
+          <div className='relative flex flex-1 flex-col overflow-hidden'>
+            {/* KPI bar — only when session is active */}
+            {activeSession && (
+              <DispatchKpiCards
+                eligible={activeSession.totalEligibleStudents}
+                planned={activeSession.totalPlannedStudents}
+                unassigned={activeSession.totalUnassignedStudents}
+                routes={activeSession.totalRoutes}
+              />
             )}
+
+            {/* Map area with toolbar overlay */}
+            <div className='relative flex-1 overflow-hidden'>
+              {/* Toolbar — top-right overlay */}
+              <div className='absolute right-3 top-3 z-[1000]'>
+                <MapToolbar
+                  onFitAll={handleFitAll}
+                  onFitRoute={handleFitRoute}
+                  canFitAll={canFitAll}
+                  canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
+                  isExpanded={false}
+                  onToggleExpand={() => setIsMapExpanded(true)}
+                />
+              </div>
+
+              {/* Map legend overlay */}
+              {hasMapData && (
+                <div className='absolute left-3 bottom-3 z-[1000]'>
+                  <SchoolBusMapLegend defaultCollapsed={true} />
+                </div>
+              )}
+
+              {/* Map is always rendered so Leaflet initialises; empty-state overlays when no data yet */}
+              <PlanningMap
+                school={school}
+                pickupPoints={mapPickupPoints}
+                selectedRouteStops={selectedRouteStops}
+                selectedRoutePath={selectedRoutePath}
+                depots={depots}
+                fitTarget={fitTarget}
+                fitKey={fitKey}
+                isMapExpanded={false}
+                className='h-full w-full'
+              />
+              {!hasMapData && (
+                <div className='absolute inset-0 z-[500]'>
+                  <MapEmptyState step={mapEmptyStep} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Right panel: Routes + Detail (400px) ────────────────────────── */}
+          <div className='flex w-[400px] shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white'>
+            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
+              <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
+                Routes &amp; Detail
+              </p>
+            </div>
+            {/* Scrollable right panel */}
+            <div className='flex-1 overflow-y-auto'>
+              <PlanningResultsPanel
+                preview={preview}
+                greedyResult={greedyResult}
+                sessionRoutes={sessionRoutes}
+                activeSession={activeSession}
+                eligibleStudents={eligibleStudents}
+                selectedRouteId={selectedRouteId}
+                onSelectRoute={handleSelectRoute}
+                onCreateManualRoute={handleCreateManualRoute}
+                creatingRoute={creatingRoute}
+              />
+            </div>
           </div>
         </div>
 
-        {/* ── Right panel: Routes + Detail (400px) ────────────────────────── */}
-        <div className='flex w-[400px] shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white'>
-          <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>
-              Routes &amp; Detail
-            </p>
-          </div>
-          {/* Scrollable right panel */}
-          <div className='flex-1 overflow-y-auto'>
-            <PlanningResultsPanel
-              preview={preview}
-              greedyResult={greedyResult}
-              sessionRoutes={sessionRoutes}
-              activeSession={activeSession}
-              eligibleStudents={eligibleStudents}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={handleSelectRoute}
-              onCreateManualRoute={handleCreateManualRoute}
-              creatingRoute={creatingRoute}
-            />
-          </div>
-        </div>
-      </div>
-
-      {cancelDialog}
-    </SchoolBusPageShell>
+        {cancelDialog}
+      </SchoolBusPageShell>
+    </MapMarkerVisibilityProvider>
   );
 }

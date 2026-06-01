@@ -100,7 +100,7 @@ export default function OperationsMapClient({
             onClick: () => onSchoolSelect?.(s.id),
             popup: (
               <div className='space-y-0.5'>
-                <p className='text-xs font-semibold text-rose-700'>🎓 School</p>
+                <p className='text-xs font-semibold text-slate-700'>🎓 School</p>
                 <p className='font-medium text-slate-950'>{s.name}</p>
                 <p className='text-xs text-slate-500'>{s.address || 'No address'}</p>
               </div>

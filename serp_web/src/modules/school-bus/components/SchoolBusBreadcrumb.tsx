@@ -29,7 +29,7 @@ interface SchoolBusBreadcrumbProps {
  * A proper navigation breadcrumb component with:
  * - Home icon on first item automatically
  * - Chevron separators with good spacing
- * - Hover color matching theme primary (rose)
+ * - Hover color matching theme primary (slate)
  * - Current item is bolder/darker, non-clickable
  * - Truncation for long labels
  */
@@ -56,8 +56,8 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
             className={cn(
               'inline-flex items-center gap-1.5 max-w-[200px] text-[13px] leading-none select-none',
               item.current
-                ? 'font-semibold text-slate-800 cursor-default'
-                : 'font-medium text-slate-500 cursor-pointer transition-colors duration-150 hover:text-rose-600 active:text-rose-700'
+                ? 'font-semibold text-slate-900 cursor-default'
+                : 'font-medium text-slate-500 cursor-pointer transition-colors duration-150 hover:text-slate-900 active:text-slate-950'
             )}
           >
             {item.icon ? (
@@ -66,7 +66,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
               <Home
                 className={cn(
                   'h-[14px] w-[14px] shrink-0',
-                  item.current ? 'text-slate-700' : 'text-slate-400 group-hover:text-rose-500'
+                  item.current ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
                 )}
                 aria-hidden='true'
               />
@@ -74,7 +74,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
             <span className='truncate'>{item.label}</span>
           </span>
         );
-
+ 
         // Choose appropriate wrapper
         let crumb: ReactNode;
         if (item.current) {
@@ -83,7 +83,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
           crumb = (
             <button
               type='button'
-              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1'
+              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1'
               onClick={() => handleSectionScroll(item.sectionId!)}
             >
               {labelNode}
@@ -93,7 +93,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
           crumb = (
             <Link
               href={item.href}
-              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1'
+              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1'
             >
               {labelNode}
             </Link>
