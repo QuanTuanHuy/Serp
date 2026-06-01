@@ -30,6 +30,8 @@ import type {
   PMTransitionWorkItemStatusResponse,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,
+  PMUpdateWorkItemScheduleRequest,
+  PMUpdateWorkItemScheduleResponse,
   PMUpsertWorklogRequest,
   PMWorkItemActivityApi,
   PMWorkItemBoardResponse,
@@ -650,6 +652,28 @@ export const pmWorkItemApi = api.injectEndpoints({
             ]
           : [{ type: 'pm/WorkItem', id: 'LIST' }],
     }),
+
+    updatePmWorkItemSchedule: builder.mutation<
+      PMUpdateWorkItemScheduleResponse,
+      {
+        projectId: number;
+        workItemId: number;
+        body: PMUpdateWorkItemScheduleRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/schedule`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMUpdateWorkItemScheduleResponse>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItem', id: 'LIST' },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -684,5 +708,6 @@ export const {
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemCommentMutation,
   useUpdatePmWorkItemMutation,
+  useUpdatePmWorkItemScheduleMutation,
   useUpdatePmWorkItemWorklogMutation,
 } = pmWorkItemApi;

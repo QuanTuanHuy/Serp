@@ -769,9 +769,12 @@ export interface PMWorkItemScheduleAllocationCalendarItemApi {
   start?: number | null;
   end?: number | null;
   effortMillis?: number | null;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
   source?: string | null;
   sourceRunId?: number | null;
   sourceRunItemId?: number | null;
+  locked?: boolean | null;
   issueType?: PMWorkItemCalendarIssueTypeApi | null;
   status?: PMWorkItemCalendarStatusApi | null;
   priority?: PMWorkItemCalendarPriorityApi | null;
@@ -783,6 +786,39 @@ export interface PMWorkItemScheduleCalendarResponse {
   totalPages: number;
   currentPage: number;
   pageSize: number;
+}
+
+export interface PMUpdateWorkItemScheduleAllocationRequest {
+  assigneeId: number;
+  start: number;
+  end: number;
+  effortMillis: number;
+}
+
+export interface PMUpdateWorkItemScheduleRequest {
+  plannedStart: number;
+  plannedEnd: number;
+  locked?: boolean | null;
+  allocations: PMUpdateWorkItemScheduleAllocationRequest[];
+}
+
+export interface PMUpdateWorkItemScheduleAllocationResponse {
+  id?: number | null;
+  assigneeId?: number | null;
+  start?: number | null;
+  end?: number | null;
+  effortMillis?: number | null;
+}
+
+export interface PMUpdateWorkItemScheduleResponse {
+  id: number;
+  workItemId: number;
+  projectId: number;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  source?: string | null;
+  locked?: boolean | null;
+  allocations: PMUpdateWorkItemScheduleAllocationResponse[];
 }
 
 export interface PMGetWorkItemTimelineParams {

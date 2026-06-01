@@ -71,6 +71,18 @@ export function formatCalendarTime(value?: number | null) {
   return date.isValid() ? date.format('HH:mm') : '';
 }
 
+export function toCalendarDateTimeInputValue(value?: number | null) {
+  if (typeof value !== 'number') return '';
+  const date = toVietnamMoment(value);
+  return date.isValid() ? date.format('YYYY-MM-DDTHH:mm') : '';
+}
+
+export function fromCalendarDateTimeInputValue(value: string) {
+  if (!value) return null;
+  const date = moment(value).utcOffset(VIETNAM_UTC_OFFSET_MINUTES, true);
+  return date.isValid() ? date.valueOf() : null;
+}
+
 export function formatEffort(value?: number | null) {
   if (!value) return '0m';
   const minutes = Math.round(value / 60000);
