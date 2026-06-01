@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.second_mile.domain.Order;
 import serp.project.second_mile.enums.OrderSyncEventSource;
+import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.kafka.event.OrderSyncEvent;
 import serp.project.second_mile.repository.OrderRepository;
 import serp.project.second_mile.service.OrderSyncService;
@@ -48,6 +49,14 @@ public class OrderSyncServiceImpl implements OrderSyncService {
                 });
 
         // Ánh xạ dữ liệu từ Event sang Entity
+        if (order.getId() != null && !shouldApplyIncomingStatus(order.getStatus(), orderSyncEvent.getStatus())) {
+            log.info("Skip sync-order status regression: orderCode={} current={} incoming={}",
+                    orderCode,
+                    order.getStatus(),
+                    orderSyncEvent.getStatus());
+            return;
+        }
+
         mapEventToOrder(orderSyncEvent, order);
 
         orderRepository.save(order);
@@ -62,7 +71,9 @@ public class OrderSyncServiceImpl implements OrderSyncService {
         order.setCustomerOrderCode(event.getCustomerOrderCode());
         order.setOriginPostOfficeCode(event.getOriginPostOfficeCode());
         order.setDestinationPostOfficeCode(event.getDestinationPostOfficeCode());
-        order.setStatus(event.getStatus());
+        if (event.getStatus() != null) {
+            order.setStatus(event.getStatus());
+        }
         order.setTotalWeight(event.getTotalWeight());
         order.setDimensions(event.getDimensions());
         order.setTotalVolume(event.getTotalVolume());
@@ -74,5 +85,21 @@ public class OrderSyncServiceImpl implements OrderSyncService {
         order.setTenantId(event.getTenantId());
         order.setCreatedAt(event.getCreatedAt());
         order.setUpdatedAt(event.getUpdatedAt());
+    }
+
+    private boolean shouldApplyIncomingStatus(OrderStatus current, OrderStatus incoming) {
+        if (incoming == null) {
+            return current == null;
+        }
+        if (current == null || current == incoming) {
+            return true;
+        }
+        if (incoming == OrderStatus.CANCELLED || incoming == OrderStatus.LOST_OR_DAMAGED) {
+            return true;
+        }
+        if (current == OrderStatus.CANCELLED || current == OrderStatus.LOST_OR_DAMAGED) {
+            return false;
+        }
+        return incoming.ordinal() >= current.ordinal();
     }
 }

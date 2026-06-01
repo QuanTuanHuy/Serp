@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import serp.project.second_mile.domain.HandoverManifestOrder;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface HandoverManifestOrderRepository extends JpaRepository<HandoverManifestOrder, Long> {
@@ -18,6 +19,12 @@ public interface HandoverManifestOrderRepository extends JpaRepository<HandoverM
     List<HandoverManifestOrder> findByManifest_IdAndOrder_OrderCodeInAndTenantId(
             Long manifestId,
             List<String> orderCodes,
+            Long tenantId
+    );
+
+    Optional<HandoverManifestOrder> findByManifest_IdAndOrder_IdAndTenantId(
+            Long manifestId,
+            Long orderId,
             Long tenantId
     );
 }

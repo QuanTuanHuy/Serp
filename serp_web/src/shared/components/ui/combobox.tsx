@@ -24,6 +24,7 @@ export type ComboboxItem = {
 };
 
 export interface ComboboxProps {
+  id?: string;
   value?: string | number;
   onChange: (value: string | number | undefined) => void;
   items: ComboboxItem[];
@@ -32,11 +33,15 @@ export interface ComboboxProps {
   disabled?: boolean;
   loading?: boolean;
   clearable?: boolean;
+  clearText?: string;
   onSearch?: (query: string) => void; // if provided, caller controls filtering via items
   className?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
+  id,
   value,
   onChange,
   items,
@@ -45,8 +50,11 @@ export const Combobox: React.FC<ComboboxProps> = ({
   disabled,
   loading,
   clearable = true,
+  clearText = 'Clear selection',
   onSearch,
   className,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -66,10 +74,13 @@ export const Combobox: React.FC<ComboboxProps> = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type='button'
           variant='outline'
           role='combobox'
           aria-expanded={open}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           className={cn('w-full justify-between', className)}
           disabled={disabled}
         >
@@ -99,20 +110,20 @@ export const Combobox: React.FC<ComboboxProps> = ({
             <CommandGroup>
               {clearable && value !== undefined && (
                 <CommandItem
-                  value='__clear__'
+                  value={clearText}
                   onSelect={() => {
                     setQuery('');
                     handleSelect('');
                   }}
                 >
-                  Clear selection
+                  {clearText}
                 </CommandItem>
               )}
               {items.map((item) => (
                 <CommandItem
                   key={item.value}
-                  value={String(item.value)}
-                  onSelect={handleSelect}
+                  value={`${item.label} ${item.value}`}
+                  onSelect={() => handleSelect(String(item.value))}
                 >
                   <Check
                     className={cn(

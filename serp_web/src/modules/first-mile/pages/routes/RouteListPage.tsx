@@ -22,11 +22,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -38,6 +33,7 @@ import {
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import { Plus, RefreshCw, Search, ShieldAlert, Trash2 } from 'lucide-react';
+import { TmsCombobox } from '../../components';
 import {
   useCreateSecondMileRouteMutation,
   useDeleteSecondMileRouteMutation,
@@ -56,7 +52,10 @@ import type {
   SecondMileRouteStatus,
   SecondMileUpdateRouteRequest,
 } from '../../types';
-import { SecondMileRoutesMap, type RouteMapLine } from './components/SecondMileRoutesMap';
+import {
+  SecondMileRoutesMap,
+  type RouteMapLine,
+} from './components/SecondMileRoutesMap';
 
 type RouteFormMode = 'create' | 'edit';
 
@@ -135,7 +134,9 @@ function toFormState(route: SecondMileRoute): RouteFormState {
     routeName: route.routeName ?? '',
     originHubId: route.originHubId ? String(route.originHubId) : '',
     destinationType: route.destinationType,
-    destinationHubId: route.destinationHubId ? String(route.destinationHubId) : '',
+    destinationHubId: route.destinationHubId
+      ? String(route.destinationHubId)
+      : '',
     destinationPostOfficeCode: route.destinationPostOfficeCode ?? '',
     vehicleId: route.vehicleId ? String(route.vehicleId) : '',
     estimatedDistanceKm:
@@ -164,17 +165,25 @@ export function RouteListPage() {
   const [selectedStatus, setSelectedStatus] = React.useState<
     'ALL' | SecondMileRouteStatus
   >('ALL');
-  const [selectedRouteId, setSelectedRouteId] = React.useState<number | undefined>();
+  const [selectedRouteId, setSelectedRouteId] = React.useState<
+    number | undefined
+  >();
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formMode, setFormMode] = React.useState<RouteFormMode>('create');
-  const [editingRouteId, setEditingRouteId] = React.useState<number | null>(null);
-  const [formValues, setFormValues] = React.useState<RouteFormState>(DEFAULT_FORM);
-  const [deleteTarget, setDeleteTarget] = React.useState<SecondMileRoute | null>(
+  const [editingRouteId, setEditingRouteId] = React.useState<number | null>(
     null
   );
+  const [formValues, setFormValues] =
+    React.useState<RouteFormState>(DEFAULT_FORM);
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<SecondMileRoute | null>(null);
 
-  const { data: routesData, isFetching, refetch } = useGetSecondMileRoutesQuery(
+  const {
+    data: routesData,
+    isFetching,
+    refetch,
+  } = useGetSecondMileRoutesQuery(
     {
       page,
       size: PAGE_SIZE,
@@ -207,6 +216,25 @@ export function RouteListPage() {
   const hubs = hubsData?.items ?? [];
   const postOffices = postOfficesData?.items ?? [];
   const routes = routesData?.items ?? [];
+  const statusFilterOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...ROUTE_STATUS_OPTIONS,
+  ];
+  const hubComboboxOptions = hubs.map((hub) => ({
+    value: String(hub.id),
+    label: `${hub.code} - ${hub.name}`,
+  }));
+  const postOfficeComboboxOptions = postOffices.map((postOffice) => ({
+    value: postOffice.code,
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+  const vehicleComboboxOptions = [
+    { value: '__none__', label: 'No vehicle' },
+    ...(vehiclesData?.items ?? []).map((vehicle) => ({
+      value: String(vehicle.id),
+      label: vehicle.licensePlate,
+    })),
+  ];
 
   const hubById = React.useMemo<Record<number, Hub>>(() => {
     return hubs.reduce<Record<number, Hub>>((acc, hub) => {
@@ -422,25 +450,18 @@ export function RouteListPage() {
                   placeholder='Route code or name...'
                 />
               </div>
-              <Select
+              <TmsCombobox
+                id='route-filter-status'
                 value={selectedStatus}
                 onValueChange={(value) => {
                   setSelectedStatus(value as 'ALL' | SecondMileRouteStatus);
                   setPage(0);
                 }}
-              >
-                <SelectTrigger className='w-full md:w-[180px]'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='ALL'>All statuses</SelectItem>
-                  {ROUTE_STATUS_OPTIONS.map((statusOption) => (
-                    <SelectItem key={statusOption.value} value={statusOption.value}>
-                      {statusOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={statusFilterOptions}
+                placeholder='All statuses'
+                emptyText='No statuses found'
+                className='w-full md:w-[180px]'
+              />
               <Button type='submit'>Search</Button>
             </form>
           </CardContent>
@@ -488,15 +509,18 @@ export function RouteListPage() {
                         className='cursor-pointer'
                         onClick={() => setSelectedRouteId(route.id)}
                       >
-                        <TableCell className='font-medium'>{route.routeCode}</TableCell>
+                        <TableCell className='font-medium'>
+                          {route.routeCode}
+                        </TableCell>
                         <TableCell>{route.routeName}</TableCell>
                         <TableCell>
-                          {hubById[route.originHubId]?.code ?? route.originHubId}
+                          {hubById[route.originHubId]?.code ??
+                            route.originHubId}
                         </TableCell>
                         <TableCell>
                           {route.destinationType === 'HUB'
-                            ? hubById[route.destinationHubId ?? -1]?.code ??
-                              route.destinationHubId
+                            ? (hubById[route.destinationHubId ?? -1]?.code ??
+                              route.destinationHubId)
                             : route.destinationPostOfficeCode}
                         </TableCell>
                         <TableCell>
@@ -599,7 +623,9 @@ export function RouteListPage() {
               const body = buildRequestBody(formValues);
               try {
                 if (formMode === 'create') {
-                  await createRoute(body as SecondMileCreateRouteRequest).unwrap();
+                  await createRoute(
+                    body as SecondMileCreateRouteRequest
+                  ).unwrap();
                   notification.success('Route created.');
                   if (page !== 0) setPage(0);
                 } else if (editingRouteId !== null) {
@@ -625,7 +651,9 @@ export function RouteListPage() {
                 <Input
                   id='route-code'
                   value={formValues.routeCode}
-                  onChange={(event) => updateField('routeCode', event.target.value)}
+                  onChange={(event) =>
+                    updateField('routeCode', event.target.value)
+                  }
                 />
               </div>
               <div className='space-y-2'>
@@ -633,128 +661,94 @@ export function RouteListPage() {
                 <Input
                   id='route-name'
                   value={formValues.routeName}
-                  onChange={(event) => updateField('routeName', event.target.value)}
+                  onChange={(event) =>
+                    updateField('routeName', event.target.value)
+                  }
                 />
               </div>
               <div className='space-y-2'>
-                <Label>Origin hub</Label>
-                <Select
-                  value={formValues.originHubId || undefined}
+                <Label htmlFor='route-origin-hub'>Origin hub</Label>
+                <TmsCombobox
+                  id='route-origin-hub'
+                  value={formValues.originHubId}
                   onValueChange={(value) => updateField('originHubId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select origin hub' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hubs.map((hub) => (
-                      <SelectItem key={hub.id} value={String(hub.id)}>
-                        {hub.code} - {hub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={hubComboboxOptions}
+                  placeholder='Select origin hub'
+                  emptyText='No hubs found'
+                />
               </div>
               <div className='space-y-2'>
-                <Label>Destination type</Label>
-                <Select
+                <Label htmlFor='route-destination-type'>Destination type</Label>
+                <TmsCombobox
+                  id='route-destination-type'
                   value={formValues.destinationType}
                   onValueChange={(value) =>
-                    updateField('destinationType', value as SecondMileRouteDestinationType)
+                    updateField(
+                      'destinationType',
+                      value as SecondMileRouteDestinationType
+                    )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROUTE_DESTINATION_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={ROUTE_DESTINATION_OPTIONS}
+                  placeholder='Select destination type'
+                  emptyText='No destination types found'
+                />
               </div>
               {formValues.destinationType === 'HUB' ? (
                 <div className='space-y-2 md:col-span-2'>
-                  <Label>Destination hub</Label>
-                  <Select
-                    value={formValues.destinationHubId || undefined}
-                    onValueChange={(value) => updateField('destinationHubId', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select destination hub' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hubs.map((hub) => (
-                        <SelectItem key={hub.id} value={String(hub.id)}>
-                          {hub.code} - {hub.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor='route-destination-hub'>Destination hub</Label>
+                  <TmsCombobox
+                    id='route-destination-hub'
+                    value={formValues.destinationHubId}
+                    onValueChange={(value) =>
+                      updateField('destinationHubId', value)
+                    }
+                    options={hubComboboxOptions}
+                    placeholder='Select destination hub'
+                    emptyText='No hubs found'
+                  />
                 </div>
               ) : (
                 <div className='space-y-2 md:col-span-2'>
-                  <Label>Destination post office</Label>
-                  <Select
-                    value={formValues.destinationPostOfficeCode || undefined}
+                  <Label htmlFor='route-destination-post-office'>
+                    Destination post office
+                  </Label>
+                  <TmsCombobox
+                    id='route-destination-post-office'
+                    value={formValues.destinationPostOfficeCode}
                     onValueChange={(value) =>
                       updateField('destinationPostOfficeCode', value)
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select destination post office' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {postOffices.map((postOffice) => (
-                        <SelectItem key={postOffice.code} value={postOffice.code}>
-                          {postOffice.code} - {postOffice.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={postOfficeComboboxOptions}
+                    placeholder='Select destination post office'
+                    emptyText='No post offices found'
+                  />
                 </div>
               )}
               <div className='space-y-2'>
-                <Label>Vehicle</Label>
-                <Select
+                <Label htmlFor='route-vehicle'>Vehicle</Label>
+                <TmsCombobox
+                  id='route-vehicle'
                   value={formValues.vehicleId || '__none__'}
                   onValueChange={(value) =>
                     updateField('vehicleId', value === '__none__' ? '' : value)
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Optional vehicle' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='__none__'>No vehicle</SelectItem>
-                    {vehiclesData?.items.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={String(vehicle.id)}>
-                        {vehicle.licensePlate}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={vehicleComboboxOptions}
+                  placeholder='Optional vehicle'
+                  emptyText='No vehicles found'
+                />
               </div>
               <div className='space-y-2'>
-                <Label>Status</Label>
-                <Select
+                <Label htmlFor='route-status'>Status</Label>
+                <TmsCombobox
+                  id='route-status'
                   value={formValues.status}
                   onValueChange={(value) =>
                     updateField('status', value as SecondMileRouteStatus)
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROUTE_STATUS_OPTIONS.map((statusOption) => (
-                      <SelectItem key={statusOption.value} value={statusOption.value}>
-                        {statusOption.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={ROUTE_STATUS_OPTIONS}
+                  placeholder='Select status'
+                  emptyText='No statuses found'
+                />
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='distance'>Distance (km)</Label>

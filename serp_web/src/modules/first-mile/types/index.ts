@@ -438,6 +438,8 @@ export interface HandoverManifestOrderItem {
   id?: number;
   orderId?: number;
   orderCode?: string;
+  customerOrderCode?: string;
+  status?: FirstMileOrderStatus | SecondMileOrderStatus;
   scanOutTime?: string;
   scanInTime?: string;
 }
@@ -445,6 +447,7 @@ export interface HandoverManifestOrderItem {
 export interface HandoverManifest {
   id: number;
   manifestCode?: string;
+  originPostOfficeId?: number;
   originPostOfficeCode?: string;
   targetHubId?: number;
   vehicleId?: number;
@@ -452,12 +455,20 @@ export interface HandoverManifest {
   routeId?: number;
   routeCode?: string;
   status?: HandoverManifestStatus;
+  totalOrders?: number;
+  scannedOutOrders?: number;
+  scannedInOrders?: number;
+  dispatchedAt?: string;
+  inboundConfirmedAt?: string;
+  sealCode?: string;
+  note?: string;
   orders?: HandoverManifestOrderItem[];
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface HandoverManifestListFilters {
+  postOfficeId?: number;
   originPostOfficeCode?: string;
   targetHubId?: number;
   vehicleId?: number;
@@ -470,6 +481,22 @@ export interface CreateHandoverManifestRequest {
   vehicle_id: number;
   route_id?: number;
   order_codes: string[];
+}
+
+export interface CreatePostOfficeHandoverManifestRequest {
+  post_office_id: number;
+  target_hub_id?: number;
+  order_codes: string[];
+  note?: string;
+}
+
+export interface DispatchPostOfficeHandoverManifestRequest {
+  seal_code?: string;
+  note?: string;
+}
+
+export interface ScanOutHandoverOrderRequest {
+  order_code: string;
 }
 
 export type SecondMileOrderStatus =
@@ -512,6 +539,11 @@ export type FirstMileOrderStatus =
   | 'PICKUP_FAILED'
   | 'PICKED_UP'
   | 'AT_ORIGIN_POST_OFFICE'
+  | 'OUTBOUND_READY_FROM_PO'
+  | 'INBOUND_AT_ORIGIN_HUB'
+  | 'BAGGING_IN_PROGRESS'
+  | 'BAGGED'
+  | 'BAG_SEALED'
   | 'CANCELLED'
   | 'LOST_OR_DAMAGED';
 

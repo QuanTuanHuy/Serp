@@ -86,6 +86,18 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 	@Query("""
 			select o
 			from Order o
+			where o.tenantId = :tenantId
+				and upper(o.orderCode) in :orderCodes
+			""")
+	List<Order> findByTenantIdAndUpperOrderCodeInWithLock(
+			@Param("tenantId") Long tenantId,
+			@Param("orderCodes") Collection<String> orderCodes
+	);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select o
+			from Order o
 			where o.id = :id
 				and o.tenantId = :tenantId
 			""")

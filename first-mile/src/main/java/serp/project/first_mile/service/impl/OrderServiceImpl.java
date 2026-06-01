@@ -816,6 +816,7 @@ public class OrderServiceImpl implements OrderService {
                     order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
                     Order savedOrder = orderRepository.save(order);
                     recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
+                    syncOrder.sendOrderEvent(savedOrder);
                 }
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
@@ -833,6 +834,7 @@ public class OrderServiceImpl implements OrderService {
                 order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
                 Order savedOrder = orderRepository.save(order);
                 recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
+                syncOrder.sendOrderEvent(savedOrder);
                 return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
             }
 
@@ -857,6 +859,7 @@ public class OrderServiceImpl implements OrderService {
         postOfficeRepository.save(postOffice);
         Order savedOrder = orderRepository.save(order);
         recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order confirmed and received at origin post office.");
+        syncOrder.sendOrderEvent(savedOrder);
 
         return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
     }

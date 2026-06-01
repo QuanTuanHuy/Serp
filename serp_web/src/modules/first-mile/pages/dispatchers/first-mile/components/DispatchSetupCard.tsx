@@ -14,13 +14,9 @@ import {
   Checkbox,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type { PickupShift } from '../../../../types';
 import type {
   DispatchOptimizationEffortOption,
@@ -91,6 +87,11 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   activeAction,
   isTmsAdmin,
 }) => {
+  const postOfficeComboboxOptions = postOfficeOptions.map((postOffice) => ({
+    value: String(postOffice.id),
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -104,41 +105,28 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
         <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-4'>
           <div className='space-y-2'>
             <Label htmlFor='dispatch-post-office'>Post office</Label>
-            <Select
-              value={selectedPostOfficeId || undefined}
+            <TmsCombobox
+              id='dispatch-post-office'
+              value={selectedPostOfficeId}
               onValueChange={onPostOfficeChange}
+              options={postOfficeComboboxOptions}
+              placeholder='Select post office'
+              emptyText='No post offices found'
               disabled={isLoadingPostOffices}
-            >
-              <SelectTrigger id='dispatch-post-office'>
-                <SelectValue placeholder='Select post office' />
-              </SelectTrigger>
-              <SelectContent>
-                {postOfficeOptions.map((postOffice) => (
-                  <SelectItem key={postOffice.id} value={String(postOffice.id)}>
-                    {postOffice.code} - {postOffice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingPostOffices}
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='dispatch-shift'>Shift</Label>
-            <Select
+            <TmsCombobox
+              id='dispatch-shift'
               value={shift}
               onValueChange={(value) => onShiftChange(value as PickupShift)}
-            >
-              <SelectTrigger id='dispatch-shift'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SHIFT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={SHIFT_OPTIONS}
+              placeholder='Select shift'
+              emptyText='No shifts found'
+            />
           </div>
 
           <div className='space-y-2'>
@@ -229,25 +217,18 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                 <Label htmlFor='dispatch-vehicle-profile'>
                   Vehicle profile
                 </Label>
-                <Select
+                <TmsCombobox
+                  id='dispatch-vehicle-profile'
                   value={businessValues.vehicleOption}
                   onValueChange={(value) =>
                     businessHandlers.onVehicleOptionChange(
                       value as RoutingVehicleOption
                     )
                   }
-                >
-                  <SelectTrigger id='dispatch-vehicle-profile'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROUTING_VEHICLE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={ROUTING_VEHICLE_OPTIONS}
+                  placeholder='Select vehicle profile'
+                  emptyText='No vehicle profiles found'
+                />
                 <p className='text-xs text-muted-foreground'>
                   Optional. Leave as backend default in most scenarios.
                 </p>
@@ -257,25 +238,18 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                 <Label htmlFor='dispatch-optimization-goal'>
                   Planning objective
                 </Label>
-                <Select
+                <TmsCombobox
+                  id='dispatch-optimization-goal'
                   value={businessValues.optimizationGoal}
                   onValueChange={(value) =>
                     businessHandlers.onOptimizationGoalChange(
                       value as DispatchOptimizationGoalOption
                     )
                   }
-                >
-                  <SelectTrigger id='dispatch-optimization-goal'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPTIMIZATION_GOAL_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={OPTIMIZATION_GOAL_OPTIONS}
+                  placeholder='Select planning objective'
+                  emptyText='No objectives found'
+                />
                 <p className='text-xs text-muted-foreground'>
                   Define business priority: on-time, cost, or assignment rate.
                 </p>
@@ -285,25 +259,18 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                 <Label htmlFor='dispatch-optimization-effort'>
                   Optimization effort
                 </Label>
-                <Select
+                <TmsCombobox
+                  id='dispatch-optimization-effort'
                   value={businessValues.optimizationEffort}
                   onValueChange={(value) =>
                     businessHandlers.onOptimizationEffortChange(
                       value as DispatchOptimizationEffortOption
                     )
                   }
-                >
-                  <SelectTrigger id='dispatch-optimization-effort'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPTIMIZATION_EFFORT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={OPTIMIZATION_EFFORT_OPTIONS}
+                  placeholder='Select optimization effort'
+                  emptyText='No optimization efforts found'
+                />
                 <p className='text-xs text-muted-foreground'>
                   Fast is suitable for high traffic time, thorough is suitable
                   when route quality is more important.
