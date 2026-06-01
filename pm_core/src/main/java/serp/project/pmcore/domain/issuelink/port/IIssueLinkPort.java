@@ -21,4 +21,6 @@ public interface IIssueLinkPort {
     void delete(Long id, Long tenantId);
 
     List<IssueLinkDetailEntity> listByWorkItemId(Long tenantId, Long workItemId);
+
+    List<IssueLinkDetailEntity> listByWorkItemIds(Long tenantId, List<Long> workItemIds);
 }

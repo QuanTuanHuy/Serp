@@ -8,6 +8,7 @@ package serp.project.pmcore.infrastructure.store.mapper;
 import org.springframework.stereotype.Component;
 import serp.project.pmcore.domain.issuelink.entity.IssueLinkDetailEntity;
 import serp.project.pmcore.domain.issuelink.entity.IssueLinkEntity;
+import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 import serp.project.pmcore.infrastructure.store.model.IssueLinkModel;
 import serp.project.pmcore.infrastructure.store.repository.IIssueLinkRepository;
 
@@ -61,6 +62,7 @@ public class IssueLinkMapper extends BaseMapper {
                 .targetId(row.getTargetId())
                 .linkTypeId(row.getLinkTypeId())
                 .linkTypeName(row.getLinkTypeName())
+                .dependencyBehavior(parseDependencyBehavior(row.getDependencyBehavior()))
                 .outwardDescription(row.getOutwardDesc())
                 .inwardDescription(row.getInwardDesc())
                 .relatedWorkItemId(row.getRelatedWorkItemId())
@@ -74,5 +76,16 @@ public class IssueLinkMapper extends BaseMapper {
                 .createdAt(row.getCreatedAt() == null ? null : row.getCreatedAt().getTime())
                 .createdBy(row.getCreatedBy())
                 .build();
+    }
+
+    private IssueLinkDependencyBehavior parseDependencyBehavior(String value) {
+        if (value == null || value.isBlank()) {
+            return IssueLinkDependencyBehavior.NONE;
+        }
+        try {
+            return IssueLinkDependencyBehavior.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return IssueLinkDependencyBehavior.NONE;
+        }
     }
 }

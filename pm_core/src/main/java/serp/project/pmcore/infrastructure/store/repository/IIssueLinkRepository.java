@@ -42,6 +42,7 @@ public interface IIssueLinkRepository extends JpaRepository<IssueLinkModel, Long
                 il.target_id,
                 il.link_type_id,
                 ilt.name AS link_type_name,
+                ilt.dependency_behavior,
                 ilt.outward_desc,
                 ilt.inward_desc,
                 CASE
@@ -81,6 +82,53 @@ public interface IIssueLinkRepository extends JpaRepository<IssueLinkModel, Long
     List<IssueLinkDetailRow> findIssueLinkDetailsByWorkItemId(@Param("tenantId") Long tenantId,
                                                               @Param("workItemId") Long workItemId);
 
+    @Query(value = """
+            SELECT
+                il.id AS link_id,
+                il.source_id,
+                il.target_id,
+                il.link_type_id,
+                ilt.name AS link_type_name,
+                ilt.dependency_behavior,
+                ilt.outward_desc,
+                ilt.inward_desc,
+                CASE
+                    WHEN il.source_id IN (:workItemIds) THEN il.target_id
+                    ELSE il.source_id
+                END AS related_work_item_id,
+                wi.project_id AS related_project_id,
+                wi.key AS related_work_item_key,
+                wi.summary AS related_work_item_summary,
+                wi.issue_type_id AS related_issue_type_id,
+                it.name AS related_issue_type_name,
+                wi.status_id AS related_status_id,
+                st.name AS related_status_name,
+                il.created_at,
+                il.created_by
+            FROM issue_links il
+            JOIN issue_link_types ilt
+              ON ilt.id = il.link_type_id
+             AND ilt.deleted_at IS NULL
+            JOIN work_items wi
+              ON wi.id = CASE
+                    WHEN il.source_id IN (:workItemIds) THEN il.target_id
+                    ELSE il.source_id
+                END
+             AND wi.deleted_at IS NULL
+            JOIN issue_types it
+              ON it.id = wi.issue_type_id
+             AND it.deleted_at IS NULL
+            JOIN statuses st
+              ON st.id = wi.status_id
+             AND st.deleted_at IS NULL
+            WHERE il.tenant_id = :tenantId
+              AND il.deleted_at IS NULL
+              AND (il.source_id IN (:workItemIds) OR il.target_id IN (:workItemIds))
+            ORDER BY il.id DESC
+            """, nativeQuery = true)
+    List<IssueLinkDetailRow> findIssueLinkDetailsByWorkItemIds(@Param("tenantId") Long tenantId,
+                                                               @Param("workItemIds") List<Long> workItemIds);
+
     interface IssueLinkDetailRow {
         Long getLinkId();
 
@@ -91,6 +139,8 @@ public interface IIssueLinkRepository extends JpaRepository<IssueLinkModel, Long
         Long getLinkTypeId();
 
         String getLinkTypeName();
+
+        String getDependencyBehavior();
 
         String getOutwardDesc();
 
