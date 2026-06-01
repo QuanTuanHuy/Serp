@@ -10,6 +10,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
   - `discuss_service/AGENTS.md`
   - `first-mile/AGENTS.md` (TMS first-mile backend)
   - `second-mile/AGENTS.md` (TMS second-mile backend)
+  - `tms-billing-service/AGENTS.md` (TMS billing / shipping fee)
   - `notification_service/AGENTS.md`
   - `pm_core/AGENTS.md`
   - `serp_web/AGENTS.md`
@@ -20,7 +21,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
 - Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
 - Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
 - Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
-- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `tms-billing-service/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
 - Shared Java libraries: `serp_java_platform/`.
 - Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
@@ -130,11 +131,13 @@ poetry run alembic revision --autogenerate -m "message"
 
 
 ### File headers and comments
-- Many backend files start with the repository header below; add it to new Go/Java files and match local Python header style when present.
+- Many backend files start with an `Author:` / `Description:` header block; add it to new Go/Java files and match local Python header style when present.
+- **Default (most of the monorepo):**
 ```text
 Author: QuanTuanHuy
 Description: Part of Serp Project
 ```
+- **TMS modules override the default author** — do **not** use `QuanTuanHuy` in `first-mile/`, `second-mile/`, `tms-billing-service/`, or `serp_web/src/modules/first-mile/`. Those guides require `Author: Nguyen The Anh` (see each module’s `AGENTS.md`). When editing an existing TMS file, **preserve** its current `Author:` line; never replace `Nguyen The Anh` with `QuanTuanHuy`.
 - Add comments only for non-obvious business rules or tricky control flow.
 
 ### Imports
