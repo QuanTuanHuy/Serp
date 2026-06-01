@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import {
   CALCULATION_TYPE_OPTIONS,
   SURCHARGE_RULE_CODE_OPTIONS,
@@ -40,7 +36,9 @@ interface SurchargeRuleFormDialogProps {
   onSubmit: (event: React.FormEvent) => void;
 }
 
-export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = ({
+export const SurchargeRuleFormDialog: React.FC<
+  SurchargeRuleFormDialogProps
+> = ({
   open,
   mode,
   form,
@@ -68,7 +66,8 @@ export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = (
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
               <Label htmlFor='surchargeCode'>Rule Code</Label>
-              <Select
+              <TmsCombobox
+                id='surchargeCode'
                 value={form.code}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -77,19 +76,11 @@ export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = (
                     name: prev.name || value,
                   }))
                 }
+                options={SURCHARGE_RULE_CODE_OPTIONS}
+                placeholder='Select rule code'
+                emptyText='No rule codes found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='surchargeCode'>
-                  <SelectValue placeholder='Select rule code' />
-                </SelectTrigger>
-                <SelectContent>
-                  {SURCHARGE_RULE_CODE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
@@ -110,7 +101,8 @@ export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = (
 
             <div className='space-y-2'>
               <Label htmlFor='surchargeCalculationType'>Calculation Type</Label>
-              <Select
+              <TmsCombobox
+                id='surchargeCalculationType'
                 value={form.calculationType}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -119,19 +111,11 @@ export const SurchargeRuleFormDialog: React.FC<SurchargeRuleFormDialogProps> = (
                       value as SurchargeRuleFormState['calculationType'],
                   }))
                 }
+                options={CALCULATION_TYPE_OPTIONS}
+                placeholder='Select type'
+                emptyText='No calculation types found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='surchargeCalculationType'>
-                  <SelectValue placeholder='Select type' />
-                </SelectTrigger>
-                <SelectContent>
-                  {CALCULATION_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
               {calculationTypeHelper ? (
                 <p className='text-xs text-muted-foreground'>
                   {calculationTypeHelper}

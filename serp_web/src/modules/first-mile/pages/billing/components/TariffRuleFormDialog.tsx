@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import {
   DELIVERY_SERVICE_OPTIONS,
   ROUTE_TYPE_OPTIONS,
@@ -64,7 +60,8 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
               <Label htmlFor='tariffServiceCode'>Service Code</Label>
-              <Select
+              <TmsCombobox
+                id='tariffServiceCode'
                 value={form.serviceCode}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -72,24 +69,17 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     serviceCode: value as TariffFormState['serviceCode'],
                   }))
                 }
+                options={DELIVERY_SERVICE_OPTIONS}
+                placeholder='Select service'
+                emptyText='No services found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='tariffServiceCode'>
-                  <SelectValue placeholder='Select service' />
-                </SelectTrigger>
-                <SelectContent>
-                  {DELIVERY_SERVICE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='tariffRouteType'>Route Type</Label>
-              <Select
+              <TmsCombobox
+                id='tariffRouteType'
                 value={form.routeTypeCode}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -97,19 +87,11 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     routeTypeCode: value as TariffFormState['routeTypeCode'],
                   }))
                 }
+                options={ROUTE_TYPE_OPTIONS}
+                placeholder='Select route type'
+                emptyText='No route types found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='tariffRouteType'>
-                  <SelectValue placeholder='Select route type' />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROUTE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>

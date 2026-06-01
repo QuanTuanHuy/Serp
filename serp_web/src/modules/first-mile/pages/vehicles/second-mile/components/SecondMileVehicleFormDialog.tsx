@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type {
   SecondMileVehicleStatus,
   SecondMileVehicleType,
@@ -72,217 +68,186 @@ export const SecondMileVehicleFormDialog: React.FC<
   onOpenChange,
   onSubmit,
   onUpdateField,
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className='sm:max-w-2xl'>
-      <DialogHeader>
-        <DialogTitle>
-          {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
-        </DialogTitle>
-        <DialogDescription>
-          Second-mile vehicle linked to a hub and optional driver staff.
-        </DialogDescription>
-      </DialogHeader>
+}) => {
+  const driverComboboxOptions = [
+    { value: NONE_VALUE, label: 'Not assigned' },
+    ...driverOptions,
+  ];
 
-      <form onSubmit={onSubmit} className='space-y-4'>
-        <div className='grid gap-4 sm:grid-cols-2'>
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-license-plate'>License plate *</Label>
-            <Input
-              id='sm-vehicle-license-plate'
-              value={formValues.licensePlate}
-              onChange={(event) =>
-                onUpdateField('licensePlate', event.target.value)
-              }
-              disabled={isSaving}
-              placeholder='17B6-72685'
-            />
-          </div>
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='sm:max-w-2xl'>
+        <DialogHeader>
+          <DialogTitle>
+            {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
+          </DialogTitle>
+          <DialogDescription>
+            Second-mile vehicle linked to a hub and optional driver staff.
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-status'>Status *</Label>
-            <Select
-              value={formValues.status}
-              onValueChange={(value) =>
-                onUpdateField('status', value as SecondMileVehicleStatus)
-              }
-              disabled={isSaving}
-            >
-              <SelectTrigger id='sm-vehicle-status' className='w-full'>
-                <SelectValue placeholder='Select status' />
-              </SelectTrigger>
-              <SelectContent>
-                {VEHICLE_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-type'>Vehicle type *</Label>
-            <Select
-              value={formValues.vehicleType}
-              onValueChange={(value) =>
-                onUpdateField('vehicleType', value as SecondMileVehicleType)
-              }
-              disabled={isSaving}
-            >
-              <SelectTrigger id='sm-vehicle-type' className='w-full'>
-                <SelectValue placeholder='Select type' />
-              </SelectTrigger>
-              <SelectContent>
-                {VEHICLE_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-max-bags'>Max bags *</Label>
-            <Input
-              id='sm-vehicle-max-bags'
-              type='number'
-              min={0}
-              step={1}
-              value={formValues.maxBags}
-              onChange={(event) => onUpdateField('maxBags', event.target.value)}
-              disabled={isSaving}
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-max-weight'>Max weight (kg) *</Label>
-            <Input
-              id='sm-vehicle-max-weight'
-              type='number'
-              min={0}
-              step='any'
-              value={formValues.maxWeight}
-              onChange={(event) =>
-                onUpdateField('maxWeight', event.target.value)
-              }
-              disabled={isSaving}
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='sm-vehicle-max-volume'>Max volume (m³) *</Label>
-            <Input
-              id='sm-vehicle-max-volume'
-              type='number'
-              min={0}
-              step='any'
-              value={formValues.maxVolume}
-              onChange={(event) =>
-                onUpdateField('maxVolume', event.target.value)
-              }
-              disabled={isSaving}
-            />
-          </div>
-
-          <div className='space-y-2 sm:col-span-2'>
-            <Label htmlFor='sm-vehicle-hub'>Hub *</Label>
-            <Select
-              value={formValues.hubId.trim() || NONE_VALUE}
-              onValueChange={(value) => {
-                const nextHubId = value === NONE_VALUE ? '' : value;
-
-                onUpdateField('hubId', nextHubId);
-
-                if (nextHubId !== formValues.hubId) {
-                  onUpdateField('assignedStaffId', '');
+        <form onSubmit={onSubmit} className='space-y-4'>
+          <div className='grid gap-4 sm:grid-cols-2'>
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-license-plate'>License plate *</Label>
+              <Input
+                id='sm-vehicle-license-plate'
+                value={formValues.licensePlate}
+                onChange={(event) =>
+                  onUpdateField('licensePlate', event.target.value)
                 }
-              }}
-              disabled={isSaving || isLoadingHubs}
-            >
-              <SelectTrigger id='sm-vehicle-hub' className='w-full'>
-                <SelectValue
-                  placeholder={
-                    isLoadingHubs ? 'Loading hubs...' : 'Select hub'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE} disabled>
-                  Select hub
-                </SelectItem>
-                {hubOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                disabled={isSaving}
+                placeholder='17B6-72685'
+              />
+            </div>
 
-          <div className='space-y-2 sm:col-span-2'>
-            <Label htmlFor='sm-vehicle-driver'>Driver</Label>
-            <Select
-              value={formValues.assignedStaffId.trim() || NONE_VALUE}
-              onValueChange={(value) =>
-                onUpdateField(
-                  'assignedStaffId',
-                  value === NONE_VALUE ? '' : value
-                )
-              }
-              disabled={
-                isSaving || !formValues.hubId.trim() || isLoadingDrivers
-              }
-            >
-              <SelectTrigger id='sm-vehicle-driver' className='w-full'>
-                <SelectValue
-                  placeholder={
-                    !formValues.hubId.trim()
-                      ? 'Select hub first'
-                      : isLoadingDrivers
-                        ? 'Loading drivers...'
-                        : 'Select driver'
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-status'>Status *</Label>
+              <TmsCombobox
+                id='sm-vehicle-status'
+                value={formValues.status}
+                onValueChange={(value) =>
+                  onUpdateField('status', value as SecondMileVehicleStatus)
+                }
+                options={VEHICLE_STATUS_OPTIONS}
+                placeholder='Select status'
+                emptyText='No statuses found'
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-type'>Vehicle type *</Label>
+              <TmsCombobox
+                id='sm-vehicle-type'
+                value={formValues.vehicleType}
+                onValueChange={(value) =>
+                  onUpdateField('vehicleType', value as SecondMileVehicleType)
+                }
+                options={VEHICLE_TYPE_OPTIONS}
+                placeholder='Select type'
+                emptyText='No vehicle types found'
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-max-bags'>Max bags *</Label>
+              <Input
+                id='sm-vehicle-max-bags'
+                type='number'
+                min={0}
+                step={1}
+                value={formValues.maxBags}
+                onChange={(event) =>
+                  onUpdateField('maxBags', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-max-weight'>Max weight (kg) *</Label>
+              <Input
+                id='sm-vehicle-max-weight'
+                type='number'
+                min={0}
+                step='any'
+                value={formValues.maxWeight}
+                onChange={(event) =>
+                  onUpdateField('maxWeight', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-max-volume'>Max volume (m³) *</Label>
+              <Input
+                id='sm-vehicle-max-volume'
+                type='number'
+                min={0}
+                step='any'
+                value={formValues.maxVolume}
+                onChange={(event) =>
+                  onUpdateField('maxVolume', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2 sm:col-span-2'>
+              <Label htmlFor='sm-vehicle-hub'>Hub *</Label>
+              <TmsCombobox
+                id='sm-vehicle-hub'
+                value={formValues.hubId.trim()}
+                onValueChange={(value) => {
+                  const nextHubId = value === NONE_VALUE ? '' : value;
+
+                  onUpdateField('hubId', nextHubId);
+
+                  if (nextHubId !== formValues.hubId) {
+                    onUpdateField('assignedStaffId', '');
                   }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>Not assigned</SelectItem>
-                {formValues.hubId.trim() ? (
-                  driverOptions.length > 0 ? (
-                    driverOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      {isLoadingDrivers
-                        ? 'Loading drivers...'
-                        : 'No drivers assigned to this hub.'}
-                    </p>
+                }}
+                options={hubOptions}
+                placeholder={isLoadingHubs ? 'Loading hubs...' : 'Select hub'}
+                emptyText={isLoadingHubs ? 'Loading hubs...' : 'No hubs found'}
+                disabled={isSaving || isLoadingHubs}
+                loading={isLoadingHubs}
+              />
+            </div>
+
+            <div className='space-y-2 sm:col-span-2'>
+              <Label htmlFor='sm-vehicle-driver'>Driver</Label>
+              <TmsCombobox
+                id='sm-vehicle-driver'
+                value={formValues.assignedStaffId.trim() || NONE_VALUE}
+                onValueChange={(value) =>
+                  onUpdateField(
+                    'assignedStaffId',
+                    value === NONE_VALUE ? '' : value
                   )
-                ) : null}
-              </SelectContent>
-            </Select>
+                }
+                options={driverComboboxOptions}
+                placeholder={
+                  !formValues.hubId.trim()
+                    ? 'Select hub first'
+                    : isLoadingDrivers
+                      ? 'Loading drivers...'
+                      : 'Select driver'
+                }
+                emptyText={
+                  !formValues.hubId.trim()
+                    ? 'Select hub first.'
+                    : isLoadingDrivers
+                      ? 'Loading drivers...'
+                      : 'No drivers assigned to this hub.'
+                }
+                disabled={
+                  isSaving || !formValues.hubId.trim() || isLoadingDrivers
+                }
+                loading={isLoadingDrivers}
+              />
+            </div>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
-            Cancel
-          </Button>
-          <Button type='submit' disabled={isSaving}>
-            {isSaving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-            {formMode === 'create' ? 'Create' : 'Save changes'}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
-  </Dialog>
-);
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button type='submit' disabled={isSaving}>
+              {isSaving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+              {formMode === 'create' ? 'Create' : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};

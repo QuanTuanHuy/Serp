@@ -14,15 +14,10 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from '@/shared/components/ui';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { CoordinatePickerMap } from '../../../components';
+import { CoordinatePickerMap, TmsCombobox } from '../../../components';
 import type {
   CreateOrderRequest,
   ProductType,
@@ -103,6 +98,54 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
   parseOptionalNumberInput,
 }) => {
   const defaultProductTypeId = productTypeOptions[0]?.id ?? 0;
+  const provinceOptions = provinceSelectOptions.flatMap((province) => {
+    const provinceCode = normalizeLocationCode(province.provinceCode);
+
+    return provinceCode
+      ? [
+          {
+            value: provinceCode,
+            label: `${province.name} (${provinceCode})`,
+          },
+        ]
+      : [];
+  });
+  const senderWardOptions = senderWardSelectOptions.flatMap((ward) => {
+    const wardCode = normalizeLocationCode(ward.wardCode);
+
+    return wardCode
+      ? [
+          {
+            value: wardCode,
+            label: `${ward.name} (${wardCode})`,
+          },
+        ]
+      : [];
+  });
+  const receiverWardOptions = receiverWardSelectOptions.flatMap((ward) => {
+    const wardCode = normalizeLocationCode(ward.wardCode);
+
+    return wardCode
+      ? [
+          {
+            value: wardCode,
+            label: `${ward.name} (${wardCode})`,
+          },
+        ]
+      : [];
+  });
+  const codOptions = [
+    { value: 'false', label: 'No COD' },
+    { value: 'true', label: 'COD' },
+  ];
+  const productCategoryOptions = [
+    { value: 'NONE', label: 'No category' },
+    ...ORDER_PRODUCT_CATEGORY_OPTIONS,
+  ];
+  const productTypeComboboxOptions = productTypeOptions.map((productType) => ({
+    value: String(productType.id),
+    label: `${productType.name} (${productType.code})`,
+  }));
 
   const handleAddProduct = () => {
     onProductsChange([
@@ -205,79 +248,40 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='senderProvinceCode'>Sender province *</Label>
-                <Select
-                  value={selectedSenderProvinceCode || undefined}
+                <TmsCombobox
+                  id='senderProvinceCode'
+                  value={selectedSenderProvinceCode}
                   onValueChange={(value) => {
                     onFormChange('senderProvinceCode', value);
                     onFormChange('senderWardCode', '');
                   }}
-                >
-                  <SelectTrigger id='senderProvinceCode'>
-                    <SelectValue placeholder='Select province' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {provinceSelectOptions.map((province) => {
-                      const provinceCode = normalizeLocationCode(
-                        province.provinceCode
-                      );
-
-                      if (!provinceCode) {
-                        return null;
-                      }
-
-                      return (
-                        <SelectItem key={provinceCode} value={provinceCode}>
-                          {province.name} ({provinceCode})
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                  options={provinceOptions}
+                  placeholder='Select province'
+                  emptyText='No provinces found'
+                />
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='senderWardCode'>Sender ward *</Label>
-                <Select
-                  value={selectedSenderWardCode || undefined}
+                <TmsCombobox
+                  id='senderWardCode'
+                  value={selectedSenderWardCode}
                   onValueChange={(value) =>
                     onFormChange('senderWardCode', value)
                   }
+                  options={senderWardOptions}
+                  placeholder={
+                    selectedSenderProvinceCode
+                      ? 'Select ward'
+                      : 'Select province first'
+                  }
+                  emptyText={
+                    selectedSenderProvinceCode && isFetchingSenderWards
+                      ? 'Loading wards...'
+                      : 'No wards available.'
+                  }
                   disabled={!selectedSenderProvinceCode}
-                >
-                  <SelectTrigger id='senderWardCode'>
-                    <SelectValue
-                      placeholder={
-                        selectedSenderProvinceCode
-                          ? 'Select ward'
-                          : 'Select province first'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedSenderProvinceCode && isFetchingSenderWards ? (
-                      <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                        Loading wards...
-                      </p>
-                    ) : senderWardSelectOptions.length > 0 ? (
-                      senderWardSelectOptions.map((ward) => {
-                        const wardCode = normalizeLocationCode(ward.wardCode);
-
-                        if (!wardCode) {
-                          return null;
-                        }
-
-                        return (
-                          <SelectItem key={wardCode} value={wardCode}>
-                            {ward.name} ({wardCode})
-                          </SelectItem>
-                        );
-                      })
-                    ) : (
-                      <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                        No wards available.
-                      </p>
-                    )}
-                  </SelectContent>
-                </Select>
+                  loading={isFetchingSenderWards}
+                />
               </div>
               <div className='space-y-2 md:col-span-2'>
                 <Label htmlFor='senderAddressDetail'>Sender address *</Label>
@@ -360,79 +364,40 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 <Label htmlFor='receiverProvinceCode'>
                   Receiver province *
                 </Label>
-                <Select
-                  value={selectedReceiverProvinceCode || undefined}
+                <TmsCombobox
+                  id='receiverProvinceCode'
+                  value={selectedReceiverProvinceCode}
                   onValueChange={(value) => {
                     onFormChange('receiverProvinceCode', value);
                     onFormChange('receiverWardCode', '');
                   }}
-                >
-                  <SelectTrigger id='receiverProvinceCode'>
-                    <SelectValue placeholder='Select province' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {provinceSelectOptions.map((province) => {
-                      const provinceCode = normalizeLocationCode(
-                        province.provinceCode
-                      );
-
-                      if (!provinceCode) {
-                        return null;
-                      }
-
-                      return (
-                        <SelectItem key={provinceCode} value={provinceCode}>
-                          {province.name} ({provinceCode})
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                  options={provinceOptions}
+                  placeholder='Select province'
+                  emptyText='No provinces found'
+                />
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='receiverWardCode'>Receiver ward *</Label>
-                <Select
-                  value={selectedReceiverWardCode || undefined}
+                <TmsCombobox
+                  id='receiverWardCode'
+                  value={selectedReceiverWardCode}
                   onValueChange={(value) =>
                     onFormChange('receiverWardCode', value)
                   }
+                  options={receiverWardOptions}
+                  placeholder={
+                    selectedReceiverProvinceCode
+                      ? 'Select ward'
+                      : 'Select province first'
+                  }
+                  emptyText={
+                    selectedReceiverProvinceCode && isFetchingReceiverWards
+                      ? 'Loading wards...'
+                      : 'No wards available.'
+                  }
                   disabled={!selectedReceiverProvinceCode}
-                >
-                  <SelectTrigger id='receiverWardCode'>
-                    <SelectValue
-                      placeholder={
-                        selectedReceiverProvinceCode
-                          ? 'Select ward'
-                          : 'Select province first'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedReceiverProvinceCode && isFetchingReceiverWards ? (
-                      <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                        Loading wards...
-                      </p>
-                    ) : receiverWardSelectOptions.length > 0 ? (
-                      receiverWardSelectOptions.map((ward) => {
-                        const wardCode = normalizeLocationCode(ward.wardCode);
-
-                        if (!wardCode) {
-                          return null;
-                        }
-
-                        return (
-                          <SelectItem key={wardCode} value={wardCode}>
-                            {ward.name} ({wardCode})
-                          </SelectItem>
-                        );
-                      })
-                    ) : (
-                      <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                        No wards available.
-                      </p>
-                    )}
-                  </SelectContent>
-                </Select>
+                  loading={isFetchingReceiverWards}
+                />
               </div>
               <div className='space-y-2 md:col-span-2'>
                 <Label htmlFor='receiverAddressDetail'>
@@ -496,8 +461,9 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
             <h3 className='text-sm font-semibold'>Order options</h3>
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label>Pickup method *</Label>
-                <Select
+                <Label htmlFor='pickupMethod'>Pickup method *</Label>
+                <TmsCombobox
+                  id='pickupMethod'
                   value={createForm.pickupMethod}
                   onValueChange={(value) =>
                     onFormChange(
@@ -505,23 +471,18 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       value as CreateOrderFormState['pickupMethod']
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_PICKUP_METHOD_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={ORDER_PICKUP_METHOD_OPTIONS}
+                  placeholder='Select pickup method'
+                  emptyText='No pickup methods found'
+                />
               </div>
 
               <div className='space-y-2'>
-                <Label>Delivery request time *</Label>
-                <Select
+                <Label htmlFor='deliveryRequestTime'>
+                  Delivery request time *
+                </Label>
+                <TmsCombobox
+                  id='deliveryRequestTime'
                   value={createForm.deliveryRequestTime}
                   onValueChange={(value) =>
                     onFormChange(
@@ -529,23 +490,16 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       value as CreateOrderFormState['deliveryRequestTime']
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELIVERY_REQUEST_TIME_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={DELIVERY_REQUEST_TIME_OPTIONS}
+                  placeholder='Select request time'
+                  emptyText='No request times found'
+                />
               </div>
 
               <div className='space-y-2'>
-                <Label>Order type *</Label>
-                <Select
+                <Label htmlFor='orderType'>Order type *</Label>
+                <TmsCombobox
+                  id='orderType'
                   value={createForm.orderType}
                   onValueChange={(value) =>
                     onFormChange(
@@ -553,23 +507,16 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       value as CreateOrderFormState['orderType']
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ORDER_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={ORDER_TYPE_OPTIONS}
+                  placeholder='Select order type'
+                  emptyText='No order types found'
+                />
               </div>
 
               <div className='space-y-2'>
-                <Label>Fee payer *</Label>
-                <Select
+                <Label htmlFor='feePayer'>Fee payer *</Label>
+                <TmsCombobox
+                  id='feePayer'
                   value={createForm.feePayer}
                   onValueChange={(value) =>
                     onFormChange(
@@ -577,41 +524,30 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       value as CreateOrderFormState['feePayer']
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FEE_PAYER_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={FEE_PAYER_OPTIONS}
+                  placeholder='Select fee payer'
+                  emptyText='No fee payers found'
+                />
               </div>
 
               <div className='space-y-2'>
-                <Label>COD</Label>
-                <Select
+                <Label htmlFor='isCod'>COD</Label>
+                <TmsCombobox
+                  id='isCod'
                   value={createForm.isCod}
                   onValueChange={(value) =>
                     onFormChange('isCod', value as 'true' | 'false')
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='false'>No COD</SelectItem>
-                    <SelectItem value='true'>COD</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={codOptions}
+                  placeholder='Select COD option'
+                  emptyText='No COD options found'
+                />
               </div>
 
               <div className='space-y-2 md:col-span-2'>
-                <Label>Product category</Label>
-                <Select
+                <Label htmlFor='orderProductCategory'>Product category</Label>
+                <TmsCombobox
+                  id='orderProductCategory'
                   value={createForm.orderProductCategory}
                   onValueChange={(value) =>
                     onFormChange(
@@ -619,19 +555,10 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       value as CreateOrderFormState['orderProductCategory']
                     )
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select category (optional)' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='NONE'>No category</SelectItem>
-                    {ORDER_PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={productCategoryOptions}
+                  placeholder='Select category (optional)'
+                  emptyText='No categories found'
+                />
               </div>
             </div>
           </div>
@@ -790,11 +717,12 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                         <Label htmlFor={`product-type-${index}`}>
                           Product type *
                         </Label>
-                        <Select
+                        <TmsCombobox
+                          id={`product-type-${index}`}
                           value={
                             product.product_type_id > 0
                               ? String(product.product_type_id)
-                              : undefined
+                              : ''
                           }
                           onValueChange={(value) =>
                             handleProductChange(
@@ -803,21 +731,10 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                               Number(value)
                             )
                           }
-                        >
-                          <SelectTrigger id={`product-type-${index}`}>
-                            <SelectValue placeholder='Select product type' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {productTypeOptions.map((productType) => (
-                              <SelectItem
-                                key={productType.id}
-                                value={String(productType.id)}
-                              >
-                                {productType.name} ({productType.code})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={productTypeComboboxOptions}
+                          placeholder='Select product type'
+                          emptyText='No product types found'
+                        />
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor={`product-value-${index}`}>

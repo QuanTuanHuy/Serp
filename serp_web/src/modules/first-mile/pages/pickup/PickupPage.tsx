@@ -23,13 +23,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Switch,
 } from '@/shared/components';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import { useNotification } from '@/shared/hooks';
 import {
   useCompletePickupTripMutation,
@@ -279,6 +275,20 @@ export const PickupPage: React.FC = () => {
     () => provincesData?.items ?? [],
     [provincesData]
   );
+  const provinceComboboxOptions = React.useMemo(
+    () =>
+      provinceOptions.flatMap((province) =>
+        province.provinceCode
+          ? [
+              {
+                value: province.provinceCode,
+                label: `${province.name} (${province.provinceCode})`,
+              },
+            ]
+          : []
+      ),
+    [provinceOptions]
+  );
 
   const { data: wardsData, isLoading: isLoadingWards } =
     useGetWardsByProvinceCodeQuery(
@@ -295,6 +305,22 @@ export const PickupPage: React.FC = () => {
   const wardOptions = React.useMemo<Ward[]>(
     () => wardsData?.items ?? [],
     [wardsData]
+  );
+  const wardComboboxOptions = React.useMemo(
+    () => [
+      { value: 'ALL', label: 'All wards in province' },
+      ...wardOptions.flatMap((ward) =>
+        ward.wardCode
+          ? [
+              {
+                value: ward.wardCode,
+                label: `${ward.name} (${ward.wardCode})`,
+              },
+            ]
+          : []
+      ),
+    ],
+    [wardOptions]
   );
 
   const { data: postOfficesData, isLoading: isLoadingPostOffices } =
@@ -313,6 +339,14 @@ export const PickupPage: React.FC = () => {
   const postOfficeOptions = React.useMemo<PostOffice[]>(
     () => postOfficesData?.items ?? [],
     [postOfficesData]
+  );
+  const postOfficeComboboxOptions = React.useMemo(
+    () =>
+      postOfficeOptions.map((postOffice) => ({
+        value: String(postOffice.id),
+        label: `${postOffice.code} - ${postOffice.name}`,
+      })),
+    [postOfficeOptions]
   );
 
   React.useEffect(() => {
@@ -407,6 +441,16 @@ export const PickupPage: React.FC = () => {
         fullName: courier.fullName?.trim() || 'Unknown courier',
       }));
   }, [couriersData]);
+  const courierComboboxOptions = React.useMemo(
+    () => [
+      { value: 'all', label: 'All couriers' },
+      ...courierOptions.map((courier) => ({
+        value: String(courier.id),
+        label: `${courier.code} - ${courier.fullName}`,
+      })),
+    ],
+    [courierOptions]
+  );
 
   React.useEffect(() => {
     setSelectedCourierStaffId('all');
@@ -733,87 +777,58 @@ export const PickupPage: React.FC = () => {
                 <>
                   <div className='space-y-2'>
                     <Label htmlFor='pickup-province'>Province</Label>
-                    <Select
-                      value={selectedProvinceCode || undefined}
+                    <TmsCombobox
+                      id='pickup-province'
+                      value={selectedProvinceCode}
                       onValueChange={handleProvinceChange}
+                      options={provinceComboboxOptions}
+                      placeholder='Select province'
+                      emptyText='No provinces found'
                       disabled={isLoadingProvinces || !provinceOptions.length}
-                    >
-                      <SelectTrigger id='pickup-province'>
-                        <SelectValue placeholder='Select province' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {provinceOptions.map((province) => (
-                          <SelectItem
-                            key={province.provinceCode}
-                            value={province.provinceCode}
-                          >
-                            {province.name} ({province.provinceCode})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      loading={isLoadingProvinces}
+                    />
                   </div>
 
                   <div className='space-y-2'>
                     <Label htmlFor='pickup-ward'>Ward</Label>
-                    <Select
+                    <TmsCombobox
+                      id='pickup-ward'
                       value={selectedWardCode || 'ALL'}
                       onValueChange={handleWardChange}
+                      options={wardComboboxOptions}
+                      placeholder={
+                        selectedProvinceCode
+                          ? 'Select ward (optional)'
+                          : 'Select province first'
+                      }
+                      emptyText={
+                        isLoadingWards ? 'Loading wards...' : 'No wards found'
+                      }
                       disabled={!selectedProvinceCode || isLoadingWards}
-                    >
-                      <SelectTrigger id='pickup-ward'>
-                        <SelectValue
-                          placeholder={
-                            selectedProvinceCode
-                              ? 'Select ward (optional)'
-                              : 'Select province first'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='ALL'>
-                          All wards in province
-                        </SelectItem>
-                        {wardOptions.map((ward) => (
-                          <SelectItem key={ward.wardCode} value={ward.wardCode}>
-                            {ward.name} ({ward.wardCode})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      loading={isLoadingWards}
+                    />
                   </div>
 
                   <div className='space-y-2'>
                     <Label htmlFor='pickup-post-office'>Post office</Label>
-                    <Select
-                      value={selectedPostOfficeId || undefined}
+                    <TmsCombobox
+                      id='pickup-post-office'
+                      value={selectedPostOfficeId}
                       onValueChange={setSelectedPostOfficeId}
+                      options={postOfficeComboboxOptions}
+                      placeholder={
+                        selectedProvinceCode
+                          ? 'Select post office'
+                          : 'Select province first'
+                      }
+                      emptyText='No post offices found'
                       disabled={
                         !selectedProvinceCode ||
                         isLoadingPostOffices ||
                         !postOfficeOptions.length
                       }
-                    >
-                      <SelectTrigger id='pickup-post-office'>
-                        <SelectValue
-                          placeholder={
-                            selectedProvinceCode
-                              ? 'Select post office'
-                              : 'Select province first'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {postOfficeOptions.map((postOffice) => (
-                          <SelectItem
-                            key={postOffice.id}
-                            value={String(postOffice.id)}
-                          >
-                            {postOffice.code} - {postOffice.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      loading={isLoadingPostOffices}
+                    />
                     {selectedProvinceCode &&
                     !isLoadingPostOffices &&
                     !postOfficeOptions.length ? (
@@ -825,26 +840,16 @@ export const PickupPage: React.FC = () => {
 
                   <div className='space-y-2'>
                     <Label htmlFor='pickup-courier'>Courier</Label>
-                    <Select
+                    <TmsCombobox
+                      id='pickup-courier'
                       value={selectedCourierStaffId}
                       onValueChange={setSelectedCourierStaffId}
+                      options={courierComboboxOptions}
+                      placeholder='All couriers in post office'
+                      emptyText='No couriers found'
                       disabled={!selectedPostOfficeId || isLoadingCouriers}
-                    >
-                      <SelectTrigger id='pickup-courier'>
-                        <SelectValue placeholder='All couriers in post office' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All couriers</SelectItem>
-                        {courierOptions.map((courier) => (
-                          <SelectItem
-                            key={courier.id}
-                            value={String(courier.id)}
-                          >
-                            {courier.code} - {courier.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      loading={isLoadingCouriers}
+                    />
                   </div>
                 </>
               ) : (
@@ -931,7 +936,9 @@ export const PickupPage: React.FC = () => {
                         <th className='px-3 py-2 font-medium'>Trip</th>
                         <th className='px-3 py-2 font-medium'>Courier</th>
                         <th className='px-3 py-2 font-medium'>Status</th>
-                        <th className='px-3 py-2 font-medium'>Check-in progress</th>
+                        <th className='px-3 py-2 font-medium'>
+                          Check-in progress
+                        </th>
                         <th className='px-3 py-2 font-medium'>Actions</th>
                       </tr>
                     </thead>
@@ -1200,8 +1207,7 @@ export const PickupPage: React.FC = () => {
                   {canViewCheckinDetail(selectedOrder) ? (
                     <>
                       <Badge variant='default'>
-                        Checked in{' '}
-                        {formatDateTime(selectedOrder.checkinTime)}
+                        Checked in {formatDateTime(selectedOrder.checkinTime)}
                       </Badge>
                       <div>
                         <Button

@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type { VehicleStatus, VehicleType } from '../../../../types';
 import {
   VEHICLE_STATUS_OPTIONS,
@@ -68,6 +64,15 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
   onSubmit,
   onUpdateField,
 }) => {
+  const postOfficeComboboxOptions = [
+    { value: NONE_VALUE, label: 'Not assigned' },
+    ...postOfficeOptions,
+  ];
+  const courierComboboxOptions = [
+    { value: NONE_VALUE, label: 'Not assigned' },
+    ...courierOptions,
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
@@ -97,46 +102,32 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='vehicle-status'>Status *</Label>
-              <Select
+              <TmsCombobox
+                id='vehicle-status'
                 value={formValues.status}
                 onValueChange={(value) =>
                   onUpdateField('status', value as VehicleStatus)
                 }
+                options={VEHICLE_STATUS_OPTIONS}
+                placeholder='Select status'
+                emptyText='No statuses found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='vehicle-status' className='w-full'>
-                  <SelectValue placeholder='Select status' />
-                </SelectTrigger>
-                <SelectContent>
-                  {VEHICLE_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='vehicle-type'>Vehicle type *</Label>
-              <Select
+              <TmsCombobox
+                id='vehicle-type'
                 value={formValues.vehicleType}
                 onValueChange={(value) =>
                   onUpdateField('vehicleType', value as VehicleType)
                 }
+                options={VEHICLE_TYPE_OPTIONS}
+                placeholder='Select type'
+                emptyText='No vehicle types found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='vehicle-type' className='w-full'>
-                  <SelectValue placeholder='Select type' />
-                </SelectTrigger>
-                <SelectContent>
-                  {VEHICLE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
@@ -173,7 +164,8 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='vehicle-post-office-id'>Post office</Label>
-              <Select
+              <TmsCombobox
+                id='vehicle-post-office-id'
                 value={formValues.postOfficeId.trim() || NONE_VALUE}
                 onValueChange={(value) => {
                   const nextPostOfficeId = value === NONE_VALUE ? '' : value;
@@ -184,41 +176,28 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                     onUpdateField('postOfficeStaffId', '');
                   }
                 }}
+                options={postOfficeComboboxOptions}
+                placeholder={
+                  isLoadingPostOffices
+                    ? 'Loading post offices...'
+                    : 'Select post office'
+                }
+                emptyText={
+                  isLoadingPostOffices
+                    ? 'Loading post offices...'
+                    : 'No post offices available.'
+                }
                 disabled={isSaving || isLoadingPostOffices}
-              >
-                <SelectTrigger id='vehicle-post-office-id' className='w-full'>
-                  <SelectValue
-                    placeholder={
-                      isLoadingPostOffices
-                        ? 'Loading post offices...'
-                        : 'Select post office'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_VALUE}>Not assigned</SelectItem>
-                  {postOfficeOptions.length > 0 ? (
-                    postOfficeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      {isLoadingPostOffices
-                        ? 'Loading post offices...'
-                        : 'No post offices available.'}
-                    </p>
-                  )}
-                </SelectContent>
-              </Select>
+                loading={isLoadingPostOffices}
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='vehicle-post-office-staff-id'>
                 Courier staff
               </Label>
-              <Select
+              <TmsCombobox
+                id='vehicle-post-office-staff-id'
                 value={formValues.postOfficeStaffId.trim() || NONE_VALUE}
                 onValueChange={(value) =>
                   onUpdateField(
@@ -226,49 +205,28 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                     value === NONE_VALUE ? '' : value
                   )
                 }
+                options={courierComboboxOptions}
+                placeholder={
+                  !formValues.postOfficeId.trim()
+                    ? 'Select post office first'
+                    : isLoadingCouriers
+                      ? 'Loading couriers...'
+                      : 'Select courier'
+                }
+                emptyText={
+                  !formValues.postOfficeId.trim()
+                    ? 'Select post office first.'
+                    : isLoadingCouriers
+                      ? 'Loading couriers...'
+                      : 'No couriers available for this post office.'
+                }
                 disabled={
                   isSaving ||
                   !formValues.postOfficeId.trim() ||
                   isLoadingCouriers
                 }
-              >
-                <SelectTrigger
-                  id='vehicle-post-office-staff-id'
-                  className='w-full'
-                >
-                  <SelectValue
-                    placeholder={
-                      !formValues.postOfficeId.trim()
-                        ? 'Select post office first'
-                        : isLoadingCouriers
-                          ? 'Loading couriers...'
-                          : 'Select courier'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_VALUE}>Not assigned</SelectItem>
-                  {formValues.postOfficeId.trim() ? (
-                    courierOptions.length > 0 ? (
-                      courierOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                        {isLoadingCouriers
-                          ? 'Loading couriers...'
-                          : 'No couriers available for this post office.'}
-                      </p>
-                    )
-                  ) : (
-                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      Select post office first.
-                    </p>
-                  )}
-                </SelectContent>
-              </Select>
+                loading={isLoadingCouriers}
+              />
             </div>
           </div>
 

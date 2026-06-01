@@ -4,22 +4,18 @@
  */
 
 import React from 'react';
-import {
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
 import { Search } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
+import { Input, Label } from '@/shared/components/ui';
 import {
   TmsListFilterPanel,
   type TmsFilterMode,
 } from '../../../components/list';
 import type { FirstMileOrderStatus } from '../../../types';
-import type { OrderFilterFormState, TriStateFilter } from '../orderFilterModels';
+import type {
+  OrderFilterFormState,
+  TriStateFilter,
+} from '../orderFilterModels';
 import type { OrderStatusFilter } from '../orderPageModels';
 
 interface OrderFiltersCardProps {
@@ -54,6 +50,19 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
   onRefresh,
   formatStatusLabel,
 }) => {
+  const statusFilterOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...statusOptions.map((statusOption) => ({
+      value: statusOption,
+      label: formatStatusLabel(statusOption),
+    })),
+  ];
+  const confirmFilterOptions = [
+    { value: 'ALL', label: 'All' },
+    { value: 'YES', label: 'Confirmed' },
+    { value: 'NO', label: 'Not confirmed' },
+  ];
+
   return (
     <TmsListFilterPanel
       title='Search & filters'
@@ -87,25 +96,17 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='order-filter-status'>Status</Label>
-            <Select
+            <TmsCombobox
+              id='order-filter-status'
               value={filterFormValues.status}
               onValueChange={(value) =>
                 onFilterFieldChange('status', value as OrderStatusFilter)
               }
+              options={statusFilterOptions}
+              placeholder='All statuses'
+              emptyText='No statuses found'
               disabled={!canViewOrders}
-            >
-              <SelectTrigger id='order-filter-status' className='w-full'>
-                <SelectValue placeholder='All statuses' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All statuses</SelectItem>
-                {statusOptions.map((statusOption) => (
-                  <SelectItem key={statusOption} value={statusOption}>
-                    {formatStatusLabel(statusOption)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         </>
       }
@@ -195,22 +196,17 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='order-filter-is-confirm'>Confirmed</Label>
-            <Select
+            <TmsCombobox
+              id='order-filter-is-confirm'
               value={filterFormValues.isConfirm}
               onValueChange={(value) =>
                 onFilterFieldChange('isConfirm', value as TriStateFilter)
               }
+              options={confirmFilterOptions}
+              placeholder='All'
+              emptyText='No options found'
               disabled={!canViewOrders}
-            >
-              <SelectTrigger id='order-filter-is-confirm' className='w-full'>
-                <SelectValue placeholder='All' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All</SelectItem>
-                <SelectItem value='YES'>Confirmed</SelectItem>
-                <SelectItem value='NO'>Not confirmed</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className='space-y-2'>

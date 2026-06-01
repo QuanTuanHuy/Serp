@@ -14,13 +14,9 @@ import {
   Checkbox,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Separator,
 } from '@/shared/components/ui';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import { Calculator, Loader2 } from 'lucide-react';
 import {
   DELIVERY_SERVICE_OPTIONS,
@@ -75,7 +71,8 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
               <Label htmlFor='serviceCode'>Service</Label>
-              <Select
+              <TmsCombobox
+                id='serviceCode'
                 value={formValues.serviceCode}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -83,18 +80,10 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                     serviceCode: value as BillingFormState['serviceCode'],
                   }))
                 }
-              >
-                <SelectTrigger id='serviceCode'>
-                  <SelectValue placeholder='Select a service' />
-                </SelectTrigger>
-                <SelectContent>
-                  {DELIVERY_SERVICE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={DELIVERY_SERVICE_OPTIONS}
+                placeholder='Select a service'
+                emptyText='No services found'
+              />
               <p className='text-xs text-muted-foreground'>
                 {
                   DELIVERY_SERVICE_OPTIONS.find(

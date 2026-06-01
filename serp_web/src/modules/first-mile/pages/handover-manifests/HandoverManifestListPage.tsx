@@ -35,11 +35,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -49,6 +44,7 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
+import { TmsCombobox } from '../../components';
 import {
   useCancelPostOfficeHandoverManifestMutation,
   useConfirmHandoverManifestInboundMutation,
@@ -333,6 +329,28 @@ export function HandoverManifestListPage() {
 
   const postOfficeOptions = postOfficesData?.items ?? [];
   const hubOptions = hubsData?.items ?? [];
+  const postOfficeFilterOptions = [
+    { value: 'ALL', label: 'All post offices' },
+    ...postOfficeOptions.map((postOffice) => ({
+      value: String(postOffice.id),
+      label: `${postOffice.code} - ${postOffice.name}`,
+    })),
+  ];
+  const createPostOfficeOptions = postOfficeOptions.map((postOffice) => ({
+    value: String(postOffice.id),
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+  const hubFilterOptions = [
+    { value: 'ALL', label: 'All hubs' },
+    ...hubOptions.map((hub) => ({
+      value: String(hub.id),
+      label: `${hub.code} - ${hub.name}`,
+    })),
+  ];
+  const statusFilterOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...MANIFEST_STATUS_OPTIONS,
+  ];
 
   const filterPostOffice = postOfficeOptions.find(
     (postOffice) => postOffice.id === filterPostOfficeNumericId
@@ -802,77 +820,50 @@ export function HandoverManifestListPage() {
             {postOfficeOptions.length > 0 ? (
               <div className='space-y-2'>
                 <Label htmlFor='filter-post-office'>Origin post office</Label>
-                <Select
+                <TmsCombobox
+                  id='filter-post-office'
                   value={filterPostOfficeId || 'ALL'}
                   onValueChange={(value) => {
                     setFilterPostOfficeId(value === 'ALL' ? '' : value);
                     setPage(0);
                   }}
-                >
-                  <SelectTrigger id='filter-post-office'>
-                    <SelectValue placeholder='All post offices' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='ALL'>All post offices</SelectItem>
-                    {postOfficeOptions.map((postOffice) => (
-                      <SelectItem
-                        key={postOffice.id}
-                        value={String(postOffice.id)}
-                      >
-                        {postOffice.code} - {postOffice.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={postOfficeFilterOptions}
+                  placeholder='All post offices'
+                  emptyText='No post offices found'
+                />
               </div>
             ) : null}
 
             {hubOptions.length > 0 ? (
               <div className='space-y-2'>
                 <Label htmlFor='filter-hub'>Target hub</Label>
-                <Select
+                <TmsCombobox
+                  id='filter-hub'
                   value={filterHubId || 'ALL'}
                   onValueChange={(value) => {
                     setFilterHubId(value === 'ALL' ? '' : value);
                     setPage(0);
                   }}
-                >
-                  <SelectTrigger id='filter-hub'>
-                    <SelectValue placeholder='All hubs' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='ALL'>All hubs</SelectItem>
-                    {hubOptions.map((hub) => (
-                      <SelectItem key={hub.id} value={String(hub.id)}>
-                        {hub.code} - {hub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={hubFilterOptions}
+                  placeholder='All hubs'
+                  emptyText='No hubs found'
+                />
               </div>
             ) : null}
 
             <div className='space-y-2'>
               <Label htmlFor='filter-status'>Status</Label>
-              <Select
+              <TmsCombobox
+                id='filter-status'
                 value={filterStatus}
                 onValueChange={(value) => {
                   setFilterStatus(value as 'ALL' | HandoverManifestStatus);
                   setPage(0);
                 }}
-              >
-                <SelectTrigger id='filter-status'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='ALL'>All statuses</SelectItem>
-                  {MANIFEST_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={statusFilterOptions}
+                placeholder='All statuses'
+                emptyText='No statuses found'
+              />
             </div>
           </div>
 
@@ -1071,24 +1062,14 @@ export function HandoverManifestListPage() {
             <div className='grid gap-4 sm:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='create-post-office'>Origin post office *</Label>
-                <Select
+                <TmsCombobox
+                  id='create-post-office'
                   value={createPostOfficeId}
                   onValueChange={setCreatePostOfficeId}
-                >
-                  <SelectTrigger id='create-post-office'>
-                    <SelectValue placeholder='Select post office' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {postOfficeOptions.map((postOffice) => (
-                      <SelectItem
-                        key={postOffice.id}
-                        value={String(postOffice.id)}
-                      >
-                        {postOffice.code} - {postOffice.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={createPostOfficeOptions}
+                  placeholder='Select post office'
+                  emptyText='No post offices found'
+                />
               </div>
 
               <DetailItem
