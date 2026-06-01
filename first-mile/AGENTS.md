@@ -118,7 +118,20 @@ Run from `first-mile/`. On Windows use `mvnw.cmd`.
 
 ## Code Style
 
-- New Java files: use the standard header block (`Author:` / `Description: Part of Serp Project`) like neighboring files.
+### File headers (required for TMS)
+
+- **Author must be `Nguyen The Anh`** on all new or touched Java/SQL files in this module. Do **not** use `QuanTuanHuy` from the root `AGENTS.md` example.
+- When editing a file that already has a header, **keep** `Author: Nguyen The Anh`; do not rewrite authorship.
+- New Java files — match neighboring block comment style:
+
+```text
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+```
+
+- New SQL under `db/migration/`: `-- Author: Nguyen The Anh` when the folder uses author comments.
 - Lombok: `@RequiredArgsConstructor`, `@Slf4j`, `@Builder` on DTOs where already used.
 - Imports: `jakarta.*`, Lombok, Spring, then `serp.project.first_mile.*`.
 - 4-space indent; parameterized logging `log.info("orderId={}", id)`.

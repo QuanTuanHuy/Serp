@@ -46,12 +46,26 @@ public class SecondMileAccessUtils {
         return authUtils.hasAnyRole("TMS_HUB_EMPLOYEE");
     }
 
+    public boolean isHubDriver() {
+        return authUtils.hasAnyRole("TMS_HUB_DRIVER");
+    }
+
     public boolean hasHubOperationRole() {
         return isAdmin() || isHubManager() || isHubEmployee();
     }
 
+    public boolean hasHubOperationOrDriverRole() {
+        return hasHubOperationRole() || isHubDriver();
+    }
+
     public void ensureHubOperationRoleOrThrow() {
         if (!hasHubOperationRole()) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    public void ensureHubOperationOrDriverRoleOrThrow() {
+        if (!hasHubOperationOrDriverRole()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
     }
@@ -68,6 +82,25 @@ public class SecondMileAccessUtils {
                 tenantId,
                 userId,
                 List.of(HubStaffRole.MANAGER, HubStaffRole.EMPLOYEE),
+                HubStaffStatus.ACTIVE
+        );
+        if (!hasActiveHubRole) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    public void ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow() {
+        if (isAdmin()) {
+            return;
+        }
+
+        Long tenantId = getCurrentTenantIdOrThrow();
+        Long userId = getCurrentUserIdOrThrow();
+
+        boolean hasActiveHubRole = hubStaffRepository.existsByTenantIdAndUserIdAndRoleInAndStatus(
+                tenantId,
+                userId,
+                List.of(HubStaffRole.MANAGER, HubStaffRole.EMPLOYEE, HubStaffRole.DRIVER),
                 HubStaffStatus.ACTIVE
         );
         if (!hasActiveHubRole) {

@@ -7,6 +7,7 @@ package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -239,26 +240,56 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         if (!unscannedOrders.isEmpty()) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "All manifest orders must be scanned out before dispatch.");
         }
+        validateDispatchAssignment(request);
+        Point originPostOfficeLocation = resolveRequiredOriginPostOfficeLocation(manifest);
 
         LocalDateTime now = LocalDateTime.now();
+        manifest.setVehicleId(request.getVehicleId());
+        manifest.setRouteId(request.getRouteId());
+        manifest.setPlannedDepartureAt(request.getPlannedDepartureAt());
+        manifest.setPlannedArrivalAt(request.getPlannedArrivalAt());
         manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
         manifest.setDispatchedAt(now);
-        if (request != null) {
-            manifest.setSealCode(normalizeNullable(request.getSealCode()));
-            manifest.setNote(normalizeNullable(request.getNote()));
-        }
+        manifest.setSealCode(normalizeNullable(request.getSealCode()));
+        manifest.setNote(normalizeNullable(request.getNote()));
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
 
         List<Order> orders = manifestOrders.stream()
                 .map(PostOfficeHandoverManifestOrder::getOrder)
                 .filter(Objects::nonNull)
                 .toList();
-        HandoverManifestSyncEvent event = toOutboundSyncEvent(savedManifest, manifestOrders);
+        HandoverManifestSyncEvent event = toOutboundSyncEvent(savedManifest, manifestOrders, originPostOfficeLocation);
         TransactionAfterCommit.run(() -> {
             orders.forEach(syncOrder::sendOrderEvent);
             handoverManifestSyncEventPublisher.publish(event);
         });
         return toResponse(savedManifest, manifestOrders);
+    }
+
+    private void validateDispatchAssignment(DispatchPostOfficeHandoverManifestRequest request) {
+        if (request == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Dispatch assignment is required.");
+        }
+        if (request.getVehicleId() == null || request.getVehicleId() <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "vehicle_id is required.");
+        }
+        if (request.getRouteId() == null || request.getRouteId() <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "route_id is required.");
+        }
+        LocalDateTime plannedDepartureAt = request.getPlannedDepartureAt();
+        LocalDateTime plannedArrivalAt = request.getPlannedArrivalAt();
+        if (plannedDepartureAt == null || plannedArrivalAt == null) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "planned_departure_at and planned_arrival_at are required."
+            );
+        }
+        if (!plannedArrivalAt.isAfter(plannedDepartureAt)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "planned_arrival_at must be after planned_departure_at."
+            );
+        }
     }
 
     @Override
@@ -479,6 +510,10 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 manifest.getOriginPostOfficeId(),
                 manifest.getOriginPostOfficeCode(),
                 manifest.getTargetHubId(),
+                manifest.getVehicleId(),
+                manifest.getRouteId(),
+                manifest.getPlannedDepartureAt(),
+                manifest.getPlannedArrivalAt(),
                 manifest.getStatus(),
                 manifestOrders.size(),
                 scannedOutOrders,
@@ -512,13 +547,15 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
 
     private HandoverManifestSyncEvent toOutboundSyncEvent(
             PostOfficeHandoverManifest manifest,
-            List<PostOfficeHandoverManifestOrder> manifestOrders
+            List<PostOfficeHandoverManifestOrder> manifestOrders,
+            Point originPostOfficeLocation
     ) {
         return toSyncEvent(
                 manifest,
                 manifestOrders,
                 HandoverManifestSyncEventType.OUTBOUND_CONFIRMED,
-                HandoverManifestSyncOrigin.FIRST_MILE
+                HandoverManifestSyncOrigin.FIRST_MILE,
+                originPostOfficeLocation
         );
     }
 
@@ -527,6 +564,16 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
             List<PostOfficeHandoverManifestOrder> manifestOrders,
             HandoverManifestSyncEventType eventType,
             HandoverManifestSyncOrigin origin
+    ) {
+        return toSyncEvent(manifest, manifestOrders, eventType, origin, resolveOriginPostOfficeLocation(manifest));
+    }
+
+    private HandoverManifestSyncEvent toSyncEvent(
+            PostOfficeHandoverManifest manifest,
+            List<PostOfficeHandoverManifestOrder> manifestOrders,
+            HandoverManifestSyncEventType eventType,
+            HandoverManifestSyncOrigin origin,
+            Point originPostOfficeLocation
     ) {
         List<String> orderCodes = manifestOrders.stream()
                 .map(PostOfficeHandoverManifestOrder::getOrder)
@@ -548,6 +595,12 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 .manifestCode(manifest.getManifestCode())
                 .originPostOfficeCode(manifest.getOriginPostOfficeCode())
                 .targetHubId(manifest.getTargetHubId())
+                .vehicleId(manifest.getVehicleId())
+                .routeId(manifest.getRouteId())
+                .plannedDepartureAt(manifest.getPlannedDepartureAt())
+                .plannedArrivalAt(manifest.getPlannedArrivalAt())
+                .originPostOfficeLatitude(originPostOfficeLocation == null ? null : originPostOfficeLocation.getY())
+                .originPostOfficeLongitude(originPostOfficeLocation == null ? null : originPostOfficeLocation.getX())
                 .status(manifest.getStatus())
                 .dispatchedAt(manifest.getDispatchedAt())
                 .inboundConfirmedAt(manifest.getInboundConfirmedAt())
@@ -556,6 +609,26 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 .sealCode(manifest.getSealCode())
                 .note(manifest.getNote())
                 .build();
+    }
+
+    private Point resolveOriginPostOfficeLocation(PostOfficeHandoverManifest manifest) {
+        if (manifest == null || manifest.getOriginPostOfficeId() == null || manifest.getTenantId() == null) {
+            return null;
+        }
+        return postOfficeRepository.findByIdAndTenantId(manifest.getOriginPostOfficeId(), manifest.getTenantId())
+                .map(PostOffice::getLocation)
+                .orElse(null);
+    }
+
+    private Point resolveRequiredOriginPostOfficeLocation(PostOfficeHandoverManifest manifest) {
+        Point location = resolveOriginPostOfficeLocation(manifest);
+        if (location == null) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Origin post office location is required for driver check-in."
+            );
+        }
+        return location;
     }
 
     private String generateManifestCode(Long tenantId, String postOfficeCode, Long hubId) {

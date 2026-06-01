@@ -121,6 +121,12 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
           circleClass: 'bg-teal-500',
           lineClass: 'bg-teal-500',
         };
+      case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
+        return {
+          Icon: Warehouse,
+          circleClass: 'bg-amber-500',
+          lineClass: 'bg-amber-500',
+        };
       case 'AT_ORIGIN_POST_OFFICE':
         return {
           Icon: Warehouse,

@@ -15,6 +15,7 @@ import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.domain.TripOrder;
+import serp.project.first_mile.dto.request.ConfirmPostOfficeInboundRequest;
 import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
 import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
@@ -37,6 +38,7 @@ import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -158,6 +160,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         int pickingUpOrders = 0;
         int pickedUpOrders = 0;
         int pickupFailedOrders = 0;
+        int pendingPostOfficeInboundOrders = 0;
 
         List<PickupTrackingOverviewResponse.PickupTrackingOrderResponse> orderResponses = new ArrayList<>();
 
@@ -195,6 +198,9 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             if (OrderStatus.PICKUP_FAILED.equals(order.getStatus())) {
                 pickupFailedOrders += 1;
             }
+            if (OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND.equals(order.getStatus())) {
+                pendingPostOfficeInboundOrders += 1;
+            }
 
             TripSummaryAccumulator tripSummary = tripSummaryByTripId.computeIfAbsent(
                     trip.getId(),
@@ -208,6 +214,9 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             }
             if (order.getStatus() != null && RETURNABLE_ORDER_STATUSES.contains(order.getStatus())) {
                 tripSummary.returnableToPostOfficeOrders += 1;
+            }
+            if (OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND.equals(order.getStatus())) {
+                tripSummary.pendingPostOfficeInboundOrders += 1;
             }
 
             PostOffice postOffice = postOfficeById.get(trip.getPostOfficeId());
@@ -279,7 +288,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                     tripSummary.totalOrders,
                     tripSummary.checkedInOrders,
                     tripSummary.pendingCheckinOrders,
-                    tripSummary.returnableToPostOfficeOrders
+                    tripSummary.returnableToPostOfficeOrders,
+                    tripSummary.pendingPostOfficeInboundOrders
             ));
         }
 
@@ -295,6 +305,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 pickingUpOrders,
                 pickedUpOrders,
                 pickupFailedOrders,
+                pendingPostOfficeInboundOrders,
                 tripResponses,
                 orderResponses
         );
@@ -512,8 +523,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-            order.setIsConfirm(true);
+            order.setStatus(OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND);
             if (order.getOriginPostOfficeCode() == null && postOffice != null) {
                 order.setOriginPostOfficeCode(postOffice.getCode());
             }
@@ -529,8 +539,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         for (Order changedOrder : changedOrders) {
             orderTimelineService.recordStatusEvent(
                     changedOrder,
-                    OrderStatus.AT_ORIGIN_POST_OFFICE,
-                    "Courier returned shipment to origin post office.",
+                    OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND,
+                    "Courier returned shipment to origin post office. Awaiting post office inbound scan.",
                     new OrderTimelineContext(
                             null,
                             trip.getId(),
@@ -546,6 +556,110 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                             null,
                             null,
                             "Origin post office"
+                    )
+            );
+            syncOrder.sendOrderEvent(changedOrder);
+        }
+
+        return buildTripLifecycleResponse(trip, tenantId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PickupTripLifecycleResponse confirmPostOfficeInbound(
+            Long tripId,
+            ConfirmPostOfficeInboundRequest request,
+            Long tenantId
+    ) {
+        Trip trip = resolveTripForLifecycle(tripId, tenantId);
+        ensureCanConfirmPostOfficeInbound(tenantId, trip);
+
+        if (!TripStatus.COMPLETED.equals(trip.getStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Trip must be completed before confirming post office inbound."
+            );
+        }
+
+        List<String> requestedOrderCodes = normalizeOrderCodes(request == null ? null : request.getOrderCodes());
+        if (requestedOrderCodes.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "At least one order code is required.");
+        }
+
+        List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
+        if (tripOrders.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip has no orders.");
+        }
+
+        List<Long> orderIds = tripOrders.stream()
+                .map(TripOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, Order> orderById = orderRepository.findByTenantIdAndIdInWithLock(tenantId, orderIds).stream()
+                .collect(Collectors.toMap(Order::getId, order -> order));
+
+        PostOffice postOffice = trip.getPostOfficeId() == null
+                ? null
+                : postOfficeRepository.findByIdAndTenantId(trip.getPostOfficeId(), tenantId).orElse(null);
+        PostOfficeStaff manager = resolveCurrentManagerStaff(tenantId);
+
+        List<Order> changedOrders = new ArrayList<>();
+        for (String orderCode : requestedOrderCodes) {
+            Order matchedOrder = orderById.values().stream()
+                    .filter(order -> order.getOrderCode() != null
+                            && order.getOrderCode().equalsIgnoreCase(orderCode))
+                    .findFirst()
+                    .orElse(null);
+            if (matchedOrder == null) {
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Order " + orderCode + " is not assigned to this pickup trip."
+                );
+            }
+            if (!OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND.equals(matchedOrder.getStatus())) {
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Order " + orderCode + " is not pending post office inbound confirmation."
+                );
+            }
+            if (changedOrders.stream().anyMatch(order -> Objects.equals(order.getId(), matchedOrder.getId()))) {
+                continue;
+            }
+
+            matchedOrder.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+            if (matchedOrder.getOriginPostOfficeCode() == null && postOffice != null) {
+                matchedOrder.setOriginPostOfficeCode(postOffice.getCode());
+            }
+            changedOrders.add(matchedOrder);
+        }
+
+        if (changedOrders.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "No orders are ready for post office inbound confirmation.");
+        }
+
+        orderRepository.saveAll(changedOrders);
+
+        for (Order changedOrder : changedOrders) {
+            orderTimelineService.recordStatusEvent(
+                    changedOrder,
+                    OrderStatus.AT_ORIGIN_POST_OFFICE,
+                    "Post office confirmed inbound receiving.",
+                    new OrderTimelineContext(
+                            null,
+                            trip.getId(),
+                            trip.getTripCode(),
+                            trip.getPostOfficeId(),
+                            postOffice == null ? null : postOffice.getCode(),
+                            postOffice == null ? null : postOffice.getName(),
+                            manager == null ? null : manager.getId(),
+                            manager == null ? null : manager.getCode(),
+                            manager == null ? null : manager.getFullName(),
+                            trip.getVehicleId(),
+                            null,
+                            null,
+                            null,
+                            "Origin post office inbound"
                     )
             );
             syncOrder.sendOrderEvent(changedOrder);
@@ -579,6 +693,52 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private void ensureCanConfirmPostOfficeInbound(Long tenantId, Trip trip) {
+        if (firstMileAccessUtils.isAdmin()) {
+            return;
+        }
+
+        if (firstMileAccessUtils.isPostOfficerManager()) {
+            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
+            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+            return;
+        }
+
+        throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private PostOfficeStaff resolveCurrentManagerStaff(Long tenantId) {
+        if (!firstMileAccessUtils.isPostOfficerManager()) {
+            return null;
+        }
+
+        try {
+            Long managerStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
+                    tenantId,
+                    PostOfficeStaffRole.MANAGER
+            );
+            return postOfficeStaffRepository.findByIdAndTenantId(managerStaffId, tenantId).orElse(null);
+        } catch (AppException exception) {
+            return null;
+        }
+    }
+
+    private List<String> normalizeOrderCodes(List<String> orderCodes) {
+        if (orderCodes == null || orderCodes.isEmpty()) {
+            return List.of();
+        }
+
+        return orderCodes.stream()
+                .filter(Objects::nonNull)
+                .map(code -> code.trim())
+                .filter(code -> !code.isEmpty())
+                .map(code -> code.toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
     }
 
     private Trip resolveTripForLifecycle(Long tripId, Long tenantId) {
@@ -626,11 +786,16 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        int returnedToPostOfficeOrders = orderIds.isEmpty()
-                ? 0
-                : (int) orderRepository.findByIdInAndTenantId(orderIds, tenantId).stream()
+        List<Order> tripLinkedOrders = orderIds.isEmpty()
+                ? List.of()
+                : orderRepository.findByIdInAndTenantId(orderIds, tenantId);
+        int pendingPostOfficeInboundOrders = (int) tripLinkedOrders.stream()
+                .filter(order -> OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND.equals(order.getStatus()))
+                .count();
+        int receivedAtPostOfficeOrders = (int) tripLinkedOrders.stream()
                 .filter(order -> OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus()))
                 .count();
+        int returnedToPostOfficeOrders = pendingPostOfficeInboundOrders + receivedAtPostOfficeOrders;
 
         int pendingCheckinOrders = Math.max(0, totalOrders - checkedInOrders);
         return new PickupTripLifecycleResponse(
@@ -641,6 +806,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 checkedInOrders,
                 pendingCheckinOrders,
                 returnedToPostOfficeOrders,
+                pendingPostOfficeInboundOrders,
+                receivedAtPostOfficeOrders,
                 totalOrders > 0 && checkedInOrders >= totalOrders
         );
     }
@@ -755,6 +922,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 0,
                 0,
                 0,
+                0,
                 List.of(),
                 List.of()
         );
@@ -800,5 +968,6 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         private int checkedInOrders;
         private int pendingCheckinOrders;
         private int returnableToPostOfficeOrders;
+        private int pendingPostOfficeInboundOrders;
     }
 }

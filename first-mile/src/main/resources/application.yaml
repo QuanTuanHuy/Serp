@@ -41,6 +41,7 @@ spring:
         - classpath:db/migration/trip.sql
         - classpath:db/migration/pickup-checkin.sql
         - classpath:db/migration/post-office-handover-manifests.sql
+        - classpath:db/migration/post-office-handover-manifest-assignment.sql
         - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages

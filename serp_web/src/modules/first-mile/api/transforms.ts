@@ -200,8 +200,73 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
       'vehicle_license_plate',
       'vehicleLicensePlate'
     ),
+    assignedDriverId: readField<number>(
+      record,
+      'assigned_driver_id',
+      'assignedDriverId'
+    ),
     routeId: readField<number>(record, 'route_id', 'routeId'),
     routeCode: readField<string>(record, 'route_code', 'routeCode'),
+    plannedDepartureAt: readField<string>(
+      record,
+      'planned_departure_at',
+      'plannedDepartureAt'
+    ),
+    plannedArrivalAt: readField<string>(
+      record,
+      'planned_arrival_at',
+      'plannedArrivalAt'
+    ),
+    originPostOfficeLatitude: readField<number>(
+      record,
+      'origin_post_office_latitude',
+      'originPostOfficeLatitude'
+    ),
+    originPostOfficeLongitude: readField<number>(
+      record,
+      'origin_post_office_longitude',
+      'originPostOfficeLongitude'
+    ),
+    driverStartCheckinAt: readField<string>(
+      record,
+      'driver_start_checkin_at',
+      'driverStartCheckinAt'
+    ),
+    driverStartLatitude: readField<number>(
+      record,
+      'driver_start_latitude',
+      'driverStartLatitude'
+    ),
+    driverStartLongitude: readField<number>(
+      record,
+      'driver_start_longitude',
+      'driverStartLongitude'
+    ),
+    driverStartDistanceM: readField<number>(
+      record,
+      'driver_start_distance_m',
+      'driverStartDistanceM'
+    ),
+    driverEndCheckinAt: readField<string>(
+      record,
+      'driver_end_checkin_at',
+      'driverEndCheckinAt'
+    ),
+    driverEndLatitude: readField<number>(
+      record,
+      'driver_end_latitude',
+      'driverEndLatitude'
+    ),
+    driverEndLongitude: readField<number>(
+      record,
+      'driver_end_longitude',
+      'driverEndLongitude'
+    ),
+    driverEndDistanceM: readField<number>(
+      record,
+      'driver_end_distance_m',
+      'driverEndDistanceM'
+    ),
     status: readField(record, 'status', 'status'),
     totalOrders: readField<number>(record, 'total_orders', 'totalOrders'),
     scannedOutOrders: readField<number>(

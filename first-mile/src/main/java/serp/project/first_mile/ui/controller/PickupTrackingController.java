@@ -8,13 +8,16 @@ package serp.project.first_mile.ui.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.first_mile.dto.ApiResponse;
+import serp.project.first_mile.dto.request.ConfirmPostOfficeInboundRequest;
 import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
 import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
@@ -89,6 +92,22 @@ public class PickupTrackingController {
         return ApiResponse.<PickupTripLifecycleResponse>builder()
                 .message(messageService.getMessage("success.pickup_tracking.trip.return_to_post_office"))
                 .result(pickupTrackingService.returnTripToPostOffice(tripId, tenantId))
+                .build();
+    }
+
+    @PostMapping("/trips/{tripId}/confirm-post-office-inbound")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<PickupTripLifecycleResponse> confirmPostOfficeInbound(
+            @PathVariable Long tripId,
+            @Valid @RequestBody ConfirmPostOfficeInboundRequest request
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+
+        return ApiResponse.<PickupTripLifecycleResponse>builder()
+                .message(messageService.getMessage("success.pickup_tracking.trip.confirm_post_office_inbound"))
+                .result(pickupTrackingService.confirmPostOfficeInbound(tripId, request, tenantId))
                 .build();
     }
 }

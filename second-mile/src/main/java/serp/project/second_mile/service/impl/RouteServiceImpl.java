@@ -185,7 +185,7 @@ public class RouteServiceImpl implements RouteService {
         }
 
         if (vehicleId != null) {
-            validateVehicle(tenantId, vehicleId);
+            validateVehicle(tenantId, vehicleId, originHubId);
         }
 
         if (destinationType == RouteDestinationType.HUB) {
@@ -204,6 +204,12 @@ public class RouteServiceImpl implements RouteService {
         }
 
         if (destinationType == RouteDestinationType.POST_OFFICE) {
+            if (vehicleId == null) {
+                throw new AppException(
+                        ErrorCode.ROUTE_VEHICLE_INVALID,
+                        "Post office collection routes require a dedicated vehicle."
+                );
+            }
             String normalizedPostOfficeCode = normalizeText(destinationPostOfficeCode);
             if (normalizedPostOfficeCode == null) {
                 throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
@@ -220,12 +226,19 @@ public class RouteServiceImpl implements RouteService {
         throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
     }
 
-    private void validateVehicle(Long tenantId, Long vehicleId) {
+    private void validateVehicle(Long tenantId, Long vehicleId, Long originHubId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROUTE_VEHICLE_INVALID));
         if (!tenantId.equals(vehicle.getTenantId()) || vehicle.getStatus() != VehicleStatus.ACTIVE) {
             throw new AppException(ErrorCode.ROUTE_VEHICLE_INVALID);
         }
+        if (!originHubId.equals(vehicle.getHubId())) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    "Route vehicle must belong to the origin hub."
+            );
+        }
+        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(vehicle.getAssignedStaffId());
     }
 
     private RouteFilterRequest normalizeFilterRequest(RouteFilterRequest filterRequest) {

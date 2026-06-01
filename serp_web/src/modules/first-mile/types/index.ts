@@ -452,8 +452,21 @@ export interface HandoverManifest {
   targetHubId?: number;
   vehicleId?: number;
   vehicleLicensePlate?: string;
+  assignedDriverId?: number;
   routeId?: number;
   routeCode?: string;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
+  originPostOfficeLatitude?: number;
+  originPostOfficeLongitude?: number;
+  driverStartCheckinAt?: string;
+  driverStartLatitude?: number;
+  driverStartLongitude?: number;
+  driverStartDistanceM?: number;
+  driverEndCheckinAt?: string;
+  driverEndLatitude?: number;
+  driverEndLongitude?: number;
+  driverEndDistanceM?: number;
   status?: HandoverManifestStatus;
   totalOrders?: number;
   scannedOutOrders?: number;
@@ -479,7 +492,11 @@ export interface CreateHandoverManifestRequest {
   origin_post_office_code: string;
   target_hub_id: number;
   vehicle_id: number;
-  route_id?: number;
+  route_id: number;
+  planned_departure_at: string;
+  planned_arrival_at: string;
+  origin_post_office_latitude?: number;
+  origin_post_office_longitude?: number;
   order_codes: string[];
 }
 
@@ -491,6 +508,10 @@ export interface CreatePostOfficeHandoverManifestRequest {
 }
 
 export interface DispatchPostOfficeHandoverManifestRequest {
+  vehicle_id: number;
+  route_id: number;
+  planned_departure_at: string;
+  planned_arrival_at: string;
   seal_code?: string;
   note?: string;
 }
@@ -499,12 +520,19 @@ export interface ScanOutHandoverOrderRequest {
   order_code: string;
 }
 
+export interface DriverHandoverCheckinRequest {
+  latitude: number;
+  longitude: number;
+  location_label?: string;
+}
+
 export type SecondMileOrderStatus =
   | 'CREATED'
   | 'ASSIGNED_TO_PICKUP'
   | 'PICKING_UP'
   | 'PICKUP_FAILED'
   | 'PICKED_UP'
+  | 'PENDING_ORIGIN_POST_OFFICE_INBOUND'
   | 'AT_ORIGIN_POST_OFFICE'
   | 'OUTBOUND_READY_FROM_PO'
   | 'INBOUND_AT_ORIGIN_HUB'
@@ -538,6 +566,7 @@ export type FirstMileOrderStatus =
   | 'PICKING_UP'
   | 'PICKUP_FAILED'
   | 'PICKED_UP'
+  | 'PENDING_ORIGIN_POST_OFFICE_INBOUND'
   | 'AT_ORIGIN_POST_OFFICE'
   | 'OUTBOUND_READY_FROM_PO'
   | 'INBOUND_AT_ORIGIN_HUB'
@@ -1009,6 +1038,7 @@ export interface PickupTrackingTrip {
   checkedInOrders?: number;
   pendingCheckinOrders?: number;
   returnableToPostOfficeOrders?: number;
+  pendingPostOfficeInboundOrders?: number;
 }
 
 export interface PickupTrackingOrder {
@@ -1059,6 +1089,7 @@ export interface PickupTrackingOverviewResponse {
   pickingUpOrders?: number;
   pickedUpOrders?: number;
   pickupFailedOrders?: number;
+  pendingPostOfficeInboundOrders?: number;
   trips?: PickupTrackingTrip[];
   orders?: PickupTrackingOrder[];
 }
@@ -1117,7 +1148,13 @@ export interface PickupTripLifecycleResponse {
   checkedInOrders?: number;
   pendingCheckinOrders?: number;
   returnedToPostOfficeOrders?: number;
+  pendingPostOfficeInboundOrders?: number;
+  receivedAtPostOfficeOrders?: number;
   allOrdersCheckedIn?: boolean;
+}
+
+export interface ConfirmPostOfficeInboundRequest {
+  orderCodes: string[];
 }
 
 export interface HubListFilters {
