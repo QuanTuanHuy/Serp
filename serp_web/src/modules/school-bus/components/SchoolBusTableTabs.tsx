@@ -16,12 +16,14 @@ interface SchoolBusTableTabsProps {
   defaultValue: string;
   tabs: SchoolBusTableTabItem[];
   className?: string;
+  flatContent?: boolean;
 }
 
 export function SchoolBusTableTabs({
   defaultValue,
   tabs,
   className,
+  flatContent = false,
 }: SchoolBusTableTabsProps) {
   const [activeTab, setActiveTab] = React.useState(defaultValue);
   const [contentMotionKey, setContentMotionKey] = React.useState(0);
@@ -41,51 +43,77 @@ export function SchoolBusTableTabs({
   }
 
   return (
-    <div className={cn(schoolBusUi.section, 'overflow-hidden p-0', className)}>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className='border-b border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#fff1f2_100%)] px-4 pt-4 sm:px-6'>
-          <div className='overflow-x-auto pb-3'>
-            <TabsList className='h-auto min-w-max justify-start gap-1 rounded-2xl border border-rose-200/80 bg-white/85 p-1.5 shadow-[0_10px_30px_rgba(225,29,72,0.08)]'>
-              {tabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className='group relative rounded-xl px-3 py-2 transition-all duration-200 ease-out data-[state=active]:-translate-y-0.5 data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-[0_10px_24px_rgba(225,29,72,0.32)] data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-rose-50 data-[state=inactive]:hover:text-rose-700'
-                >
-                  <span className='inline-flex items-center gap-2 whitespace-nowrap'>
-                    <span className='text-sm font-semibold'>{tab.label}</span>
-                    <span className='rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition-colors duration-200 group-data-[state=active]:border-rose-100 group-data-[state=active]:bg-white/25 group-data-[state=active]:text-white'>
-                      {tab.count}
-                    </span>
+    <div className={cn('w-full flex flex-col gap-4', className)}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
+        {/* Tabs switcher wrapper */}
+        <div className='flex items-center justify-start'>
+          <TabsList className='inline-flex h-10 items-center justify-start gap-1 rounded-xl bg-slate-100/60 p-1 border border-slate-200/40 shadow-none'>
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className={cn(
+                  'group relative rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 outline-none',
+                  'text-slate-600 hover:bg-slate-200/40 hover:text-slate-900',
+                  'data-[state=active]:bg-[#C81E3A] data-[state=active]:text-white data-[state=active]:hover:bg-[#C81E3A] data-[state=active]:hover:text-white',
+                  'shadow-none border-0'
+                )}
+              >
+                <span className='inline-flex items-center gap-1.5 whitespace-nowrap'>
+                  <span>{tab.label}</span>
+                  <span
+                    className={cn(
+                      'rounded-md px-1.5 py-0.5 text-[9px] font-bold transition-colors duration-150',
+                      'bg-slate-200/70 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-600',
+                      'group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white'
+                    )}
+                  >
+                    {tab.count}
                   </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
 
-        {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className='mt-0 px-4 py-5 sm:px-6'>
-            <div
-              key={`${tab.value}-${contentMotionKey}`}
-              className='school-bus-tab-panel-enter'
-            >
-              {tab.content}
-            </div>
-          </TabsContent>
-        ))}
+        {/* Tab content wrapper */}
+        {flatContent ? (
+          <div className='mt-2'>
+            {tabs.map((tab) => (
+              <TabsContent key={tab.value} value={tab.value} className='mt-0 p-0'>
+                <div
+                  key={`${tab.value}-${contentMotionKey}`}
+                  className='school-bus-tab-panel-enter'
+                >
+                  {tab.content}
+                </div>
+              </TabsContent>
+            ))}
+          </div>
+        ) : (
+          <div className={cn(schoolBusUi.card, 'mt-2 overflow-hidden p-0 bg-white')}>
+            {tabs.map((tab) => (
+              <TabsContent key={tab.value} value={tab.value} className='mt-0 p-0'>
+                <div
+                  key={`${tab.value}-${contentMotionKey}`}
+                  className='school-bus-tab-panel-enter'
+                >
+                  {tab.content}
+                </div>
+              </TabsContent>
+            ))}
+          </div>
+        )}
       </Tabs>
       <style jsx>{`
         @keyframes schoolBusTabPanelEnter {
           0% {
             opacity: 0;
-            transform: translateY(8px) scale(0.995);
-            filter: saturate(0.96);
+            transform: translateY(4px);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1);
-            filter: saturate(1);
+            transform: translateY(0);
           }
         }
 
@@ -96,3 +124,4 @@ export function SchoolBusTableTabs({
     </div>
   );
 }
+

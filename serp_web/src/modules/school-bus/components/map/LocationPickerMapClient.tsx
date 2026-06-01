@@ -89,7 +89,7 @@ export default function LocationPickerMapClient({
   };
 
   return (
-    <div className={cn('space-y-3', schoolBusUi.subtlePanel)}>
+    <div className='w-full rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm p-4 space-y-3'>
       <div>
         <p className='text-sm font-semibold text-slate-950'>{title}</p>
         <p className='mt-1 text-xs text-slate-500'>
@@ -98,9 +98,10 @@ export default function LocationPickerMapClient({
       </div>
 
       <SchoolBusMapWorkspace
+        flat
         defaultPreset='map-focus'
         allowFullscreen={false}
-        mapHeightClassName='h-[360px]'
+        mapHeightClassName='h-[320px]'
         map={
           <LeafletMapShell
             center={

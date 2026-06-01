@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   DynamicSidebar,
   RouteGuard,
@@ -10,6 +10,7 @@ import {
 import { cn } from '@/shared/utils';
 import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
 import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
+import { SchoolBusTopbar } from './SchoolBusTopbar';
 
 interface SchoolBusLayoutProps {
   children: React.ReactNode;
@@ -18,11 +19,12 @@ interface SchoolBusLayoutProps {
 const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
   children,
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const { isCollapsed } = useSidebarContext();
 
   return (
     <div
-      className={cn('school-bus-shell flex min-h-screen', schoolBusUi.pageGradient)}
+      className={cn('school-bus-shell flex min-h-screen bg-background', schoolBusUi.pageGradient)}
       style={schoolBusThemeStyle}
     >
       <style>
@@ -51,11 +53,13 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
       </style>
       <DynamicSidebar moduleCode='SCHOOLBUS' />
       <div
+        ref={containerRef}
         className={cn(
-          'flex min-h-screen flex-1 flex-col transition-all duration-300',
+          'flex flex-1 flex-col transition-all duration-300 h-screen overflow-y-auto',
           isCollapsed ? 'pl-16' : 'pl-64'
         )}
       >
+        <SchoolBusTopbar scrollContainerRef={containerRef} />
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
             <RouteGuard moduleCode='SCHOOLBUS'>{children}</RouteGuard>

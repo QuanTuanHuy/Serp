@@ -4,14 +4,15 @@ import * as React from 'react';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   AlertTriangle,
-  Building2,
   CalendarClock,
   ChevronDown,
   ChevronRight,
   Clock,
+  GraduationCap,
   Link2,
   Map,
-  MapPinned,
+  MapPin,
+  MapPinCheck,
   Pencil,
   Plus,
   Search,
@@ -21,7 +22,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
-import { Combobox } from '@/shared/components/ui/combobox';
 import { cn } from '@/shared/utils';
 import {
   useCreatePickupPointMutation,
@@ -57,7 +57,9 @@ import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
-import { SchoolBusTableTabs } from '../components/SchoolBusTableTabs';
+import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
+import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { MapToolbar } from '../components/map/MapToolbar';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { OperationsMap } from '../components/map/OperationsMap';
@@ -85,15 +87,43 @@ type DeleteTarget =
 
 type ViewMode = 'directory' | 'network';
 
+const formatDaysCompact = (days: string[] | undefined | null) => {
+  if (!days || days.length === 0) return 'Mon–Fri';
+  const dayMap: Record<string, string> = {
+    MONDAY: 'Mon',
+    TUESDAY: 'Tue',
+    WEDNESDAY: 'Wed',
+    THURSDAY: 'Thu',
+    FRIDAY: 'Fri',
+    SATURDAY: 'Sat',
+    SUNDAY: 'Sun',
+  };
+  return days.map(d => dayMap[d.toUpperCase()] || d).join(', ');
+};
+
+const formatUsageType = (type: string | undefined | null) => {
+  if (type === 'PICKUP' || type === 'PICKUP_ONLY') return 'Pickup only';
+  if (type === 'DROPOFF' || type === 'DROPOFF_ONLY') return 'Drop-off only';
+  if (type === 'PICKUP_DROPOFF') return 'Pickup & drop-off';
+  return type || 'N/A';
+};
+
+const getUsageTypeBadgeClasses = (type: string | undefined | null) => {
+  if (type === 'PICKUP' || type === 'PICKUP_ONLY') return 'bg-blue-50 text-blue-700 border border-blue-200';
+  if (type === 'DROPOFF' || type === 'DROPOFF_ONLY') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  return 'bg-indigo-50 text-indigo-700 border border-indigo-200';
+};
+
 // ── Shared InfoRow ────────────────────────────────────────────────────────────
 
-function InfoRow({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
+// ── DetailField Helper ────────────────────────────────────────────────────────
+function DetailField({ label, value, warn = false }: { label: string; value: React.ReactNode; warn?: boolean }) {
   return (
-    <div className='rounded-xl bg-slate-50/80 px-3 py-2 ring-1 ring-slate-100'>
-      <p className='text-[10px] text-slate-400'>{label}</p>
-      <p className={`mt-0.5 text-xs font-medium ${warn ? 'text-amber-600' : 'text-slate-700'}`}>
+    <div className='flex flex-col gap-0.5'>
+      <span className='text-[10px] font-semibold text-slate-400 uppercase tracking-wider'>{label}</span>
+      <div className={cn('text-xs font-medium text-slate-700', warn && 'text-amber-600 font-semibold')}>
         {value}
-      </p>
+      </div>
     </div>
   );
 }
@@ -123,63 +153,113 @@ function NetworkDetailPanel({
 }: DetailPanelProps) {
   if (!selectedSchool && !selectedPickup) {
     return (
-      <div className='flex h-full flex-col items-center justify-center gap-3 px-4 py-8 text-center'>
-        <div className='flex h-12 w-12 items-center justify-center rounded-full bg-slate-100'>
-          <MapPinned className='h-6 w-6 text-slate-400' />
+      <div className='flex h-full flex-col items-center justify-center gap-3 px-6 py-12 text-center bg-slate-50/20'>
+        <div className='flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm text-slate-400'>
+          <MapPin className='h-5 w-5' />
         </div>
-        <p className='text-sm font-medium text-slate-600'>Nothing selected</p>
-        <p className='max-w-[200px] text-xs leading-5 text-slate-400'>
-          Click a school or pickup point in the list or on the map to see details and actions.
-        </p>
+        <div className='space-y-1.5'>
+          <p className='text-sm font-semibold text-slate-800'>Select school or pickup</p>
+          <p className='max-w-[240px] text-xs leading-5 text-slate-400'>
+            Click a marker on the map or a list item to inspect network details.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (selectedSchool) {
     return (
-      <div className='flex h-full flex-col gap-3 p-4'>
+      <div className='flex h-full flex-col overflow-hidden min-h-0 bg-white'>
         {/* Header */}
-        <div className='flex items-start gap-2.5'>
-          <div className='mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-50 ring-1 ring-rose-200'>
-            <Building2 className='h-4 w-4 text-rose-600' />
+        <div className='flex items-start gap-3 p-5 border-b border-slate-100 bg-white shrink-0'>
+          <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-red-50 border border-red-100'>
+            <GraduationCap className='h-4.5 w-4.5 text-[#C81E3A]' />
           </div>
           <div className='min-w-0 flex-1'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>School</p>
-            <p className='mt-0.5 text-sm font-semibold leading-tight text-slate-900'>
+            <p className='text-[10px] font-bold uppercase tracking-widest text-[#C81E3A]'>School</p>
+            <h4 className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate' title={selectedSchool.name}>
               {selectedSchool.name}
-            </p>
+            </h4>
           </div>
         </div>
 
-        {/* Details */}
-        <div className='space-y-2 overflow-y-auto flex-1'>
-          <InfoRow label='Code' value={selectedSchool.code ?? '—'} />
-          <InfoRow label='Address' value={selectedSchool.address ?? '—'} />
-          <InfoRow label='Contact' value={selectedSchool.contactPhone ?? '—'} />
-          <InfoRow
-            label='Coordinates'
-            value={
-              typeof selectedSchool.latitude === 'number' && typeof selectedSchool.longitude === 'number'
-                ? `${selectedSchool.latitude.toFixed(5)}, ${selectedSchool.longitude.toFixed(5)}`
-                : '⚠ Not set'
-            }
-            warn={typeof selectedSchool.latitude !== 'number'}
-          />
-          <InfoRow label='Status' value={selectedSchool.isActive ? 'Active' : 'Inactive'} />
-          <InfoRow label='Linked pickups' value={String(linkedPickupCount)} />
-          <InfoRow label='Schedules' value={String(scheduleCount)} />
+        {/* Details (Scrollable Body) */}
+        <div className='flex-1 overflow-y-auto p-5 space-y-4 min-h-0'>
+          {/* Identity Section */}
+          <div className='space-y-1.5'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Identity</p>
+            <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
+              <DetailField label='Code' value={selectedSchool.code ?? '—'} />
+              <DetailField
+                label='Status'
+                value={
+                  selectedSchool.isActive ? (
+                    <span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10'>
+                      Active
+                    </span>
+                  ) : (
+                    <span className='inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-500/10'>
+                      Inactive
+                    </span>
+                  )
+                }
+              />
+            </div>
+          </div>
+
+          {/* Location Section */}
+          <div className='space-y-1.5'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Location</p>
+            <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
+              <DetailField label='Address' value={selectedSchool.address ?? '—'} />
+              <DetailField
+                label='Coordinates'
+                value={
+                  typeof selectedSchool.latitude === 'number' && typeof selectedSchool.longitude === 'number'
+                    ? `${selectedSchool.latitude.toFixed(5)}, ${selectedSchool.longitude.toFixed(5)}`
+                    : '⚠ Not set'
+                }
+                warn={typeof selectedSchool.latitude !== 'number'}
+              />
+            </div>
+          </div>
+
+          {/* Operations Section */}
+          <div className='space-y-1.5'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Operations</p>
+            <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
+              <DetailField label='Contact' value={selectedSchool.contactPhone ?? '—'} />
+              <DetailField label='Linked pickups' value={String(linkedPickupCount)} />
+              <DetailField label='Schedules' value={String(scheduleCount)} />
+            </div>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className='shrink-0 flex flex-col gap-2 border-t border-slate-100 pt-3'>
-          <Button size='sm' variant='outline' className='w-full justify-start' onClick={() => onEditSchool(selectedSchool)}>
-            <Pencil className='mr-2 h-3.5 w-3.5' /> Edit school
+        {/* Actions (Sticky Footer) */}
+        <div className='shrink-0 flex flex-col gap-2 border-t border-slate-100 p-5 bg-white'>
+          <Button
+            size='sm'
+            variant='outline'
+            className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
+            onClick={() => onEditSchool(selectedSchool)}
+          >
+            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Edit school
           </Button>
-          <Button size='sm' variant='outline' className='w-full justify-start' onClick={onLinkPickup}>
-            <Link2 className='mr-2 h-3.5 w-3.5' /> Link pickup point
+          <Button
+            size='sm'
+            variant='outline'
+            className='w-full justify-start border-red-200 text-[#C81E3A] bg-red-50/10 hover:bg-red-50 hover:border-red-300 hover:text-[#99182D]'
+            onClick={onLinkPickup}
+          >
+            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link pickup point
           </Button>
-          <Button size='sm' variant='outline' className='w-full justify-start' onClick={onManageSchedules}>
-            <CalendarClock className='mr-2 h-3.5 w-3.5' /> Manage schedules
+          <Button
+            size='sm'
+            variant='outline'
+            className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
+            onClick={onManageSchedules}
+          >
+            <CalendarClock className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Manage schedules
           </Button>
         </div>
       </div>
@@ -187,44 +267,89 @@ function NetworkDetailPanel({
   }
 
   if (selectedPickup) {
+    const isPickup = selectedPickup.usageType === 'PICKUP' || selectedPickup.usageType === 'PICKUP_ONLY';
+    const isDropoff = selectedPickup.usageType === 'DROPOFF' || selectedPickup.usageType === 'DROPOFF_ONLY';
+    const PickupIcon = isDropoff ? MapPinCheck : MapPin;
+    
+    const iconColor = isDropoff
+      ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
+      : isPickup
+        ? 'text-blue-600 bg-blue-50 border-blue-100'
+        : 'text-indigo-600 bg-indigo-50 border-indigo-100';
+
+    const labelColor = isDropoff
+      ? 'text-[#10B981]'
+      : isPickup
+        ? 'text-blue-600'
+        : 'text-indigo-600';
+
+    const labelText = isDropoff
+      ? 'Drop-off Point'
+      : isPickup
+        ? 'Pickup Point'
+        : 'Pickup & Drop-off';
+
     return (
-      <div className='flex h-full flex-col gap-3 p-4'>
+      <div className='flex h-full flex-col overflow-hidden min-h-0 bg-white'>
         {/* Header */}
-        <div className='flex items-start gap-2.5'>
-          <div className='mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 ring-1 ring-sky-200'>
-            <MapPinned className='h-4 w-4 text-sky-600' />
+        <div className='flex items-start gap-3 p-5 border-b border-slate-100 bg-white shrink-0'>
+          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border', iconColor)}>
+            <PickupIcon className='h-4.5 w-4.5' />
           </div>
           <div className='min-w-0 flex-1'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-sky-600'>Pickup Point</p>
-            <p className='mt-0.5 text-sm font-semibold leading-tight text-slate-900'>
+            <p className={cn('text-[10px] font-bold uppercase tracking-widest', labelColor)}>{labelText}</p>
+            <h4 className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate' title={selectedPickup.name}>
               {selectedPickup.name}
-            </p>
+            </h4>
           </div>
         </div>
 
-        {/* Details */}
-        <div className='space-y-2 overflow-y-auto flex-1'>
-          <InfoRow label='Usage type' value={selectedPickup.usageType ?? '—'} />
-          <InfoRow label='Zone' value={selectedPickup.zoneCode ?? '—'} />
-          <InfoRow label='Address' value={selectedPickup.address ?? '—'} />
-          <InfoRow
-            label='Coordinates'
-            value={
-              typeof selectedPickup.latitude === 'number' && typeof selectedPickup.longitude === 'number'
-                ? `${selectedPickup.latitude.toFixed(5)}, ${selectedPickup.longitude.toFixed(5)}`
-                : '⚠ Not set'
-            }
-            warn={typeof selectedPickup.latitude !== 'number'}
-          />
+        {/* Details (Scrollable Body) */}
+        <div className='flex-1 overflow-y-auto p-5 space-y-4 min-h-0'>
+          {/* Identity Section */}
+          <div className='space-y-1.5'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Identity</p>
+            <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
+              <DetailField label='Usage type' value={formatUsageType(selectedPickup.usageType)} />
+              <DetailField label='Zone code' value={selectedPickup.zoneCode ?? '—'} />
+            </div>
+          </div>
+
+          {/* Location Section */}
+          <div className='space-y-1.5'>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Location</p>
+            <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
+              <DetailField label='Address' value={selectedPickup.address ?? '—'} />
+              <DetailField
+                label='Coordinates'
+                value={
+                  typeof selectedPickup.latitude === 'number' && typeof selectedPickup.longitude === 'number'
+                    ? `${selectedPickup.latitude.toFixed(5)}, ${selectedPickup.longitude.toFixed(5)}`
+                    : '⚠ Not set'
+                }
+                warn={typeof selectedPickup.latitude !== 'number'}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className='shrink-0 flex flex-col gap-2 border-t border-slate-100 pt-3'>
-          <Button size='sm' variant='outline' className='w-full justify-start' onClick={() => onEditPickup(selectedPickup)}>
-            <Pencil className='mr-2 h-3.5 w-3.5' /> Edit pickup point
+        {/* Actions (Sticky Footer) */}
+        <div className='shrink-0 flex flex-col gap-2 border-t border-slate-100 p-5 bg-white'>
+          <Button
+            size='sm'
+            variant='outline'
+            className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
+            onClick={() => onEditPickup(selectedPickup)}
+          >
+            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Edit pickup point
           </Button>
-          <Button size='sm' variant='outline' className='w-full justify-start' onClick={onLinkPickup}>
-            <Link2 className='mr-2 h-3.5 w-3.5' /> Link to school
+          <Button
+            size='sm'
+            variant='outline'
+            className='w-full justify-start border-red-200 text-[#C81E3A] bg-red-50/10 hover:bg-red-50 hover:border-red-300 hover:text-[#99182D]'
+            onClick={onLinkPickup}
+          >
+            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link to school
           </Button>
         </div>
       </div>
@@ -238,14 +363,27 @@ function NetworkDetailPanel({
 
 export function SchoolBusSchoolsPage() {
   const [viewMode, setViewMode] = React.useState<ViewMode>('network');
+  const [activeTab, setActiveTab] = React.useState('schools');
   const [networkFilter, setNetworkFilter] = React.useState('');
+
+  // ─── Directory search & filter states ────────────────────────────
+  const [schoolSearchValue, setSchoolSearchValue] = React.useState('');
+  const [schoolStatusFilter, setSchoolStatusFilter] = React.useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [schoolCoordsFilter, setSchoolCoordsFilter] = React.useState<'ALL' | 'MISSING'>('ALL');
+
+  const [pickupSearchValue, setPickupSearchValue] = React.useState('');
+  const [pickupUsageFilter, setPickupUsageFilter] = React.useState<'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'>('ALL');
+  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<'ALL' | 'MISSING'>('ALL');
+
+  const [scheduleSearch, setScheduleSearch] = React.useState('');
+  const [linkedSearch, setLinkedSearch] = React.useState('');
 
   const schoolsPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
   const pickupPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
 
-  const { data, isLoading } = useGetSchoolsQuery(schoolsPagination.params);
+  const { data, isLoading: loadingSchools } = useGetSchoolsQuery(schoolsPagination.params);
   const { data: allSchoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: pickupPointsData } = useGetPickupPointsQuery(pickupPagination.params);
+  const { data: pickupPointsData, isLoading: loadingPickups } = useGetPickupPointsQuery(pickupPagination.params);
   const { data: depotsData } = useGetDepotsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const { data: allLinksData } = useGetAllActiveSchoolPickupLinksQuery();
 
@@ -298,7 +436,7 @@ export function SchoolBusSchoolsPage() {
   }, [schools, selectedSchoolId]);
 
   // ─── Schedule & linked data ──────────────────────────────────────
-  const { data: schedulesData } = useGetSchoolSchedulesQuery(
+  const { data: schedulesData, isLoading: loadingSchedules } = useGetSchoolSchedulesQuery(
     { schoolId: selectedSchoolId!, page: 0, size: 50 },
     { skip: !selectedSchoolId }
   );
@@ -309,6 +447,57 @@ export function SchoolBusSchoolsPage() {
   const schedules = getPageItems(schedulesData?.data);
   const linkedPickupPoints = getPageItems(linkedPickupData?.data);
   const allPickupPointsForLink = getPageItems(pickupPointsData?.data);
+
+  // ─── Memoized directory filtered tables ──────────────────────────
+  const filteredSchoolsTable = React.useMemo(() => {
+    return schools.filter((school) => {
+      const matchesStatus = schoolStatusFilter === 'ALL'
+        ? true
+        : schoolStatusFilter === 'ACTIVE'
+          ? school.isActive
+          : !school.isActive;
+      const matchesCoords = schoolCoordsFilter === 'ALL'
+        ? true
+        : typeof school.latitude !== 'number' || typeof school.longitude !== 'number';
+      return matchesStatus && matchesCoords;
+    });
+  }, [schools, schoolStatusFilter, schoolCoordsFilter]);
+
+  const filteredPickupsTable = React.useMemo(() => {
+    return pickupPoints.filter((pp) => {
+      const matchesUsage = pickupUsageFilter === 'ALL'
+        ? true
+        : pickupUsageFilter === 'PICKUP'
+          ? (pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY')
+          : pickupUsageFilter === 'DROPOFF'
+            ? (pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY')
+            : pp.usageType === 'PICKUP_DROPOFF';
+      const matchesCoords = pickupCoordsFilter === 'ALL'
+        ? true
+        : typeof pp.latitude !== 'number' || typeof pp.longitude !== 'number';
+      return matchesUsage && matchesCoords;
+    });
+  }, [pickupPoints, pickupUsageFilter, pickupCoordsFilter]);
+
+  const filteredSchedulesTable = React.useMemo(() => {
+    if (!scheduleSearch) return schedules;
+    const q = scheduleSearch.toLowerCase();
+    return schedules.filter(
+      (sch) =>
+        sch.scheduleName.toLowerCase().includes(q) ||
+        (sch.scheduleCode ?? '').toLowerCase().includes(q)
+    );
+  }, [schedules, scheduleSearch]);
+
+  const filteredLinkedPickupsTable = React.useMemo(() => {
+    if (!linkedSearch) return linkedPickupPoints;
+    const q = linkedSearch.toLowerCase();
+    return linkedPickupPoints.filter(
+      (lp) =>
+        lp.pickupPointName.toLowerCase().includes(q) ||
+        (lp.pickupPointAddress ?? '').toLowerCase().includes(q)
+    );
+  }, [linkedPickupPoints, linkedSearch]);
 
   const { data: windowsData } = useGetSchoolPickupPointWindowsQuery(expandedSppId!, { skip: !expandedSppId });
   const windows = windowsData?.data ?? [];
@@ -418,21 +607,6 @@ export function SchoolBusSchoolsPage() {
     catch (error: any) { toast.error(error?.data?.message || 'Failed to delete window'); }
   };
 
-  // ─── School search for combobox ──────────────────────────────────
-  const [schoolSearchKeyword, setSchoolSearchKeyword] = React.useState('');
-  const [debouncedKeyword, setDebouncedKeyword] = React.useState('');
-  React.useEffect(() => {
-    const t = setTimeout(() => setDebouncedKeyword(schoolSearchKeyword), 300);
-    return () => clearTimeout(t);
-  }, [schoolSearchKeyword]);
-  const { data: searchedSchoolsData, isFetching: searchingSchools } = useGetSchoolsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name', keyword: debouncedKeyword || undefined,
-  });
-  const searchedSchools = getPageItems(searchedSchoolsData?.data);
-  const schoolItems = React.useMemo(
-    () => searchedSchools.map((s) => ({ value: s.id, label: s.name })),
-    [searchedSchools]
-  );
 
   // ─── Network list filtering ──────────────────────────────────────
   const filteredSchools = React.useMemo(() => {
@@ -506,92 +680,165 @@ export function SchoolBusSchoolsPage() {
             </div>
           }
         >
+          <div className='flex flex-col gap-6'>
           {/* Stats row */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-            <SchoolBusMetricCard label='Schools' value={allSchools.length} icon={Building2} tone='info' />
-            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPinned} tone='success' />
-            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='default' />
+            <SchoolBusMetricCard label='Schools' value={allSchools.length} icon={GraduationCap} tone='school' variant='compact' />
+            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPin} tone='pickup' variant='compact' />
+            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='linked' variant='compact' />
             <SchoolBusMetricCard
               label='Missing coords'
               value={missingCoordsCount}
               icon={AlertTriangle}
               tone={missingCoordsCount > 0 ? 'warning' : 'success'}
-              hint={missingCoordsCount > 0 ? 'Items not visible on map' : 'All items have coordinates'}
+              variant='compact'
             />
           </div>
 
           {/* 3-column workspace */}
           <div
             className='flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
-            style={{ height: 'calc(100vh - 260px)', minHeight: '520px' }}
+            style={{ height: 'calc(100vh - 225px)', minHeight: '520px' }}
           >
             {/* ── Left panel: list ──────────────────────────────── */}
-            <div className='flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
-              <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white px-3 py-2.5'>
-                <p className='text-[10px] font-bold uppercase tracking-widest text-rose-600'>Network</p>
+            <div className='flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
+              <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3'>
+                <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>Network Directory</p>
               </div>
               {/* Search */}
-              <div className='shrink-0 border-b border-slate-100 px-3 py-2'>
+              <div className='shrink-0 border-b border-slate-100 px-3.5 py-2.5'>
                 <div className='relative'>
                   <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
                   <input
                     type='text'
-                    placeholder='Filter schools/pickups...'
+                    placeholder='Filter schools or pickup points...'
                     value={networkFilter}
                     onChange={(e) => setNetworkFilter(e.target.value)}
-                    className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+                    className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
                   />
                 </div>
               </div>
               {/* Scrollable list */}
-              <div className='flex-1 overflow-y-auto'>
-                {/* Schools */}
-                <div className='border-b border-slate-100'>
-                  <p className='px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400'>
-                    Schools ({filteredSchools.length})
-                  </p>
-                  {filteredSchools.map((s) => (
-                    <button
-                      key={s.id}
-                      type='button'
-                      className={cn(
-                        'w-full px-3 py-2 text-left transition-colors hover:bg-rose-50/50',
-                        selectedSchoolId === s.id && !selectedPickupPointId && 'bg-rose-50 border-l-2 border-rose-500'
-                      )}
-                      onClick={() => { setSelectedSchoolId(s.id); setSelectedPickupPointId(null); setFitSelectedKey((k) => k + 1); }}
-                    >
-                      <p className='text-xs font-medium text-slate-900 truncate'>{s.name}</p>
-                      <p className='text-[10px] text-slate-400 truncate'>{s.address || 'No address'}</p>
-                    </button>
-                  ))}
-                </div>
-                {/* Pickup points */}
+              <div className='flex-1 overflow-y-auto divide-y divide-slate-100/50'>
+                {/* Schools group */}
                 <div>
-                  <p className='px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400'>
-                    Pickup Points ({filteredPickups.length})
-                  </p>
-                  {filteredPickups.map((p) => (
-                    <button
-                      key={p.id}
-                      type='button'
-                      className={cn(
-                        'w-full px-3 py-2 text-left transition-colors hover:bg-sky-50/50',
-                        selectedPickupPointId === p.id && 'bg-sky-50 border-l-2 border-sky-500'
-                      )}
-                      onClick={() => { setSelectedPickupPointId(p.id); setSelectedSchoolId(p.schoolId ?? null); setFitSelectedKey((k) => k + 1); }}
-                    >
-                      <p className='text-xs font-medium text-slate-900 truncate'>{p.name}</p>
-                      <p className='text-[10px] text-slate-400 truncate'>{p.address || 'No address'}</p>
-                    </button>
-                  ))}
+                  <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
+                    <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>Schools</span>
+                    <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
+                      {filteredSchools.length}
+                    </span>
+                  </div>
+                  <div className='pb-2'>
+                    {filteredSchools.length === 0 ? (
+                      <p className='px-3.5 py-3 text-xs text-slate-400 italic'>No schools found</p>
+                    ) : (
+                      filteredSchools.map((s) => {
+                        const isSelected = selectedSchoolId === s.id && !selectedPickupPointId;
+                        return (
+                          <button
+                            key={s.id}
+                            type='button'
+                            onClick={() => {
+                              setSelectedSchoolId(s.id);
+                              setSelectedPickupPointId(null);
+                              // Fit map to selected school
+                              setFitSelectedKey((k) => k + 1);
+                            }}
+                            className={cn(
+                              'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
+                              isSelected
+                                ? 'bg-red-50/20 font-semibold border-l-[#C81E3A] text-[#A61B31]'
+                                : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
+                            )}
+                          >
+                            <div className='flex items-center justify-between w-full gap-2'>
+                              <span className='truncate text-xs font-semibold text-slate-900'>{s.name}</span>
+                              {s.code && (
+                                <span className='shrink-0 rounded bg-red-50 px-1 text-[9px] font-bold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
+                                  {s.code}
+                                </span>
+                              )}
+                            </div>
+                            <span className='truncate text-[10px] text-slate-400 mt-0.5'>{s.address || 'No address'}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Pickup points group */}
+                <div>
+                  <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
+                    <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>Pickup Points</span>
+                    <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
+                      {filteredPickups.length}
+                    </span>
+                  </div>
+                  <div className='pb-2'>
+                    {filteredPickups.length === 0 ? (
+                      <p className='px-3.5 py-3 text-xs text-slate-400 italic'>No pickup points found</p>
+                    ) : (
+                      filteredPickups.map((p) => {
+                        const isSelected = selectedPickupPointId === p.id;
+                        const isPickup = p.usageType === 'PICKUP' || p.usageType === 'PICKUP_ONLY';
+                        const isDropoff = p.usageType === 'DROPOFF' || p.usageType === 'DROPOFF_ONLY';
+                        const leftBorderClass = isPickup
+                          ? 'border-l-blue-600 text-blue-700'
+                          : isDropoff
+                            ? 'border-l-emerald-600 text-emerald-700'
+                            : 'border-l-indigo-600 text-indigo-700';
+                        const activeBg = isPickup
+                          ? 'bg-blue-50/20'
+                          : isDropoff
+                            ? 'bg-emerald-50/20'
+                            : 'bg-indigo-50/20';
+
+                        return (
+                          <button
+                            key={p.id}
+                            type='button'
+                            onClick={() => {
+                              setSelectedPickupPointId(p.id);
+                              // Select school of this pickup if it exists in the linked list
+                              const schoolLink = allLinks.find((l) => l.pickupPointId === p.id);
+                              if (schoolLink) {
+                                setSelectedSchoolId(schoolLink.schoolId);
+                              }
+                              // Fit map to selected pickup
+                              setFitSelectedKey((k) => k + 1);
+                            }}
+                            className={cn(
+                              'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
+                              isSelected
+                                ? cn('font-semibold', activeBg, leftBorderClass)
+                                : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
+                            )}
+                          >
+                            <div className='flex items-center justify-between w-full gap-2'>
+                              <span className='truncate text-xs font-semibold text-slate-900'>{p.name}</span>
+                              {p.zoneCode && (
+                                <span className='shrink-0 rounded bg-blue-50 px-1 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
+                                  {p.zoneCode}
+                                </span>
+                              )}
+                            </div>
+                            <span className='truncate text-[10px] text-slate-400 mt-0.5'>{p.address || 'No address'}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* ── Right side: Map + Detail Panel ────────────────── */}
             <SchoolBusMapWorkspace
-              className='flex-1 border-none rounded-none shadow-none'
+              flat
+              className='flex-1 min-h-0'
               mapHeightClassName='h-full'
+              panelClassName='w-[340px] p-0 flex flex-col h-full min-h-0 bg-white'
               map={
                 canFitAll ? (
                   <OperationsMap
@@ -611,7 +858,7 @@ export function SchoolBusSchoolsPage() {
                 ) : (
                   <div className='flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6'>
                     <div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white'>
-                      <MapPinned className='h-8 w-8 text-slate-300' />
+                      <MapPin className='h-8 w-8 text-slate-300' />
                     </div>
                     <div className='text-center'>
                       <p className='text-sm font-semibold text-slate-600'>No map data yet</p>
@@ -642,6 +889,7 @@ export function SchoolBusSchoolsPage() {
               }
             />
           </div>
+          </div>
         </SchoolBusPageShell>
 
         {renderDialogs()}
@@ -654,265 +902,670 @@ export function SchoolBusSchoolsPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   const schoolScopeSelector = (
-    <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm'>
-      <label className='text-sm font-medium text-slate-700 whitespace-nowrap'>School:</label>
-      <Combobox
-        value={selectedSchoolId ?? undefined}
-        onChange={(val) => { setSelectedSchoolId(val != null ? Number(val) : null); setSelectedPickupPointId(null); }}
-        items={schoolItems}
-        placeholder='Search school by name...'
+    <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm'>
+      <label className='text-xs font-semibold text-slate-500 whitespace-nowrap uppercase tracking-wider'>School:</label>
+      <SchoolBusSelect
+        value={selectedSchoolId ?? ''}
+        onChange={(val) => {
+          setSelectedSchoolId(val ? Number(val) : null);
+          setSelectedPickupPointId(null);
+        }}
+        options={allSchools.map((s) => ({ label: s.name, value: s.id }))}
+        placeholder='Select school...'
+        searchPlaceholder='Search school by name...'
         emptyText='No schools found'
-        loading={searchingSchools}
         clearable
-        onSearch={setSchoolSearchKeyword}
-        className='h-9 flex-1 min-w-0 rounded-lg'
+        searchable
+        fullWidth
+        className='flex-1 min-w-[200px]'
       />
     </div>
   );
 
-  const schoolsTabContent = (
-    <div className='space-y-4'>
-      <div>
-        <h3 className='text-base font-semibold text-slate-950'>School directory</h3>
-        <p className='mt-1 text-sm text-slate-500'>Create, update, and soft-delete school master data.</p>
+  // Columns definition for schools
+  const schoolColumns: SchoolBusTableColumn<SchoolBusSchool>[] = [
+    {
+      key: 'school',
+      header: 'School',
+      className: 'pl-6',
+      headerClassName: 'pl-6',
+      render: (school) => {
+        const isSelected = selectedSchoolId === school.id;
+        return (
+          <div className='flex items-center gap-3'>
+            <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#C81E3A] border border-red-100/50'>
+              <GraduationCap className='h-4.5 w-4.5' />
+            </div>
+            <div className='min-w-0'>
+              <button
+                type='button'
+                className='text-left outline-none'
+                onClick={() => {
+                  setSelectedSchoolId(school.id);
+                  setSelectedPickupPointId(null);
+                }}
+              >
+                <p className={cn(
+                  'font-bold text-sm transition-colors',
+                  isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
+                )}>{school.name}</p>
+                <p className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate' title={school.address || undefined}>
+                  {school.address || 'No address'}
+                </p>
+              </button>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'network',
+      header: 'Network',
+      render: (school) => {
+        const linkedCount = allLinks.filter((l) => l.schoolId === school.id).length;
+        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
+        return (
+          <div className='flex items-center gap-2'>
+            <span className='inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10'>
+              {linkedCount} linked pickups
+            </span>
+            {!hasCoords && (
+              <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
+                No coords
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      render: (school) => (
+        school.code ? (
+          <span className='inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
+            {school.code}
+          </span>
+        ) : (
+          <span className='text-slate-400 font-medium'>—</span>
+        )
+      )
+    },
+    {
+      key: 'contact',
+      header: 'Contact',
+      render: (school) => (
+        <span className='text-xs font-medium text-slate-600'>{school.contactPhone || '—'}</span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (school) => <SchoolBusStatusBadge status={school.isActive ? 'ACTIVE' : 'INACTIVE'} />
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'pr-6 text-right',
+      headerClassName: 'pr-6 text-right',
+      render: (school) => (
+        <div className='flex justify-end gap-1.5'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingSchool(school);
+              setSchoolDialogOpen(true);
+            }}
+          >
+            <Pencil className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+            onClick={() => setDeleteTarget({ type: 'school', entity: school })}
+          >
+            <Trash2 className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  // Columns definition for pickup-points
+  const pickupColumns: SchoolBusTableColumn<SchoolBusPickupPoint>[] = [
+    {
+      key: 'pickup',
+      header: 'Pickup Point',
+      className: 'pl-6',
+      headerClassName: 'pl-6',
+      render: (pp) => {
+        const isDropoff = pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY';
+        const isPickup = pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY';
+        const cellIconWrapper = isDropoff
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50'
+          : isPickup
+            ? 'bg-blue-50 text-blue-700 border-blue-100/50'
+            : 'bg-indigo-50 text-indigo-700 border-indigo-100/50';
+        const PickupIcon = isDropoff ? MapPinCheck : MapPin;
+        const hasCoords = typeof pp.latitude === 'number' && typeof pp.longitude === 'number';
+
+        return (
+          <div className='flex items-center gap-3'>
+            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border', cellIconWrapper)}>
+              <PickupIcon className='h-4.5 w-4.5' />
+            </div>
+            <div className='min-w-0'>
+              <button
+                type='button'
+                className='text-left outline-none'
+                onClick={() => {
+                  setSelectedPickupPointId(pp.id);
+                  setSelectedSchoolId(pp.schoolId ?? null);
+                }}
+              >
+                <p className='font-bold text-slate-900 hover:text-[#C81E3A] text-sm transition-colors'>{pp.name}</p>
+                <div className='flex flex-wrap items-center gap-2 mt-0.5'>
+                  <span className='text-[11px] text-slate-400 truncate max-w-xs' title={pp.address || undefined}>
+                    {pp.address || 'No address'}
+                  </span>
+                  {!hasCoords && (
+                    <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-1 py-0.2 text-[8px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/10'>
+                      No coords
+                    </span>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'zone',
+      header: 'Zone',
+      render: (pp) => (
+        pp.zoneCode ? (
+          <span className='inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
+            {pp.zoneCode}
+          </span>
+        ) : (
+          <span className='text-slate-400 font-medium'>—</span>
+        )
+      )
+    },
+    {
+      key: 'school',
+      header: 'Linked School',
+      render: (pp) => {
+        const schoolName = allSchools.find((s) => s.id === pp.schoolId)?.name;
+        return schoolName ? (
+          <span className='text-xs font-semibold text-slate-700'>{schoolName}</span>
+        ) : (
+          <span className='text-xs text-slate-400 italic font-medium'>Unlinked</span>
+        );
+      }
+    },
+    {
+      key: 'usage',
+      header: 'Usage Type',
+      render: (pp) => {
+        if (pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY') {
+          return (
+            <span className='inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-600/15'>
+              Pickup
+            </span>
+          );
+        } else if (pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY') {
+          return (
+            <span className='inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/15'>
+              Drop-off
+            </span>
+          );
+        } else {
+          return (
+            <span className='inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/15'>
+              Pickup & Drop-off
+            </span>
+          );
+        }
+      }
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'pr-6 text-right',
+      headerClassName: 'pr-6 text-right',
+      render: (pp) => (
+        <div className='flex justify-end gap-1.5'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingPickup(pp);
+              setPickupDialogOpen(true);
+            }}
+          >
+            <Pencil className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+            onClick={() => setDeleteTarget({ type: 'pickup', entity: pp })}
+          >
+            <Trash2 className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  // Columns definition for schedules
+  const scheduleColumns: SchoolBusTableColumn<SchoolBusSchedule>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      className: 'pl-6 font-bold text-slate-900 text-sm',
+      headerClassName: 'pl-6',
+      render: (schedule) => schedule.scheduleName
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      render: (schedule) => (
+        schedule.scheduleCode ? (
+          <span className='inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10'>
+            {schedule.scheduleCode}
+          </span>
+        ) : (
+          <span className='text-slate-400 font-medium'>—</span>
+        )
+      )
+    },
+    {
+      key: 'shift',
+      header: 'Shift',
+      className: 'text-xs font-medium text-slate-600',
+      render: (schedule) => schedule.shiftType
+    },
+    {
+      key: 'days',
+      header: 'Days',
+      render: (schedule) => renderDayChips(schedule.daysOfWeek || [])
+    },
+    {
+      key: 'arrival',
+      header: 'Arrival',
+      className: 'text-xs font-semibold text-slate-700',
+      render: (schedule) => schedule.arrivalDeadline || '—'
+    },
+    {
+      key: 'departure',
+      header: 'Departure',
+      className: 'text-xs font-semibold text-slate-700',
+      render: (schedule) => schedule.departureTime || '—'
+    },
+    {
+      key: 'effective',
+      header: 'Effective Window',
+      className: 'text-xs text-slate-500',
+      render: (schedule) => (
+        `${formatDate(schedule.effectiveFrom)}${schedule.effectiveTo ? ` – ${formatDate(schedule.effectiveTo)}` : ' –'}`
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'pr-6 text-right',
+      headerClassName: 'pr-6 text-right',
+      render: (schedule) => (
+        <div className='flex justify-end gap-1.5'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingSchedule(schedule);
+              setScheduleDialogOpen(true);
+            }}
+          >
+            <Pencil className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+            onClick={() => handleDeleteSchedule(schedule.id)}
+          >
+            <Trash2 className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  // Toolbars definition
+  const schoolToolbar = (
+    <div className='flex flex-wrap items-center justify-between gap-4 w-full'>
+      <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+        <div className='relative w-full max-w-xs'>
+          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+          <input
+            type='text'
+            placeholder='Search schools...'
+            value={schoolSearchValue}
+            onChange={(e) => {
+              setSchoolSearchValue(e.target.value);
+              schoolsPagination.setKeyword(e.target.value);
+            }}
+            className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+          />
+        </div>
+        <SchoolBusSelect
+          value={schoolCoordsFilter}
+          onChange={(val) => setSchoolCoordsFilter(val || 'ALL')}
+          options={[
+            { label: 'All coordinates', value: 'ALL' },
+            { label: 'Missing coordinates', value: 'MISSING' },
+          ]}
+        />
+        <SchoolBusSelect
+          value={schoolStatusFilter}
+          onChange={(val) => setSchoolStatusFilter(val || 'ALL')}
+          options={[
+            { label: 'All status', value: 'ALL' },
+            { label: 'Active', value: 'ACTIVE' },
+            { label: 'Inactive', value: 'INACTIVE' },
+          ]}
+        />
       </div>
-      {isLoading ? (
-        <p className='text-sm text-muted-foreground'>Loading schools...</p>
-      ) : schools.length === 0 ? (
-        <SchoolBusEmptyState title='No schools registered yet' description='Add your first school to unlock routing and request setup.' icon={Building2} />
-      ) : (
-        <SchoolBusScrollableTable footer={<SchoolBusPaginationBar page={data?.data} onPageChange={schoolsPagination.setPage} />}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>School</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className='text-right'>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schools.map((school) => (
-                <TableRow key={school.id}>
-                  <TableCell>
-                    <button type='button' className='text-left' onClick={() => { setSelectedSchoolId(school.id); setSelectedPickupPointId(null); }}>
-                      <p className='font-medium'>{school.name}</p>
-                      <p className='text-xs text-muted-foreground'>{school.address || 'No address'}</p>
-                    </button>
-                  </TableCell>
-                  <TableCell>{school.code || 'N/A'}</TableCell>
-                  <TableCell>
-                    <div className='text-sm'>
-                      <p>{school.contactPhone || 'No phone'}</p>
-                      <p className='text-xs text-muted-foreground'>{school.contactEmail || 'No email'}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell><SchoolBusStatusBadge status={school.isActive ? 'ACTIVE' : 'INACTIVE'} /></TableCell>
-                  <TableCell className='text-right'>
-                    <div className='flex justify-end gap-2'>
-                      <Button size='icon' variant='outline' onClick={() => { setEditingSchool(school); setSchoolDialogOpen(true); }}><Pencil className='h-4 w-4' /></Button>
-                      <Button size='icon' variant='outline' onClick={() => setDeleteTarget({ type: 'school', entity: school })}><Trash2 className='h-4 w-4' /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SchoolBusScrollableTable>
+      <Button
+        variant='outline'
+        className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
+        onClick={() => { setEditingSchool(null); setSchoolDialogOpen(true); }}
+      >
+        <Plus className='h-4 w-4 mr-1.5' /> Add school
+      </Button>
+    </div>
+  );
+
+  const pickupToolbar = (
+    <div className='flex flex-wrap items-center justify-between gap-4 w-full'>
+      <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+        <div className='relative w-full max-w-xs'>
+          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+          <input
+            type='text'
+            placeholder='Search pickup points...'
+            value={pickupSearchValue}
+            onChange={(e) => {
+              setPickupSearchValue(e.target.value);
+              pickupPagination.setKeyword(e.target.value);
+            }}
+            className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+          />
+        </div>
+        <SchoolBusSelect
+          value={pickupCoordsFilter}
+          onChange={(val) => setPickupCoordsFilter(val || 'ALL')}
+          options={[
+            { label: 'All coordinates', value: 'ALL' },
+            { label: 'Missing coordinates', value: 'MISSING' },
+          ]}
+        />
+        <SchoolBusSelect
+          value={pickupUsageFilter}
+          onChange={(val) => setPickupUsageFilter(val || 'ALL')}
+          options={[
+            { label: 'All usage types', value: 'ALL' },
+            { label: 'Pickup only', value: 'PICKUP' },
+            { label: 'Drop-off only', value: 'DROPOFF' },
+            { label: 'Pickup & Drop-off', value: 'PICKUP_DROPOFF' },
+          ]}
+        />
+      </div>
+      <Button
+        variant='outline'
+        className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
+        onClick={() => { setEditingPickup(null); setPickupDialogOpen(true); }}
+      >
+        <Plus className='h-4 w-4 mr-1.5' /> Add pickup point
+      </Button>
+    </div>
+  );
+
+  const scheduleToolbar = (
+    <div className='flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between'>
+      <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+        {schoolScopeSelector}
+        <div className='relative w-full max-w-xs'>
+          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+          <input
+            type='text'
+            placeholder='Search schedules...'
+            value={scheduleSearch}
+            onChange={(e) => setScheduleSearch(e.target.value)}
+            className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+          />
+        </div>
+      </div>
+      {selectedSchoolId && (
+        <Button
+          variant='outline'
+          className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
+          onClick={() => { setEditingSchedule(null); setScheduleDialogOpen(true); }}
+        >
+          <Plus className='h-4 w-4 mr-1.5' /> Add schedule
+        </Button>
       )}
     </div>
   );
 
-  const pickupPointsTabContent = (
-    <div className='space-y-4'>
-      <div>
-        <h3 className='text-base font-semibold text-slate-950'>Pickup point footprint</h3>
-        <p className='mt-1 text-sm text-slate-500'>Boarding points grouped into the operational network.</p>
+  const linkedPickupToolbar = (
+    <div className='flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between'>
+      <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+        {schoolScopeSelector}
+        {selectedSchoolId && (
+          <div className='relative w-full max-w-xs'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+            <input
+              type='text'
+              placeholder='Search linked pickups...'
+              value={linkedSearch}
+              onChange={(e) => setLinkedSearch(e.target.value)}
+              className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+            />
+          </div>
+        )}
       </div>
-      {pickupPoints.length === 0 ? (
-        <SchoolBusEmptyState title='No pickup points available' description='Add pickup points to make request-to-route planning actionable.' icon={MapPinned} className='min-h-[220px]' />
-      ) : (
-        <SchoolBusScrollableTable footer={<SchoolBusPaginationBar page={pickupPointsData?.data} onPageChange={pickupPagination.setPage} />}>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pickup point</TableHead>
-                <TableHead>Zone</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Usage type</TableHead>
-                <TableHead className='text-right'>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pickupPoints.map((pp) => (
-                <TableRow key={pp.id}>
-                  <TableCell>
-                    <button type='button' className='text-left font-medium' onClick={() => { setSelectedPickupPointId(pp.id); setSelectedSchoolId(pp.schoolId ?? null); }}>
-                      {pp.name}
-                    </button>
-                  </TableCell>
-                  <TableCell><span className='text-sm text-slate-600'>{pp.zoneCode || '-'}</span></TableCell>
-                  <TableCell>{pp.address}</TableCell>
-                  <TableCell><span className='text-xs font-mono text-rose-700'>{pp.usageType || 'N/A'}</span></TableCell>
-                  <TableCell className='text-right'>
-                    <div className='flex justify-end gap-2'>
-                      <Button size='icon' variant='outline' onClick={() => { setEditingPickup(pp); setPickupDialogOpen(true); }}><Pencil className='h-4 w-4' /></Button>
-                      <Button size='icon' variant='outline' onClick={() => setDeleteTarget({ type: 'pickup', entity: pp })}><Trash2 className='h-4 w-4' /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SchoolBusScrollableTable>
+      {selectedSchoolId && (
+        <Button
+          variant='outline'
+          className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
+          onClick={() => setLinkDialogOpen(true)}
+        >
+          <Link2 className='h-4 w-4 mr-1.5' /> Link pickup point
+        </Button>
       )}
     </div>
   );
 
   const selectedSchoolName = schools.find((s) => s.id === selectedSchoolId)?.name;
 
-  const schedulesTabContent = (
-    <div className='space-y-4'>
-      {schoolScopeSelector}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h3 className='text-base font-semibold text-slate-950'>Schedules</h3>
-          <p className='mt-1 text-sm text-slate-500'>
-            {selectedSchoolName ? `Academic schedules for ${selectedSchoolName}` : 'Select a school above to view schedules'}
-          </p>
-        </div>
-        {selectedSchoolId && (
-          <Button variant='outline' className='rounded-full' onClick={() => { setEditingSchedule(null); setScheduleDialogOpen(true); }}>
-            <Plus className='h-4 w-4' /> Add schedule
-          </Button>
-        )}
+  const renderDayChips = (days: string | string[]) => {
+    const daysArr = typeof days === 'string'
+      ? days.split(',').map((d) => d.trim().toUpperCase())
+      : (days || []).map((d) => d.toUpperCase());
+    const allWeekdays = [
+      { key: 'MONDAY', label: 'M' },
+      { key: 'TUESDAY', label: 'T' },
+      { key: 'WEDNESDAY', label: 'W' },
+      { key: 'THURSDAY', label: 'T' },
+      { key: 'FRIDAY', label: 'F' },
+      { key: 'SATURDAY', label: 'S' },
+      { key: 'SUNDAY', label: 'S' },
+    ];
+    return (
+      <div className='flex gap-1'>
+        {allWeekdays.map((day) => {
+          const active = daysArr.includes(day.key);
+          return (
+            <span
+              key={day.key}
+              className={cn(
+                'inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold transition-colors',
+                active
+                  ? 'bg-red-50 text-[#C81E3A] border border-[#F6CDD5]'
+                  : 'bg-slate-50 text-slate-300 border border-slate-100/50'
+              )}
+              title={day.key}
+            >
+              {day.label}
+            </span>
+          );
+        })}
       </div>
-      {!selectedSchoolId ? (
-        <SchoolBusEmptyState title='No school selected' description='Use the dropdown above to pick a school.' icon={CalendarClock} className='min-h-[220px]' />
-      ) : schedules.length === 0 ? (
-        <SchoolBusEmptyState title='No schedules yet' description='Create a schedule to define shift times.' icon={CalendarClock} className='min-h-[220px]' />
-      ) : (
-        <SchoolBusScrollableTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Shift</TableHead>
-                <TableHead>Day</TableHead>
-                <TableHead>Arrival</TableHead>
-                <TableHead>Departure</TableHead>
-                <TableHead>Effective</TableHead>
-                <TableHead className='text-right'>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((schedule) => (
-                <TableRow key={schedule.id}>
-                  <TableCell className='font-medium'>{schedule.scheduleName}</TableCell>
-                  <TableCell><span className='text-xs font-mono text-rose-700'>{schedule.scheduleCode || '-'}</span></TableCell>
-                  <TableCell>{schedule.shiftType}</TableCell>
-                  <TableCell>{schedule.daysOfWeek?.length ? schedule.daysOfWeek.join(', ') : 'Mon–Fri'}</TableCell>
-                  <TableCell>{schedule.arrivalDeadline || '-'}</TableCell>
-                  <TableCell>{schedule.departureTime || '-'}</TableCell>
-                  <TableCell>{formatDate(schedule.effectiveFrom)}{schedule.effectiveTo ? ` – ${formatDate(schedule.effectiveTo)}` : ' –'}</TableCell>
-                  <TableCell className='text-right'>
-                    <div className='flex justify-end gap-2'>
-                      <Button size='icon' variant='outline' onClick={() => { setEditingSchedule(schedule); setScheduleDialogOpen(true); }}><Pencil className='h-4 w-4' /></Button>
-                      <Button size='icon' variant='outline' onClick={() => handleDeleteSchedule(schedule.id)}><Trash2 className='h-4 w-4' /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SchoolBusScrollableTable>
-      )}
-    </div>
-  );
+    );
+  };
 
-  const linkedPickupTabContent = (
-    <div className='space-y-4'>
-      {schoolScopeSelector}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h3 className='text-base font-semibold text-slate-950'>Linked pickup points</h3>
-          <p className='mt-1 text-sm text-slate-500'>
-            {selectedSchoolName ? `Pickup points for ${selectedSchoolName}. Click to manage windows.` : 'Select a school above'}
-          </p>
-        </div>
-        {selectedSchoolId && (
-          <Button variant='outline' className='rounded-full' onClick={() => setLinkDialogOpen(true)}>
-            <Link2 className='h-4 w-4' /> Link pickup point
-          </Button>
-        )}
-      </div>
+  const linkedPickupTabChildren = (
+    <div className='flex flex-col min-h-0 bg-white'>
       {!selectedSchoolId ? (
-        <SchoolBusEmptyState title='No school selected' description='Use the dropdown above to pick a school.' icon={Link2} className='min-h-[220px]' />
-      ) : linkedPickupPoints.length === 0 ? (
-        <SchoolBusEmptyState title='No pickup points linked' description='Link a pickup point to this school.' icon={Link2} className='min-h-[220px]' />
+        <div className='px-6 py-8'>
+          <SchoolBusEmptyState
+            title='No school selected'
+            description='Select a school from the dropdown above to manage its linked pickup points.'
+            icon={Link2}
+            className='min-h-[220px]'
+          />
+        </div>
+      ) : filteredLinkedPickupsTable.length === 0 ? (
+        <div className='px-6 py-8'>
+          <SchoolBusEmptyState
+            title={linkedPickupPoints.length === 0 ? 'No pickup points linked yet' : 'No matching linked pickup points'}
+            description={linkedPickupPoints.length === 0 ? 'Link a pickup point to this school to make request planning actionable.' : 'Try adjusting your search criteria.'}
+            icon={Link2}
+            className='min-h-[220px]'
+          />
+        </div>
       ) : (
-        <div className='space-y-2'>
-          {linkedPickupPoints.map((link) => {
+        <div className='px-6 py-5 space-y-3 bg-slate-50/20 border-b border-slate-100 rounded-b-2xl'>
+          {filteredLinkedPickupsTable.map((link) => {
             const isExpanded = expandedSppId === link.id;
             const linkWindows = isExpanded ? windows : [];
             return (
-              <div key={link.id} className='rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm'>
-                <div className='flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50/80 transition-colors' onClick={() => setExpandedSppId(isExpanded ? null : link.id)}>
-                  <span className='text-slate-400'>{isExpanded ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}</span>
-                  <div className='flex-1 min-w-0'>
-                    <p className='font-medium text-sm text-slate-900 truncate'>{link.pickupPointName}</p>
-                    <p className='text-xs text-slate-500 truncate'>{link.pickupPointAddress || 'No address'}</p>
+              <div key={link.id} className='rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-sm hover:shadow-md/5 transition-all duration-200'>
+                {/* Header */}
+                <div
+                  className='flex items-center justify-between px-5 py-4 cursor-pointer select-none transition hover:bg-slate-50/50'
+                  onClick={() => setExpandedSppId(isExpanded ? null : link.id)}
+                >
+                  <div className='flex items-center gap-3 min-w-0'>
+                    <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/40 text-slate-500'>
+                      {isExpanded ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}
+                    </div>
+                    <div className='min-w-0'>
+                      <p className='text-sm font-bold text-slate-800'>{link.pickupPointName}</p>
+                      <p className='text-[11px] text-slate-400 mt-0.5 truncate max-w-md' title={link.pickupPointAddress || undefined}>
+                        {link.pickupPointAddress || 'No address'}
+                      </p>
+                    </div>
                   </div>
-                  <span className='rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600'>{link.pickupPointUsageType || 'N/A'}</span>
-                  <Button size='icon' variant='outline' className='h-8 w-8 rounded-lg' onClick={(e) => { e.stopPropagation(); handleUnlinkPickupPoint(link.pickupPointId); }}>
-                    <Unlink className='h-3.5 w-3.5' />
-                  </Button>
+                  <div className='flex items-center gap-3 shrink-0'>
+                    <span className={cn(
+                      'rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset',
+                      link.pickupPointUsageType === 'PICKUP' || link.pickupPointUsageType === 'PICKUP_ONLY'
+                        ? 'bg-blue-50 text-blue-700 ring-blue-600/15'
+                        : link.pickupPointUsageType === 'DROPOFF' || link.pickupPointUsageType === 'DROPOFF_ONLY'
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'
+                          : 'bg-indigo-50 text-indigo-700 ring-indigo-600/15'
+                    )}>
+                      {formatUsageType(link.pickupPointUsageType)}
+                    </span>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      className='h-8 px-3 rounded-lg border-red-200 text-[#C81E3A] hover:bg-red-50 hover:text-[#99182D] hover:border-red-300 gap-1.5'
+                      onClick={(e) => { e.stopPropagation(); handleUnlinkPickupPoint(link.pickupPointId); }}
+                    >
+                      <Unlink className='h-3.5 w-3.5' /> Unlink
+                    </Button>
+                  </div>
                 </div>
+
+                {/* Expanded content */}
                 {isExpanded && (
-                  <div className='border-t border-slate-100 bg-slate-50/50 px-4 py-3'>
-                    <div className='flex items-center justify-between mb-3'>
-                      <div className='flex items-center gap-2 text-sm font-medium text-slate-700'>
-                        <Clock className='h-4 w-4 text-rose-500' /> Time windows
-                      </div>
-                      <Button size='sm' variant='outline' className='h-7 rounded-full text-xs' onClick={() => { setEditingWindow(null); setWindowDialogOpen(true); }}>
-                        <Plus className='h-3 w-3' /> Add window
+                  <div className='border-t border-slate-100 bg-slate-50/20 p-5'>
+                    <div className='flex items-center justify-between mb-4'>
+                      <h5 className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Operational Windows</h5>
+                      <Button
+                        size='sm'
+                        className='h-7 rounded-lg bg-[#C81E3A] text-white hover:bg-[#B31B34] text-xs font-semibold px-3 gap-1'
+                        onClick={() => { setEditingWindow(null); setWindowDialogOpen(true); }}
+                      >
+                        <Plus className='h-3.5 w-3.5' /> Add window
                       </Button>
                     </div>
+
                     {linkWindows.length === 0 ? (
-                      <p className='text-xs text-slate-400 py-3 text-center'>No time windows configured.</p>
+                      <div className='rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center'>
+                        <Clock className='mx-auto h-6 w-6 text-slate-300 mb-2' />
+                        <p className='text-xs font-semibold text-slate-600'>No timing windows configured</p>
+                        <p className='text-[10px] text-slate-400 mt-1 max-w-[280px] mx-auto'>
+                          Define time boundaries for school runs to restrict trip dispatching.
+                        </p>
+                      </div>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow className='text-xs'>
-                            <TableHead>Schedule</TableHead>
-                            <TableHead>Direction</TableHead>
-                            <TableHead>Window</TableHead>
-                            <TableHead>Distance</TableHead>
-                            <TableHead className='text-right'>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {linkWindows.map((w) => (
-                            <TableRow key={w.id} className='text-xs'>
-                              <TableCell className='font-medium'>{w.scheduleName}</TableCell>
-                              <TableCell>{DIRECTION_LABELS[w.direction] || w.direction}</TableCell>
-                              <TableCell>{w.windowStart} – {w.windowEnd}</TableCell>
-                              <TableCell>
-                                {w.estimatedDistanceToSchoolKm != null ? `${w.estimatedDistanceToSchoolKm} km` : '-'}
-                                {w.estimatedDurationToSchoolMin != null ? ` / ${w.estimatedDurationToSchoolMin} min` : ''}
-                              </TableCell>
-                              <TableCell className='text-right'>
-                                <div className='flex items-center justify-end gap-1'>
-                                  <Button size='icon' variant='ghost' className='h-7 w-7' onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}><Pencil className='h-3 w-3' /></Button>
-                                  <Button size='icon' variant='ghost' className='h-7 w-7 text-rose-600 hover:text-rose-700' onClick={() => handleDeleteWindow(w.id)}><Trash2 className='h-3 w-3' /></Button>
-                                </div>
-                              </TableCell>
+                      <div className='overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
+                        <Table>
+                          <TableHeader className='bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100'>
+                            <TableRow className='h-8 border-b border-slate-100'>
+                              <TableHead className='pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Schedule</TableHead>
+                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Direction</TableHead>
+                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Time window</TableHead>
+                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Transit Estimate</TableHead>
+                              <TableHead className='pr-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right'>Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {linkWindows.map((w) => (
+                              <TableRow key={w.id} className='text-xs hover:bg-slate-50/30 border-b border-slate-100 last:border-b-0'>
+                                <TableCell className='pl-4 py-2.5 font-medium text-slate-900'>{w.scheduleName}</TableCell>
+                                <TableCell className='py-2.5'>{DIRECTION_LABELS[w.direction] || w.direction}</TableCell>
+                                <TableCell className='py-2.5 font-semibold text-slate-700'>{w.windowStart} – {w.windowEnd}</TableCell>
+                                <TableCell className='py-2.5 text-slate-500'>
+                                  {w.estimatedDistanceToSchoolKm != null ? `${w.estimatedDistanceToSchoolKm} km` : '-'}
+                                  {w.estimatedDurationToSchoolMin != null ? ` / ${w.estimatedDurationToSchoolMin} min` : ''}
+                                </TableCell>
+                                <TableCell className='pr-4 py-2.5 text-right'>
+                                  <div className='flex items-center justify-end gap-1'>
+                                    <Button
+                                      size='icon'
+                                      variant='ghost'
+                                      className='h-7 w-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                      onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}
+                                    >
+                                      <Pencil className='h-3 w-3' />
+                                    </Button>
+                                    <Button
+                                      size='icon'
+                                      variant='ghost'
+                                      className='h-7 w-7 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50'
+                                      onClick={() => handleDeleteWindow(w.id)}
+                                    >
+                                      <Trash2 className='h-3 w-3' />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     )}
                   </div>
                 )}
@@ -947,29 +1600,77 @@ export function SchoolBusSchoolsPage() {
           </div>
         }
       >
-        {/* Stats */}
-        <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-          <SchoolBusMetricCard label='Schools' value={schools.length} icon={Building2} tone='info' />
-          <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPinned} tone='success' />
-          <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='default' />
-          <SchoolBusMetricCard
-            label='Missing coords'
-            value={missingCoordsCount}
-            icon={AlertTriangle}
-            tone={missingCoordsCount > 0 ? 'warning' : 'success'}
-          />
-        </div>
+        <div className='flex flex-col gap-6'>
+          {/* Stats */}
+          <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
+            <SchoolBusMetricCard label='Schools' value={schools.length} icon={GraduationCap} tone='school' />
+            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPin} tone='pickup' />
+            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='linked' />
+            <SchoolBusMetricCard
+              label='Missing coords'
+              value={missingCoordsCount}
+              icon={AlertTriangle}
+              tone={missingCoordsCount > 0 ? 'warning' : 'success'}
+            />
+          </div>
 
-        {/* Tabs */}
-        <SchoolBusTableTabs
-          defaultValue='schools'
-          tabs={[
-            { value: 'schools', label: 'Schools', count: schools.length, content: schoolsTabContent },
-            { value: 'pickup-points', label: 'Pickup points', count: pickupPoints.length, content: pickupPointsTabContent },
-            { value: 'schedules', label: 'Schedules', count: schedules.length, content: schedulesTabContent },
-            { value: 'linked-pickups', label: 'Linked pickups', count: linkedPickupPoints.length, content: linkedPickupTabContent },
-          ]}
-        />
+          {/* Unified Table view */}
+          <SchoolBusDataTable<any>
+            tabs={[
+              { key: 'schools', label: 'Schools', count: schools.length },
+              { key: 'pickup-points', label: 'Pickup points', count: pickupPoints.length },
+              { key: 'schedules', label: 'Schedules', count: schedules.length },
+              { key: 'linked-pickups', label: 'Linked pickups', count: linkedPickupPoints.length },
+            ]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            toolbar={
+              activeTab === 'schools'
+                ? schoolToolbar
+                : activeTab === 'pickup-points'
+                  ? pickupToolbar
+                  : activeTab === 'schedules'
+                    ? scheduleToolbar
+                    : linkedPickupToolbar
+            }
+            data={
+              activeTab === 'schools'
+                ? filteredSchoolsTable
+                : activeTab === 'pickup-points'
+                  ? filteredPickupsTable
+                  : activeTab === 'schedules'
+                    ? filteredSchedulesTable
+                    : []
+            }
+            columns={
+              activeTab === 'schools'
+                ? schoolColumns
+                : activeTab === 'pickup-points'
+                  ? pickupColumns
+                  : activeTab === 'schedules'
+                    ? scheduleColumns
+                    : []
+            }
+            isLoading={
+              activeTab === 'schools'
+                ? loadingSchools
+                : activeTab === 'pickup-points'
+                  ? loadingPickups
+                  : activeTab === 'schedules'
+                    ? loadingSchedules
+                    : false
+            }
+            pagination={
+              activeTab === 'schools' && data
+                ? { page: data, onPageChange: schoolsPagination.setPage }
+                : activeTab === 'pickup-points' && pickupPointsData
+                  ? { page: pickupPointsData, onPageChange: pickupPagination.setPage }
+                  : undefined
+            }
+          >
+            {activeTab === 'linked-pickups' && linkedPickupTabChildren}
+          </SchoolBusDataTable>
+        </div>
       </SchoolBusPageShell>
 
       {renderDialogs()}

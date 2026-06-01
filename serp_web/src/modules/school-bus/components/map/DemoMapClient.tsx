@@ -160,7 +160,7 @@ export default function DemoMapClient({
         >
           <Popup>
             <div className='space-y-1'>
-              <p className='text-xs font-semibold text-rose-700'>
+              <p className='text-xs font-semibold text-slate-700'>
                 {endStop.locationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
               </p>
               <p className='font-medium'>{endStop.displayName || endStop.depotName || endStop.schoolName}</p>
@@ -208,7 +208,7 @@ export default function DemoMapClient({
       {resolvedLine.length >= 2 && (
         <Polyline
           positions={resolvedLine}
-          color={isFallback ? '#f59e0b' : '#e11d48'}
+          color={isFallback ? '#f59e0b' : '#0284c7'}
           weight={isFallback ? 3 : 4}
           opacity={0.85}
           dashArray={isFallback ? '10 6' : undefined}

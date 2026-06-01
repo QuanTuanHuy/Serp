@@ -69,10 +69,18 @@ export function SchoolBusMapLegend({
         }}
         title={isCollapsed ? 'Click to show legend' : 'Click to hide legend'}
       >
-        <span>Map legend</span>
-        <span className='ml-1 text-[9px] font-normal normal-case tracking-normal text-slate-400'>
-          {isCollapsed ? '(show)' : '(hide)'}
-        </span>
+        {isCollapsed ? (
+          <span className='normal-case tracking-normal text-slate-600 hover:text-slate-950'>
+            Map legend <span className='text-slate-400'>· show</span>
+          </span>
+        ) : (
+          <>
+            <span>Map legend</span>
+            <span className='ml-1 text-[9px] font-normal normal-case tracking-normal text-slate-400'>
+              (hide)
+            </span>
+          </>
+        )}
       </div>
 
       {!isCollapsed && (
@@ -89,10 +97,10 @@ export function SchoolBusMapLegend({
           </div>
           {showRouteLines && (
             <div className='mt-2.5 space-y-1 text-xs border-t border-slate-100 pt-2'>
-              <p className='flex items-center gap-2 text-rose-700'>
+              <p className='flex items-center gap-2 text-sky-700'>
                 <span
                   className='block h-[2px] w-8 rounded-full'
-                  style={{ backgroundColor: schoolBusBrand.rose }}
+                  style={{ backgroundColor: schoolBusBrand.sky }}
                 />
                 Outbound route
               </p>

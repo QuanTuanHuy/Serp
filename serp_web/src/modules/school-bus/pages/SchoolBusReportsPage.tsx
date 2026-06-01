@@ -127,6 +127,7 @@ export function SchoolBusReportsPage() {
 
           <SchoolBusTableTabs
             defaultValue='trips'
+            flatContent
             tabs={[
               {
                 value: 'trips',
@@ -159,7 +160,7 @@ export function SchoolBusReportsPage() {
                         <TableBody>
                           {trips.map((trip) => (
                             <TableRow key={trip.id}>
-                              <TableCell className='font-semibold text-rose-700'>
+                              <TableCell className='font-semibold text-slate-900'>
                                 {trip.tripCode}
                               </TableCell>
                               <TableCell>{trip.routeCode}</TableCell>

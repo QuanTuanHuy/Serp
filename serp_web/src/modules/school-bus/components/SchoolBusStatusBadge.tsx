@@ -12,7 +12,7 @@ export function SchoolBusStatusBadge({
   const normalizedStatus = status?.toUpperCase() || 'UNKNOWN';
 
   if (
-    ['APPROVED', 'ASSIGNED', 'COMPLETED', 'ON_BOARD', 'CHECKED_IN', 'ACTIVE', 'PUBLISHED', 'GENERATED', 'REVIEWING', 'BOARDED', 'DROPPED_OFF', 'BOARDING', 'DEPARTED']
+    ['APPROVED', 'ASSIGNED', 'COMPLETED', 'READY', 'ACTIVE', 'PUBLISHED', 'GENERATED', 'BOARDED', 'DROPPED_OFF']
       .includes(normalizedStatus)
   ) {
     return (
@@ -23,7 +23,7 @@ export function SchoolBusStatusBadge({
   }
 
   if (
-    ['PENDING', 'DRAFT', 'SUBMITTED', 'PLANNED', 'IN_PROGRESS', 'WAITING', 'SCHEDULED', 'PAUSED', 'ARRIVED'].includes(
+    ['PENDING', 'SUBMITTED', 'PAUSED', 'WAITING', 'WARNING'].includes(
       normalizedStatus
     )
   ) {
@@ -35,12 +35,24 @@ export function SchoolBusStatusBadge({
   }
 
   if (
+    ['IN_PROGRESS', 'RUNNING', 'ON_BOARD', 'CHECKED_IN', 'BOARDING', 'DEPARTED', 'ARRIVED', 'SCHEDULED', 'PLANNED'].includes(
+      normalizedStatus
+    )
+  ) {
+    return (
+      <Badge className='rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700 hover:bg-blue-50'>
+        {normalizedStatus}
+      </Badge>
+    );
+  }
+
+  if (
     ['REJECTED', 'CANCELLED', 'ABSENT', 'INACTIVE', 'OFFLINE', 'STOPPED', 'EXPIRED', 'NO_SHOW', 'NOT_SERVED', 'SKIPPED'].includes(
       normalizedStatus
     )
   ) {
     return (
-      <Badge className='rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700 hover:bg-rose-50'>
+      <Badge className='rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-700 hover:bg-red-50'>
         {normalizedStatus}
       </Badge>
     );
@@ -49,7 +61,7 @@ export function SchoolBusStatusBadge({
   return (
     <Badge
       variant='outline'
-      className='rounded-full border-slate-200 px-3 py-1 text-slate-600'
+      className='rounded-full border-slate-200 bg-slate-50 px-3 py-1 text-slate-600'
     >
       {normalizedStatus}
     </Badge>

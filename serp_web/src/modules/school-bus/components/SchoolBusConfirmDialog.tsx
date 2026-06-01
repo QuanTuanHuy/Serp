@@ -29,8 +29,8 @@ export interface SchoolBusConfirmDialogProps {
   cancelLabel?: string;
   /**
    * Visual variant of the confirm button.
-   * - "danger"  → rose / destructive (default for delete actions)
-   * - "primary" → rose branded (default for non-destructive confirmations)
+   * - "danger"  → red / destructive (default for delete actions)
+   * - "primary" → slate / primary (default for non-destructive confirmations)
    */
   variant?: 'danger' | 'primary';
   /** Extra content rendered between description and footer (e.g. an input or checklist) */
@@ -43,7 +43,7 @@ export interface SchoolBusConfirmDialogProps {
  * SchoolBusConfirmDialog
  *
  * Base confirmation dialog that all school-bus confirm/delete popovers should
- * use.  Applies the module's rounded-card aesthetic and rose colour theme so
+ * use.  Applies the module's rounded-card aesthetic and neutral colour theme so
  * every confirmation modal looks consistent.
  *
  * Usage:

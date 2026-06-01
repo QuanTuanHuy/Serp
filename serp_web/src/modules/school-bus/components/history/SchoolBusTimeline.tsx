@@ -58,16 +58,16 @@ const EVENT_STYLES: Record<string, EventStyle> = {
   CHANGED: { icon: Pencil,       ringColor: 'ring-violet-200',  bgColor: 'bg-violet-50',  iconColor: 'text-violet-600' },
   APPROVE: { icon: CheckCircle2, ringColor: 'ring-emerald-200', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600' },
   APPROVED:{ icon: CheckCircle2, ringColor: 'ring-emerald-200', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-  REJECT:  { icon: XCircle,      ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
-  REJECTED:{ icon: XCircle,      ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
-  CANCEL:  { icon: XCircle,      ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
-  CANCELLED:{ icon: XCircle,     ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
+  REJECT:  { icon: XCircle,      ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
+  REJECTED:{ icon: XCircle,      ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
+  CANCEL:  { icon: XCircle,      ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
+  CANCELLED:{ icon: XCircle,     ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
   PAUSE:   { icon: PauseCircle,  ringColor: 'ring-amber-200',   bgColor: 'bg-amber-50',   iconColor: 'text-amber-600' },
   PAUSED:  { icon: PauseCircle,  ringColor: 'ring-amber-200',   bgColor: 'bg-amber-50',   iconColor: 'text-amber-600' },
   RESUME:  { icon: PlayCircle,   ringColor: 'ring-emerald-200', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600' },
   RESUMED: { icon: PlayCircle,   ringColor: 'ring-emerald-200', bgColor: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-  STOP:    { icon: Ban,          ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
-  STOPPED: { icon: Ban,          ringColor: 'ring-rose-200',    bgColor: 'bg-rose-50',    iconColor: 'text-rose-600' },
+  STOP:    { icon: Ban,          ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
+  STOPPED: { icon: Ban,          ringColor: 'ring-red-200',    bgColor: 'bg-red-50',    iconColor: 'text-red-600' },
   RENEW:   { icon: RefreshCw,    ringColor: 'ring-blue-200',    bgColor: 'bg-blue-50',    iconColor: 'text-blue-600' },
   RENEWED: { icon: RefreshCw,    ringColor: 'ring-blue-200',    bgColor: 'bg-blue-50',    iconColor: 'text-blue-600' },
   ASSIGN:  { icon: BusFront,     ringColor: 'ring-sky-200',     bgColor: 'bg-sky-50',     iconColor: 'text-sky-600' },
@@ -204,7 +204,7 @@ function TimelineCard({
 
       {/* Card */}
       <div className='mb-6 min-w-0 flex-1'>
-        <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition group-hover:border-rose-200 group-hover:shadow-[0_12px_32px_rgba(225,29,72,0.08)]'>
+        <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition group-hover:border-slate-300 group-hover:shadow-[0_12px_32px_rgba(15,23,42,0.06)]'>
           <div className='flex flex-wrap items-start justify-between gap-2'>
             <div className='flex flex-wrap items-center gap-2'>
               <span className='text-sm font-semibold text-slate-900'>{event.title}</span>
@@ -233,7 +233,7 @@ function TimelineCard({
               <button
                 type='button'
                 onClick={() => setExpanded(!expanded)}
-                className='inline-flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700'
+                className='inline-flex items-center gap-1 text-xs font-semibold text-slate-900 hover:text-slate-800'
               >
                 {expanded ? 'Hide details' : 'Show details'}
                 {expanded ? <ChevronUp className='h-3 w-3' /> : <ChevronDown className='h-3 w-3' />}
@@ -299,10 +299,10 @@ function TimelineLoading() {
 function TimelineError({ message }: { message?: string }) {
   return (
     <div className='flex flex-col items-center justify-center py-12 text-center'>
-      <div className='flex h-14 w-14 items-center justify-center rounded-full bg-rose-100'>
-        <XCircle className='h-6 w-6 text-rose-500' />
+      <div className='flex h-14 w-14 items-center justify-center rounded-full bg-red-100'>
+        <XCircle className='h-6 w-6 text-red-500' />
       </div>
-      <p className='mt-4 text-sm font-semibold text-rose-700'>Failed to load history</p>
+      <p className='mt-4 text-sm font-semibold text-red-700'>Failed to load history</p>
       <p className='mt-1 text-xs text-slate-400'>{message || 'Please try again later.'}</p>
     </div>
   );

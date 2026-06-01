@@ -4,13 +4,13 @@ import * as React from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
-  Contact,
   Mail,
   Pencil,
   Phone,
   Plus,
   Search,
   Trash2,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/lib/store';
@@ -26,27 +26,19 @@ import {
 } from '../api/schoolBusApi';
 import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
-import { SchoolBusFilterSelect } from '../components/SchoolBusFilterSelect';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { ParentFormDialog } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
-import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
+import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type { SchoolBusAccountUser, SchoolBusParent } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/components/ui/table';
 
 // ── Contact readiness helpers ─────────────────────────────────────────────────
 
@@ -63,7 +55,7 @@ const contactReadinessConfig: Record<ContactReadiness, { label: string; classNam
   reachable: { label: 'Reachable', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   'missing-phone': { label: 'Missing phone', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   'missing-email': { label: 'Missing email', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'no-linked-student': { label: 'No linked student', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  'no-linked-student': { label: 'No linked student', className: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
 function ContactReadinessBadge({ readiness }: { readiness: ContactReadiness }) {
@@ -175,6 +167,140 @@ export function SchoolBusParentsPage() {
     } catch (error: any) { toast.error(error?.data?.message || 'Failed to delete parent profile'); }
   };
 
+  const parentColumns: SchoolBusTableColumn<SchoolBusParent>[] = [
+    {
+      key: 'parent',
+      header: 'Parent',
+      className: 'pl-6',
+      headerClassName: 'pl-6',
+      render: (parent) => (
+        <div className='flex items-center gap-3'>
+          <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600 ring-1 ring-slate-200/50'>
+            <Users className='h-4.5 w-4.5' />
+          </div>
+          <div>
+            <p className='font-semibold text-slate-900'>{parent.fullName}</p>
+            <p className='text-xs text-muted-foreground mt-0.5'>
+              Linked account #{parent.userId}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'contact',
+      header: 'Contact',
+      render: (parent) => (
+        <div>
+          <p className='text-sm'>{parent.phone || <span className='text-slate-400 italic'>No phone</span>}</p>
+          <p className='text-xs text-muted-foreground'>{parent.email || <span className='italic'>No email</span>}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'students',
+      header: 'Linked students',
+      render: (parent) => {
+        const studentCount = linkedStudentsMap.get(parent.id) || 0;
+        return studentCount > 0 ? (
+          <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200'>
+            {studentCount} student{studentCount > 1 ? 's' : ''}
+          </span>
+        ) : (
+          <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
+            None
+          </span>
+        );
+      },
+    },
+    {
+      key: 'readiness',
+      header: 'Contact readiness',
+      render: (parent) => {
+        const studentCount = linkedStudentsMap.get(parent.id) || 0;
+        const readiness = getContactReadiness(parent, studentCount);
+        return <ContactReadinessBadge readiness={readiness} />;
+      },
+    },
+    {
+      key: 'address',
+      header: 'Address',
+      render: (parent) => (
+        <span className='text-sm'>{parent.address || <span className='text-slate-400 italic'>No address</span>}</span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (parent) => <SchoolBusStatusBadge status={parent.isActive ? 'ACTIVE' : 'INACTIVE'} />,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'pr-6 text-right',
+      headerClassName: 'pr-6 text-right',
+      render: (parent) => (
+        <div className='flex justify-end gap-2'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
+            onClick={() => { setEditingParent(parent); setDialogOpen(true); }}
+          >
+            <Pencil className='h-4 w-4' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border-slate-200'
+            onClick={() => setDeletingParent(parent)}
+          >
+            <Trash2 className='h-4 w-4' />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const toolbar = (
+    <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
+      {/* Search */}
+      <div className='relative flex-1 min-w-[200px] max-w-xs'>
+        <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+        <input
+          type='text'
+          placeholder='Search by name, phone, or email...'
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+        />
+      </div>
+      <SchoolBusSelect
+        value={filterContact}
+        onChange={setFilterContact}
+        placeholder='All contacts'
+        icon={Phone}
+        options={[
+          { label: 'Has phone', value: 'has-phone' },
+          { label: 'Has email', value: 'has-email' },
+          { label: 'Missing phone', value: 'missing-phone' },
+          { label: 'Missing email', value: 'missing-email' },
+        ]}
+        clearable
+      />
+      <SchoolBusSelect
+        value={filterStatus}
+        onChange={setFilterStatus}
+        placeholder='All statuses'
+        options={[
+          { label: 'Active', value: 'active' },
+          { label: 'Inactive', value: 'inactive' },
+        ]}
+        clearable
+      />
+    </div>
+  );
+
   return (
     <>
       <SchoolBusPageShell
@@ -187,143 +313,45 @@ export function SchoolBusParentsPage() {
           ]} />
         }
         actions={
-          <Button className='rounded-full' onClick={() => { setEditingParent(null); setDialogOpen(true); }}>
+          <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingParent(null); setDialogOpen(true); }}>
             <Plus className='h-4 w-4' /> Add parent profile
           </Button>
         }
       >
-        {/* Stats */}
-        <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-          <SchoolBusMetricCard label='Parent profiles' value={parents.length} icon={Contact} tone='info' hint='Profiles linked to school-bus operations' />
-          <SchoolBusMetricCard label='With email' value={withEmail} icon={Mail} tone='success' hint='Ready for notification flows' />
-          <SchoolBusMetricCard label='With phone' value={withPhone} icon={Phone} tone='default' hint='Reachable for escalation' />
-          <SchoolBusMetricCard
-            label='No linked student'
-            value={noLinkedStudents}
-            icon={AlertTriangle}
-            tone={noLinkedStudents > 0 ? 'warning' : 'success'}
-            hint={noLinkedStudents > 0 ? 'Parents without any linked student' : 'All parents linked'}
-          />
-        </div>
-
-        {/* Search & Filter bar */}
-        <div className='flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm'>
-          {/* Search */}
-          <div className='relative flex-1 min-w-[200px]'>
-            <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
-            <input
-              type='text'
-              placeholder='Search by name, phone, or email...'
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-rose-300 focus:ring-1 focus:ring-rose-200'
+        <div className='flex flex-col gap-6'>
+          {/* Stats */}
+          <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
+            <SchoolBusMetricCard label='Parent profiles' value={parents.length} icon={Users} tone='info' hint='Profiles linked to school-bus operations' />
+            <SchoolBusMetricCard label='With email' value={withEmail} icon={Mail} tone='success' hint='Ready for notification flows' />
+            <SchoolBusMetricCard label='With phone' value={withPhone} icon={Phone} tone='default' hint='Reachable for escalation' />
+            <SchoolBusMetricCard
+              label='No linked student'
+              value={noLinkedStudents}
+              icon={AlertTriangle}
+              tone={noLinkedStudents > 0 ? 'warning' : 'success'}
+              hint={noLinkedStudents > 0 ? 'Parents without any linked student' : 'All parents linked'}
             />
           </div>
-          <SchoolBusFilterSelect
-            value={filterContact}
-            onChange={setFilterContact}
-            placeholder='All contacts'
-            icon={Phone}
-            options={[
-              { label: 'Has phone', value: 'has-phone' },
-              { label: 'Has email', value: 'has-email' },
-              { label: 'Missing phone', value: 'missing-phone' },
-              { label: 'Missing email', value: 'missing-email' },
-            ]}
-          />
-          <SchoolBusFilterSelect
-            value={filterStatus}
-            onChange={setFilterStatus}
-            placeholder='All statuses'
-            options={[
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-            ]}
+
+          <SchoolBusDataTable
+            title='Parent profiles'
+            description='Manage parent profiles, contact data, and student linkages.'
+            toolbar={toolbar}
+            data={filteredParents}
+            columns={parentColumns}
+            isLoading={isLoading}
+            pagination={{ page: data?.data, onPageChange: pagination.setPage }}
+            stickyFirstColumn
+            stickyActionColumn
+            emptyIcon={Users}
+            emptyTitle={parents.length === 0 ? 'No parent profiles found' : 'No parents match the current filters'}
+            emptyDescription={
+              parents.length === 0
+                ? 'Create parent profiles so requests and family linkage can be managed in the module.'
+                : 'No parents match the current filters. Try adjusting your search criteria.'
+            }
           />
         </div>
-
-        {/* Table */}
-        {isLoading ? (
-          <p className='text-sm text-muted-foreground'>Loading parents...</p>
-        ) : filteredParents.length === 0 ? (
-          <SchoolBusEmptyState
-            title='No parent profiles found'
-            description={parents.length === 0
-              ? 'Create parent profiles so requests and family linkage can be managed in the module.'
-              : 'No parents match the current filters. Try adjusting your search criteria.'}
-            icon={Contact}
-          />
-        ) : (
-          <SchoolBusScrollableTable footer={<SchoolBusPaginationBar page={data?.data} onPageChange={pagination.setPage} />}>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Parent</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Linked students</TableHead>
-                  <TableHead>Contact readiness</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='text-right'>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredParents.map((parent) => {
-                  const studentCount = linkedStudentsMap.get(parent.id) || 0;
-                  const readiness = getContactReadiness(parent, studentCount);
-                  return (
-                    <TableRow key={parent.id}>
-                      <TableCell>
-                        <div>
-                          <p className='font-medium'>{parent.fullName}</p>
-                          <p className='text-xs text-muted-foreground'>
-                            Linked account #{parent.userId}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className='text-sm'>{parent.phone || <span className='text-slate-400 italic'>No phone</span>}</p>
-                          <p className='text-xs text-muted-foreground'>{parent.email || <span className='italic'>No email</span>}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {studentCount > 0 ? (
-                          <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200'>
-                            {studentCount} student{studentCount > 1 ? 's' : ''}
-                          </span>
-                        ) : (
-                          <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
-                            None
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <ContactReadinessBadge readiness={readiness} />
-                      </TableCell>
-                      <TableCell>
-                        <span className='text-sm'>{parent.address || <span className='text-slate-400 italic'>No address</span>}</span>
-                      </TableCell>
-                      <TableCell>
-                        <SchoolBusStatusBadge status={parent.isActive ? 'ACTIVE' : 'INACTIVE'} />
-                      </TableCell>
-                      <TableCell className='text-right'>
-                        <div className='flex justify-end gap-2'>
-                          <Button size='icon' variant='outline' onClick={() => { setEditingParent(parent); setDialogOpen(true); }}>
-                            <Pencil className='h-4 w-4' />
-                          </Button>
-                          <Button size='icon' variant='outline' onClick={() => setDeletingParent(parent)}>
-                            <Trash2 className='h-4 w-4' />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </SchoolBusScrollableTable>
-        )}
       </SchoolBusPageShell>
 
       <ParentFormDialog

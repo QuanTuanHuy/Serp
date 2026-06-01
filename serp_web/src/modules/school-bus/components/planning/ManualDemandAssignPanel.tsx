@@ -83,13 +83,13 @@ export function ManualDemandAssignPanel({
     <SchoolBusSection
       title={`Assign to "${selectedRoute.routeName}"`}
       action={
-        <span className='rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700'>
+        <span className='rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700'>
           {direction}
         </span>
       }
     >
       {error && (
-        <div className='mb-3 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs font-medium text-rose-700'>
+        <div className='mb-3 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/60 px-3 py-2 text-xs font-medium text-red-700'>
           <AlertCircle className='h-3.5 w-3.5 shrink-0' />
           {error}
         </div>
@@ -143,8 +143,8 @@ export function ManualDemandAssignPanel({
                   disabled={!hasPoint || loadingStudentId !== null}
                   onClick={() => handleAssign(student)}
                   className={cn(
-                    'ml-2 shrink-0 rounded-full border-rose-200 px-3 py-1 text-[11px] font-semibold text-rose-600',
-                    'hover:bg-rose-50 hover:border-rose-300 disabled:opacity-40',
+                    'ml-2 shrink-0 rounded-lg border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-800',
+                    'hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40',
                   )}
                 >
                   {isThisLoading ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Add'}
