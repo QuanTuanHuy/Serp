@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.second_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.second_mile.domain.HandoverManifest;
 import serp.project.second_mile.domain.HandoverManifestOrder;
+import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.Order;
 import serp.project.second_mile.domain.Route;
@@ -21,6 +23,7 @@ import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
 import serp.project.second_mile.dto.request.CreateHandoverManifestRequest;
+import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
 import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestOrderResponse;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
@@ -41,6 +44,8 @@ import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
 import serp.project.second_mile.repository.HandoverManifestOrderRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
+import serp.project.second_mile.repository.HubRepository;
+import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.OrderRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
@@ -48,6 +53,7 @@ import serp.project.second_mile.repository.specification.HandoverManifestSpecifi
 import serp.project.second_mile.service.HandoverManifestService;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -63,6 +69,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HandoverManifestServiceImpl implements HandoverManifestService {
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final double CHECKIN_RADIUS_METERS = 100.0;
+    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final List<HandoverManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
             HandoverManifestStatus.CREATED,
             HandoverManifestStatus.OUTBOUND_CONFIRMED
@@ -74,6 +82,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
+    private final HubRepository hubRepository;
+    private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
@@ -88,13 +98,21 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         String normalizedOriginPostOfficeCode = normalizeText(request.getOriginPostOfficeCode());
         if (normalizedOriginPostOfficeCode == null
                 || request.getTargetHubId() == null
-                || request.getVehicleId() == null) {
+                || request.getVehicleId() == null
+                || request.getRouteId() == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
+        validatePlannedWindow(request.getPlannedDepartureAt(), request.getPlannedArrivalAt());
+        validateGeoCoordinatePair(
+                request.getOriginPostOfficeLatitude(),
+                request.getOriginPostOfficeLongitude(),
+                "Origin post office location is required for driver check-in."
+        );
 
         validatePostOfficeMappedToHub(tenantId, normalizedOriginPostOfficeCode, request.getTargetHubId());
         Vehicle vehicle = validateVehicleForManifest(tenantId, request.getTargetHubId(), request.getVehicleId());
         validateVehicleHasAssignedDriver(vehicle);
+        validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), request.getTargetHubId());
         Route route = validateRouteForManifest(
                 tenantId,
                 request.getTargetHubId(),
@@ -130,7 +148,14 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
         }
         validateVehicleCapacity(vehicle, orders);
-        validateVehicleScheduleAvailability(tenantId, vehicle.getId());
+        validateVehicleScheduleAvailability(
+                tenantId,
+                vehicle.getId(),
+                vehicle.getAssignedStaffId(),
+                request.getPlannedDepartureAt(),
+                request.getPlannedArrivalAt(),
+                null
+        );
 
         String manifestCode = generateManifestCode(tenantId, request.getTargetHubId());
         HandoverManifest manifest = HandoverManifest.builder()
@@ -138,7 +163,12 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 .originPostOfficeCode(normalizedOriginPostOfficeCode)
                 .targetHubId(request.getTargetHubId())
                 .vehicleId(vehicle.getId())
-                .routeId(route == null ? null : route.getId())
+                .assignedDriverId(vehicle.getAssignedStaffId())
+                .routeId(route.getId())
+                .plannedDepartureAt(request.getPlannedDepartureAt())
+                .plannedArrivalAt(request.getPlannedArrivalAt())
+                .originPostOfficeLatitude(request.getOriginPostOfficeLatitude())
+                .originPostOfficeLongitude(request.getOriginPostOfficeLongitude())
                 .status(HandoverManifestStatus.CREATED)
                 .tenantId(tenantId)
                 .build();
@@ -206,7 +236,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processOutboundCheckin(manifest, false);
+        return processOutboundCheckin(manifest, false, null);
     }
 
     @Override
@@ -216,27 +246,27 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, request, false);
+        return processInboundCheckin(manifest, request, false, null);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public HandoverManifestResponse driverCheckinStart(Long manifestId) {
-        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
-        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
+    public HandoverManifestResponse driverCheckinStart(Long manifestId, DriverHandoverCheckinRequest request) {
+        secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processOutboundCheckin(manifest, true);
+        return processOutboundCheckin(manifest, true, request);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public HandoverManifestResponse driverCheckinEnd(Long manifestId) {
-        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
-        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
+    public HandoverManifestResponse driverCheckinEnd(Long manifestId, DriverHandoverCheckinRequest request) {
+        secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, null, true);
+        return processInboundCheckin(manifest, null, true, request);
     }
 
     @Override
@@ -291,8 +321,33 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (!HandoverManifestSyncEventType.OUTBOUND_CONFIRMED.equals(event.getEventType())) {
             return;
         }
+        if (event.getVehicleId() == null
+                || event.getRouteId() == null
+                || event.getPlannedDepartureAt() == null
+                || event.getPlannedArrivalAt() == null) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Handover manifest sync must include vehicle_id, route_id, planned_departure_at, and planned_arrival_at."
+            );
+        }
+        validatePlannedWindow(event.getPlannedDepartureAt(), event.getPlannedArrivalAt());
+        validateGeoCoordinatePair(
+                event.getOriginPostOfficeLatitude(),
+                event.getOriginPostOfficeLongitude(),
+                "Origin post office location is required for driver check-in."
+        );
 
         validatePostOfficeMappedToHub(tenantId, originPostOfficeCode, event.getTargetHubId());
+        Vehicle vehicle = validateVehicleForManifest(tenantId, event.getTargetHubId(), event.getVehicleId());
+        validateVehicleHasAssignedDriver(vehicle);
+        validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), event.getTargetHubId());
+        Route route = validateRouteForManifest(
+                tenantId,
+                event.getTargetHubId(),
+                originPostOfficeCode,
+                event.getRouteId(),
+                event.getVehicleId()
+        );
         List<String> normalizedOrderCodes = normalizeOrderCodes(event.getOrderCodes());
         if (normalizedOrderCodes.isEmpty()) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Handover manifest sync must include order_codes.");
@@ -302,12 +357,28 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (orders.size() != normalizedOrderCodes.size()) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Some handover manifest orders are not synced yet.");
         }
+        validateVehicleCapacity(vehicle, orders);
+        validateVehicleScheduleAvailability(
+                tenantId,
+                vehicle.getId(),
+                vehicle.getAssignedStaffId(),
+                event.getPlannedDepartureAt(),
+                event.getPlannedArrivalAt(),
+                existingManifest == null ? null : existingManifest.getId()
+        );
 
         HandoverManifest manifest = existingManifest == null
                 ? HandoverManifest.builder()
                 .manifestCode(manifestCode)
                 .originPostOfficeCode(originPostOfficeCode)
                 .targetHubId(event.getTargetHubId())
+                .vehicleId(vehicle.getId())
+                .assignedDriverId(vehicle.getAssignedStaffId())
+                .routeId(route.getId())
+                .plannedDepartureAt(event.getPlannedDepartureAt())
+                .plannedArrivalAt(event.getPlannedArrivalAt())
+                .originPostOfficeLatitude(event.getOriginPostOfficeLatitude())
+                .originPostOfficeLongitude(event.getOriginPostOfficeLongitude())
                 .status(HandoverManifestStatus.OUTBOUND_CONFIRMED)
                 .tenantId(tenantId)
                 .build()
@@ -317,6 +388,13 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         }
         manifest.setOriginPostOfficeCode(originPostOfficeCode);
         manifest.setTargetHubId(event.getTargetHubId());
+        manifest.setVehicleId(vehicle.getId());
+        manifest.setAssignedDriverId(vehicle.getAssignedStaffId());
+        manifest.setRouteId(route.getId());
+        manifest.setPlannedDepartureAt(event.getPlannedDepartureAt());
+        manifest.setPlannedArrivalAt(event.getPlannedArrivalAt());
+        manifest.setOriginPostOfficeLatitude(event.getOriginPostOfficeLatitude());
+        manifest.setOriginPostOfficeLongitude(event.getOriginPostOfficeLongitude());
         manifest.setStatus(HandoverManifestStatus.OUTBOUND_CONFIRMED);
         HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
 
@@ -398,6 +476,26 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureActiveDriverStaffOrThrow(vehicle.getAssignedStaffId());
     }
 
+    private void validateDriverAssignedToHub(Long tenantId, Long driverStaffId, Long hubId) {
+        if (driverStaffId == null || hubId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver and hub are required.");
+        }
+        boolean assignedToHub = hubStaffAssignmentRepository
+                .findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
+                        driverStaffId,
+                        hubId,
+                        tenantId,
+                        LocalDate.now()
+                )
+                .isPresent();
+        if (!assignedToHub) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Assigned vehicle driver must be active at the target hub."
+            );
+        }
+    }
+
     private void validateVehicleCapacity(Vehicle vehicle, List<Order> orders) {
         if (vehicle == null || orders == null || orders.isEmpty()) {
             return;
@@ -436,19 +534,30 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         }
     }
 
-    private void validateVehicleScheduleAvailability(Long tenantId, Long vehicleId) {
-        if (vehicleId == null) {
-            return;
+    private void validateVehicleScheduleAvailability(
+            Long tenantId,
+            Long vehicleId,
+            Long assignedDriverId,
+            LocalDateTime plannedDepartureAt,
+            LocalDateTime plannedArrivalAt,
+            Long excludeManifestId
+    ) {
+        if (vehicleId == null || plannedDepartureAt == null || plannedArrivalAt == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
         }
-        boolean hasActiveManifest = handoverManifestRepository.existsByTenantIdAndVehicleIdAndStatusIn(
+        boolean hasActiveManifest = handoverManifestRepository.existsOverlappingActiveAssignment(
                 tenantId,
                 vehicleId,
-                ACTIVE_MANIFEST_STATUSES
+                assignedDriverId,
+                plannedDepartureAt,
+                plannedArrivalAt,
+                ACTIVE_MANIFEST_STATUSES,
+                excludeManifestId
         );
         if (hasActiveManifest) {
             throw new AppException(
                     ErrorCode.ROUTE_VEHICLE_INVALID,
-                    "Vehicle is already assigned to another active handover manifest."
+                    "Vehicle or driver is already assigned to another active handover manifest in this time window."
             );
         }
     }
@@ -461,7 +570,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             Long vehicleId
     ) {
         if (routeId == null) {
-            return null;
+            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route is required for handover manifest.");
         }
 
         Route route = routeRepository.findById(routeId)
@@ -485,7 +594,13 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                     "Route destination post office must match manifest origin post office."
             );
         }
-        if (route.getVehicleId() != null && !Objects.equals(route.getVehicleId(), vehicleId)) {
+        if (route.getVehicleId() == null) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    "Route must have a dedicated assigned vehicle."
+            );
+        }
+        if (!Objects.equals(route.getVehicleId(), vehicleId)) {
             throw new AppException(
                     ErrorCode.ROUTE_VEHICLE_INVALID,
                     "Selected vehicle must match the vehicle assigned to the route."
@@ -517,6 +632,124 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         return candidate + "-" + System.currentTimeMillis() % 1000;
     }
 
+    private void validatePlannedWindow(LocalDateTime plannedDepartureAt, LocalDateTime plannedArrivalAt) {
+        if (plannedDepartureAt == null || plannedArrivalAt == null) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "planned_departure_at and planned_arrival_at are required."
+            );
+        }
+        if (!plannedArrivalAt.isAfter(plannedDepartureAt)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "planned_arrival_at must be after planned_departure_at."
+            );
+        }
+    }
+
+    private void validateGeoCoordinatePair(Double latitude, Double longitude, String message) {
+        if (latitude == null || longitude == null
+                || latitude < -90.0 || latitude > 90.0
+                || longitude < -180.0 || longitude > 180.0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, message);
+        }
+    }
+
+    private void recordDriverStartCheckin(
+            HandoverManifest manifest,
+            DriverHandoverCheckinRequest request
+    ) {
+        if (manifest.getDriverStartCheckinAt() != null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the post office.");
+        }
+        validateCheckinRequest(request);
+        validateGeoCoordinatePair(
+                manifest.getOriginPostOfficeLatitude(),
+                manifest.getOriginPostOfficeLongitude(),
+                "Origin post office location is missing."
+        );
+        double distanceMeters = calculateDistanceMeters(
+                request.getLatitude(),
+                request.getLongitude(),
+                manifest.getOriginPostOfficeLatitude(),
+                manifest.getOriginPostOfficeLongitude()
+        );
+        validateCheckinDistance(distanceMeters, "Driver must check in within 100m of the origin post office.");
+
+        manifest.setDriverStartCheckinAt(LocalDateTime.now());
+        manifest.setDriverStartLatitude(request.getLatitude());
+        manifest.setDriverStartLongitude(request.getLongitude());
+        manifest.setDriverStartDistanceM(distanceMeters);
+    }
+
+    private void recordDriverEndCheckin(
+            HandoverManifest manifest,
+            DriverHandoverCheckinRequest request
+    ) {
+        if (manifest.getDriverStartCheckinAt() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver departure check-in is required before arrival.");
+        }
+        if (manifest.getDriverEndCheckinAt() != null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the hub.");
+        }
+        validateCheckinRequest(request);
+
+        Hub hub = hubRepository.findById(manifest.getTargetHubId())
+                .orElseThrow(() -> new AppException(ErrorCode.HUB_NOT_FOUND));
+        if (!Objects.equals(hub.getTenantId(), manifest.getTenantId())) {
+            throw new AppException(ErrorCode.HUB_NOT_FOUND);
+        }
+        Point hubLocation = hub.getLocation();
+        if (hubLocation == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Target hub location is missing.");
+        }
+        double distanceMeters = calculateDistanceMeters(
+                request.getLatitude(),
+                request.getLongitude(),
+                hubLocation.getY(),
+                hubLocation.getX()
+        );
+        validateCheckinDistance(distanceMeters, "Driver must check in within 100m of the target hub.");
+
+        manifest.setDriverEndCheckinAt(LocalDateTime.now());
+        manifest.setDriverEndLatitude(request.getLatitude());
+        manifest.setDriverEndLongitude(request.getLongitude());
+        manifest.setDriverEndDistanceM(distanceMeters);
+    }
+
+    private void validateCheckinRequest(DriverHandoverCheckinRequest request) {
+        if (request == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in location is required.");
+        }
+        validateGeoCoordinatePair(request.getLatitude(), request.getLongitude(), "Driver check-in location is invalid.");
+    }
+
+    private void validateCheckinDistance(double distanceMeters, String message) {
+        if (distanceMeters > CHECKIN_RADIUS_METERS) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    String.format(Locale.ROOT, "%s Distance: %.1fm.", message, distanceMeters)
+            );
+        }
+    }
+
+    private double calculateDistanceMeters(
+            double latitude,
+            double longitude,
+            double targetLatitude,
+            double targetLongitude
+    ) {
+        double lat1 = Math.toRadians(latitude);
+        double lat2 = Math.toRadians(targetLatitude);
+        double deltaLat = Math.toRadians(targetLatitude - latitude);
+        double deltaLon = Math.toRadians(targetLongitude - longitude);
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return EARTH_RADIUS_METERS * c;
+    }
+
     private String normalizeText(String value) {
         if (value == null) {
             return null;
@@ -542,8 +775,16 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         return new ArrayList<>(normalized);
     }
 
-    private HandoverManifestResponse processOutboundCheckin(HandoverManifest manifest, boolean driverOnly) {
-        if (manifest.getStatus() != HandoverManifestStatus.CREATED) {
+    private HandoverManifestResponse processOutboundCheckin(
+            HandoverManifest manifest,
+            boolean driverOnly,
+            DriverHandoverCheckinRequest request
+    ) {
+        boolean validStatus = driverOnly
+                ? manifest.getStatus() == HandoverManifestStatus.CREATED
+                || manifest.getStatus() == HandoverManifestStatus.OUTBOUND_CONFIRMED
+                : manifest.getStatus() == HandoverManifestStatus.CREATED;
+        if (!validStatus) {
             throw new AppException(ErrorCode.BAG_STATUS_INVALID);
         }
         if (manifest.getVehicleId() == null) {
@@ -554,8 +795,10 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
         }
         validateVehicleHasAssignedDriver(vehicle);
+        validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+            recordDriverStartCheckin(manifest, request);
         }
 
         List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
@@ -583,7 +826,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private HandoverManifestResponse processInboundCheckin(
             HandoverManifest manifest,
             ConfirmHandoverInboundRequest request,
-            boolean driverOnly
+            boolean driverOnly,
+            DriverHandoverCheckinRequest checkinRequest
     ) {
         if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
             throw new AppException(ErrorCode.BAG_STATUS_INVALID);
@@ -601,6 +845,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         }
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+            validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
+            recordDriverEndCheckin(manifest, checkinRequest);
         }
 
         Long tenantId = manifest.getTenantId();
@@ -726,8 +972,21 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 manifest.getTargetHubId(),
                 manifest.getVehicleId(),
                 vehicle == null ? null : vehicle.getLicensePlate(),
+                manifest.getAssignedDriverId(),
                 manifest.getRouteId(),
                 route == null ? null : route.getRouteCode(),
+                manifest.getPlannedDepartureAt(),
+                manifest.getPlannedArrivalAt(),
+                manifest.getOriginPostOfficeLatitude(),
+                manifest.getOriginPostOfficeLongitude(),
+                manifest.getDriverStartCheckinAt(),
+                manifest.getDriverStartLatitude(),
+                manifest.getDriverStartLongitude(),
+                manifest.getDriverStartDistanceM(),
+                manifest.getDriverEndCheckinAt(),
+                manifest.getDriverEndLatitude(),
+                manifest.getDriverEndLongitude(),
+                manifest.getDriverEndDistanceM(),
                 manifest.getStatus(),
                 mappedOrders,
                 manifest.getCreatedAt(),

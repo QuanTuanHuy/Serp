@@ -49,6 +49,18 @@ public class PostOfficeHandoverManifest extends AbstractAudit {
     @Column(name = "target_hub_id", nullable = false)
     private Long targetHubId;
 
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
+
+    @Column(name = "route_id")
+    private Long routeId;
+
+    @Column(name = "planned_departure_at")
+    private LocalDateTime plannedDepartureAt;
+
+    @Column(name = "planned_arrival_at")
+    private LocalDateTime plannedArrivalAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
     private HandoverManifestStatus status;

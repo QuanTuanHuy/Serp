@@ -16,6 +16,7 @@ import type {
   CreatePostOfficeRequest,
   CreateProductTypeRequest,
   ConfirmOrderPaymentRequest,
+  ConfirmPostOfficeInboundRequest,
   FirstMileApiResponse,
   FirstMileOrderDetail,
   FirstMileOrderListFilters,
@@ -72,6 +73,7 @@ import type {
   HandoverManifestListFilters,
   CreateHandoverManifestRequest,
   CreatePostOfficeHandoverManifestRequest,
+  DriverHandoverCheckinRequest,
   SecondMileOrder,
   SecondMileOrderListFilters,
   DispatchPostOfficeHandoverManifestRequest,
@@ -654,35 +656,37 @@ export const firstMileApi = api.injectEndpoints({
 
     driverCheckinHandoverManifestStart: builder.mutation<
       HandoverManifest,
-      number
+      { manifestId: number; body: DriverHandoverCheckinRequest }
     >({
-      query: (manifestId) => ({
+      query: ({ manifestId, body }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-start`,
         method: 'POST',
+        body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
         normalizeHandoverManifest(unwrapFirstMileResult(response)),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_result, _error, { manifestId }) => [
         { type: 'HandoverManifest', id: 'LIST' },
-        { type: 'HandoverManifest', id: String(id) },
+        { type: 'HandoverManifest', id: String(manifestId) },
       ],
     }),
 
     driverCheckinHandoverManifestEnd: builder.mutation<
       HandoverManifest,
-      number
+      { manifestId: number; body: DriverHandoverCheckinRequest }
     >({
-      query: (manifestId) => ({
+      query: ({ manifestId, body }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-end`,
         method: 'POST',
+        body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
         normalizeHandoverManifest(unwrapFirstMileResult(response)),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_result, _error, { manifestId }) => [
         { type: 'HandoverManifest', id: 'LIST' },
-        { type: 'HandoverManifest', id: String(id) },
+        { type: 'HandoverManifest', id: String(manifestId) },
       ],
     }),
 
@@ -1587,6 +1591,22 @@ export const firstMileApi = api.injectEndpoints({
         unwrapFirstMileResultOrRaw<PickupTripLifecycleResponse>,
     }),
 
+    confirmPickupTripPostOfficeInbound: builder.mutation<
+      PickupTripLifecycleResponse,
+      { tripId: number; body: ConfirmPostOfficeInboundRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/pickup-tracking/trips/${tripId}/confirm-post-office-inbound`,
+        method: 'POST',
+        body: {
+          order_codes: body.orderCodes,
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse:
+        unwrapFirstMileResultOrRaw<PickupTripLifecycleResponse>,
+    }),
+
     exportOrderTemplate: builder.query<Blob, void>({
       query: () => ({
         url: '/orders/template',
@@ -1726,6 +1746,7 @@ export const {
   useLazyGetPickupCheckinDetailQuery,
   useCompletePickupTripMutation,
   useReturnPickupTripToPostOfficeMutation,
+  useConfirmPickupTripPostOfficeInboundMutation,
   usePickupCheckinOrderMutation,
   useLazyExportOrderTemplateQuery,
   useValidateOrderImportMutation,

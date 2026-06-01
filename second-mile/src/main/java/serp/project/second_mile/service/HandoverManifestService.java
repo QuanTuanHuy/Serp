@@ -8,6 +8,7 @@ package serp.project.second_mile.service;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
 import serp.project.second_mile.dto.request.CreateHandoverManifestRequest;
+import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
 import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
@@ -25,9 +26,9 @@ public interface HandoverManifestService {
 
     HandoverManifestResponse confirmInbound(Long manifestId, ConfirmHandoverInboundRequest request);
 
-    HandoverManifestResponse driverCheckinStart(Long manifestId);
+    HandoverManifestResponse driverCheckinStart(Long manifestId, DriverHandoverCheckinRequest request);
 
-    HandoverManifestResponse driverCheckinEnd(Long manifestId);
+    HandoverManifestResponse driverCheckinEnd(Long manifestId, DriverHandoverCheckinRequest request);
 
     HandoverManifestResponse getManifest(Long manifestId);
 

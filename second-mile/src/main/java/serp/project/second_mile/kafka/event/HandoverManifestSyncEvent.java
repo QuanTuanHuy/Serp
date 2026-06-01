@@ -37,6 +37,24 @@ public class HandoverManifestSyncEvent {
     @JsonProperty("target_hub_id")
     private Long targetHubId;
 
+    @JsonProperty("vehicle_id")
+    private Long vehicleId;
+
+    @JsonProperty("route_id")
+    private Long routeId;
+
+    @JsonProperty("planned_departure_at")
+    private LocalDateTime plannedDepartureAt;
+
+    @JsonProperty("planned_arrival_at")
+    private LocalDateTime plannedArrivalAt;
+
+    @JsonProperty("origin_post_office_latitude")
+    private Double originPostOfficeLatitude;
+
+    @JsonProperty("origin_post_office_longitude")
+    private Double originPostOfficeLongitude;
+
     private HandoverManifestStatus status;
 
     @JsonProperty("dispatched_at")

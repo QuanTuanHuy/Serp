@@ -25,6 +25,7 @@ public record PickupTrackingOverviewResponse(
         Integer pickingUpOrders,
         Integer pickedUpOrders,
         Integer pickupFailedOrders,
+        Integer pendingPostOfficeInboundOrders,
         List<PickupTrackingTripResponse> trips,
         List<PickupTrackingOrderResponse> orders
 ) {
@@ -45,7 +46,8 @@ public record PickupTrackingOverviewResponse(
             Integer totalOrders,
             Integer checkedInOrders,
             Integer pendingCheckinOrders,
-            Integer returnableToPostOfficeOrders
+            Integer returnableToPostOfficeOrders,
+            Integer pendingPostOfficeInboundOrders
     ) {
     }
 

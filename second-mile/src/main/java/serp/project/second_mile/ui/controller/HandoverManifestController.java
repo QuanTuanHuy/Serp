@@ -19,6 +19,7 @@ import serp.project.second_mile.dto.ApiResponse;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
 import serp.project.second_mile.dto.request.CreateHandoverManifestRequest;
+import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
 import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
 import serp.project.second_mile.enums.HandoverManifestStatus;
@@ -85,20 +86,26 @@ public class HandoverManifestController {
     }
 
     @PostMapping("/{manifestId}/driver-checkin-start")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
-    public ApiResponse<HandoverManifestResponse> driverCheckinStart(@PathVariable Long manifestId) {
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
+    public ApiResponse<HandoverManifestResponse> driverCheckinStart(
+            @PathVariable Long manifestId,
+            @Valid @RequestBody DriverHandoverCheckinRequest request
+    ) {
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.driver_checkin_start"))
-                .result(handoverManifestService.driverCheckinStart(manifestId))
+                .result(handoverManifestService.driverCheckinStart(manifestId, request))
                 .build();
     }
 
     @PostMapping("/{manifestId}/driver-checkin-end")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
-    public ApiResponse<HandoverManifestResponse> driverCheckinEnd(@PathVariable Long manifestId) {
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
+    public ApiResponse<HandoverManifestResponse> driverCheckinEnd(
+            @PathVariable Long manifestId,
+            @Valid @RequestBody DriverHandoverCheckinRequest request
+    ) {
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.driver_checkin_end"))
-                .result(handoverManifestService.driverCheckinEnd(manifestId))
+                .result(handoverManifestService.driverCheckinEnd(manifestId, request))
                 .build();
     }
 

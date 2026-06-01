@@ -29,6 +29,7 @@ import { TmsCombobox } from '@/modules/first-mile/components';
 import { useNotification } from '@/shared/hooks';
 import {
   useCompletePickupTripMutation,
+  useConfirmPickupTripPostOfficeInboundMutation,
   useGetActiveCouriersByPostOfficeQuery,
   useGetPickupTrackingOverviewQuery,
   useGetPostOfficesQuery,
@@ -49,6 +50,7 @@ import type {
 } from '../../types';
 import { PickupCheckinDetailDialog } from './components/PickupCheckinDetailDialog';
 import { PickupOrdersMap } from './components/PickupOrdersMap';
+import { PickupPostOfficeInboundDialog } from './components/PickupPostOfficeInboundDialog';
 import {
   isPickupCheckinDevFeatureAvailable,
   readDevCheckinModePreference,
@@ -203,6 +205,25 @@ const canReturnTripToPostOffice = (
   );
 };
 
+const canConfirmPostOfficeInbound = (
+  trip: PickupTrackingTrip,
+  orders: PickupTrackingOrder[]
+): boolean => {
+  if (trip.tripId === undefined || trip.tripStatus !== 'COMPLETED') {
+    return false;
+  }
+
+  if (trip.pendingPostOfficeInboundOrders !== undefined) {
+    return trip.pendingPostOfficeInboundOrders > 0;
+  }
+
+  return orders.some(
+    (order) =>
+      order.tripId === trip.tripId &&
+      order.orderStatus === 'PENDING_ORIGIN_POST_OFFICE_INBOUND'
+  );
+};
+
 const resolveOrders = (
   overview?: PickupTrackingOverviewResponse
 ): PickupTrackingOrder[] => {
@@ -227,6 +248,8 @@ export const PickupPage: React.FC = () => {
 
   const canAccess = accessScope !== 'NO_ACCESS';
   const isCourierScope = accessScope === 'COURIER_SELF';
+  const canManagePostOfficeInbound =
+    accessScope === 'ADMIN_ALL' || accessScope === 'MANAGER_SCOPED';
 
   const [tripDate, setTripDate] = React.useState(getTodayDateInputValue);
   const [selectedProvinceCode, setSelectedProvinceCode] = React.useState('');
@@ -551,6 +574,11 @@ export const PickupPage: React.FC = () => {
     useCompletePickupTripMutation();
   const [returnPickupTripToPostOffice, { isLoading: isReturningTrip }] =
     useReturnPickupTripToPostOfficeMutation();
+  const [confirmPostOfficeInbound, { isLoading: isConfirmingPostOfficeInbound }] =
+    useConfirmPickupTripPostOfficeInboundMutation();
+  const [inboundTrip, setInboundTrip] = React.useState<PickupTrackingTrip | null>(
+    null
+  );
 
   const applyValidCheckinCoordinates = React.useCallback(
     (order: PickupTrackingOrder) => {
@@ -711,11 +739,40 @@ export const PickupPage: React.FC = () => {
     try {
       await returnPickupTripToPostOffice(trip.tripId).unwrap();
       notification.success(
-        `Trip ${trip.tripCode || `#${trip.tripId}`} returned to post office successfully.`
+        `Trip ${trip.tripCode || `#${trip.tripId}`} returned to post office. Orders are awaiting post office inbound scan.`
       );
       void refetchOverview();
     } catch (error) {
       notification.error('Failed to return trip to post office.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleOpenPostOfficeInbound = (trip: PickupTrackingTrip) => {
+    setInboundTrip(trip);
+  };
+
+  const handleConfirmPostOfficeInbound = async (orderCodes: string[]) => {
+    if (!inboundTrip?.tripId) {
+      return;
+    }
+
+    if (orderCodes.length === 0) {
+      notification.error('Scan at least one order before confirming inbound.');
+      return;
+    }
+
+    try {
+      await confirmPostOfficeInbound({
+        tripId: inboundTrip.tripId,
+        body: { orderCodes },
+      }).unwrap();
+      notification.success('Post office inbound confirmed successfully.');
+      setInboundTrip(null);
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to confirm post office inbound.', {
         description: getErrorMessage(error),
       });
     }
@@ -914,13 +971,25 @@ export const PickupPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
             </Card>
+
+            {canManagePostOfficeInbound ? (
+              <Card>
+                <CardHeader className='pb-2'>
+                  <CardDescription>Pending post office inbound</CardDescription>
+                  <CardTitle className='text-2xl'>
+                    {formatNumber(pickupOverview?.pendingPostOfficeInboundOrders)}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            ) : null}
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle>Assigned trips</CardTitle>
               <CardDescription>
-                Complete trips manually or confirm return to origin post office.
+                Couriers complete trips and return shipments. Post office staff
+                scan and confirm inbound receiving.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -998,8 +1067,27 @@ export const PickupPage: React.FC = () => {
                                   Return to post office
                                 </Button>
                               ) : null}
+                              {canManagePostOfficeInbound &&
+                              canConfirmPostOfficeInbound(trip, orders) ? (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={
+                                    isCompletingTrip ||
+                                    isReturningTrip ||
+                                    isConfirmingPostOfficeInbound
+                                  }
+                                  onClick={() => handleOpenPostOfficeInbound(trip)}
+                                >
+                                  Receive at post office
+                                </Button>
+                              ) : null}
                               {!canCompleteTrip(trip) &&
-                              !canReturnTripToPostOffice(trip, orders) ? (
+                              !canReturnTripToPostOffice(trip, orders) &&
+                              !(
+                                canManagePostOfficeInbound &&
+                                canConfirmPostOfficeInbound(trip, orders)
+                              ) ? (
                                 <span className='text-xs text-muted-foreground'>
                                   No actions
                                 </span>
@@ -1247,6 +1335,19 @@ export const PickupPage: React.FC = () => {
           ) : null}
         </>
       )}
+
+      <PickupPostOfficeInboundDialog
+        open={Boolean(inboundTrip)}
+        trip={inboundTrip}
+        orders={orders}
+        isConfirming={isConfirmingPostOfficeInbound}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInboundTrip(null);
+          }
+        }}
+        onConfirm={handleConfirmPostOfficeInbound}
+      />
 
       <PickupCheckinDetailDialog
         open={isCheckinDetailDialogOpen}

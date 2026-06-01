@@ -9,6 +9,7 @@ import React from 'react';
 import {
   CheckCircle2,
   Eye,
+  MapPin,
   PackageCheck,
   Plus,
   RefreshCw,
@@ -50,6 +51,8 @@ import {
   useConfirmHandoverManifestInboundMutation,
   useCreatePostOfficeHandoverManifestMutation,
   useDispatchPostOfficeHandoverManifestMutation,
+  useDriverCheckinHandoverManifestEndMutation,
+  useDriverCheckinHandoverManifestStartMutation,
   useGetFirstMileOrdersQuery,
   useGetHandoverManifestByIdQuery,
   useGetHandoverManifestsQuery,
@@ -57,6 +60,8 @@ import {
   useGetPostOfficeHandoverManifestByIdQuery,
   useGetPostOfficeHandoverManifestsQuery,
   useGetPostOfficesQuery,
+  useGetSecondMileRoutesQuery,
+  useGetSecondMileVehiclesQuery,
   useScanOutPostOfficeHandoverOrderMutation,
 } from '../../api';
 import type {
@@ -65,6 +70,8 @@ import type {
   HandoverManifestStatus,
   Hub,
   PostOffice,
+  SecondMileRoute,
+  SecondMileVehicle,
 } from '../../types';
 
 const PAGE_SIZE = 20;
@@ -95,7 +102,8 @@ const canManagePostOfficeHandover = (roles: string[]): boolean =>
 const canReceiveHubHandover = (roles: string[]): boolean =>
   roles.includes('TMS_ADMIN') ||
   roles.includes('TMS_HUB_MANAGER') ||
-  roles.includes('TMS_HUB_EMPLOYEE');
+  roles.includes('TMS_HUB_EMPLOYEE') ||
+  roles.includes('TMS_HUB_DRIVER');
 
 const getStatusBadgeVariant = (
   status?: HandoverManifestStatus
@@ -148,6 +156,50 @@ const isReadyForDispatch = (manifest: HandoverManifest): boolean => {
 };
 
 const normalizeScanCode = (value: string): string => value.trim();
+
+const padDatePart = (value: number): string => String(value).padStart(2, '0');
+
+const toDateTimeLocalValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const getDefaultDepartureTime = (): string => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 15);
+  return toDateTimeLocalValue(date);
+};
+
+const getDefaultArrivalTime = (): string => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 75);
+  return toDateTimeLocalValue(date);
+};
+
+const getBrowserLocation = (): Promise<{
+  latitude: number;
+  longitude: number;
+}> =>
+  new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('Geolocation is not available in this browser.'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }),
+      () => reject(new Error('Could not read the current location.')),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+  });
 
 interface DetailItemProps {
   label: string;
@@ -297,6 +349,10 @@ export function HandoverManifestListPage() {
 
   const [dispatchManifest, setDispatchManifest] =
     React.useState<HandoverManifest | null>(null);
+  const [dispatchRouteId, setDispatchRouteId] = React.useState('');
+  const [dispatchVehicleId, setDispatchVehicleId] = React.useState('');
+  const [dispatchDepartureAt, setDispatchDepartureAt] = React.useState('');
+  const [dispatchArrivalAt, setDispatchArrivalAt] = React.useState('');
   const [dispatchSealCode, setDispatchSealCode] = React.useState('');
   const [dispatchNote, setDispatchNote] = React.useState('');
 
@@ -393,6 +449,39 @@ export function HandoverManifestListPage() {
   const selectedCreatePostOffice = postOfficeOptions.find(
     (postOffice) => postOffice.id === Number(createPostOfficeId)
   );
+  const dispatchTargetHubId = dispatchManifest?.targetHubId;
+  const dispatchOriginPostOfficeCode = dispatchManifest?.originPostOfficeCode;
+
+  const { data: dispatchRoutesData, isFetching: isLoadingDispatchRoutes } =
+    useGetSecondMileRoutesQuery(
+      {
+        page: 0,
+        size: SELECT_PAGE_SIZE,
+        ...(dispatchTargetHubId ? { originHubId: dispatchTargetHubId } : {}),
+        destinationType: 'POST_OFFICE',
+        ...(dispatchOriginPostOfficeCode
+          ? { destinationPostOfficeCode: dispatchOriginPostOfficeCode }
+          : {}),
+        status: 'ACTIVE',
+      },
+      {
+        skip:
+          !dispatchManifest ||
+          !dispatchTargetHubId ||
+          !dispatchOriginPostOfficeCode,
+      }
+    );
+
+  const { data: dispatchVehiclesData, isFetching: isLoadingDispatchVehicles } =
+    useGetSecondMileVehiclesQuery(
+      {
+        page: 0,
+        size: SELECT_PAGE_SIZE,
+        ...(dispatchTargetHubId ? { hubId: dispatchTargetHubId } : {}),
+        status: 'ACTIVE',
+      },
+      { skip: !dispatchManifest || !dispatchTargetHubId }
+    );
 
   const { data: readyOrdersData, isFetching: isLoadingReadyOrders } =
     useGetFirstMileOrdersQuery(
@@ -444,6 +533,10 @@ export function HandoverManifestListPage() {
     useCancelPostOfficeHandoverManifestMutation();
   const [confirmInbound, { isLoading: isConfirmingInbound }] =
     useConfirmHandoverManifestInboundMutation();
+  const [driverCheckinStart, { isLoading: isDriverCheckingInStart }] =
+    useDriverCheckinHandoverManifestStartMutation();
+  const [driverCheckinEnd, { isLoading: isDriverCheckingInEnd }] =
+    useDriverCheckinHandoverManifestEndMutation();
 
   const manifestsData =
     effectiveMode === 'POST_OFFICE'
@@ -455,6 +548,21 @@ export function HandoverManifestListPage() {
       : isFetchingHubManifests;
   const manifests = manifestsData?.items ?? [];
   const readyOrders = readyOrdersData?.items ?? [];
+  const dispatchRoutes = dispatchRoutesData?.items ?? [];
+  const dispatchVehicles = dispatchVehiclesData?.items ?? [];
+  const dispatchRouteOptions = dispatchRoutes.map((route: SecondMileRoute) => ({
+    value: String(route.id),
+    label: `${route.routeCode} - ${route.routeName}`,
+  }));
+  const dispatchVehicleOptions = dispatchVehicles.map(
+    (vehicle: SecondMileVehicle) => ({
+      value: String(vehicle.id),
+      label: `${vehicle.licensePlate} (${vehicle.vehicleType})`,
+    })
+  );
+  const selectedDispatchRoute = dispatchRoutes.find(
+    (route) => route.id === Number(dispatchRouteId)
+  );
 
   const activeScanManifest = scanManifestDetail ?? scanManifest;
   const scanOrders = activeScanManifest?.orders ?? [];
@@ -496,6 +604,12 @@ export function HandoverManifestListPage() {
     setSelectedOrderCodes([]);
   }, [createPostOfficeId]);
 
+  React.useEffect(() => {
+    if (selectedDispatchRoute?.vehicleId) {
+      setDispatchVehicleId(String(selectedDispatchRoute.vehicleId));
+    }
+  }, [selectedDispatchRoute?.vehicleId]);
+
   const refetchActiveManifests = () => {
     if (effectiveMode === 'POST_OFFICE') {
       void refetchPostOfficeManifests();
@@ -528,6 +642,31 @@ export function HandoverManifestListPage() {
       return `${postOffice.code} - ${postOffice.name}`;
     }
     return postOfficeCode || (postOfficeId ? `#${postOfficeId}` : '--');
+  };
+
+  const resolveRouteLabel = (routeId?: number, routeCode?: string): string => {
+    if (routeCode) {
+      return routeCode;
+    }
+    if (!routeId) {
+      return '--';
+    }
+    const route = dispatchRoutes.find((item) => item.id === routeId);
+    return route ? `${route.routeCode} - ${route.routeName}` : `#${routeId}`;
+  };
+
+  const resolveVehicleLabel = (
+    vehicleId?: number,
+    licensePlate?: string
+  ): string => {
+    if (licensePlate) {
+      return licensePlate;
+    }
+    if (!vehicleId) {
+      return '--';
+    }
+    const vehicle = dispatchVehicles.find((item) => item.id === vehicleId);
+    return vehicle ? vehicle.licensePlate : `#${vehicleId}`;
   };
 
   const resetCreateForm = () => {
@@ -588,6 +727,18 @@ export function HandoverManifestListPage() {
 
   const handleOpenDispatch = (manifest: HandoverManifest) => {
     setDispatchManifest(manifest);
+    setDispatchRouteId(manifest.routeId ? String(manifest.routeId) : '');
+    setDispatchVehicleId(manifest.vehicleId ? String(manifest.vehicleId) : '');
+    setDispatchDepartureAt(
+      manifest.plannedDepartureAt
+        ? manifest.plannedDepartureAt.slice(0, 16)
+        : getDefaultDepartureTime()
+    );
+    setDispatchArrivalAt(
+      manifest.plannedArrivalAt
+        ? manifest.plannedArrivalAt.slice(0, 16)
+        : getDefaultArrivalTime()
+    );
     setDispatchSealCode(manifest.sealCode ?? '');
     setDispatchNote(manifest.note ?? '');
   };
@@ -636,11 +787,33 @@ export function HandoverManifestListPage() {
       notification.error('All orders must be scanned out before dispatch.');
       return;
     }
+    const routeId = Number(dispatchRouteId);
+    const vehicleId = Number(dispatchVehicleId);
+    if (!routeId) {
+      notification.error('Select a post office to hub route.');
+      return;
+    }
+    if (!vehicleId) {
+      notification.error('Select the route vehicle.');
+      return;
+    }
+    if (!dispatchDepartureAt || !dispatchArrivalAt) {
+      notification.error('Planned departure and arrival times are required.');
+      return;
+    }
+    if (new Date(dispatchArrivalAt) <= new Date(dispatchDepartureAt)) {
+      notification.error('Planned arrival must be after departure.');
+      return;
+    }
 
     try {
       await dispatchManifestRun({
         manifestId: dispatchManifest.id,
         body: {
+          vehicle_id: vehicleId,
+          route_id: routeId,
+          planned_departure_at: dispatchDepartureAt,
+          planned_arrival_at: dispatchArrivalAt,
           ...(dispatchSealCode.trim()
             ? { seal_code: dispatchSealCode.trim() }
             : {}),
@@ -649,6 +822,10 @@ export function HandoverManifestListPage() {
       }).unwrap();
       notification.success('Manifest dispatched to hub successfully.');
       setDispatchManifest(null);
+      setDispatchRouteId('');
+      setDispatchVehicleId('');
+      setDispatchDepartureAt('');
+      setDispatchArrivalAt('');
       setDispatchSealCode('');
       setDispatchNote('');
       void refetchPostOfficeManifests();
@@ -731,6 +908,46 @@ export function HandoverManifestListPage() {
       void refetchHubManifests();
     } catch (error) {
       notification.error('Failed to confirm inbound receiving.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDriverDepartureCheckin = async (manifest: HandoverManifest) => {
+    if (!manifest.id) {
+      return;
+    }
+
+    try {
+      const location = await getBrowserLocation();
+      await driverCheckinStart({
+        manifestId: manifest.id,
+        body: location,
+      }).unwrap();
+      notification.success('Driver departure check-in recorded.');
+      void refetchHubManifests();
+    } catch (error) {
+      notification.error('Failed to check in departure.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDriverArrivalCheckin = async (manifest: HandoverManifest) => {
+    if (!manifest.id) {
+      return;
+    }
+
+    try {
+      const location = await getBrowserLocation();
+      await driverCheckinEnd({
+        manifestId: manifest.id,
+        body: location,
+      }).unwrap();
+      notification.success('Driver arrival check-in recorded.');
+      void refetchHubManifests();
+    } catch (error) {
+      notification.error('Failed to check in arrival.', {
         description: getErrorMessage(error),
       });
     }
@@ -874,6 +1091,8 @@ export function HandoverManifestListPage() {
                   <TableHead>Manifest</TableHead>
                   <TableHead>Post office</TableHead>
                   <TableHead>Hub</TableHead>
+                  <TableHead>Transport</TableHead>
+                  <TableHead>Planned</TableHead>
                   <TableHead>Orders</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Seal</TableHead>
@@ -886,7 +1105,7 @@ export function HandoverManifestListPage() {
                 {manifests.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={11}
                       className='py-8 text-center text-muted-foreground'
                     >
                       {isFetching
@@ -913,6 +1132,35 @@ export function HandoverManifestListPage() {
                         </TableCell>
                         <TableCell>
                           {resolveHubLabel(manifest.targetHubId)}
+                        </TableCell>
+                        <TableCell>
+                          <div className='space-y-1 text-xs'>
+                            <div>
+                              Route:{' '}
+                              {resolveRouteLabel(
+                                manifest.routeId,
+                                manifest.routeCode
+                              )}
+                            </div>
+                            <div>
+                              Vehicle:{' '}
+                              {resolveVehicleLabel(
+                                manifest.vehicleId,
+                                manifest.vehicleLicensePlate
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className='space-y-1 text-xs'>
+                            <div>
+                              Depart{' '}
+                              {formatDateTime(manifest.plannedDepartureAt)}
+                            </div>
+                            <div>
+                              Arrive {formatDateTime(manifest.plannedArrivalAt)}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>{totalOrders}</TableCell>
                         <TableCell>
@@ -992,13 +1240,44 @@ export function HandoverManifestListPage() {
 
                             {effectiveMode === 'HUB' &&
                             manifest.status === 'OUTBOUND_CONFIRMED' ? (
-                              <Button
-                                size='sm'
-                                onClick={() => handleOpenReceive(manifest)}
-                              >
-                                <CheckCircle2 className='mr-1 h-3.5 w-3.5' />
-                                Receive
-                              </Button>
+                              <>
+                                {!manifest.driverStartCheckinAt ? (
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    disabled={isDriverCheckingInStart}
+                                    onClick={() =>
+                                      void handleDriverDepartureCheckin(
+                                        manifest
+                                      )
+                                    }
+                                  >
+                                    <MapPin className='mr-1 h-3.5 w-3.5' />
+                                    Depart check-in
+                                  </Button>
+                                ) : null}
+                                {manifest.driverStartCheckinAt &&
+                                !manifest.driverEndCheckinAt ? (
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    disabled={isDriverCheckingInEnd}
+                                    onClick={() =>
+                                      void handleDriverArrivalCheckin(manifest)
+                                    }
+                                  >
+                                    <MapPin className='mr-1 h-3.5 w-3.5' />
+                                    Arrival check-in
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  size='sm'
+                                  onClick={() => handleOpenReceive(manifest)}
+                                >
+                                  <CheckCircle2 className='mr-1 h-3.5 w-3.5' />
+                                  Receive
+                                </Button>
+                              </>
                             ) : null}
                           </div>
                         </TableCell>
@@ -1259,12 +1538,16 @@ export function HandoverManifestListPage() {
         onOpenChange={(open) => {
           if (!open) {
             setDispatchManifest(null);
+            setDispatchRouteId('');
+            setDispatchVehicleId('');
+            setDispatchDepartureAt('');
+            setDispatchArrivalAt('');
             setDispatchSealCode('');
             setDispatchNote('');
           }
         }}
       >
-        <DialogContent className='sm:max-w-xl'>
+        <DialogContent className='sm:max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Dispatch manifest to hub</DialogTitle>
             <DialogDescription>
@@ -1284,6 +1567,62 @@ export function HandoverManifestListPage() {
                   dispatchManifest
                 )}`}
               />
+            </div>
+
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-route'>Route *</Label>
+                <TmsCombobox
+                  id='dispatch-route'
+                  value={dispatchRouteId}
+                  onValueChange={setDispatchRouteId}
+                  options={dispatchRouteOptions}
+                  placeholder={
+                    isLoadingDispatchRoutes
+                      ? 'Loading routes...'
+                      : 'Select route'
+                  }
+                  emptyText='No matching hub to post office routes'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-vehicle'>Vehicle *</Label>
+                <TmsCombobox
+                  id='dispatch-vehicle'
+                  value={dispatchVehicleId}
+                  onValueChange={setDispatchVehicleId}
+                  options={dispatchVehicleOptions}
+                  placeholder={
+                    isLoadingDispatchVehicles
+                      ? 'Loading vehicles...'
+                      : 'Select vehicle'
+                  }
+                  emptyText='No active vehicles found'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-departure'>Planned departure *</Label>
+                <Input
+                  id='dispatch-departure'
+                  type='datetime-local'
+                  value={dispatchDepartureAt}
+                  onChange={(event) =>
+                    setDispatchDepartureAt(event.target.value)
+                  }
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-arrival'>Planned arrival *</Label>
+                <Input
+                  id='dispatch-arrival'
+                  type='datetime-local'
+                  value={dispatchArrivalAt}
+                  onChange={(event) => setDispatchArrivalAt(event.target.value)}
+                />
+              </div>
             </div>
 
             <div className='space-y-2'>
@@ -1315,6 +1654,10 @@ export function HandoverManifestListPage() {
               disabled={
                 !dispatchManifest ||
                 !isReadyForDispatch(dispatchManifest) ||
+                !dispatchRouteId ||
+                !dispatchVehicleId ||
+                !dispatchDepartureAt ||
+                !dispatchArrivalAt ||
                 isDispatching
               }
               onClick={() => void handleDispatchManifest()}
@@ -1458,6 +1801,20 @@ export function HandoverManifestListPage() {
                   value={resolveHubLabel(detailManifest.targetHubId)}
                 />
                 <DetailItem
+                  label='Route'
+                  value={resolveRouteLabel(
+                    detailManifest.routeId,
+                    detailManifest.routeCode
+                  )}
+                />
+                <DetailItem
+                  label='Vehicle'
+                  value={resolveVehicleLabel(
+                    detailManifest.vehicleId,
+                    detailManifest.vehicleLicensePlate
+                  )}
+                />
+                <DetailItem
                   label='Origin post office'
                   value={resolvePostOfficeLabel(
                     detailManifest.originPostOfficeId,
@@ -1485,8 +1842,40 @@ export function HandoverManifestListPage() {
                   value={formatDateTime(detailManifest.dispatchedAt)}
                 />
                 <DetailItem
+                  label='Planned departure'
+                  value={formatDateTime(detailManifest.plannedDepartureAt)}
+                />
+                <DetailItem
+                  label='Planned arrival'
+                  value={formatDateTime(detailManifest.plannedArrivalAt)}
+                />
+                <DetailItem
                   label='Inbound confirmed'
                   value={formatDateTime(detailManifest.inboundConfirmedAt)}
+                />
+                <DetailItem
+                  label='Departure check-in'
+                  value={
+                    detailManifest.driverStartCheckinAt
+                      ? `${formatDateTime(
+                          detailManifest.driverStartCheckinAt
+                        )} (${Math.round(
+                          detailManifest.driverStartDistanceM ?? 0
+                        )}m)`
+                      : '--'
+                  }
+                />
+                <DetailItem
+                  label='Arrival check-in'
+                  value={
+                    detailManifest.driverEndCheckinAt
+                      ? `${formatDateTime(
+                          detailManifest.driverEndCheckinAt
+                        )} (${Math.round(
+                          detailManifest.driverEndDistanceM ?? 0
+                        )}m)`
+                      : '--'
+                  }
                 />
               </div>
 
