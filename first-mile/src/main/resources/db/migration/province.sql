@@ -14,6 +14,9 @@ CREATE TABLE provinces (
 
 CREATE UNIQUE INDEX provinces_province_code_unique ON provinces (province_code);
 
+CREATE UNIQUE INDEX provinces_country_code_unique ON provinces (country_code);
+
+
 INSERT INTO provinces (id, province_code, name, short_name, code, place_type, country_code) VALUES
                                                                                                 (1, '01', 'Thành phố Hà Nội', 'Thành phố Hà Nội', 'HNI', 'Thành phố Trung Ương', 'VN'),
                                                                                                 (2, '04', 'Cao Bằng', 'Cao Bằng', 'CBG', 'Tỉnh', 'VN'),
