@@ -164,14 +164,6 @@ export function PMProjectDependenciesFilters({
                 <Badge variant='secondary'>{activeCount}</Badge>
               ) : null}
             </DialogTitle>
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
           </div>
         </DialogHeader>
 

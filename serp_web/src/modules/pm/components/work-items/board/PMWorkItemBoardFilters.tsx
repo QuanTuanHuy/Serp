@@ -130,8 +130,6 @@ export function PMWorkItemBoardFilters({
     onUpdate({ [key]: serializeNumberList(nextValues) });
   };
 
-  const close = () => onOpenChange(false);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-4xl gap-0 p-0 sm:max-h-[85vh] sm:max-w-4xl'>
@@ -149,9 +147,6 @@ export function PMWorkItemBoardFilters({
                 Narrow the board without filtering by status columns.
               </p>
             </div>
-            <Button type='button' variant='ghost' size='sm' onClick={close}>
-              Close
-            </Button>
           </div>
         </DialogHeader>
 

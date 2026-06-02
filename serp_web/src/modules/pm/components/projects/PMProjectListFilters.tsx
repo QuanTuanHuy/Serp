@@ -98,14 +98,6 @@ export function PMProjectListFilters({
                 Pick a criterion on the left, then choose a value.
               </p>
             </div>
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
           </div>
         </DialogHeader>
 
