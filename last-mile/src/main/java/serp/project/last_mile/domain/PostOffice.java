@@ -1,0 +1,114 @@
+package serp.project.last_mile.domain;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.locationtech.jts.geom.Point;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.last_mile.enums.PostOfficeStatus;
+import serp.project.last_mile.exception.AppException;
+import serp.project.last_mile.exception.ErrorCode;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+@Setter
+@Getter
+@Entity
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "post_offices")
+@EntityListeners(AuditingEntityListener.class)
+public class PostOffice extends AbstractAudit {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "code", unique = true, nullable = false)
+    private String code;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "province_code", nullable = false)
+    private String provinceCode;
+
+    @Column(name = "ward_code", nullable = false)
+    private String wardCode;
+
+    @Column(name = "address_detail", nullable = false)
+    private String addressDetail;
+
+    @Column(name = "phone_number", length = 15)
+    private String phoneNumber;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(name = "operational_start_date")
+    private LocalDate operationalStartDate;
+
+    @Column(name = "operational_end_date")
+    private LocalDate operationalEndDate;
+
+    @Column(name = "working_start_time")
+    private LocalTime workingStartTime;
+
+    @Column(name = "working_end_time")
+    private LocalTime workingEndTime;
+
+    @Column(name = "location", columnDefinition = "geography(Point, 4326)")
+    private Point location;
+
+    @Column(name = "service_radius_m", nullable = false)
+    @Builder.Default
+    private Integer serviceRadiusM = 5000;
+
+    // @Column(name = "coverage_polygon", columnDefinition = "geometry(Polygon,4326)")
+    // private Polygon coveragePolygon;
+
+    @Column(name = "daily_capacity", nullable = false)
+    @Builder.Default
+    private Integer dailyCapacity = 0;
+
+    @Column(name = "current_load", nullable = false)
+    @Builder.Default
+    private Integer currentLoad = 0;
+
+    @Column(name = "priority", nullable = false)
+    @Builder.Default
+    private Integer priority = 100;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private PostOfficeStatus status = PostOfficeStatus.INACTIVE;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
+
+    /**
+     * Hub id in second-mile (same tenant); optional — post office managed under a hub.
+     */
+    @Column(name = "hub_id")
+    private Long hubId;
+
+    public boolean isActive() {
+        return PostOfficeStatus.ACTIVE.equals(status);
+    }
+
+    public boolean canAccept(int incomingOrders) {
+        if (incomingOrders <= 0) {
+            return false;
+        }
+        return isActive() && (this.currentLoad + incomingOrders <= this.dailyCapacity);
+    }
+
+    public void addLoad(int incomingOrders) {
+        if (!canAccept(incomingOrders)) {
+            throw new AppException(ErrorCode.POST_OFFICE_OVERLOADED);
+        }
+        this.currentLoad += incomingOrders;
+    }
+}

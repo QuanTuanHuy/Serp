@@ -6,6 +6,8 @@ import org.springframework.http.HttpStatusCode;
 
 @Getter
 public enum ErrorCode {
+    // Lỗi liên quan đến PostOffice (10xx)
+    POST_OFFICE_OVERLOADED(1001, "error.1001", HttpStatus.BAD_REQUEST),
 
     RATE_LIMIT_EXCEEDED(9429, "error.9429", HttpStatus.TOO_MANY_REQUESTS),
 
