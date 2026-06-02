@@ -120,6 +120,10 @@ external:
       host: localhost
       port: "8097"
       timeout: 15s
+    tmsOrderService:
+      host: localhost
+      port: "8099"
+      timeout: 15s
     notificationService:
       host: localhost
       port: "8090"
