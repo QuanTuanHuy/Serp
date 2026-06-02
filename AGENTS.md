@@ -9,6 +9,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
   - `api_gateway/AGENTS.md`
   - `discuss_service/AGENTS.md`
   - `first-mile/AGENTS.md` (TMS first-mile backend)
+  - `last-mile/AGENTS.md` (TMS last-mile backend)
   - `second-mile/AGENTS.md` (TMS second-mile backend)
   - `tms-billing-service/AGENTS.md` (TMS billing / shipping fee)
   - `notification_service/AGENTS.md`
@@ -21,7 +22,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
 - Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
 - Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
 - Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
-- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `tms-billing-service/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `last-mile/`, `second-mile/`, `tms-billing-service/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
 - Shared Java libraries: `serp_java_platform/`.
 - Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
@@ -57,7 +58,7 @@ npx prettier --check src/path/to/file.tsx
 - There is currently no `test` script and no checked-in frontend test framework, so there is no supported single-test command today.
 
 ### Spring Boot services
-Applies to `account`, `crm`, `discuss_service`, `first-mile`, `second-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
+Applies to `account`, `crm`, `discuss_service`, `first-mile`, `last-mile`, `second-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
 Run from the service directory.
 ```bash
 ./run-dev.sh                    # when present
@@ -70,7 +71,7 @@ Run from the service directory.
 ./mvnw -DskipTests clean package
 ```
 - On Windows CMD or PowerShell, use `mvnw.cmd`.
-- `sales/`, `first-mile/`, and `second-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
+- `sales/`, `first-mile/`, `last-mile/`, and `second-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
 - Most services do not have a dedicated lint plugin, so `clean compile` and `test` are the practical quality gate.
 
 ### Shared Java platform (`serp_java_platform`)
@@ -137,7 +138,7 @@ poetry run alembic revision --autogenerate -m "message"
 Author: QuanTuanHuy
 Description: Part of Serp Project
 ```
-- **TMS modules override the default author** — do **not** use `QuanTuanHuy` in `first-mile/`, `second-mile/`, `tms-billing-service/`, or `serp_web/src/modules/first-mile/`. Those guides require `Author: Nguyen The Anh` (see each module’s `AGENTS.md`). When editing an existing TMS file, **preserve** its current `Author:` line; never replace `Nguyen The Anh` with `QuanTuanHuy`.
+- **TMS modules override the default author** — do **not** use `QuanTuanHuy` in `first-mile/`, `last-mile/`, `second-mile/`, `tms-billing-service/`, or `serp_web/src/modules/first-mile/`. Those guides require `Author: Nguyen The Anh` (see each module’s `AGENTS.md`). When editing an existing TMS file, **preserve** its current `Author:` line; never replace `Nguyen The Anh` with `QuanTuanHuy`.
 - Add comments only for non-obvious business rules or tricky control flow.
 
 ### Imports
