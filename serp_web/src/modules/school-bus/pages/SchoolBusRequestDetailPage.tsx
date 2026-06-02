@@ -50,6 +50,7 @@ export function SchoolBusRequestDetailPage({
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
     useGetTransportRequestHistoryQuery(requestId);
   const [rejectOpen, setRejectOpen] = React.useState(false);
+  const [fitAllKey, setFitAllKey] = React.useState(0);
   const detail = data?.data;
 
   const handleApprove = async () => {
@@ -282,9 +283,12 @@ export function SchoolBusRequestDetailPage({
                   return acc;
                 }, [])}
                 selectedSchoolId={request.schoolId}
+                fitAllKey={fitAllKey}
                 className='h-full w-full'
               />
             }
+            onFitAll={() => setFitAllKey((k) => k + 1)}
+            canFitAll={true}
             legend={<SchoolBusMapLegend />}
             panel={
               <div className='space-y-3'>

@@ -17,14 +17,14 @@ import type { SchoolBusMapLocation } from '../../types';
 import { NominatimSearchBox } from './NominatimSearchBox';
 import { SchoolBusMapLegend } from './SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from './SchoolBusMapWorkspace';
-import { createSchoolBusMarkerIcon } from './mapIcons';
+import { createSchoolBusMarkerIcon, type MarkerKind } from './mapIcons';
 
 interface LocationValue {
   latitude?: number | null;
   longitude?: number | null;
 }
 
-interface ReferenceMarker {
+export interface ReferenceMarker {
   id: string | number;
   name: string;
   address?: string | null;
@@ -33,12 +33,13 @@ interface ReferenceMarker {
   type: 'school' | 'pickup' | 'depot';
 }
 
-interface LocationPickerMapClientProps {
+export interface LocationPickerMapClientProps {
   value?: LocationValue | null;
   onChange: (next: { latitude: number; longitude: number }) => void;
   onAddressResolved?: (address: string) => void;
   referenceMarkers?: ReferenceMarker[];
   title?: string;
+  kind?: MarkerKind;
 }
 
 export default function LocationPickerMapClient({
@@ -47,8 +48,10 @@ export default function LocationPickerMapClient({
   onAddressResolved,
   referenceMarkers = [],
   title = 'Pin location',
+  kind = 'pickup',
 }: LocationPickerMapClientProps) {
   const [reverseLocation] = useLazyReverseMapLocationQuery();
+  const [fitKey, setFitKey] = React.useState(0);
   const selectedLocation =
     typeof value?.latitude === 'number' && typeof value?.longitude === 'number'
       ? ([value.latitude, value.longitude] as [number, number])
@@ -100,8 +103,10 @@ export default function LocationPickerMapClient({
       <SchoolBusMapWorkspace
         flat
         defaultPreset='map-focus'
-        allowFullscreen={false}
+        allowFullscreen={true}
         mapHeightClassName='h-[320px]'
+        onFitAll={() => setFitKey((k) => k + 1)}
+        canFitAll={true}
         map={
           <LeafletMapShell
             center={
@@ -120,6 +125,7 @@ export default function LocationPickerMapClient({
             <LocationPickerViewport
               selectedLocation={selectedLocation}
               referenceMarkers={referenceMarkers}
+              fitKey={fitKey}
             />
             <LocationPickerEvents onLocationChange={handleLocationChange} />
 
@@ -156,7 +162,7 @@ export default function LocationPickerMapClient({
               <Marker
                 position={selectedLocation}
                 draggable
-                icon={createSchoolBusMarkerIcon('pickup')}
+                icon={createSchoolBusMarkerIcon(kind)}
                 eventHandlers={{
                   dragend: (event) => {
                     const next = event.target.getLatLng();
@@ -210,9 +216,11 @@ function LocationPickerEvents({
 function LocationPickerViewport({
   selectedLocation,
   referenceMarkers,
+  fitKey,
 }: {
   selectedLocation: [number, number] | null;
   referenceMarkers: ReferenceMarker[];
+  fitKey?: number;
 }) {
   const map = useMap();
 
@@ -245,7 +253,7 @@ function LocationPickerViewport({
     }
 
     map.fitBounds(latLngBounds(coordinates), { padding: [32, 32] });
-  }, [map, referenceMarkers, selectedLocation]);
+  }, [map, referenceMarkers, selectedLocation, fitKey]);
 
   return null;
 }

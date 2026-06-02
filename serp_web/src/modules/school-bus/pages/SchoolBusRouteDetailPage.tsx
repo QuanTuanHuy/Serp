@@ -77,6 +77,7 @@ export function SchoolBusRouteDetailPage({
   const [createTripFromRoute, { isLoading: creatingTrip }] =
     useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
+  const [fitKey, setFitKey] = React.useState(0);
   const { data: routePathData } = useGetRoutePathQuery(routeId);
 
   const detail = data?.data;
@@ -425,7 +426,7 @@ export function SchoolBusRouteDetailPage({
           {/* Right Column */}
           <div className='flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start'>
             
-            {/* Route Map Card with Overlay Legend */}
+            {/* Route Map Card with Workspace Wrapper */}
             <div className='bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col'>
               <div className='p-4 border-b border-slate-100 flex items-center justify-between'>
                 <h3 className='font-bold text-slate-900 text-sm flex items-center gap-2'>
@@ -438,18 +439,24 @@ export function SchoolBusRouteDetailPage({
                   </span>
                 )}
               </div>
-              <div className='h-[420px] w-full relative bg-slate-50'>
-                <RouteMap
-                  route={detail.route}
-                  stops={detail.stops}
-                  assignment={detail.assignment}
-                  routePath={routePathData?.data}
-                  className='h-full w-full'
+              <div className='w-full bg-slate-50'>
+                <SchoolBusMapWorkspace
+                  flat
+                  mapHeightClassName='h-[420px]'
+                  map={
+                    <RouteMap
+                      route={detail.route}
+                      stops={detail.stops}
+                      assignment={detail.assignment}
+                      routePath={routePathData?.data}
+                      className='h-full w-full'
+                      fitKey={fitKey}
+                    />
+                  }
+                  legend={<SchoolBusMapLegend />}
+                  onFitAll={() => setFitKey((k) => k + 1)}
+                  canFitAll={true}
                 />
-                {/* Embedded legend overlay */}
-                <div className='absolute bottom-3 left-3 z-[40] bg-white/95 backdrop-blur shadow-md rounded-xl p-2.5 border border-slate-150 max-w-[220px]'>
-                  <SchoolBusMapLegend />
-                </div>
               </div>
             </div>
 

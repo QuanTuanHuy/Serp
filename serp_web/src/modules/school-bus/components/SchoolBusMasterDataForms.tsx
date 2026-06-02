@@ -51,6 +51,7 @@ import { SHIFT_TYPE_OPTIONS } from '../constants';
 import { toCoordinateString } from '../utils';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 import { LocationPickerMap } from './map/LocationPickerMap';
+import { useGetActiveSchoolPickupPointsQuery } from '../api/schoolBusApi';
 
 const schoolSchema = z.object({
   name: z.string().min(1, 'School name is required'),
@@ -238,6 +239,7 @@ export function SchoolFormDialog({
         <FormSectionHeader title='4. School location map' />
         <div className='col-span-full'>
           <LocationPickerMap
+            kind='school'
             value={{
               latitude: form.watch('latitude')
                 ? Number(form.watch('latitude'))
@@ -246,7 +248,7 @@ export function SchoolFormDialog({
                 ? Number(form.watch('longitude'))
                 : null,
             }}
-            onChange={({ latitude, longitude }) => {
+            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -254,7 +256,7 @@ export function SchoolFormDialog({
                 shouldDirty: true,
               });
             }}
-            onAddressResolved={(address) =>
+            onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
             title='School location'
@@ -372,6 +374,7 @@ export function PickupPointFormDialog({
         <FormSectionHeader title='4. Pickup point location map' />
         <div className='col-span-full'>
           <LocationPickerMap
+            kind='pickup'
             value={{
               latitude: form.watch('latitude')
                 ? Number(form.watch('latitude'))
@@ -396,7 +399,7 @@ export function PickupPointFormDialog({
                   type: 'school' as const,
                 }))
             }
-            onChange={({ latitude, longitude }) => {
+            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -404,7 +407,7 @@ export function PickupPointFormDialog({
                 shouldDirty: true,
               });
             }}
-            onAddressResolved={(address) =>
+            onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
             title='Pickup point location'
@@ -494,6 +497,7 @@ export function DepotFormDialog({
         <FormSectionHeader title='Map picker' />
         <div className='md:col-span-2'>
           <LocationPickerMap
+            kind='depot'
             value={{
               latitude: form.watch('latitude')
                 ? Number(form.watch('latitude'))
@@ -502,7 +506,7 @@ export function DepotFormDialog({
                 ? Number(form.watch('longitude'))
                 : null,
             }}
-            onChange={({ latitude, longitude }) => {
+            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -510,7 +514,7 @@ export function DepotFormDialog({
                 shouldDirty: true,
               });
             }}
-            onAddressResolved={(address) =>
+            onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
             title='Depot location'
@@ -729,30 +733,34 @@ export function StudentFormDialog({
 
   // Watch schoolId to filter pickup/dropoff by school
   const selectedSchoolId = form.watch('schoolId');
+  const numericSchoolId = selectedSchoolId ? Number(selectedSchoolId) : 0;
 
   // When school changes, clear pickup/dropoff selections
-  const prevSchoolRef = React.useRef(selectedSchoolId);
+  const prevSchoolRef = React.useRef(numericSchoolId);
   React.useEffect(() => {
-    if (prevSchoolRef.current !== selectedSchoolId && prevSchoolRef.current !== 0) {
+    if (prevSchoolRef.current !== numericSchoolId && prevSchoolRef.current !== 0) {
       form.setValue('pickupPointId', '');
       form.setValue('defaultDropoffPointId', '');
     }
-    prevSchoolRef.current = selectedSchoolId;
-  }, [selectedSchoolId, form]);
+    prevSchoolRef.current = numericSchoolId;
+  }, [numericSchoolId, form]);
+
+  // Fetch active school pickup point links from backend dynamically when school changes
+  const { data: activeLinksData, isFetching } = useGetActiveSchoolPickupPointsQuery(
+    numericSchoolId,
+    { skip: !numericSchoolId }
+  );
+  const activeSchoolPickupPoints = activeLinksData?.data ?? [];
 
   // Filter linked pickup points by the selected school
   const linkedPointIds = React.useMemo(() => {
-    if (!selectedSchoolId) return new Set<number>();
-    return new Set(
-      schoolPickupPoints
-        .filter((sp) => sp.schoolId === selectedSchoolId)
-        .map((sp) => sp.pickupPointId)
-    );
-  }, [schoolPickupPoints, selectedSchoolId]);
+    if (!numericSchoolId) return new Set<number>();
+    return new Set(activeSchoolPickupPoints.map((sp) => sp.pickupPointId));
+  }, [activeSchoolPickupPoints, numericSchoolId]);
 
   // Pickup options: linked points with usage PICKUP_ONLY or PICKUP_DROPOFF
   const pickupOptions = React.useMemo(() => {
-    if (!selectedSchoolId) return [];
+    if (!numericSchoolId) return [];
     return pickupPoints
       .filter(
         (pp) =>
@@ -760,11 +768,11 @@ export function StudentFormDialog({
           (pp.usageType === 'PICKUP_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
       )
       .map((pp) => ({ value: String(pp.id), label: pp.name }));
-  }, [pickupPoints, linkedPointIds, selectedSchoolId]);
+  }, [pickupPoints, linkedPointIds, numericSchoolId]);
 
   // Dropoff options: linked points with usage DROPOFF_ONLY or PICKUP_DROPOFF
   const dropoffOptions = React.useMemo(() => {
-    if (!selectedSchoolId) return [];
+    if (!numericSchoolId) return [];
     return pickupPoints
       .filter(
         (pp) =>
@@ -772,9 +780,9 @@ export function StudentFormDialog({
           (pp.usageType === 'DROPOFF_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
       )
       .map((pp) => ({ value: String(pp.id), label: pp.name }));
-  }, [pickupPoints, linkedPointIds, selectedSchoolId]);
+  }, [pickupPoints, linkedPointIds, numericSchoolId]);
 
-  const noSchoolSelected = !selectedSchoolId;
+  const noSchoolSelected = !numericSchoolId;
 
   return (
     <SchoolBusFormDialog
@@ -869,18 +877,30 @@ export function StudentFormDialog({
             name='pickupPointId'
             label='Default pickup point'
             allowEmpty
-            emptyLabel={noSchoolSelected ? 'Select a school first' : 'No pickup point'}
+            emptyLabel={
+              isFetching
+                ? 'Loading pickup points...'
+                : noSchoolSelected
+                  ? 'Select a school first'
+                  : 'No pickup point'
+            }
             options={pickupOptions}
-            disabled={noSchoolSelected}
+            disabled={noSchoolSelected || isFetching}
           />
           <SelectField
             form={form}
             name='defaultDropoffPointId'
             label='Default drop-off point'
             allowEmpty
-            emptyLabel={noSchoolSelected ? 'Select a school first' : 'No drop-off point'}
+            emptyLabel={
+              isFetching
+                ? 'Loading drop-off points...'
+                : noSchoolSelected
+                  ? 'Select a school first'
+                  : 'No drop-off point'
+            }
             options={dropoffOptions}
-            disabled={noSchoolSelected}
+            disabled={noSchoolSelected || isFetching}
           />
         </div>
         <TextareaField form={form} name='homeAddress' label='Home address' />

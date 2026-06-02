@@ -12,6 +12,7 @@ import { PlanningMap } from '../components/map/PlanningMap';
 import { MapToolbar } from '../components/map/MapToolbar';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -397,38 +398,30 @@ export default function SchoolBusRoutePlanningPage() {
                 routes={activeSession.totalRoutes}
               />
             )}
-            {/* Toolbar overlay */}
-            <div
-              className='absolute right-4 z-[1000]'
-              style={{ top: activeSession ? '52px' : '12px' }}
-            >
-              <MapToolbar
-                onFitAll={handleFitAll}
-                onFitRoute={handleFitRoute}
-                canFitAll={canFitAll}
-                canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
-                isExpanded={true}
-                onToggleExpand={() => setIsMapExpanded(false)}
-              />
-            </div>
-
-            {/* Map legend overlay */}
-            {hasMapData && (
-              <div className='absolute left-4 bottom-4 z-[1000]'>
-                <SchoolBusMapLegend defaultCollapsed={false} />
-              </div>
-            )}
-
-            <PlanningMap
-              school={school}
-              pickupPoints={mapPickupPoints}
-              selectedRouteStops={selectedRouteStops}
-              selectedRoutePath={selectedRoutePath}
-              depots={depots}
-              fitTarget={fitTarget}
-              fitKey={fitKey}
-              isMapExpanded={true}
-              className='h-full w-full'
+            <SchoolBusMapWorkspace
+              flat
+              mapHeightClassName='h-full'
+              isExpanded={true}
+              onToggleExpand={() => setIsMapExpanded(false)}
+              map={
+                <PlanningMap
+                  school={school}
+                  pickupPoints={mapPickupPoints}
+                  selectedRouteStops={selectedRouteStops}
+                  selectedRoutePath={selectedRoutePath}
+                  depots={depots}
+                  fitTarget={fitTarget}
+                  fitKey={fitKey}
+                  isMapExpanded={true}
+                  className='h-full w-full'
+                />
+              }
+              legend={hasMapData ? <SchoolBusMapLegend defaultCollapsed={false} /> : undefined}
+              onFitAll={handleFitAll}
+              onFitRoute={handleFitRoute}
+              canFitAll={canFitAll}
+              canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
+              fitRouteLabel='Fit Route'
             />
           </div>
         </div>
@@ -499,37 +492,32 @@ export default function SchoolBusRoutePlanningPage() {
             )}
 
             {/* Map area with toolbar overlay */}
+            {/* Map area with workspace wrapper */}
             <div className='relative flex-1 overflow-hidden'>
-              {/* Toolbar — top-right overlay */}
-              <div className='absolute right-3 top-3 z-[1000]'>
-                <MapToolbar
-                  onFitAll={handleFitAll}
-                  onFitRoute={handleFitRoute}
-                  canFitAll={canFitAll}
-                  canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
-                  isExpanded={false}
-                  onToggleExpand={() => setIsMapExpanded(true)}
-                />
-              </div>
-
-              {/* Map legend overlay */}
-              {hasMapData && (
-                <div className='absolute left-3 bottom-3 z-[1000]'>
-                  <SchoolBusMapLegend defaultCollapsed={true} />
-                </div>
-              )}
-
-              {/* Map is always rendered so Leaflet initialises; empty-state overlays when no data yet */}
-              <PlanningMap
-                school={school}
-                pickupPoints={mapPickupPoints}
-                selectedRouteStops={selectedRouteStops}
-                selectedRoutePath={selectedRoutePath}
-                depots={depots}
-                fitTarget={fitTarget}
-                fitKey={fitKey}
-                isMapExpanded={false}
-                className='h-full w-full'
+              <SchoolBusMapWorkspace
+                flat
+                mapHeightClassName='h-full'
+                isExpanded={false}
+                onToggleExpand={() => setIsMapExpanded(true)}
+                map={
+                  <PlanningMap
+                    school={school}
+                    pickupPoints={mapPickupPoints}
+                    selectedRouteStops={selectedRouteStops}
+                    selectedRoutePath={selectedRoutePath}
+                    depots={depots}
+                    fitTarget={fitTarget}
+                    fitKey={fitKey}
+                    isMapExpanded={false}
+                    className='h-full w-full'
+                  />
+                }
+                legend={hasMapData ? <SchoolBusMapLegend defaultCollapsed={true} /> : undefined}
+                onFitAll={handleFitAll}
+                onFitRoute={handleFitRoute}
+                canFitAll={canFitAll}
+                canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
+                fitRouteLabel='Fit Route'
               />
               {!hasMapData && (
                 <div className='absolute inset-0 z-[500]'>
