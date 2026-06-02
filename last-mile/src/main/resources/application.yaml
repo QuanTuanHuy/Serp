@@ -62,14 +62,6 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
-payment:
-  service:
-    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
-    gateway-code: ${PAYMENT_GATEWAY_CODE:zalopay}
-    create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
-    query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
-    redirect-url: ${PAYMENT_REDIRECT_URL:http://localhost:3000/payment/result}
-
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}
   api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
