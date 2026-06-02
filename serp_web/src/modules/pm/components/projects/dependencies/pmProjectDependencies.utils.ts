@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - PM dependency view helpers
  */
 
-import { MarkerType, type Edge, type Node } from 'reactflow';
+import { MarkerType, Position, type Edge, type Node } from 'reactflow';
 import {
   countActiveFilters,
   formatDate,
@@ -89,47 +89,63 @@ export function buildDependencyFlowElements(
       data: {
         label: `${node.key} - ${node.summary}`,
       },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
       style: {
         width: 220,
         borderRadius: 8,
         border: node.hasCycle
-          ? '1px solid hsl(var(--destructive))'
+          ? '1px solid var(--destructive)'
           : node.outsideFilter
-            ? '1px dashed hsl(var(--muted-foreground))'
-            : '1px solid hsl(var(--border))',
+            ? '1px dashed var(--muted-foreground)'
+            : '1px solid var(--border)',
         background: node.hasCycle
-          ? 'hsl(var(--destructive) / 0.08)'
+          ? 'color-mix(in oklch, var(--destructive) 10%, var(--background))'
           : node.outsideFilter
-            ? 'hsl(var(--muted) / 0.65)'
-            : 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))',
+            ? 'var(--muted)'
+            : 'var(--background)',
+        color: 'var(--foreground)',
         fontSize: 12,
       },
     };
   });
 
-  const flowEdges: Edge[] = edges.map((edge) => ({
-    id: String(edge.linkId),
-    source: String(edge.predecessorId),
-    target: String(edge.successorId),
-    label: getEdgeLabel(edge),
-    animated: edge.cycle,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-    },
-    style: {
-      stroke: edge.cycle
-        ? 'hsl(var(--destructive))'
-        : edge.relatedLink
-          ? 'hsl(var(--muted-foreground))'
-          : 'hsl(var(--primary))',
-      strokeDasharray: edge.relatedLink ? '5 5' : undefined,
-    },
-    labelStyle: {
-      fill: 'hsl(var(--foreground))',
-      fontSize: 11,
-    },
-  }));
+  const flowEdges: Edge[] = edges.map((edge) => {
+    const stroke = edge.cycle
+      ? 'var(--destructive)'
+      : edge.relatedLink
+        ? 'var(--muted-foreground)'
+        : 'var(--primary)';
+
+    return {
+      id: String(edge.linkId),
+      source: String(edge.predecessorId),
+      target: String(edge.successorId),
+      type: 'smoothstep',
+      label: getEdgeLabel(edge),
+      animated: edge.cycle,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: stroke,
+        width: 20,
+        height: 20,
+      },
+      style: {
+        stroke,
+        strokeWidth: 2,
+        strokeDasharray: edge.relatedLink ? '5 5' : undefined,
+      },
+      labelStyle: {
+        fill: 'var(--foreground)',
+        fontSize: 11,
+        fontWeight: 600,
+      },
+      labelBgStyle: {
+        fill: 'var(--background)',
+        fillOpacity: 0.85,
+      },
+    };
+  });
 
   return { nodes: flowNodes, edges: flowEdges };
 }
