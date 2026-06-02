@@ -43,6 +43,7 @@ type ExternalServiceProperties struct {
 	CrmService          ServiceProperty
 	PaymentService      ServiceProperty
 	TmsBillingService   ServiceProperty
+	TmsOrderService     ServiceProperty
 	NotificationService ServiceProperty
 	SalesService        ServiceProperty
 	DiscussService      ServiceProperty

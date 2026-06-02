@@ -95,6 +95,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.TmsBillingService.BaseURL(),
 		},
 		{
+			Name:         "tms-order",
+			SourcePrefix: "/tms-order/api/v1",
+			TargetPrefix: "/api/v1",
+			Target:       props.TmsOrderService.BaseURL(),
+		},
+		{
 			Name:         "notification",
 			SourcePrefix: "/ns/api/v1",
 			TargetPrefix: "/notification/api/v1",
