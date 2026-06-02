@@ -33,7 +33,8 @@ export function getCalendarViewport(date: Date, view: PMProjectCalendarView) {
 
 export function getVisibleCalendarDays(
   date: Date,
-  view: PMProjectCalendarView
+  view: PMProjectCalendarView,
+  options?: { includeWeekends?: boolean }
 ) {
   const { viewportStart, viewportEnd } = getCalendarViewport(date, view);
   const days: moment.Moment[] = [];
@@ -41,7 +42,7 @@ export function getVisibleCalendarDays(
   const end = toVietnamMoment(viewportEnd).startOf('day');
 
   while (cursor.isSameOrBefore(end, 'day')) {
-    if (cursor.isoWeekday() <= 5) {
+    if (options?.includeWeekends || cursor.isoWeekday() <= 5) {
       days.push(cursor.clone());
     }
     cursor.add(1, 'day');

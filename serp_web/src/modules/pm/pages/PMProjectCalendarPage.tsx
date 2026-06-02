@@ -90,7 +90,11 @@ export function PMProjectCalendarPage() {
     statusIds,
   ]);
 
-  const days = useMemo(() => getVisibleCalendarDays(date, view), [date, view]);
+  const showWeekends = calendarMode === 'deadline';
+  const days = useMemo(
+    () => getVisibleCalendarDays(date, view, { includeWeekends: showWeekends }),
+    [date, showWeekends, view]
+  );
   const viewport = useMemo(() => {
     const range = getCalendarViewport(date, view);
     return {
@@ -413,6 +417,7 @@ export function PMProjectCalendarPage() {
               days={days}
               mode={calendarMode}
               view={view}
+              showWeekends={showWeekends}
               deadlineItemsByDay={deadlineItemsByDay}
               scheduleItemsByDay={scheduleItemsByDay}
               onDeadlineClick={(item) => openWorkItemDetail(item.id)}
