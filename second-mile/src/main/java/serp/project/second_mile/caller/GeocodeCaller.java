@@ -11,4 +11,6 @@ import java.util.Optional;
 
 public interface GeocodeCaller {
     Optional<GeoPoint> searchFirst(String query);
+
+
 }
