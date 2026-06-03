@@ -1,5 +1,5 @@
 /**
- * Author: Nguyễn Thế Anh
+ * Author: Nguyen The Anh
  * Description: Part of Serp Project - First-mile API endpoints
  */
 
@@ -1090,7 +1090,7 @@ export const firstMileApi = api.injectEndpoints({
           ...(keyword ? { keyword } : {}),
         },
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMilePageResult<ProductType>,
     }),
 
@@ -1099,7 +1099,7 @@ export const firstMileApi = api.injectEndpoints({
         url: `/product-types/${id}`,
         method: 'GET',
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResult<ProductType>,
     }),
 
@@ -1109,7 +1109,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResult<ProductType>,
     }),
 
@@ -1122,7 +1122,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResult<ProductType>,
     }),
 
@@ -1131,7 +1131,7 @@ export const firstMileApi = api.injectEndpoints({
         url: `/product-types/${id}`,
         method: 'DELETE',
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: (response: { message?: string }) =>
         response?.message || 'Deleted successfully',
     }),

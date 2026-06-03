@@ -3,7 +3,7 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.service.impl;
+package serp.project.tms_order.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,33 +12,35 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.first_mile.domain.ProductType;
-import serp.project.first_mile.dto.PageResponse;
-import serp.project.first_mile.dto.request.CreateProductTypeRequest;
-import serp.project.first_mile.dto.request.UpdateProductTypeRequest;
-import serp.project.first_mile.dto.response.ProductTypeResponse;
-import serp.project.first_mile.exception.AppException;
-import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.mapper.ProductTypeMapper;
-import serp.project.first_mile.repository.ProductTypeRepository;
-import serp.project.first_mile.service.ProductTypeService;
+import serp.project.tms_order.domain.ProductType;
+import serp.project.tms_order.dto.PageResponse;
+import serp.project.tms_order.dto.request.CreateProductTypeRequest;
+import serp.project.tms_order.dto.request.UpdateProductTypeRequest;
+import serp.project.tms_order.dto.response.ProductTypeResponse;
+import serp.project.tms_order.exception.AppException;
+import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.mapper.ProductTypeMapper;
+import serp.project.tms_order.repository.ProductTypeRepository;
+import serp.project.tms_order.service.ProductTypeService;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProductTypeServiceImpl implements ProductTypeService {
 
     private final ProductTypeRepository productTypeRepository;
-    private final FirstMileAccessUtils firstMileAccessUtils;
 
     @Override
-    @Transactional(readOnly = true)
-    public PageResponse<ProductTypeResponse> getProductTypes(int page, int size, String keyword) {
-        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+    public PageResponse<ProductTypeResponse> getProductTypes(int page, int size, String keyword, Long tenantId) {
+        if (page < 0 || size <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         String normalizedKeyword = normalizeKeyword(keyword);
 
-        Page<ProductTypeResponse> mappedPage = productTypeRepository.searchByTenantId(tenantId, normalizedKeyword, pageable)
+        Page<ProductTypeResponse> mappedPage = productTypeRepository
+                .searchByTenantId(tenantId, normalizedKeyword, pageable)
                 .map(ProductTypeMapper::toResponse);
 
         return PageResponse.<ProductTypeResponse>builder()
@@ -53,17 +55,14 @@ public class ProductTypeServiceImpl implements ProductTypeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public ProductTypeResponse getProductTypeById(Long id) {
-        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+    public ProductTypeResponse getProductTypeById(Long id, Long tenantId) {
         ProductType productType = getProductTypeByIdAndTenantOrThrow(id, tenantId);
         return ProductTypeMapper.toResponse(productType);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ProductTypeResponse createProductType(CreateProductTypeRequest request) {
-        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+    public ProductTypeResponse createProductType(CreateProductTypeRequest request, Long tenantId) {
         String normalizedCode = normalizeCode(request.getCode());
 
         if (productTypeRepository.existsByCodeIgnoreCaseAndTenantId(normalizedCode, tenantId)) {
@@ -80,8 +79,7 @@ public class ProductTypeServiceImpl implements ProductTypeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public ProductTypeResponse updateProductType(Long id, UpdateProductTypeRequest request) {
-        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+    public ProductTypeResponse updateProductType(Long id, UpdateProductTypeRequest request, Long tenantId) {
         ProductType productType = getProductTypeByIdAndTenantOrThrow(id, tenantId);
         String normalizedCode = normalizeCode(request.getCode());
 
@@ -99,8 +97,7 @@ public class ProductTypeServiceImpl implements ProductTypeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteProductType(Long id) {
-        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+    public void deleteProductType(Long id, Long tenantId) {
         ProductType productType = getProductTypeByIdAndTenantOrThrow(id, tenantId);
         productTypeRepository.delete(productType);
     }

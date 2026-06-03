@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
@@ -10,8 +15,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Setter
 @Getter
@@ -97,10 +100,6 @@ public class Order extends AbstractAudit{
     @Column(name = "total_volume")
     private Double totalVolume;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Product> products = new ArrayList<>();
-
     @Column(name = "pickup_attempts")
     @Builder.Default
     private Integer pickupAttempts = 0;
@@ -148,20 +147,4 @@ public class Order extends AbstractAudit{
 
     @Column(name = "cancel_reason")
     private String cancelReason;
-
-    public void addProduct(Product product) {
-        if (products == null) {
-            products = new ArrayList<>();
-        }
-        products.add(product);
-        product.setOrder(this);
-    }
-
-    public void removeProduct(Product product) {
-        if (products == null) {
-            return;
-        }
-        products.remove(product);
-        product.setOrder(null);
-    }
 }

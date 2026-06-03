@@ -14,8 +14,6 @@ public enum ErrorCode {
     POST_OFFICE_NOT_FOUND(9405, "error.9405", HttpStatus.NOT_FOUND),
     POST_OFFICE_CODE_EXISTED(9406, "error.9406", HttpStatus.CONFLICT),
     WARD_NOT_FOUND(9407, "error.9407", HttpStatus.NOT_FOUND),
-    PRODUCT_TYPE_NOT_FOUND(9408, "error.9408", HttpStatus.NOT_FOUND),
-    PRODUCT_TYPE_CODE_EXISTED(9409, "error.9409", HttpStatus.CONFLICT),
     GEOCODE_NOT_FOUND(9410, "error.9410", HttpStatus.NOT_FOUND),
     POST_OFFICE_STAFF_NOT_FOUND(9411, "error.9411", HttpStatus.NOT_FOUND),
     VEHICLE_NOT_FOUND(9412, "error.9412", HttpStatus.NOT_FOUND),

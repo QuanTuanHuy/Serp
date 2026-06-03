@@ -3,12 +3,12 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.mapper;
+package serp.project.tms_order.mapper;
 
-import serp.project.first_mile.domain.ProductType;
-import serp.project.first_mile.dto.request.CreateProductTypeRequest;
-import serp.project.first_mile.dto.request.UpdateProductTypeRequest;
-import serp.project.first_mile.dto.response.ProductTypeResponse;
+import serp.project.tms_order.domain.ProductType;
+import serp.project.tms_order.dto.request.CreateProductTypeRequest;
+import serp.project.tms_order.dto.request.UpdateProductTypeRequest;
+import serp.project.tms_order.dto.response.ProductTypeResponse;
 
 public final class ProductTypeMapper {
 

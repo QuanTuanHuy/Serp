@@ -5,6 +5,8 @@ Description: Part of Serp Project
 
 package serp.project.tms_order.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +19,28 @@ import java.util.Optional;
 
 @Repository
 public interface ProductTypeRepository extends JpaRepository<ProductType, Long> {
+    @Query("""
+            select p
+            from ProductType p
+            where p.tenantId = :tenantId
+                and (
+                    :keyword is null
+                    or :keyword = ''
+                    or lower(p.code) like lower(concat('%', :keyword, '%'))
+                    or lower(p.name) like lower(concat('%', :keyword, '%'))
+                )
+            """)
+    Page<ProductType> searchByTenantId(
+            @Param("tenantId") Long tenantId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
     Optional<ProductType> findByIdAndTenantId(Long id, Long tenantId);
+
+    boolean existsByCodeIgnoreCaseAndTenantId(String code, Long tenantId);
+
+    boolean existsByCodeIgnoreCaseAndTenantIdAndIdNot(String code, Long tenantId, Long id);
 
     @Query("""
             select p.code as code, p.name as name

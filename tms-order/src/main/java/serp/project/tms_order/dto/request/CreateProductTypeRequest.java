@@ -3,7 +3,7 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.dto.request;
+package serp.project.tms_order.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateProductTypeRequest {
+public class CreateProductTypeRequest {
 
     @JsonProperty("code")
     @NotBlank
