@@ -347,7 +347,15 @@ export function PickupPointFormDialog({
         stickyFooter
       >
         <FormSectionHeader title='1. Pickup point information' />
-        <TextField form={form} name='name' label='Pickup point name *' className='md:col-span-2' />
+        {initialData?.code && (
+          <ReadOnlyField label='Pickup point code' value={initialData.code} className='md:col-span-1' />
+        )}
+        <TextField
+          form={form}
+          name='name'
+          label='Pickup point name *'
+          className={initialData?.code ? 'md:col-span-1' : 'md:col-span-2'}
+        />
         <TextField form={form} name='zoneCode' label='Zone code' className='md:col-span-1' />
 
         <FormSectionHeader title='2. Usage details' />

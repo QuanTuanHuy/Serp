@@ -39,4 +39,6 @@ public interface ISchoolPickupPointService extends IBaseService<SchoolPickupPoin
 
     /** Check if a pickup point is linked and active for a school. */
     boolean isLinkedAndActive(Long schoolId, Long pickupPointId, Long tenantId);
+
+    List<SchoolPickupPointEntity> getPickupPointLinksForSchools(List<Long> schoolIds, Long tenantId);
 }

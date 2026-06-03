@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Eye,
   GraduationCap,
   Link2,
   Map,
@@ -21,7 +22,8 @@ import {
   Unlink,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/shared/components/ui';
+import { Button, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui';
+import { SchoolBusSchoolDetailPage } from './SchoolBusSchoolDetailPage';
 import { cn } from '@/shared/utils';
 import {
   useCreatePickupPointMutation,
@@ -362,6 +364,7 @@ function NetworkDetailPanel({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function SchoolBusSchoolsPage() {
+  const [selectedDetailSchoolId, setSelectedDetailSchoolId] = React.useState<number | null>(null);
   const [viewMode, setViewMode] = React.useState<ViewMode>('network');
   const [activeTab, setActiveTab] = React.useState('schools');
   const [networkFilter, setNetworkFilter] = React.useState('');
@@ -931,6 +934,7 @@ export function SchoolBusSchoolsPage() {
       headerClassName: 'pl-6',
       render: (school) => {
         const isSelected = selectedSchoolId === school.id;
+        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
         return (
           <div className='flex items-center gap-3'>
             <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#C81E3A] border border-red-100/50'>
@@ -945,10 +949,22 @@ export function SchoolBusSchoolsPage() {
                   setSelectedPickupPointId(null);
                 }}
               >
-                <p className={cn(
-                  'font-bold text-sm transition-colors',
-                  isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
-                )}>{school.name}</p>
+                <div className='flex items-center gap-1.5'>
+                  <p className={cn(
+                    'font-bold text-sm transition-colors',
+                    isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
+                  )}>{school.name}</p>
+                  {!hasCoords && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertTriangle className='h-3.5 w-3.5 text-amber-500 cursor-help shrink-0' />
+                      </TooltipTrigger>
+                      <TooltipContent className='bg-slate-900 text-white p-2 rounded-lg text-xs max-w-[200px]'>
+                        School profile is missing geocoding coordinates.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
                 <p className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate' title={school.address || undefined}>
                   {school.address || 'No address'}
                 </p>
@@ -962,19 +978,154 @@ export function SchoolBusSchoolsPage() {
       key: 'network',
       header: 'Network',
       render: (school) => {
-        const linkedCount = allLinks.filter((l) => l.schoolId === school.id).length;
-        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
+        const linkedCount = school.pickupPointCount ?? 0;
+        const missingLinked = school.anyLinkedPointMissingCoordinates;
         return (
           <div className='flex items-center gap-2'>
-            <span className='inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10'>
+            <span className={cn(
+              'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset',
+              missingLinked
+                ? 'bg-amber-50 text-amber-800 ring-amber-600/15'
+                : 'bg-slate-100 text-slate-700 ring-slate-600/10'
+            )}>
               {linkedCount} linked pickups
+              {missingLinked && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertTriangle className='h-3 w-3 text-amber-600 ml-1 cursor-help' />
+                  </TooltipTrigger>
+                  <TooltipContent className='bg-slate-900 text-white p-2 rounded-lg text-xs max-w-[200px]'>
+                    Warning: Some linked pickup points are missing coordinates.
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </span>
-            {!hasCoords && (
-              <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
-                No coords
-              </span>
-            )}
           </div>
+        );
+      }
+    },
+    {
+      key: 'schedules',
+      header: 'Schedules',
+      render: (school) => {
+        const schedules = school.schedules || [];
+        if (schedules.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
+
+        const limit = 2;
+        const visible = schedules.slice(0, limit);
+        const extra = schedules.length - limit;
+
+        return (
+          <TooltipProvider>
+            <div className='flex flex-col gap-1 items-start py-1'>
+              {visible.map((sch) => (
+                <Tooltip key={sch.id}>
+                  <TooltipTrigger asChild>
+                    <span className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
+                      sch.shift === 'MORNING'
+                        ? 'bg-blue-50 text-blue-700 border-blue-100'
+                        : 'bg-orange-50 text-orange-700 border-orange-100'
+                    )}>
+                      {sch.code}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className='p-3 max-w-[260px] bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 space-y-1 text-xs'>
+                    <div className='flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5 mb-1.5'>
+                      <p className='font-bold'>{sch.name}</p>
+                      <span className={cn(
+                        'text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded border font-bold',
+                        sch.isActive
+                          ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      )}>
+                        {sch.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className='text-slate-400 font-medium'>Shift: <span className='text-slate-200 font-semibold'>{sch.shift}</span></p>
+                    <p className='text-slate-400 font-medium'>Days: <span className='text-slate-200 font-semibold'>{sch.days?.join(', ') || 'Mon-Fri'}</span></p>
+                    <p className='text-slate-400 font-medium'>Window: <span className='text-slate-200 font-semibold'>{sch.arrivalDeadline || '—'} / {sch.departureTime || '—'}</span></p>
+                    {sch.isDefault && (
+                      <span className='inline-block bg-red-950 text-red-400 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-800 mt-1'>
+                        Default Schedule
+                      </span>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+              {extra > 0 && (
+                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
+                  +{extra} more
+                </span>
+              )}
+            </div>
+          </TooltipProvider>
+        );
+      }
+    },
+    {
+      key: 'pickupPoints',
+      header: 'Pickup points',
+      render: (school) => {
+        const points = school.pickupPoints || [];
+        if (points.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
+
+        const limit = 2;
+        const visible = points.slice(0, limit);
+        const extra = points.length - limit;
+
+        return (
+          <TooltipProvider>
+            <div className='flex flex-col gap-1 items-start py-1'>
+              {visible.map((pt) => {
+                const hasCoords = !!pt.hasCoordinates;
+                const isPickup = pt.usageType === 'PICKUP' || pt.usageType === 'PICKUP_ONLY';
+                const isDropoff = pt.usageType === 'DROPOFF' || pt.usageType === 'DROPOFF_ONLY';
+
+                return (
+                  <Tooltip key={pt.code}>
+                    <TooltipTrigger asChild>
+                      <span className={cn(
+                        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
+                        !hasCoords
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : isPickup
+                          ? 'bg-blue-50 text-blue-700 border-blue-150'
+                          : isDropoff
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                      )}>
+                        {!hasCoords && <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />}
+                        {pt.code}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className='p-3 max-w-[260px] bg-slate-900 text-white rounded-xl shadow-lg border border-slate-800 space-y-1 text-xs'>
+                      <div className='flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5 mb-1.5'>
+                        <p className='font-bold'>{pt.name}</p>
+                        {pt.isDefault && (
+                          <span className='bg-indigo-950 text-indigo-400 px-1 py-0.5 rounded text-[8px] font-bold border border-indigo-800 font-sans'>
+                            Default Link
+                          </span>
+                        )}
+                      </div>
+                      <p className='text-slate-400 font-medium'>Usage: <span className='text-slate-200 font-semibold'>{pt.usageType}</span></p>
+                      <p className='text-slate-400 font-medium truncate'>Address: <span className='text-slate-200 font-semibold'>{pt.address || 'No address'}</span></p>
+                      <p className='text-slate-400 font-medium'>Coordinates: {hasCoords ? (
+                        <span className='text-emerald-400 font-semibold'>Configured</span>
+                      ) : (
+                        <span className='text-amber-500 font-semibold flex items-center gap-0.5 inline-flex'><AlertTriangle className='h-3 w-3 shrink-0' /> Missing</span>
+                      )}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+              {extra > 0 && (
+                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
+                  +{extra} more
+                </span>
+              )}
+            </div>
+          </TooltipProvider>
         );
       }
     },
@@ -1010,6 +1161,16 @@ export function SchoolBusSchoolsPage() {
       headerClassName: 'pr-6 text-right',
       render: (school) => (
         <div className='flex justify-end gap-1.5'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setSelectedDetailSchoolId(school.id);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
           <Button
             size='icon'
             variant='outline'
@@ -1082,6 +1243,19 @@ export function SchoolBusSchoolsPage() {
           </div>
         );
       }
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      render: (pp) => (
+        pp.code ? (
+          <span className='inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
+            {pp.code}
+          </span>
+        ) : (
+          <span className='text-slate-400 font-medium'>—</span>
+        )
+      )
     },
     {
       key: 'zone',
@@ -1577,6 +1751,15 @@ export function SchoolBusSchoolsPage() {
     </div>
   );
 
+  if (selectedDetailSchoolId != null) {
+    return (
+      <SchoolBusSchoolDetailPage
+        schoolId={selectedDetailSchoolId}
+        onClose={() => setSelectedDetailSchoolId(null)}
+      />
+    );
+  }
+
   return (
     <>
       <SchoolBusPageShell
@@ -1619,8 +1802,6 @@ export function SchoolBusSchoolsPage() {
             tabs={[
               { key: 'schools', label: 'Schools', count: schools.length },
               { key: 'pickup-points', label: 'Pickup points', count: pickupPoints.length },
-              { key: 'schedules', label: 'Schedules', count: schedules.length },
-              { key: 'linked-pickups', label: 'Linked pickups', count: linkedPickupPoints.length },
             ]}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -1662,9 +1843,9 @@ export function SchoolBusSchoolsPage() {
             }
             pagination={
               activeTab === 'schools' && data
-                ? { page: data, onPageChange: schoolsPagination.setPage }
+                ? { page: data?.data, onPageChange: schoolsPagination.setPage }
                 : activeTab === 'pickup-points' && pickupPointsData
-                  ? { page: pickupPointsData, onPageChange: pickupPagination.setPage }
+                  ? { page: pickupPointsData?.data, onPageChange: pickupPagination.setPage }
                   : undefined
             }
           >

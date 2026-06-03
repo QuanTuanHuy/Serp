@@ -267,4 +267,13 @@ public class SchoolScheduleServiceImpl extends AbstractBaseService<SchoolSchedul
             }
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SchoolScheduleEntity> getSchedulesForSchools(List<Long> schoolIds, Long tenantId) {
+        if (schoolIds == null || schoolIds.isEmpty()) {
+            return List.of();
+        }
+        return scheduleRepository.findBySchoolIdInWithDays(schoolIds, tenantId);
+    }
 }

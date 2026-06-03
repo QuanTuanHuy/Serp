@@ -40,4 +40,6 @@ public interface ISchoolPickupPointWindowService extends IBaseService<SchoolPick
 
     /** Batch: find which point IDs have a valid window for the school+schedule+direction. */
     List<Long> findPointIdsWithWindow(Long schoolId, List<Long> pointIds, Long scheduleId, String direction, Long tenantId);
+
+    List<SchoolPickupPointWindowEntity> getWindowsForLinks(List<Long> linkIds, Long tenantId);
 }

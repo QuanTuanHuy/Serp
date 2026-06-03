@@ -26,6 +26,10 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
+import serp.project.school_bus_service.dto.response.SchoolPickupPointWindowResponse;
+import serp.project.school_bus_service.entity.SchoolPickupPointWindowEntity;
 
 @Service
 public class SchoolPickupPointServiceImpl extends AbstractBaseService<SchoolPickupPointEntity, Long>
@@ -67,23 +71,49 @@ public class SchoolPickupPointServiceImpl extends AbstractBaseService<SchoolPick
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<SchoolPickupPointResponse> getBySchool(Long schoolId, int page, int size, Long tenantId) {
-        return PageResponse.from(
+        PageResponse<SchoolPickupPointResponse> pageResponse = PageResponse.from(
                 repository.findBySchoolIdAndTenantIdAndIsDeletedFalse(
                         schoolId, tenantId, PageRequest.of(page, size, Sort.by("pickupPoint.name"))),
                 mapper::toSchoolPickupPointResponse);
+        enrichLinksWithWindows(pageResponse.getItems(), tenantId);
+        return pageResponse;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SchoolPickupPointResponse> getActiveBySchool(Long schoolId, Long tenantId) {
-        return repository.findBySchoolIdAndTenantIdAndIsDeletedFalseAndIsActiveTrue(schoolId, tenantId)
+        List<SchoolPickupPointResponse> list = repository.findBySchoolIdAndTenantIdAndIsDeletedFalseAndIsActiveTrue(schoolId, tenantId)
                 .stream().map(mapper::toSchoolPickupPointResponse).toList();
+        enrichLinksWithWindows(list, tenantId);
+        return list;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SchoolPickupPointResponse> getAllActiveLinks(Long tenantId) {
-        return repository.findByTenantIdAndIsDeletedFalseAndIsActiveTrue(tenantId)
+        List<SchoolPickupPointResponse> list = repository.findByTenantIdAndIsDeletedFalseAndIsActiveTrue(tenantId)
                 .stream().map(mapper::toSchoolPickupPointResponse).toList();
+        enrichLinksWithWindows(list, tenantId);
+        return list;
+    }
+
+    private void enrichLinksWithWindows(List<SchoolPickupPointResponse> linkResponses, Long tenantId) {
+        if (linkResponses == null || linkResponses.isEmpty()) {
+            return;
+        }
+        List<Long> linkIds = linkResponses.stream().map(SchoolPickupPointResponse::getId).toList();
+        List<SchoolPickupPointWindowEntity> windowEntities = windowService.getWindowsForLinks(linkIds, tenantId);
+        
+        Map<Long, List<SchoolPickupPointWindowResponse>> windowsByLinkId = windowEntities.stream()
+                .map(mapper::toSchoolPickupPointWindowResponse)
+                .collect(Collectors.groupingBy(SchoolPickupPointWindowResponse::getSchoolPickupPointId));
+
+        for (SchoolPickupPointResponse linkResponse : linkResponses) {
+            List<SchoolPickupPointWindowResponse> windows = windowsByLinkId.get(linkResponse.getId());
+            linkResponse.setWindows(windows != null ? windows : List.of());
+        }
     }
 
     @Override
@@ -167,5 +197,14 @@ public class SchoolPickupPointServiceImpl extends AbstractBaseService<SchoolPick
         // This link entity only manages the school<->pickup_point relationship and default flag.
         entity.setIsDefaultPoint(request.getIsDefault() != null ? request.getIsDefault() : false);
         entity.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SchoolPickupPointEntity> getPickupPointLinksForSchools(List<Long> schoolIds, Long tenantId) {
+        if (schoolIds == null || schoolIds.isEmpty()) {
+            return List.of();
+        }
+        return repository.findBySchoolIdInAndTenantIdAndIsDeletedFalse(schoolIds, tenantId);
     }
 }

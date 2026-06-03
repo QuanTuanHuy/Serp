@@ -1,5 +1,6 @@
 export * from './SchoolBusDashboardPage';
 export * from './SchoolBusSchoolsPage';
+export * from './SchoolBusSchoolDetailPage';
 export * from './SchoolBusStudentsPage';
 export * from './SchoolBusParentsPage';
 export * from './SchoolBusFleetPage';

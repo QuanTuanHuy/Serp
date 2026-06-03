@@ -21,6 +21,10 @@ public interface SchoolPickupPointWindowRepository extends BaseRepository<School
     List<SchoolPickupPointWindowEntity> findBySchoolPickupPointIdAndSchoolScheduleIdAndTenantIdAndIsDeletedFalse(
             Long schoolPickupPointId, Long schoolScheduleId, Long tenantId);
 
+    @Query("SELECT w FROM SchoolPickupPointWindowEntity w JOIN FETCH w.schoolSchedule WHERE w.schoolPickupPoint.id IN :linkIds AND w.tenantId = :tenantId AND w.isDeleted = false")
+    List<SchoolPickupPointWindowEntity> findBySchoolPickupPointIdInAndTenantIdAndIsDeletedFalse(
+            @Param("linkIds") List<Long> linkIds, @Param("tenantId") Long tenantId);
+
     /**
      * Batch query: returns the pickup_point IDs (from the given set) that have
      * a valid window for the specified school + schedule + direction.

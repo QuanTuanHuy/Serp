@@ -27,4 +27,6 @@ public interface ISchoolScheduleService extends IBaseService<SchoolScheduleEntit
     SchoolScheduleResponse updateSchedule(Long id, SchoolScheduleUpsertRequest request, Long tenantId, Long actorId);
 
     void deleteSchedule(Long id, Long tenantId, Long actorId);
+
+    List<SchoolScheduleEntity> getSchedulesForSchools(List<Long> schoolIds, Long tenantId);
 }
