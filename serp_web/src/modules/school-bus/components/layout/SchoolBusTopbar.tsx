@@ -49,9 +49,13 @@ export function SchoolBusTopbar({ scrollContainerRef, className }: SchoolBusTopb
   };
 
   const getBreadcrumbs = () => {
-    const segments = pathname.split('/').filter(Boolean);
+    const decodedPath = decodeURIComponent(pathname);
+    const segments = decodedPath.split('/').filter(Boolean);
     return segments.map((segment, index) => {
       let name = segment.replace(/-/g, ' ');
+      if (name.includes('&')) {
+        name = name.split('&')[0];
+      }
       if (segment.toLowerCase() === 'school-bus') {
         name = 'School Bus';
       } else {

@@ -17,9 +17,15 @@ import {
   Table2,
   Trash2,
   Unlink,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/shared/components/ui';
+import { useRouter, useSearchParams, useParams, usePathname } from 'next/navigation';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolByIdQuery,
@@ -95,25 +101,65 @@ const getUsageTypeBadgeClasses = (type: string | undefined | null) => {
 };
 
 export function SchoolBusSchoolDetailPage({
-  schoolId,
+  schoolId: propSchoolId,
   onClose,
 }: SchoolBusSchoolDetailPageProps) {
-  const [activeTab, setActiveTab] = React.useState<'general' | 'schedules' | 'pickups'>('general');
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Ensure we extract the pure numeric ID for display/fetching if a string was passed at runtime
+  let rawId = params?.id ? decodeURIComponent(String(params.id)) : String(propSchoolId);
+  if ((!rawId || !rawId.includes('&')) && typeof window !== 'undefined') {
+    const windowPath = window.location.pathname;
+    const match = windowPath.match(/\/school-bus\/schools\/(.+)$/);
+    if (match && match[1]) {
+      rawId = decodeURIComponent(match[1]);
+    }
+  }
+
+  const cleanSchoolId = rawId.includes('&')
+    ? Number(rawId.split('&')[0])
+    : Number(rawId || propSchoolId);
+
+  // Parse tab and view from dynamic path if format is id&tab=...
+  let tabFromUrl = searchParams.get('tab');
+  let viewParam = searchParams.get('view') || 'network';
+
+  if (rawId.includes('&')) {
+    const decoded = decodeURIComponent(rawId);
+    const parts = decoded.split('&');
+    for (let i = 1; i < parts.length; i++) {
+      const [k, v] = parts[i].split('=');
+      if (k === 'tab') tabFromUrl = v;
+      if (k === 'view') viewParam = v;
+    }
+  }
+
+  const activeTab = (tabFromUrl === 'general' || tabFromUrl === 'schedules' || tabFromUrl === 'linked-pickups')
+    ? (tabFromUrl === 'linked-pickups' ? 'pickups' : tabFromUrl as 'general' | 'schedules')
+    : 'general';
+
+  const setActiveTab = (newTab: 'general' | 'schedules' | 'pickups') => {
+    const urlTab = newTab === 'pickups' ? 'linked-pickups' : newTab;
+    router.push(`/school-bus/schools/${cleanSchoolId}&tab=${urlTab}&view=${viewParam}`);
+  };
 
   // --- RTK queries & mutations ---
   const { data: schoolDetailData, isLoading: loadingSchool, refetch: refetchSchool } =
-    useGetSchoolByIdQuery(schoolId);
+    useGetSchoolByIdQuery(cleanSchoolId);
   const school = schoolDetailData?.data;
 
   const { data: schedulesData, refetch: refetchSchedules } = useGetSchoolSchedulesQuery({
-    schoolId,
+    schoolId: cleanSchoolId,
     page: 0,
     size: 100,
   });
   const schedules = getPageItems(schedulesData?.data);
 
   const { data: linkedPickupData, refetch: refetchLinkedPickups } = useGetSchoolPickupPointsQuery({
-    schoolId,
+    schoolId: cleanSchoolId,
     page: 0,
     size: 100,
   });
@@ -162,8 +208,17 @@ export function SchoolBusSchoolDetailPage({
   const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<'ALL' | 'CONFIGURED' | 'MISSING'>('ALL');
 
   // --- Map fit control key ---
+  const [fitAllKey, setFitAllKey] = React.useState(0);
   const [fitSelectedKey, setFitSelectedKey] = React.useState(0);
+  const handleFitAll = React.useCallback(() => setFitAllKey((k) => k + 1), []);
+  const handleFitSelected = React.useCallback(() => setFitSelectedKey((k) => k + 1), []);
   const [selectedPickupPointId, setSelectedPickupPointId] = React.useState<number | null>(null);
+
+  // --- Calendar & Details state ---
+  const [currentYear, setCurrentYear] = React.useState<number>(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = React.useState<number>(new Date().getMonth());
+  const [selectedDetailSchedule, setSelectedDetailSchedule] = React.useState<SchoolBusSchedule | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = React.useState(false);
 
   // --- Handlers ---
   const refetchAll = React.useCallback(async () => {
@@ -172,7 +227,7 @@ export function SchoolBusSchoolDetailPage({
 
   const handleEditSchool = async (values: any) => {
     try {
-      const response = await updateSchool({ id: schoolId, body: values }).unwrap();
+      const response = await updateSchool({ id: cleanSchoolId, body: values }).unwrap();
       toast.success(response.message || 'School details updated');
       setSchoolDialogOpen(false);
       refetchSchool();
@@ -185,7 +240,7 @@ export function SchoolBusSchoolDetailPage({
     try {
       const response = editingSchedule
         ? await updateSchedule({ id: editingSchedule.id, body: values }).unwrap()
-        : await createSchedule({ schoolId, body: values }).unwrap();
+        : await createSchedule({ schoolId: cleanSchoolId, body: values }).unwrap();
       toast.success(response.message || 'Schedule saved successfully');
       setScheduleDialogOpen(false);
       setEditingSchedule(null);
@@ -197,7 +252,7 @@ export function SchoolBusSchoolDetailPage({
 
   const handleLinkPickupPoint = async (values: any) => {
     try {
-      const response = await linkPickupPoint({ schoolId, body: values }).unwrap();
+      const response = await linkPickupPoint({ schoolId: cleanSchoolId, body: values }).unwrap();
       toast.success(response.message || 'Pickup point linked successfully');
       setLinkDialogOpen(false);
       refetchAll();
@@ -229,7 +284,7 @@ export function SchoolBusSchoolDetailPage({
         const response = await deleteSchedule(deleteTarget.id).unwrap();
         toast.success(response.message || 'Schedule deleted');
       } else if (deleteTarget.type === 'link') {
-        const response = await unlinkPickupPoint({ schoolId, pickupPointId: deleteTarget.id }).unwrap();
+        const response = await unlinkPickupPoint({ schoolId: cleanSchoolId, pickupPointId: deleteTarget.id }).unwrap();
         toast.success(response.message || 'Pickup point unlinked');
       } else if (deleteTarget.type === 'window') {
         const response = await deleteWindow(deleteTarget.id).unwrap();
@@ -334,6 +389,12 @@ export function SchoolBusSchoolDetailPage({
     );
   }
 
+  const schoolScheduleCount = school.scheduleCount ?? schedules?.length ?? 0;
+  const schoolPickupPointCount = school.pickupPointCount ?? linkedPickupPoints?.length ?? 0;
+  const schoolActiveScheduleCount = school.activeScheduleCount ?? schedules?.filter((s) => s.isActive).length ?? 0;
+  const hasMissingCoords = school.anyLinkedPointMissingCoordinates ||
+    (linkedPickupPoints && linkedPickupPoints.some((lp) => typeof lp.pickupPointLatitude !== 'number' || typeof lp.pickupPointLongitude !== 'number'));
+
   return (
     <>
       <SchoolBusPageShell
@@ -342,9 +403,9 @@ export function SchoolBusSchoolDetailPage({
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'School Bus', href: '/school-bus/dispatch' },
               { label: 'Schools', href: '/school-bus/schools' },
-              { label: school.name, current: true },
+              { label: String(cleanSchoolId), current: true },
             ]}
           />
         }
@@ -378,30 +439,30 @@ export function SchoolBusSchoolDetailPage({
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
             <SchoolBusMetricCard
               label="Schedules"
-              value={school.scheduleCount ?? 0}
+              value={schoolScheduleCount}
               icon={CalendarClock}
               tone="school"
               variant="compact"
             />
             <SchoolBusMetricCard
               label="Linked Pickups"
-              value={school.pickupPointCount ?? 0}
+              value={schoolPickupPointCount}
               icon={MapPin}
               tone="pickup"
               variant="compact"
             />
             <SchoolBusMetricCard
               label="Active schedules"
-              value={school.activeScheduleCount ?? 0}
+              value={schoolActiveScheduleCount}
               icon={Clock}
               tone="linked"
               variant="compact"
             />
             <SchoolBusMetricCard
               label="Coordinated points"
-              value={school.pickupPointCount && school.anyLinkedPointMissingCoordinates ? 'Warning' : 'Configured'}
+              value={schoolPickupPointCount && hasMissingCoords ? 'Warning' : 'Configured'}
               icon={AlertTriangle}
-              tone={school.anyLinkedPointMissingCoordinates ? 'warning' : 'success'}
+              tone={hasMissingCoords ? 'warning' : 'success'}
               variant="compact"
             />
           </div>
@@ -522,41 +583,46 @@ export function SchoolBusSchoolDetailPage({
 
         {/* Right Column: Operations Map */}
         <div className="flex-1 min-h-[400px] flex flex-col bg-slate-50 relative p-4">
-          <MapMarkerVisibilityProvider>
-            <SchoolBusMapWorkspace
-              flat
-              className="flex-1 rounded-2xl overflow-hidden border border-slate-200 shadow-sm"
-              mapHeightClassName="h-full"
-              panelClassName="w-[300px] p-0 flex flex-col h-full min-h-0 bg-white"
-              map={
-                hasMapData ? (
-                  <OperationsMap
-                    schools={mapSchools}
-                    depots={[]}
-                    pickupPoints={mapPickupPoints}
-                    selectedSchoolId={schoolId}
-                    selectedPickupPointId={selectedPickupPointId}
-                    onSchoolSelect={() => {}}
-                    onPickupPointSelect={(id) => setSelectedPickupPointId(id)}
-                    fitSelectedKey={fitSelectedKey}
-                    className="h-full w-full"
-                  />
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white shadow-sm">
-                      <MapPin className="h-8 w-8 text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-600">No map markers yet</p>
-                      <p className="mt-1 max-w-[240px] text-xs leading-5 text-slate-400">
-                        Map markers will appear once coordinates are configured for the school or linked points.
-                      </p>
-                    </div>
+          <SchoolBusMapWorkspace
+            flat
+            className="flex-1 rounded-2xl overflow-hidden border border-slate-200 shadow-sm"
+            mapHeightClassName="h-full"
+            panelClassName="w-[300px] p-0 flex flex-col h-full min-h-0 bg-white"
+            map={
+              hasMapData ? (
+                <OperationsMap
+                  schools={mapSchools}
+                  depots={[]}
+                  pickupPoints={mapPickupPoints}
+                  selectedSchoolId={cleanSchoolId}
+                  selectedPickupPointId={selectedPickupPointId}
+                  onSchoolSelect={() => {}}
+                  onPickupPointSelect={(id) => setSelectedPickupPointId(id)}
+                  fitAllKey={fitAllKey}
+                  fitSelectedKey={fitSelectedKey}
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white shadow-sm">
+                    <MapPin className="h-8 w-8 text-slate-300" />
                   </div>
-                )
-              }
-            />
-          </MapMarkerVisibilityProvider>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-600">No map markers yet</p>
+                    <p className="mt-1 max-w-[240px] text-xs leading-5 text-slate-400">
+                      Map markers will appear once coordinates are configured for the school or linked points.
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+            legend={<SchoolBusMapLegend showRouteLines={false} />}
+            onFitAll={handleFitAll}
+            onFitRoute={handleFitSelected}
+            canFitAll={hasMapData}
+            canFitRoute={!!cleanSchoolId || !!selectedPickupPointId}
+            fitRouteLabel="Fit Selected"
+          />
         </div>
       </div>
     );
@@ -567,26 +633,26 @@ export function SchoolBusSchoolDetailPage({
     return (
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* Left rail filter panel */}
-        <div className="w-full lg:w-[280px] shrink-0 border-r border-slate-200 p-5 space-y-5 bg-slate-50/40">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Schedules Manager</h3>
+        <div className="w-full lg:w-[240px] shrink-0 border-r border-slate-200 p-4 space-y-4 bg-slate-50/20">
+          <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Schedules</h3>
 
-          <div className="space-y-4">
+          <div className="space-y-4.5">
             {/* Shift Filter */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Shift Type</label>
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Shift Type</label>
+              <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-slate-100 p-0.5 border border-slate-150">
                 {(['ALL', 'MORNING', 'AFTERNOON'] as const).map((shift) => (
                   <button
                     key={shift}
                     onClick={() => setScheduleShiftFilter(shift)}
                     className={cn(
-                      'rounded-lg py-1 text-[10px] font-bold text-center capitalize transition-all',
+                      'rounded-md py-1 text-[9px] font-extrabold text-center capitalize transition-all',
                       scheduleShiftFilter === shift
-                        ? 'bg-white shadow-sm text-slate-900'
+                        ? 'bg-white shadow-xs text-slate-900'
                         : 'text-slate-500 hover:text-slate-800'
                     )}
                   >
-                    {shift === 'ALL' ? 'All' : shift.toLowerCase()}
+                    {shift === 'ALL' ? 'All' : shift === 'MORNING' ? 'AM' : 'PM'}
                   </button>
                 ))}
               </div>
@@ -594,30 +660,32 @@ export function SchoolBusSchoolDetailPage({
 
             {/* Day filter */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Day of Week</label>
-              <select
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Day of Week</label>
+              <SchoolBusSelect
                 value={scheduleDayFilter}
-                onChange={(e) => setScheduleDayFilter(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white py-1.5 px-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 shadow-sm"
-              >
-                <option value="ALL">All operational days</option>
-                {daysOfWeekList.map((day) => (
-                  <option key={day} value={day.toUpperCase()}>
-                    {day}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setScheduleDayFilter(val)}
+                options={[
+                  { label: 'All operational days', value: 'ALL' },
+                  ...daysOfWeekList.map((day) => ({
+                    label: day,
+                    value: day.toUpperCase(),
+                  })),
+                ]}
+                placeholder="Select day"
+                fullWidth
+                className="border-slate-200 hover:border-slate-350 rounded-lg text-xs"
+              />
             </div>
 
             {/* View switcher */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Layout mode</label>
-              <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">Layout mode</label>
+              <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-slate-100 p-0.5 border border-slate-150">
                 <button
                   onClick={() => setScheduleViewMode('table')}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[10px] font-bold transition-all',
-                    scheduleViewMode === 'table' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+                    'flex items-center justify-center gap-1 rounded-md py-1 text-[9px] font-extrabold transition-all',
+                    scheduleViewMode === 'table' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-850'
                   )}
                 >
                   <Table2 className="h-3 w-3" /> Table
@@ -625,8 +693,8 @@ export function SchoolBusSchoolDetailPage({
                 <button
                   onClick={() => setScheduleViewMode('calendar')}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[10px] font-bold transition-all',
-                    scheduleViewMode === 'calendar' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+                    'flex items-center justify-center gap-1 rounded-md py-1 text-[9px] font-extrabold transition-all',
+                    scheduleViewMode === 'calendar' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-850'
                   )}
                 >
                   <Calendar className="h-3 w-3" /> Calendar
@@ -637,7 +705,7 @@ export function SchoolBusSchoolDetailPage({
         </div>
 
         {/* Right main workspace */}
-        <div className="flex-1 overflow-auto p-6 min-h-0">
+        <div className="flex-1 overflow-auto p-4 lg:p-5 min-h-0">
           {filteredSchedules.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <CalendarClock className="h-10 w-10 text-slate-300 animate-pulse" />
@@ -689,10 +757,10 @@ export function SchoolBusSchoolDetailPage({
                       </td>
                       <td className="py-3.5 px-4 font-medium text-slate-600 truncate max-w-[140px]">{formatDaysCompact(sch.daysOfWeek)}</td>
                       <td className="py-3.5 px-4 font-bold text-slate-700">
-                        {sch.arrivalDeadline || '—'} / {sch.departureTime || '—'}
+                        {sch.arrivalDeadline || '—'} - {sch.departureTime || '—'}
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-500">
-                        {sch.effectiveFrom ? formatDate(sch.effectiveFrom) : '—'} to {sch.effectiveTo ? formatDate(sch.effectiveTo) : '—'}
+                      <td className="py-3.5 px-4 font-medium text-slate-650">
+                        {sch.effectiveFrom ? formatDate(sch.effectiveFrom) : '-'} to {sch.effectiveTo ? formatDate(sch.effectiveTo) : '-'}
                       </td>
                       <td className="py-3.5 px-4">
                         <SchoolBusStatusBadge status={sch.isActive ? 'ACTIVE' : 'INACTIVE'} />
@@ -742,66 +810,372 @@ export function SchoolBusSchoolDetailPage({
 
   // Helper calendar renderer
   function renderCalendarLayout() {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3">
-        {daysOfWeekList.map((day) => {
-          const dayUpper = day.toUpperCase();
-          const daySchedules = schedules.filter((s) =>
-            s.daysOfWeek?.map((d) => d.toUpperCase()).includes(dayUpper)
-          );
+    const toMidnight = (dateStr: string | undefined | null) => {
+      if (!dateStr) return null;
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return null;
+        d.setHours(0, 0, 0, 0);
+        return d;
+      } catch (e) {
+        return null;
+      }
+    };
 
-          return (
-            <div key={day} className="flex flex-col rounded-2xl border border-slate-100 bg-slate-50/50 overflow-hidden min-h-[220px]">
-              <div className="bg-slate-100/80 px-3 py-2 border-b border-slate-200 flex justify-between items-center shrink-0">
-                <span className="text-xs font-bold text-slate-700">{day}</span>
-                <span className="text-[10px] font-bold text-slate-400 bg-white border rounded-full px-1.5 py-0.5">
-                  {daySchedules.length}
-                </span>
-              </div>
-              <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-                {daySchedules.map((sch) => (
-                  <div
-                    key={sch.id}
-                    className="p-2.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-colors shadow-sm space-y-1.5 relative group"
-                  >
-                    <div className="flex justify-between items-start gap-1">
-                      <span className="text-[10px] font-bold font-mono text-[#C81E3A]">{sch.scheduleCode}</span>
-                      <span className={cn(
-                        'px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border',
-                        sch.shiftType === 'MORNING'
-                          ? 'bg-blue-50 text-blue-700 border-blue-100'
-                          : 'bg-orange-50 text-orange-700 border-orange-100'
-                      )}>
-                        {sch.shiftType === 'MORNING' ? 'AM' : 'PM'}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-slate-800 leading-snug line-clamp-1">{sch.scheduleName}</p>
-                    <p className="text-[10px] font-semibold text-slate-500 font-mono flex items-center gap-1">
-                      <Clock className="h-3 w-3 shrink-0" />
-                      {sch.arrivalDeadline || '—'} / {sch.departureTime || '—'}
-                    </p>
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1 bg-white pl-1 py-0.5">
-                      <button
-                        onClick={() => {
-                          setEditingSchedule(sch);
-                          setScheduleDialogOpen(true);
-                        }}
-                        className="text-slate-400 hover:text-slate-700 p-0.5"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {daySchedules.length === 0 && (
-                  <div className="h-full flex items-center justify-center text-center p-3 text-[10px] text-slate-400">
-                    No active slots
-                  </div>
-                )}
-              </div>
+    const formatTimeHM = (timeStr?: string | null) => {
+      if (!timeStr) return '—';
+      const parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+      return timeStr;
+    };
+
+    const today = new Date();
+    const DAYS_OF_WEEK_NAMES = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY'
+    ];
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const monthOptions = monthNames.map((name, index) => ({
+      label: name,
+      value: index
+    }));
+
+    const startYear = today.getFullYear() - 5;
+    const yearOptions = Array.from({ length: 11 }, (_, i) => {
+      const y = startYear + i;
+      return { label: String(y), value: y };
+    });
+
+    const handlePrevMonth = () => {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    };
+
+    const handleNextMonth = () => {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    };
+
+    const handleToday = () => {
+      setCurrentMonth(today.getMonth());
+      setCurrentYear(today.getFullYear());
+    };
+
+    const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Sunday, 1 is Monday, etc.
+    const startOffset = (firstDayOfWeek + 6) % 7; // Monday-based offset (0 for Monday, 6 for Sunday)
+    const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const cells: { date: Date; isCurrentMonth: boolean }[] = [];
+
+    // Previous month padding
+    for (let i = 0; i < startOffset; i++) {
+      const day = daysInPrevMonth - startOffset + i + 1;
+      cells.push({
+        date: new Date(currentYear, currentMonth - 1, day),
+        isCurrentMonth: false
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInCurrentMonth; i++) {
+      cells.push({
+        date: new Date(currentYear, currentMonth, i),
+        isCurrentMonth: true
+      });
+    }
+
+    // Next month padding to fill complete weeks
+    const totalCells = Math.ceil(cells.length / 7) * 7;
+    const nextMonthPadding = totalCells - cells.length;
+    for (let i = 1; i <= nextMonthPadding; i++) {
+      cells.push({
+        date: new Date(currentYear, currentMonth + 1, i),
+        isCurrentMonth: false
+      });
+    }
+
+    if (schedules.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 my-6 min-h-[300px]">
+          <CalendarClock className="h-10 w-10 text-slate-300 mb-2" />
+          <p className="text-sm font-semibold text-slate-700">No schedules configured for this school.</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-xs mb-4">
+            Add operational schedules to specify arrival and departure times.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditingSchedule(null);
+              setScheduleDialogOpen(true);
+            }}
+            className="bg-[#C81E3A] hover:bg-[#A6172D] text-white rounded-full"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add schedule
+          </Button>
+        </div>
+      );
+    }
+
+    const showFilterWarning = filteredSchedules.length === 0 && schedules.length > 0;
+
+    const renderScheduleBadge = (sch: SchoolBusSchedule) => {
+      const isDefault = sch.isDefault;
+      const isActive = sch.isActive;
+
+      return (
+        <button
+          key={sch.id}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedDetailSchedule(sch);
+            setDetailDialogOpen(true);
+          }}
+          className={cn(
+            "w-full text-left p-1 py-1.5 px-2 rounded-lg border text-[10px] transition-all flex flex-col gap-0.5 relative group overflow-hidden shadow-xs",
+            isActive
+              ? "bg-[#FFFDFD] border-red-100 hover:border-red-200 text-[#C81E3A]"
+              : "bg-slate-50 border-slate-200 text-slate-400 opacity-70 hover:opacity-100"
+          )}
+        >
+          <div className="flex justify-between items-center gap-1 w-full">
+            <span className="font-semibold font-mono truncate">{sch.scheduleCode || 'SCH'}</span>
+            {isDefault && (
+              <span className="text-[8px] font-extrabold text-[#C81E3A] shrink-0" title="Default Schedule">
+                • Default
+              </span>
+            )}
+          </div>
+          <span className="text-[8px] font-mono font-medium text-slate-400 truncate">
+            {formatTimeHM(sch.arrivalDeadline)}–{formatTimeHM(sch.departureTime)}
+          </span>
+        </button>
+      );
+    };
+
+    return (
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Calendar toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 bg-white border border-slate-150 p-4 rounded-2xl shadow-sm">
+          {/* Navigation Buttons */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-md text-slate-600 hover:bg-white hover:shadow-xs"
+                onClick={handlePrevMonth}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-md text-slate-600 hover:bg-white hover:shadow-xs"
+                onClick={handleNextMonth}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          );
-        })}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-350 text-xs font-semibold transition-all shadow-xs"
+              onClick={handleToday}
+            >
+              Today
+            </Button>
+            
+            <span className="text-base font-extrabold text-slate-850 tracking-tight ml-2">
+              {monthNames[currentMonth]} {currentYear}
+            </span>
+          </div>
+
+          {/* Dropdowns */}
+          <div className="flex items-center gap-2">
+            <SchoolBusSelect
+              value={currentMonth}
+              onChange={(val) => setCurrentMonth(Number(val))}
+              options={monthOptions}
+              placeholder="Month"
+              className="w-[125px] border-slate-200 hover:border-slate-300 rounded-xl"
+            />
+            <SchoolBusSelect
+              value={currentYear}
+              onChange={(val) => setCurrentYear(Number(val))}
+              options={yearOptions}
+              placeholder="Year"
+              className="w-[95px] border-slate-200 hover:border-slate-300 rounded-xl"
+            />
+          </div>
+        </div>
+
+        {showFilterWarning && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-3 py-2 rounded-xl mb-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>No schedules match the active filters (Shift/Day).</span>
+          </div>
+        )}
+
+        {/* 7-column grid */}
+        <div className="grid grid-cols-7 gap-px bg-slate-200/70 border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          {/* Headers */}
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+            <div key={day} className="bg-slate-50 py-2.5 text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+              {day}
+            </div>
+          ))}
+
+          {/* Grid Cells */}
+          {cells.map((cell, idx) => {
+            const isToday = cell.date.toDateString() === today.toDateString();
+            const isCurrentMonth = cell.isCurrentMonth;
+            const cellMidnight = new Date(cell.date);
+            cellMidnight.setHours(0, 0, 0, 0);
+
+            // Mute / don't render schedules for days outside current month
+            const cellSchedules = !isCurrentMonth ? [] : filteredSchedules.filter((sch) => {
+              const fromDate = toMidnight(sch.effectiveFrom);
+              if (!fromDate) return false;
+              const toDate = toMidnight(sch.effectiveTo);
+              const inRange = cellMidnight.getTime() >= fromDate.getTime() && (!toDate || cellMidnight.getTime() <= toDate.getTime());
+
+              const dayName = DAYS_OF_WEEK_NAMES[cellMidnight.getDay()];
+              const hasDay = sch.daysOfWeek?.map((d) => d.toUpperCase()).includes(dayName);
+              const matchesDay = scheduleDayFilter === 'ALL' || dayName === scheduleDayFilter;
+              return inRange && hasDay && matchesDay;
+            });
+
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "min-h-[115px] p-2 flex flex-col justify-between transition-all group",
+                  isCurrentMonth 
+                    ? (isToday ? "bg-[#FFFDFD]" : "bg-white hover:bg-slate-50/50") 
+                    : "bg-slate-50/30"
+                )}
+              >
+                {/* Day number header */}
+                <div className="flex justify-start items-center mb-1.5 shrink-0">
+                  <span className={cn(
+                    "text-[11px] font-bold h-5.5 w-5.5 flex items-center justify-center rounded-md transition-all",
+                    isToday
+                      ? "border border-red-250 text-[#C81E3A] bg-red-50/40"
+                      : isCurrentMonth
+                        ? "text-slate-650"
+                        : "text-slate-300"
+                  )}>
+                    {cell.date.getDate()}
+                  </span>
+                  {isToday && (
+                    <span className="ml-1.5 text-[9px] font-bold text-[#C81E3A] uppercase tracking-wider scale-95">Today</span>
+                  )}
+                </div>
+
+                {/* Schedules area */}
+                <div className="flex-1 flex flex-col justify-end gap-1">
+                  {cellSchedules.length > 0 && (
+                    <>
+                      {renderScheduleBadge(cellSchedules[0])}
+                      {cellSchedules.length > 1 && (
+                        <div className="flex justify-start">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="text-[8px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded-md border border-slate-200 transition-colors"
+                              >
+                                +{cellSchedules.length - 1} more
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              className="z-[200] w-64 p-3 bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col gap-2"
+                            >
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-100">
+                                Additional Schedules ({cellSchedules.length - 1})
+                              </p>
+                              <div className="max-h-48 overflow-y-auto flex flex-col gap-1.5 custom-scrollbar">
+                                {cellSchedules.slice(1).map((sch) => {
+                                  const isDefault = sch.isDefault;
+                                  const isActive = sch.isActive;
+                                  return (
+                                    <button
+                                      key={sch.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedDetailSchedule(sch);
+                                        setDetailDialogOpen(true);
+                                      }}
+                                      className={cn(
+                                        "w-full text-left p-2 rounded-lg border text-[10px] transition-all flex flex-col gap-0.5 hover:shadow-xs",
+                                        isActive
+                                          ? "bg-[#FFFDFD] border-red-100 hover:border-red-200 text-[#C81E3A]"
+                                          : "bg-slate-50 border-slate-200 text-slate-400 opacity-70 hover:opacity-100"
+                                      )}
+                                    >
+                                      <div className="flex justify-between items-center gap-1 w-full">
+                                        <span className="font-semibold font-mono truncate">{sch.scheduleCode || 'SCH'}</span>
+                                        {isDefault && (
+                                          <span className="text-[8px] font-extrabold text-[#C81E3A] shrink-0">
+                                            • Default
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex justify-between items-center w-full mt-0.5">
+                                        <span className="text-[8px] font-mono font-medium text-slate-400">
+                                          {formatTimeHM(sch.arrivalDeadline)}–{formatTimeHM(sch.departureTime)}
+                                        </span>
+                                        <span className={cn(
+                                          'px-1 py-0.2 rounded text-[7px] font-bold uppercase tracking-wide border scale-90 origin-right',
+                                          sch.shiftType === 'MORNING'
+                                            ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                            : 'bg-orange-50 text-orange-700 border-orange-100'
+                                        )}>
+                                          {sch.shiftType}
+                                        </span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -829,22 +1203,23 @@ export function SchoolBusSchoolDetailPage({
                 />
               </div>
             </div>
-
             {/* Usage Filter */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Usage Type</label>
-              <select
+              <SchoolBusSelect
                 value={pickupUsageFilter}
-                onChange={(e) => setPickupUsageFilter(e.target.value as any)}
-                className="w-full rounded-xl border border-slate-200 bg-white py-1.5 px-3 text-xs font-medium text-slate-700 focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 shadow-sm"
-              >
-                <option value="ALL">All usage types</option>
-                <option value="PICKUP">Pickup only</option>
-                <option value="DROPOFF">Drop-off only</option>
-                <option value="PICKUP_DROPOFF">Pickup & Drop-off</option>
-              </select>
+                onChange={(val) => setPickupUsageFilter(val as any)}
+                options={[
+                  { label: 'All usage types', value: 'ALL' },
+                  { label: 'Pickup only', value: 'PICKUP' },
+                  { label: 'Drop-off only', value: 'DROPOFF' },
+                  { label: 'Pickup & Drop-off', value: 'PICKUP_DROPOFF' },
+                ]}
+                placeholder="Select usage type"
+                fullWidth
+                className="border-slate-200 hover:border-slate-350 rounded-lg text-xs"
+              />
             </div>
-
             {/* Coordinate filter */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coordinates</label>
@@ -1118,6 +1493,115 @@ export function SchoolBusSchoolDetailPage({
           isLoading={deletingSchedule || unlinkingPickup || deletingWindow}
           onConfirm={handleConfirmDelete}
         />
+
+        {/* Schedule Detail Dialog */}
+        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <DialogContent className="max-w-md rounded-[24px] border border-slate-200 bg-white p-6 shadow-xl text-slate-900">
+            {selectedDetailSchedule && (
+              <>
+                <DialogHeader className="pb-4 border-b border-slate-100 flex flex-row items-center gap-2">
+                  <div className="flex items-center gap-2 w-full">
+                    <span className="font-mono text-[10px] font-bold bg-red-50 text-[#C81E3A] px-2 py-1 rounded-lg border border-red-100 shrink-0">
+                      {selectedDetailSchedule.scheduleCode || 'SCH'}
+                    </span>
+                    <DialogTitle className="text-base font-bold text-slate-900 truncate flex-1 leading-none mt-1">
+                      {selectedDetailSchedule.scheduleName}
+                    </DialogTitle>
+                  </div>
+                </DialogHeader>
+
+                <div className="py-4 space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Shift Type</span>
+                      <div>
+                        <span className={cn(
+                          'px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block',
+                          selectedDetailSchedule.shiftType === 'MORNING'
+                            ? 'bg-blue-50 text-blue-700 border-blue-100'
+                            : 'bg-orange-50 text-orange-700 border-orange-100'
+                        )}>
+                          {selectedDetailSchedule.shiftType}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Days</span>
+                      <p className="font-semibold text-slate-700 truncate" title={selectedDetailSchedule.daysOfWeek?.join(', ')}>
+                        {formatDaysCompact(selectedDetailSchedule.daysOfWeek)}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Arrival Deadline</span>
+                      <p className="font-mono font-bold text-slate-700 text-sm">{selectedDetailSchedule.arrivalDeadline || '—'}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Departure Time</span>
+                      <p className="font-mono font-bold text-slate-700 text-sm">{selectedDetailSchedule.departureTime || '—'}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Effective From</span>
+                      <p className="font-medium text-slate-600">{selectedDetailSchedule.effectiveFrom ? formatDate(selectedDetailSchedule.effectiveFrom) : '—'}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Effective To</span>
+                      <p className="font-medium text-slate-600">{selectedDetailSchedule.effectiveTo ? formatDate(selectedDetailSchedule.effectiveTo) : '—'}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Status</span>
+                      <div>
+                        {selectedDetailSchedule.isDefault ? (
+                          <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10">
+                            Default
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-slate-50 px-2.5 py-0.5 text-[10px] font-semibold text-slate-500 ring-1 ring-inset ring-slate-500/10">
+                            Standard
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Status</span>
+                      <div>
+                        <SchoolBusStatusBadge status={selectedDetailSchedule.isActive ? 'ACTIVE' : 'INACTIVE'} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    onClick={() => setDetailDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-[#C81E3A] hover:bg-[#A6172D] text-white"
+                    onClick={() => {
+                      setEditingSchedule(selectedDetailSchedule);
+                      setScheduleDialogOpen(true);
+                      setDetailDialogOpen(false);
+                    }}
+                  >
+                    <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit Schedule
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </>
     );
   }
