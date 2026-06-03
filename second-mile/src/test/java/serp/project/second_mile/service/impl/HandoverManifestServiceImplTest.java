@@ -11,11 +11,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.second_mile.caller.TmsOrderClient;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.domain.HandoverManifest;
+import serp.project.second_mile.domain.HandoverManifestOrder;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.HubStaffAssignment;
-import serp.project.second_mile.domain.Order;
 import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
@@ -27,7 +29,6 @@ import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.enums.VehicleType;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.kafka.HandoverManifestSyncEventPublisher;
-import serp.project.second_mile.kafka.OrderSyncEventPublisher;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEventType;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
@@ -37,9 +38,9 @@ import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
-import serp.project.second_mile.repository.OrderRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
+import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -73,9 +74,6 @@ class HandoverManifestServiceImplTest {
     private HandoverManifestOrderRepository handoverManifestOrderRepository;
 
     @Mock
-    private OrderRepository orderRepository;
-
-    @Mock
     private VehicleRepository vehicleRepository;
 
     @Mock
@@ -94,7 +92,10 @@ class HandoverManifestServiceImplTest {
     private SecondMileAccessUtils secondMileAccessUtils;
 
     @Mock
-    private OrderSyncEventPublisher orderSyncEventPublisher;
+    private TmsOrderClient tmsOrderClient;
+
+    @Mock
+    private TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
 
     @Mock
     private HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
@@ -122,7 +123,7 @@ class HandoverManifestServiceImplTest {
         Hub hub = hub();
         Vehicle vehicle = vehicle();
         Route route = route();
-        Order order = order("ORD-001", 10.0, 0.2);
+        TmsOrderOperationView order = order("ORD-001", 10.0, 0.2);
 
         when(handoverManifestRepository.findByTenantIdAndManifestCodeIgnoreCase(TENANT_ID, "HM-001"))
                 .thenReturn(Optional.empty());
@@ -137,7 +138,7 @@ class HandoverManifestServiceImplTest {
         when(hubStaffAssignmentRepository.findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
                 eq(DRIVER_ID), eq(HUB_ID), eq(TENANT_ID), any(LocalDate.class)
         )).thenReturn(Optional.of(HubStaffAssignment.builder().build()));
-        when(orderRepository.findByTenantIdAndUpperOrderCodeIn(TENANT_ID, List.of("ORD-001")))
+        when(tmsOrderClient.lookupByCodes(List.of("ORD-001")))
                 .thenReturn(List.of(order));
         when(handoverManifestRepository.existsOverlappingActiveAssignment(
                 eq(TENANT_ID),
@@ -148,7 +149,7 @@ class HandoverManifestServiceImplTest {
                 anyCollection(),
                 eq(null)
         )).thenReturn(false);
-        when(handoverManifestOrderRepository.findByManifest_IdAndOrder_IdAndTenantId(
+        when(handoverManifestOrderRepository.findByManifest_IdAndTmsOrderIdAndTenantId(
                 any(),
                 eq(1L),
                 eq(TENANT_ID)
@@ -173,7 +174,7 @@ class HandoverManifestServiceImplTest {
         assertEquals(DEPARTURE_AT, savedManifest.getPlannedDepartureAt());
         assertEquals(ARRIVAL_AT, savedManifest.getPlannedArrivalAt());
         assertEquals(HandoverManifestStatus.OUTBOUND_CONFIRMED, savedManifest.getStatus());
-        assertEquals(OrderStatus.OUTBOUND_READY_FROM_PO, order.getStatus());
+        verify(tmsOrderTransitionOutboxService).enqueue(any(), eq(TENANT_ID));
     }
 
     @Test
@@ -257,8 +258,8 @@ class HandoverManifestServiceImplTest {
                 .build();
     }
 
-    private Order order(String orderCode, Double weight, Double volume) {
-        return Order.builder()
+    private TmsOrderOperationView order(String orderCode, Double weight, Double volume) {
+        return TmsOrderOperationView.builder()
                 .id(1L)
                 .orderCode(orderCode)
                 .originPostOfficeCode(POST_OFFICE_CODE)

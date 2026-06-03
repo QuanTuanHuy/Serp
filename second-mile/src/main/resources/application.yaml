@@ -58,6 +58,15 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
+tms-order:
+  service:
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    bearer-token: ${TMS_ORDER_SERVICE_TOKEN:}
+    lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
+    status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
+  transition-outbox:
+    retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
+
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}
   api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}

@@ -16,15 +16,15 @@ import java.util.Optional;
 public interface HandoverManifestOrderRepository extends JpaRepository<HandoverManifestOrder, Long> {
     List<HandoverManifestOrder> findByManifest_IdAndTenantId(Long manifestId, Long tenantId);
 
-    List<HandoverManifestOrder> findByManifest_IdAndOrder_OrderCodeInAndTenantId(
+    List<HandoverManifestOrder> findByManifest_IdAndOrderCodeInAndTenantId(
             Long manifestId,
             List<String> orderCodes,
             Long tenantId
     );
 
-    Optional<HandoverManifestOrder> findByManifest_IdAndOrder_IdAndTenantId(
+    Optional<HandoverManifestOrder> findByManifest_IdAndTmsOrderIdAndTenantId(
             Long manifestId,
-            Long orderId,
+            Long tmsOrderId,
             Long tenantId
     );
 }
