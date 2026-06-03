@@ -10,9 +10,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.PrecisionModel;
+import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
+import serp.project.tms_order.caller.PaymentServiceCaller;
+import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.domain.ProductType;
+import serp.project.tms_order.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.tms_order.dto.request.CreateOrderRequest;
+import serp.project.tms_order.dto.request.PaymentOrderConfirmedWebhookRequest;
+import serp.project.tms_order.dto.response.OrderConfirmationResponse;
+import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
+import serp.project.tms_order.dto.response.PaymentWebhookProcessResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
 import serp.project.tms_order.enums.DeliveryRequestTime;
 import serp.project.tms_order.enums.FeePayer;
@@ -22,6 +33,7 @@ import serp.project.tms_order.enums.OrderType;
 import serp.project.tms_order.enums.PaymentStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.ProductTypeRepository;
@@ -36,12 +48,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceImplTest {
 
     private static final Long TENANT_ID = 9L;
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Mock
     private OrderRepository orderRepository;
@@ -51,6 +66,15 @@ class OrderServiceImplTest {
 
     @Mock
     private AuthUtils authUtils;
+
+    @Mock
+    private PaymentServiceCaller paymentServiceCaller;
+
+    @Mock
+    private FirstMilePostOfficeCaller firstMilePostOfficeCaller;
+
+    @Mock
+    private OrderSyncEventPublisher orderSyncEventPublisher;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -106,6 +130,102 @@ class OrderServiceImplTest {
         assertEquals(ErrorCode.ORDER_CUSTOMER_CODE_EXISTED, exception.getErrorCode());
     }
 
+    @Test
+    void confirmOrderRequiresSenderPaymentBeforeConfirmation() {
+        Order order = confirmableOrder();
+        order.setFeePayer(FeePayer.SENDER);
+        order.setPaymentStatus(PaymentStatus.UNPAID);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+
+        AppException exception = assertThrows(
+                AppException.class,
+                () -> orderService.confirmOrder(1L, TENANT_ID)
+        );
+
+        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
+        verify(firstMilePostOfficeCaller, never()).reserveBestOriginPostOffice(any(), any());
+    }
+
+    @Test
+    void confirmOrderReservesOriginPostOfficeAndPublishesSyncEvent() {
+        Order order = confirmableOrder();
+        OriginPostOfficeReservationResponse postOffice = OriginPostOfficeReservationResponse.builder()
+                .id(5L)
+                .code("PO-HN-01")
+                .name("Ha Noi 01")
+                .currentLoad(3)
+                .dailyCapacity(100)
+                .build();
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+        when(firstMilePostOfficeCaller.reserveBestOriginPostOffice(21.0278D, 105.8342D))
+                .thenReturn(postOffice);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderConfirmationResponse response = orderService.confirmOrder(1L, TENANT_ID);
+
+        assertTrue(response.alreadyConfirmed() == false);
+        assertEquals("PO-HN-01", response.originPostOffice().code());
+        assertEquals(true, order.getIsConfirm());
+        assertEquals("PO-HN-01", order.getOriginPostOfficeCode());
+        verify(orderSyncEventPublisher).publish(order);
+    }
+
+    @Test
+    void confirmOrderPaymentReturnsSuccessWhenOrderAlreadyPaid() {
+        Order order = confirmableOrder();
+        order.setPaymentStatus(PaymentStatus.PAID);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+
+        OrderPaymentConfirmResponse response = orderService.confirmOrderPayment(
+                1L,
+                TENANT_ID,
+                new ConfirmOrderPaymentRequest("250101_abc")
+        );
+
+        assertEquals(PaymentStatus.PAID, response.paymentStatus());
+        assertEquals("SUCCESS", response.gatewayStatus());
+        verify(paymentServiceCaller, never()).queryOrderStatus(any());
+        verify(orderSyncEventPublisher, never()).publish(any());
+    }
+
+    @Test
+    void processPaymentWebhookMarksOrderPaidAndPublishesSyncEvent() {
+        Order order = confirmableOrder();
+        order.setPaymentStatus(PaymentStatus.UNPAID);
+
+        when(orderRepository.findByOrderCodeAndTenantIdForUpdate("ORD-001", TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PaymentWebhookProcessResponse response = orderService.processPaymentOrderConfirmedWebhook(
+                new PaymentOrderConfirmedWebhookRequest(
+                        "250101_abc",
+                        "ORD-001",
+                        TENANT_ID,
+                        45000L,
+                        null,
+                        "zalopay",
+                        "gateway-1"
+                )
+        );
+
+        assertTrue(response.updated());
+        assertEquals(PaymentStatus.PAID, order.getPaymentStatus());
+        assertEquals(45000L, order.getTotalShippingFee());
+        verify(orderSyncEventPublisher).publish(order);
+    }
+
     private CreateOrderRequest createRequest() {
         CreateOrderRequest request = new CreateOrderRequest();
         request.setCustomerOrderCode(" CUS-001 ");
@@ -139,6 +259,21 @@ class OrderServiceImplTest {
                 7L
         )));
         return request;
+    }
+
+    private Order confirmableOrder() {
+        return Order.builder()
+                .id(1L)
+                .orderCode("ORD-001")
+                .customerOrderCode("CUS-001")
+                .status(OrderStatus.CREATED)
+                .isConfirm(false)
+                .pickupMethod(OrderPickupMethod.COURIER_PICKUP)
+                .feePayer(FeePayer.RECEIVER)
+                .paymentStatus(PaymentStatus.UNPAID)
+                .senderLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(105.8342D, 21.0278D)))
+                .tenantId(TENANT_ID)
+                .build();
     }
 
     private String orderCodePrefix() {

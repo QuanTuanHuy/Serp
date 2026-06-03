@@ -51,8 +51,6 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/internal/payment-webhooks/**")
-                        .permitAll()
                         .requestMatchers("/api/**")
                         .authenticated()
                         .anyRequest()

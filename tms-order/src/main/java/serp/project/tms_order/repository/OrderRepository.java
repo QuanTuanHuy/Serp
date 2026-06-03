@@ -41,6 +41,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Optional<Order> findByIdAndTenantId(Long id, Long tenantId);
 
+    Optional<Order> findByOrderCodeAndTenantId(String orderCode, Long tenantId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select o
@@ -50,6 +52,18 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             """)
     Optional<Order> findByIdAndTenantIdForUpdate(
             @Param("id") Long id,
+            @Param("tenantId") Long tenantId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select o
+            from Order o
+            where o.orderCode = :orderCode
+                and o.tenantId = :tenantId
+            """)
+    Optional<Order> findByOrderCodeAndTenantIdForUpdate(
+            @Param("orderCode") String orderCode,
             @Param("tenantId") Long tenantId
     );
 

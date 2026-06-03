@@ -3,17 +3,17 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.caller.dto.payment;
+package serp.project.tms_order.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentQueryOrderRequest {
+public class ConfirmOrderPaymentRequest {
+    @NotBlank
     private String appTransId;
 }

@@ -14,9 +14,12 @@ public enum ErrorCode {
     // Lỗi liên quan đến PostOffice (10xx)
     POST_OFFICE_OVERLOADED(1001, "error.1001", HttpStatus.BAD_REQUEST),
 
+    POST_OFFICE_NOT_FOUND(9405, "error.9405", HttpStatus.NOT_FOUND),
     PRODUCT_TYPE_NOT_FOUND(9408, "error.9408", HttpStatus.NOT_FOUND),
     PRODUCT_TYPE_CODE_EXISTED(9409, "error.9409", HttpStatus.CONFLICT),
     ORDER_NOT_FOUND(9416, "error.9416", HttpStatus.NOT_FOUND),
+    ORDER_NOT_ASSIGNABLE(9417, "error.9417", HttpStatus.BAD_REQUEST),
+    NO_SUITABLE_ORIGIN_POST_OFFICE(9421, "error.9421", HttpStatus.BAD_REQUEST),
     ORDER_CUSTOMER_CODE_EXISTED(9422, "error.9422", HttpStatus.CONFLICT),
     ORDER_NOT_EDITABLE(9423, "error.9423", HttpStatus.BAD_REQUEST),
 

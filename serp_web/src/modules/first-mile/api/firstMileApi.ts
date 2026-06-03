@@ -1341,7 +1341,7 @@ export const firstMileApi = api.injectEndpoints({
         url: `/orders/${orderId}/confirm`,
         method: 'POST',
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
     }),
 
@@ -1354,7 +1354,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         ...(body ? { body } : {}),
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<OrderPaymentInitResponse>,
     }),
 
@@ -1367,7 +1367,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse:
         unwrapFirstMileResultOrRaw<OrderPaymentConfirmResponse>,
     }),
@@ -1400,7 +1400,7 @@ export const firstMileApi = api.injectEndpoints({
           post_office_id: postOfficeId,
         },
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<OrderConfirmationResponse>,
     }),
 

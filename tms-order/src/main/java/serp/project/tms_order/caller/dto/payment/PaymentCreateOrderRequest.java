@@ -3,7 +3,7 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.caller.dto.payment;
+package serp.project.tms_order.caller.dto.payment;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

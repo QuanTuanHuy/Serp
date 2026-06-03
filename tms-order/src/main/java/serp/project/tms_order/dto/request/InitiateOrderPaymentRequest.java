@@ -3,9 +3,9 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.dto.request;
+package serp.project.tms_order.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConfirmOrderPaymentRequest {
-    @NotBlank
-    private String appTransId;
+public class InitiateOrderPaymentRequest {
+    @Positive
+    private Long amount;
 }

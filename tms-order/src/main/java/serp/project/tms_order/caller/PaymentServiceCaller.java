@@ -3,7 +3,7 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.first_mile.caller;
+package serp.project.tms_order.caller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,13 +12,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
-import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderRequest;
-import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
-import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderRequest;
-import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
-import serp.project.first_mile.exception.AppException;
-import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.tms_order.caller.dto.payment.PaymentCreateOrderRequest;
+import serp.project.tms_order.caller.dto.payment.PaymentCreateOrderResponse;
+import serp.project.tms_order.caller.dto.payment.PaymentQueryOrderRequest;
+import serp.project.tms_order.caller.dto.payment.PaymentQueryOrderResponse;
+import serp.project.tms_order.exception.AppException;
+import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kernel.utils.AuthUtils;
 
 @Component
 @Slf4j
@@ -39,7 +39,8 @@ public class PaymentServiceCaller {
     public PaymentServiceCaller(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${payment.service.base-url:http://localhost:8096}") String paymentServiceBaseUrl) {
+            @Value("${payment.service.base-url:http://localhost:8096}") String paymentServiceBaseUrl
+    ) {
         this.authUtils = authUtils;
         this.restClient = restClientBuilder.baseUrl(paymentServiceBaseUrl).build();
     }
@@ -53,12 +54,15 @@ public class PaymentServiceCaller {
                     .retrieve()
                     .body(PaymentCreateOrderResponse.class);
             if (response == null) {
-                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Payment service returned empty create-order response.");
+                throw new AppException(
+                        ErrorCode.UNCATEGORIZED_EXCEPTION,
+                        "Payment service returned empty create-order response."
+                );
             }
             return response;
-        } catch (RestClientException ex) {
-            log.error("Failed to call payment create-order endpoint: {}", ex.getMessage(), ex);
-            throw toPaymentServiceException(ex);
+        } catch (RestClientException exception) {
+            log.error("Failed to call payment create-order endpoint: {}", exception.getMessage(), exception);
+            throw toPaymentServiceException(exception);
         }
     }
 
@@ -78,17 +82,20 @@ public class PaymentServiceCaller {
                     .retrieve()
                     .body(PaymentQueryOrderResponse.class);
             if (response == null) {
-                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Payment service returned empty query-order response.");
+                throw new AppException(
+                        ErrorCode.UNCATEGORIZED_EXCEPTION,
+                        "Payment service returned empty query-order response."
+                );
             }
             return response;
-        } catch (RestClientException ex) {
-            log.error("Failed to call payment query-order endpoint: {}", ex.getMessage(), ex);
-            throw toPaymentServiceException(ex);
+        } catch (RestClientException exception) {
+            log.error("Failed to call payment query-order endpoint: {}", exception.getMessage(), exception);
+            throw toPaymentServiceException(exception);
         }
     }
 
-    private AppException toPaymentServiceException(RestClientException ex) {
-        if (ex instanceof RestClientResponseException responseException) {
+    private AppException toPaymentServiceException(RestClientException exception) {
+        if (exception instanceof RestClientResponseException responseException) {
             int statusCode = responseException.getStatusCode().value();
             if (statusCode == 401 || statusCode == 403) {
                 return new AppException(

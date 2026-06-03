@@ -15,26 +15,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import serp.project.first_mile.caller.PaymentServiceCaller;
-import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderRequest;
-import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
-import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PickupCheckin;
 import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.dto.request.FileUploadRequest;
-import serp.project.first_mile.dto.request.ConfirmOrderPaymentRequest;
-import serp.project.first_mile.dto.request.InitiateOrderPaymentRequest;
-import serp.project.first_mile.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.first_mile.dto.response.FileUploadResponse;
-import serp.project.first_mile.dto.response.OrderConfirmationResponse;
-import serp.project.first_mile.dto.response.OrderPaymentConfirmResponse;
-import serp.project.first_mile.dto.response.OrderPaymentInitResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.OrderTimelineResponse;
-import serp.project.first_mile.dto.response.PaymentWebhookProcessResponse;
 import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.enums.*;
 import serp.project.first_mile.exception.AppException;
@@ -43,7 +32,6 @@ import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.kernel.utils.PostOfficeStaffCodeUtils;
-import serp.project.first_mile.mapper.OrderMapper;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PickupCheckinRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
@@ -96,9 +84,6 @@ public class OrderServiceImpl implements OrderService {
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
 
-    @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
-    private String paymentRedirectUrl;
-
     private final OrderRepository orderRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final FirstMileAccessUtils firstMileAccessUtils;
@@ -108,7 +93,6 @@ public class OrderServiceImpl implements OrderService {
     private final PickupCheckinRepository pickupCheckinRepository;
     private final FileStorageService fileStorageService;
     private final SyncOrder syncOrder;
-    private final PaymentServiceCaller paymentServiceCaller;
     private final OrderTimelineService orderTimelineService;
 
     @Override
@@ -147,149 +131,6 @@ public class OrderServiceImpl implements OrderService {
                 toLongitude(order.getSenderLocation()),
                 buildSenderLocationLabel(order)
         ));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public OrderPaymentInitResponse initiateOrderPayment(
-            Long orderId,
-            Long tenantId,
-            InitiateOrderPaymentRequest request
-    ) {
-        OrderActorScope actorScope = resolveActorScope(tenantId);
-        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-
-        validateCanMutateOrder(order, tenantId, actorScope);
-
-        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee is already paid.");
-        }
-
-        long shippingFee = resolveShippingFeeForPayment(order, request);
-        order.setTotalShippingFee(shippingFee);
-        orderRepository.save(order);
-        Long actorId = firstMileAccessUtils.getCurrentUserIdOrThrow();
-        String orderCode = order.getOrderCode();
-
-        PaymentCreateOrderRequest paymentRequest = PaymentCreateOrderRequest.builder()
-                .appUser(orderCode)
-                .amount(shippingFee)
-                .description("Thanh toan phi van chuyen cho don hang " + orderCode)
-                .embedData(PaymentCreateOrderRequest.EmbedData.builder()
-                        .redirectUrl(paymentRedirectUrl + "?source=first-mile&orderId=" + order.getId())
-                        .build())
-                .title("Phi van chuyen - " + orderCode)
-                .tenantId(tenantId)
-                .actorId(actorId)
-                .userId(actorId)
-                .items(List.of(PaymentCreateOrderRequest.Item.builder()
-                        .itemId("shipping-fee-" + orderCode)
-                        .itemName("Phi van chuyen don hang " + orderCode)
-                        .itemPrice(shippingFee)
-                        .itemQuantity(1)
-                        .build()))
-                .build();
-
-        PaymentCreateOrderResponse paymentResponse = paymentServiceCaller.createOrder(paymentRequest);
-        if (paymentResponse.getStatus() == null || !"SUCCESS".equalsIgnoreCase(paymentResponse.getStatus())) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    paymentResponse.getMessage() == null
-                            ? "Cannot create payment order for shipping fee."
-                            : paymentResponse.getMessage()
-            );
-        }
-
-        return new OrderPaymentInitResponse(
-                order.getId(),
-                orderCode,
-                shippingFee,
-                paymentResponse.getAppTransId(),
-                paymentResponse.getOrderUrl(),
-                paymentResponse.getStatus(),
-                paymentResponse.getMessage()
-        );
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public OrderPaymentConfirmResponse confirmOrderPayment(Long orderId, Long tenantId, ConfirmOrderPaymentRequest request) {
-        OrderActorScope actorScope = resolveActorScope(tenantId);
-        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-
-        validateCanMutateOrder(order, tenantId, actorScope);
-
-        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
-            return new OrderPaymentConfirmResponse(
-                    order.getId(),
-                    order.getOrderCode(),
-                    order.getPaymentStatus(),
-                    request.getAppTransId(),
-                    "SUCCESS",
-                    "Order shipping fee is already marked as paid."
-            );
-        }
-
-        PaymentQueryOrderResponse queryResponse = paymentServiceCaller.queryOrderStatus(request.getAppTransId());
-        String gatewayStatus = queryResponse.getStatus() == null ? "UNKNOWN" : queryResponse.getStatus();
-        if (!"SUCCESS".equalsIgnoreCase(gatewayStatus)) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Payment status is not successful yet. Current status: " + gatewayStatus
-            );
-        }
-
-        order.setPaymentStatus(PaymentStatus.PAID);
-        Order savedOrder = orderRepository.save(order);
-        syncOrder.sendOrderEvent(savedOrder);
-
-        return new OrderPaymentConfirmResponse(
-                savedOrder.getId(),
-                savedOrder.getOrderCode(),
-                savedOrder.getPaymentStatus(),
-                request.getAppTransId(),
-                gatewayStatus,
-                queryResponse.getMessage()
-        );
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public PaymentWebhookProcessResponse processPaymentOrderConfirmedWebhook(
-            PaymentOrderConfirmedWebhookRequest request
-    ) {
-        if (request == null || !hasText(request.getOrderCode()) || request.getTenantId() == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid webhook payload.");
-        }
-
-        String orderCode = request.getOrderCode().trim();
-        Order order = orderRepository.findByOrderCodeAndTenantIdForUpdate(orderCode, request.getTenantId())
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-
-        if (PaymentStatus.PAID.equals(order.getPaymentStatus())) {
-            return new PaymentWebhookProcessResponse(
-                    orderCode,
-                    request.getAppTransId(),
-                    false,
-                    "Order shipping fee is already marked as paid."
-            );
-        }
-
-        if (request.getAmount() != null && request.getAmount() > 0L) {
-            order.setTotalShippingFee(request.getAmount());
-        }
-        order.setPaymentStatus(PaymentStatus.PAID);
-        Order savedOrder = orderRepository.save(order);
-        syncOrder.sendOrderEvent(savedOrder);
-
-        return new PaymentWebhookProcessResponse(
-                savedOrder.getOrderCode(),
-                request.getAppTransId(),
-                true,
-                "Order payment status updated to PAID."
-        );
     }
 
     @Override
@@ -447,64 +288,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public OrderConfirmationResponse confirmOrder(Long orderId, Long tenantId) {
-        OrderActorScope actorScope = resolveActorScope(tenantId);
-        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-
-        validateCanMutateOrder(order, tenantId, actorScope);
-
-        if (OrderPickupMethod.DROP_OFF_AT_POST_OFFICE.equals(resolveOrderPickupMethod(order))) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Drop-off orders must be confirmed by a post office manager at the receiving post office."
-            );
-        }
-
-        if (Boolean.TRUE.equals(order.getIsConfirm())) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Order has already been confirmed. If you need to change the order details, please contact support."
-            );
-        }
-
-        if (FeePayer.SENDER.equals(order.getFeePayer())
-                && !PaymentStatus.PAID.equals(order.getPaymentStatus())) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Sender must complete shipping fee payment before order confirmation."
-            );
-        }
-
-        if (hasText(order.getOriginPostOfficeCode())) {
-            order.setIsConfirm(true);
-            orderRepository.save(order);
-            syncOrder.sendOrderEvent(order);
-            Optional<PostOffice> assignedPostOffice = resolveAssignedPostOffice(order, tenantId);
-            return OrderMapper.toOrderConfirmationResponse(order, assignedPostOffice.orElse(null), true);
-        }
-
-        validateOrderForConfirmation(order);
-
-        PostOffice postOffice = postOfficeRepository.findBestAssignablePostOfficeForSenderForUpdate(
-                        tenantId,
-                        order.getSenderLocation(),
-                        LocalDate.now()
-                )
-                .orElseThrow(() -> new AppException(ErrorCode.NO_SUITABLE_ORIGIN_POST_OFFICE));
-
-        postOffice.addLoad(1);
-        order.setOriginPostOfficeCode(postOffice.getCode());
-        order.setIsConfirm(true);
-
-        postOfficeRepository.save(postOffice);
-        orderRepository.save(order);
-        syncOrder.sendOrderEvent(order);
-        return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
-    }
-
-    @Override
     public List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(
             Long orderId,
             Integer limit,
@@ -520,7 +303,7 @@ public class OrderServiceImpl implements OrderService {
 
         validateCanMutateOrder(order, tenantId, actorScope);
         ensureDropOffPickupMethod(order);
-        validateOrderForConfirmation(order);
+        validateOrderForDropOffSuggestions(order);
 
         int suggestionLimit = normalizeDropOffSuggestionLimit(limit);
         Point senderLocation = order.getSenderLocation();
@@ -546,79 +329,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public OrderConfirmationResponse confirmDropOffOrderAtPostOffice(Long orderId, Long postOfficeId, Long tenantId) {
-        if (orderId == null || orderId <= 0 || postOfficeId == null || postOfficeId <= 0) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        PostOffice postOffice = postOfficeRepository.findByIdAndTenantIdForUpdate(postOfficeId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
-
-        firstMileAccessUtils.ensureCurrentManagerAssignedToPostOfficeOrThrow(postOfficeId, tenantId);
-
-        Order order = orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-
-        ensureDropOffPickupMethod(order);
-
-        if (Boolean.TRUE.equals(order.getIsConfirm())) {
-            if (hasText(order.getOriginPostOfficeCode())
-                    && postOffice.getCode() != null
-                    && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
-                if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
-                    order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                    Order savedOrder = orderRepository.save(order);
-                    recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
-                    syncOrder.sendOrderEvent(savedOrder);
-                }
-                return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
-            }
-
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Order has already been confirmed at another post office."
-            );
-        }
-
-        if (hasText(order.getOriginPostOfficeCode())) {
-            if (postOffice.getCode() != null
-                    && order.getOriginPostOfficeCode().equalsIgnoreCase(postOffice.getCode())) {
-                order.setIsConfirm(true);
-                order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                Order savedOrder = orderRepository.save(order);
-                recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order received at origin post office.");
-                syncOrder.sendOrderEvent(savedOrder);
-                return OrderMapper.toOrderConfirmationResponse(order, postOffice, true);
-            }
-
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Order is already linked to another origin post office."
-            );
-        }
-
-        validateOrderForConfirmation(order);
-
-        Point senderLocation = order.getSenderLocation();
-        if (!isPostOfficeSuitableForSender(postOffice, LocalDate.now(), senderLocation)) {
-            throw new AppException(ErrorCode.NO_SUITABLE_ORIGIN_POST_OFFICE);
-        }
-
-        postOffice.addLoad(1);
-        order.setOriginPostOfficeCode(postOffice.getCode());
-        order.setIsConfirm(true);
-        order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-
-        postOfficeRepository.save(postOffice);
-        Order savedOrder = orderRepository.save(order);
-        recordAtOriginPostOfficeTimeline(savedOrder, postOffice, "Order confirmed and received at origin post office.");
-        syncOrder.sendOrderEvent(savedOrder);
-
-        return OrderMapper.toOrderConfirmationResponse(order, postOffice, false);
-    }
-
-    @Override
     public void publishOrderEvent(String orderCode) {
         var order = orderRepository.findByOrderCodeAndTenantId(orderCode, firstMileAccessUtils.getCurrentTenantIdOrThrow())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
@@ -628,7 +338,7 @@ public class OrderServiceImpl implements OrderService {
             log.warn("The order with orderCode {} is not confirmed yet, skipping event publish.", orderCode);
         }
     }
-    private void validateOrderForConfirmation(Order order) {
+    private void validateOrderForDropOffSuggestions(Order order) {
         if (order == null) {
             throw new AppException(ErrorCode.ORDER_NOT_FOUND);
         }
@@ -646,24 +356,6 @@ public class OrderServiceImpl implements OrderService {
         if (!isValidCoordinate(latitude, longitude)) {
             throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
         }
-    }
-
-    private long resolveShippingFeeForPayment(Order order, InitiateOrderPaymentRequest request) {
-        if (order == null) {
-            throw new AppException(ErrorCode.ORDER_NOT_FOUND);
-        }
-        if (request != null && request.getAmount() != null) {
-            Long amount = request.getAmount();
-            if (amount <= 0L) {
-                throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee must be greater than 0 for payment.");
-            }
-            return amount;
-        }
-        Long totalShippingFee = order.getTotalShippingFee();
-        if (totalShippingFee == null || totalShippingFee <= 0L) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Order shipping fee must be greater than 0 for payment.");
-        }
-        return totalShippingFee;
     }
 
     private boolean isValidCoordinate(double latitude, double longitude) {
@@ -707,30 +399,6 @@ public class OrderServiceImpl implements OrderService {
         return String.join(", ", addressParts);
     }
 
-    private void recordAtOriginPostOfficeTimeline(Order order, PostOffice postOffice, String description) {
-        orderTimelineService.recordStatusEvent(
-                order,
-                OrderStatus.AT_ORIGIN_POST_OFFICE,
-                description,
-                new OrderTimelineContext(
-                        LocalDateTime.now(),
-                        null,
-                        null,
-                        postOffice == null ? null : postOffice.getId(),
-                        postOffice == null ? null : postOffice.getCode(),
-                        postOffice == null ? null : postOffice.getName(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        postOffice == null ? null : toLatitude(postOffice.getLocation()),
-                        postOffice == null ? null : toLongitude(postOffice.getLocation()),
-                        postOffice == null ? null : postOffice.getName()
-                )
-        );
-    }
-
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -743,16 +411,6 @@ public class OrderServiceImpl implements OrderService {
         String trimmedValue = value.trim();
         return trimmedValue.isEmpty() ? null : trimmedValue;
     }
-
-    private Optional<PostOffice> resolveAssignedPostOffice(Order order, Long tenantId) {
-        if (order == null || !hasText(order.getOriginPostOfficeCode())) {
-            return Optional.empty();
-        }
-
-        return postOfficeRepository.findByCodeIgnoreCaseAndTenantId(order.getOriginPostOfficeCode(), tenantId);
-    }
-
-
 
     private OrderActorScope resolveActorScope(Long tenantId) {
         if (firstMileAccessUtils.isAdmin()) {

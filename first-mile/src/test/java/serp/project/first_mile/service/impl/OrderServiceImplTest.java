@@ -17,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.first_mile.domain.Order;
 import serp.project.first_mile.domain.PostOffice;
-import serp.project.first_mile.dto.response.OrderConfirmationResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.enums.OrderPickupMethod;
 import serp.project.first_mile.enums.OrderStatus;
@@ -26,7 +25,6 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.caller.PaymentServiceCaller;
 import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PickupCheckinRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
@@ -36,19 +34,13 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.OrderTimelineService;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,9 +74,6 @@ class OrderServiceImplTest {
 
     @Mock
     private SyncOrder syncOrder;
-
-    @Mock
-    private PaymentServiceCaller paymentServiceCaller;
 
     @Mock
     private OrderTimelineService orderTimelineService;
@@ -142,159 +131,6 @@ class OrderServiceImplTest {
     }
 
     @Test
-    void confirmOrderShouldAssignBestPostOfficeAndIncreaseLoad() {
-        Long tenantId = 1L;
-        Long orderId = 99L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setOrderCode("FM000099");
-        order.setCustomerOrderCode("CUS000099");
-        order.setStatus(OrderStatus.CREATED);
-        order.setPickupMethod(OrderPickupMethod.COURIER_PICKUP);
-        order.setSenderLocation(point(10.77371, 106.70098));
-
-        PostOffice postOffice = new PostOffice();
-        postOffice.setId(10L);
-        postOffice.setCode("PO-HCM-01");
-        postOffice.setName("Post Office 01");
-        postOffice.setStatus(PostOfficeStatus.ACTIVE);
-        postOffice.setCurrentLoad(4);
-        postOffice.setDailyCapacity(10);
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-        when(postOfficeRepository.findBestAssignablePostOfficeForSenderForUpdate(
-                eq(tenantId),
-                eq(order.getSenderLocation()),
-                any(LocalDate.class)
-        )).thenReturn(Optional.of(postOffice));
-
-        OrderConfirmationResponse response = orderService.confirmOrder(orderId, tenantId);
-
-        assertEquals("PO-HCM-01", order.getOriginPostOfficeCode());
-        assertTrue(Boolean.TRUE.equals(order.getIsConfirm()));
-        assertEquals(5, postOffice.getCurrentLoad());
-        assertFalse(response.alreadyConfirmed());
-        assertEquals("PO-HCM-01", response.originPostOffice().code());
-        assertEquals(5, response.originPostOffice().currentLoad());
-
-        verify(postOfficeRepository).save(postOffice);
-        verify(orderRepository).save(order);
-    }
-
-    @Test
-    void confirmOrderShouldThrowWhenNoSuitablePostOfficeExists() {
-        Long tenantId = 1L;
-        Long orderId = 100L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setStatus(OrderStatus.CREATED);
-        order.setPickupMethod(OrderPickupMethod.COURIER_PICKUP);
-        order.setSenderLocation(point(10.77371, 106.70098));
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-        when(postOfficeRepository.findBestAssignablePostOfficeForSenderForUpdate(
-                eq(tenantId),
-                eq(order.getSenderLocation()),
-                any(LocalDate.class)
-        )).thenReturn(Optional.empty());
-
-        AppException exception = assertThrows(AppException.class, () -> orderService.confirmOrder(orderId, tenantId));
-
-        assertEquals(ErrorCode.NO_SUITABLE_ORIGIN_POST_OFFICE, exception.getErrorCode());
-        verify(postOfficeRepository, never()).save(any(PostOffice.class));
-        verify(orderRepository, never()).save(any(Order.class));
-    }
-
-    @Test
-    void confirmOrderShouldRejectAlreadyConfirmedOrder() {
-        Long tenantId = 1L;
-        Long orderId = 101L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setOrderCode("FM000101");
-        order.setCustomerOrderCode("CUS000101");
-        order.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
-        order.setPickupMethod(OrderPickupMethod.COURIER_PICKUP);
-        order.setIsConfirm(true);
-        order.setOriginPostOfficeCode("PO-HCM-02");
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-
-        AppException exception = assertThrows(AppException.class, () -> orderService.confirmOrder(orderId, tenantId));
-
-        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
-
-        verify(postOfficeRepository, never()).findBestAssignablePostOfficeForSenderForUpdate(
-                eq(tenantId),
-                any(Point.class),
-                any(LocalDate.class)
-        );
-        verify(postOfficeRepository, never()).save(any(PostOffice.class));
-        verify(orderRepository, never()).save(any(Order.class));
-    }
-
-    @Test
-    void confirmOrderShouldMarkConfirmedWhenOriginExistsButFlagIsFalse() {
-        Long tenantId = 1L;
-        Long orderId = 102L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setOrderCode("FM000102");
-        order.setCustomerOrderCode("CUS000102");
-        order.setStatus(OrderStatus.CREATED);
-        order.setPickupMethod(OrderPickupMethod.COURIER_PICKUP);
-        order.setIsConfirm(false);
-        order.setOriginPostOfficeCode("PO-HCM-03");
-
-        PostOffice postOffice = new PostOffice();
-        postOffice.setId(12L);
-        postOffice.setCode("PO-HCM-03");
-        postOffice.setName("Post Office 03");
-        postOffice.setCurrentLoad(6);
-        postOffice.setDailyCapacity(20);
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-        when(postOfficeRepository.findByCodeIgnoreCaseAndTenantId("PO-HCM-03", tenantId))
-                .thenReturn(Optional.of(postOffice));
-
-        OrderConfirmationResponse response = orderService.confirmOrder(orderId, tenantId);
-
-        assertTrue(Boolean.TRUE.equals(order.getIsConfirm()));
-        assertTrue(response.alreadyConfirmed());
-        assertEquals("PO-HCM-03", response.originPostOffice().code());
-
-        verify(orderRepository).save(order);
-        verify(postOfficeRepository, never()).findBestAssignablePostOfficeForSenderForUpdate(
-                eq(tenantId),
-                any(Point.class),
-                any(LocalDate.class)
-        );
-        verify(postOfficeRepository, never()).save(any(PostOffice.class));
-    }
-
-    @Test
-    void confirmOrderShouldThrowWhenOrderUsesDropOffMethod() {
-        Long tenantId = 1L;
-        Long orderId = 107L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setStatus(OrderStatus.CREATED);
-        order.setPickupMethod(OrderPickupMethod.DROP_OFF_AT_POST_OFFICE);
-        order.setSenderLocation(point(10.77371, 106.70098));
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-
-        AppException exception = assertThrows(AppException.class, () -> orderService.confirmOrder(orderId, tenantId));
-
-        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
-    }
-
-    @Test
     void getDropOffPostOfficeSuggestionsShouldReturnSortedSuggestions() {
         Long tenantId = 1L;
         Long orderId = 108L;
@@ -347,48 +183,6 @@ class OrderServiceImplTest {
         assertEquals(2, suggestions.size());
         assertEquals("PO-HCM-01", suggestions.get(0).code());
         assertEquals("PO-HCM-02", suggestions.get(1).code());
-    }
-
-    @Test
-    void confirmDropOffOrderAtPostOfficeShouldAssignAndMarkAtOrigin() {
-        Long tenantId = 1L;
-        Long orderId = 109L;
-        Long postOfficeId = 21L;
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setOrderCode("FM000109");
-        order.setCustomerOrderCode("CUS000109");
-        order.setStatus(OrderStatus.CREATED);
-        order.setPickupMethod(OrderPickupMethod.DROP_OFF_AT_POST_OFFICE);
-        order.setSenderLocation(point(10.77371, 106.70098));
-
-        PostOffice postOffice = new PostOffice();
-        postOffice.setId(postOfficeId);
-        postOffice.setCode("PO-HCM-21");
-        postOffice.setName("Post Office 21");
-        postOffice.setStatus(PostOfficeStatus.ACTIVE);
-        postOffice.setCurrentLoad(3);
-        postOffice.setDailyCapacity(10);
-        postOffice.setServiceRadiusM(5000);
-        postOffice.setLocation(point(10.77390, 106.70120));
-
-        when(postOfficeRepository.findByIdAndTenantIdForUpdate(postOfficeId, tenantId)).thenReturn(Optional.of(postOffice));
-        when(orderRepository.findByIdAndTenantIdForUpdate(orderId, tenantId)).thenReturn(Optional.of(order));
-
-        OrderConfirmationResponse response =
-                orderService.confirmDropOffOrderAtPostOffice(orderId, postOfficeId, tenantId);
-
-        verify(firstMileAccessUtils).ensureCurrentManagerAssignedToPostOfficeOrThrow(postOfficeId, tenantId);
-        assertTrue(Boolean.TRUE.equals(order.getIsConfirm()));
-        assertEquals(OrderStatus.AT_ORIGIN_POST_OFFICE, order.getStatus());
-        assertEquals("PO-HCM-21", order.getOriginPostOfficeCode());
-        assertEquals(4, postOffice.getCurrentLoad());
-        assertFalse(response.alreadyConfirmed());
-        assertEquals("PO-HCM-21", response.originPostOffice().code());
-
-        verify(postOfficeRepository).save(postOffice);
-        verify(orderRepository).save(order);
     }
 
     private Point point(double latitude, double longitude) {
