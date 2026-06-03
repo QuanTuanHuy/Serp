@@ -1291,7 +1291,7 @@ export const firstMileApi = api.injectEndpoints({
         url: `/orders/${orderId}/timeline`,
         method: 'GET',
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<
         FirstMileOrderTimelineItem[]
       >,
@@ -1383,7 +1383,7 @@ export const firstMileApi = api.injectEndpoints({
           limit,
         },
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<
         OrderDropOffPostOfficeSuggestion[]
       >,
@@ -1576,7 +1576,7 @@ export const firstMileApi = api.injectEndpoints({
       { orderId: number; formData: FormData }
     >({
       query: ({ orderId, formData }) => ({
-        url: `/orders/${orderId}/pickup-checkin`,
+        url: `/pickup-tracking/orders/${orderId}/checkin`,
         method: 'POST',
         body: formData,
       }),

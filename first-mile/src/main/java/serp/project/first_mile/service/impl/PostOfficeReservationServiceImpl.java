@@ -13,7 +13,9 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.first_mile.domain.PostOffice;
+import serp.project.first_mile.dto.request.PostOfficeSuggestionRequest;
 import serp.project.first_mile.dto.request.ReserveOriginPostOfficeRequest;
+import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.OriginPostOfficeReservationResponse;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -22,6 +24,9 @@ import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.service.PostOfficeReservationService;
 
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,8 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
+    private static final int DEFAULT_DROP_OFF_SUGGESTION_LIMIT = 5;
+    private static final int MAX_DROP_OFF_SUGGESTION_LIMIT = 20;
 
     private final FirstMileAccessUtils firstMileAccessUtils;
     private final PostOfficeRepository postOfficeRepository;
@@ -91,6 +98,41 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
         return toResponse(postOffice);
     }
 
+    @Override
+    public List<OrderDropOffPostOfficeSuggestionResponse> suggestDropOffPostOffices(
+            PostOfficeSuggestionRequest request
+    ) {
+        Point senderLocation = toSenderPoint(request);
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+        LocalDate operationalDate = LocalDate.now();
+        double senderLatitude = senderLocation.getY();
+        double senderLongitude = senderLocation.getX();
+
+        return postOfficeRepository.findAllByTenantId(tenantId)
+                .stream()
+                .map(postOffice -> buildSuggestionCandidate(
+                        postOffice,
+                        operationalDate,
+                        senderLatitude,
+                        senderLongitude
+                ))
+                .flatMap(Optional::stream)
+                .sorted(
+                        Comparator.comparingInt(
+                                        (DropOffSuggestionCandidate candidate) ->
+                                                safePriority(candidate.postOffice().getPriority())
+                                )
+                                .thenComparingDouble(DropOffSuggestionCandidate::distanceMeters)
+                                .thenComparingInt(candidate -> safeInt(candidate.postOffice().getCurrentLoad()))
+                                .thenComparingLong(candidate -> candidate.postOffice().getId() == null
+                                        ? Long.MAX_VALUE
+                                        : candidate.postOffice().getId())
+                )
+                .limit(normalizeDropOffSuggestionLimit(request == null ? null : request.getLimit()))
+                .map(this::toDropOffSuggestionResponse)
+                .toList();
+    }
+
     private Point toSenderPoint(ReserveOriginPostOfficeRequest request) {
         if (request == null
                 || request.getSenderLatitude() == null
@@ -103,6 +145,84 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
                 request.getSenderLongitude(),
                 request.getSenderLatitude()
         ));
+    }
+
+    private Point toSenderPoint(PostOfficeSuggestionRequest request) {
+        if (request == null
+                || request.getSenderLatitude() == null
+                || request.getSenderLongitude() == null
+                || !isValidCoordinate(request.getSenderLatitude(), request.getSenderLongitude())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(
+                request.getSenderLongitude(),
+                request.getSenderLatitude()
+        ));
+    }
+
+    private Optional<DropOffSuggestionCandidate> buildSuggestionCandidate(
+            PostOffice postOffice,
+            LocalDate operationalDate,
+            double senderLatitude,
+            double senderLongitude
+    ) {
+        if (postOffice == null || postOffice.getLocation() == null) {
+            return Optional.empty();
+        }
+
+        Point postOfficeLocation = postOffice.getLocation();
+        if (!isValidCoordinate(postOfficeLocation.getY(), postOfficeLocation.getX())) {
+            return Optional.empty();
+        }
+
+        if (!isPostOfficeSuitableForSender(
+                postOffice,
+                operationalDate,
+                toPoint(senderLatitude, senderLongitude)
+        )) {
+            return Optional.empty();
+        }
+
+        double distanceMeters = calculateDistanceMeters(
+                senderLatitude,
+                senderLongitude,
+                postOfficeLocation.getY(),
+                postOfficeLocation.getX()
+        );
+
+        return Optional.of(new DropOffSuggestionCandidate(postOffice, distanceMeters));
+    }
+
+    private OrderDropOffPostOfficeSuggestionResponse toDropOffSuggestionResponse(
+            DropOffSuggestionCandidate candidate
+    ) {
+        PostOffice postOffice = candidate.postOffice();
+        Point location = postOffice.getLocation();
+
+        int currentLoad = safeInt(postOffice.getCurrentLoad());
+        int dailyCapacity = safeInt(postOffice.getDailyCapacity());
+        int remainingCapacity = Math.max(dailyCapacity - currentLoad, 0);
+
+        return new OrderDropOffPostOfficeSuggestionResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                postOffice.getProvinceCode(),
+                postOffice.getWardCode(),
+                postOffice.getAddressDetail(),
+                postOffice.getPriority(),
+                postOffice.getCurrentLoad(),
+                postOffice.getDailyCapacity(),
+                remainingCapacity,
+                location == null ? null : round3(location.getY()),
+                location == null ? null : round3(location.getX()),
+                round3(candidate.distanceMeters())
+        );
+    }
+
+    private Point toPoint(double latitude, double longitude) {
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
     }
 
     private boolean isPostOfficeSuitableForSender(PostOffice postOffice, LocalDate operationalDate, Point senderLocation) {
@@ -181,5 +301,27 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
                 postOffice.getCurrentLoad(),
                 postOffice.getDailyCapacity()
         );
+    }
+
+    private int normalizeDropOffSuggestionLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return DEFAULT_DROP_OFF_SUGGESTION_LIMIT;
+        }
+        return Math.min(limit, MAX_DROP_OFF_SUGGESTION_LIMIT);
+    }
+
+    private int safePriority(Integer value) {
+        return value == null ? Integer.MAX_VALUE : value;
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private double round3(double value) {
+        return Math.round(value * 1000.0) / 1000.0;
+    }
+
+    private record DropOffSuggestionCandidate(PostOffice postOffice, double distanceMeters) {
     }
 }

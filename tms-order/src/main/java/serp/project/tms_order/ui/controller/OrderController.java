@@ -36,8 +36,10 @@ import serp.project.tms_order.dto.request.UpdateOrderRequest;
 import serp.project.tms_order.dto.response.ImportHistoryResponse;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
+import serp.project.tms_order.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
 import serp.project.tms_order.dto.response.OrderPaymentInitResponse;
+import serp.project.tms_order.dto.response.OrderTimelineResponse;
 import serp.project.tms_order.dto.response.ValidateImportFileDTO;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.exception.AppException;
@@ -45,8 +47,10 @@ import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.exception.MessageService;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.service.OrderService;
+import serp.project.tms_order.service.OrderTimelineService;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -57,6 +61,7 @@ public class OrderController {
     private final AuthUtils authUtils;
     private final MessageService messageService;
     private final OrderService orderService;
+    private final OrderTimelineService orderTimelineService;
 
     @GetMapping("/template")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
@@ -156,6 +161,34 @@ public class OrderController {
         return ApiResponse.<OrderDetailResponse>builder()
                 .message(messageService.getMessage("success.orders.detail"))
                 .result(orderService.getOrderById(orderId, tenantId))
+                .build();
+    }
+
+    @GetMapping("/{orderId}/timeline")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<List<OrderTimelineResponse>> getOrderTimeline(@PathVariable Long orderId) {
+        Long tenantId = getCurrentTenantId();
+
+        log.info("REST request to get TMS Order timeline {} for tenant {}", orderId, tenantId);
+        orderService.getOrderById(orderId, tenantId);
+        return ApiResponse.<List<OrderTimelineResponse>>builder()
+                .message(messageService.getMessage("success.orders.timeline"))
+                .result(orderTimelineService.getTimeline(orderId, tenantId))
+                .build();
+    }
+
+    @GetMapping("/{orderId}/drop-off-post-office-suggestions")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
+    public ApiResponse<List<OrderDropOffPostOfficeSuggestionResponse>> getDropOffPostOfficeSuggestions(
+            @PathVariable Long orderId,
+            @RequestParam(name = "limit", defaultValue = "5") Integer limit
+    ) {
+        Long tenantId = getCurrentTenantId();
+
+        log.info("REST request to get drop-off post office suggestions for TMS Order {} tenant {}", orderId, tenantId);
+        return ApiResponse.<List<OrderDropOffPostOfficeSuggestionResponse>>builder()
+                .message(messageService.getMessage("success.orders.drop_off_suggestions"))
+                .result(orderService.getDropOffPostOfficeSuggestions(orderId, limit, tenantId))
                 .build();
     }
 

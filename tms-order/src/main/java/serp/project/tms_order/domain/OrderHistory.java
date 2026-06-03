@@ -2,6 +2,7 @@ package serp.project.tms_order.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.tms_order.enums.OrderStatus;
 
@@ -10,7 +11,7 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 @Entity
-@Builder
+@SuperBuilder
 @Table(name = "order_history")
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor

@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS post_office_handover_manifest_orders (
     id BIGSERIAL PRIMARY KEY,
     manifest_id BIGINT NOT NULL,
     order_id BIGINT NOT NULL,
+    order_code VARCHAR(255),
+    customer_order_code VARCHAR(255),
+    last_known_status VARCHAR(255),
     scan_out_time TIMESTAMP WITHOUT TIME ZONE,
     scan_in_time TIMESTAMP WITHOUT TIME ZONE,
     tenant_id BIGINT,
@@ -46,9 +49,7 @@ CREATE TABLE IF NOT EXISTS post_office_handover_manifest_orders (
     updated_by VARCHAR(255),
     CONSTRAINT uq_po_handover_manifest_order UNIQUE (manifest_id, order_id),
     CONSTRAINT fk_po_handover_manifest_orders_manifest
-        FOREIGN KEY (manifest_id) REFERENCES post_office_handover_manifests(id) ON DELETE CASCADE,
-    CONSTRAINT fk_po_handover_manifest_orders_order
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        FOREIGN KEY (manifest_id) REFERENCES post_office_handover_manifests(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_po_handover_manifest_orders_manifest
@@ -56,6 +57,9 @@ CREATE INDEX IF NOT EXISTS idx_po_handover_manifest_orders_manifest
 
 CREATE INDEX IF NOT EXISTS idx_po_handover_manifest_orders_order
     ON post_office_handover_manifest_orders (order_id);
+
+CREATE INDEX IF NOT EXISTS idx_po_handover_manifest_orders_order_code
+    ON post_office_handover_manifest_orders (order_code);
 
 CREATE INDEX IF NOT EXISTS idx_po_handover_manifest_orders_scan_out
     ON post_office_handover_manifest_orders (scan_out_time);

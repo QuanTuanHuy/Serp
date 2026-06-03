@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
+import serp.project.tms_order.caller.FirstMilePostOfficeSuggestionCaller;
 import serp.project.tms_order.caller.PaymentServiceCaller;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.payment.PaymentCreateOrderRequest;
@@ -46,6 +47,7 @@ import serp.project.tms_order.dto.request.UpdateOrderRequest;
 import serp.project.tms_order.dto.response.ImportHistoryResponse;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
+import serp.project.tms_order.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
 import serp.project.tms_order.dto.response.OrderPaymentInitResponse;
 import serp.project.tms_order.dto.response.PaymentWebhookProcessResponse;
@@ -70,6 +72,7 @@ import serp.project.tms_order.repository.specification.OrderSpecification;
 import serp.project.tms_order.service.OrderExcelService;
 import serp.project.tms_order.service.OrderImportExcelService;
 import serp.project.tms_order.service.OrderService;
+import serp.project.tms_order.service.OrderTimelineService;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -107,6 +110,8 @@ public class OrderServiceImpl implements OrderService {
     private static final int WARD_COLUMN_INDEX = 0;
     private static final int PROVINCE_COLUMN_INDEX = 1;
     private static final int PRODUCT_TYPE_COLUMN_INDEX = 5;
+    private static final int DEFAULT_DROP_OFF_SUGGESTION_LIMIT = 5;
+    private static final int MAX_DROP_OFF_SUGGESTION_LIMIT = 20;
 
     private final OrderRepository orderRepository;
     private final ProductTypeRepository productTypeRepository;
@@ -115,7 +120,9 @@ public class OrderServiceImpl implements OrderService {
     private final OrderImportExcelService orderImportExcelService;
     private final PaymentServiceCaller paymentServiceCaller;
     private final FirstMilePostOfficeCaller firstMilePostOfficeCaller;
+    private final FirstMilePostOfficeSuggestionCaller firstMilePostOfficeSuggestionCaller;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final OrderTimelineService orderTimelineService;
 
     @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
     private String paymentRedirectUrl;
@@ -254,6 +261,13 @@ public class OrderServiceImpl implements OrderService {
         order.setCancelReason(request == null ? null : normalizeText(request.getCancelReason()));
 
         Order cancelledOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                cancelledOrder,
+                OrderStatus.CANCELLED,
+                hasText(order.getCancelReason()) ? order.getCancelReason() : "Order cancelled.",
+                null
+        );
+        publishOrderAfterCommit(cancelledOrder);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
     }
 
@@ -341,6 +355,12 @@ public class OrderServiceImpl implements OrderService {
                 if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
                     order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
                     Order savedOrder = orderRepository.save(order);
+                    orderTimelineService.recordStatusEvent(
+                            savedOrder,
+                            OrderStatus.AT_ORIGIN_POST_OFFICE,
+                            "Drop-off order confirmed at origin post office.",
+                            null
+                    );
                     publishOrderAfterCommit(savedOrder);
                     return toOrderConfirmationResponse(savedOrder, managedPostOffice, true);
                 }
@@ -360,6 +380,12 @@ public class OrderServiceImpl implements OrderService {
                 order.setIsConfirm(true);
                 order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
                 Order savedOrder = orderRepository.save(order);
+                orderTimelineService.recordStatusEvent(
+                        savedOrder,
+                        OrderStatus.AT_ORIGIN_POST_OFFICE,
+                        "Drop-off order confirmed at origin post office.",
+                        null
+                );
                 publishOrderAfterCommit(savedOrder);
                 return toOrderConfirmationResponse(savedOrder, managedPostOffice, true);
             }
@@ -384,8 +410,38 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
 
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.AT_ORIGIN_POST_OFFICE,
+                "Drop-off order confirmed at origin post office.",
+                null
+        );
         publishOrderAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, false);
+    }
+
+    @Override
+    public List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(
+            Long orderId,
+            Integer limit,
+            Long tenantId
+    ) {
+        if (orderId == null || orderId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Order order = orderRepository.findByIdAndTenantId(orderId, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        validateCanMutateOrder(order);
+        ensureDropOffPickupMethod(order);
+        validateOrderForConfirmation(order);
+
+        return firstMilePostOfficeSuggestionCaller.getDropOffSuggestions(
+                toLatitude(order.getSenderLocation()),
+                toLongitude(order.getSenderLocation()),
+                normalizeDropOffSuggestionLimit(limit)
+        );
     }
 
     @Override
@@ -918,6 +974,13 @@ public class OrderServiceImpl implements OrderService {
         if (!isValidCoordinate(latitude, longitude)) {
             throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
         }
+    }
+
+    private int normalizeDropOffSuggestionLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return DEFAULT_DROP_OFF_SUGGESTION_LIMIT;
+        }
+        return Math.min(limit, MAX_DROP_OFF_SUGGESTION_LIMIT);
     }
 
     private long resolveShippingFeeForPayment(Order order, InitiateOrderPaymentRequest request) {

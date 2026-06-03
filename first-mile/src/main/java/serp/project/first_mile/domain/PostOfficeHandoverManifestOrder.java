@@ -8,6 +8,8 @@ package serp.project.first_mile.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,6 +24,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.first_mile.enums.OrderStatus;
 
 import java.time.LocalDateTime;
 
@@ -48,9 +51,18 @@ public class PostOfficeHandoverManifestOrder extends AbstractAudit {
     @JoinColumn(name = "manifest_id", nullable = false)
     private PostOfficeHandoverManifest manifest;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column(name = "order_id", nullable = false)
+    private Long orderId;
+
+    @Column(name = "order_code")
+    private String orderCode;
+
+    @Column(name = "customer_order_code")
+    private String customerOrderCode;
+
+    @Column(name = "last_known_status")
+    @Enumerated(EnumType.STRING)
+    private OrderStatus lastKnownStatus;
 
     @Column(name = "scan_out_time")
     private LocalDateTime scanOutTime;

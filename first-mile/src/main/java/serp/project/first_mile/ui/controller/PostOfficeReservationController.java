@@ -52,4 +52,5 @@ public class PostOfficeReservationController {
         log.info("REST request to validate managed origin post office {}", postOfficeId);
         return postOfficeReservationService.validateManagedPostOffice(postOfficeId);
     }
+
 }

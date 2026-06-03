@@ -16,6 +16,7 @@ import serp.project.tms_order.dto.request.OrderFilterRequest;
 import serp.project.tms_order.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.tms_order.dto.request.UpdateOrderRequest;
 import serp.project.tms_order.dto.response.ImportHistoryResponse;
+import serp.project.tms_order.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
 import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
@@ -23,6 +24,8 @@ import serp.project.tms_order.dto.response.OrderPaymentInitResponse;
 import serp.project.tms_order.dto.response.PaymentWebhookProcessResponse;
 import serp.project.tms_order.dto.response.ValidateImportFileDTO;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public interface OrderService {
     byte[] exportTemplate(Long tenantId);
@@ -49,6 +52,12 @@ public interface OrderService {
             Long orderId,
             Long tenantId,
             ConfirmDropOffOrderRequest request
+    );
+
+    List<OrderDropOffPostOfficeSuggestionResponse> getDropOffPostOfficeSuggestions(
+            Long orderId,
+            Integer limit,
+            Long tenantId
     );
 
     OrderPaymentInitResponse initiateOrderPayment(
