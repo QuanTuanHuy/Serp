@@ -31,7 +31,14 @@ spring:
     init:
       mode: ${DB_INIT_MODE:never}
       encoding: UTF-8
-      schema-locations: []
+      schema-locations:
+        - classpath:db.migration/province.sql
+        - classpath:db.migration/ward.sql
+        - classpath:db.migration/product-type.sql
+        - classpath:db.migration/order.sql
+        - classpath:db.migration/product.sql
+        - classpath:db.migration/import_history.sql
+        - classpath:db.migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
     use-code-as-default-message: true

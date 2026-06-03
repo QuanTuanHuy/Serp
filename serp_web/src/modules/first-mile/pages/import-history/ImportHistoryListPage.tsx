@@ -15,7 +15,10 @@ import {
   CardTitle,
 } from '@/shared/components/ui';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { useGetImportHistoriesQuery } from '../../api';
+import {
+  useGetImportHistoriesQuery,
+  useGetOrderImportHistoriesQuery,
+} from '../../api';
 import type { ImportType } from '../../types';
 
 const PAGE_SIZE = 20;
@@ -23,26 +26,48 @@ const PAGE_SIZE = 20;
 export const ImportHistoryListPage: React.FC = () => {
   const [page, setPage] = React.useState(0);
   const [type, setType] = React.useState<ImportType | undefined>(undefined);
+  const isOrderHistory = type === 'ORDER';
 
-  const { data, isLoading, isFetching, refetch } = useGetImportHistoriesQuery({
-    page,
-    size: PAGE_SIZE,
-    type,
-  });
+  const firstMileHistory = useGetImportHistoriesQuery(
+    {
+      page,
+      size: PAGE_SIZE,
+      type,
+    },
+    { skip: isOrderHistory }
+  );
+  const orderHistory = useGetOrderImportHistoriesQuery(
+    {
+      page,
+      size: PAGE_SIZE,
+    },
+    { skip: !isOrderHistory }
+  );
+
+  const data = isOrderHistory ? orderHistory.data : firstMileHistory.data;
+  const isLoading = isOrderHistory
+    ? orderHistory.isLoading
+    : firstMileHistory.isLoading;
+  const isFetching = isOrderHistory
+    ? orderHistory.isFetching
+    : firstMileHistory.isFetching;
+  const refetch = isOrderHistory
+    ? orderHistory.refetch
+    : firstMileHistory.refetch;
 
   return (
     <div className='space-y-6'>
       <div className='flex flex-col gap-2'>
         <h1 className='text-2xl font-bold tracking-tight'>Import History</h1>
         <p className='text-muted-foreground'>
-          Track asynchronous import jobs for orders and post offices.
+          Track asynchronous import jobs across TMS services.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter history by import type.</CardDescription>
+          <CardDescription>Choose the history source or import type.</CardDescription>
         </CardHeader>
         <CardContent className='flex flex-wrap items-center gap-2'>
           <Button
@@ -52,7 +77,7 @@ export const ImportHistoryListPage: React.FC = () => {
               setType(undefined);
             }}
           >
-            All
+            First-mile
           </Button>
           <Button
             variant={type === 'ORDER' ? 'default' : 'outline'}
@@ -73,8 +98,19 @@ export const ImportHistoryListPage: React.FC = () => {
             Post Office
           </Button>
           <Button
+            variant={type === 'VEHICLE' ? 'default' : 'outline'}
+            onClick={() => {
+              setPage(0);
+              setType('VEHICLE');
+            }}
+          >
+            Vehicle
+          </Button>
+          <Button
             variant='outline'
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             disabled={isFetching}
           >
             <RefreshCw className='h-4 w-4 mr-2' />

@@ -101,6 +101,7 @@ import {
 
 const FIRST_MILE_SERVICE = { service: 'first-mile' as const };
 const SECOND_MILE_SERVICE = { service: 'second-mile' as const };
+const TMS_ORDER_SERVICE = { service: 'tms-order' as const };
 
 export const firstMileApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -818,7 +819,7 @@ export const firstMileApi = api.injectEndpoints({
           ...(status ? { status } : {}),
         },
       }),
-      extraOptions: SECOND_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: normalizeSecondMileOrderPage,
     }),
 
@@ -1158,7 +1159,32 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<ImportHistory>,
+      transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
+    }),
+
+    getOrderImportHistories: builder.query<
+      FirstMilePaginatedData<ImportHistory>,
+      { page?: number; size?: number }
+    >({
+      query: ({ page = 0, size = 20 }) => ({
+        url: '/import-history',
+        method: 'GET',
+        params: {
+          page,
+          size,
+        },
+      }),
+      extraOptions: TMS_ORDER_SERVICE,
+      transformResponse: unwrapFirstMilePageResult<ImportHistory>,
+    }),
+
+    getOrderImportHistoryById: builder.query<ImportHistory, number>({
+      query: (id) => ({
+        url: `/import-history/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: TMS_ORDER_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
 
     getProvinces: builder.query<
@@ -1247,7 +1273,7 @@ export const firstMileApi = api.injectEndpoints({
           ...(pickupTo ? { pickup_to: pickupTo } : {}),
         },
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMilePageResultOrRaw<FirstMileOrderDetail>,
     }),
 
@@ -1256,7 +1282,7 @@ export const firstMileApi = api.injectEndpoints({
         url: `/orders/${orderId}`,
         method: 'GET',
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
@@ -1280,7 +1306,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
@@ -1293,7 +1319,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
@@ -1306,7 +1332,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<FirstMileOrderDetail>,
     }),
 
@@ -1613,7 +1639,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
         responseHandler: (response) => response.blob(),
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
     }),
 
     validateOrderImport: builder.mutation<
@@ -1625,7 +1651,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         body: formData,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<
         ValidateImportFileResponse<OrderImportItem>
       >,
@@ -1637,7 +1663,7 @@ export const firstMileApi = api.injectEndpoints({
         method: 'POST',
         body: formData,
       }),
-      extraOptions: FIRST_MILE_SERVICE,
+      extraOptions: TMS_ORDER_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw<ImportHistory>,
     }),
   }),
@@ -1714,6 +1740,8 @@ export const {
   useDeleteProductTypeMutation,
   useGetImportHistoriesQuery,
   useGetImportHistoryByIdQuery,
+  useGetOrderImportHistoriesQuery,
+  useGetOrderImportHistoryByIdQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useLazyGetWardsByProvinceCodeQuery,
