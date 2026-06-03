@@ -81,8 +81,8 @@ public final class BagMapper {
     private static BagOrderResponse toBagOrderResponse(BagOrder bagOrder) {
         return new BagOrderResponse(
                 bagOrder.getId(),
-                bagOrder.getOrder().getId(),
-                bagOrder.getOrder().getOrderCode()
+                bagOrder.getTmsOrderId(),
+                bagOrder.getOrderCode()
         );
     }
 }

@@ -48,9 +48,29 @@ public class HandoverManifestOrder extends AbstractAudit {
     @JoinColumn(name = "manifest_id", nullable = false)
     private HandoverManifest manifest;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    @Column(name = "order_id", nullable = false)
+    private Long tmsOrderId;
+
+    @Column(name = "order_code")
+    private String orderCode;
+
+    @Column(name = "customer_order_code")
+    private String customerOrderCode;
+
+    @Column(name = "last_known_status")
+    private String lastKnownStatus;
+
+    @Column(name = "origin_post_office_code")
+    private String originPostOfficeCode;
+
+    @Column(name = "destination_post_office_code")
+    private String destinationPostOfficeCode;
+
+    @Column(name = "total_weight_snapshot")
+    private Double totalWeightSnapshot;
+
+    @Column(name = "total_volume_snapshot")
+    private Double totalVolumeSnapshot;
 
     @Column(name = "scan_out_time")
     private LocalDateTime scanOutTime;

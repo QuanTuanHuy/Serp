@@ -53,7 +53,7 @@ public class InternalOrderController {
     }
 
     @PostMapping("/status-transitions")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
     public OrderStatusTransitionResponse applyStatusTransitions(
             @Valid @RequestBody InternalOrderStatusTransitionRequest request
     ) {

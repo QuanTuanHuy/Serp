@@ -13,11 +13,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.second_mile.caller.TmsOrderClient;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.second_mile.domain.HandoverManifest;
 import serp.project.second_mile.domain.HandoverManifestOrder;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
-import serp.project.second_mile.domain.Order;
 import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.PageResponse;
@@ -34,40 +36,40 @@ import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
-import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
-import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.second_mile.kafka.HandoverManifestSyncEventPublisher;
-import serp.project.second_mile.kafka.OrderSyncEventPublisher;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEventType;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
+import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
+import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.second_mile.repository.HandoverManifestOrderRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
-import serp.project.second_mile.repository.OrderRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.HandoverManifestSpecification;
 import serp.project.second_mile.service.HandoverManifestService;
+import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
-import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class HandoverManifestServiceImpl implements HandoverManifestService {
+    private static final String TRANSITION_SOURCE = "SECOND_MILE";
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final double CHECKIN_RADIUS_METERS = 100.0;
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
@@ -78,15 +80,15 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
     private final HandoverManifestRepository handoverManifestRepository;
     private final HandoverManifestOrderRepository handoverManifestOrderRepository;
-    private final OrderRepository orderRepository;
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
     private final HubRepository hubRepository;
     private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
-    private final OrderSyncEventPublisher orderSyncEventPublisher;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
+    private final TmsOrderClient tmsOrderClient;
+    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -126,26 +128,9 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        List<Order> orders = orderRepository.findByTenantIdAndOrderCodeIn(tenantId, normalizedOrderCodes);
-        if (orders.size() != normalizedOrderCodes.size()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes do not exist in current tenant.");
-        }
-
-        for (Order order : orders) {
-            if (!Objects.equals(normalizedOriginPostOfficeCode, normalizeText(order.getOriginPostOfficeCode()))) {
-                throw new AppException(
-                        ErrorCode.INVALID_REQUEST,
-                        "All orders in a manifest must have the same origin post office code."
-                );
-            }
-            OrderStatus status = order.getStatus();
-            if (status != OrderStatus.AT_ORIGIN_POST_OFFICE && status != OrderStatus.OUTBOUND_READY_FROM_PO) {
-                throw new AppException(
-                        ErrorCode.INVALID_REQUEST,
-                        "Order must be AT_ORIGIN_POST_OFFICE or OUTBOUND_READY_FROM_PO to create handover manifest."
-                );
-            }
-            order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
+        List<TmsOrderOperationView> orders = lookupOrdersByCodes(tenantId, normalizedOrderCodes);
+        for (TmsOrderOperationView order : orders) {
+            validateOrderOriginAndOutboundStatus(order, normalizedOriginPostOfficeCode);
         }
         validateVehicleCapacity(vehicle, orders);
         validateVehicleScheduleAvailability(
@@ -174,20 +159,25 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 .build();
         HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
 
-        List<HandoverManifestOrder> manifestOrders = new ArrayList<>();
-        for (Order order : orders) {
-            HandoverManifestOrder manifestOrder = HandoverManifestOrder.builder()
-                    .manifest(savedManifest)
-                    .order(order)
-                    .scanOutTime(null)
-                    .tenantId(tenantId)
-                    .build();
-            manifestOrders.add(manifestOrder);
-        }
-
-        orderRepository.saveAll(orders);
+        List<HandoverManifestOrder> manifestOrders = orders.stream()
+                .map(order -> toManifestOrder(savedManifest, order, tenantId))
+                .toList();
         handoverManifestOrderRepository.saveAll(manifestOrders);
-        orderSyncEventPublisher.publishAll(orders);
+
+        enqueueManifestTransition(
+                tenantId,
+                idempotencyKey("manifest", savedManifest.getId(), "outbound-ready"),
+                orders.stream()
+                        .map(order -> toTransitionItem(
+                                order,
+                                OrderStatus.OUTBOUND_READY_FROM_PO,
+                                List.of(OrderStatus.AT_ORIGIN_POST_OFFICE, OrderStatus.OUTBOUND_READY_FROM_PO),
+                                "Second-mile handover manifest created.",
+                                buildManifestContext(savedManifest, vehicle, route)
+                        ))
+                        .toList()
+        );
+
         return toResponse(savedManifest, manifestOrders, vehicle, route);
     }
 
@@ -302,19 +292,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 .findByTenantIdAndManifestCodeIgnoreCase(tenantId, manifestCode)
                 .orElse(null);
         if (HandoverManifestSyncEventType.CANCELLED.equals(event.getEventType())) {
-            if (existingManifest != null && existingManifest.getStatus() != HandoverManifestStatus.INBOUND_CONFIRMED) {
-                List<Order> changedOrders = findManifestOrders(existingManifest.getId(), tenantId).stream()
-                        .map(HandoverManifestOrder::getOrder)
-                        .filter(Objects::nonNull)
-                        .filter(order -> OrderStatus.OUTBOUND_READY_FROM_PO.equals(order.getStatus()))
-                        .peek(order -> order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE))
-                        .toList();
-                if (!changedOrders.isEmpty()) {
-                    orderRepository.saveAll(changedOrders);
-                }
-                existingManifest.setStatus(HandoverManifestStatus.CANCELLED);
-                handoverManifestRepository.save(existingManifest);
-            }
+            handleOutboundSyncCancellation(existingManifest, tenantId);
             return;
         }
 
@@ -353,10 +331,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Handover manifest sync must include order_codes.");
         }
 
-        List<Order> orders = orderRepository.findByTenantIdAndUpperOrderCodeIn(tenantId, normalizedOrderCodes);
-        if (orders.size() != normalizedOrderCodes.size()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Some handover manifest orders are not synced yet.");
-        }
+        List<TmsOrderOperationView> orders = lookupOrdersByCodes(tenantId, normalizedOrderCodes);
         validateVehicleCapacity(vehicle, orders);
         validateVehicleScheduleAvailability(
                 tenantId,
@@ -400,8 +375,9 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
         LocalDateTime scanOutTime = event.getDispatchedAt() == null ? LocalDateTime.now() : event.getDispatchedAt();
         List<HandoverManifestOrder> manifestOrders = new ArrayList<>();
-        List<Order> changedOrders = new ArrayList<>();
-        for (Order order : orders) {
+        List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+        TmsOrderStatusTransitionRequest.Context context = buildManifestContext(savedManifest, vehicle, route);
+        for (TmsOrderOperationView order : orders) {
             if (!Objects.equals(originPostOfficeCode, normalizeText(order.getOriginPostOfficeCode()))) {
                 throw new AppException(
                         ErrorCode.INVALID_REQUEST,
@@ -409,25 +385,64 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 );
             }
             if (shouldAdvanceToOutboundReady(order.getStatus())) {
-                order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
-                changedOrders.add(order);
+                transitionItems.add(toTransitionItem(
+                        order,
+                        OrderStatus.OUTBOUND_READY_FROM_PO,
+                        List.of(OrderStatus.AT_ORIGIN_POST_OFFICE, OrderStatus.OUTBOUND_READY_FROM_PO),
+                        "First-mile outbound handover confirmed.",
+                        context
+                ));
             }
             HandoverManifestOrder manifestOrder = handoverManifestOrderRepository
-                    .findByManifest_IdAndOrder_IdAndTenantId(savedManifest.getId(), order.getId(), tenantId)
+                    .findByManifest_IdAndTmsOrderIdAndTenantId(savedManifest.getId(), order.getId(), tenantId)
                     .orElseGet(() -> HandoverManifestOrder.builder()
                             .manifest(savedManifest)
-                            .order(order)
+                            .tmsOrderId(order.getId())
                             .tenantId(tenantId)
                             .build());
+            updateManifestOrderSnapshot(manifestOrder, order);
             if (manifestOrder.getScanOutTime() == null) {
                 manifestOrder.setScanOutTime(scanOutTime);
             }
             manifestOrders.add(manifestOrder);
         }
-        if (!changedOrders.isEmpty()) {
-            orderRepository.saveAll(changedOrders);
-        }
         handoverManifestOrderRepository.saveAll(manifestOrders);
+        enqueueManifestTransition(
+                tenantId,
+                idempotencyKey("manifest", savedManifest.getId(), "outbound-sync"),
+                transitionItems
+        );
+    }
+
+    private void handleOutboundSyncCancellation(HandoverManifest existingManifest, Long tenantId) {
+        if (existingManifest == null || existingManifest.getStatus() == HandoverManifestStatus.INBOUND_CONFIRMED) {
+            return;
+        }
+
+        List<HandoverManifestOrder> manifestOrders = findManifestOrders(existingManifest.getId(), tenantId);
+        List<HandoverManifestOrder> rollbackTargets = manifestOrders.stream()
+                .filter(item -> item.getScanInTime() == null)
+                .toList();
+        for (HandoverManifestOrder target : rollbackTargets) {
+            target.setLastKnownStatus(OrderStatus.AT_ORIGIN_POST_OFFICE.name());
+        }
+        handoverManifestOrderRepository.saveAll(rollbackTargets);
+        enqueueManifestTransition(
+                tenantId,
+                idempotencyKey("manifest", existingManifest.getId(), "cancel"),
+                rollbackTargets.stream()
+                        .map(item -> toTransitionItem(
+                                item,
+                                OrderStatus.AT_ORIGIN_POST_OFFICE,
+                                List.of(OrderStatus.OUTBOUND_READY_FROM_PO),
+                                "First-mile handover manifest cancelled.",
+                                buildManifestContext(existingManifest, loadVehicle(existingManifest.getVehicleId()), loadRoute(existingManifest.getRouteId()))
+                        ))
+                        .toList()
+        );
+
+        existingManifest.setStatus(HandoverManifestStatus.CANCELLED);
+        handoverManifestRepository.save(existingManifest);
     }
 
     private HandoverManifest getManifestOrThrow(Long manifestId) {
@@ -496,17 +511,17 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         }
     }
 
-    private void validateVehicleCapacity(Vehicle vehicle, List<Order> orders) {
+    private void validateVehicleCapacity(Vehicle vehicle, List<TmsOrderOperationView> orders) {
         if (vehicle == null || orders == null || orders.isEmpty()) {
             return;
         }
         double totalWeight = orders.stream()
-                .map(Order::getTotalWeight)
+                .map(TmsOrderOperationView::getTotalWeight)
                 .filter(Objects::nonNull)
                 .mapToDouble(Double::doubleValue)
                 .sum();
         double totalVolume = orders.stream()
-                .map(Order::getTotalVolume)
+                .map(TmsOrderOperationView::getTotalVolume)
                 .filter(Objects::nonNull)
                 .mapToDouble(Double::doubleValue)
                 .sum();
@@ -750,31 +765,6 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         return EARTH_RADIUS_METERS * c;
     }
 
-    private String normalizeText(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        return trimmed.toUpperCase(Locale.ROOT);
-    }
-
-    private List<String> normalizeOrderCodes(List<String> orderCodes) {
-        if (orderCodes == null || orderCodes.isEmpty()) {
-            return List.of();
-        }
-        Set<String> normalized = new LinkedHashSet<>();
-        for (String orderCode : orderCodes) {
-            String normalizedCode = normalizeText(orderCode);
-            if (normalizedCode != null) {
-                normalized.add(normalizedCode);
-            }
-        }
-        return new ArrayList<>(normalized);
-    }
-
     private HandoverManifestResponse processOutboundCheckin(
             HandoverManifest manifest,
             boolean driverOnly,
@@ -855,7 +845,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             targets = findManifestOrders(manifest.getId(), tenantId);
         } else {
             List<String> normalizedCodes = normalizeOrderCodes(request.getOrderCodes());
-            targets = handoverManifestOrderRepository.findByManifest_IdAndOrder_OrderCodeInAndTenantId(
+            targets = handoverManifestOrderRepository.findByManifest_IdAndOrderCodeInAndTenantId(
                     manifest.getId(),
                     normalizedCodes,
                     tenantId
@@ -872,22 +862,31 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         LocalDateTime now = LocalDateTime.now();
         for (HandoverManifestOrder target : targets) {
             target.setScanInTime(now);
+            target.setLastKnownStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB.name());
             if (target.getScanOutTime() == null) {
                 target.setScanOutTime(now);
             }
         }
 
-        Map<Long, Order> orderById = targets.stream()
-                .map(HandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Order::getId, Function.identity(), (left, right) -> left));
-
-        for (Order order : orderById.values()) {
-            order.setStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB);
-        }
-        orderRepository.saveAll(orderById.values());
         handoverManifestOrderRepository.saveAll(targets);
-        orderSyncEventPublisher.publishAll(orderById.values());
+        TmsOrderStatusTransitionRequest.Context context = buildManifestContext(
+                manifest,
+                vehicle,
+                loadRoute(manifest.getRouteId())
+        );
+        enqueueManifestTransition(
+                tenantId,
+                idempotencyKey("manifest", manifest.getId(), "inbound", now),
+                targets.stream()
+                        .map(item -> toTransitionItem(
+                                item,
+                                OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                                List.of(OrderStatus.OUTBOUND_READY_FROM_PO, OrderStatus.INBOUND_AT_ORIGIN_HUB),
+                                "Second-mile hub inbound confirmed.",
+                                context
+                        ))
+                        .toList()
+        );
 
         List<HandoverManifestOrder> allManifestOrders = findManifestOrders(manifest.getId(), tenantId);
         boolean allInboundScanned = allManifestOrders.stream().allMatch(item -> item.getScanInTime() != null);
@@ -923,16 +922,12 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             LocalDateTime inboundConfirmedAt
     ) {
         List<String> orderCodes = manifestOrders.stream()
-                .map(HandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .map(Order::getOrderCode)
+                .map(HandoverManifestOrder::getOrderCode)
                 .filter(Objects::nonNull)
                 .toList();
         List<String> scannedOrderCodes = manifestOrders.stream()
                 .filter(item -> item.getScanInTime() != null)
-                .map(HandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .map(Order::getOrderCode)
+                .map(HandoverManifestOrder::getOrderCode)
                 .filter(Objects::nonNull)
                 .toList();
         return HandoverManifestSyncEvent.builder()
@@ -958,8 +953,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         List<HandoverManifestOrderResponse> mappedOrders = manifestOrders.stream()
                 .map(item -> new HandoverManifestOrderResponse(
                         item.getId(),
-                        item.getOrder() == null ? null : item.getOrder().getId(),
-                        item.getOrder() == null ? null : item.getOrder().getOrderCode(),
+                        item.getTmsOrderId(),
+                        item.getOrderCode(),
                         item.getScanOutTime(),
                         item.getScanInTime()
                 ))
@@ -992,5 +987,190 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 manifest.getCreatedAt(),
                 manifest.getUpdatedAt()
         );
+    }
+
+    private void validateOrderOriginAndOutboundStatus(TmsOrderOperationView order, String originPostOfficeCode) {
+        if (!Objects.equals(originPostOfficeCode, normalizeText(order.getOriginPostOfficeCode()))) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "All orders in a manifest must have the same origin post office code."
+            );
+        }
+        OrderStatus status = order.getStatus();
+        if (status != OrderStatus.AT_ORIGIN_POST_OFFICE && status != OrderStatus.OUTBOUND_READY_FROM_PO) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Order must be AT_ORIGIN_POST_OFFICE or OUTBOUND_READY_FROM_PO to create handover manifest."
+            );
+        }
+    }
+
+    private List<TmsOrderOperationView> lookupOrdersByCodes(Long tenantId, List<String> orderCodes) {
+        Map<String, TmsOrderOperationView> orderByCode = new LinkedHashMap<>();
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByCodes(orderCodes);
+        for (TmsOrderOperationView order : orders) {
+            validateTmsOrderTenant(tenantId, order);
+            String normalizedOrderCode = normalizeText(order.getOrderCode());
+            if (normalizedOrderCode != null) {
+                orderByCode.put(normalizedOrderCode, order);
+            }
+        }
+
+        List<TmsOrderOperationView> ordered = new ArrayList<>();
+        for (String orderCode : orderCodes) {
+            TmsOrderOperationView order = orderByCode.get(orderCode);
+            if (order == null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes do not exist in tms-order.");
+            }
+            ordered.add(order);
+        }
+        return ordered;
+    }
+
+    private void validateTmsOrderTenant(Long tenantId, TmsOrderOperationView order) {
+        if (order == null || order.getId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid tms-order lookup response.");
+        }
+        if (order.getTenantId() != null && !Objects.equals(order.getTenantId(), tenantId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    private HandoverManifestOrder toManifestOrder(
+            HandoverManifest manifest,
+            TmsOrderOperationView order,
+            Long tenantId
+    ) {
+        HandoverManifestOrder manifestOrder = HandoverManifestOrder.builder()
+                .manifest(manifest)
+                .tmsOrderId(order.getId())
+                .tenantId(tenantId)
+                .build();
+        updateManifestOrderSnapshot(manifestOrder, order);
+        return manifestOrder;
+    }
+
+    private void updateManifestOrderSnapshot(HandoverManifestOrder manifestOrder, TmsOrderOperationView order) {
+        manifestOrder.setTmsOrderId(order.getId());
+        manifestOrder.setOrderCode(normalizeText(order.getOrderCode()));
+        manifestOrder.setCustomerOrderCode(normalizeText(order.getCustomerOrderCode()));
+        manifestOrder.setLastKnownStatus(statusName(order.getStatus()));
+        manifestOrder.setOriginPostOfficeCode(normalizeText(order.getOriginPostOfficeCode()));
+        manifestOrder.setDestinationPostOfficeCode(normalizeText(order.getDestinationPostOfficeCode()));
+        manifestOrder.setTotalWeightSnapshot(safeDouble(order.getTotalWeight()));
+        manifestOrder.setTotalVolumeSnapshot(safeDouble(order.getTotalVolume()));
+    }
+
+    private void enqueueManifestTransition(
+            Long tenantId,
+            String idempotencyKey,
+            List<TmsOrderStatusTransitionRequest.Item> items
+    ) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+                .source(TRANSITION_SOURCE)
+                .idempotencyKey(idempotencyKey)
+                .items(items)
+                .build(), tenantId);
+    }
+
+    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
+            TmsOrderOperationView order,
+            OrderStatus targetStatus,
+            List<OrderStatus> expectedStatuses,
+            String description,
+            TmsOrderStatusTransitionRequest.Context context
+    ) {
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(order.getId())
+                .orderCode(order.getOrderCode())
+                .expectedStatuses(expectedStatuses)
+                .targetStatus(targetStatus)
+                .description(description)
+                .context(context)
+                .build();
+    }
+
+    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
+            HandoverManifestOrder manifestOrder,
+            OrderStatus targetStatus,
+            List<OrderStatus> expectedStatuses,
+            String description,
+            TmsOrderStatusTransitionRequest.Context context
+    ) {
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(manifestOrder.getTmsOrderId())
+                .orderCode(manifestOrder.getOrderCode())
+                .expectedStatuses(expectedStatuses)
+                .targetStatus(targetStatus)
+                .description(description)
+                .context(context)
+                .build();
+    }
+
+    private TmsOrderStatusTransitionRequest.Context buildManifestContext(
+            HandoverManifest manifest,
+            Vehicle vehicle,
+            Route route
+    ) {
+        Hub hub = manifest.getTargetHubId() == null
+                ? null
+                : hubRepository.findById(manifest.getTargetHubId()).orElse(null);
+        return TmsOrderStatusTransitionRequest.Context.builder()
+                .eventTime(LocalDateTime.now())
+                .hubId(hub == null ? manifest.getTargetHubId() : hub.getId())
+                .hubCode(hub == null ? null : hub.getCode())
+                .hubName(hub == null ? null : hub.getName())
+                .manifestId(manifest.getId())
+                .manifestCode(manifest.getManifestCode())
+                .routeId(route == null ? manifest.getRouteId() : route.getId())
+                .routeCode(route == null ? null : route.getRouteCode())
+                .driverId(manifest.getAssignedDriverId())
+                .vehicleId(vehicle == null ? manifest.getVehicleId() : vehicle.getId())
+                .vehicleLicensePlate(vehicle == null ? null : vehicle.getLicensePlate())
+                .build();
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.toUpperCase(Locale.ROOT);
+    }
+
+    private List<String> normalizeOrderCodes(List<String> orderCodes) {
+        if (orderCodes == null || orderCodes.isEmpty()) {
+            return List.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String orderCode : orderCodes) {
+            String normalizedCode = normalizeText(orderCode);
+            if (normalizedCode != null) {
+                normalized.add(normalizedCode);
+            }
+        }
+        return new ArrayList<>(normalized);
+    }
+
+    private String idempotencyKey(Object... parts) {
+        return java.util.Arrays.stream(parts)
+                .filter(Objects::nonNull)
+                .map(part -> part.toString().trim())
+                .filter(part -> !part.isEmpty())
+                .collect(Collectors.joining(":"));
+    }
+
+    private String statusName(OrderStatus status) {
+        return status == null ? null : status.name();
+    }
+
+    private double safeDouble(Double value) {
+        return value == null || value < 0 ? 0.0 : value;
     }
 }

@@ -3,16 +3,13 @@ Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
-package serp.project.tms_order.dto.request;
+package serp.project.second_mile.caller.dto.tms_order;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.tms_order.enums.OrderStatus;
+import serp.project.second_mile.enums.OrderStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,15 +18,9 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InternalOrderStatusTransitionRequest {
-    @NotBlank
+public class TmsOrderStatusTransitionRequest {
     private String source;
-
-    @NotBlank
     private String idempotencyKey;
-
-    @Valid
-    @NotEmpty
     private List<Item> items;
 
     @Data
@@ -51,11 +42,6 @@ public class InternalOrderStatusTransitionRequest {
     @AllArgsConstructor
     public static class Context {
         private LocalDateTime eventTime;
-        private Long tripId;
-        private String tripCode;
-        private Long postOfficeId;
-        private String postOfficeCode;
-        private String postOfficeName;
         private Long hubId;
         private String hubCode;
         private String hubName;
@@ -68,9 +54,6 @@ public class InternalOrderStatusTransitionRequest {
         private Long driverId;
         private String driverCode;
         private String driverName;
-        private Long staffId;
-        private String staffCode;
-        private String staffName;
         private Long vehicleId;
         private String vehicleLicensePlate;
         private Double latitude;
