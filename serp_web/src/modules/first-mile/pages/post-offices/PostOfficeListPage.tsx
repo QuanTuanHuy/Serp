@@ -384,12 +384,6 @@ export const PostOfficeListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} row(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate post office import file.', {
@@ -410,9 +404,6 @@ export const PostOfficeListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -673,15 +664,11 @@ export const PostOfficeListPage: React.FC = () => {
             importFileInputKey={importFileInputKey}
             selectedImportFile={selectedImportFile}
             validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
             lastImportJob={lastImportJob}
-            previewLimit={IMPORT_PREVIEW_LIMIT}
             onSelectImportFile={handleSelectImportFile}
             onDownloadTemplate={handleDownloadTemplate}
             onValidateImportFile={handleValidateImportFile}
             onImportFile={handleImportFile}
-            getProvinceLabel={getProvinceLabel}
-            getWardLabel={getWardLabel}
           />
         ) : null}
 

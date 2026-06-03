@@ -8,7 +8,13 @@
 import React from 'react';
 import { Button, Input } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { ChevronDown, ChevronUp, Download, FileUp, Loader2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  FileUp,
+  Loader2,
+} from 'lucide-react';
 
 interface TmsExcelImportToolbarProps {
   canImport: boolean;
@@ -23,8 +29,6 @@ interface TmsExcelImportToolbarProps {
   onDownloadTemplate: () => void;
   onSelectFile: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onValidate: () => void;
-  onImport: () => void;
-  canImportFile?: boolean;
   details?: React.ReactNode;
   className?: string;
 }
@@ -42,8 +46,6 @@ export const TmsExcelImportToolbar: React.FC<TmsExcelImportToolbarProps> = ({
   onDownloadTemplate,
   onSelectFile,
   onValidate,
-  onImport,
-  canImportFile = false,
   details,
   className,
 }) => {
@@ -65,7 +67,7 @@ export const TmsExcelImportToolbar: React.FC<TmsExcelImportToolbarProps> = ({
         <div className='min-w-0'>
           <p className='text-xs font-medium'>Excel import</p>
           <p className='text-[11px] text-muted-foreground'>
-            Template, validate, then import {entityLabel}.
+            Template and Excel file for {entityLabel}.
           </p>
         </div>
 
@@ -97,23 +99,10 @@ export const TmsExcelImportToolbar: React.FC<TmsExcelImportToolbarProps> = ({
           <Button
             type='button'
             size='sm'
-            variant='outline'
             onClick={onValidate}
             disabled={!canImport || !selectedFileName || isBusy}
           >
-            {isValidating && (
-              <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
-            )}
-            Validate
-          </Button>
-
-          <Button
-            type='button'
-            size='sm'
-            onClick={onImport}
-            disabled={!canImport || !canImportFile || isBusy}
-          >
-            {isImporting ? (
+            {isValidating || isImporting ? (
               <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
             ) : (
               <FileUp className='mr-1.5 h-3.5 w-3.5' />
@@ -146,7 +135,9 @@ export const TmsExcelImportToolbar: React.FC<TmsExcelImportToolbarProps> = ({
       ) : null}
 
       {!canImport && permissionHint ? (
-        <p className='mt-1 text-[11px] text-muted-foreground'>{permissionHint}</p>
+        <p className='mt-1 text-[11px] text-muted-foreground'>
+          {permissionHint}
+        </p>
       ) : null}
 
       {hasDetails && showDetails ? (

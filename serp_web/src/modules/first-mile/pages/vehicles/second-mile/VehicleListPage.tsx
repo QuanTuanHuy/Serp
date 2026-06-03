@@ -50,7 +50,6 @@ import {
 import {
   buildVehicleRequest,
   DEFAULT_VEHICLE_FORM,
-  IMPORT_PREVIEW_LIMIT,
   mapVehicleToFormState,
   PAGE_SIZE,
   parseOptionalPositiveInteger,
@@ -86,10 +85,11 @@ export function SecondMileVehicleListPage() {
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
 
-  const { data, isLoading, isFetching, refetch } = useGetSecondMileVehiclesQuery(
-    { page, size: PAGE_SIZE, keyword },
-    { skip: !isTmsAdmin }
-  );
+  const { data, isLoading, isFetching, refetch } =
+    useGetSecondMileVehiclesQuery(
+      { page, size: PAGE_SIZE, keyword },
+      { skip: !isTmsAdmin }
+    );
 
   const { data: hubsData, isFetching: isFetchingHubs } = useGetHubsQuery(
     { page: 0, size: 500 },
@@ -126,15 +126,13 @@ export function SecondMileVehicleListPage() {
     [formValues.hubId]
   );
 
-  const {
-    data: hubDriverAssignments,
-    isFetching: isFetchingHubDrivers,
-  } = useGetSecondMileHubStaffAssignmentsQuery(
-    { hubId: selectedHubNumericId ?? 0, role: 'DRIVER' },
-    {
-      skip: !isTmsAdmin || !isFormOpen || selectedHubNumericId === undefined,
-    }
-  );
+  const { data: hubDriverAssignments, isFetching: isFetchingHubDrivers } =
+    useGetSecondMileHubStaffAssignmentsQuery(
+      { hubId: selectedHubNumericId ?? 0, role: 'DRIVER' },
+      {
+        skip: !isTmsAdmin || !isFormOpen || selectedHubNumericId === undefined,
+      }
+    );
 
   const formatDriverOptionLabel = React.useCallback(
     (assignment: SecondMileHubStaffAssignment & { staffId: number }) => {
@@ -164,7 +162,8 @@ export function SecondMileVehicleListPage() {
         (
           assignment
         ): assignment is SecondMileHubStaffAssignment & { staffId: number } =>
-          Number.isInteger(assignment.staffId) && (assignment.staffId as number) > 0
+          Number.isInteger(assignment.staffId) &&
+          (assignment.staffId as number) > 0
       )
       .map((assignment) => ({
         value: String(assignment.staffId),
@@ -215,11 +214,6 @@ export function SecondMileVehicleListPage() {
   const isSaving = isCreating || isUpdating;
   const isImportBusy = isExporting || isValidating || isImporting;
 
-  const previewItems = React.useMemo(
-    () => validateResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
-    [validateResult]
-  );
-
   const updateField = <K extends keyof VehicleFormState>(
     field: K,
     value: VehicleFormState[K]
@@ -262,16 +256,18 @@ export function SecondMileVehicleListPage() {
               Second-mile vehicles
             </h1>
             <p className='text-muted-foreground'>
-              Manage hub-linked vehicles, Excel import, and CRUD via
-              second-mile API.
+              Manage hub-linked vehicles, Excel import, and CRUD via second-mile
+              API.
             </p>
           </div>
-          <Button onClick={() => {
-            setFormMode('create');
-            setEditingId(null);
-            setFormValues(DEFAULT_VEHICLE_FORM);
-            setIsFormOpen(true);
-          }}>
+          <Button
+            onClick={() => {
+              setFormMode('create');
+              setEditingId(null);
+              setFormValues(DEFAULT_VEHICLE_FORM);
+              setIsFormOpen(true);
+            }}
+          >
             <Plus className='mr-2 h-4 w-4' />
             New vehicle
           </Button>
@@ -322,7 +318,6 @@ export function SecondMileVehicleListPage() {
           importFileInputKey={importFileKey}
           selectedFile={importFile}
           validateResult={validateResult}
-          previewItems={previewItems}
           lastImportJob={lastImportJob}
           onDownloadTemplate={async () => {
             try {
@@ -359,10 +354,6 @@ export function SecondMileVehicleListPage() {
               setValidateResult(result);
               if (result.is_success) {
                 notification.success(`Validated ${result.data.length} row(s).`);
-              } else {
-                notification.error('Validation failed.', {
-                  description: result.error_message,
-                });
               }
             } catch (error) {
               notification.error('Validate failed.', {

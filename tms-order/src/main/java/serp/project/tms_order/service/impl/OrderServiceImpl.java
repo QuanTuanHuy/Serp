@@ -160,6 +160,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ImportHistoryResponse importOrdersAsync(MultipartFile file, Long tenantId) {
         return orderImportExcelService.importOrdersAsync(file, tenantId);
     }
@@ -217,6 +218,12 @@ public class OrderServiceImpl implements OrderService {
 
         applyCreateOrderRequest(order, request, customerOrderCode, tenantId);
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                OrderStatus.CREATED,
+                "Order created.",
+                null
+        );
         log.info("Created TMS order orderCode={} tenantId={}", savedOrder.getOrderCode(), tenantId);
         return OrderMapper.toOrderDetailResponse(savedOrder);
     }
@@ -309,6 +316,12 @@ public class OrderServiceImpl implements OrderService {
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             Order savedOrder = orderRepository.save(order);
+            orderTimelineService.recordStatusEvent(
+                    savedOrder,
+                    savedOrder.getStatus(),
+                    "Order confirmed.",
+                    null
+            );
             publishOrderAfterCommit(savedOrder);
             return toOrderConfirmationResponse(savedOrder, null, true);
         }
@@ -325,6 +338,12 @@ public class OrderServiceImpl implements OrderService {
         order.setIsConfirm(true);
 
         Order savedOrder = orderRepository.save(order);
+        orderTimelineService.recordStatusEvent(
+                savedOrder,
+                savedOrder.getStatus(),
+                "Order confirmed.",
+                null
+        );
         publishOrderAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, false);
     }

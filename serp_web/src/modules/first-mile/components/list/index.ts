@@ -6,4 +6,5 @@
 export * from './listFilterUtils';
 export * from './TmsAccessScopeBanner';
 export * from './TmsExcelImportToolbar';
+export * from './TmsImportValidationResultDialog';
 export * from './TmsListFilterPanel';
