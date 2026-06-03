@@ -8,10 +8,11 @@ package serp.project.first_mile.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.caller.TmsOrderClient;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
@@ -35,7 +36,6 @@ import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
@@ -43,7 +43,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.PickupOptimizationService;
-import serp.project.first_mile.service.OrderTimelineService;
+import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
 import serp.project.first_mile.service.dto.*;
 
 import java.time.LocalDate;
@@ -111,6 +111,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private static final String REASON_INVALID_SENDER_LOCATION = "INVALID_SENDER_LOCATION";
     private static final String REASON_ALREADY_ASSIGNED_TO_ACTIVE_TRIP = "ALREADY_ASSIGNED_TO_ACTIVE_TRIP";
     private static final String REASON_ORDER_NOT_ASSIGNABLE = "ORDER_NOT_ASSIGNABLE";
+    private static final String TRANSITION_SOURCE = "FIRST_MILE_PICKUP_OPTIMIZATION";
 
     private static final LocalTime SHIFT_MORNING_START = LocalTime.of(7, 30);
     private static final LocalTime SHIFT_MORNING_END = LocalTime.of(12, 0);
@@ -133,7 +134,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             OrderStatus.PICKUP_FAILED
     );
 
-    private final OrderRepository orderRepository;
+    private final TmsOrderClient tmsOrderClient;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
@@ -142,7 +143,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
-    private final OrderTimelineService orderTimelineService;
+    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -192,13 +193,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<Order> candidateOrders = orderRepository.findPickupCandidateOrders(
-                tenantId,
-                statuses,
+        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
                 postOffice.getCode(),
+                statuses,
                 config.planningStartTime(),
                 config.planningEndTime(),
-                PageRequest.of(0, config.orderLimit())
+                config.orderLimit()
         );
 
         PreparedOrderData preparedOrderData = prepareOrders(candidateOrders);
@@ -277,13 +277,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         applyExistingRouteData(routes, existingTripByCourier, existingRouteData);
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<Order> candidateOrders = orderRepository.findPickupCandidateOrders(
-                tenantId,
-                statuses,
+        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
                 postOffice.getCode(),
+                statuses,
                 config.planningStartTime(),
                 config.planningEndTime(),
-                PageRequest.of(0, config.orderLimit())
+                config.orderLimit()
         );
         lockOrdersForAssignment(candidateOrders, tenantId);
 
@@ -436,11 +435,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         LinkedHashSet<Long> allOrderIds = new LinkedHashSet<>(existingTripOrderIds);
         allOrderIds.addAll(requestedOrderIds);
 
-        Map<Long, Order> orderById = loadOrdersByIdMapOrThrow(allOrderIds, tenantId);
+        Map<Long, TmsOrderOperationView> orderById = loadOrdersByIdMapOrThrow(allOrderIds, tenantId);
 
         Long excludeTripId = existingTrip == null ? null : existingTrip.getId();
         for (Long orderId : requestedOrderIds) {
-            Order order = orderById.get(orderId);
+            TmsOrderOperationView order = orderById.get(orderId);
             if (order == null) {
                 throw new AppException(ErrorCode.ORDER_NOT_FOUND);
             }
@@ -611,12 +610,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             tripOrderRepository.saveAll(forceTripOrders);
         }
 
-        List<Order> assignedOrders = orderRepository.findByIdInAndTenantId(requestedOrderIds, tenantId);
-        for (Order assignedOrder : assignedOrders) {
-            assignedOrder.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
-        }
-        orderRepository.saveAll(assignedOrders);
-        for (Order assignedOrder : assignedOrders) {
+        Map<Long, TmsOrderOperationView> assignedOrderById = loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+        List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+        for (TmsOrderOperationView assignedOrder : assignedOrderById.values()) {
             if (assignedOrder == null || assignedOrder.getId() == null) {
                 continue;
             }
@@ -638,19 +634,21 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                     senderLocation == null ? null : senderLocation.getX(),
                     assignedOrder.getSenderName()
             );
-            orderTimelineService.recordStatusEvent(
+            transitionItems.add(toTransitionItem(
                     assignedOrder,
+                    List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
                     OrderStatus.ASSIGNED_TO_PICKUP,
                     "Order force assigned to pickup trip by manual confirmation.",
                     context
-            );
+            ));
         }
+        enqueueTransitions(transitionItems, tenantId);
 
-        Map<Long, Order> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
+        Map<Long, TmsOrderOperationView> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
         List<PickupAssignmentResponse.AssignedStopResponse> stopResponses = new ArrayList<>();
         int stopSequence = 1;
         for (Long orderId : finalTripOrderIds) {
-            Order order = finalOrderById.get(orderId);
+            TmsOrderOperationView order = finalOrderById.get(orderId);
             stopResponses.add(new PickupAssignmentResponse.AssignedStopResponse(
                     stopSequence++,
                     orderId,
@@ -931,12 +929,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Long tenantId
     ) {
         if (!assignedOrderIds.isEmpty()) {
-            List<Order> assignedOrders = orderRepository.findByIdInAndTenantId(assignedOrderIds, tenantId);
-            for (Order assignedOrder : assignedOrders) {
-                assignedOrder.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
-            }
-            orderRepository.saveAll(assignedOrders);
-            for (Order assignedOrder : assignedOrders) {
+            Map<Long, TmsOrderOperationView> assignedOrderById = loadOrdersByIdMapOrThrow(assignedOrderIds, tenantId);
+            List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+            for (TmsOrderOperationView assignedOrder : assignedOrderById.values()) {
                 if (assignedOrder == null || assignedOrder.getId() == null) {
                     continue;
                 }
@@ -944,13 +939,15 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 OrderTimelineContext context = assignmentContextByOrderId == null
                         ? null
                         : assignmentContextByOrderId.get(assignedOrder.getId());
-                orderTimelineService.recordStatusEvent(
+                transitionItems.add(toTransitionItem(
                         assignedOrder,
+                        List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
                         OrderStatus.ASSIGNED_TO_PICKUP,
                         "Order assigned to pickup trip.",
                         context
-                );
+                ));
             }
+            enqueueTransitions(transitionItems, tenantId);
         }
 
         Set<Long> releasedOrderIds = new HashSet<>(previousAssignedOrderIds);
@@ -959,8 +956,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return;
         }
 
-        List<Order> releasedOrders = orderRepository.findByIdInAndTenantId(releasedOrderIds, tenantId);
-        for (Order releasedOrder : releasedOrders) {
+        Map<Long, TmsOrderOperationView> releasedOrderById = loadOrdersByIdMapOrThrow(releasedOrderIds, tenantId);
+        List<TmsOrderStatusTransitionRequest.Item> releaseTransitionItems = new ArrayList<>();
+        for (TmsOrderOperationView releasedOrder : releasedOrderById.values()) {
             if (releasedOrder.getId() == null) {
                 continue;
             }
@@ -972,16 +970,67 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                     null
             );
             if (!stillAssignedToActiveTrip && OrderStatus.ASSIGNED_TO_PICKUP.equals(releasedOrder.getStatus())) {
-                releasedOrder.setStatus(OrderStatus.CREATED);
-                orderTimelineService.recordStatusEvent(
+                releaseTransitionItems.add(toTransitionItem(
                         releasedOrder,
+                        List.of(OrderStatus.ASSIGNED_TO_PICKUP),
                         OrderStatus.CREATED,
                         "Order released from pickup trip and moved back to CREATED.",
                         OrderTimelineContext.empty()
-                );
+                ));
             }
         }
-        orderRepository.saveAll(releasedOrders);
+        enqueueTransitions(releaseTransitionItems, tenantId);
+    }
+
+    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
+            TmsOrderOperationView order,
+            List<OrderStatus> expectedStatuses,
+            OrderStatus targetStatus,
+            String description,
+            OrderTimelineContext context
+    ) {
+        TmsOrderStatusTransitionRequest.Context transitionContext = context == null
+                ? null
+                : TmsOrderStatusTransitionRequest.Context.builder()
+                .eventTime(context.eventTime())
+                .tripId(context.tripId())
+                .tripCode(context.tripCode())
+                .postOfficeId(context.postOfficeId())
+                .postOfficeCode(context.postOfficeCode())
+                .postOfficeName(context.postOfficeName())
+                .staffId(context.courierStaffId())
+                .staffCode(context.courierCode())
+                .staffName(context.courierName())
+                .vehicleId(context.vehicleId())
+                .vehicleLicensePlate(context.vehicleLicensePlate())
+                .latitude(context.latitude())
+                .longitude(context.longitude())
+                .locationLabel(context.locationLabel())
+                .build();
+
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(order.getId())
+                .orderCode(order.getOrderCode())
+                .expectedStatuses(expectedStatuses)
+                .targetStatus(targetStatus)
+                .description(description)
+                .context(transitionContext)
+                .build();
+    }
+
+    private void enqueueTransitions(
+            List<TmsOrderStatusTransitionRequest.Item> items,
+            Long tenantId
+    ) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+                .source(TRANSITION_SOURCE)
+                .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
+                .items(items)
+                .build(), tenantId);
     }
 
     private Map<Long, Trip> loadReplannableTripsByCourier(
@@ -1056,10 +1105,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             }
         }
 
-        Map<Long, Order> orderById = new HashMap<>();
+        Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
         if (!existingOrderIds.isEmpty()) {
-            List<Order> existingOrders = orderRepository.findByIdInAndTenantId(existingOrderIds, tenantId);
-            for (Order existingOrder : existingOrders) {
+            List<TmsOrderOperationView> existingOrders = tmsOrderClient.lookupByIds(existingOrderIds);
+            for (TmsOrderOperationView existingOrder : existingOrders) {
                 orderById.put(existingOrder.getId(), existingOrder);
             }
         }
@@ -1074,7 +1123,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                     continue;
                 }
 
-                Order order = orderById.get(orderId);
+                TmsOrderOperationView order = orderById.get(orderId);
                 if (order == null) {
                     continue;
                 }
@@ -1156,10 +1205,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return new PreparedOrderData(assignableOrders, unassignedOrders);
     }
 
-    private Map<Long, Order> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
-        Map<Long, Order> orderById = new HashMap<>();
-        List<Order> orders = orderRepository.findByIdInAndTenantId(orderIds, tenantId);
-        for (Order order : orders) {
+    private Map<Long, TmsOrderOperationView> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
+        Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByIds(orderIds);
+        for (TmsOrderOperationView order : orders) {
             orderById.put(order.getId(), order);
         }
 
@@ -1172,26 +1221,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return orderById;
     }
 
-    private void lockOrdersForAssignment(List<Order> orders, Long tenantId) {
-        if (orders == null || orders.isEmpty()) {
-            return;
-        }
-
-        Set<Long> orderIds = new LinkedHashSet<>();
-        for (Order order : orders) {
-            if (order != null && order.getId() != null) {
-                orderIds.add(order.getId());
-            }
-        }
-
-        lockOrderIdsForAssignment(orderIds, tenantId);
+    private void lockOrdersForAssignment(List<TmsOrderOperationView> orders, Long tenantId) {
     }
 
     private void lockOrderIdsForAssignment(Set<Long> orderIds, Long tenantId) {
-        if (orderIds == null || orderIds.isEmpty()) {
-            return;
-        }
-        orderRepository.findByTenantIdAndIdInWithLock(tenantId, orderIds);
     }
 
     private void validateActiveTripConflict(
@@ -1230,7 +1263,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
     }
 
-    private void validateManualOrder(Order order, String postOfficeCode, boolean alreadyInCurrentTrip) {
+    private void validateManualOrder(TmsOrderOperationView order, String postOfficeCode, boolean alreadyInCurrentTrip) {
         OrderStatus status = order.getStatus();
         if (alreadyInCurrentTrip) {
             boolean validExistingStatus = OrderStatus.ASSIGNED_TO_PICKUP.equals(status)
@@ -1586,7 +1619,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return !planningStartTime.isBefore(shiftStartTime) && !planningEndTime.isAfter(shiftEndTime);
     }
 
-    private PickupOrderNode toOrderNodeIfValid(Order order) {
+    private PickupOrderNode toOrderNodeIfValid(TmsOrderOperationView order) {
         if (order == null) {
             return null;
         }
@@ -1617,7 +1650,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
     }
 
-    private PickupOrderNode toOrderNodeOrThrow(Order order, ErrorCode errorCode) {
+    private PickupOrderNode toOrderNodeOrThrow(TmsOrderOperationView order, ErrorCode errorCode) {
         PickupOrderNode orderNode = toOrderNodeIfValid(order);
         if (orderNode == null) {
             throw new AppException(errorCode);
@@ -1668,9 +1701,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return count;
     }
 
-    private Set<Long> extractOrderIds(List<Order> orders) {
+    private Set<Long> extractOrderIds(List<TmsOrderOperationView> orders) {
         Set<Long> orderIds = new HashSet<>();
-        for (Order order : orders) {
+        for (TmsOrderOperationView order : orders) {
             if (order.getId() != null) {
                 orderIds.add(order.getId());
             }
@@ -1720,11 +1753,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return pickupOptimizationEngine.evaluateSolution(solution, config);
     }
 
-    private PreparedOrderData prepareOrders(List<Order> candidateOrders) {
+    private PreparedOrderData prepareOrders(List<TmsOrderOperationView> candidateOrders) {
         return pickupOptimizationEngine.prepareOrders(candidateOrders);
     }
 
-    private PickupOrderNode toOrderNodeWithoutLocation(Order order) {
+    private PickupOrderNode toOrderNodeWithoutLocation(TmsOrderOperationView order) {
         return pickupOptimizationEngine.toOrderNodeWithoutLocation(order);
     }
 

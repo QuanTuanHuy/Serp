@@ -42,6 +42,8 @@ spring:
         - classpath:db/migration/pickup-checkin.sql
         - classpath:db/migration/post-office-handover-manifests.sql
         - classpath:db/migration/post-office-handover-manifest-assignment.sql
+        - classpath:db/migration/order-storage-compatibility.sql
+        - classpath:db/migration/order-transition-outbox.sql
         - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
@@ -60,11 +62,8 @@ app:
   kafka:
     topics:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
-      sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
-    order-sync:
-      consumer-group-id: ${KAFKA_FIRST_MILE_ORDER_SYNC_GROUP:first-mile-sync-order}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     handover-manifest-sync:
@@ -74,15 +73,14 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
-payment:
+tms-order:
   service:
-    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
-    gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
-    create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
-    query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
-    redirect-url: ${PAYMENT_REDIRECT_URL:http://localhost:3000/payment/result}
-  webhook:
-    secret: ${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
+    pickup-candidates-path: ${TMS_ORDER_PICKUP_CANDIDATES_PATH:/api/v1/internal/orders/pickup-candidates}
+    status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
+  transition-outbox:
+    retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

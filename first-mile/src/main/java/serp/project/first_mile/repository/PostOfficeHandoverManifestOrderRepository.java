@@ -18,19 +18,19 @@ import java.util.Optional;
 public interface PostOfficeHandoverManifestOrderRepository extends JpaRepository<PostOfficeHandoverManifestOrder, Long> {
     List<PostOfficeHandoverManifestOrder> findByManifest_IdAndTenantId(Long manifestId, Long tenantId);
 
-    Optional<PostOfficeHandoverManifestOrder> findByManifest_IdAndOrder_OrderCodeIgnoreCaseAndTenantId(
+    Optional<PostOfficeHandoverManifestOrder> findByManifest_IdAndOrderCodeIgnoreCaseAndTenantId(
             Long manifestId,
             String orderCode,
             Long tenantId
     );
 
-    List<PostOfficeHandoverManifestOrder> findByManifest_IdAndOrder_OrderCodeInAndTenantId(
+    List<PostOfficeHandoverManifestOrder> findByManifest_IdAndOrderCodeInAndTenantId(
             Long manifestId,
             Collection<String> orderCodes,
             Long tenantId
     );
 
-    boolean existsByOrder_IdAndTenantIdAndManifest_StatusIn(
+    boolean existsByOrderIdAndTenantIdAndManifest_StatusIn(
             Long orderId,
             Long tenantId,
             Collection<HandoverManifestStatus> statuses

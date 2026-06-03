@@ -20,7 +20,7 @@ public class AsyncConfig {
     @Bean(name = "orderImportTaskExecutor")
     public Executor orderImportTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("order-import-");
+        executor.setThreadNamePrefix("first-mile-import-");
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(200);

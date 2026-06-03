@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.ui.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.request.ConfirmPostOfficeInboundRequest;
+import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
 import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
@@ -53,6 +56,24 @@ public class PickupTrackingController {
                         postOfficeId,
                         courierStaffId
                 ))
+                .build();
+    }
+
+    @PostMapping(value = "/orders/{orderId}/checkin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('TMS_POSTOFFICER')")
+    public ApiResponse<PickupCheckinResponse> pickupCheckinOrder(
+            @PathVariable Long orderId,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam("photo") MultipartFile photo
+    ) {
+        Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
+                () -> new AppException(ErrorCode.UNAUTHORIZED)
+        );
+
+        return ApiResponse.<PickupCheckinResponse>builder()
+                .message(messageService.getMessage("success.pickup_tracking.checkin"))
+                .result(pickupTrackingService.checkInPickupOrder(orderId, latitude, longitude, photo, tenantId))
                 .build();
     }
 

@@ -31,7 +31,16 @@ spring:
     init:
       mode: ${DB_INIT_MODE:never}
       encoding: UTF-8
-      schema-locations: []
+      schema-locations:
+        - classpath:db.migration/province.sql
+        - classpath:db.migration/ward.sql
+        - classpath:db.migration/product-type.sql
+        - classpath:db.migration/order.sql
+        - classpath:db.migration/product.sql
+        - classpath:db.migration/order-history.sql
+        - classpath:db.migration/order-transition-log.sql
+        - classpath:db.migration/import_history.sql
+        - classpath:db.migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
     use-code-as-default-message: true
@@ -61,6 +70,24 @@ app:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
+
+payment:
+  service:
+    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
+    gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
+    create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
+    query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
+    redirect-url: ${PAYMENT_REDIRECT_URL:http://localhost:3000/payment/result}
+  webhook:
+    secret: ${TMS_ORDER_PAYMENT_WEBHOOK_SECRET:change-me}
+
+first-mile:
+  service:
+    base-url: ${FIRST_MILE_SERVICE_BASE_URL:http://localhost:8093}
+    reserve-best-origin-path: ${FIRST_MILE_RESERVE_BEST_ORIGIN_PATH:/api/v1/internal/post-office-reservations/origin/best}
+    reserve-drop-off-origin-path: ${FIRST_MILE_RESERVE_DROP_OFF_ORIGIN_PATH:/api/v1/internal/post-office-reservations/origin/%d/drop-off}
+    validate-managed-post-office-path: ${FIRST_MILE_VALIDATE_MANAGED_POST_OFFICE_PATH:/api/v1/internal/post-office-reservations/origin/%d/managed}
+    drop-off-suggestions-path: ${FIRST_MILE_DROP_OFF_SUGGESTIONS_PATH:/api/v1/internal/post-office-suggestions/drop-off}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

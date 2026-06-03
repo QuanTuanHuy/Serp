@@ -1,6 +1,6 @@
 /**
- * Author: Nguyễn Thế Anh
- * Description: Part of Serp Project - First-mile product type list page
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - TMS order product type list page
  */
 
 'use client';
@@ -42,7 +42,7 @@ export const ProductTypeListPage: React.FC = () => {
       <div className='flex flex-col gap-2'>
         <h1 className='text-2xl font-bold tracking-tight'>Product Types</h1>
         <p className='text-muted-foreground'>
-          Configure product classification used in first-mile order imports.
+          Configure product classification used in TMS order imports.
         </p>
       </div>
 

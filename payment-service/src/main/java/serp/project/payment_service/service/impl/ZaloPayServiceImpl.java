@@ -466,7 +466,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
             }
             
             transactionRepository.save(transaction);
-            sendFirstMilePaymentConfirmedWebhook(transaction);
+            sendOrderPaymentConfirmedWebhook(transaction);
             
             log.info("Updated transaction on callback: {}", callbackData.getAppTransId());
             
@@ -652,13 +652,13 @@ public class ZaloPayServiceImpl implements ZaloPayService {
         return transaction.getTitle();
     }
 
-    private void sendFirstMilePaymentConfirmedWebhook(ZaloPayTransaction transaction) {
+    private void sendOrderPaymentConfirmedWebhook(ZaloPayTransaction transaction) {
         try {
             if (transaction == null || transaction.getAppTransId() == null || transaction.getAppTransId().isBlank()) {
                 return;
             }
             if (transaction.getAppUser() == null || transaction.getAppUser().isBlank()) {
-                log.warn("Missing appUser(orderCode). Skip first-mile webhook for appTransId={}", transaction.getAppTransId());
+                log.warn("Missing appUser(orderCode). Skip order payment webhook for appTransId={}", transaction.getAppTransId());
                 return;
             }
 
@@ -679,7 +679,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
 
             webhookEventService.enqueueOrderPaymentConfirmedWebhook(webhookRequest);
         } catch (Exception ex) {
-            log.error("Failed to enqueue first-mile payment webhook appTransId={}", transaction.getAppTransId(), ex);
+            log.error("Failed to enqueue order payment webhook appTransId={}", transaction.getAppTransId(), ex);
         }
     }
 
@@ -1036,7 +1036,7 @@ public class ZaloPayServiceImpl implements ZaloPayService {
                     transaction.setDiscountAmount(queryResponse.getDiscountAmount());
                     transaction.setPaidAt(LocalDateTime.now());
                     transactionRepository.save(transaction);
-                    sendFirstMilePaymentConfirmedWebhook(transaction);
+                    sendOrderPaymentConfirmedWebhook(transaction);
                     
                     log.info("Updated transaction from query to SUCCESS: {}", appTransId);
                     break;

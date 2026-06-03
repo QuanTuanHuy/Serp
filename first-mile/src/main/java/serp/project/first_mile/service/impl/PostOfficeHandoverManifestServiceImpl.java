@@ -14,7 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.caller.TmsOrderClient;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeHandoverManifest;
 import serp.project.first_mile.domain.PostOfficeHandoverManifestOrder;
@@ -32,15 +34,13 @@ import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kafka.HandoverManifestSyncEventPublisher;
-import serp.project.first_mile.kafka.impl.order.SyncOrder;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.TransactionAfterCommit;
-import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PostOfficeHandoverManifestOrderRepository;
 import serp.project.first_mile.repository.PostOfficeHandoverManifestRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
-import serp.project.first_mile.service.OrderTimelineService;
 import serp.project.first_mile.service.PostOfficeHandoverManifestService;
+import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
 import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.time.LocalDateTime;
@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,14 +67,14 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
             HandoverManifestStatus.CREATED,
             HandoverManifestStatus.OUTBOUND_CONFIRMED
     );
+    private static final String TRANSITION_SOURCE = "FIRST_MILE_POST_OFFICE_HANDOVER";
 
     private final FirstMileAccessUtils firstMileAccessUtils;
+    private final TmsOrderClient tmsOrderClient;
     private final PostOfficeRepository postOfficeRepository;
-    private final OrderRepository orderRepository;
     private final PostOfficeHandoverManifestRepository manifestRepository;
     private final PostOfficeHandoverManifestOrderRepository manifestOrderRepository;
-    private final OrderTimelineService orderTimelineService;
-    private final SyncOrder syncOrder;
+    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
 
     @Override
@@ -158,7 +159,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
             throw new AppException(ErrorCode.INVALID_REQUEST, "order_codes must not be empty.");
         }
 
-        List<Order> orders = orderRepository.findByTenantIdAndUpperOrderCodeInWithLock(tenantId, normalizedOrderCodes);
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByCodes(normalizedOrderCodes);
         validateCreateOrders(tenantId, postOffice, normalizedOrderCodes, orders);
 
         String manifestCode = generateManifestCode(tenantId, postOffice.getCode(), targetHubId);
@@ -174,10 +175,13 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
 
         List<PostOfficeHandoverManifestOrder> manifestOrders = new ArrayList<>();
-        for (Order order : orders) {
+        for (TmsOrderOperationView order : orders) {
             manifestOrders.add(PostOfficeHandoverManifestOrder.builder()
                     .manifest(savedManifest)
-                    .order(order)
+                    .orderId(order.getId())
+                    .orderCode(order.getOrderCode())
+                    .customerOrderCode(order.getCustomerOrderCode())
+                    .lastKnownStatus(order.getStatus())
                     .tenantId(tenantId)
                     .build());
         }
@@ -199,19 +203,39 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         }
 
         PostOfficeHandoverManifestOrder manifestOrder = manifestOrderRepository
-                .findByManifest_IdAndOrder_OrderCodeIgnoreCaseAndTenantId(manifest.getId(), orderCode, tenantId)
+                .findByManifest_IdAndOrderCodeIgnoreCaseAndTenantId(manifest.getId(), orderCode, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Order is not in this manifest."));
 
         if (manifestOrder.getScanOutTime() == null) {
             LocalDateTime now = LocalDateTime.now();
             manifestOrder.setScanOutTime(now);
-            Order order = manifestOrder.getOrder();
-            if (order != null && OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
-                order.setStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
-                orderRepository.save(order);
-                recordTimeline(order, manifest, OrderStatus.OUTBOUND_READY_FROM_PO, now, "Order scanned out from origin post office.");
-                TransactionAfterCommit.run(() -> syncOrder.sendOrderEvent(order));
+            TmsOrderOperationView order = loadOrderOrThrow(manifestOrder.getOrderId());
+            if (!OrderStatus.AT_ORIGIN_POST_OFFICE.equals(order.getStatus())) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Only AT_ORIGIN_POST_OFFICE orders can be scanned out.");
             }
+            manifestOrder.setLastKnownStatus(OrderStatus.OUTBOUND_READY_FROM_PO);
+            enqueueTransitions(List.of(toTransitionItem(
+                    order,
+                    List.of(OrderStatus.AT_ORIGIN_POST_OFFICE),
+                    OrderStatus.OUTBOUND_READY_FROM_PO,
+                    "Order scanned out from origin post office.",
+                    new OrderTimelineContext(
+                            now,
+                            null,
+                            manifest.getManifestCode(),
+                            manifest.getOriginPostOfficeId(),
+                            manifest.getOriginPostOfficeCode(),
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            "Post office handover manifest"
+                    )
+            )), tenantId);
             manifestOrderRepository.save(manifestOrder);
         }
 
@@ -254,15 +278,8 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         manifest.setNote(normalizeNullable(request.getNote()));
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
 
-        List<Order> orders = manifestOrders.stream()
-                .map(PostOfficeHandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .toList();
         HandoverManifestSyncEvent event = toOutboundSyncEvent(savedManifest, manifestOrders, originPostOfficeLocation);
-        TransactionAfterCommit.run(() -> {
-            orders.forEach(syncOrder::sendOrderEvent);
-            handoverManifestSyncEventPublisher.publish(event);
-        });
+        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
         return toResponse(savedManifest, manifestOrders);
     }
 
@@ -301,16 +318,27 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         ensureManifestStatus(manifest, HandoverManifestStatus.CREATED);
 
         List<PostOfficeHandoverManifestOrder> manifestOrders = findManifestOrders(manifest);
-        List<Order> changedOrders = new ArrayList<>();
+        List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+        Map<Long, TmsOrderOperationView> orderById = loadOrdersByIds(manifestOrders.stream()
+                .map(PostOfficeHandoverManifestOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .toList());
         for (PostOfficeHandoverManifestOrder manifestOrder : manifestOrders) {
-            Order order = manifestOrder.getOrder();
+            TmsOrderOperationView order = orderById.get(manifestOrder.getOrderId());
             if (order != null && OrderStatus.OUTBOUND_READY_FROM_PO.equals(order.getStatus())) {
-                order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
-                changedOrders.add(order);
+                manifestOrder.setLastKnownStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
+                transitionItems.add(toTransitionItem(
+                        order,
+                        List.of(OrderStatus.OUTBOUND_READY_FROM_PO),
+                        OrderStatus.AT_ORIGIN_POST_OFFICE,
+                        "Handover manifest cancelled; order returned to origin post office.",
+                        OrderTimelineContext.empty()
+                ));
             }
         }
-        if (!changedOrders.isEmpty()) {
-            orderRepository.saveAll(changedOrders);
+        if (!transitionItems.isEmpty()) {
+            manifestOrderRepository.saveAll(manifestOrders);
+            enqueueTransitions(transitionItems, tenantId);
         }
         manifest.setStatus(HandoverManifestStatus.CANCELLED);
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
@@ -320,10 +348,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 HandoverManifestSyncEventType.CANCELLED,
                 HandoverManifestSyncOrigin.FIRST_MILE
         );
-        TransactionAfterCommit.run(() -> {
-            changedOrders.forEach(syncOrder::sendOrderEvent);
-            handoverManifestSyncEventPublisher.publish(event);
-        });
+        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
         return toResponse(savedManifest, manifestOrders);
     }
 
@@ -355,8 +380,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 : event.getInboundConfirmedAt();
         if (!scannedCodes.isEmpty()) {
             for (PostOfficeHandoverManifestOrder manifestOrder : manifestOrders) {
-                Order order = manifestOrder.getOrder();
-                if (order != null && scannedCodes.contains(normalizeText(order.getOrderCode()))) {
+                if (scannedCodes.contains(normalizeText(manifestOrder.getOrderCode()))) {
                     manifestOrder.setScanInTime(inboundTime);
                 }
             }
@@ -376,16 +400,16 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
             Long tenantId,
             PostOffice postOffice,
             List<String> expectedOrderCodes,
-            List<Order> orders
+            List<TmsOrderOperationView> orders
     ) {
         if (orders.size() != expectedOrderCodes.size()) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes do not exist in current tenant.");
         }
 
-        Map<String, Order> orderByCode = orders.stream()
+        Map<String, TmsOrderOperationView> orderByCode = orders.stream()
                 .collect(Collectors.toMap(order -> normalizeText(order.getOrderCode()), Function.identity()));
         for (String expectedOrderCode : expectedOrderCodes) {
-            Order order = orderByCode.get(expectedOrderCode);
+            TmsOrderOperationView order = orderByCode.get(expectedOrderCode);
             if (order == null) {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Some order codes do not exist in current tenant.");
             }
@@ -401,7 +425,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                         "All orders must belong to the manifest origin post office."
                 );
             }
-            if (manifestOrderRepository.existsByOrder_IdAndTenantIdAndManifest_StatusIn(
+            if (manifestOrderRepository.existsByOrderIdAndTenantIdAndManifest_StatusIn(
                     order.getId(),
                     tenantId,
                     ACTIVE_MANIFEST_STATUSES
@@ -461,36 +485,6 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         }
     }
 
-    private void recordTimeline(
-            Order order,
-            PostOfficeHandoverManifest manifest,
-            OrderStatus status,
-            LocalDateTime eventTime,
-            String description
-    ) {
-        orderTimelineService.recordStatusEvent(
-                order,
-                status,
-                description,
-                new OrderTimelineContext(
-                        eventTime,
-                        null,
-                        manifest.getManifestCode(),
-                        manifest.getOriginPostOfficeId(),
-                        manifest.getOriginPostOfficeCode(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        "Post office handover manifest"
-                )
-        );
-    }
-
     private PostOfficeHandoverManifestResponse toResponse(PostOfficeHandoverManifest manifest) {
         return toResponse(manifest, findManifestOrders(manifest));
     }
@@ -529,13 +523,12 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
     }
 
     private PostOfficeHandoverManifestOrderResponse toOrderResponse(PostOfficeHandoverManifestOrder manifestOrder) {
-        Order order = manifestOrder.getOrder();
         return new PostOfficeHandoverManifestOrderResponse(
                 manifestOrder.getId(),
-                order == null ? null : order.getId(),
-                order == null ? null : order.getOrderCode(),
-                order == null ? null : order.getCustomerOrderCode(),
-                order == null ? null : order.getStatus(),
+                manifestOrder.getOrderId(),
+                manifestOrder.getOrderCode(),
+                manifestOrder.getCustomerOrderCode(),
+                manifestOrder.getLastKnownStatus(),
                 manifestOrder.getScanOutTime(),
                 manifestOrder.getScanInTime()
         );
@@ -576,16 +569,12 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
             Point originPostOfficeLocation
     ) {
         List<String> orderCodes = manifestOrders.stream()
-                .map(PostOfficeHandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .map(Order::getOrderCode)
+                .map(PostOfficeHandoverManifestOrder::getOrderCode)
                 .filter(Objects::nonNull)
                 .toList();
         List<String> scannedOrderCodes = manifestOrders.stream()
                 .filter(item -> item.getScanOutTime() != null || item.getScanInTime() != null)
-                .map(PostOfficeHandoverManifestOrder::getOrder)
-                .filter(Objects::nonNull)
-                .map(Order::getOrderCode)
+                .map(PostOfficeHandoverManifestOrder::getOrderCode)
                 .filter(Objects::nonNull)
                 .toList();
         return HandoverManifestSyncEvent.builder()
@@ -609,6 +598,79 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 .sealCode(manifest.getSealCode())
                 .note(manifest.getNote())
                 .build();
+    }
+
+    private TmsOrderOperationView loadOrderOrThrow(Long orderId) {
+        if (orderId == null || orderId <= 0) {
+            throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+        }
+        return tmsOrderClient.lookupByIds(List.of(orderId)).stream()
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
+    private Map<Long, TmsOrderOperationView> loadOrdersByIds(Collection<Long> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> safeOrderIds = orderIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (safeOrderIds.isEmpty()) {
+            return Map.of();
+        }
+        return tmsOrderClient.lookupByIds(safeOrderIds).stream()
+                .filter(order -> order.getId() != null)
+                .collect(Collectors.toMap(TmsOrderOperationView::getId, Function.identity(), (left, right) -> left));
+    }
+
+    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
+            TmsOrderOperationView order,
+            List<OrderStatus> expectedStatuses,
+            OrderStatus targetStatus,
+            String description,
+            OrderTimelineContext context
+    ) {
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(order.getId())
+                .orderCode(order.getOrderCode())
+                .expectedStatuses(expectedStatuses)
+                .targetStatus(targetStatus)
+                .description(description)
+                .context(toTransitionContext(context))
+                .build();
+    }
+
+    private TmsOrderStatusTransitionRequest.Context toTransitionContext(OrderTimelineContext context) {
+        OrderTimelineContext safeContext = context == null ? OrderTimelineContext.empty() : context;
+        return TmsOrderStatusTransitionRequest.Context.builder()
+                .eventTime(safeContext.eventTime())
+                .tripId(safeContext.tripId())
+                .tripCode(safeContext.tripCode())
+                .postOfficeId(safeContext.postOfficeId())
+                .postOfficeCode(safeContext.postOfficeCode())
+                .postOfficeName(safeContext.postOfficeName())
+                .staffId(safeContext.courierStaffId())
+                .staffCode(safeContext.courierCode())
+                .staffName(safeContext.courierName())
+                .vehicleId(safeContext.vehicleId())
+                .vehicleLicensePlate(safeContext.vehicleLicensePlate())
+                .latitude(safeContext.latitude())
+                .longitude(safeContext.longitude())
+                .locationLabel(safeContext.locationLabel())
+                .build();
+    }
+
+    private void enqueueTransitions(List<TmsOrderStatusTransitionRequest.Item> items, Long tenantId) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+                .source(TRANSITION_SOURCE)
+                .idempotencyKey(UUID.randomUUID().toString())
+                .items(items)
+                .build(), tenantId);
     }
 
     private Point resolveOriginPostOfficeLocation(PostOfficeHandoverManifest manifest) {

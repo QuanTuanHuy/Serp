@@ -31,7 +31,7 @@ public class ImportHistoryController {
         Long tenantId = authUtils.getCurrentTenantId().orElseThrow(
                 () -> new AppException(ErrorCode.UNAUTHORIZED)
         );
-        log.info("REST request to get order import history {} for tenant {}", importHistoryId, tenantId);
+        log.info("REST request to get import history {} for tenant {}", importHistoryId, tenantId);
         return importHistoryService.getImportHistory(importHistoryId, tenantId);
     }
 

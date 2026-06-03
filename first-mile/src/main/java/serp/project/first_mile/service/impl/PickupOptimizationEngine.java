@@ -13,7 +13,7 @@ import serp.project.first_mile.caller.DistanceMatrixCaller;
 import serp.project.first_mile.caller.dto.DistanceMatrixElement;
 import serp.project.first_mile.caller.dto.DistanceMatrixResult;
 import serp.project.first_mile.caller.dto.GeoPoint;
-import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.enums.PickupDestroyOperator;
 import serp.project.first_mile.enums.PickupRepairOperator;
 import serp.project.first_mile.service.dto.*;
@@ -53,11 +53,11 @@ class PickupOptimizationEngine {
 
     private final DistanceMatrixCaller distanceMatrixCaller;
 
-    PreparedOrderData prepareOrders(List<Order> candidateOrders) {
+    PreparedOrderData prepareOrders(List<TmsOrderOperationView> candidateOrders) {
         List<PickupOrderNode> assignableOrders = new ArrayList<>();
         List<UnassignedOrderState> unassignedOrders = new ArrayList<>();
 
-        for (Order order : candidateOrders) {
+        for (TmsOrderOperationView order : candidateOrders) {
             Point senderLocation = order.getSenderLocation();
             if (senderLocation == null) {
                 unassignedOrders.add(new UnassignedOrderState(
@@ -102,7 +102,7 @@ class PickupOptimizationEngine {
         return new PreparedOrderData(assignableOrders, unassignedOrders);
     }
 
-    PickupOrderNode toOrderNodeWithoutLocation(Order order) {
+    PickupOrderNode toOrderNodeWithoutLocation(TmsOrderOperationView order) {
         return new PickupOrderNode(
                 order.getId(),
                 order.getOrderCode(),
