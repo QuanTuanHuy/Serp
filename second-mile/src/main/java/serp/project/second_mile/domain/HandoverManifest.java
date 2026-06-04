@@ -79,6 +79,9 @@ public class HandoverManifest extends AbstractAudit {
     @Column(name = "driver_start_distance_m")
     private Double driverStartDistanceM;
 
+    @Column(name = "driver_start_photo_url")
+    private String driverStartPhotoUrl;
+
     @Column(name = "driver_end_checkin_at")
     private LocalDateTime driverEndCheckinAt;
 
@@ -90,6 +93,9 @@ public class HandoverManifest extends AbstractAudit {
 
     @Column(name = "driver_end_distance_m")
     private Double driverEndDistanceM;
+
+    @Column(name = "driver_end_photo_url")
+    private String driverEndPhotoUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)

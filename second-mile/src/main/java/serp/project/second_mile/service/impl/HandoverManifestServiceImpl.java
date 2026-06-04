@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.second_mile.caller.TmsOrderClient;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
@@ -42,6 +43,7 @@ import serp.project.second_mile.kafka.HandoverManifestSyncEventPublisher;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEventType;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
+import serp.project.second_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
 import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.second_mile.repository.HandoverManifestOrderRepository;
@@ -52,9 +54,13 @@ import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.HandoverManifestSpecification;
+import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.HandoverManifestService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.dto.request.FileUploadRequest;
+import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -75,6 +81,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final double CHECKIN_RADIUS_METERS = 100.0;
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
+    private static final String STORAGE_SERVICE_NAME = "second-mile";
+    private static final String HANDOVER_CHECKIN_PHOTO_FOLDER = "handover-checkin-photo";
     private static final List<HandoverManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
             HandoverManifestStatus.CREATED,
             HandoverManifestStatus.OUTBOUND_CONFIRMED
@@ -96,6 +104,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private final HubRepository hubRepository;
     private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
+    private final FileStorageService fileStorageService;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
     private final TmsOrderClient tmsOrderClient;
     private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
@@ -243,7 +252,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processOutboundCheckin(manifest, false, null);
+        return processOutboundCheckin(manifest, false, null, null);
     }
 
     @Override
@@ -253,27 +262,35 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, request, false, null);
+        return processInboundCheckin(manifest, request, false, null, null);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public HandoverManifestResponse driverCheckinStart(Long manifestId, DriverHandoverCheckinRequest request) {
+    public HandoverManifestResponse driverCheckinStart(
+            Long manifestId,
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
+    ) {
         secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processOutboundCheckin(manifest, true, request);
+        return processOutboundCheckin(manifest, true, request, photo);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public HandoverManifestResponse driverCheckinEnd(Long manifestId, DriverHandoverCheckinRequest request) {
+    public HandoverManifestResponse driverCheckinEnd(
+            Long manifestId,
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
+    ) {
         secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, null, true, request);
+        return processInboundCheckin(manifest, null, true, request, photo);
     }
 
     @Override
@@ -746,12 +763,14 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
     private void recordDriverStartCheckin(
             HandoverManifest manifest,
-            DriverHandoverCheckinRequest request
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
     ) {
         if (manifest.getDriverStartCheckinAt() != null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the post office.");
         }
         validateCheckinRequest(request);
+        validateCheckinPhoto(photo);
         validateGeoCoordinatePair(
                 manifest.getOriginPostOfficeLatitude(),
                 manifest.getOriginPostOfficeLongitude(),
@@ -769,11 +788,13 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         manifest.setDriverStartLatitude(request.getLatitude());
         manifest.setDriverStartLongitude(request.getLongitude());
         manifest.setDriverStartDistanceM(distanceMeters);
+        manifest.setDriverStartPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
     }
 
     private void recordDriverEndCheckin(
             HandoverManifest manifest,
-            DriverHandoverCheckinRequest request
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
     ) {
         if (manifest.getDriverStartCheckinAt() == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver departure check-in is required before arrival.");
@@ -782,6 +803,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the hub.");
         }
         validateCheckinRequest(request);
+        validateCheckinPhoto(photo);
 
         Hub hub = hubRepository.findById(manifest.getTargetHubId())
                 .orElseThrow(() -> new AppException(ErrorCode.HUB_NOT_FOUND));
@@ -804,6 +826,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         manifest.setDriverEndLatitude(request.getLatitude());
         manifest.setDriverEndLongitude(request.getLongitude());
         manifest.setDriverEndDistanceM(distanceMeters);
+        manifest.setDriverEndPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
     }
 
     private void validateCheckinRequest(DriverHandoverCheckinRequest request) {
@@ -811,6 +834,32 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in location is required.");
         }
         validateGeoCoordinatePair(request.getLatitude(), request.getLongitude(), "Driver check-in location is invalid.");
+    }
+
+    private void validateCheckinPhoto(MultipartFile photo) {
+        if (photo == null || photo.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+        ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
+    }
+
+    private String uploadCheckinPhoto(MultipartFile photo, Long tenantId) {
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
+        try {
+            FileUploadResponse uploadResponse = fileStorageService.upload(FileUploadRequest.builder()
+                    .content(photo.getBytes())
+                    .originalFileName(photo.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(HANDOVER_CHECKIN_PHOTO_FOLDER)
+                    .tenantId(tenantId)
+                    .uploaderId(secondMileAccessUtils.getCurrentUserIdOrNull())
+                    .publicFile(true)
+                    .build());
+            return uploadResponse.getUrl();
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
     }
 
     private void validateCheckinDistance(double distanceMeters, String message) {
@@ -842,7 +891,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private HandoverManifestResponse processOutboundCheckin(
             HandoverManifest manifest,
             boolean driverOnly,
-            DriverHandoverCheckinRequest request
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
     ) {
         boolean validStatus = driverOnly
                 ? manifest.getStatus() == HandoverManifestStatus.CREATED
@@ -862,7 +912,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
-            recordDriverStartCheckin(manifest, request);
+            recordDriverStartCheckin(manifest, request, photo);
         }
 
         List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
@@ -898,7 +948,8 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             HandoverManifest manifest,
             ConfirmHandoverInboundRequest request,
             boolean driverOnly,
-            DriverHandoverCheckinRequest checkinRequest
+            DriverHandoverCheckinRequest checkinRequest,
+            MultipartFile photo
     ) {
         if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
             throw new AppException(ErrorCode.BAG_STATUS_INVALID);
@@ -917,7 +968,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
             validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
-            recordDriverEndCheckin(manifest, checkinRequest);
+            recordDriverEndCheckin(manifest, checkinRequest, photo);
         }
 
         Long tenantId = manifest.getTenantId();
@@ -1040,6 +1091,10 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                         item.getScanInTime()
                 ))
                 .toList();
+        Hub targetHub = manifest.getTargetHubId() == null
+                ? null
+                : hubRepository.findById(manifest.getTargetHubId()).orElse(null);
+        Point targetHubLocation = targetHub == null ? null : targetHub.getLocation();
 
         return new HandoverManifestResponse(
                 manifest.getId(),
@@ -1055,14 +1110,18 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 manifest.getPlannedArrivalAt(),
                 manifest.getOriginPostOfficeLatitude(),
                 manifest.getOriginPostOfficeLongitude(),
+                targetHubLocation == null ? null : targetHubLocation.getY(),
+                targetHubLocation == null ? null : targetHubLocation.getX(),
                 manifest.getDriverStartCheckinAt(),
                 manifest.getDriverStartLatitude(),
                 manifest.getDriverStartLongitude(),
                 manifest.getDriverStartDistanceM(),
+                manifest.getDriverStartPhotoUrl(),
                 manifest.getDriverEndCheckinAt(),
                 manifest.getDriverEndLatitude(),
                 manifest.getDriverEndLongitude(),
                 manifest.getDriverEndDistanceM(),
+                manifest.getDriverEndPhotoUrl(),
                 manifest.getStatus(),
                 mappedOrders,
                 manifest.getCreatedAt(),

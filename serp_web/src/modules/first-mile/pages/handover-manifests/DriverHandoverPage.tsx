@@ -7,6 +7,7 @@
 
 import * as React from 'react';
 import {
+  Camera,
   CheckCircle2,
   Clock,
   Loader2,
@@ -26,7 +27,16 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
   Separator,
+  Switch,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useNotification } from '@/shared/hooks';
@@ -38,6 +48,14 @@ import {
 import type { HandoverManifest } from '../../types';
 
 const PAGE_SIZE = 50;
+
+type DriverHandoverAction = 'START' | 'END';
+
+export const isHandoverDriverOnly = (roles: string[]): boolean =>
+  roles.includes('TMS_HUB_DRIVER') &&
+  !roles.includes('TMS_ADMIN') &&
+  !roles.includes('TMS_HUB_MANAGER') &&
+  !roles.includes('TMS_HUB_EMPLOYEE');
 
 const formatDateTime = (value?: string): string => {
   if (!value) {
@@ -106,6 +124,18 @@ const getActionLabel = (manifest: HandoverManifest): string => {
   return 'Completed';
 };
 
+const buildCheckinFormData = (
+  latitude: number,
+  longitude: number,
+  photo: File
+): FormData => {
+  const formData = new FormData();
+  formData.append('latitude', String(latitude));
+  formData.append('longitude', String(longitude));
+  formData.append('photo', photo);
+  return formData;
+};
+
 function MetricItem({
   label,
   value,
@@ -168,6 +198,12 @@ export function DriverHandoverPage() {
   const [activeManifestId, setActiveManifestId] = React.useState<number | null>(
     null
   );
+  const [checkinManifest, setCheckinManifest] =
+    React.useState<HandoverManifest | null>(null);
+  const [checkinPhoto, setCheckinPhoto] = React.useState<File | null>(null);
+  const [checkinLatitude, setCheckinLatitude] = React.useState('');
+  const [checkinLongitude, setCheckinLongitude] = React.useState('');
+  const [isDevMode, setIsDevMode] = React.useState(false);
 
   const { data, isFetching, refetch } = useGetHandoverManifestsQuery(
     {
@@ -192,28 +228,104 @@ export function DriverHandoverPage() {
     (manifest) =>
       manifest.driverEndCheckinAt || manifest.status === 'INBOUND_CONFIRMED'
   );
+  const checkinAction: DriverHandoverAction =
+    checkinManifest?.driverStartCheckinAt ? 'END' : 'START';
+  const checkinTitle =
+    checkinAction === 'START' ? 'Departure check-in' : 'Arrival check-out';
 
-  const handleDriverAction = async (manifest: HandoverManifest) => {
+  const applyValidCheckinCoordinates = React.useCallback(
+    (manifest: HandoverManifest) => {
+      if (manifest.driverStartCheckinAt) {
+        if (
+          typeof manifest.targetHubLatitude !== 'number' ||
+          typeof manifest.targetHubLongitude !== 'number'
+        ) {
+          notification.error('Target hub coordinates are missing.');
+          return;
+        }
+        setCheckinLatitude(manifest.targetHubLatitude.toFixed(6));
+        setCheckinLongitude(manifest.targetHubLongitude.toFixed(6));
+        return;
+      }
+      if (
+        typeof manifest.originPostOfficeLatitude !== 'number' ||
+        typeof manifest.originPostOfficeLongitude !== 'number'
+      ) {
+        notification.error('Origin post office coordinates are missing.');
+        return;
+      }
+      setCheckinLatitude(manifest.originPostOfficeLatitude.toFixed(6));
+      setCheckinLongitude(manifest.originPostOfficeLongitude.toFixed(6));
+    },
+    [notification]
+  );
+
+  React.useEffect(() => {
+    if (isDevMode && checkinManifest) {
+      applyValidCheckinCoordinates(checkinManifest);
+    }
+  }, [applyValidCheckinCoordinates, checkinManifest, isDevMode]);
+
+  const handleOpenCheckinDialog = async (manifest: HandoverManifest) => {
     if (!manifest.id || manifest.driverEndCheckinAt) {
       return;
     }
+    setCheckinManifest(manifest);
+    setCheckinPhoto(null);
+    setCheckinLatitude('');
+    setCheckinLongitude('');
+    if (isDevMode) {
+      applyValidCheckinCoordinates(manifest);
+    }
+  };
 
-    setActiveManifestId(manifest.id);
+  const handleUseCurrentLocation = async () => {
     try {
       const location = await getBrowserLocation();
-      if (!manifest.driverStartCheckinAt) {
+      setCheckinLatitude(location.latitude.toFixed(6));
+      setCheckinLongitude(location.longitude.toFixed(6));
+    } catch (error) {
+      notification.error('Unable to read current location.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleSubmitDriverAction = async () => {
+    if (!checkinManifest?.id) {
+      notification.error('Please select a handover manifest.');
+      return;
+    }
+    if (!checkinPhoto) {
+      notification.error('Please select a check-in photo.');
+      return;
+    }
+
+    const latitude = Number(checkinLatitude);
+    const longitude = Number(checkinLongitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      notification.error('Please provide a valid GPS location.');
+      return;
+    }
+
+    const formData = buildCheckinFormData(latitude, longitude, checkinPhoto);
+    setActiveManifestId(checkinManifest.id);
+    try {
+      if (!checkinManifest.driverStartCheckinAt) {
         await driverCheckinStart({
-          manifestId: manifest.id,
-          body: location,
+          manifestId: checkinManifest.id,
+          formData,
         }).unwrap();
         notification.success('Departure check-in recorded.');
       } else {
         await driverCheckinEnd({
-          manifestId: manifest.id,
-          body: location,
+          manifestId: checkinManifest.id,
+          formData,
         }).unwrap();
         notification.success('Arrival check-out recorded.');
       }
+      setCheckinManifest(null);
+      setCheckinPhoto(null);
       void refetch();
     } catch (error) {
       notification.error('Driver handover action failed.', {
@@ -339,7 +451,7 @@ export function DriverHandoverPage() {
                     </div>
 
                     <Button
-                      onClick={() => void handleDriverAction(manifest)}
+                      onClick={() => void handleOpenCheckinDialog(manifest)}
                       disabled={isSubmitting}
                     >
                       {isCurrentSubmitting ? (
@@ -408,6 +520,114 @@ export function DriverHandoverPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(checkinManifest)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCheckinManifest(null);
+            setCheckinPhoto(null);
+            setCheckinLatitude('');
+            setCheckinLongitude('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{checkinTitle}</DialogTitle>
+            <DialogDescription>
+              Upload a handover photo and provide the GPS location for this
+              driver checkpoint.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='flex items-center justify-between rounded-md border p-3'>
+              <div className='space-y-1'>
+                <Label htmlFor='handover-dev-mode'>Development mode</Label>
+                <p className='text-xs text-muted-foreground'>
+                  Fill valid checkpoint coordinates from the manifest.
+                </p>
+              </div>
+              <Switch
+                id='handover-dev-mode'
+                checked={isDevMode}
+                onCheckedChange={setIsDevMode}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='handover-photo'>Photo</Label>
+              <Input
+                id='handover-photo'
+                type='file'
+                accept='image/*'
+                capture='environment'
+                onChange={(event) =>
+                  setCheckinPhoto(event.target.files?.[0] ?? null)
+                }
+              />
+            </div>
+
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='handover-latitude'>Latitude</Label>
+                <Input
+                  id='handover-latitude'
+                  inputMode='decimal'
+                  value={checkinLatitude}
+                  onChange={(event) => setCheckinLatitude(event.target.value)}
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='handover-longitude'>Longitude</Label>
+                <Input
+                  id='handover-longitude'
+                  inputMode='decimal'
+                  value={checkinLongitude}
+                  onChange={(event) => setCheckinLongitude(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => void handleUseCurrentLocation()}
+            >
+              <MapPin className='mr-2 h-4 w-4' />
+              Use current location
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => {
+                setCheckinManifest(null);
+                setCheckinPhoto(null);
+                setCheckinLatitude('');
+                setCheckinLongitude('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type='button'
+              disabled={isSubmitting}
+              onClick={() => void handleSubmitDriverAction()}
+            >
+              {isSubmitting ? (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              ) : (
+                <Camera className='mr-2 h-4 w-4' />
+              )}
+              Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

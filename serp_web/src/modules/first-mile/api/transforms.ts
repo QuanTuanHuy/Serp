@@ -359,6 +359,16 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
       'origin_post_office_longitude',
       'originPostOfficeLongitude'
     ),
+    targetHubLatitude: readField<number>(
+      record,
+      'target_hub_latitude',
+      'targetHubLatitude'
+    ),
+    targetHubLongitude: readField<number>(
+      record,
+      'target_hub_longitude',
+      'targetHubLongitude'
+    ),
     driverStartCheckinAt: readField<string>(
       record,
       'driver_start_checkin_at',
@@ -379,6 +389,11 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
       'driver_start_distance_m',
       'driverStartDistanceM'
     ),
+    driverStartPhotoUrl: readField<string>(
+      record,
+      'driver_start_photo_url',
+      'driverStartPhotoUrl'
+    ),
     driverEndCheckinAt: readField<string>(
       record,
       'driver_end_checkin_at',
@@ -398,6 +413,11 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
       record,
       'driver_end_distance_m',
       'driverEndDistanceM'
+    ),
+    driverEndPhotoUrl: readField<string>(
+      record,
+      'driver_end_photo_url',
+      'driverEndPhotoUrl'
     ),
     status: readField(record, 'status', 'status'),
     totalOrders: readField<number>(record, 'total_orders', 'totalOrders'),

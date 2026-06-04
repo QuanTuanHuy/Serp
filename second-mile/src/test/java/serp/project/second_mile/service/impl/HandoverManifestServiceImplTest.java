@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import serp.project.second_mile.caller.TmsOrderClient;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.domain.HandoverManifest;
@@ -41,6 +42,7 @@ import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
+import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
 import java.time.LocalDate;
@@ -91,6 +93,9 @@ class HandoverManifestServiceImplTest {
 
     @Mock
     private SecondMileAccessUtils secondMileAccessUtils;
+
+    @Mock
+    private FileStorageService fileStorageService;
 
     @Mock
     private TmsOrderClient tmsOrderClient;
@@ -204,8 +209,14 @@ class HandoverManifestServiceImplTest {
         )).thenReturn(Optional.of(HubStaffAssignment.builder().build()));
 
         DriverHandoverCheckinRequest request = new DriverHandoverCheckinRequest(11.0, 107.0, null);
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "handover.jpg",
+                "image/jpeg",
+                new byte[]{1}
+        );
 
-        assertThrows(AppException.class, () -> service.driverCheckinStart(100L, request));
+        assertThrows(AppException.class, () -> service.driverCheckinStart(100L, request, photo));
         assertNull(manifest.getDriverStartCheckinAt());
     }
 

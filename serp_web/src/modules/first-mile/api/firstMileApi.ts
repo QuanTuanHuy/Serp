@@ -73,7 +73,6 @@ import type {
   HandoverManifestListFilters,
   CreateHandoverManifestRequest,
   CreatePostOfficeHandoverManifestRequest,
-  DriverHandoverCheckinRequest,
   SecondMileOrder,
   SecondMileOrderListFilters,
   DispatchPostOfficeHandoverManifestRequest,
@@ -674,12 +673,12 @@ export const firstMileApi = api.injectEndpoints({
 
     driverCheckinHandoverManifestStart: builder.mutation<
       HandoverManifest,
-      { manifestId: number; body: DriverHandoverCheckinRequest }
+      { manifestId: number; formData: FormData }
     >({
-      query: ({ manifestId, body }) => ({
+      query: ({ manifestId, formData }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-start`,
         method: 'POST',
-        body,
+        body: formData,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
@@ -692,12 +691,12 @@ export const firstMileApi = api.injectEndpoints({
 
     driverCheckinHandoverManifestEnd: builder.mutation<
       HandoverManifest,
-      { manifestId: number; body: DriverHandoverCheckinRequest }
+      { manifestId: number; formData: FormData }
     >({
-      query: ({ manifestId, body }) => ({
+      query: ({ manifestId, formData }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-end`,
         method: 'POST',
-        body,
+        body: formData,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>

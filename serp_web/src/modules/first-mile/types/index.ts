@@ -469,14 +469,18 @@ export interface HandoverManifest {
   plannedArrivalAt?: string;
   originPostOfficeLatitude?: number;
   originPostOfficeLongitude?: number;
+  targetHubLatitude?: number;
+  targetHubLongitude?: number;
   driverStartCheckinAt?: string;
   driverStartLatitude?: number;
   driverStartLongitude?: number;
   driverStartDistanceM?: number;
+  driverStartPhotoUrl?: string;
   driverEndCheckinAt?: string;
   driverEndLatitude?: number;
   driverEndLongitude?: number;
   driverEndDistanceM?: number;
+  driverEndPhotoUrl?: string;
   status?: HandoverManifestStatus;
   totalOrders?: number;
   scannedOutOrders?: number;

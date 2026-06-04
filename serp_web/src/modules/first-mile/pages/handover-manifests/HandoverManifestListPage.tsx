@@ -52,8 +52,6 @@ import {
   useConfirmHandoverManifestInboundMutation,
   useCreatePostOfficeHandoverManifestMutation,
   useDispatchPostOfficeHandoverManifestMutation,
-  useDriverCheckinHandoverManifestEndMutation,
-  useDriverCheckinHandoverManifestStartMutation,
   useGetFirstMileOrdersQuery,
   useGetHandoverManifestByIdQuery,
   useGetHandoverManifestsQuery,
@@ -74,6 +72,10 @@ import type {
   SecondMileRoute,
   SecondMileVehicle,
 } from '../../types';
+import {
+  DriverHandoverPage,
+  isHandoverDriverOnly,
+} from './DriverHandoverPage';
 
 const PAGE_SIZE = 20;
 const SELECT_PAGE_SIZE = 200;
@@ -180,27 +182,6 @@ const getDefaultArrivalTime = (): string => {
   date.setMinutes(date.getMinutes() + 75);
   return toDateTimeLocalValue(date);
 };
-
-const getBrowserLocation = (): Promise<{
-  latitude: number;
-  longitude: number;
-}> =>
-  new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Geolocation is not available in this browser.'));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) =>
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }),
-      () => reject(new Error('Could not read the current location.')),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-    );
-  });
 
 interface DetailItemProps {
   label: string;
@@ -310,7 +291,7 @@ function ManifestOrdersTable({
   );
 }
 
-export function HandoverManifestListPage() {
+function HandoverManifestManagementPage() {
   const notification = useNotification();
   const roles = useAppSelector(
     (state) => state.account.user.profile?.roles ?? []
@@ -537,10 +518,6 @@ export function HandoverManifestListPage() {
     useCancelPostOfficeHandoverManifestMutation();
   const [confirmInbound, { isLoading: isConfirmingInbound }] =
     useConfirmHandoverManifestInboundMutation();
-  const [driverCheckinStart, { isLoading: isDriverCheckingInStart }] =
-    useDriverCheckinHandoverManifestStartMutation();
-  const [driverCheckinEnd, { isLoading: isDriverCheckingInEnd }] =
-    useDriverCheckinHandoverManifestEndMutation();
 
   const manifestsData =
     effectiveMode === 'POST_OFFICE'
@@ -917,46 +894,6 @@ export function HandoverManifestListPage() {
     }
   };
 
-  const handleDriverDepartureCheckin = async (manifest: HandoverManifest) => {
-    if (!manifest.id) {
-      return;
-    }
-
-    try {
-      const location = await getBrowserLocation();
-      await driverCheckinStart({
-        manifestId: manifest.id,
-        body: location,
-      }).unwrap();
-      notification.success('Driver departure check-in recorded.');
-      void refetchHubManifests();
-    } catch (error) {
-      notification.error('Failed to check in departure.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleDriverArrivalCheckin = async (manifest: HandoverManifest) => {
-    if (!manifest.id) {
-      return;
-    }
-
-    try {
-      const location = await getBrowserLocation();
-      await driverCheckinEnd({
-        manifestId: manifest.id,
-        body: location,
-      }).unwrap();
-      notification.success('Driver arrival check-in recorded.');
-      void refetchHubManifests();
-    } catch (error) {
-      notification.error('Failed to check in arrival.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
   if (!canAccess) {
     return (
       <Card>
@@ -1253,35 +1190,6 @@ export function HandoverManifestListPage() {
                             {effectiveMode === 'HUB' &&
                             manifest.status === 'OUTBOUND_CONFIRMED' ? (
                               <>
-                                {!manifest.driverStartCheckinAt ? (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    disabled={isDriverCheckingInStart}
-                                    onClick={() =>
-                                      void handleDriverDepartureCheckin(
-                                        manifest
-                                      )
-                                    }
-                                  >
-                                    <MapPin className='mr-1 h-3.5 w-3.5' />
-                                    Depart check-in
-                                  </Button>
-                                ) : null}
-                                {manifest.driverStartCheckinAt &&
-                                !manifest.driverEndCheckinAt ? (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    disabled={isDriverCheckingInEnd}
-                                    onClick={() =>
-                                      void handleDriverArrivalCheckin(manifest)
-                                    }
-                                  >
-                                    <MapPin className='mr-1 h-3.5 w-3.5' />
-                                    Arrival check-in
-                                  </Button>
-                                ) : null}
                                 <Button
                                   size='sm'
                                   onClick={() => handleOpenReceive(manifest)}
@@ -1919,4 +1827,16 @@ export function HandoverManifestListPage() {
       </Dialog>
     </div>
   );
+}
+
+export function HandoverManifestListPage() {
+  const roles = useAppSelector(
+    (state) => state.account.user.profile?.roles ?? []
+  );
+
+  if (isHandoverDriverOnly(roles)) {
+    return <DriverHandoverPage />;
+  }
+
+  return <HandoverManifestManagementPage />;
 }
