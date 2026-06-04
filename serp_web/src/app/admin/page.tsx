@@ -23,6 +23,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -58,6 +59,20 @@ const formatGeneratedAt = (value: number | undefined) => {
 
 const filterVisibleStatuses = (items: AdminDashboardStatusCount[]) =>
   items.filter((item) => item.count > 0);
+
+const SUBSCRIPTION_STATUS_COLORS: Record<string, string> = {
+  ACTIVE: '#16a34a',
+  TRIAL: '#0891b2',
+  PENDING: '#d97706',
+  PENDING_UPGRADE: '#ea580c',
+  EXPIRED: '#dc2626',
+  CANCELLED: '#64748b',
+  PAYMENT_FAILED: '#b91c1c',
+  GRACE_PERIOD: '#7c3aed',
+};
+
+const getSubscriptionStatusColor = (status: string) =>
+  SUBSCRIPTION_STATUS_COLORS[status] ?? '#2563eb';
 
 export default function AdminDashboardPage() {
   const {
@@ -296,12 +311,22 @@ export default function AdminDashboardPage() {
                       tickLine={false}
                       axisLine={false}
                     />
-                    <Tooltip />
-                    <Bar
-                      dataKey='count'
-                      fill='hsl(var(--primary))'
-                      radius={4}
+                    <Tooltip
+                      cursor={{ fill: 'rgba(148, 163, 184, 0.14)' }}
+                      contentStyle={{
+                        borderRadius: 6,
+                        borderColor: '#e2e8f0',
+                        fontSize: 12,
+                      }}
                     />
+                    <Bar dataKey='count' radius={4}>
+                      {subscriptionStatusData.map((item) => (
+                        <Cell
+                          key={item.status}
+                          fill={getSubscriptionStatusColor(item.status)}
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -336,7 +361,7 @@ export default function AdminDashboardPage() {
                         {organization.name}
                       </p>
                       <p className='text-xs text-muted-foreground'>
-                        {organization.code} ·{' '}
+                        {organization.code} -{' '}
                         {formatNumber(organization.userCount)} users
                       </p>
                     </div>
@@ -380,7 +405,7 @@ export default function AdminDashboardPage() {
                         {item.label}
                       </span>
                       <span className='block text-xs text-muted-foreground'>
-                        {formatNumber(item.active)} {item.activeLabel} ·{' '}
+                        {formatNumber(item.active)} {item.activeLabel} -{' '}
                         {formatNumber(item.inactive)} {item.inactiveLabel}
                       </span>
                     </span>
