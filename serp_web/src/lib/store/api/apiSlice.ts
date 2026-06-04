@@ -179,6 +179,7 @@ export const api = createApi({
     'Territory',
     // Admin tags
     'admin/Organization',
+    'admin/Dashboard',
     'admin/Subscription',
     'admin/Plan',
     'admin/PlanModule',

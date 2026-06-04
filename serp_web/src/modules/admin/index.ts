@@ -100,6 +100,12 @@ export type {
   UserType,
   RoleScope,
   RoleType,
+  AdminDashboard,
+  AdminDashboardActionQueue,
+  AdminDashboardConfigurationCoverage,
+  AdminDashboardMetrics,
+  AdminDashboardRecentOrganization,
+  AdminDashboardStatusCount,
   MenuType,
   MenuRoleInfo,
   MenuDisplayDetail,
@@ -114,6 +120,10 @@ export type {
 
 // API Services
 export {
+  // Dashboard
+  dashboardApi,
+  useGetAdminDashboardQuery,
+
   // Organizations
   organizationsApi,
   useGetOrganizationsQuery,

@@ -3,6 +3,12 @@
  * Description: Part of Serp Project - Admin API barrel exports
  */
 
+// Dashboard API
+export {
+  dashboardApi,
+  useGetAdminDashboardQuery,
+} from './dashboard/dashboardApi';
+
 // Organizations API
 export {
   organizationsApi,
