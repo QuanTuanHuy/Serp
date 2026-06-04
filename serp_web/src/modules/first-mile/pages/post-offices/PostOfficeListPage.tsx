@@ -384,12 +384,6 @@ export const PostOfficeListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} row(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate post office import file.', {
@@ -410,9 +404,6 @@ export const PostOfficeListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -650,10 +641,27 @@ export const PostOfficeListPage: React.FC = () => {
           </div>
 
           {isTmsAdmin ? (
-            <Button onClick={handleOpenCreateDialog}>
-              <Plus className='h-4 w-4 mr-2' />
-              New Post Office
-            </Button>
+            <div className='flex flex-wrap items-center gap-2'>
+              <PostOfficeImportCard
+                isTmsAdmin={isTmsAdmin}
+                isImportFlowBusy={isImportFlowBusy}
+                isExportingTemplate={isExportingTemplate}
+                isValidatingImport={isValidatingImport}
+                isImportingPostOffices={isImportingPostOffices}
+                importFileInputKey={importFileInputKey}
+                selectedImportFile={selectedImportFile}
+                validateImportResult={validateImportResult}
+                lastImportJob={lastImportJob}
+                onSelectImportFile={handleSelectImportFile}
+                onDownloadTemplate={handleDownloadTemplate}
+                onValidateImportFile={handleValidateImportFile}
+                onImportFile={handleImportFile}
+              />
+              <Button onClick={handleOpenCreateDialog}>
+                <Plus className='h-4 w-4 mr-2' />
+                New Post Office
+              </Button>
+            </div>
           ) : (
             <Badge variant='outline' className='gap-1'>
               <ShieldAlert className='h-3.5 w-3.5' />
@@ -661,29 +669,6 @@ export const PostOfficeListPage: React.FC = () => {
             </Badge>
           )}
         </div>
-
-        {isTmsAdmin ? (
-          <PostOfficeImportCard
-            className='w-full'
-            isTmsAdmin={isTmsAdmin}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingPostOffices={isImportingPostOffices}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
-            lastImportJob={lastImportJob}
-            previewLimit={IMPORT_PREVIEW_LIMIT}
-            onSelectImportFile={handleSelectImportFile}
-            onDownloadTemplate={handleDownloadTemplate}
-            onValidateImportFile={handleValidateImportFile}
-            onImportFile={handleImportFile}
-            getProvinceLabel={getProvinceLabel}
-            getWardLabel={getWardLabel}
-          />
-        ) : null}
 
         <PostOfficeFiltersCard
           filterMode={filterMode}

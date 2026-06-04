@@ -92,7 +92,6 @@ import {
 } from './hubForm';
 
 const PAGE_SIZE = 20;
-const IMPORT_PREVIEW_LIMIT = 5;
 
 function getHubStatusBadgeVariant(
   status: HubStatus
@@ -393,11 +392,6 @@ export function HubListPage() {
     []
   );
 
-  const validatedPreviewItems = React.useMemo(
-    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
-    [validateImportResult]
-  );
-
   const resetImportFileSelection = React.useCallback(() => {
     setSelectedImportFile(null);
     setValidateImportResult(null);
@@ -568,10 +562,6 @@ export function HubListPage() {
       setValidateImportResult(result);
       if (result.is_success) {
         notification.success('File validated successfully.');
-      } else {
-        notification.error('Validation completed with errors.', {
-          description: result.error_message,
-        });
       }
     } catch (error) {
       notification.error('Failed to validate hub import file.', {
@@ -589,8 +579,11 @@ export function HubListPage() {
       notification.error('Please select an Excel file first.');
       return;
     }
-    if (!validateImportResult?.is_success) {
+    if (!validateImportResult) {
       notification.error('Please validate the selected file before importing.');
+      return;
+    }
+    if (!validateImportResult.is_success) {
       return;
     }
     try {
@@ -810,10 +803,31 @@ export function HubListPage() {
               Refresh
             </Button>
             {isTmsAdmin ? (
-              <Button type='button' onClick={openCreateDialog}>
-                <Plus className='h-4 w-4 mr-2' />
-                New hub
-              </Button>
+              <>
+                <HubImportCard
+                  isTmsAdmin={isTmsAdmin}
+                  isImportFlowBusy={isImportFlowBusy}
+                  isExportingTemplate={isExportingTemplate}
+                  isValidatingImport={isValidatingImport}
+                  isImportingHubs={isImportingHubs}
+                  importFileInputKey={importFileInputKey}
+                  selectedImportFile={selectedImportFile}
+                  validateImportResult={validateImportResult}
+                  lastImportJob={lastImportJob}
+                  onSelectImportFile={(e) => {
+                    const file = e.target.files?.[0];
+                    setSelectedImportFile(file ?? null);
+                    setValidateImportResult(null);
+                  }}
+                  onDownloadTemplate={handleDownloadTemplate}
+                  onValidateImportFile={handleValidateImportFile}
+                  onImportFile={handleImportFile}
+                />
+                <Button type='button' onClick={openCreateDialog}>
+                  <Plus className='h-4 w-4 mr-2' />
+                  New hub
+                </Button>
+              </>
             ) : (
               <Badge variant='outline' className='gap-1'>
                 <ShieldAlert className='h-3.5 w-3.5' />
@@ -822,31 +836,6 @@ export function HubListPage() {
             )}
           </div>
         </div>
-
-        {isTmsAdmin ? (
-          <HubImportCard
-            isTmsAdmin={isTmsAdmin}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingHubs={isImportingHubs}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
-            lastImportJob={lastImportJob}
-            previewLimit={IMPORT_PREVIEW_LIMIT}
-            getProvinceLabel={getProvinceLabel}
-            onSelectImportFile={(e) => {
-              const file = e.target.files?.[0];
-              setSelectedImportFile(file ?? null);
-              setValidateImportResult(null);
-            }}
-            onDownloadTemplate={handleDownloadTemplate}
-            onValidateImportFile={handleValidateImportFile}
-            onImportFile={handleImportFile}
-          />
-        ) : null}
 
         <HubFiltersCard
           filterMode={filterMode}

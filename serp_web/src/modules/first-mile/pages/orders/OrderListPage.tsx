@@ -77,13 +77,11 @@ import {
   DEFAULT_CREATE_ORDER_FORM,
   formatDateTime,
   formatPickupMethodLabel,
-  formatOrderImportProductsPreview,
   formatStatusLabel,
   getProvinceNameByCode,
   getScopeBadgeLabel,
   getScopeDescription,
   getStatusBadgeVariant,
-  IMPORT_PREVIEW_LIMIT,
   isDropOffOrder,
   isConfirmableStatus,
   isDraftOrder,
@@ -507,11 +505,6 @@ export const OrderListPage: React.FC = () => {
   const isSubmittingOrder = isCreatingOrder || isUpdatingOrder;
   const isImportFlowBusy =
     isExportingTemplate || isValidatingImport || isImportingOrders;
-
-  const validatedPreviewItems = React.useMemo(
-    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
-    [validateImportResult]
-  );
 
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
@@ -1644,12 +1637,6 @@ export const OrderListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} order(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate order import file.', {
@@ -1670,9 +1657,6 @@ export const OrderListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -1704,6 +1688,31 @@ export const OrderListPage: React.FC = () => {
       <OrderPageHeader
         canMutateOrders={canMutateOrders}
         onCreateOrder={handleOpenCreateDialog}
+        importAction={
+          canMutateOrders ? (
+            <OrderImportCard
+              canMutateOrders={canMutateOrders}
+              isImportFlowBusy={isImportFlowBusy}
+              isExportingTemplate={isExportingTemplate}
+              isValidatingImport={isValidatingImport}
+              isImportingOrders={isImportingOrders}
+              importFileInputKey={importFileInputKey}
+              selectedImportFile={selectedImportFile}
+              validateImportResult={validateImportResult}
+              lastImportJob={lastImportJob}
+              onDownloadTemplate={() => {
+                void handleDownloadTemplate();
+              }}
+              onSelectImportFile={handleSelectImportFile}
+              onValidateImportFile={() => {
+                void handleValidateImportFile();
+              }}
+              onImportFile={() => {
+                void handleImportFile();
+              }}
+            />
+          ) : null
+        }
       />
 
       <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
@@ -1713,34 +1722,6 @@ export const OrderListPage: React.FC = () => {
             badgeLabel={getScopeBadgeLabel(accessScope)}
             description={getScopeDescription(accessScope)}
             className='flex-1'
-          />
-        ) : null}
-
-        {canMutateOrders ? (
-          <OrderImportCard
-            className='w-full lg:max-w-2xl'
-            canMutateOrders={canMutateOrders}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingOrders={isImportingOrders}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
-            importPreviewLimit={IMPORT_PREVIEW_LIMIT}
-            lastImportJob={lastImportJob}
-            onDownloadTemplate={() => {
-              void handleDownloadTemplate();
-            }}
-            onSelectImportFile={handleSelectImportFile}
-            onValidateImportFile={() => {
-              void handleValidateImportFile();
-            }}
-            onImportFile={() => {
-              void handleImportFile();
-            }}
-            formatProductsPreview={formatOrderImportProductsPreview}
           />
         ) : null}
       </div>

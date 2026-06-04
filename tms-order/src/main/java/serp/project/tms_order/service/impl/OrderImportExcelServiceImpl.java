@@ -44,6 +44,7 @@ import serp.project.tms_order.repository.ProvinceRepository;
 import serp.project.tms_order.repository.WardRepository;
 import serp.project.tms_order.repository.projection.CodeNameProjection;
 import serp.project.tms_order.service.OrderImportExcelService;
+import serp.project.tms_order.service.OrderTimelineService;
 import serp.project.tms_order.service.dto.import_record.ImportExecutionResult;
 
 import java.io.ByteArrayInputStream;
@@ -225,6 +226,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private final ImportHistoryRepository importHistoryRepository;
     private final ImportHistoryFailureUtils importHistoryFailureUtils;
     private final MessageService messageService;
+    private final OrderTimelineService orderTimelineService;
 
     @Qualifier("orderImportTaskExecutor")
     private final Executor orderImportTaskExecutor;
@@ -421,7 +423,13 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
 
                 try {
                     Order order = mapToOrderEntity(orderImport, tenantId, orderCode, productTypeById);
-                    orderRepository.save(order);
+                    Order savedOrder = orderRepository.save(order);
+                    orderTimelineService.recordStatusEvent(
+                            savedOrder,
+                            OrderStatus.CREATED,
+                            "Order imported.",
+                            null
+                    );
                     successRecords++;
                 } catch (Exception exception) {
                     errors.add(buildImportPersistError(orderImport, exception));
