@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
 import serp.project.account.infrastructure.store.mapper.OrganizationMapper;
@@ -52,6 +53,7 @@ class OrganizationServiceTest {
                 .email("old@example.com")
                 .city("Old City")
                 .primaryColor("#111111")
+                .status(OrganizationStatus.ACTIVE)
                 .build();
     }
 
@@ -75,6 +77,17 @@ class OrganizationServiceTest {
         assertEquals("Hanoi", updated.getCity());
         assertEquals("#7c3aed", updated.getPrimaryColor());
         assertEquals("monday", updated.getWeekStartsOn());
+        verify(organizationPort).save(organization);
+    }
+
+    @Test
+    void updateOrganizationStatusShouldPersistStatusChange() {
+        when(organizationPort.getById(1L)).thenReturn(organization);
+        when(organizationPort.save(any(OrganizationEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var updated = organizationService.updateOrganizationStatus(1L, OrganizationStatus.SUSPENDED);
+
+        assertEquals(OrganizationStatus.SUSPENDED, updated.getStatus());
         verify(organizationPort).save(organization);
     }
 }

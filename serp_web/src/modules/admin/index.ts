@@ -29,6 +29,23 @@ export type {
   AdminActionMenuProps,
   AdminActionMenuItem,
 } from './components/shared/AdminActionMenu';
+export { AdminFilterDialog } from './components/shared/AdminFilterDialog';
+export type {
+  AdminFilterCriterion,
+  AdminFilterDialogProps,
+} from './components/shared/AdminFilterDialog';
+export { AdminFilterChips } from './components/shared/AdminFilterChips';
+export type {
+  AdminFilterChip,
+  AdminFilterChipsProps,
+} from './components/shared/AdminFilterChips';
+export { AdminConfirmStatusDialog } from './components/shared/AdminConfirmStatusDialog';
+export type { AdminConfirmStatusDialogProps } from './components/shared/AdminConfirmStatusDialog';
+
+// Organization Components
+export { OrganizationDetailsDrawer } from './components/organizations/OrganizationDetailsDrawer';
+export { OrganizationStatusDialog } from './components/organizations/OrganizationStatusDialog';
+export { OrganizationUsersPreview } from './components/organizations/OrganizationUsersPreview';
 
 // Role Components
 export { RoleForm, RoleFormDialog } from './components/roles';
@@ -57,10 +74,14 @@ export { useMenuDisplays } from './hooks/useMenuDisplays';
 // Types
 export type {
   Organization,
+  OrganizationStatusUpdateResponse,
   OrganizationSubscription,
   SubscriptionPlan,
   Module,
   UserProfile,
+  UserStats,
+  UserDetailResponse,
+  DepartmentOption,
   Role,
   Permission,
   CreateRoleRequest,
@@ -71,10 +92,12 @@ export type {
   UserFilters,
   RoleFilters,
   OrganizationStatus,
+  OrganizationType,
   SubscriptionStatus,
   BillingCycle,
   ModuleStatus,
   UserStatus,
+  UserType,
   RoleScope,
   RoleType,
   MenuType,
@@ -95,13 +118,30 @@ export {
   organizationsApi,
   useGetOrganizationsQuery,
   useGetOrganizationByIdQuery,
+  useGetOrganizationUserStatsQuery,
   useLazyGetOrganizationsQuery,
   useLazyGetOrganizationByIdQuery,
+  useLazyGetOrganizationUserStatsQuery,
+  useUpdateOrganizationStatusMutation,
 
   // Users
   usersApi,
   useGetUsersQuery,
   useLazyGetUsersQuery,
+  useGetUserStatsQuery,
+  useGetUserDetailQuery,
+  useLazyGetUserDetailQuery,
+  useGetOrganizationRolesQuery,
+  useUpdateUserInfoMutation,
+  useUpdateUserStatusMutation,
+  useUpdateUserRolesMutation,
+  useUpdateUserTypeMutation,
+  useCreateUserForOrganizationMutation,
+
+  // Departments
+  departmentsApi,
+  useGetDepartmentsQuery,
+  useLazyGetDepartmentsQuery,
 
   // Subscriptions
   subscriptionsApi,
@@ -151,3 +191,6 @@ export {
 
 // Users UI Components
 export { UserDialog } from './components/users/UserDialog';
+export { UserDetailsDrawer } from './components/users/UserDetailsDrawer';
+export { UserAccessDialog } from './components/users/UserAccessDialog';
+export { UserStatusDialog } from './components/users/UserStatusDialog';

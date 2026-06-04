@@ -21,6 +21,7 @@ import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
@@ -99,6 +100,15 @@ public class OrganizationService implements IOrganizationService {
         var organization = getOrganizationById(organizationId);
 
         applySettingsUpdate(organization, request);
+        return organizationPort.save(organization);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity updateOrganizationStatus(Long organizationId, OrganizationStatus status) {
+        var organization = getOrganizationById(organizationId);
+        organization.setStatus(status);
+        organization.setUpdatedAt(System.currentTimeMillis());
         return organizationPort.save(organization);
     }
 

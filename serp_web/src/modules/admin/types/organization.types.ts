@@ -10,20 +10,23 @@ import type {
 } from '@/lib/store/api/types';
 
 export type OrganizationStatus =
-  | 'PENDING'
   | 'ACTIVE'
+  | 'TRIAL'
   | 'SUSPENDED'
-  | 'INACTIVE'
-  | 'DELETED';
+  | 'EXPIRED'
+  | 'CLOSED';
 
 export type OrganizationType =
   | 'ENTERPRISE'
   | 'SMB'
   | 'STARTUP'
-  | 'NONPROFIT'
-  | 'PERSONAL';
+  | 'PERSONAL'
+  | 'NON_PROFIT'
+  | 'GOVERNMENT';
 
 export type BillingCycle = 'MONTHLY' | 'YEARLY' | 'QUARTERLY';
+
+export type AdminTimestamp = string | number;
 
 // Organization
 export interface Organization {
@@ -37,9 +40,9 @@ export interface Organization {
   industry?: string;
   employeeCount?: number;
   subscriptionId?: number;
-  subscriptionExpiresAt?: string;
+  subscriptionExpiresAt?: AdminTimestamp;
   currentBillingCycle?: BillingCycle;
-  nextBillingDate?: string;
+  nextBillingDate?: AdminTimestamp;
   status: OrganizationStatus;
   timezone?: string;
   currency?: string;
@@ -49,10 +52,17 @@ export interface Organization {
   website?: string;
   phoneNumber?: string;
   email?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: AdminTimestamp;
+  updatedAt: AdminTimestamp;
   createdBy?: number;
   updatedBy?: number;
+}
+
+export interface OrganizationStatusUpdateResponse {
+  organization: Organization;
+  affectedUsers: number;
+  activatedUsers: number;
+  suspendedUsers: number;
 }
 
 // Filters

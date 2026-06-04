@@ -4,44 +4,53 @@
  */
 
 import { api } from '@/lib/store/api';
+import {
+  createPaginatedTransform,
+  createRtkTransformResponse,
+} from '@/lib/store/api/utils';
+import type { ApiResponse } from '@/lib/store/api/types';
 import type {
+  CreateUserForOrganizationRequest,
+  Role,
+  UserDetailResponse,
   UserFilters,
   UserProfile,
-  UsersResponse,
   UserResponse,
+  UserStats,
+  UserStatus,
+  UserType,
+  UsersResponse,
   UpdateUserInfoRequest,
-  CreateUserForOrganizationRequest,
 } from '../../types';
-import { createPaginatedTransform } from '@/lib/store/api/utils';
+
+const buildUserQueryParams = (filters: UserFilters): string => {
+  const params = new URLSearchParams();
+
+  if (filters.search) params.append('search', filters.search);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.userType) params.append('userType', filters.userType);
+  if (filters.roleId !== undefined)
+    params.append('roleId', String(filters.roleId));
+  if (filters.departmentId !== undefined)
+    params.append('departmentId', String(filters.departmentId));
+  if (filters.organizationId !== undefined)
+    params.append('organizationId', String(filters.organizationId));
+  if (filters.page !== undefined) params.append('page', String(filters.page));
+  if (filters.pageSize !== undefined)
+    params.append('pageSize', String(filters.pageSize));
+  if (filters.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters.sortDir) params.append('sortDir', filters.sortDir);
+
+  return params.toString();
+};
 
 export const usersApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getUsers: builder.query<UsersResponse, UserFilters>({
-      query: (filters) => {
-        const params = new URLSearchParams();
-
-        if (filters.search) params.append('search', filters.search);
-        if (filters.organizationId)
-          params.append('organizationId', String(filters.organizationId));
-        if (filters.status) {
-          const status =
-            filters.status === 'PENDING'
-              ? 'INVITED'
-              : (filters.status as string);
-          params.append('status', status);
-        }
-        if (filters.page !== undefined)
-          params.append('page', String(filters.page));
-        if (filters.pageSize !== undefined)
-          params.append('pageSize', String(filters.pageSize));
-        if (filters.sortBy) params.append('sortBy', filters.sortBy);
-        if (filters.sortDir) params.append('sortDir', filters.sortDir);
-
-        return {
-          url: `/users?${params.toString()}`,
-          method: 'GET',
-        };
-      },
+      query: (filters) => ({
+        url: `/users?${buildUserQueryParams(filters)}`,
+        method: 'GET',
+      }),
       transformResponse: createPaginatedTransform<UserProfile>(),
       providesTags: (result) =>
         result?.data.items
@@ -55,6 +64,42 @@ export const usersApi = api.injectEndpoints({
           : [{ type: 'admin/User', id: 'LIST' }],
     }),
 
+    getUserStats: builder.query<ApiResponse<UserStats>, number>({
+      query: (organizationId) => ({
+        url: `/organizations/${organizationId}/users/stats`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+      providesTags: (_result, _error, organizationId) => [
+        { type: 'admin/User', id: `STATS-${organizationId}` },
+      ],
+    }),
+
+    getUserDetail: builder.query<
+      ApiResponse<UserDetailResponse>,
+      { organizationId: number; userId: number }
+    >({
+      query: ({ organizationId, userId }) => ({
+        url: `/organizations/${organizationId}/users/${userId}/detail`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+      providesTags: (_result, _error, { userId }) => [
+        { type: 'admin/User', id: `detail-${userId}` },
+      ],
+    }),
+
+    getOrganizationRoles: builder.query<ApiResponse<Role[]>, number>({
+      query: (organizationId) => ({
+        url: `/organizations/${organizationId}/roles`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+      providesTags: (_result, _error, organizationId) => [
+        { type: 'admin/Role', id: `ORG-${organizationId}` },
+      ],
+    }),
+
     updateUserInfo: builder.mutation<
       UserResponse,
       { userId: number; body: UpdateUserInfoRequest }
@@ -64,8 +109,58 @@ export const usersApi = api.injectEndpoints({
         method: 'PATCH',
         body,
       }),
-      invalidatesTags: (_res, _err, args) => [
-        { type: 'admin/User', id: args.userId },
+      invalidatesTags: (_result, _error, { userId }) => [
+        { type: 'admin/User', id: userId },
+        { type: 'admin/User', id: `detail-${userId}` },
+        { type: 'admin/User', id: 'LIST' },
+      ],
+    }),
+
+    updateUserStatus: builder.mutation<
+      UserResponse,
+      { organizationId: number; userId: number; status: UserStatus }
+    >({
+      query: ({ organizationId, userId, status }) => ({
+        url: `/organizations/${organizationId}/users/${userId}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: (_result, _error, { userId, organizationId }) => [
+        { type: 'admin/User', id: userId },
+        { type: 'admin/User', id: `detail-${userId}` },
+        { type: 'admin/User', id: 'LIST' },
+        { type: 'admin/User', id: `STATS-${organizationId}` },
+      ],
+    }),
+
+    updateUserRoles: builder.mutation<
+      UserResponse,
+      { organizationId: number; userId: number; body: { roleIds: number[] } }
+    >({
+      query: ({ organizationId, userId, body }) => ({
+        url: `/organizations/${organizationId}/users/${userId}/roles`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { userId }) => [
+        { type: 'admin/User', id: userId },
+        { type: 'admin/User', id: `detail-${userId}` },
+        { type: 'admin/User', id: 'LIST' },
+      ],
+    }),
+
+    updateUserType: builder.mutation<
+      UserResponse,
+      { organizationId: number; userId: number; body: { userType: UserType } }
+    >({
+      query: ({ organizationId, userId, body }) => ({
+        url: `/organizations/${organizationId}/users/${userId}/type`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { userId }) => [
+        { type: 'admin/User', id: userId },
+        { type: 'admin/User', id: `detail-${userId}` },
         { type: 'admin/User', id: 'LIST' },
       ],
     }),
@@ -79,7 +174,10 @@ export const usersApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'admin/User', id: 'LIST' }],
+      invalidatesTags: (_result, _error, { organizationId }) => [
+        { type: 'admin/User', id: 'LIST' },
+        { type: 'admin/User', id: `STATS-${organizationId}` },
+      ],
     }),
   }),
   overrideExisting: false,
@@ -88,6 +186,13 @@ export const usersApi = api.injectEndpoints({
 export const {
   useGetUsersQuery,
   useLazyGetUsersQuery,
+  useGetUserStatsQuery,
+  useGetUserDetailQuery,
+  useLazyGetUserDetailQuery,
+  useGetOrganizationRolesQuery,
   useUpdateUserInfoMutation,
+  useUpdateUserStatusMutation,
+  useUpdateUserRolesMutation,
+  useUpdateUserTypeMutation,
   useCreateUserForOrganizationMutation,
 } = usersApi;

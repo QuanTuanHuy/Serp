@@ -7,10 +7,19 @@
 
 import { useMemo, useCallback } from 'react';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
-import type { Organization, OrganizationFilters } from '@/modules/admin/types';
+import type {
+  Organization,
+  OrganizationFilters,
+  OrganizationStatus,
+} from '@/modules/admin/types';
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import {
+  closeOrganizationDetailDrawer,
+  closeOrganizationStatusDialog,
+  openOrganizationDetailDrawer,
+  openOrganizationStatusDialog,
   selectOrganizationsFilters,
+  selectOrganizationsUiState,
   setOrganizationsFilters,
   setOrganizationsSearch,
   setOrganizationsStatus,
@@ -19,13 +28,12 @@ import {
   setOrganizationsPageSize,
   setOrganizationsSort,
 } from '@/modules/admin/store';
-import { useNotification } from '@/shared/hooks/use-notification';
 
 export function useOrganizations() {
   const dispatch = useAppDispatch();
-  const notification = useNotification();
 
   const filters = useAppSelector(selectOrganizationsFilters);
+  const ui = useAppSelector(selectOrganizationsUiState);
 
   const {
     data: response,
@@ -56,13 +64,24 @@ export function useOrganizations() {
   );
 
   const handleFilterChange = useCallback(
-    (key: keyof OrganizationFilters, value: any) => {
+    <K extends keyof OrganizationFilters>(
+      key: K,
+      value: OrganizationFilters[K]
+    ) => {
       switch (key) {
         case 'status':
-          dispatch(setOrganizationsStatus(value || undefined));
+          dispatch(
+            setOrganizationsStatus(
+              (value || undefined) as OrganizationFilters['status']
+            )
+          );
           break;
         case 'type':
-          dispatch(setOrganizationsType(value || undefined));
+          dispatch(
+            setOrganizationsType(
+              (value || undefined) as OrganizationFilters['type']
+            )
+          );
           break;
         case 'page':
           dispatch(setOrganizationsPage(value as number));
@@ -82,7 +101,11 @@ export function useOrganizations() {
           );
           break;
         default:
-          dispatch(setOrganizationsFilters({ [key]: value } as any));
+          dispatch(
+            setOrganizationsFilters({
+              [key]: value,
+            } as Partial<OrganizationFilters>)
+          );
       }
     },
     [dispatch, filters.sortBy, filters.sortDir]
@@ -90,6 +113,28 @@ export function useOrganizations() {
 
   const handlePageChange = useCallback(
     (newPage: number) => dispatch(setOrganizationsPage(newPage)),
+    [dispatch]
+  );
+
+  const openDetails = useCallback(
+    (organizationId: number) =>
+      dispatch(openOrganizationDetailDrawer({ organizationId })),
+    [dispatch]
+  );
+
+  const closeDetails = useCallback(
+    () => dispatch(closeOrganizationDetailDrawer()),
+    [dispatch]
+  );
+
+  const openStatus = useCallback(
+    (organizationId: number, status: OrganizationStatus) =>
+      dispatch(openOrganizationStatusDialog({ organizationId, status })),
+    [dispatch]
+  );
+
+  const closeStatus = useCallback(
+    () => dispatch(closeOrganizationStatusDialog()),
     [dispatch]
   );
 
@@ -101,9 +146,14 @@ export function useOrganizations() {
     isFetching,
     error,
     refetch,
+    ui,
     handleSearch,
     handleFilterChange,
     handlePageChange,
+    openDetails,
+    closeDetails,
+    openStatus,
+    closeStatus,
   };
 }
 

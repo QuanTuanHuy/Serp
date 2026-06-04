@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +20,10 @@ import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
+import serp.project.account.core.domain.dto.request.UpdateOrganizationStatusRequest;
 import serp.project.account.core.usecase.OrganizationUseCase;
 import serp.project.account.core.usecase.RoleUseCase;
+import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
 
 @RequiredArgsConstructor
@@ -29,6 +32,7 @@ import serp.project.account.kernel.utils.AuthUtils;
 public class OrganizationController {
     private final OrganizationUseCase organizationUseCase;
     private final RoleUseCase roleUseCase;
+    private final UserUseCase userUseCase;
 
     private final AuthUtils authUtils;
 
@@ -38,15 +42,34 @@ public class OrganizationController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer pageSize) {
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir) {
         GetOrganizationParams params = GetOrganizationParams.builder()
                 .search(search)
                 .status(status)
                 .type(type)
                 .page(page)
                 .pageSize(pageSize)
+                .sortBy(sortBy)
+                .sortDirection(sortDir)
                 .build();
         var response = organizationUseCase.getOrganizations(params);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PatchMapping("/admin/organizations/{organizationId}/status")
+    public ResponseEntity<?> updateOrganizationStatus(
+            @PathVariable Long organizationId,
+            @Valid @RequestBody UpdateOrganizationStatusRequest request) {
+        Long updatedBy = authUtils.getCurrentUserId().orElse(null);
+        var response = organizationUseCase.updateOrganizationStatus(organizationId, updatedBy, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @GetMapping("/admin/organizations/{organizationId}/users/stats")
+    public ResponseEntity<?> getOrganizationUserStats(@PathVariable Long organizationId) {
+        var response = userUseCase.getUserStats(organizationId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
