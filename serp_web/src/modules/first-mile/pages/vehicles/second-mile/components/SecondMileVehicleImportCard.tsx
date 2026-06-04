@@ -38,24 +38,11 @@ export const SecondMileVehicleImportCard: React.FC<
   importFileInputKey,
   selectedFile,
   validateResult,
-  lastImportJob,
   onDownloadTemplate,
   onSelectFile,
   onValidate,
   onImport,
 }) => {
-  const details = lastImportJob ? (
-    <div className='rounded-md border p-2 text-xs'>
-      <p className='font-medium text-foreground'>
-        Latest import job #{lastImportJob.id}
-      </p>
-      <p className='text-muted-foreground'>
-        {lastImportJob.status} - success {lastImportJob.success_records} /
-        failed {lastImportJob.failed_records}
-      </p>
-    </div>
-  ) : undefined;
-
   return (
     <TmsExcelImportToolbar
       canImport={canManage}
@@ -72,7 +59,6 @@ export const SecondMileVehicleImportCard: React.FC<
       onSelectFile={onSelectFile}
       onValidate={onValidate}
       onConfirmImport={onImport}
-      details={details}
     />
   );
 };

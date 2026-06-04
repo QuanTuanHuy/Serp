@@ -8,6 +8,7 @@ package serp.project.second_mile.caller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -30,7 +31,7 @@ public class TmsOrderClient {
 
     private final RestClient restClient;
     private final AuthUtils authUtils;
-    private final String serviceBearerToken;
+    private final String internalApiKey;
 
     @Value("${tms-order.service.lookup-path:/api/v1/internal/orders/lookup}")
     private String lookupPath;
@@ -42,50 +43,64 @@ public class TmsOrderClient {
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
             @Value("${tms-order.service.base-url:http://localhost:8099}") String tmsOrderBaseUrl,
-            @Value("${tms-order.service.bearer-token:}") String serviceBearerToken
+            @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;
-        this.serviceBearerToken = normalizeText(serviceBearerToken);
+        this.internalApiKey = normalizeText(internalApiKey);
         this.restClient = restClientBuilder.baseUrl(tmsOrderBaseUrl).build();
     }
 
     public List<TmsOrderOperationView> lookupByIds(Collection<Long> orderIds) {
+        return lookupByIds(null, orderIds);
+    }
+
+    public List<TmsOrderOperationView> lookupByIds(Long tenantId, Collection<Long> orderIds) {
         return lookup(TmsOrderLookupRequest.builder()
                 .orderIds(orderIds == null ? List.of() : orderIds.stream().toList())
-                .build());
+                .build(), tenantId);
     }
 
     public List<TmsOrderOperationView> lookupByCodes(Collection<String> orderCodes) {
+        return lookupByCodes(null, orderCodes);
+    }
+
+    public List<TmsOrderOperationView> lookupByCodes(Long tenantId, Collection<String> orderCodes) {
         return lookup(TmsOrderLookupRequest.builder()
                 .orderCodes(orderCodes == null ? List.of() : orderCodes.stream().toList())
-                .build());
+                .build(), tenantId);
     }
 
     public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request) {
+        return applyTransitions(request, null);
+    }
+
+    public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request, Long tenantId) {
         return post(
                 statusTransitionsPath,
                 request,
+                tenantId,
                 new ParameterizedTypeReference<TmsOrderStatusTransitionResponse>() {
                 }
         );
     }
 
-    private List<TmsOrderOperationView> lookup(TmsOrderLookupRequest request) {
+    private List<TmsOrderOperationView> lookup(TmsOrderLookupRequest request, Long tenantId) {
         List<TmsOrderOperationView> response = post(
                 lookupPath,
                 request,
+                tenantId,
                 new ParameterizedTypeReference<List<TmsOrderOperationView>>() {
                 }
         );
         return response == null ? List.of() : response;
     }
 
-    private <T> T post(String path, Object request, ParameterizedTypeReference<T> responseType) {
+    private <T> T post(String path, Object request, Long tenantId, ParameterizedTypeReference<T> responseType) {
         try {
             return restClient.post()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .headers(headers -> headers.setBearerAuth(resolveBearerToken()))
+                    .headers(headers -> applyAuthHeaders(headers, tenantId))
                     .body(request)
                     .retrieve()
                     .body(responseType);
@@ -95,13 +110,19 @@ public class TmsOrderClient {
         }
     }
 
-    private String resolveBearerToken() {
-        return authUtils.getBearerToken()
-                .or(() -> serviceBearerToken == null ? java.util.Optional.empty() : java.util.Optional.of(serviceBearerToken))
-                .orElseThrow(() -> new AppException(
-                        ErrorCode.UNAUTHORIZED,
-                        "Missing authentication token for tms-order service."
-                ));
+    private void applyAuthHeaders(HttpHeaders headers, Long tenantId) {
+        Long resolvedTenantId = tenantId == null
+                ? authUtils.getCurrentTenantId().orElse(null)
+                : tenantId;
+        if (internalApiKey == null || resolvedTenantId == null) {
+            throw new AppException(
+                    ErrorCode.UNAUTHORIZED,
+                    "Missing internal API key or tenant id for tms-order service call."
+            );
+        }
+        headers.set("X-Internal-Api-Key", internalApiKey);
+        headers.set("X-Tenant-Id", resolvedTenantId.toString());
+        headers.set("X-Internal-Service", "second-mile");
     }
 
     private AppException toTmsOrderException(RestClientException exception) {

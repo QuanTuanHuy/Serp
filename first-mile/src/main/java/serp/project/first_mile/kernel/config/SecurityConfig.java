@@ -18,6 +18,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.ArrayList;
@@ -36,7 +37,10 @@ public class SecurityConfig {
     private String jwkSetUri;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity httpSecurity,
+            InternalApiAuthenticationFilter internalApiAuthenticationFilter
+    ) throws Exception {
         httpSecurity
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(HttpMethod.GET,
@@ -51,6 +55,8 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html")
                         .permitAll()
+                        .requestMatchers("/api/v1/internal/**", "/api/v1/{resource}/internal/**")
+                        .permitAll()
                         .requestMatchers("/api/**")
                         .authenticated()
                         .anyRequest()
@@ -59,6 +65,7 @@ public class SecurityConfig {
                         .jwt(jwtConfigurer -> jwtConfigurer
                                 .decoder(jwtDecoder())
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                .addFilterBefore(internalApiAuthenticationFilter, BearerTokenAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable);
 
         return httpSecurity.build();

@@ -7,6 +7,7 @@ package serp.project.second_mile.ui.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import serp.project.second_mile.dto.ApiResponse;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.ConfirmHandoverInboundRequest;
@@ -24,6 +26,7 @@ import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.exception.MessageService;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 import serp.project.second_mile.service.HandoverManifestService;
 
 @RestController
@@ -34,7 +37,7 @@ public class HandoverManifestController {
     private final MessageService messageService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<PageResponse<HandoverManifestResponse>> listManifests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -64,6 +67,15 @@ public class HandoverManifestController {
                 .build();
     }
 
+    @PostMapping("/internal/validate-outbound-sync")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<Void> validateOutboundSync(@RequestBody HandoverManifestSyncEvent event) {
+        handoverManifestService.validateOutboundSync(event);
+        return ApiResponse.<Void>builder()
+                .message(messageService.getMessage("success.handover_manifests.validate_outbound_sync"))
+                .build();
+    }
+
     @PostMapping("/{manifestId}/confirm-outbound")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
     public ApiResponse<HandoverManifestResponse> confirmOutbound(@PathVariable Long manifestId) {
@@ -85,32 +97,40 @@ public class HandoverManifestController {
                 .build();
     }
 
-    @PostMapping("/{manifestId}/driver-checkin-start")
+    @PostMapping(value = "/{manifestId}/driver-checkin-start", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<HandoverManifestResponse> driverCheckinStart(
             @PathVariable Long manifestId,
-            @Valid @RequestBody DriverHandoverCheckinRequest request
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(name = "location_label", required = false) String locationLabel,
+            @RequestParam("photo") MultipartFile photo
     ) {
+        DriverHandoverCheckinRequest request = new DriverHandoverCheckinRequest(latitude, longitude, locationLabel);
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.driver_checkin_start"))
-                .result(handoverManifestService.driverCheckinStart(manifestId, request))
+                .result(handoverManifestService.driverCheckinStart(manifestId, request, photo))
                 .build();
     }
 
-    @PostMapping("/{manifestId}/driver-checkin-end")
+    @PostMapping(value = "/{manifestId}/driver-checkin-end", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<HandoverManifestResponse> driverCheckinEnd(
             @PathVariable Long manifestId,
-            @Valid @RequestBody DriverHandoverCheckinRequest request
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(name = "location_label", required = false) String locationLabel,
+            @RequestParam("photo") MultipartFile photo
     ) {
+        DriverHandoverCheckinRequest request = new DriverHandoverCheckinRequest(latitude, longitude, locationLabel);
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.driver_checkin_end"))
-                .result(handoverManifestService.driverCheckinEnd(manifestId, request))
+                .result(handoverManifestService.driverCheckinEnd(manifestId, request, photo))
                 .build();
     }
 
     @GetMapping("/{manifestId}")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<HandoverManifestResponse> getManifest(@PathVariable Long manifestId) {
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.detail"))

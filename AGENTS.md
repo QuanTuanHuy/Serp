@@ -165,6 +165,13 @@ Description: Part of Serp Project
 - Java: throw module-specific business exceptions (`AppException` or the module's domain exception types), use `@Transactional` for write operations and `@Transactional(readOnly = true)` for read paths, and preserve `ResponseUtils` and `GeneralResponse<?>` response shapes.
 - Python: raise custom app exceptions or `HTTPException`, keep exception-to-response mapping in the shared FastAPI middleware or handlers, and do not swallow infrastructure errors silently.
 
+### Internal service authentication
+- Do not use hard-coded JWTs or service bearer-token env vars for backend-to-backend calls that may run without HTTP context.
+- For internal Spring service calls, prefer the shared API-key pattern: send `X-Internal-Api-Key`, `X-Tenant-Id`, and `X-Internal-Service`; receive them through the module's `InternalApiAuthenticationFilter`, then read tenant/roles through `AuthUtils`.
+- Internal service endpoints should be public at the Spring Security route layer (`permitAll`) so they do not require JWT, but the API-key filter must enforce `X-Internal-Api-Key` for internal paths before controller logic runs.
+- Internal service callers should send the API key headers even when a user JWT exists; use the JWT only for normal user-facing HTTP traffic, not service-to-service internal endpoints.
+- Keep `INTERNAL_API_KEY` out of source control. Configure it consistently on all participating services and rotate it like any other shared secret.
+
 ### Testing conventions
 - Java tests are JUnit 5; most modules use Mockito and `spring-boot-starter-test`.
 - Go tests use the standard `testing` package; `testify` is present in `ptm_task` and `ptm_schedule`.

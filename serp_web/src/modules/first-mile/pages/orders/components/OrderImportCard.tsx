@@ -37,25 +37,12 @@ export const OrderImportCard: React.FC<OrderImportCardProps> = ({
   importFileInputKey,
   selectedImportFile,
   validateImportResult,
-  lastImportJob,
   onDownloadTemplate,
   onSelectImportFile,
   onValidateImportFile,
   onImportFile,
   className,
 }) => {
-  const details = lastImportJob ? (
-    <div className='space-y-3 text-xs'>
-      <div className='rounded-md border p-2 text-muted-foreground'>
-        <p className='font-medium text-foreground'>Latest import job</p>
-        <p>
-          #{lastImportJob.id} - {lastImportJob.file_name} (
-          {lastImportJob.status})
-        </p>
-      </div>
-    </div>
-  ) : undefined;
-
   return (
     <TmsExcelImportToolbar
       className={className}
@@ -73,7 +60,6 @@ export const OrderImportCard: React.FC<OrderImportCardProps> = ({
       onSelectFile={onSelectImportFile}
       onValidate={onValidateImportFile}
       onConfirmImport={onImportFile}
-      details={details}
     />
   );
 };

@@ -92,6 +92,8 @@ Run from `first-mile/`. On Windows use `mvnw.cmd`.
   - `TMS_CUSTOMER` — customer-facing order APIs
 - Add or tighten `@PreAuthorize` on new endpoints; mirror checks in service layer when data must be scoped by post office or user.
 - Reuse `AuthUtils` / access helpers in `kernel/utils` instead of duplicating role parsing.
+- Internal service calls use API key auth, not service bearer tokens or forwarded JWTs. Callers must send `X-Internal-Api-Key`, `X-Tenant-Id`, and `X-Internal-Service`, including from normal request handlers and background jobs. Internal endpoints should be `permitAll` in `SecurityConfig` to avoid JWT requirements, while `InternalApiAuthenticationFilter` enforces the API key before controller logic. Service code should still read tenant through `AuthUtils`.
+- Configure `INTERNAL_API_KEY` consistently across `first-mile`, `second-mile`, and `tms-order`; never commit its value.
 
 ## Persistence and Schema Changes
 

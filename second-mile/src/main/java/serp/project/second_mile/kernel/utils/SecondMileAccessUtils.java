@@ -7,6 +7,7 @@ package serp.project.second_mile.kernel.utils;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import serp.project.second_mile.domain.HubStaff;
 import serp.project.second_mile.enums.HubStaffRole;
 import serp.project.second_mile.enums.HubStaffStatus;
 import serp.project.second_mile.exception.AppException;
@@ -109,11 +110,17 @@ public class SecondMileAccessUtils {
     }
 
     public void ensureActiveDriverStaffOrThrow(Long staffId) {
+        ensureActiveDriverStaffOrThrow(getCurrentTenantIdOrThrow(), staffId);
+    }
+
+    public void ensureActiveDriverStaffOrThrow(Long tenantId, Long staffId) {
         if (staffId == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver is required.");
         }
+        if (tenantId == null || tenantId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Tenant is required to validate assigned vehicle driver.");
+        }
 
-        Long tenantId = getCurrentTenantIdOrThrow();
         boolean activeDriver = hubStaffRepository.existsByTenantIdAndIdAndRoleAndStatus(
                 tenantId,
                 staffId,
@@ -146,5 +153,18 @@ public class SecondMileAccessUtils {
         if (!assignedDriver) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
+    }
+
+    public Long getCurrentActiveDriverStaffIdOrThrow() {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        Long userId = getCurrentUserIdOrThrow();
+        return hubStaffRepository.findByTenantIdAndUserIdAndRoleAndStatus(
+                        tenantId,
+                        userId,
+                        HubStaffRole.DRIVER,
+                        HubStaffStatus.ACTIVE
+                )
+                .map(HubStaff::getId)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
     }
 }

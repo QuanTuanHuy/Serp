@@ -7,6 +7,7 @@ package serp.project.second_mile.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 
 import java.time.LocalDateTime;
@@ -16,7 +17,9 @@ public record RouteResponse(
         Long id,
         @JsonProperty("route_code") String routeCode,
         @JsonProperty("route_name") String routeName,
+        @JsonProperty("origin_type") RouteEndpointType originType,
         @JsonProperty("origin_hub_id") Long originHubId,
+        @JsonProperty("origin_post_office_code") String originPostOfficeCode,
         @JsonProperty("destination_type") RouteDestinationType destinationType,
         @JsonProperty("destination_hub_id") Long destinationHubId,
         @JsonProperty("destination_post_office_code") String destinationPostOfficeCode,

@@ -73,7 +73,6 @@ import type {
   HandoverManifestListFilters,
   CreateHandoverManifestRequest,
   CreatePostOfficeHandoverManifestRequest,
-  DriverHandoverCheckinRequest,
   SecondMileOrder,
   SecondMileOrderListFilters,
   DispatchPostOfficeHandoverManifestRequest,
@@ -92,6 +91,10 @@ import {
   normalizeHubPostOfficeMappingPage,
   normalizeHandoverManifest,
   normalizeHandoverManifestPage,
+  normalizeSecondMileRoute,
+  normalizeSecondMileRoutePage,
+  normalizeSecondMileVehicle,
+  normalizeSecondMileVehiclePage,
   normalizeSecondMileOrderPage,
   unwrapFirstMilePageResult,
   unwrapFirstMilePageResultOrRaw,
@@ -380,7 +383,7 @@ export const firstMileApi = api.injectEndpoints({
         },
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMilePageResult<SecondMileVehicle>,
+      transformResponse: normalizeSecondMileVehiclePage,
     }),
 
     getSecondMileVehicleById: builder.query<SecondMileVehicle, number>({
@@ -389,7 +392,8 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileVehicle>) =>
+        normalizeSecondMileVehicle(unwrapFirstMileResult(response)),
     }),
 
     createSecondMileVehicle: builder.mutation<
@@ -402,7 +406,8 @@ export const firstMileApi = api.injectEndpoints({
         body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileVehicle>) =>
+        normalizeSecondMileVehicle(unwrapFirstMileResult(response)),
     }),
 
     updateSecondMileVehicle: builder.mutation<
@@ -415,7 +420,8 @@ export const firstMileApi = api.injectEndpoints({
         body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileVehicle>) =>
+        normalizeSecondMileVehicle(unwrapFirstMileResult(response)),
     }),
 
     deleteSecondMileVehicle: builder.mutation<string, number>({
@@ -442,7 +448,8 @@ export const firstMileApi = api.injectEndpoints({
         };
       },
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileVehicle>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileVehicle>) =>
+        normalizeSecondMileVehicle(unwrapFirstMileResult(response)),
     }),
 
     exportSecondMileVehicleTemplate: builder.query<Blob, void>({
@@ -488,7 +495,9 @@ export const firstMileApi = api.injectEndpoints({
         size = 20,
         keyword,
         routeCode,
+        originType,
         originHubId,
+        originPostOfficeCode,
         destinationType,
         destinationHubId,
         destinationPostOfficeCode,
@@ -502,7 +511,11 @@ export const firstMileApi = api.injectEndpoints({
           size,
           ...(keyword ? { keyword } : {}),
           ...(routeCode ? { route_code: routeCode } : {}),
+          ...(originType ? { origin_type: originType } : {}),
           ...(originHubId !== undefined ? { origin_hub_id: originHubId } : {}),
+          ...(originPostOfficeCode
+            ? { origin_post_office_code: originPostOfficeCode }
+            : {}),
           ...(destinationType ? { destination_type: destinationType } : {}),
           ...(destinationHubId !== undefined
             ? { destination_hub_id: destinationHubId }
@@ -515,7 +528,7 @@ export const firstMileApi = api.injectEndpoints({
         },
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMilePageResult<SecondMileRoute>,
+      transformResponse: normalizeSecondMileRoutePage,
     }),
 
     getSecondMileRouteById: builder.query<SecondMileRoute, number>({
@@ -524,7 +537,8 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileRoute>) =>
+        normalizeSecondMileRoute(unwrapFirstMileResult(response)),
     }),
 
     createSecondMileRoute: builder.mutation<
@@ -537,7 +551,8 @@ export const firstMileApi = api.injectEndpoints({
         body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileRoute>) =>
+        normalizeSecondMileRoute(unwrapFirstMileResult(response)),
     }),
 
     updateSecondMileRoute: builder.mutation<
@@ -550,7 +565,8 @@ export const firstMileApi = api.injectEndpoints({
         body,
       }),
       extraOptions: SECOND_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResult<SecondMileRoute>,
+      transformResponse: (response: FirstMileApiResponse<SecondMileRoute>) =>
+        normalizeSecondMileRoute(unwrapFirstMileResult(response)),
     }),
 
     deleteSecondMileRoute: builder.mutation<string, number>({
@@ -657,12 +673,12 @@ export const firstMileApi = api.injectEndpoints({
 
     driverCheckinHandoverManifestStart: builder.mutation<
       HandoverManifest,
-      { manifestId: number; body: DriverHandoverCheckinRequest }
+      { manifestId: number; formData: FormData }
     >({
-      query: ({ manifestId, body }) => ({
+      query: ({ manifestId, formData }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-start`,
         method: 'POST',
-        body,
+        body: formData,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>
@@ -675,12 +691,12 @@ export const firstMileApi = api.injectEndpoints({
 
     driverCheckinHandoverManifestEnd: builder.mutation<
       HandoverManifest,
-      { manifestId: number; body: DriverHandoverCheckinRequest }
+      { manifestId: number; formData: FormData }
     >({
-      query: ({ manifestId, body }) => ({
+      query: ({ manifestId, formData }) => ({
         url: `/handover-manifests/${manifestId}/driver-checkin-end`,
         method: 'POST',
-        body,
+        body: formData,
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: FirstMileApiResponse<HandoverManifest>) =>

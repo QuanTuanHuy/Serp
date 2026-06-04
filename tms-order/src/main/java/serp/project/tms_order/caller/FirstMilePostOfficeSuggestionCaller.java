@@ -8,6 +8,7 @@ package serp.project.tms_order.caller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,6 +28,7 @@ public class FirstMilePostOfficeSuggestionCaller {
 
     private final RestClient restClient;
     private final AuthUtils authUtils;
+    private final String internalApiKey;
 
     @Value("${first-mile.service.drop-off-suggestions-path:/api/v1/internal/post-office-suggestions/drop-off}")
     private String dropOffSuggestionsPath;
@@ -34,9 +36,11 @@ public class FirstMilePostOfficeSuggestionCaller {
     public FirstMilePostOfficeSuggestionCaller(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${first-mile.service.base-url:http://localhost:8093}") String firstMileBaseUrl
+            @Value("${first-mile.service.base-url:http://localhost:8093}") String firstMileBaseUrl,
+            @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;
+        this.internalApiKey = normalizeText(internalApiKey);
         this.restClient = restClientBuilder.baseUrl(firstMileBaseUrl).build();
     }
 
@@ -45,7 +49,6 @@ public class FirstMilePostOfficeSuggestionCaller {
             Double senderLongitude,
             Integer limit
     ) {
-        String bearerToken = resolveBearerToken();
         InternalPostOfficeSuggestionRequest request = InternalPostOfficeSuggestionRequest.builder()
                 .senderLatitude(senderLatitude)
                 .senderLongitude(senderLongitude)
@@ -55,7 +58,7 @@ public class FirstMilePostOfficeSuggestionCaller {
             List<OrderDropOffPostOfficeSuggestionResponse> response = restClient.post()
                     .uri(dropOffSuggestionsPath)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .headers(headers -> headers.setBearerAuth(bearerToken))
+                    .headers(this::applyAuthHeaders)
                     .body(request)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<OrderDropOffPostOfficeSuggestionResponse>>() {
@@ -67,12 +70,17 @@ public class FirstMilePostOfficeSuggestionCaller {
         }
     }
 
-    private String resolveBearerToken() {
-        return authUtils.getBearerToken()
-                .orElseThrow(() -> new AppException(
-                        ErrorCode.UNAUTHORIZED,
-                        "Missing authentication token for first-mile post-office suggestions."
-                ));
+    private void applyAuthHeaders(HttpHeaders headers) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (internalApiKey == null || tenantId == null) {
+            throw new AppException(
+                    ErrorCode.UNAUTHORIZED,
+                    "Missing internal API key or tenant id for first-mile service call."
+            );
+        }
+        headers.set("X-Internal-Api-Key", internalApiKey);
+        headers.set("X-Tenant-Id", tenantId.toString());
+        headers.set("X-Internal-Service", "tms-order");
     }
 
     private AppException toFirstMileException(RestClientException exception) {
@@ -93,5 +101,13 @@ public class FirstMilePostOfficeSuggestionCaller {
                 ErrorCode.UNCATEGORIZED_EXCEPTION,
                 "Cannot connect to first-mile service. Ensure first-mile is running and FIRST_MILE_SERVICE_BASE_URL is correct."
         );
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

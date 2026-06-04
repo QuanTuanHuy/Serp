@@ -73,6 +73,10 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
+internal-api:
+  api-key: ${INTERNAL_API_KEY:}
+  roles: ${INTERNAL_API_ROLES:TMS_ADMIN,TMS_POSTOFFICER_MANAGER,TMS_POSTOFFICER,TMS_HUB_MANAGER,TMS_HUB_EMPLOYEE}
+
 tms-order:
   service:
     base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
@@ -81,6 +85,11 @@ tms-order:
     status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
   transition-outbox:
     retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
+
+second-mile:
+  service:
+    base-url: ${SECOND_MILE_SERVICE_BASE_URL:http://localhost:8095}
+    validate-handover-outbound-sync-path: ${SECOND_MILE_VALIDATE_HANDOVER_OUTBOUND_SYNC_PATH:/api/v1/handover-manifests/internal/validate-outbound-sync}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

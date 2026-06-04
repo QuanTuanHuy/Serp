@@ -10,5 +10,6 @@ export * from './vehicles';
 export * from './routes';
 export * from './orders';
 export * from './dispatchers';
+export * from './handover-manifests';
 export * from './pickup';
 export * from './billing';

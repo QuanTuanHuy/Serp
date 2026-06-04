@@ -71,6 +71,10 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
+internal-api:
+  api-key: ${INTERNAL_API_KEY:}
+  roles: ${INTERNAL_API_ROLES:TMS_ADMIN,TMS_POSTOFFICER_MANAGER,TMS_POSTOFFICER,TMS_HUB_MANAGER,TMS_HUB_EMPLOYEE}
+
 payment:
   service:
     base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
