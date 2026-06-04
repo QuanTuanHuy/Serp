@@ -115,6 +115,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 	{
 		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("", organizationController.GetOrganizations)
 		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId", organizationController.GetOrganizationById)
+		adminOrganizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/status", genericProxyController.ProxyHandler("account"))
 	}
 
 	organizationsV1 := group.Group("/api/v1/organizations")
