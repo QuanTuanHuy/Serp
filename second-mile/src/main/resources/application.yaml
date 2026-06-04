@@ -58,10 +58,13 @@ app:
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
 
+internal-api:
+  api-key: ${INTERNAL_API_KEY:}
+  roles: ${INTERNAL_API_ROLES:TMS_ADMIN,TMS_POSTOFFICER_MANAGER,TMS_POSTOFFICER,TMS_HUB_MANAGER,TMS_HUB_EMPLOYEE}
+
 tms-order:
   service:
     base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
-    bearer-token: ${TMS_ORDER_SERVICE_TOKEN:}
     lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
     status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
   transition-outbox:

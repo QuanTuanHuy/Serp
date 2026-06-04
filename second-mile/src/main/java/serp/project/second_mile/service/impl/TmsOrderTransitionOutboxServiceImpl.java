@@ -111,7 +111,7 @@ public class TmsOrderTransitionOutboxServiceImpl implements TmsOrderTransitionOu
                     outbox.getRequestPayload(),
                     TmsOrderStatusTransitionRequest.class
             );
-            tmsOrderClient.applyTransitions(request);
+            tmsOrderClient.applyTransitions(request, outbox.getTenantId());
 
             outbox.setStatus(OrderTransitionOutboxStatus.SUCCEEDED);
             outbox.setLastError(null);

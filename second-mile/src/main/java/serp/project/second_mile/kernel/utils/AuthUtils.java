@@ -7,9 +7,11 @@ package serp.project.second_mile.kernel.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
+import serp.project.second_mile.kernel.config.InternalApiAuthenticationDetails;
 
 import java.util.*;
 
@@ -42,10 +44,14 @@ public class AuthUtils {
     }
 
     public Optional<Long> getCurrentTenantId() {
-        return getCurrentJwt()
+        Optional<Long> jwtTenantId = getCurrentJwt()
                 .map(jwt -> jwt.getClaimAsString("tid"))
                 .filter(tenant -> !tenant.isEmpty())
                 .map(Long::valueOf);
+        if (jwtTenantId.isPresent()) {
+            return jwtTenantId;
+        }
+        return getCurrentInternalApiDetails().map(InternalApiAuthenticationDetails::tenantId);
     }
 
     public Optional<String> getCurrentUserEmail() {
@@ -62,7 +68,12 @@ public class AuthUtils {
             return uid;
         }
 
-        return getCurrentJwt().map(Jwt::getSubject);
+        Optional<String> jwtSubject = getCurrentJwt().map(Jwt::getSubject);
+        if (jwtSubject.isPresent()) {
+            return jwtSubject;
+        }
+        return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .map(Authentication::getName);
     }
 
     @SuppressWarnings("unchecked")
@@ -116,7 +127,7 @@ public class AuthUtils {
     @SuppressWarnings("unchecked")
     public List<String> getAllRoles() {
         try {
-            return getCurrentJwt()
+            Optional<List<String>> jwtRoles = getCurrentJwt()
                     .map(jwt -> {
                         List<String> allRoles = new ArrayList<>();
 
@@ -147,12 +158,30 @@ public class AuthUtils {
                                 .filter(Objects::nonNull)
                                 .distinct()
                                 .toList();
-                    })
-                    .orElse(Collections.emptyList());
+                    });
+            if (jwtRoles.isPresent()) {
+                return jwtRoles.get();
+            }
+            return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                    .map(Authentication::getAuthorities)
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(GrantedAuthority::getAuthority)
+                    .map(role -> role.startsWith("ROLE_") ? role.substring("ROLE_".length()) : role)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
         } catch (Exception e) {
             log.error("Error extracting all roles from current JWT", e);
             return Collections.emptyList();
         }
+    }
+
+    private Optional<InternalApiAuthenticationDetails> getCurrentInternalApiDetails() {
+        return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .map(Authentication::getDetails)
+                .filter(InternalApiAuthenticationDetails.class::isInstance)
+                .map(InternalApiAuthenticationDetails.class::cast);
     }
 
     public boolean hasRealmRole(String roleName) {

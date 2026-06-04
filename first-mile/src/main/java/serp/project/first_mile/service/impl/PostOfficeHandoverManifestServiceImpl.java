@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.first_mile.caller.SecondMileHandoverManifestClient;
 import serp.project.first_mile.caller.TmsOrderClient;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
@@ -76,6 +77,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
     private final PostOfficeHandoverManifestOrderRepository manifestOrderRepository;
     private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
+    private final SecondMileHandoverManifestClient secondMileHandoverManifestClient;
 
     @Override
     public PageResponse<PostOfficeHandoverManifestResponse> listManifests(
@@ -276,9 +278,10 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         manifest.setDispatchedAt(now);
         manifest.setSealCode(normalizeNullable(request.getSealCode()));
         manifest.setNote(normalizeNullable(request.getNote()));
-        PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
+        HandoverManifestSyncEvent event = toOutboundSyncEvent(manifest, manifestOrders, originPostOfficeLocation);
+        secondMileHandoverManifestClient.validateOutboundSync(event);
 
-        HandoverManifestSyncEvent event = toOutboundSyncEvent(savedManifest, manifestOrders, originPostOfficeLocation);
+        PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
         TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
         return toResponse(savedManifest, manifestOrders);
     }

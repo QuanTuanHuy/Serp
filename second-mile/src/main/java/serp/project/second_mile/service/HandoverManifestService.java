@@ -32,5 +32,7 @@ public interface HandoverManifestService {
 
     HandoverManifestResponse getManifest(Long manifestId);
 
+    void validateOutboundSync(HandoverManifestSyncEvent event);
+
     void applyOutboundSync(HandoverManifestSyncEvent event);
 }

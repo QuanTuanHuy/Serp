@@ -24,6 +24,7 @@ import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.enums.VehicleType;
@@ -138,7 +139,7 @@ class HandoverManifestServiceImplTest {
         when(hubStaffAssignmentRepository.findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
                 eq(DRIVER_ID), eq(HUB_ID), eq(TENANT_ID), any(LocalDate.class)
         )).thenReturn(Optional.of(HubStaffAssignment.builder().build()));
-        when(tmsOrderClient.lookupByCodes(List.of("ORD-001")))
+        when(tmsOrderClient.lookupByCodes(TENANT_ID, List.of("ORD-001")))
                 .thenReturn(List.of(order));
         when(handoverManifestRepository.existsOverlappingActiveAssignment(
                 eq(TENANT_ID),
@@ -249,9 +250,10 @@ class HandoverManifestServiceImplTest {
     private Route route() {
         return Route.builder()
                 .id(ROUTE_ID)
-                .originHubId(HUB_ID)
-                .destinationType(RouteDestinationType.POST_OFFICE)
-                .destinationPostOfficeCode(POST_OFFICE_CODE)
+                .originType(RouteEndpointType.POST_OFFICE)
+                .originPostOfficeCode(POST_OFFICE_CODE)
+                .destinationType(RouteDestinationType.HUB)
+                .destinationHubId(HUB_ID)
                 .vehicleId(VEHICLE_ID)
                 .status(RouteStatus.ACTIVE)
                 .tenantId(TENANT_ID)

@@ -6,6 +6,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   CheckCircle2,
   Eye,
@@ -987,6 +988,14 @@ export function HandoverManifestListPage() {
             <RefreshCw className='mr-2 h-4 w-4' />
             Refresh
           </Button>
+          {canHubMode ? (
+            <Button variant='outline' asChild>
+              <Link href='/first-mile/handover-manifests/driver'>
+                <MapPin className='mr-2 h-4 w-4' />
+                Driver handover
+              </Link>
+            </Button>
+          ) : null}
           {effectiveMode === 'POST_OFFICE' ? (
             <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className='mr-2 h-4 w-4' />

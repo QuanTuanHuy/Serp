@@ -24,6 +24,7 @@ import serp.project.second_mile.dto.request.HandoverManifestFilterRequest;
 import serp.project.second_mile.dto.response.HandoverManifestResponse;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.exception.MessageService;
+import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
 import serp.project.second_mile.service.HandoverManifestService;
 
 @RestController
@@ -34,7 +35,7 @@ public class HandoverManifestController {
     private final MessageService messageService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<PageResponse<HandoverManifestResponse>> listManifests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -61,6 +62,15 @@ public class HandoverManifestController {
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.create"))
                 .result(handoverManifestService.createManifest(request))
+                .build();
+    }
+
+    @PostMapping("/internal/validate-outbound-sync")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    public ApiResponse<Void> validateOutboundSync(@RequestBody HandoverManifestSyncEvent event) {
+        handoverManifestService.validateOutboundSync(event);
+        return ApiResponse.<Void>builder()
+                .message(messageService.getMessage("success.handover_manifests.validate_outbound_sync"))
                 .build();
     }
 
@@ -110,7 +120,7 @@ public class HandoverManifestController {
     }
 
     @GetMapping("/{manifestId}")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_HUB_MANAGER', 'TMS_HUB_EMPLOYEE', 'TMS_HUB_DRIVER')")
     public ApiResponse<HandoverManifestResponse> getManifest(@PathVariable Long manifestId) {
         return ApiResponse.<HandoverManifestResponse>builder()
                 .message(messageService.getMessage("success.handover_manifests.detail"))

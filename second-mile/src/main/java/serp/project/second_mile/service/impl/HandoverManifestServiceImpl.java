@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.second_mile.caller.TmsOrderClient;
@@ -78,6 +79,14 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             HandoverManifestStatus.CREATED,
             HandoverManifestStatus.OUTBOUND_CONFIRMED
     );
+
+    private record OutboundSyncValidation(
+            HandoverManifest existingManifest,
+            Vehicle vehicle,
+            Route route,
+            List<TmsOrderOperationView> orders
+    ) {
+    }
 
     private final HandoverManifestRepository handoverManifestRepository;
     private final HandoverManifestOrderRepository handoverManifestOrderRepository;
@@ -189,16 +198,23 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             int size,
             HandoverManifestFilterRequest filterRequest
     ) {
-        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
-        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
+        secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 200);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Long driverStaffId = resolveDriverScopedStaffId();
+        Specification<HandoverManifest> specification = HandoverManifestSpecification.byFilter(tenantId, filterRequest);
+        if (driverStaffId != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("assignedDriverId"), driverStaffId)
+            );
+        }
 
         Page<HandoverManifest> manifestPage = handoverManifestRepository.findAll(
-                HandoverManifestSpecification.byFilter(tenantId, filterRequest),
+                specification,
                 pageable
         );
 
@@ -263,10 +279,14 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     @Override
     @Transactional(readOnly = true)
     public HandoverManifestResponse getManifest(Long manifestId) {
-        secondMileAccessUtils.ensureHubOperationRoleOrThrow();
-        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
+        secondMileAccessUtils.ensureHubOperationOrDriverRoleOrThrow();
+        secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
+        Long driverStaffId = resolveDriverScopedStaffId();
+        if (driverStaffId != null && !Objects.equals(manifest.getAssignedDriverId(), driverStaffId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
         List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
         return toResponse(
                 manifest,
@@ -274,6 +294,12 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 loadVehicle(manifest.getVehicleId()),
                 loadRoute(manifest.getRouteId())
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateOutboundSync(HandoverManifestSyncEvent event) {
+        resolveOutboundSyncValidation(event);
     }
 
     @Override
@@ -300,48 +326,15 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (!HandoverManifestSyncEventType.OUTBOUND_CONFIRMED.equals(event.getEventType())) {
             return;
         }
-        if (event.getVehicleId() == null
-                || event.getRouteId() == null
-                || event.getPlannedDepartureAt() == null
-                || event.getPlannedArrivalAt() == null) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "Handover manifest sync must include vehicle_id, route_id, planned_departure_at, and planned_arrival_at."
-            );
-        }
-        validatePlannedWindow(event.getPlannedDepartureAt(), event.getPlannedArrivalAt());
-        validateGeoCoordinatePair(
-                event.getOriginPostOfficeLatitude(),
-                event.getOriginPostOfficeLongitude(),
-                "Origin post office location is required for driver check-in."
-        );
-
-        validatePostOfficeMappedToHub(tenantId, originPostOfficeCode, event.getTargetHubId());
-        Vehicle vehicle = validateVehicleForManifest(tenantId, event.getTargetHubId(), event.getVehicleId());
-        validateVehicleHasAssignedDriver(tenantId, vehicle);
-        validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), event.getTargetHubId());
-        Route route = validateRouteForManifest(
+        OutboundSyncValidation validation = validateOutboundSyncEvent(
+                event,
                 tenantId,
-                event.getTargetHubId(),
                 originPostOfficeCode,
-                event.getRouteId(),
-                event.getVehicleId()
+                existingManifest
         );
-        List<String> normalizedOrderCodes = normalizeOrderCodes(event.getOrderCodes());
-        if (normalizedOrderCodes.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Handover manifest sync must include order_codes.");
-        }
-
-        List<TmsOrderOperationView> orders = lookupOrdersByCodes(tenantId, normalizedOrderCodes);
-        validateVehicleCapacity(vehicle, orders);
-        validateVehicleScheduleAvailability(
-                tenantId,
-                vehicle.getId(),
-                vehicle.getAssignedStaffId(),
-                event.getPlannedDepartureAt(),
-                event.getPlannedArrivalAt(),
-                existingManifest == null ? null : existingManifest.getId()
-        );
+        Vehicle vehicle = validation.vehicle();
+        Route route = validation.route();
+        List<TmsOrderOperationView> orders = validation.orders();
 
         HandoverManifest manifest = existingManifest == null
                 ? HandoverManifest.builder()
@@ -413,6 +406,77 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 idempotencyKey("manifest", savedManifest.getId(), "outbound-sync"),
                 transitionItems
         );
+    }
+
+    private OutboundSyncValidation resolveOutboundSyncValidation(HandoverManifestSyncEvent event) {
+        if (event == null
+                || !HandoverManifestSyncOrigin.FIRST_MILE.equals(event.getOrigin())
+                || !HandoverManifestSyncEventType.OUTBOUND_CONFIRMED.equals(event.getEventType())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid handover manifest sync payload.");
+        }
+
+        Long tenantId = event.getTenantId();
+        String manifestCode = normalizeText(event.getManifestCode());
+        String originPostOfficeCode = normalizeText(event.getOriginPostOfficeCode());
+        if (tenantId == null || manifestCode == null || originPostOfficeCode == null || event.getTargetHubId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid handover manifest sync payload.");
+        }
+
+        HandoverManifest existingManifest = handoverManifestRepository
+                .findByTenantIdAndManifestCodeIgnoreCase(tenantId, manifestCode)
+                .orElse(null);
+        return validateOutboundSyncEvent(event, tenantId, originPostOfficeCode, existingManifest);
+    }
+
+    private OutboundSyncValidation validateOutboundSyncEvent(
+            HandoverManifestSyncEvent event,
+            Long tenantId,
+            String originPostOfficeCode,
+            HandoverManifest existingManifest
+    ) {
+        if (event.getVehicleId() == null
+                || event.getRouteId() == null
+                || event.getPlannedDepartureAt() == null
+                || event.getPlannedArrivalAt() == null) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Handover manifest sync must include vehicle_id, route_id, planned_departure_at, and planned_arrival_at."
+            );
+        }
+        validatePlannedWindow(event.getPlannedDepartureAt(), event.getPlannedArrivalAt());
+        validateGeoCoordinatePair(
+                event.getOriginPostOfficeLatitude(),
+                event.getOriginPostOfficeLongitude(),
+                "Origin post office location is required for driver check-in."
+        );
+
+        validatePostOfficeMappedToHub(tenantId, originPostOfficeCode, event.getTargetHubId());
+        Vehicle vehicle = validateVehicleForManifest(tenantId, event.getTargetHubId(), event.getVehicleId());
+        validateVehicleHasAssignedDriver(tenantId, vehicle);
+        validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), event.getTargetHubId());
+        Route route = validateRouteForManifest(
+                tenantId,
+                event.getTargetHubId(),
+                originPostOfficeCode,
+                event.getRouteId(),
+                event.getVehicleId()
+        );
+        List<String> normalizedOrderCodes = normalizeOrderCodes(event.getOrderCodes());
+        if (normalizedOrderCodes.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Handover manifest sync must include order_codes.");
+        }
+
+        List<TmsOrderOperationView> orders = lookupOrdersByCodes(tenantId, normalizedOrderCodes);
+        validateVehicleCapacity(vehicle, orders);
+        validateVehicleScheduleAvailability(
+                tenantId,
+                vehicle.getId(),
+                vehicle.getAssignedStaffId(),
+                event.getPlannedDepartureAt(),
+                event.getPlannedArrivalAt(),
+                existingManifest == null ? null : existingManifest.getId()
+        );
+        return new OutboundSyncValidation(existingManifest, vehicle, route, orders);
     }
 
     private void handleOutboundSyncCancellation(HandoverManifest existingManifest, Long tenantId) {
@@ -823,6 +887,13 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         );
     }
 
+    private Long resolveDriverScopedStaffId() {
+        if (secondMileAccessUtils.hasHubOperationRole() || !secondMileAccessUtils.isHubDriver()) {
+            return null;
+        }
+        return secondMileAccessUtils.getCurrentActiveDriverStaffIdOrThrow();
+    }
+
     private HandoverManifestResponse processInboundCheckin(
             HandoverManifest manifest,
             ConfirmHandoverInboundRequest request,
@@ -1017,7 +1088,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
     private List<TmsOrderOperationView> lookupOrdersByCodes(Long tenantId, List<String> orderCodes) {
         Map<String, TmsOrderOperationView> orderByCode = new LinkedHashMap<>();
-        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByCodes(orderCodes);
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByCodes(tenantId, orderCodes);
         for (TmsOrderOperationView order : orders) {
             validateTmsOrderTenant(tenantId, order);
             String normalizedOrderCode = normalizeText(order.getOrderCode());

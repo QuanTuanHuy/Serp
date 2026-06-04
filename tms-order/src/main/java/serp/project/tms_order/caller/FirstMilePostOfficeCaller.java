@@ -7,6 +7,7 @@ package serp.project.tms_order.caller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -24,6 +25,7 @@ public class FirstMilePostOfficeCaller {
 
     private final RestClient restClient;
     private final AuthUtils authUtils;
+    private final String internalApiKey;
 
     @Value("${first-mile.service.reserve-best-origin-path:/api/v1/internal/post-office-reservations/origin/best}")
     private String reserveBestOriginPath;
@@ -37,9 +39,11 @@ public class FirstMilePostOfficeCaller {
     public FirstMilePostOfficeCaller(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${first-mile.service.base-url:http://localhost:8093}") String firstMileBaseUrl
+            @Value("${first-mile.service.base-url:http://localhost:8093}") String firstMileBaseUrl,
+            @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;
+        this.internalApiKey = normalizeText(internalApiKey);
         this.restClient = restClientBuilder.baseUrl(firstMileBaseUrl).build();
     }
 
@@ -56,11 +60,10 @@ public class FirstMilePostOfficeCaller {
     }
 
     public OriginPostOfficeReservationResponse validateManagedPostOffice(Long postOfficeId) {
-        String bearerToken = resolveBearerToken();
         try {
             OriginPostOfficeReservationResponse response = restClient.get()
                     .uri(resolveValidateManagedPostOfficePath(postOfficeId))
-                    .headers(headers -> headers.setBearerAuth(bearerToken))
+                    .headers(this::applyAuthHeaders)
                     .retrieve()
                     .body(OriginPostOfficeReservationResponse.class);
             if (response == null) {
@@ -80,12 +83,11 @@ public class FirstMilePostOfficeCaller {
             String path,
             OriginPostOfficeReservationRequest request
     ) {
-        String bearerToken = resolveBearerToken();
         try {
             OriginPostOfficeReservationResponse response = restClient.post()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .headers(headers -> headers.setBearerAuth(bearerToken))
+                    .headers(this::applyAuthHeaders)
                     .body(request)
                     .retrieve()
                     .body(OriginPostOfficeReservationResponse.class);
@@ -109,12 +111,17 @@ public class FirstMilePostOfficeCaller {
                 .build();
     }
 
-    private String resolveBearerToken() {
-        return authUtils.getBearerToken()
-                .orElseThrow(() -> new AppException(
-                        ErrorCode.UNAUTHORIZED,
-                        "Missing authentication token for first-mile post-office reservation."
-                ));
+    private void applyAuthHeaders(HttpHeaders headers) {
+        Long tenantId = authUtils.getCurrentTenantId().orElse(null);
+        if (internalApiKey == null || tenantId == null) {
+            throw new AppException(
+                    ErrorCode.UNAUTHORIZED,
+                    "Missing internal API key or tenant id for first-mile service call."
+            );
+        }
+        headers.set("X-Internal-Api-Key", internalApiKey);
+        headers.set("X-Tenant-Id", tenantId.toString());
+        headers.set("X-Internal-Service", "tms-order");
     }
 
     private AppException toFirstMileException(RestClientException exception) {
@@ -150,5 +157,13 @@ public class FirstMilePostOfficeCaller {
 
     private String resolveValidateManagedPostOfficePath(Long postOfficeId) {
         return String.format(validateManagedPostOfficePath, postOfficeId);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
