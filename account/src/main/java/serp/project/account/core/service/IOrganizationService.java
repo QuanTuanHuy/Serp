@@ -34,4 +34,10 @@ public interface IOrganizationService {
     List<OrganizationEntity> getOrganizationsByIds(List<Long> organizationIds);
 
     Pair<List<OrganizationEntity>, Long> getOrganizations(GetOrganizationParams params);
+
+    Long countOrganizations();
+
+    Long countOrganizationsByStatus(OrganizationStatus status);
+
+    List<OrganizationEntity> getRecentOrganizations(int limit);
 }

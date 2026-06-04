@@ -221,4 +221,14 @@ public class MenuDisplayService implements IMenuDisplayService {
                 .orElseThrow(() -> new AppException(Constants.ErrorMessage.MENU_DISPLAY_NOT_FOUND));
     }
 
+    @Override
+    public Long countMenuDisplays() {
+        return menuDisplayPort.countMenuDisplays();
+    }
+
+    @Override
+    public Long countVisibleMenuDisplays() {
+        return menuDisplayPort.countVisibleMenuDisplays();
+    }
+
 }

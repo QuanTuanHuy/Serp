@@ -134,6 +134,21 @@ public class OrganizationService implements IOrganizationService {
         return organizationPort.getOrganizations(params);
     }
 
+    @Override
+    public Long countOrganizations() {
+        return organizationPort.countOrganizations();
+    }
+
+    @Override
+    public Long countOrganizationsByStatus(OrganizationStatus status) {
+        return organizationPort.countOrganizationsByStatus(status);
+    }
+
+    @Override
+    public List<OrganizationEntity> getRecentOrganizations(int limit) {
+        return organizationPort.getRecentOrganizations(limit);
+    }
+
     private void applySettingsUpdate(OrganizationEntity organization, UpdateOrganizationSettingsRequest request) {
         if (request.getName() != null) {
             organization.setName(normalizeRequired(request.getName()));

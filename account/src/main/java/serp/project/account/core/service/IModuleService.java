@@ -27,4 +27,8 @@ public interface IModuleService {
     List<ModuleEntity> getModulesByIds(List<Long> moduleIds);
 
     void seedPredefinedModules();
+
+    Long countModules();
+
+    Long countAvailableModules();
 }

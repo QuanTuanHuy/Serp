@@ -84,6 +84,27 @@ public class UserAdapter implements IUserPort {
     }
 
     @Override
+    public Long countUsers() {
+        return userRepository.count();
+    }
+
+    @Override
+    public Long countUsersByStatus(UserStatus status) {
+        return userRepository.countByStatus(status);
+    }
+
+    @Override
+    public Map<Long, Long> countUsersByOrganizationIds(List<Long> organizationIds) {
+        if (organizationIds == null || organizationIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.countUsersByOrganizationIds(organizationIds).stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row[0]).longValue(),
+                        row -> ((Number) row[1]).longValue()));
+    }
+
+    @Override
     public Integer countUsersByOrganizationIdAndStatus(Long organizationId, UserStatus status) {
         return userRepository.countByPrimaryOrganizationIdAndStatus(organizationId, status);
     }

@@ -32,6 +32,8 @@ public interface IOrganizationSubscriptionRepository extends IBaseRepository<Org
 
     List<OrganizationSubscriptionModel> findByStatus(SubscriptionStatus status);
 
+    Long countByStatus(SubscriptionStatus status);
+
     @Query("SELECT os FROM OrganizationSubscriptionModel os " +
            "WHERE os.status IN ('ACTIVE', 'TRIAL') " +
            "AND os.endDate IS NOT NULL " +
@@ -57,4 +59,20 @@ public interface IOrganizationSubscriptionRepository extends IBaseRepository<Org
     List<OrganizationSubscriptionModel> findByOrganizationIdOrderByStartDateDesc(@Param("organizationId") Long organizationId);
 
     List<OrganizationSubscriptionModel> findBySubscriptionPlanId(Long planId);
+
+    @Query("SELECT COUNT(os) FROM OrganizationSubscriptionModel os " +
+           "WHERE os.status = 'ACTIVE' " +
+           "AND os.endDate IS NOT NULL " +
+           "AND os.endDate >= :from " +
+           "AND os.endDate <= :to")
+    Long countActiveEndingSoon(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
+
+    @Query("SELECT COUNT(os) FROM OrganizationSubscriptionModel os " +
+           "WHERE os.status = 'TRIAL' " +
+           "AND os.trialEndsAt IS NOT NULL " +
+           "AND os.trialEndsAt >= :from " +
+           "AND os.trialEndsAt <= :to")
+    Long countTrialsEndingSoon(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
+
+    List<OrganizationSubscriptionModel> findByOrganizationIdInOrderByCreatedAtDesc(List<Long> organizationIds);
 }

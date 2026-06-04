@@ -40,4 +40,8 @@ public interface IMenuDisplayService {
     Pair<List<MenuDisplayEntity>, Long> getAllMenuDisplays(GetMenuDisplayParams params);
 
     List<MenuDisplayRoleEntity> getMenuDisplayRolesByMenuDisplayIds(List<Long> menuDisplayIds);
+
+    Long countMenuDisplays();
+
+    Long countVisibleMenuDisplays();
 }

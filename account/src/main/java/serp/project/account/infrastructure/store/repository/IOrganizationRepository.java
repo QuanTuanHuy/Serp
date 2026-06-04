@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.infrastructure.store.model.OrganizationModel;
 
 @Repository
@@ -19,4 +20,8 @@ public interface IOrganizationRepository extends IBaseRepository<OrganizationMod
     Optional<OrganizationModel> findByCode(String code);
 
     List<OrganizationModel> findByIdIn(List<Long> ids);
+
+    Long countByStatus(OrganizationStatus status);
+
+    List<OrganizationModel> findTop5ByOrderByCreatedAtDesc();
 }

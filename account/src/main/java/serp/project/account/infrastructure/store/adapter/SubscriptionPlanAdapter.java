@@ -96,4 +96,14 @@ public class SubscriptionPlanAdapter implements ISubscriptionPlanPort {
         var entities = subscriptionPlanMapper.toEntityList(result.getContent());
         return Pair.of(entities, result.getTotalElements());
     }
+
+    @Override
+    public Long countPlans() {
+        return subscriptionPlanRepository.count();
+    }
+
+    @Override
+    public Long countActivePlans() {
+        return subscriptionPlanRepository.countByIsActive(true);
+    }
 }

@@ -268,4 +268,14 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
     public Pair<List<SubscriptionPlanEntity>, Long> getAllPlans(GetSubscriptionPlanParams params) {
         return subscriptionPlanPort.getAll(params);
     }
+
+    @Override
+    public Long countPlans() {
+        return subscriptionPlanPort.countPlans();
+    }
+
+    @Override
+    public Long countActivePlans() {
+        return subscriptionPlanPort.countActivePlans();
+    }
 }
