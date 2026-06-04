@@ -335,6 +335,7 @@ function PMWorkItemDetailMain({
   const [deleteWorkItemLink, deleteWorkItemLinkState] =
     useDeletePmWorkItemLinkMutation();
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
+  const [subtasksOpen, setSubtasksOpen] = useState(true);
   const [linkedItemsOpen, setLinkedItemsOpen] = useState(true);
 
   const handleUpdate = async (body: PMUpdateWorkItemRequest) => {
@@ -398,20 +399,45 @@ function PMWorkItemDetailMain({
           />
         </DetailSection>
 
-        <DetailSection
-          title={`Subtasks${item.subtaskTotal !== undefined ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})` : ''}`}
-        >
-          <div className='flex items-center justify-between gap-3'>
-            <p className='text-sm text-muted-foreground'>
-              Add child issues under this work item.
-            </p>
-            <PMWorkItemSubtaskActions
-              projectId={projectId}
-              workItemId={workItemId}
-            />
+        <section className='space-y-2'>
+          <div className='flex items-center gap-3'>
+            <button
+              type='button'
+              className='flex min-w-0 items-center gap-2 text-left text-base font-semibold'
+              aria-expanded={subtasksOpen}
+              onClick={() => setSubtasksOpen((current) => !current)}
+            >
+              {subtasksOpen ? (
+                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+              ) : (
+                <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+              )}
+              <span className='truncate'>
+                Subtasks
+                {item.subtaskTotal !== undefined
+                  ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})`
+                  : ''}
+              </span>
+            </button>
           </div>
-          <WorkItemChildrenList query={childrenQuery} />
-        </DetailSection>
+          {subtasksOpen ? (
+            <>
+              <div className='flex items-center justify-between gap-3'>
+                <p className='text-sm text-muted-foreground'>
+                  Add child issues under this work item.
+                </p>
+                <PMWorkItemSubtaskActions
+                  projectId={projectId}
+                  workItemId={workItemId}
+                />
+              </div>
+              <WorkItemChildrenList
+                projectId={projectId}
+                query={childrenQuery}
+              />
+            </>
+          ) : null}
+        </section>
 
         <section className='space-y-2'>
           <div className='flex items-center gap-3'>
