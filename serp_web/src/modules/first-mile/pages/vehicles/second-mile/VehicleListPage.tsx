@@ -23,6 +23,7 @@ import { Plus, RefreshCw, Search, ShieldAlert } from 'lucide-react';
 import {
   useCreateSecondMileVehicleMutation,
   useDeleteSecondMileVehicleMutation,
+  useGetSecondMileAssignableStaffsQuery,
   useGetHubsQuery,
   useGetSecondMileHubStaffAssignmentsQuery,
   useGetSecondMileVehicleByIdQuery,
@@ -36,6 +37,7 @@ import {
 import type {
   Hub,
   ImportHistory,
+  SecondMileHubStaff,
   SecondMileHubStaffAssignment,
   SecondMileVehicle,
   SecondMileVehicleImportItem,
@@ -84,6 +86,7 @@ export function SecondMileVehicleListPage() {
     );
   const [lastImportJob, setLastImportJob] =
     React.useState<ImportHistory | null>(null);
+  const [imageRefreshKey, setImageRefreshKey] = React.useState(0);
 
   const { data, isLoading, isFetching, refetch } =
     useGetSecondMileVehiclesQuery(
@@ -96,10 +99,18 @@ export function SecondMileVehicleListPage() {
     { skip: !isTmsAdmin }
   );
 
-  const { data: vehicleDetail, isFetching: isFetchingDetail } =
-    useGetSecondMileVehicleByIdQuery(selectedId ?? 0, {
-      skip: !isTmsAdmin || !detailOpen || selectedId === null,
-    });
+  const {
+    data: vehicleDetail,
+    isFetching: isFetchingDetail,
+    refetch: refetchVehicleDetail,
+  } = useGetSecondMileVehicleByIdQuery(selectedId ?? 0, {
+    skip: !isTmsAdmin || !detailOpen || selectedId === null,
+  });
+
+  const { data: driversData } = useGetSecondMileAssignableStaffsQuery(
+    { role: 'DRIVER' },
+    { skip: !isTmsAdmin }
+  );
 
   const hubById = React.useMemo(() => {
     const map: Record<number, Hub> = {};
@@ -121,6 +132,35 @@ export function SecondMileVehicleListPage() {
     [hubsData?.items]
   );
 
+  const formatDriverLabel = React.useCallback(
+    (driver?: SecondMileHubStaff | SecondMileHubStaffAssignment) => {
+      let code: string | undefined;
+      let name: string | undefined;
+
+      if (driver && 'code' in driver) {
+        code = driver.code?.trim();
+        name = driver.fullName?.trim();
+      } else {
+        const assignment = driver as SecondMileHubStaffAssignment | undefined;
+        code = assignment?.staffCode?.trim();
+        name = assignment?.staffFullName?.trim();
+      }
+
+      if (code && name) {
+        return `${code} - ${name}`;
+      }
+      if (name) {
+        return name;
+      }
+      if (code) {
+        return code;
+      }
+
+      return undefined;
+    },
+    []
+  );
+
   const selectedHubNumericId = React.useMemo(
     () => parseOptionalPositiveInteger(formValues.hubId),
     [formValues.hubId]
@@ -134,26 +174,34 @@ export function SecondMileVehicleListPage() {
       }
     );
 
+  const driverLabelByStaffId = React.useMemo(() => {
+    const map: Record<number, string> = {};
+
+    for (const driver of driversData ?? []) {
+      const label = formatDriverLabel(driver);
+      if (label) {
+        map[driver.id] = label;
+      }
+    }
+
+    for (const assignment of hubDriverAssignments ?? []) {
+      if (!assignment.staffId) {
+        continue;
+      }
+      const label = formatDriverLabel(assignment);
+      if (label) {
+        map[assignment.staffId] = label;
+      }
+    }
+
+    return map;
+  }, [driversData, formatDriverLabel, hubDriverAssignments]);
+
   const formatDriverOptionLabel = React.useCallback(
     (assignment: SecondMileHubStaffAssignment & { staffId: number }) => {
-      const staffCode = assignment.staffCode?.trim();
-      const staffFullName = assignment.staffFullName?.trim();
-
-      if (staffCode && staffFullName) {
-        return `${staffCode} - ${staffFullName}`;
-      }
-
-      if (staffFullName) {
-        return staffFullName;
-      }
-
-      if (staffCode) {
-        return staffCode;
-      }
-
-      return `Driver #${assignment.staffId}`;
+      return formatDriverLabel(assignment) ?? `Driver #${assignment.staffId}`;
     },
-    []
+    [formatDriverLabel]
   );
 
   const driverOptions = React.useMemo(() => {
@@ -389,6 +437,8 @@ export function SecondMileVehicleListPage() {
         <SecondMileVehicleResultsCard
           canManage={isTmsAdmin}
           data={data}
+          driverLabelByStaffId={driverLabelByStaffId}
+          imageRefreshKey={imageRefreshKey}
           hubById={hubById}
           isLoading={isLoading}
           isFetching={isFetching}
@@ -461,7 +511,9 @@ export function SecondMileVehicleListPage() {
         isFetching={isFetchingDetail}
         isUploadingImage={isUploadingImage}
         vehicle={vehicleDetail}
+        driverLabelByStaffId={driverLabelByStaffId}
         hubById={hubById}
+        imageRefreshKey={imageRefreshKey}
         onOpenChange={(open) => {
           setDetailOpen(open);
           if (!open) setSelectedId(null);
@@ -479,6 +531,9 @@ export function SecondMileVehicleListPage() {
           if (!selectedId) return;
           try {
             await uploadImage({ id: selectedId, file }).unwrap();
+            setImageRefreshKey(Date.now());
+            void refetch();
+            void refetchVehicleDetail();
             notification.success('Image uploaded.');
           } catch (error) {
             notification.error('Upload failed.', {

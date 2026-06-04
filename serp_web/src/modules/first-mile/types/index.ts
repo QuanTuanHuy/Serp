@@ -326,6 +326,8 @@ export interface SecondMileVehicle {
   imageUrl?: string;
   hubId: number;
   assignedStaffId?: number;
+  assignedStaffCode?: string;
+  assignedStaffFullName?: string;
   status: SecondMileVehicleStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -375,13 +377,17 @@ export interface SecondMileVehicleImportItem {
 
 export type SecondMileRouteDestinationType = 'HUB' | 'POST_OFFICE';
 
+export type SecondMileRouteEndpointType = 'HUB' | 'POST_OFFICE';
+
 export type SecondMileRouteStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface SecondMileRoute {
   id: number;
   routeCode: string;
   routeName: string;
-  originHubId: number;
+  originType: SecondMileRouteEndpointType;
+  originHubId?: number;
+  originPostOfficeCode?: string;
   destinationType: SecondMileRouteDestinationType;
   destinationHubId?: number;
   destinationPostOfficeCode?: string;
@@ -401,7 +407,9 @@ export interface SecondMileRoute {
 export interface SecondMileRouteListFilters {
   keyword?: string;
   routeCode?: string;
+  originType?: SecondMileRouteEndpointType;
   originHubId?: number;
+  originPostOfficeCode?: string;
   destinationType?: SecondMileRouteDestinationType;
   destinationHubId?: number;
   destinationPostOfficeCode?: string;
@@ -412,7 +420,9 @@ export interface SecondMileRouteListFilters {
 export interface SecondMileCreateRouteRequest {
   route_code: string;
   route_name: string;
-  origin_hub_id: number;
+  origin_type?: SecondMileRouteEndpointType;
+  origin_hub_id?: number;
+  origin_post_office_code?: string;
   destination_type: SecondMileRouteDestinationType;
   destination_hub_id?: number;
   destination_post_office_code?: string;

@@ -59,6 +59,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
   lines,
   selectedRouteId,
 }) => {
+  const [isMapReady, setIsMapReady] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef = React.useRef<import('leaflet').Map | null>(null);
   const leafletRef = React.useRef<typeof import('leaflet') | null>(null);
@@ -95,6 +96,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
         DEFAULT_ZOOM
       );
       layerGroupRef.current = leaflet.layerGroup().addTo(map);
+      setIsMapReady(true);
       window.setTimeout(() => map.invalidateSize(), 0);
     };
 
@@ -105,6 +107,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
       if (mapRef.current) {
         mapRef.current.remove();
       }
+      setIsMapReady(false);
       mapRef.current = null;
       leafletRef.current = null;
       layerGroupRef.current = null;
@@ -115,7 +118,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
     const leaflet = leafletRef.current;
     const map = mapRef.current;
     const layerGroup = layerGroupRef.current;
-    if (!leaflet || !map || !layerGroup) {
+    if (!isMapReady || !leaflet || !map || !layerGroup) {
       return;
     }
 
@@ -184,7 +187,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
       return;
     }
     map.fitBounds(leaflet.latLngBounds(points).pad(0.25));
-  }, [lines, selectedRouteId]);
+  }, [isMapReady, lines, selectedRouteId]);
 
   return (
     <Card>

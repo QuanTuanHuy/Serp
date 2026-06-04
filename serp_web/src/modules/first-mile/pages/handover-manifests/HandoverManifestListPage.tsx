@@ -457,10 +457,13 @@ export function HandoverManifestListPage() {
       {
         page: 0,
         size: SELECT_PAGE_SIZE,
-        ...(dispatchTargetHubId ? { originHubId: dispatchTargetHubId } : {}),
-        destinationType: 'POST_OFFICE',
+        originType: 'POST_OFFICE',
         ...(dispatchOriginPostOfficeCode
-          ? { destinationPostOfficeCode: dispatchOriginPostOfficeCode }
+          ? { originPostOfficeCode: dispatchOriginPostOfficeCode }
+          : {}),
+        destinationType: 'HUB',
+        ...(dispatchTargetHubId
+          ? { destinationHubId: dispatchTargetHubId }
           : {}),
         status: 'ACTIVE',
       },

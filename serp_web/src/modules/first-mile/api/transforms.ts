@@ -18,15 +18,41 @@ import type {
   SecondMileHubStaffAssignment,
   SecondMileHubStaff,
   SecondMileOrder,
+  SecondMileRoute,
+  SecondMileRouteDestinationType,
+  SecondMileRouteEndpointType,
+  SecondMileRouteStatus,
+  SecondMileVehicle,
+  SecondMileVehicleStatus,
+  SecondMileVehicleType,
 } from '../types';
 
 const readField = <T>(
   raw: Record<string, unknown>,
   snakeKey: string,
-  camelKey: string
+  camelKey: string,
+  ...alternateKeys: string[]
 ): T | undefined => {
-  const value = raw[snakeKey] ?? raw[camelKey];
-  return value as T | undefined;
+  for (const key of [snakeKey, camelKey, ...alternateKeys]) {
+    const value = raw[key];
+    if (value !== undefined && value !== null) {
+      return value as T;
+    }
+  }
+  return undefined;
+};
+
+const readOptionalNumber = (
+  raw: Record<string, unknown>,
+  snakeKey: string,
+  camelKey: string
+): number | undefined => {
+  const value = readField<unknown>(raw, snakeKey, camelKey);
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
 };
 
 export const normalizeHubPostOfficeMapping = (
@@ -151,6 +177,112 @@ export const normalizeSecondMileOrder = (raw: unknown): SecondMileOrder => {
     status: readField(record, 'status', 'status'),
     totalWeight: readField<number>(record, 'total_weight', 'totalWeight'),
     totalVolume: readField<number>(record, 'total_volume', 'totalVolume'),
+  };
+};
+
+export const normalizeSecondMileVehicle = (raw: unknown): SecondMileVehicle => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    licensePlate: String(
+      readField(record, 'license_plate', 'licensePlate') ?? ''
+    ),
+    vehicleType:
+      readField<SecondMileVehicleType>(record, 'vehicle_type', 'vehicleType') ??
+      'TRUCK',
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxBags: readOptionalNumber(record, 'max_bags', 'maxBags') ?? 0,
+    imageUrl: readField<string>(record, 'image_url', 'imageUrl'),
+    hubId: readOptionalNumber(record, 'hub_id', 'hubId') ?? 0,
+    assignedStaffId: readOptionalNumber(
+      record,
+      'assigned_staff_id',
+      'assignedStaffId'
+    ),
+    assignedStaffCode: readField<string>(
+      record,
+      'assigned_staff_code',
+      'assignedStaffCode',
+      'driver_code',
+      'driverCode'
+    ),
+    assignedStaffFullName: readField<string>(
+      record,
+      'assigned_staff_full_name',
+      'assignedStaffFullName',
+      'driver_name',
+      'driverName'
+    ),
+    status:
+      readField<SecondMileVehicleStatus>(record, 'status', 'status') ??
+      'ACTIVE',
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileRoute = (raw: unknown): SecondMileRoute => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    routeCode: String(readField(record, 'route_code', 'routeCode') ?? ''),
+    routeName: String(readField(record, 'route_name', 'routeName') ?? ''),
+    originType:
+      readField<SecondMileRouteEndpointType>(
+        record,
+        'origin_type',
+        'originType'
+      ) ?? 'HUB',
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    destinationType:
+      readField<SecondMileRouteDestinationType>(
+        record,
+        'destination_type',
+        'destinationType'
+      ) ?? 'HUB',
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    estimatedDistanceKm: readOptionalNumber(
+      record,
+      'estimated_distance_km',
+      'estimatedDistanceKm'
+    ),
+    estimatedDurationMinutes: readOptionalNumber(
+      record,
+      'estimated_duration_minutes',
+      'estimatedDurationMinutes'
+    ),
+    fixedDepartureTime: readField<string>(
+      record,
+      'fixed_departure_time',
+      'fixedDepartureTime'
+    ),
+    status:
+      readField<SecondMileRouteStatus>(record, 'status', 'status') ?? 'ACTIVE',
+    note: readField<string>(record, 'note', 'note'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
   };
 };
 
@@ -314,6 +446,30 @@ export const normalizeSecondMileOrderPage = (
   return {
     ...page,
     items: page.items.map((item) => normalizeSecondMileOrder(item)),
+  };
+};
+
+export const normalizeSecondMileVehiclePage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileVehicle>>
+    | FirstMilePageResponse<SecondMileVehicle>
+): FirstMilePaginatedData<SecondMileVehicle> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileVehicle>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileVehicle(item)),
+  };
+};
+
+export const normalizeSecondMileRoutePage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileRoute>>
+    | FirstMilePageResponse<SecondMileRoute>
+): FirstMilePaginatedData<SecondMileRoute> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileRoute>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileRoute(item)),
   };
 };
 

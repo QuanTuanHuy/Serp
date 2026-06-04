@@ -32,6 +32,7 @@ import serp.project.second_mile.dto.response.HandoverManifestResponse;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
@@ -113,7 +114,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
         validatePostOfficeMappedToHub(tenantId, normalizedOriginPostOfficeCode, request.getTargetHubId());
         Vehicle vehicle = validateVehicleForManifest(tenantId, request.getTargetHubId(), request.getVehicleId());
-        validateVehicleHasAssignedDriver(vehicle);
+        validateVehicleHasAssignedDriver(tenantId, vehicle);
         validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), request.getTargetHubId());
         Route route = validateRouteForManifest(
                 tenantId,
@@ -317,7 +318,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
 
         validatePostOfficeMappedToHub(tenantId, originPostOfficeCode, event.getTargetHubId());
         Vehicle vehicle = validateVehicleForManifest(tenantId, event.getTargetHubId(), event.getVehicleId());
-        validateVehicleHasAssignedDriver(vehicle);
+        validateVehicleHasAssignedDriver(tenantId, vehicle);
         validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), event.getTargetHubId());
         Route route = validateRouteForManifest(
                 tenantId,
@@ -487,8 +488,11 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         return vehicle;
     }
 
-    private void validateVehicleHasAssignedDriver(Vehicle vehicle) {
-        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(vehicle.getAssignedStaffId());
+    private void validateVehicleHasAssignedDriver(Long tenantId, Vehicle vehicle) {
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(tenantId, vehicle.getAssignedStaffId());
     }
 
     private void validateDriverAssignedToHub(Long tenantId, Long driverStaffId, Long hubId) {
@@ -594,20 +598,26 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (!tenantId.equals(route.getTenantId()) || route.getStatus() != RouteStatus.ACTIVE) {
             throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
         }
-        if (!Objects.equals(route.getOriginHubId(), targetHubId)) {
-            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
-        }
-        if (route.getDestinationType() != RouteDestinationType.POST_OFFICE) {
+        if (route.getOriginType() != RouteEndpointType.POST_OFFICE) {
             throw new AppException(
                     ErrorCode.ROUTE_DEFINITION_INVALID,
-                    "Route must target a post office for post office collection runs."
+                    "Route must start from the origin post office for post office to hub runs."
             );
         }
-        if (!Objects.equals(normalizeText(route.getDestinationPostOfficeCode()), originPostOfficeCode)) {
+        if (!Objects.equals(normalizeText(route.getOriginPostOfficeCode()), originPostOfficeCode)) {
             throw new AppException(
                     ErrorCode.ROUTE_POST_OFFICE_INVALID,
-                    "Route destination post office must match manifest origin post office."
+                    "Route origin post office must match manifest origin post office."
             );
+        }
+        if (route.getDestinationType() != RouteDestinationType.HUB) {
+            throw new AppException(
+                    ErrorCode.ROUTE_DEFINITION_INVALID,
+                    "Route must target a hub for post office to hub runs."
+            );
+        }
+        if (!Objects.equals(route.getDestinationHubId(), targetHubId)) {
+            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
         }
         if (route.getVehicleId() == null) {
             throw new AppException(
@@ -784,7 +794,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (vehicle == null) {
             throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
         }
-        validateVehicleHasAssignedDriver(vehicle);
+        validateVehicleHasAssignedDriver(manifest.getTenantId(), vehicle);
         validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
         if (driverOnly) {
             secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
@@ -829,7 +839,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             if (vehicle == null) {
                 throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
             }
-            validateVehicleHasAssignedDriver(vehicle);
+            validateVehicleHasAssignedDriver(manifest.getTenantId(), vehicle);
         } else if (driverOnly) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in requires an assigned vehicle.");
         }

@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 
 @Data
@@ -19,7 +20,9 @@ import serp.project.second_mile.enums.RouteStatus;
 public class RouteFilterRequest {
     private String keyword;
     private String routeCode;
+    private RouteEndpointType originType;
     private Long originHubId;
+    private String originPostOfficeCode;
     private RouteDestinationType destinationType;
     private Long destinationHubId;
     private String destinationPostOfficeCode;

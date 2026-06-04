@@ -109,11 +109,17 @@ public class SecondMileAccessUtils {
     }
 
     public void ensureActiveDriverStaffOrThrow(Long staffId) {
+        ensureActiveDriverStaffOrThrow(getCurrentTenantIdOrThrow(), staffId);
+    }
+
+    public void ensureActiveDriverStaffOrThrow(Long tenantId, Long staffId) {
         if (staffId == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver is required.");
         }
+        if (tenantId == null || tenantId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Tenant is required to validate assigned vehicle driver.");
+        }
 
-        Long tenantId = getCurrentTenantIdOrThrow();
         boolean activeDriver = hubStaffRepository.existsByTenantIdAndIdAndRoleAndStatus(
                 tenantId,
                 staffId,

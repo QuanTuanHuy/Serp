@@ -36,25 +36,11 @@ export const VehicleImportCard: React.FC<VehicleImportCardProps> = ({
   importFileInputKey,
   selectedImportFile,
   validateImportResult,
-  lastImportJob,
   onDownloadTemplate,
   onSelectImportFile,
   onValidateFile,
   onImportFile,
 }) => {
-  const details = lastImportJob ? (
-    <div className='space-y-1 rounded-md border p-2 text-xs'>
-      <p className='font-medium text-foreground'>Latest import job</p>
-      <p className='text-muted-foreground'>
-        #{lastImportJob.id} - {lastImportJob.file_name}
-      </p>
-      <p className='text-muted-foreground'>
-        Status: {lastImportJob.status} | Success/Failed:{' '}
-        {lastImportJob.success_records}/{lastImportJob.failed_records}
-      </p>
-    </div>
-  ) : undefined;
-
   return (
     <TmsExcelImportToolbar
       canImport={canManageVehicles}
@@ -71,7 +57,6 @@ export const VehicleImportCard: React.FC<VehicleImportCardProps> = ({
       onSelectFile={onSelectImportFile}
       onValidate={onValidateFile}
       onConfirmImport={onImportFile}
-      details={details}
     />
   );
 };

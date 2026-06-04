@@ -41,6 +41,7 @@ import {
   useGetHubPostOfficesQuery,
   useGetHubsQuery,
   useGetPostOfficesQuery,
+  useGetSecondMileHubStaffAssignmentsQuery,
   useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
   useUpdateSecondMileRouteMutation,
@@ -49,8 +50,10 @@ import type {
   Hub,
   PostOffice,
   SecondMileCreateRouteRequest,
+  SecondMileHubStaffAssignment,
   SecondMileRoute,
   SecondMileRouteDestinationType,
+  SecondMileRouteEndpointType,
   SecondMileRouteStatus,
   SecondMileUpdateRouteRequest,
   SecondMileVehicle,
@@ -65,7 +68,9 @@ type RouteFormMode = 'create' | 'edit';
 interface RouteFormState {
   routeCode: string;
   routeName: string;
+  originType: SecondMileRouteEndpointType;
   originHubId: string;
+  originPostOfficeCode: string;
   destinationType: SecondMileRouteDestinationType;
   destinationHubId: string;
   destinationPostOfficeCode: string;
@@ -84,11 +89,14 @@ const NO_VEHICLE_VALUE = '__none__';
 type RouteDestinationFilter =
   | typeof ALL_FILTER_VALUE
   | SecondMileRouteDestinationType;
+type RouteOriginFilter = typeof ALL_FILTER_VALUE | SecondMileRouteEndpointType;
 
 const DEFAULT_FORM: RouteFormState = {
   routeCode: '',
   routeName: '',
+  originType: 'HUB',
   originHubId: '',
+  originPostOfficeCode: '',
   destinationType: 'HUB',
   destinationHubId: '',
   destinationPostOfficeCode: '',
@@ -110,6 +118,14 @@ const ROUTE_STATUS_OPTIONS: Array<{
 
 const ROUTE_DESTINATION_OPTIONS: Array<{
   value: SecondMileRouteDestinationType;
+  label: string;
+}> = [
+  { value: 'HUB', label: 'Hub' },
+  { value: 'POST_OFFICE', label: 'Post office' },
+];
+
+const ROUTE_ENDPOINT_OPTIONS: Array<{
+  value: SecondMileRouteEndpointType;
   label: string;
 }> = [
   { value: 'HUB', label: 'Hub' },
@@ -211,7 +227,9 @@ function toFormState(route: SecondMileRoute): RouteFormState {
   return {
     routeCode: route.routeCode ?? '',
     routeName: route.routeName ?? '',
+    originType: route.originType ?? 'HUB',
     originHubId: route.originHubId ? String(route.originHubId) : '',
+    originPostOfficeCode: route.originPostOfficeCode ?? '',
     destinationType: route.destinationType,
     destinationHubId: route.destinationHubId
       ? String(route.destinationHubId)
@@ -244,7 +262,11 @@ export function RouteListPage() {
   const [selectedStatus, setSelectedStatus] = React.useState<
     typeof ALL_FILTER_VALUE | SecondMileRouteStatus
   >(ALL_FILTER_VALUE);
+  const [selectedOriginType, setSelectedOriginType] =
+    React.useState<RouteOriginFilter>(ALL_FILTER_VALUE);
   const [selectedOriginHubId, setSelectedOriginHubId] = React.useState('');
+  const [selectedOriginPostOfficeCode, setSelectedOriginPostOfficeCode] =
+    React.useState('');
   const [selectedDestinationType, setSelectedDestinationType] =
     React.useState<RouteDestinationFilter>(ALL_FILTER_VALUE);
   const [selectedDestinationHubId, setSelectedDestinationHubId] =
@@ -278,6 +300,13 @@ export function RouteListPage() {
   const formOriginHubNumericId = parseOptionalPositiveInteger(
     formValues.originHubId
   );
+  const formDestinationHubNumericId = parseOptionalPositiveInteger(
+    formValues.destinationHubId
+  );
+  const formOperatingHubNumericId =
+    formValues.originType === 'POST_OFFICE'
+      ? formDestinationHubNumericId
+      : formOriginHubNumericId;
 
   const {
     data: routesData,
@@ -288,7 +317,15 @@ export function RouteListPage() {
       page,
       size: PAGE_SIZE,
       keyword,
+      originType:
+        selectedOriginType === ALL_FILTER_VALUE
+          ? undefined
+          : selectedOriginType,
       originHubId: selectedOriginHubNumericId,
+      originPostOfficeCode:
+        selectedOriginType === 'POST_OFFICE'
+          ? selectedOriginPostOfficeCode.trim() || undefined
+          : undefined,
       destinationType:
         selectedDestinationType === ALL_FILTER_VALUE
           ? undefined
@@ -337,13 +374,22 @@ export function RouteListPage() {
       {
         page: 0,
         size: 500,
-        hubId: formOriginHubNumericId,
+        hubId: formOperatingHubNumericId,
         status: 'ACTIVE',
       },
       {
-        skip: !isTmsAdmin || !isFormOpen || !formOriginHubNumericId,
+        skip: !isTmsAdmin || !isFormOpen || !formOperatingHubNumericId,
       }
     );
+  const {
+    data: formDriverAssignments,
+    isFetching: isFetchingFormDriverAssignments,
+  } = useGetSecondMileHubStaffAssignmentsQuery(
+    { hubId: formOperatingHubNumericId ?? 0, role: 'DRIVER' },
+    {
+      skip: !isTmsAdmin || !isFormOpen || !formOperatingHubNumericId,
+    }
+  );
 
   const [createRoute, { isLoading: isCreating }] =
     useCreateSecondMileRouteMutation();
@@ -352,9 +398,14 @@ export function RouteListPage() {
   const [deleteRoute, { isLoading: isDeleting }] =
     useDeleteSecondMileRouteMutation();
   const isSavingRoute = isCreating || isUpdating;
+  const isVehicleRequired =
+    formValues.originType === 'POST_OFFICE' ||
+    formValues.destinationType === 'POST_OFFICE';
   const isRouteFormDependencyLoading =
-    formValues.destinationType === 'POST_OFFICE' &&
-    (isFetchingMappedPostOffices || isFetchingFormVehicles);
+    isVehicleRequired &&
+    (isFetchingMappedPostOffices ||
+      isFetchingFormVehicles ||
+      isFetchingFormDriverAssignments);
 
   const hubs = hubsData?.items ?? [];
   const postOffices = postOfficesData?.items ?? [];
@@ -370,12 +421,24 @@ export function RouteListPage() {
     { value: ALL_FILTER_VALUE, label: 'All destinations' },
     ...ROUTE_DESTINATION_OPTIONS,
   ];
+  const originTypeFilterOptions = [
+    { value: ALL_FILTER_VALUE, label: 'All origins' },
+    ...ROUTE_ENDPOINT_OPTIONS,
+  ];
+  const formDestinationTypeOptions =
+    formValues.originType === 'POST_OFFICE'
+      ? ROUTE_DESTINATION_OPTIONS.filter((option) => option.value === 'HUB')
+      : ROUTE_DESTINATION_OPTIONS;
   const hubComboboxOptions = hubs.map((hub) => ({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
   }));
   const destinationHubComboboxOptions = hubs
-    .filter((hub) => hub.id !== formOriginHubNumericId)
+    .filter(
+      (hub) =>
+        formValues.originType === 'POST_OFFICE' ||
+        hub.id !== formOriginHubNumericId
+    )
     .map((hub) => ({
       value: String(hub.id),
       label: `${hub.code} - ${hub.name}`,
@@ -404,6 +467,33 @@ export function RouteListPage() {
       {}
     );
   }, [vehicles]);
+  const driverAssignmentByStaffId = React.useMemo<
+    Record<number, SecondMileHubStaffAssignment>
+  >(() => {
+    return (formDriverAssignments ?? []).reduce<
+      Record<number, SecondMileHubStaffAssignment>
+    >((acc, assignment) => {
+      if (assignment.staffId !== undefined && assignment.staffId !== null) {
+        acc[assignment.staffId] = assignment;
+      }
+      return acc;
+    }, {});
+  }, [formDriverAssignments]);
+
+  const getDriverLabel = (vehicle: SecondMileVehicle) => {
+    const assignedStaffId = vehicle.assignedStaffId;
+    if (assignedStaffId === undefined || assignedStaffId === null) {
+      return 'No driver';
+    }
+    const assignment = driverAssignmentByStaffId[assignedStaffId];
+    return (
+      assignment?.staffFullName ||
+      assignment?.staffCode ||
+      vehicle.assignedStaffFullName ||
+      vehicle.assignedStaffCode ||
+      `Driver #${assignedStaffId}`
+    );
+  };
 
   const postOfficeFilterOptions = postOffices.map((postOffice) => ({
     value: postOffice.code,
@@ -425,7 +515,7 @@ export function RouteListPage() {
     };
   });
   const formVehicleComboboxOptions = [
-    ...(formValues.destinationType === 'HUB'
+    ...(formValues.originType === 'HUB' && formValues.destinationType === 'HUB'
       ? [{ value: NO_VEHICLE_VALUE, label: 'No vehicle' }]
       : []),
     ...formVehicles
@@ -437,7 +527,7 @@ export function RouteListPage() {
       )
       .map((vehicle) => ({
         value: String(vehicle.id),
-        label: `${vehicle.licensePlate} - Driver #${vehicle.assignedStaffId}`,
+        label: `${vehicle.licensePlate} - ${getDriverLabel(vehicle)}`,
       })),
   ];
 
@@ -459,6 +549,13 @@ export function RouteListPage() {
       : postOfficeCode;
   };
 
+  const getOriginLabel = (route: SecondMileRoute) => {
+    if (route.originType === 'POST_OFFICE') {
+      return getPostOfficeLabel(route.originPostOfficeCode);
+    }
+    return getHubLabel(route.originHubId);
+  };
+
   const getVehicleLabel = (vehicleId?: number) => {
     if (vehicleId === undefined || vehicleId === null) {
       return '-';
@@ -478,11 +575,26 @@ export function RouteListPage() {
     const lines: RouteMapLine[] = [];
 
     for (const route of routes) {
-      const originHub = hubById[route.originHubId];
+      const originHub =
+        route.originType === 'HUB' && route.originHubId
+          ? hubById[route.originHubId]
+          : undefined;
+      const originPostOffice =
+        route.originType === 'POST_OFFICE' && route.originPostOfficeCode
+          ? postOfficeByCode[route.originPostOfficeCode]
+          : undefined;
+      const originName = originHub
+        ? `${originHub.code} - ${originHub.name}`
+        : originPostOffice
+          ? `${originPostOffice.code} - ${originPostOffice.name}`
+          : undefined;
+      const originLatitude = originHub?.latitude ?? originPostOffice?.latitude;
+      const originLongitude =
+        originHub?.longitude ?? originPostOffice?.longitude;
       if (
-        !originHub ||
-        originHub.latitude === undefined ||
-        originHub.longitude === undefined
+        !originName ||
+        originLatitude === undefined ||
+        originLongitude === undefined
       ) {
         continue;
       }
@@ -504,9 +616,9 @@ export function RouteListPage() {
           routeCode: route.routeCode,
           routeName: route.routeName,
           origin: {
-            name: `${originHub.code} - ${originHub.name}`,
-            latitude: originHub.latitude,
-            longitude: originHub.longitude,
+            name: originName,
+            latitude: originLatitude,
+            longitude: originLongitude,
           },
           destination: {
             name: `${destinationHub.code} - ${destinationHub.name}`,
@@ -533,9 +645,9 @@ export function RouteListPage() {
         routeCode: route.routeCode,
         routeName: route.routeName,
         origin: {
-          name: `${originHub.code} - ${originHub.name}`,
-          latitude: originHub.latitude,
-          longitude: originHub.longitude,
+          name: originName,
+          latitude: originLatitude,
+          longitude: originLongitude,
         },
         destination: {
           name: `${destinationPostOffice.code} - ${destinationPostOffice.name}`,
@@ -554,12 +666,37 @@ export function RouteListPage() {
     value: RouteFormState[K]
   ) => setFormValues((prev) => ({ ...prev, [key]: value }));
 
+  const updateOriginType = (value: SecondMileRouteEndpointType) => {
+    setFormValues((prev) => ({
+      ...prev,
+      originType: value,
+      originHubId: value === 'HUB' ? prev.originHubId : '',
+      originPostOfficeCode:
+        value === 'POST_OFFICE' ? prev.originPostOfficeCode : '',
+      destinationType:
+        value === 'POST_OFFICE' && prev.destinationType === 'POST_OFFICE'
+          ? 'HUB'
+          : prev.destinationType,
+      destinationHubId: '',
+      destinationPostOfficeCode: '',
+      vehicleId: '',
+    }));
+  };
+
   const updateOriginHub = (value: string) => {
     setFormValues((prev) => ({
       ...prev,
       originHubId: value,
       destinationHubId: '',
       destinationPostOfficeCode: '',
+      vehicleId: '',
+    }));
+  };
+
+  const updateOriginPostOffice = (value: string) => {
+    setFormValues((prev) => ({
+      ...prev,
+      originPostOfficeCode: value,
       vehicleId: '',
     }));
   };
@@ -571,6 +708,7 @@ export function RouteListPage() {
       destinationHubId: value === 'HUB' ? prev.destinationHubId : '',
       destinationPostOfficeCode:
         value === 'POST_OFFICE' ? prev.destinationPostOfficeCode : '',
+      vehicleId: '',
     }));
   };
 
@@ -578,7 +716,9 @@ export function RouteListPage() {
     setSearchInput('');
     setKeyword(undefined);
     setSelectedStatus(ALL_FILTER_VALUE);
+    setSelectedOriginType(ALL_FILTER_VALUE);
     setSelectedOriginHubId('');
+    setSelectedOriginPostOfficeCode('');
     setSelectedDestinationType(ALL_FILTER_VALUE);
     setSelectedDestinationHubId('');
     setSelectedDestinationPostOfficeCode('');
@@ -603,12 +743,28 @@ export function RouteListPage() {
   const validateForm = (values: RouteFormState): string | null => {
     if (!values.routeCode.trim()) return 'Route code is required.';
     if (!values.routeName.trim()) return 'Route name is required.';
-    if (!values.originHubId) return 'Origin hub is required.';
+    if (values.originType === 'HUB' && !values.originHubId) {
+      return 'Origin hub is required.';
+    }
+    if (
+      values.originType === 'POST_OFFICE' &&
+      !values.originPostOfficeCode.trim()
+    ) {
+      return 'Origin post office is required.';
+    }
     const originHubId = parseOptionalPositiveInteger(values.originHubId);
     const destinationHubId = parseOptionalPositiveInteger(
       values.destinationHubId
     );
     const vehicleId = parseOptionalPositiveInteger(values.vehicleId);
+    const operatingHubId =
+      values.originType === 'POST_OFFICE' ? destinationHubId : originHubId;
+    if (
+      values.originType === 'POST_OFFICE' &&
+      values.destinationType !== 'HUB'
+    ) {
+      return 'Post office origin routes must target a hub.';
+    }
     if (values.destinationType === 'HUB' && !values.destinationHubId) {
       return 'Destination hub is required.';
     }
@@ -620,6 +776,16 @@ export function RouteListPage() {
     ) {
       return 'Origin hub and destination hub must be different.';
     }
+    if (values.originType === 'POST_OFFICE' && destinationHubId !== undefined) {
+      const originPostOffice =
+        postOfficeByCode[values.originPostOfficeCode.trim()];
+      if (
+        originPostOffice?.hubId !== undefined &&
+        originPostOffice.hubId !== destinationHubId
+      ) {
+        return 'Destination hub must match the origin post office hub.';
+      }
+    }
     if (
       values.destinationType === 'POST_OFFICE' &&
       !values.destinationPostOfficeCode.trim()
@@ -629,7 +795,13 @@ export function RouteListPage() {
     if (values.destinationType === 'POST_OFFICE' && !values.vehicleId) {
       return 'Vehicle is required for hub-post office routes.';
     }
-    if (values.destinationType === 'POST_OFFICE') {
+    if (values.originType === 'POST_OFFICE' && !values.vehicleId) {
+      return 'Vehicle is required for post office-hub routes.';
+    }
+    if (
+      values.originType === 'HUB' &&
+      values.destinationType === 'POST_OFFICE'
+    ) {
       if (isFetchingMappedPostOffices) {
         return 'Post office mappings are still loading.';
       }
@@ -646,10 +818,10 @@ export function RouteListPage() {
         vehicleById[vehicleId];
       if (selectedVehicle) {
         if (
-          originHubId !== undefined &&
-          selectedVehicle.hubId !== originHubId
+          operatingHubId !== undefined &&
+          selectedVehicle.hubId !== operatingHubId
         ) {
-          return 'Vehicle must belong to the selected origin hub.';
+          return 'Vehicle must belong to the operating hub.';
         }
         if (selectedVehicle.status !== 'ACTIVE') {
           return 'Vehicle must be active.';
@@ -686,7 +858,7 @@ export function RouteListPage() {
     const body: SecondMileCreateRouteRequest = {
       route_code: values.routeCode.trim(),
       route_name: values.routeName.trim(),
-      origin_hub_id: Number(values.originHubId),
+      origin_type: values.originType,
       destination_type: values.destinationType,
       vehicle_id: vehicleId,
       estimated_distance_km: parseOptionalNumber(values.estimatedDistanceKm),
@@ -697,6 +869,15 @@ export function RouteListPage() {
       note: values.note.trim() || undefined,
       status: values.status,
     };
+
+    if (values.originType === 'HUB') {
+      body.origin_hub_id = parseOptionalPositiveInteger(values.originHubId);
+      body.origin_post_office_code = undefined;
+    } else {
+      body.origin_hub_id = undefined;
+      body.origin_post_office_code =
+        values.originPostOfficeCode.trim() || undefined;
+    }
 
     if (values.destinationType === 'HUB') {
       body.destination_hub_id = parseOptionalPositiveInteger(
@@ -735,7 +916,7 @@ export function RouteListPage() {
           <div>
             <h1 className='text-2xl font-bold tracking-tight'>Routes</h1>
             <p className='text-muted-foreground'>
-              Fixed transport routes between hub-hub and hub-post office.
+              Fixed transport routes between hubs and post offices.
             </p>
           </div>
           <div className='flex gap-2'>
@@ -756,7 +937,7 @@ export function RouteListPage() {
           </CardHeader>
           <CardContent>
             <form
-              className='grid gap-3 md:grid-cols-2 xl:grid-cols-7'
+              className='grid gap-3 md:grid-cols-2 xl:grid-cols-8'
               onSubmit={(event) => {
                 event.preventDefault();
                 setPage(0);
@@ -787,19 +968,50 @@ export function RouteListPage() {
                 className='w-full'
               />
               <TmsCombobox
-                id='route-filter-origin-hub'
-                value={selectedOriginHubId}
+                id='route-filter-origin-type'
+                value={selectedOriginType}
                 onValueChange={(value) => {
-                  setSelectedOriginHubId(value);
+                  setSelectedOriginType(value as RouteOriginFilter);
+                  setSelectedOriginHubId('');
+                  setSelectedOriginPostOfficeCode('');
                   setSelectedVehicleId('');
                   setPage(0);
                 }}
-                options={hubComboboxOptions}
-                placeholder='Origin hub'
-                emptyText='No hubs found'
-                clearable
+                options={originTypeFilterOptions}
+                placeholder='All origins'
+                emptyText='No origin types found'
                 className='w-full'
               />
+              {selectedOriginType === 'POST_OFFICE' ? (
+                <TmsCombobox
+                  id='route-filter-origin-post-office'
+                  value={selectedOriginPostOfficeCode}
+                  onValueChange={(value) => {
+                    setSelectedOriginPostOfficeCode(value);
+                    setPage(0);
+                  }}
+                  options={postOfficeFilterOptions}
+                  placeholder='Origin post office'
+                  emptyText='No post offices found'
+                  clearable
+                  className='w-full'
+                />
+              ) : (
+                <TmsCombobox
+                  id='route-filter-origin-hub'
+                  value={selectedOriginHubId}
+                  onValueChange={(value) => {
+                    setSelectedOriginHubId(value);
+                    setSelectedVehicleId('');
+                    setPage(0);
+                  }}
+                  options={hubComboboxOptions}
+                  placeholder='Origin hub'
+                  emptyText='No hubs found'
+                  clearable
+                  className='w-full'
+                />
+              )}
               <TmsCombobox
                 id='route-filter-destination-type'
                 value={selectedDestinationType}
@@ -940,7 +1152,7 @@ export function RouteListPage() {
                           {route.routeCode}
                         </TableCell>
                         <TableCell>{route.routeName}</TableCell>
-                        <TableCell>{getHubLabel(route.originHubId)}</TableCell>
+                        <TableCell>{getOriginLabel(route)}</TableCell>
                         <TableCell>
                           {formatDestinationTypeLabel(route.destinationType)}
                         </TableCell>
@@ -1033,7 +1245,7 @@ export function RouteListPage() {
           }
         }}
       >
-        <DialogContent className='max-w-2xl'>
+        <DialogContent className='max-h-[85vh] max-w-5xl overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>
               {formMode === 'create' ? 'Create route' : 'Update route'}
@@ -1078,7 +1290,7 @@ export function RouteListPage() {
               }
             }}
           >
-            <div className='grid gap-4 md:grid-cols-2'>
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
               <div className='space-y-2'>
                 <Label htmlFor='route-code'>Route code</Label>
                 <Input
@@ -1100,16 +1312,45 @@ export function RouteListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='route-origin-hub'>Origin hub</Label>
+                <Label htmlFor='route-origin-type'>Origin type</Label>
                 <TmsCombobox
-                  id='route-origin-hub'
-                  value={formValues.originHubId}
-                  onValueChange={updateOriginHub}
-                  options={hubComboboxOptions}
-                  placeholder='Select origin hub'
-                  emptyText='No hubs found'
+                  id='route-origin-type'
+                  value={formValues.originType}
+                  onValueChange={(value) =>
+                    updateOriginType(value as SecondMileRouteEndpointType)
+                  }
+                  options={ROUTE_ENDPOINT_OPTIONS}
+                  placeholder='Select origin type'
+                  emptyText='No origin types found'
                 />
               </div>
+              {formValues.originType === 'HUB' ? (
+                <div className='space-y-2'>
+                  <Label htmlFor='route-origin-hub'>Origin hub</Label>
+                  <TmsCombobox
+                    id='route-origin-hub'
+                    value={formValues.originHubId}
+                    onValueChange={updateOriginHub}
+                    options={hubComboboxOptions}
+                    placeholder='Select origin hub'
+                    emptyText='No hubs found'
+                  />
+                </div>
+              ) : (
+                <div className='space-y-2'>
+                  <Label htmlFor='route-origin-post-office'>
+                    Origin post office
+                  </Label>
+                  <TmsCombobox
+                    id='route-origin-post-office'
+                    value={formValues.originPostOfficeCode}
+                    onValueChange={updateOriginPostOffice}
+                    options={postOfficeFilterOptions}
+                    placeholder='Select origin post office'
+                    emptyText='No post offices found'
+                  />
+                </div>
+              )}
               <div className='space-y-2'>
                 <Label htmlFor='route-destination-type'>Destination type</Label>
                 <TmsCombobox
@@ -1120,7 +1361,7 @@ export function RouteListPage() {
                       value as SecondMileRouteDestinationType
                     )
                   }
-                  options={ROUTE_DESTINATION_OPTIONS}
+                  options={formDestinationTypeOptions}
                   placeholder='Select destination type'
                   emptyText='No destination types found'
                 />
@@ -1137,11 +1378,14 @@ export function RouteListPage() {
                     options={destinationHubComboboxOptions}
                     placeholder='Select destination hub'
                     emptyText={
+                      formValues.originType === 'POST_OFFICE' ||
                       formValues.originHubId
                         ? 'No destination hubs found'
                         : 'Select origin hub first'
                     }
-                    disabled={!formValues.originHubId}
+                    disabled={
+                      formValues.originType === 'HUB' && !formValues.originHubId
+                    }
                   />
                 </div>
               ) : (
@@ -1173,7 +1417,8 @@ export function RouteListPage() {
               )}
               <div className='space-y-2'>
                 <Label htmlFor='route-vehicle'>
-                  {formValues.destinationType === 'POST_OFFICE'
+                  {formValues.originType === 'POST_OFFICE' ||
+                  formValues.destinationType === 'POST_OFFICE'
                     ? 'Vehicle *'
                     : 'Vehicle'}
                 </Label>
@@ -1181,7 +1426,8 @@ export function RouteListPage() {
                   id='route-vehicle'
                   value={
                     formValues.vehicleId ||
-                    (formValues.destinationType === 'HUB'
+                    (formValues.originType === 'HUB' &&
+                    formValues.destinationType === 'HUB'
                       ? NO_VEHICLE_VALUE
                       : '')
                   }
@@ -1193,17 +1439,22 @@ export function RouteListPage() {
                   }
                   options={formVehicleComboboxOptions}
                   placeholder={
+                    formValues.originType === 'POST_OFFICE' ||
                     formValues.destinationType === 'POST_OFFICE'
                       ? 'Select vehicle'
                       : 'Optional vehicle'
                   }
                   emptyText={
-                    formValues.originHubId
+                    formOperatingHubNumericId
                       ? 'No active driver-backed vehicles found'
-                      : 'Select origin hub first'
+                      : formValues.originType === 'POST_OFFICE'
+                        ? 'Select destination hub first'
+                        : 'Select origin hub first'
                   }
-                  disabled={!formValues.originHubId}
-                  loading={isFetchingFormVehicles}
+                  disabled={!formOperatingHubNumericId}
+                  loading={
+                    isFetchingFormVehicles || isFetchingFormDriverAssignments
+                  }
                 />
               </div>
               <div className='space-y-2'>
@@ -1247,7 +1498,7 @@ export function RouteListPage() {
                   placeholder='Optional'
                 />
               </div>
-              <div className='space-y-2 md:col-span-2'>
+              <div className='space-y-2'>
                 <Label htmlFor='departure-time'>Fixed departure time</Label>
                 <Input
                   id='departure-time'
@@ -1258,7 +1509,7 @@ export function RouteListPage() {
                   }
                 />
               </div>
-              <div className='space-y-2 md:col-span-2'>
+              <div className='space-y-2 md:col-span-2 xl:col-span-3'>
                 <Label htmlFor='note'>Note</Label>
                 <Textarea
                   id='note'
