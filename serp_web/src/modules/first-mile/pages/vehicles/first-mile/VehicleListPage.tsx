@@ -679,6 +679,23 @@ export const VehicleListPage: React.FC = () => {
         <VehiclePageHeader
           canManageVehicles={canManageVehicles}
           onCreateVehicle={handleOpenCreateDialog}
+          importAction={
+            <VehicleImportCard
+              canManageVehicles={canManageVehicles}
+              isImportFlowBusy={isImportFlowBusy}
+              isExportingTemplate={isExportingTemplate}
+              isValidatingImport={isValidatingImport}
+              isImportingVehicles={isImportingVehicles}
+              importFileInputKey={importFileInputKey}
+              selectedImportFile={selectedImportFile}
+              validateImportResult={validateImportResult}
+              lastImportJob={lastImportJob}
+              onDownloadTemplate={handleDownloadTemplate}
+              onSelectImportFile={handleSelectImportFile}
+              onValidateFile={handleValidateImportFile}
+              onImportFile={handleImportFile}
+            />
+          }
         />
 
         <VehicleAccessScopeCard
@@ -695,22 +712,6 @@ export const VehicleListPage: React.FC = () => {
           onRefresh={() => {
             void refetch();
           }}
-        />
-
-        <VehicleImportCard
-          canManageVehicles={canManageVehicles}
-          isImportFlowBusy={isImportFlowBusy}
-          isExportingTemplate={isExportingTemplate}
-          isValidatingImport={isValidatingImport}
-          isImportingVehicles={isImportingVehicles}
-          importFileInputKey={importFileInputKey}
-          selectedImportFile={selectedImportFile}
-          validateImportResult={validateImportResult}
-          lastImportJob={lastImportJob}
-          onDownloadTemplate={handleDownloadTemplate}
-          onSelectImportFile={handleSelectImportFile}
-          onValidateFile={handleValidateImportFile}
-          onImportFile={handleImportFile}
         />
 
         <VehicleResultsCard

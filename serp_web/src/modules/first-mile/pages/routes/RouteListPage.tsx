@@ -6,6 +6,8 @@
 'use client';
 
 import React from 'react';
+import { Plus, RefreshCw, Search, ShieldAlert, Trash2, X } from 'lucide-react';
+
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
   Badge,
@@ -32,11 +34,11 @@ import {
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
-import { Plus, RefreshCw, Search, ShieldAlert, Trash2 } from 'lucide-react';
 import { TmsCombobox } from '../../components';
 import {
   useCreateSecondMileRouteMutation,
   useDeleteSecondMileRouteMutation,
+  useGetHubPostOfficesQuery,
   useGetHubsQuery,
   useGetPostOfficesQuery,
   useGetSecondMileRoutesQuery,
@@ -51,6 +53,7 @@ import type {
   SecondMileRouteDestinationType,
   SecondMileRouteStatus,
   SecondMileUpdateRouteRequest,
+  SecondMileVehicle,
 } from '../../types';
 import {
   SecondMileRoutesMap,
@@ -75,6 +78,12 @@ interface RouteFormState {
 }
 
 const PAGE_SIZE = 20;
+const ALL_FILTER_VALUE = 'ALL';
+const NO_VEHICLE_VALUE = '__none__';
+
+type RouteDestinationFilter =
+  | typeof ALL_FILTER_VALUE
+  | SecondMileRouteDestinationType;
 
 const DEFAULT_FORM: RouteFormState = {
   routeCode: '',
@@ -128,6 +137,76 @@ function parseOptionalNumber(value: string): number | undefined {
   return numeric;
 }
 
+function parseOptionalPositiveInteger(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const numeric = Number(trimmed);
+  if (!Number.isInteger(numeric) || numeric <= 0) {
+    return undefined;
+  }
+  return numeric;
+}
+
+function parseOptionalNonNegativeInteger(value: string): number | undefined {
+  const numeric = parseOptionalNumber(value);
+  if (numeric === undefined || numeric < 0 || !Number.isInteger(numeric)) {
+    return undefined;
+  }
+  return numeric;
+}
+
+function validateOptionalNonNegativeNumber(
+  label: string,
+  value: string
+): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric)) {
+    return `${label} must be a valid number.`;
+  }
+  if (numeric < 0) {
+    return `${label} cannot be negative.`;
+  }
+  return null;
+}
+
+function validateOptionalNonNegativeInteger(
+  label: string,
+  value: string
+): string | null {
+  const baseError = validateOptionalNonNegativeNumber(label, value);
+  if (baseError) {
+    return baseError;
+  }
+  const trimmed = value.trim();
+  if (trimmed && !Number.isInteger(Number(trimmed))) {
+    return `${label} must be a whole number.`;
+  }
+  return null;
+}
+
+function formatStatusLabel(status: SecondMileRouteStatus): string {
+  return status === 'ACTIVE' ? 'Active' : 'Inactive';
+}
+
+function formatDestinationTypeLabel(
+  destinationType: SecondMileRouteDestinationType
+): string {
+  return destinationType === 'HUB' ? 'Hub' : 'Post office';
+}
+
+function formatRouteMetric(value?: number, suffix?: string): string {
+  if (value === undefined || value === null) {
+    return '-';
+  }
+  return suffix ? `${value} ${suffix}` : String(value);
+}
+
 function toFormState(route: SecondMileRoute): RouteFormState {
   return {
     routeCode: route.routeCode ?? '',
@@ -163,8 +242,18 @@ export function RouteListPage() {
   const [searchInput, setSearchInput] = React.useState('');
   const [keyword, setKeyword] = React.useState<string | undefined>();
   const [selectedStatus, setSelectedStatus] = React.useState<
-    'ALL' | SecondMileRouteStatus
-  >('ALL');
+    typeof ALL_FILTER_VALUE | SecondMileRouteStatus
+  >(ALL_FILTER_VALUE);
+  const [selectedOriginHubId, setSelectedOriginHubId] = React.useState('');
+  const [selectedDestinationType, setSelectedDestinationType] =
+    React.useState<RouteDestinationFilter>(ALL_FILTER_VALUE);
+  const [selectedDestinationHubId, setSelectedDestinationHubId] =
+    React.useState('');
+  const [
+    selectedDestinationPostOfficeCode,
+    setSelectedDestinationPostOfficeCode,
+  ] = React.useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = React.useState('');
   const [selectedRouteId, setSelectedRouteId] = React.useState<
     number | undefined
   >();
@@ -179,6 +268,17 @@ export function RouteListPage() {
   const [deleteTarget, setDeleteTarget] =
     React.useState<SecondMileRoute | null>(null);
 
+  const selectedOriginHubNumericId =
+    parseOptionalPositiveInteger(selectedOriginHubId);
+  const selectedDestinationHubNumericId = parseOptionalPositiveInteger(
+    selectedDestinationHubId
+  );
+  const selectedVehicleNumericId =
+    parseOptionalPositiveInteger(selectedVehicleId);
+  const formOriginHubNumericId = parseOptionalPositiveInteger(
+    formValues.originHubId
+  );
+
   const {
     data: routesData,
     isFetching,
@@ -188,7 +288,21 @@ export function RouteListPage() {
       page,
       size: PAGE_SIZE,
       keyword,
-      status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+      originHubId: selectedOriginHubNumericId,
+      destinationType:
+        selectedDestinationType === ALL_FILTER_VALUE
+          ? undefined
+          : selectedDestinationType,
+      destinationHubId:
+        selectedDestinationType === 'HUB'
+          ? selectedDestinationHubNumericId
+          : undefined,
+      destinationPostOfficeCode:
+        selectedDestinationType === 'POST_OFFICE'
+          ? selectedDestinationPostOfficeCode.trim() || undefined
+          : undefined,
+      vehicleId: selectedVehicleNumericId,
+      status: selectedStatus === ALL_FILTER_VALUE ? undefined : selectedStatus,
     },
     { skip: !isTmsAdmin }
   );
@@ -205,6 +319,31 @@ export function RouteListPage() {
     { page: 0, size: 500 },
     { skip: !isTmsAdmin }
   );
+  const {
+    data: mappedPostOfficesData,
+    isFetching: isFetchingMappedPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: formOriginHubNumericId ?? 0, page: 0, size: 500 },
+    {
+      skip:
+        !isTmsAdmin ||
+        !isFormOpen ||
+        formValues.destinationType !== 'POST_OFFICE' ||
+        !formOriginHubNumericId,
+    }
+  );
+  const { data: formVehiclesData, isFetching: isFetchingFormVehicles } =
+    useGetSecondMileVehiclesQuery(
+      {
+        page: 0,
+        size: 500,
+        hubId: formOriginHubNumericId,
+        status: 'ACTIVE',
+      },
+      {
+        skip: !isTmsAdmin || !isFormOpen || !formOriginHubNumericId,
+      }
+    );
 
   const [createRoute, { isLoading: isCreating }] =
     useCreateSecondMileRouteMutation();
@@ -212,29 +351,35 @@ export function RouteListPage() {
     useUpdateSecondMileRouteMutation();
   const [deleteRoute, { isLoading: isDeleting }] =
     useDeleteSecondMileRouteMutation();
+  const isSavingRoute = isCreating || isUpdating;
+  const isRouteFormDependencyLoading =
+    formValues.destinationType === 'POST_OFFICE' &&
+    (isFetchingMappedPostOffices || isFetchingFormVehicles);
 
   const hubs = hubsData?.items ?? [];
   const postOffices = postOfficesData?.items ?? [];
+  const vehicles = vehiclesData?.items ?? [];
+  const mappedPostOffices = mappedPostOfficesData?.items ?? [];
+  const formVehicles = formVehiclesData?.items ?? [];
   const routes = routesData?.items ?? [];
   const statusFilterOptions = [
-    { value: 'ALL', label: 'All statuses' },
+    { value: ALL_FILTER_VALUE, label: 'All statuses' },
     ...ROUTE_STATUS_OPTIONS,
+  ];
+  const destinationTypeFilterOptions = [
+    { value: ALL_FILTER_VALUE, label: 'All destinations' },
+    ...ROUTE_DESTINATION_OPTIONS,
   ];
   const hubComboboxOptions = hubs.map((hub) => ({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
   }));
-  const postOfficeComboboxOptions = postOffices.map((postOffice) => ({
-    value: postOffice.code,
-    label: `${postOffice.code} - ${postOffice.name}`,
-  }));
-  const vehicleComboboxOptions = [
-    { value: '__none__', label: 'No vehicle' },
-    ...(vehiclesData?.items ?? []).map((vehicle) => ({
-      value: String(vehicle.id),
-      label: vehicle.licensePlate,
-    })),
-  ];
+  const destinationHubComboboxOptions = hubs
+    .filter((hub) => hub.id !== formOriginHubNumericId)
+    .map((hub) => ({
+      value: String(hub.id),
+      label: `${hub.code} - ${hub.name}`,
+    }));
 
   const hubById = React.useMemo<Record<number, Hub>>(() => {
     return hubs.reduce<Record<number, Hub>>((acc, hub) => {
@@ -249,6 +394,85 @@ export function RouteListPage() {
       return acc;
     }, {});
   }, [postOffices]);
+
+  const vehicleById = React.useMemo<Record<number, SecondMileVehicle>>(() => {
+    return vehicles.reduce<Record<number, SecondMileVehicle>>(
+      (acc, vehicle) => {
+        acc[vehicle.id] = vehicle;
+        return acc;
+      },
+      {}
+    );
+  }, [vehicles]);
+
+  const postOfficeFilterOptions = postOffices.map((postOffice) => ({
+    value: postOffice.code,
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+  const routeVehicleFilterOptions = vehicles.map((vehicle) => ({
+    value: String(vehicle.id),
+    label: `${vehicle.licensePlate}${
+      hubById[vehicle.hubId]?.code ? ` - ${hubById[vehicle.hubId].code}` : ''
+    }`,
+  }));
+  const mappedPostOfficeComboboxOptions = mappedPostOffices.map((mapping) => {
+    const postOffice = postOfficeByCode[mapping.postOfficeCode];
+    return {
+      value: mapping.postOfficeCode,
+      label: postOffice
+        ? `${postOffice.code} - ${postOffice.name}`
+        : mapping.postOfficeCode,
+    };
+  });
+  const formVehicleComboboxOptions = [
+    ...(formValues.destinationType === 'HUB'
+      ? [{ value: NO_VEHICLE_VALUE, label: 'No vehicle' }]
+      : []),
+    ...formVehicles
+      .filter(
+        (vehicle) =>
+          vehicle.status === 'ACTIVE' &&
+          vehicle.assignedStaffId !== undefined &&
+          vehicle.assignedStaffId !== null
+      )
+      .map((vehicle) => ({
+        value: String(vehicle.id),
+        label: `${vehicle.licensePlate} - Driver #${vehicle.assignedStaffId}`,
+      })),
+  ];
+
+  const getHubLabel = (hubId?: number) => {
+    if (hubId === undefined || hubId === null) {
+      return '-';
+    }
+    const hub = hubById[hubId];
+    return hub ? `${hub.code} - ${hub.name}` : `Hub #${hubId}`;
+  };
+
+  const getPostOfficeLabel = (postOfficeCode?: string) => {
+    if (!postOfficeCode) {
+      return '-';
+    }
+    const postOffice = postOfficeByCode[postOfficeCode];
+    return postOffice
+      ? `${postOffice.code} - ${postOffice.name}`
+      : postOfficeCode;
+  };
+
+  const getVehicleLabel = (vehicleId?: number) => {
+    if (vehicleId === undefined || vehicleId === null) {
+      return '-';
+    }
+    const vehicle = vehicleById[vehicleId];
+    return vehicle ? vehicle.licensePlate : `Vehicle #${vehicleId}`;
+  };
+
+  const getDestinationLabel = (route: SecondMileRoute) => {
+    if (route.destinationType === 'HUB') {
+      return getHubLabel(route.destinationHubId);
+    }
+    return getPostOfficeLabel(route.destinationPostOfficeCode);
+  };
 
   const mapLines = React.useMemo<RouteMapLine[]>(() => {
     const lines: RouteMapLine[] = [];
@@ -330,6 +554,38 @@ export function RouteListPage() {
     value: RouteFormState[K]
   ) => setFormValues((prev) => ({ ...prev, [key]: value }));
 
+  const updateOriginHub = (value: string) => {
+    setFormValues((prev) => ({
+      ...prev,
+      originHubId: value,
+      destinationHubId: '',
+      destinationPostOfficeCode: '',
+      vehicleId: '',
+    }));
+  };
+
+  const updateDestinationType = (value: SecondMileRouteDestinationType) => {
+    setFormValues((prev) => ({
+      ...prev,
+      destinationType: value,
+      destinationHubId: value === 'HUB' ? prev.destinationHubId : '',
+      destinationPostOfficeCode:
+        value === 'POST_OFFICE' ? prev.destinationPostOfficeCode : '',
+    }));
+  };
+
+  const clearRouteFilters = () => {
+    setSearchInput('');
+    setKeyword(undefined);
+    setSelectedStatus(ALL_FILTER_VALUE);
+    setSelectedOriginHubId('');
+    setSelectedDestinationType(ALL_FILTER_VALUE);
+    setSelectedDestinationHubId('');
+    setSelectedDestinationPostOfficeCode('');
+    setSelectedVehicleId('');
+    setPage(0);
+  };
+
   const openCreateDialog = () => {
     setFormMode('create');
     setEditingRouteId(null);
@@ -348,8 +604,21 @@ export function RouteListPage() {
     if (!values.routeCode.trim()) return 'Route code is required.';
     if (!values.routeName.trim()) return 'Route name is required.';
     if (!values.originHubId) return 'Origin hub is required.';
+    const originHubId = parseOptionalPositiveInteger(values.originHubId);
+    const destinationHubId = parseOptionalPositiveInteger(
+      values.destinationHubId
+    );
+    const vehicleId = parseOptionalPositiveInteger(values.vehicleId);
     if (values.destinationType === 'HUB' && !values.destinationHubId) {
       return 'Destination hub is required.';
+    }
+    if (
+      values.destinationType === 'HUB' &&
+      originHubId !== undefined &&
+      destinationHubId !== undefined &&
+      originHubId === destinationHubId
+    ) {
+      return 'Origin hub and destination hub must be different.';
     }
     if (
       values.destinationType === 'POST_OFFICE' &&
@@ -357,20 +626,71 @@ export function RouteListPage() {
     ) {
       return 'Destination post office is required.';
     }
+    if (values.destinationType === 'POST_OFFICE' && !values.vehicleId) {
+      return 'Vehicle is required for hub-post office routes.';
+    }
+    if (values.destinationType === 'POST_OFFICE') {
+      if (isFetchingMappedPostOffices) {
+        return 'Post office mappings are still loading.';
+      }
+      const mappedCodes = new Set(
+        mappedPostOffices.map((mapping) => mapping.postOfficeCode)
+      );
+      if (!mappedCodes.has(values.destinationPostOfficeCode.trim())) {
+        return 'Destination post office must be mapped to the origin hub.';
+      }
+    }
+    if (vehicleId !== undefined) {
+      const selectedVehicle =
+        formVehicles.find((vehicle) => vehicle.id === vehicleId) ??
+        vehicleById[vehicleId];
+      if (selectedVehicle) {
+        if (
+          originHubId !== undefined &&
+          selectedVehicle.hubId !== originHubId
+        ) {
+          return 'Vehicle must belong to the selected origin hub.';
+        }
+        if (selectedVehicle.status !== 'ACTIVE') {
+          return 'Vehicle must be active.';
+        }
+        if (
+          selectedVehicle.assignedStaffId === undefined ||
+          selectedVehicle.assignedStaffId === null
+        ) {
+          return 'Vehicle must have an assigned driver.';
+        }
+      }
+    }
+    const distanceError = validateOptionalNonNegativeNumber(
+      'Distance',
+      values.estimatedDistanceKm
+    );
+    if (distanceError) {
+      return distanceError;
+    }
+    const durationError = validateOptionalNonNegativeInteger(
+      'Duration',
+      values.estimatedDurationMinutes
+    );
+    if (durationError) {
+      return durationError;
+    }
     return null;
   };
 
   const buildRequestBody = (
     values: RouteFormState
   ): SecondMileCreateRouteRequest | SecondMileUpdateRouteRequest => {
+    const vehicleId = parseOptionalPositiveInteger(values.vehicleId);
     const body: SecondMileCreateRouteRequest = {
       route_code: values.routeCode.trim(),
       route_name: values.routeName.trim(),
       origin_hub_id: Number(values.originHubId),
       destination_type: values.destinationType,
-      vehicle_id: values.vehicleId ? Number(values.vehicleId) : undefined,
+      vehicle_id: vehicleId,
       estimated_distance_km: parseOptionalNumber(values.estimatedDistanceKm),
-      estimated_duration_minutes: parseOptionalNumber(
+      estimated_duration_minutes: parseOptionalNonNegativeInteger(
         values.estimatedDurationMinutes
       ),
       fixed_departure_time: values.fixedDepartureTime || undefined,
@@ -379,7 +699,9 @@ export function RouteListPage() {
     };
 
     if (values.destinationType === 'HUB') {
-      body.destination_hub_id = Number(values.destinationHubId);
+      body.destination_hub_id = parseOptionalPositiveInteger(
+        values.destinationHubId
+      );
       body.destination_post_office_code = undefined;
     } else {
       body.destination_hub_id = undefined;
@@ -430,18 +752,18 @@ export function RouteListPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Search</CardTitle>
+            <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
             <form
-              className='flex flex-col gap-2 md:flex-row'
+              className='grid gap-3 md:grid-cols-2 xl:grid-cols-7'
               onSubmit={(event) => {
                 event.preventDefault();
                 setPage(0);
                 setKeyword(searchInput.trim() || undefined);
               }}
             >
-              <div className='relative flex-1'>
+              <div className='relative md:col-span-2 xl:col-span-2'>
                 <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                 <Input
                   className='pl-10'
@@ -454,15 +776,116 @@ export function RouteListPage() {
                 id='route-filter-status'
                 value={selectedStatus}
                 onValueChange={(value) => {
-                  setSelectedStatus(value as 'ALL' | SecondMileRouteStatus);
+                  setSelectedStatus(
+                    value as typeof ALL_FILTER_VALUE | SecondMileRouteStatus
+                  );
                   setPage(0);
                 }}
                 options={statusFilterOptions}
                 placeholder='All statuses'
                 emptyText='No statuses found'
-                className='w-full md:w-[180px]'
+                className='w-full'
               />
-              <Button type='submit'>Search</Button>
+              <TmsCombobox
+                id='route-filter-origin-hub'
+                value={selectedOriginHubId}
+                onValueChange={(value) => {
+                  setSelectedOriginHubId(value);
+                  setSelectedVehicleId('');
+                  setPage(0);
+                }}
+                options={hubComboboxOptions}
+                placeholder='Origin hub'
+                emptyText='No hubs found'
+                clearable
+                className='w-full'
+              />
+              <TmsCombobox
+                id='route-filter-destination-type'
+                value={selectedDestinationType}
+                onValueChange={(value) => {
+                  setSelectedDestinationType(value as RouteDestinationFilter);
+                  setSelectedDestinationHubId('');
+                  setSelectedDestinationPostOfficeCode('');
+                  setPage(0);
+                }}
+                options={destinationTypeFilterOptions}
+                placeholder='All destinations'
+                emptyText='No destination types found'
+                className='w-full'
+              />
+              {selectedDestinationType === 'HUB' ? (
+                <TmsCombobox
+                  id='route-filter-destination-hub'
+                  value={selectedDestinationHubId}
+                  onValueChange={(value) => {
+                    setSelectedDestinationHubId(value);
+                    setPage(0);
+                  }}
+                  options={hubComboboxOptions}
+                  placeholder='Destination hub'
+                  emptyText='No hubs found'
+                  clearable
+                  className='w-full'
+                />
+              ) : selectedDestinationType === 'POST_OFFICE' ? (
+                <TmsCombobox
+                  id='route-filter-destination-post-office'
+                  value={selectedDestinationPostOfficeCode}
+                  onValueChange={(value) => {
+                    setSelectedDestinationPostOfficeCode(value);
+                    setPage(0);
+                  }}
+                  options={postOfficeFilterOptions}
+                  placeholder='Destination post office'
+                  emptyText='No post offices found'
+                  clearable
+                  className='w-full'
+                />
+              ) : (
+                <TmsCombobox
+                  id='route-filter-vehicle'
+                  value={selectedVehicleId}
+                  onValueChange={(value) => {
+                    setSelectedVehicleId(value);
+                    setPage(0);
+                  }}
+                  options={routeVehicleFilterOptions}
+                  placeholder='Vehicle'
+                  emptyText='No vehicles found'
+                  clearable
+                  className='w-full'
+                />
+              )}
+              {selectedDestinationType !== ALL_FILTER_VALUE && (
+                <TmsCombobox
+                  id='route-filter-vehicle'
+                  value={selectedVehicleId}
+                  onValueChange={(value) => {
+                    setSelectedVehicleId(value);
+                    setPage(0);
+                  }}
+                  options={routeVehicleFilterOptions}
+                  placeholder='Vehicle'
+                  emptyText='No vehicles found'
+                  clearable
+                  className='w-full'
+                />
+              )}
+              <div className='flex gap-2 md:col-span-2 xl:col-span-7 xl:justify-end'>
+                <Button type='submit'>
+                  <Search className='mr-2 h-4 w-4' />
+                  Search
+                </Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={clearRouteFilters}
+                >
+                  <X className='mr-2 h-4 w-4' />
+                  Reset
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -487,7 +910,11 @@ export function RouteListPage() {
                     <TableHead>Route code</TableHead>
                     <TableHead>Route name</TableHead>
                     <TableHead>Origin</TableHead>
+                    <TableHead>Destination type</TableHead>
                     <TableHead>Destination</TableHead>
+                    <TableHead>Assigned vehicle</TableHead>
+                    <TableHead>Departure</TableHead>
+                    <TableHead>Distance / duration</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
@@ -496,7 +923,7 @@ export function RouteListPage() {
                   {routes.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={10}
                         className='py-8 text-center text-muted-foreground'
                       >
                         {isFetching ? 'Loading routes...' : 'No routes found'}
@@ -513,19 +940,25 @@ export function RouteListPage() {
                           {route.routeCode}
                         </TableCell>
                         <TableCell>{route.routeName}</TableCell>
+                        <TableCell>{getHubLabel(route.originHubId)}</TableCell>
                         <TableCell>
-                          {hubById[route.originHubId]?.code ??
-                            route.originHubId}
+                          {formatDestinationTypeLabel(route.destinationType)}
                         </TableCell>
+                        <TableCell>{getDestinationLabel(route)}</TableCell>
                         <TableCell>
-                          {route.destinationType === 'HUB'
-                            ? (hubById[route.destinationHubId ?? -1]?.code ??
-                              route.destinationHubId)
-                            : route.destinationPostOfficeCode}
+                          {getVehicleLabel(route.vehicleId)}
+                        </TableCell>
+                        <TableCell>{route.fixedDepartureTime || '-'}</TableCell>
+                        <TableCell>
+                          {formatRouteMetric(route.estimatedDistanceKm, 'km')} /{' '}
+                          {formatRouteMetric(
+                            route.estimatedDurationMinutes,
+                            'min'
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(route.status)}>
-                            {route.status}
+                            {formatStatusLabel(route.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className='text-right'>
@@ -592,7 +1025,7 @@ export function RouteListPage() {
       <Dialog
         open={isFormOpen}
         onOpenChange={(open) => {
-          if (!isCreating && !isUpdating) {
+          if (!isSavingRoute) {
             setIsFormOpen(open);
             if (!open) {
               setEditingRouteId(null);
@@ -671,7 +1104,7 @@ export function RouteListPage() {
                 <TmsCombobox
                   id='route-origin-hub'
                   value={formValues.originHubId}
-                  onValueChange={(value) => updateField('originHubId', value)}
+                  onValueChange={updateOriginHub}
                   options={hubComboboxOptions}
                   placeholder='Select origin hub'
                   emptyText='No hubs found'
@@ -683,8 +1116,7 @@ export function RouteListPage() {
                   id='route-destination-type'
                   value={formValues.destinationType}
                   onValueChange={(value) =>
-                    updateField(
-                      'destinationType',
+                    updateDestinationType(
                       value as SecondMileRouteDestinationType
                     )
                   }
@@ -702,9 +1134,14 @@ export function RouteListPage() {
                     onValueChange={(value) =>
                       updateField('destinationHubId', value)
                     }
-                    options={hubComboboxOptions}
+                    options={destinationHubComboboxOptions}
                     placeholder='Select destination hub'
-                    emptyText='No hubs found'
+                    emptyText={
+                      formValues.originHubId
+                        ? 'No destination hubs found'
+                        : 'Select origin hub first'
+                    }
+                    disabled={!formValues.originHubId}
                   />
                 </div>
               ) : (
@@ -718,23 +1155,55 @@ export function RouteListPage() {
                     onValueChange={(value) =>
                       updateField('destinationPostOfficeCode', value)
                     }
-                    options={postOfficeComboboxOptions}
-                    placeholder='Select destination post office'
-                    emptyText='No post offices found'
+                    options={mappedPostOfficeComboboxOptions}
+                    placeholder={
+                      formValues.originHubId
+                        ? 'Select mapped post office'
+                        : 'Select origin hub first'
+                    }
+                    emptyText={
+                      formValues.originHubId
+                        ? 'No mapped post offices found'
+                        : 'Select origin hub first'
+                    }
+                    disabled={!formValues.originHubId}
+                    loading={isFetchingMappedPostOffices}
                   />
                 </div>
               )}
               <div className='space-y-2'>
-                <Label htmlFor='route-vehicle'>Vehicle</Label>
+                <Label htmlFor='route-vehicle'>
+                  {formValues.destinationType === 'POST_OFFICE'
+                    ? 'Vehicle *'
+                    : 'Vehicle'}
+                </Label>
                 <TmsCombobox
                   id='route-vehicle'
-                  value={formValues.vehicleId || '__none__'}
-                  onValueChange={(value) =>
-                    updateField('vehicleId', value === '__none__' ? '' : value)
+                  value={
+                    formValues.vehicleId ||
+                    (formValues.destinationType === 'HUB'
+                      ? NO_VEHICLE_VALUE
+                      : '')
                   }
-                  options={vehicleComboboxOptions}
-                  placeholder='Optional vehicle'
-                  emptyText='No vehicles found'
+                  onValueChange={(value) =>
+                    updateField(
+                      'vehicleId',
+                      value === NO_VEHICLE_VALUE ? '' : value
+                    )
+                  }
+                  options={formVehicleComboboxOptions}
+                  placeholder={
+                    formValues.destinationType === 'POST_OFFICE'
+                      ? 'Select vehicle'
+                      : 'Optional vehicle'
+                  }
+                  emptyText={
+                    formValues.originHubId
+                      ? 'No active driver-backed vehicles found'
+                      : 'Select origin hub first'
+                  }
+                  disabled={!formValues.originHubId}
+                  loading={isFetchingFormVehicles}
                 />
               </div>
               <div className='space-y-2'>
@@ -754,6 +1223,9 @@ export function RouteListPage() {
                 <Label htmlFor='distance'>Distance (km)</Label>
                 <Input
                   id='distance'
+                  type='number'
+                  min='0'
+                  step='0.1'
                   value={formValues.estimatedDistanceKm}
                   onChange={(event) =>
                     updateField('estimatedDistanceKm', event.target.value)
@@ -765,6 +1237,9 @@ export function RouteListPage() {
                 <Label htmlFor='duration'>Duration (minutes)</Label>
                 <Input
                   id='duration'
+                  type='number'
+                  min='0'
+                  step='1'
                   value={formValues.estimatedDurationMinutes}
                   onChange={(event) =>
                     updateField('estimatedDurationMinutes', event.target.value)
@@ -801,12 +1276,17 @@ export function RouteListPage() {
               >
                 Cancel
               </Button>
-              <Button type='submit' disabled={isCreating || isUpdating}>
-                {isCreating || isUpdating
+              <Button
+                type='submit'
+                disabled={isSavingRoute || isRouteFormDependencyLoading}
+              >
+                {isSavingRoute
                   ? 'Saving...'
-                  : formMode === 'create'
-                    ? 'Create route'
-                    : 'Update route'}
+                  : isRouteFormDependencyLoading
+                    ? 'Loading data...'
+                    : formMode === 'create'
+                      ? 'Create route'
+                      : 'Update route'}
               </Button>
             </div>
           </form>

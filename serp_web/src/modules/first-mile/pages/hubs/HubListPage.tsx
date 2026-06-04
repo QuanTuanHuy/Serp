@@ -803,10 +803,31 @@ export function HubListPage() {
               Refresh
             </Button>
             {isTmsAdmin ? (
-              <Button type='button' onClick={openCreateDialog}>
-                <Plus className='h-4 w-4 mr-2' />
-                New hub
-              </Button>
+              <>
+                <HubImportCard
+                  isTmsAdmin={isTmsAdmin}
+                  isImportFlowBusy={isImportFlowBusy}
+                  isExportingTemplate={isExportingTemplate}
+                  isValidatingImport={isValidatingImport}
+                  isImportingHubs={isImportingHubs}
+                  importFileInputKey={importFileInputKey}
+                  selectedImportFile={selectedImportFile}
+                  validateImportResult={validateImportResult}
+                  lastImportJob={lastImportJob}
+                  onSelectImportFile={(e) => {
+                    const file = e.target.files?.[0];
+                    setSelectedImportFile(file ?? null);
+                    setValidateImportResult(null);
+                  }}
+                  onDownloadTemplate={handleDownloadTemplate}
+                  onValidateImportFile={handleValidateImportFile}
+                  onImportFile={handleImportFile}
+                />
+                <Button type='button' onClick={openCreateDialog}>
+                  <Plus className='h-4 w-4 mr-2' />
+                  New hub
+                </Button>
+              </>
             ) : (
               <Badge variant='outline' className='gap-1'>
                 <ShieldAlert className='h-3.5 w-3.5' />
@@ -815,28 +836,6 @@ export function HubListPage() {
             )}
           </div>
         </div>
-
-        {isTmsAdmin ? (
-          <HubImportCard
-            isTmsAdmin={isTmsAdmin}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingHubs={isImportingHubs}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            lastImportJob={lastImportJob}
-            onSelectImportFile={(e) => {
-              const file = e.target.files?.[0];
-              setSelectedImportFile(file ?? null);
-              setValidateImportResult(null);
-            }}
-            onDownloadTemplate={handleDownloadTemplate}
-            onValidateImportFile={handleValidateImportFile}
-            onImportFile={handleImportFile}
-          />
-        ) : null}
 
         <HubFiltersCard
           filterMode={filterMode}

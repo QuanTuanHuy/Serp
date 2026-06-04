@@ -36,6 +36,15 @@ interface TmsImportValidationResultDialogProps<T extends object> {
   onConfirmImport?: () => void;
 }
 
+interface TmsImportValidationResultPanelProps<T extends object> {
+  result: ValidateImportFileResponse<T>;
+  entityLabel: string;
+  isImporting?: boolean;
+  onBack?: () => void;
+  onClose: () => void;
+  onConfirmImport?: () => void;
+}
+
 interface DisplayRow {
   item: Record<string, unknown>;
   rowNumber: number;
@@ -183,14 +192,41 @@ export function TmsImportValidationResultDialog<T extends object>({
   isImporting = false,
   onConfirmImport,
 }: TmsImportValidationResultDialogProps<T>) {
+  if (!result) {
+    return null;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className='flex h-[88vh] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-4 sm:max-w-6xl'>
+        <TmsImportValidationResultPanel
+          result={result}
+          entityLabel={entityLabel}
+          isImporting={isImporting}
+          onClose={() => onOpenChange(false)}
+          onConfirmImport={onConfirmImport}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function TmsImportValidationResultPanel<T extends object>({
+  result,
+  entityLabel,
+  isImporting = false,
+  onBack,
+  onClose,
+  onConfirmImport,
+}: TmsImportValidationResultPanelProps<T>) {
   const columns = React.useMemo(
-    () => Object.entries(result?.header ?? {}),
-    [result?.header]
+    () => Object.entries(result.header ?? {}),
+    [result.header]
   );
 
   const errorMessages = React.useMemo(
-    () => splitErrorMessages(result?.error_message),
-    [result?.error_message]
+    () => splitErrorMessages(result.error_message),
+    [result.error_message]
   );
 
   const errorsByRow = React.useMemo(() => {
@@ -209,140 +245,143 @@ export function TmsImportValidationResultDialog<T extends object>({
     return nextErrors;
   }, [errorMessages]);
 
-  const rows = React.useMemo(() => result?.data ?? [], [result?.data]);
+  const rows = React.useMemo(() => result.data ?? [], [result.data]);
   const displayRows = React.useMemo(
     () => buildDisplayRows(rows, errorsByRow),
     [errorsByRow, rows]
   );
 
-  if (!result) {
-    return null;
-  }
-
   const isSuccess = result.is_success;
   const canConfirmImport = isSuccess && Boolean(onConfirmImport);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='flex h-[88vh] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-4 sm:max-w-6xl'>
-        <DialogHeader>
-          <DialogTitle className='flex items-center gap-2'>
-            {isSuccess ? (
-              <CheckCircle2 className='h-5 w-5 text-emerald-600' />
-            ) : (
-              <XCircle className='h-5 w-5 text-destructive' />
-            )}
-            {isSuccess
-              ? 'Your Excel file is ready to import'
-              : 'Review Excel rows before importing'}
-          </DialogTitle>
-          <DialogDescription>
-            Green rows are valid. Red rows need changes; review the Errors
-            column, update the Excel file, then import the {entityLabel} file
-            again.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle className='flex items-center gap-2'>
+          {isSuccess ? (
+            <CheckCircle2 className='h-5 w-5 text-emerald-600' />
+          ) : (
+            <XCircle className='h-5 w-5 text-destructive' />
+          )}
+          {isSuccess
+            ? 'Your Excel file is ready to import'
+            : 'Review Excel rows before importing'}
+        </DialogTitle>
+        <DialogDescription>
+          Green rows are valid. Red rows need changes; review the Errors column,
+          update the Excel file, then import the {entityLabel} file again.
+        </DialogDescription>
+      </DialogHeader>
 
-        <div className='min-h-0 flex-1 overflow-auto rounded-md border'>
-          <div className='min-w-max'>
-            <Table className='min-w-max'>
-              <TableHeader className='sticky top-0 z-10 bg-background'>
-                <TableRow>
-                  <TableHead className='min-w-20'>Row</TableHead>
-                  {columns.map(([key, label]) => (
-                    <TableHead key={key} className='min-w-44'>
-                      {label || key}
-                    </TableHead>
-                  ))}
-                  <TableHead className='min-w-72'>Errors</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayRows.length > 0 ? (
-                  displayRows.map((row) => {
-                    const hasErrors = row.errors.length > 0;
+      <div className='min-h-0 flex-1 overflow-auto rounded-md border'>
+        <div className='min-w-max'>
+          <Table className='min-w-max'>
+            <TableHeader className='sticky top-0 z-10 bg-background'>
+              <TableRow>
+                <TableHead className='min-w-20'>Row</TableHead>
+                {columns.map(([key, label]) => (
+                  <TableHead key={key} className='min-w-44'>
+                    {label || key}
+                  </TableHead>
+                ))}
+                <TableHead className='min-w-72'>Errors</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayRows.length > 0 ? (
+                displayRows.map((row) => {
+                  const hasErrors = row.errors.length > 0;
 
-                    return (
-                      <TableRow
-                        key={row.key}
+                  return (
+                    <TableRow
+                      key={row.key}
+                      className={cn(
+                        hasErrors
+                          ? 'bg-red-50 hover:bg-red-50'
+                          : 'bg-emerald-50/60 hover:bg-emerald-50'
+                      )}
+                    >
+                      <TableCell className='font-medium'>
+                        {row.rowNumber}
+                      </TableCell>
+                      {columns.map(([key]) => (
+                        <TableCell
+                          key={key}
+                          className='max-w-72 min-w-44 truncate'
+                        >
+                          {toDisplayValue(
+                            getCellValue(
+                              row.item,
+                              key,
+                              row.rowNumber,
+                              row.sourceRowIndex
+                            )
+                          )}
+                        </TableCell>
+                      ))}
+                      <TableCell
                         className={cn(
-                          hasErrors
-                            ? 'bg-red-50 hover:bg-red-50'
-                            : 'bg-emerald-50/60 hover:bg-emerald-50'
+                          'whitespace-normal text-muted-foreground',
+                          hasErrors && 'text-destructive'
                         )}
                       >
-                        <TableCell className='font-medium'>
-                          {row.rowNumber}
-                        </TableCell>
-                        {columns.map(([key]) => (
-                          <TableCell
-                            key={key}
-                            className='max-w-72 min-w-44 truncate'
-                          >
-                            {toDisplayValue(
-                              getCellValue(
-                                row.item,
-                                key,
-                                row.rowNumber,
-                                row.sourceRowIndex
-                              )
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell
-                          className={cn(
-                            'whitespace-normal text-muted-foreground',
-                            hasErrors && 'text-destructive'
-                          )}
-                        >
-                          {hasErrors
-                            ? Array.from(new Set(row.errors)).join(' ')
-                            : 'OK'}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length + 2}
-                      className='h-24 text-center text-muted-foreground'
-                    >
-                      {errorMessages.length > 0
-                        ? errorMessages.join(' ')
-                        : 'No parsed rows are available.'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                        {hasErrors
+                          ? Array.from(new Set(row.errors)).join(' ')
+                          : 'OK'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + 2}
+                    className='h-24 text-center text-muted-foreground'
+                  >
+                    {errorMessages.length > 0
+                      ? errorMessages.join(' ')
+                      : 'No parsed rows are available.'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
-        <DialogFooter className='gap-2 sm:justify-end'>
+      </div>
+      <DialogFooter className='gap-2 sm:justify-end'>
+        {onBack ? (
           <Button
             type='button'
             variant='outline'
-            onClick={() => onOpenChange(false)}
+            onClick={onBack}
             disabled={isImporting}
           >
-            Cancel
+            Back
           </Button>
-          <Button
-            type='button'
-            variant='destructive'
-            onClick={onConfirmImport}
-            disabled={!canConfirmImport || isImporting}
-            className={cn(!canConfirmImport && 'opacity-40')}
-          >
-            {isImporting ? (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            ) : (
-              <FileUp className='mr-2 h-4 w-4' />
-            )}
-            Confirm import
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        ) : null}
+        <Button
+          type='button'
+          variant='outline'
+          onClick={onClose}
+          disabled={isImporting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type='button'
+          variant='destructive'
+          onClick={onConfirmImport}
+          disabled={!canConfirmImport || isImporting}
+          className={cn(!canConfirmImport && 'opacity-40')}
+        >
+          {isImporting ? (
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          ) : (
+            <FileUp className='mr-2 h-4 w-4' />
+          )}
+          Confirm import
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

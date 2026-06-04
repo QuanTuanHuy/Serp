@@ -1688,6 +1688,31 @@ export const OrderListPage: React.FC = () => {
       <OrderPageHeader
         canMutateOrders={canMutateOrders}
         onCreateOrder={handleOpenCreateDialog}
+        importAction={
+          canMutateOrders ? (
+            <OrderImportCard
+              canMutateOrders={canMutateOrders}
+              isImportFlowBusy={isImportFlowBusy}
+              isExportingTemplate={isExportingTemplate}
+              isValidatingImport={isValidatingImport}
+              isImportingOrders={isImportingOrders}
+              importFileInputKey={importFileInputKey}
+              selectedImportFile={selectedImportFile}
+              validateImportResult={validateImportResult}
+              lastImportJob={lastImportJob}
+              onDownloadTemplate={() => {
+                void handleDownloadTemplate();
+              }}
+              onSelectImportFile={handleSelectImportFile}
+              onValidateImportFile={() => {
+                void handleValidateImportFile();
+              }}
+              onImportFile={() => {
+                void handleImportFile();
+              }}
+            />
+          ) : null
+        }
       />
 
       <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
@@ -1697,31 +1722,6 @@ export const OrderListPage: React.FC = () => {
             badgeLabel={getScopeBadgeLabel(accessScope)}
             description={getScopeDescription(accessScope)}
             className='flex-1'
-          />
-        ) : null}
-
-        {canMutateOrders ? (
-          <OrderImportCard
-            className='w-full lg:max-w-2xl'
-            canMutateOrders={canMutateOrders}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingOrders={isImportingOrders}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            lastImportJob={lastImportJob}
-            onDownloadTemplate={() => {
-              void handleDownloadTemplate();
-            }}
-            onSelectImportFile={handleSelectImportFile}
-            onValidateImportFile={() => {
-              void handleValidateImportFile();
-            }}
-            onImportFile={() => {
-              void handleImportFile();
-            }}
           />
         ) : null}
       </div>

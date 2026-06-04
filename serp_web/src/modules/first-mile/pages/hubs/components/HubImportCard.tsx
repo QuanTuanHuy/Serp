@@ -4,10 +4,7 @@
  */
 
 import React from 'react';
-import {
-  TmsExcelImportToolbar,
-  TmsImportValidationResultDialog,
-} from '../../../components/list';
+import { TmsExcelImportToolbar } from '../../../components/list';
 import type {
   HubImportItem,
   ImportHistory,
@@ -47,15 +44,6 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
   onImportFile,
   className,
 }) => {
-  const [isValidationDialogOpen, setIsValidationDialogOpen] =
-    React.useState(false);
-
-  React.useEffect(() => {
-    if (validateImportResult) {
-      setIsValidationDialogOpen(true);
-    }
-  }, [validateImportResult]);
-
   const details = lastImportJob ? (
     <div className='space-y-3 text-xs'>
       <div className='rounded-md border p-2 text-muted-foreground'>
@@ -69,37 +57,29 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
   ) : undefined;
 
   return (
-    <>
-      <TmsExcelImportToolbar
-        className={className}
-        canImport={isTmsAdmin}
-        entityLabel='hubs'
-        isBusy={isImportFlowBusy}
-        isExportingTemplate={isExportingTemplate}
-        isValidating={isValidatingImport}
-        isImporting={isImportingHubs}
-        importFileInputKey={importFileInputKey}
-        selectedFileName={selectedImportFile?.name}
-        permissionHint='Import requires TMS_ADMIN.'
-        onDownloadTemplate={() => {
-          void onDownloadTemplate();
-        }}
-        onSelectFile={onSelectImportFile}
-        onValidate={() => {
-          void onValidateImportFile();
-        }}
-        details={details}
-      />
-      <TmsImportValidationResultDialog
-        open={isValidationDialogOpen}
-        onOpenChange={setIsValidationDialogOpen}
-        result={validateImportResult}
-        entityLabel='hub'
-        isImporting={isImportingHubs}
-        onConfirmImport={() => {
-          void onImportFile();
-        }}
-      />
-    </>
+    <TmsExcelImportToolbar
+      className={className}
+      canImport={isTmsAdmin}
+      entityLabel='hubs'
+      isBusy={isImportFlowBusy}
+      isExportingTemplate={isExportingTemplate}
+      isValidating={isValidatingImport}
+      isImporting={isImportingHubs}
+      importFileInputKey={importFileInputKey}
+      selectedFileName={selectedImportFile?.name}
+      validateImportResult={validateImportResult}
+      permissionHint='Import requires TMS_ADMIN.'
+      onDownloadTemplate={() => {
+        void onDownloadTemplate();
+      }}
+      onSelectFile={onSelectImportFile}
+      onValidate={() => {
+        void onValidateImportFile();
+      }}
+      onConfirmImport={() => {
+        void onImportFile();
+      }}
+      details={details}
+    />
   );
 };

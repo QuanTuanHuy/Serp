@@ -6,7 +6,13 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui';
 
 export interface RouteMapLine {
   id: number;
@@ -35,6 +41,19 @@ const DEFAULT_CENTER = {
   longitude: 108.20623,
 };
 const DEFAULT_ZOOM = 6;
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[char] ?? char;
+  });
+}
 
 export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
   lines,
@@ -71,7 +90,10 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
         })
         .addTo(map);
 
-      map.setView([DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude], DEFAULT_ZOOM);
+      map.setView(
+        [DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude],
+        DEFAULT_ZOOM
+      );
       layerGroupRef.current = leaflet.layerGroup().addTo(map);
       window.setTimeout(() => map.invalidateSize(), 0);
     };
@@ -132,7 +154,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
           fillOpacity: 0.9,
         })
         .bindPopup(
-          `<div style="font-size:12px;line-height:1.4"><strong>${line.routeCode}</strong><br/>${line.origin.name}<br/><span style="color:#64748b">Origin hub</span></div>`
+          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeCode)}</strong><br/>${escapeHtml(line.origin.name)}<br/><span style="color:#64748b">Origin hub</span></div>`
         )
         .addTo(layerGroup);
 
@@ -145,13 +167,16 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
           fillOpacity: 0.9,
         })
         .bindPopup(
-          `<div style="font-size:12px;line-height:1.4"><strong>${line.routeName}</strong><br/>${line.destination.name}<br/><span style="color:#64748b">Destination ${line.destination.type === 'HUB' ? 'hub' : 'post office'}</span></div>`
+          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeName)}</strong><br/>${escapeHtml(line.destination.name)}<br/><span style="color:#64748b">Destination ${line.destination.type === 'HUB' ? 'hub' : 'post office'}</span></div>`
         )
         .addTo(layerGroup);
     });
 
     if (points.length === 0) {
-      map.setView([DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude], DEFAULT_ZOOM);
+      map.setView(
+        [DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude],
+        DEFAULT_ZOOM
+      );
       return;
     }
     if (points.length === 1) {
@@ -165,9 +190,25 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
     <Card>
       <CardHeader>
         <CardTitle>Route map</CardTitle>
+        <CardDescription>
+          {lines.length > 0
+            ? `${lines.length} route${lines.length === 1 ? '' : 's'} with complete coordinates`
+            : 'No routes with complete coordinates to display.'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div ref={containerRef} className='h-[420px] overflow-hidden rounded-lg border' />
+        <div className='relative'>
+          <div
+            ref={containerRef}
+            className='h-[420px] overflow-hidden rounded-lg border'
+          />
+          {lines.length === 0 && (
+            <div className='pointer-events-none absolute inset-x-4 top-4 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm'>
+              Add origin and destination coordinates to preview route lines
+              here.
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

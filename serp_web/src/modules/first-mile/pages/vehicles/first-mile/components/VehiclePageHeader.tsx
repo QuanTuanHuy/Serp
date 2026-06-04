@@ -9,11 +9,13 @@ import { Plus, ShieldAlert } from 'lucide-react';
 
 interface VehiclePageHeaderProps {
   canManageVehicles: boolean;
+  importAction?: React.ReactNode;
   onCreateVehicle: () => void;
 }
 
 export const VehiclePageHeader: React.FC<VehiclePageHeaderProps> = ({
   canManageVehicles,
+  importAction,
   onCreateVehicle,
 }) => {
   return (
@@ -27,10 +29,13 @@ export const VehiclePageHeader: React.FC<VehiclePageHeaderProps> = ({
       </div>
 
       {canManageVehicles ? (
-        <Button onClick={onCreateVehicle}>
-          <Plus className='mr-2 h-4 w-4' />
-          New Vehicle
-        </Button>
+        <div className='flex flex-wrap items-center gap-2'>
+          {importAction}
+          <Button onClick={onCreateVehicle}>
+            <Plus className='mr-2 h-4 w-4' />
+            New Vehicle
+          </Button>
+        </div>
       ) : (
         <Badge variant='outline' className='gap-1'>
           <ShieldAlert className='h-3.5 w-3.5' />

@@ -641,10 +641,27 @@ export const PostOfficeListPage: React.FC = () => {
           </div>
 
           {isTmsAdmin ? (
-            <Button onClick={handleOpenCreateDialog}>
-              <Plus className='h-4 w-4 mr-2' />
-              New Post Office
-            </Button>
+            <div className='flex flex-wrap items-center gap-2'>
+              <PostOfficeImportCard
+                isTmsAdmin={isTmsAdmin}
+                isImportFlowBusy={isImportFlowBusy}
+                isExportingTemplate={isExportingTemplate}
+                isValidatingImport={isValidatingImport}
+                isImportingPostOffices={isImportingPostOffices}
+                importFileInputKey={importFileInputKey}
+                selectedImportFile={selectedImportFile}
+                validateImportResult={validateImportResult}
+                lastImportJob={lastImportJob}
+                onSelectImportFile={handleSelectImportFile}
+                onDownloadTemplate={handleDownloadTemplate}
+                onValidateImportFile={handleValidateImportFile}
+                onImportFile={handleImportFile}
+              />
+              <Button onClick={handleOpenCreateDialog}>
+                <Plus className='h-4 w-4 mr-2' />
+                New Post Office
+              </Button>
+            </div>
           ) : (
             <Badge variant='outline' className='gap-1'>
               <ShieldAlert className='h-3.5 w-3.5' />
@@ -652,25 +669,6 @@ export const PostOfficeListPage: React.FC = () => {
             </Badge>
           )}
         </div>
-
-        {isTmsAdmin ? (
-          <PostOfficeImportCard
-            className='w-full'
-            isTmsAdmin={isTmsAdmin}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingPostOffices={isImportingPostOffices}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            lastImportJob={lastImportJob}
-            onSelectImportFile={handleSelectImportFile}
-            onDownloadTemplate={handleDownloadTemplate}
-            onValidateImportFile={handleValidateImportFile}
-            onImportFile={handleImportFile}
-          />
-        ) : null}
 
         <PostOfficeFiltersCard
           filterMode={filterMode}

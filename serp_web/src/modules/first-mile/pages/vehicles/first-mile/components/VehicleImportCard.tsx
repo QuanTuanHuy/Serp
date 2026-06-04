@@ -4,17 +4,7 @@
  */
 
 import React from 'react';
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-} from '@/shared/components/ui';
-import { Download, FileUp, Loader2 } from 'lucide-react';
-import { TmsImportValidationResultDialog } from '../../../../components/list';
+import { TmsExcelImportToolbar } from '../../../../components/list';
 import type {
   ImportHistory,
   ValidateImportFileResponse,
@@ -52,100 +42,36 @@ export const VehicleImportCard: React.FC<VehicleImportCardProps> = ({
   onValidateFile,
   onImportFile,
 }) => {
-  const [isValidationDialogOpen, setIsValidationDialogOpen] =
-    React.useState(false);
-
-  React.useEffect(() => {
-    if (validateImportResult) {
-      setIsValidationDialogOpen(true);
-    }
-  }, [validateImportResult]);
+  const details = lastImportJob ? (
+    <div className='space-y-1 rounded-md border p-2 text-xs'>
+      <p className='font-medium text-foreground'>Latest import job</p>
+      <p className='text-muted-foreground'>
+        #{lastImportJob.id} - {lastImportJob.file_name}
+      </p>
+      <p className='text-muted-foreground'>
+        Status: {lastImportJob.status} | Success/Failed:{' '}
+        {lastImportJob.success_records}/{lastImportJob.failed_records}
+      </p>
+    </div>
+  ) : undefined;
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Excel Import</CardTitle>
-          <CardDescription>
-            Download template, choose the completed file, then import vehicles.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-col gap-2 lg:flex-row lg:items-center'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={onDownloadTemplate}
-              disabled={!canManageVehicles || isImportFlowBusy}
-            >
-              {isExportingTemplate ? (
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              ) : (
-                <Download className='mr-2 h-4 w-4' />
-              )}
-              Download template
-            </Button>
-
-            <Input
-              key={importFileInputKey}
-              type='file'
-              accept='.xlsx,.xls'
-              onChange={onSelectImportFile}
-              disabled={!canManageVehicles || isImportFlowBusy}
-              className='lg:max-w-sm'
-            />
-
-            <Button
-              type='button'
-              onClick={onValidateFile}
-              disabled={
-                !canManageVehicles || !selectedImportFile || isImportFlowBusy
-              }
-            >
-              {isValidatingImport || isImportingVehicles ? (
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-              ) : (
-                <FileUp className='mr-2 h-4 w-4' />
-              )}
-              Import file
-            </Button>
-          </div>
-
-          {!canManageVehicles && (
-            <p className='text-xs text-muted-foreground'>
-              Import actions require TMS_ADMIN or TMS_POSTOFFICER_MANAGER
-              permission.
-            </p>
-          )}
-
-          {selectedImportFile && (
-            <p className='text-sm text-muted-foreground'>
-              Selected file: {selectedImportFile.name}
-            </p>
-          )}
-
-          {lastImportJob && (
-            <div className='space-y-1 rounded-lg border p-3'>
-              <p className='text-sm font-medium'>Latest import job</p>
-              <p className='text-xs text-muted-foreground'>
-                #{lastImportJob.id} - {lastImportJob.file_name}
-              </p>
-              <p className='text-xs text-muted-foreground'>
-                Status: {lastImportJob.status} | Success/Failed:{' '}
-                {lastImportJob.success_records}/{lastImportJob.failed_records}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      <TmsImportValidationResultDialog
-        open={isValidationDialogOpen}
-        onOpenChange={setIsValidationDialogOpen}
-        result={validateImportResult}
-        entityLabel='vehicle'
-        isImporting={isImportingVehicles}
-        onConfirmImport={onImportFile}
-      />
-    </>
+    <TmsExcelImportToolbar
+      canImport={canManageVehicles}
+      entityLabel='vehicles'
+      isBusy={isImportFlowBusy}
+      isExportingTemplate={isExportingTemplate}
+      isValidating={isValidatingImport}
+      isImporting={isImportingVehicles}
+      importFileInputKey={importFileInputKey}
+      selectedFileName={selectedImportFile?.name}
+      validateImportResult={validateImportResult}
+      permissionHint='Import actions require TMS_ADMIN or TMS_POSTOFFICER_MANAGER permission.'
+      onDownloadTemplate={onDownloadTemplate}
+      onSelectFile={onSelectImportFile}
+      onValidate={onValidateFile}
+      onConfirmImport={onImportFile}
+      details={details}
+    />
   );
 };
