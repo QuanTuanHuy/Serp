@@ -753,6 +753,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -771,6 +772,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -788,6 +790,8 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
@@ -845,6 +849,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
         { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+        { type: 'schoolBus/TransportRequest', id: 'LIST' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
     pauseSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
@@ -854,6 +861,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
         { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+        { type: 'schoolBus/TransportRequest', id: 'LIST' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
     stopSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
@@ -863,6 +873,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
         { type: 'schoolBus/TransportRequest', id: `SUB-HISTORY-${id}` },
+        { type: 'schoolBus/TransportRequest', id: 'LIST' },
+        { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
     getSubscriptionHistory: builder.query<
@@ -1873,77 +1886,76 @@ export const schoolBusApi = api.injectEndpoints({
   }),
 });
 
-export const {
+const {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
-  useGetSchoolBusSummaryQuery,
-  useGetSchoolBusReportQuery,
-  useGetSchoolBusReportTripsQuery,
-  useGetSchoolBusReportAttendanceQuery,
-  useGetSchoolBusReportCapacityQuery,
-  useGetBusTypesQuery,
-  useGetSchoolsQuery,
-  useGetSchoolByIdQuery,
+  useGetSchoolBusSummaryQuery: useGetSchoolBusSummaryQueryOrig,
+  useGetSchoolBusReportQuery: useGetSchoolBusReportQueryOrig,
+  useGetSchoolBusReportTripsQuery: useGetSchoolBusReportTripsQueryOrig,
+  useGetSchoolBusReportAttendanceQuery: useGetSchoolBusReportAttendanceQueryOrig,
+  useGetSchoolBusReportCapacityQuery: useGetSchoolBusReportCapacityQueryOrig,
+  useGetBusTypesQuery: useGetBusTypesQueryOrig,
+  useGetSchoolsQuery: useGetSchoolsQueryOrig,
+  useGetSchoolByIdQuery: useGetSchoolByIdQueryOrig,
   useCreateSchoolMutation,
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
-  useGetParentsQuery,
-  useGetParentByIdQuery,
+  useGetParentsQuery: useGetParentsQueryOrig,
+  useGetParentByIdQuery: useGetParentByIdQueryOrig,
   useCreateParentMutation,
   useUpdateParentMutation,
   useDeleteParentMutation,
-  useGetStudentsQuery,
-  useGetStudentByIdQuery,
+  useGetStudentsQuery: useGetStudentsQueryOrig,
+  useGetStudentByIdQuery: useGetStudentByIdQueryOrig,
   useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
-  useGetBusesQuery,
-  useGetBusByIdQuery,
+  useGetBusesQuery: useGetBusesQueryOrig,
+  useGetBusByIdQuery: useGetBusByIdQueryOrig,
   useCreateBusMutation,
   useUpdateBusMutation,
   useDeleteBusMutation,
-  useGetDriversQuery,
-  useGetDriverByIdQuery,
+  useGetDriversQuery: useGetDriversQueryOrig,
+  useGetDriverByIdQuery: useGetDriverByIdQueryOrig,
   useCreateDriverMutation,
   useUpdateDriverMutation,
   useDeleteDriverMutation,
-  useGetAttendantsQuery,
-  useGetAttendantByIdQuery,
+  useGetAttendantsQuery: useGetAttendantsQueryOrig,
+  useGetAttendantByIdQuery: useGetAttendantByIdQueryOrig,
   useCreateAttendantMutation,
   useUpdateAttendantMutation,
   useDeleteAttendantMutation,
-  useGetPickupPointsQuery,
-  useGetPickupPointByIdQuery,
+  useGetPickupPointsQuery: useGetPickupPointsQueryOrig,
+  useGetPickupPointByIdQuery: useGetPickupPointByIdQueryOrig,
   useCreatePickupPointMutation,
   useUpdatePickupPointMutation,
   useDeletePickupPointMutation,
-  useGetDepotsQuery,
-  useGetDepotByIdQuery,
+  useGetDepotsQuery: useGetDepotsQueryOrig,
+  useGetDepotByIdQuery: useGetDepotByIdQueryOrig,
   useCreateDepotMutation,
   useUpdateDepotMutation,
   useDeleteDepotMutation,
-  useGetTransportRequestsQuery,
-  useGetTransportRequestByIdQuery,
+  useGetTransportRequestsQuery: useGetTransportRequestsQueryOrig,
+  useGetTransportRequestByIdQuery: useGetTransportRequestByIdQueryOrig,
   useCreateTransportRequestMutation,
   useUpdateTransportRequestMutation,
   useApproveTransportRequestMutation,
   useRejectTransportRequestMutation,
   useCancelTransportRequestMutation,
-  useGetTransportRequestHistoryQuery,
-  useGetSubscriptionsQuery,
-  useGetSubscriptionByIdQuery,
+  useGetTransportRequestHistoryQuery: useGetTransportRequestHistoryQueryOrig,
+  useGetSubscriptionsQuery: useGetSubscriptionsQueryOrig,
+  useGetSubscriptionByIdQuery: useGetSubscriptionByIdQueryOrig,
   useCreateSubscriptionMutation,
   useActivateSubscriptionMutation,
   usePauseSubscriptionMutation,
   useStopSubscriptionMutation,
-  useGetSubscriptionHistoryQuery,
-  useGetSubscriptionPausePeriodsQuery,
-  useGetRoutesQuery,
-  useGetRouteByIdQuery,
-  useGetRoutePathQuery,
+  useGetSubscriptionHistoryQuery: useGetSubscriptionHistoryQueryOrig,
+  useGetSubscriptionPausePeriodsQuery: useGetSubscriptionPausePeriodsQueryOrig,
+  useGetRoutesQuery: useGetRoutesQueryOrig,
+  useGetRouteByIdQuery: useGetRouteByIdQueryOrig,
+  useGetRoutePathQuery: useGetRoutePathQueryOrig,
   useUpdateRouteMutation,
-  // useGenerateGreedyPlanMutation removed — replaced by useGenerateGreedyForSessionMutation
-  useGetAssignmentHistoryQuery,
+  useGetAssignmentHistoryQuery: useGetAssignmentHistoryQueryOrig,
   useAssignRouteMutation,
   useManualDispatchRouteMutation,
   useReorderRouteStopsMutation,
@@ -1953,26 +1965,26 @@ export const {
   useRemoveRouteStudentMutation,
   useComputeRoutePathMutation,
   useCreateTripFromRouteMutation,
-  useGetTripsQuery,
-  useGetTripByIdQuery,
+  useGetTripsQuery: useGetTripsQueryOrig,
+  useGetTripByIdQuery: useGetTripByIdQueryOrig,
   useStartTripMutation,
   useArriveTripStopMutation,
   useDepartTripStopMutation,
   useSkipTripStopMutation,
   useCompleteTripMutation,
   useCancelTripMutation,
-  useGetTripStopsQuery,
-  useGetTripStudentsQuery,
-  useGetTripAttendanceQuery,
-  useGetTripAttendanceManifestQuery,
-  useGetTripAttendanceSummaryQuery,
+  useGetTripStopsQuery: useGetTripStopsQueryOrig,
+  useGetTripStudentsQuery: useGetTripStudentsQueryOrig,
+  useGetTripAttendanceQuery: useGetTripAttendanceQueryOrig,
+  useGetTripAttendanceManifestQuery: useGetTripAttendanceManifestQueryOrig,
+  useGetTripAttendanceSummaryQuery: useGetTripAttendanceSummaryQueryOrig,
   useBoardTripStudentMutation,
   useDropoffTripStudentMutation,
   useAbsentTripStudentMutation,
   useNoShowTripStudentMutation,
   useCreateDemoSessionMutation,
-  useGetDemoSessionQuery,
-  useGetDemoSessionByTripQuery,
+  useGetDemoSessionQuery: useGetDemoSessionQueryOrig,
+  useGetDemoSessionByTripQuery: useGetDemoSessionByTripQueryOrig,
   useStartDemoSessionMutation,
   usePauseDemoSessionMutation,
   useResumeDemoSessionMutation,
@@ -1983,40 +1995,186 @@ export const {
   useJumpDemoSessionToStartMutation,
   useJumpDemoSessionToEndMutation,
   useUpdateDemoAutomationSettingsMutation,
-  useGetDemoSessionEventsQuery,
-  useGetAttendanceQuery,
-  useGetTripHistoryQuery,
-  // School Schedule
-  useGetSchoolSchedulesQuery,
-  useGetActiveSchoolSchedulesQuery,
-  useGetSchoolScheduleByIdQuery,
+  useGetDemoSessionEventsQuery: useGetDemoSessionEventsQueryOrig,
+  useGetAttendanceQuery: useGetAttendanceQueryOrig,
+  useGetTripHistoryQuery: useGetTripHistoryQueryOrig,
+  useGetSchoolSchedulesQuery: useGetSchoolSchedulesQueryOrig,
+  useGetActiveSchoolSchedulesQuery: useGetActiveSchoolSchedulesQueryOrig,
+  useGetSchoolScheduleByIdQuery: useGetSchoolScheduleByIdQueryOrig,
   useCreateSchoolScheduleMutation,
   useUpdateSchoolScheduleMutation,
   useDeleteSchoolScheduleMutation,
-  // School Pickup Point
-  useGetSchoolPickupPointsQuery,
-  useGetActiveSchoolPickupPointsQuery,
-  useGetSchoolPickupPointsCompatibilityQuery,
-  useGetAllActiveSchoolPickupLinksQuery,
+  useGetSchoolPickupPointsQuery: useGetSchoolPickupPointsQueryOrig,
+  useGetActiveSchoolPickupPointsQuery: useGetActiveSchoolPickupPointsQueryOrig,
+  useGetSchoolPickupPointsCompatibilityQuery: useGetSchoolPickupPointsCompatibilityQueryOrig,
+  useGetAllActiveSchoolPickupLinksQuery: useGetAllActiveSchoolPickupLinksQueryOrig,
   useLinkSchoolPickupPointMutation,
   useUpdateSchoolPickupPointMutation,
   useUnlinkSchoolPickupPointMutation,
-  // School Pickup Point Windows
-  useGetSchoolPickupPointWindowsQuery,
-  useGetScheduleWindowsQuery,
+  useGetSchoolPickupPointWindowsQuery: useGetSchoolPickupPointWindowsQueryOrig,
+  useGetScheduleWindowsQuery: useGetScheduleWindowsQueryOrig,
   useCreateSchoolPickupPointWindowMutation,
   useUpdateSchoolPickupPointWindowMutation,
   useDeleteSchoolPickupPointWindowMutation,
-  // Planning Sessions
   usePreviewPlanningDemandMutation,
   useCreatePlanningSessionMutation,
-  useGetPlanningSessionsQueryQuery,
-  useGetPlanningSessionQuery,
+  useGetPlanningSessionsQueryQuery: useGetPlanningSessionsQueryQueryOrig,
+  useGetPlanningSessionQuery: useGetPlanningSessionQueryOrig,
   useGenerateGreedyForSessionMutation,
   usePublishPlanningSessionMutation,
   useCancelPlanningSessionMutation,
-  useGetSessionRoutesQuery,
+  useGetSessionRoutesQuery: useGetSessionRoutesQueryOrig,
   useCreateRouteInSessionMutation,
-  useGetSessionEligibleStudentsQuery,
+  useGetSessionEligibleStudentsQuery: useGetSessionEligibleStudentsQueryOrig,
   useAssignStudentToRouteMutation,
 } = schoolBusApi;
+
+function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
+  return ((arg: any, options?: any) => {
+    return hook(arg, { refetchOnMountOrArgChange: true, ...options });
+  }) as unknown as T;
+}
+
+export const useGetSchoolBusSummaryQuery = wrapQueryHook(useGetSchoolBusSummaryQueryOrig);
+export const useGetSchoolBusReportQuery = wrapQueryHook(useGetSchoolBusReportQueryOrig);
+export const useGetSchoolBusReportTripsQuery = wrapQueryHook(useGetSchoolBusReportTripsQueryOrig);
+export const useGetSchoolBusReportAttendanceQuery = wrapQueryHook(useGetSchoolBusReportAttendanceQueryOrig);
+export const useGetSchoolBusReportCapacityQuery = wrapQueryHook(useGetSchoolBusReportCapacityQueryOrig);
+export const useGetBusTypesQuery = wrapQueryHook(useGetBusTypesQueryOrig);
+export const useGetSchoolsQuery = wrapQueryHook(useGetSchoolsQueryOrig);
+export const useGetSchoolByIdQuery = wrapQueryHook(useGetSchoolByIdQueryOrig);
+export const useGetParentsQuery = wrapQueryHook(useGetParentsQueryOrig);
+export const useGetParentByIdQuery = wrapQueryHook(useGetParentByIdQueryOrig);
+export const useGetStudentsQuery = wrapQueryHook(useGetStudentsQueryOrig);
+export const useGetStudentByIdQuery = wrapQueryHook(useGetStudentByIdQueryOrig);
+export const useGetBusesQuery = wrapQueryHook(useGetBusesQueryOrig);
+export const useGetBusByIdQuery = wrapQueryHook(useGetBusByIdQueryOrig);
+export const useGetDriversQuery = wrapQueryHook(useGetDriversQueryOrig);
+export const useGetDriverByIdQuery = wrapQueryHook(useGetDriverByIdQueryOrig);
+export const useGetAttendantsQuery = wrapQueryHook(useGetAttendantsQueryOrig);
+export const useGetAttendantByIdQuery = wrapQueryHook(useGetAttendantByIdQueryOrig);
+export const useGetPickupPointsQuery = wrapQueryHook(useGetPickupPointsQueryOrig);
+export const useGetPickupPointByIdQuery = wrapQueryHook(useGetPickupPointByIdQueryOrig);
+export const useGetDepotsQuery = wrapQueryHook(useGetDepotsQueryOrig);
+export const useGetDepotByIdQuery = wrapQueryHook(useGetDepotByIdQueryOrig);
+export const useGetTransportRequestsQuery = wrapQueryHook(useGetTransportRequestsQueryOrig);
+export const useGetTransportRequestByIdQuery = wrapQueryHook(useGetTransportRequestByIdQueryOrig);
+export const useGetTransportRequestHistoryQuery = wrapQueryHook(useGetTransportRequestHistoryQueryOrig);
+export const useGetSubscriptionsQuery = wrapQueryHook(useGetSubscriptionsQueryOrig);
+export const useGetSubscriptionByIdQuery = wrapQueryHook(useGetSubscriptionByIdQueryOrig);
+export const useGetSubscriptionHistoryQuery = wrapQueryHook(useGetSubscriptionHistoryQueryOrig);
+export const useGetSubscriptionPausePeriodsQuery = wrapQueryHook(useGetSubscriptionPausePeriodsQueryOrig);
+export const useGetRoutesQuery = wrapQueryHook(useGetRoutesQueryOrig);
+export const useGetRouteByIdQuery = wrapQueryHook(useGetRouteByIdQueryOrig);
+export const useGetRoutePathQuery = wrapQueryHook(useGetRoutePathQueryOrig);
+export const useGetAssignmentHistoryQuery = wrapQueryHook(useGetAssignmentHistoryQueryOrig);
+export const useGetTripsQuery = wrapQueryHook(useGetTripsQueryOrig);
+export const useGetTripByIdQuery = wrapQueryHook(useGetTripByIdQueryOrig);
+export const useGetTripStopsQuery = wrapQueryHook(useGetTripStopsQueryOrig);
+export const useGetTripStudentsQuery = wrapQueryHook(useGetTripStudentsQueryOrig);
+export const useGetTripAttendanceQuery = wrapQueryHook(useGetTripAttendanceQueryOrig);
+export const useGetTripAttendanceManifestQuery = wrapQueryHook(useGetTripAttendanceManifestQueryOrig);
+export const useGetTripAttendanceSummaryQuery = wrapQueryHook(useGetTripAttendanceSummaryQueryOrig);
+export const useGetDemoSessionQuery = wrapQueryHook(useGetDemoSessionQueryOrig);
+export const useGetDemoSessionByTripQuery = wrapQueryHook(useGetDemoSessionByTripQueryOrig);
+export const useGetDemoSessionEventsQuery = wrapQueryHook(useGetDemoSessionEventsQueryOrig);
+export const useGetAttendanceQuery = wrapQueryHook(useGetAttendanceQueryOrig);
+export const useGetTripHistoryQuery = wrapQueryHook(useGetTripHistoryQueryOrig);
+export const useGetSchoolSchedulesQuery = wrapQueryHook(useGetSchoolSchedulesQueryOrig);
+export const useGetActiveSchoolSchedulesQuery = wrapQueryHook(useGetActiveSchoolSchedulesQueryOrig);
+export const useGetSchoolScheduleByIdQuery = wrapQueryHook(useGetSchoolScheduleByIdQueryOrig);
+export const useGetSchoolPickupPointsQuery = wrapQueryHook(useGetSchoolPickupPointsQueryOrig);
+export const useGetActiveSchoolPickupPointsQuery = wrapQueryHook(useGetActiveSchoolPickupPointsQueryOrig);
+export const useGetSchoolPickupPointsCompatibilityQuery = wrapQueryHook(useGetSchoolPickupPointsCompatibilityQueryOrig);
+export const useGetAllActiveSchoolPickupLinksQuery = wrapQueryHook(useGetAllActiveSchoolPickupLinksQueryOrig);
+export const useGetSchoolPickupPointWindowsQuery = wrapQueryHook(useGetSchoolPickupPointWindowsQueryOrig);
+export const useGetScheduleWindowsQuery = wrapQueryHook(useGetScheduleWindowsQueryOrig);
+export const useGetPlanningSessionsQueryQuery = wrapQueryHook(useGetPlanningSessionsQueryQueryOrig);
+export const useGetPlanningSessionQuery = wrapQueryHook(useGetPlanningSessionQueryOrig);
+export const useGetSessionRoutesQuery = wrapQueryHook(useGetSessionRoutesQueryOrig);
+export const useGetSessionEligibleStudentsQuery = wrapQueryHook(useGetSessionEligibleStudentsQueryOrig);
+
+export {
+  useLazySearchMapLocationsQuery,
+  useLazyReverseMapLocationQuery,
+  useCreateSchoolMutation,
+  useUpdateSchoolMutation,
+  useDeleteSchoolMutation,
+  useCreateParentMutation,
+  useUpdateParentMutation,
+  useDeleteParentMutation,
+  useCreateStudentMutation,
+  useUpdateStudentMutation,
+  useDeleteStudentMutation,
+  useCreateBusMutation,
+  useUpdateBusMutation,
+  useDeleteBusMutation,
+  useCreateDriverMutation,
+  useUpdateDriverMutation,
+  useDeleteDriverMutation,
+  useCreateAttendantMutation,
+  useUpdateAttendantMutation,
+  useDeleteAttendantMutation,
+  useCreatePickupPointMutation,
+  useUpdatePickupPointMutation,
+  useDeletePickupPointMutation,
+  useCreateDepotMutation,
+  useUpdateDepotMutation,
+  useDeleteDepotMutation,
+  useCreateTransportRequestMutation,
+  useUpdateTransportRequestMutation,
+  useApproveTransportRequestMutation,
+  useRejectTransportRequestMutation,
+  useCancelTransportRequestMutation,
+  useCreateSubscriptionMutation,
+  useActivateSubscriptionMutation,
+  usePauseSubscriptionMutation,
+  useStopSubscriptionMutation,
+  useUpdateRouteMutation,
+  useAssignRouteMutation,
+  useManualDispatchRouteMutation,
+  useReorderRouteStopsMutation,
+  useAddRouteStopMutation,
+  useRemoveRouteStopMutation,
+  useMoveRouteStudentMutation,
+  useRemoveRouteStudentMutation,
+  useComputeRoutePathMutation,
+  useCreateTripFromRouteMutation,
+  useStartTripMutation,
+  useArriveTripStopMutation,
+  useDepartTripStopMutation,
+  useSkipTripStopMutation,
+  useCompleteTripMutation,
+  useCancelTripMutation,
+  useBoardTripStudentMutation,
+  useDropoffTripStudentMutation,
+  useAbsentTripStudentMutation,
+  useNoShowTripStudentMutation,
+  useCreateDemoSessionMutation,
+  useStartDemoSessionMutation,
+  usePauseDemoSessionMutation,
+  useResumeDemoSessionMutation,
+  useTickDemoSessionMutation,
+  useStopDemoSessionMutation,
+  useJumpDemoSessionToStopMutation,
+  useJumpDemoSessionToProgressMutation,
+  useJumpDemoSessionToStartMutation,
+  useJumpDemoSessionToEndMutation,
+  useUpdateDemoAutomationSettingsMutation,
+  useCreateSchoolScheduleMutation,
+  useUpdateSchoolScheduleMutation,
+  useDeleteSchoolScheduleMutation,
+  useLinkSchoolPickupPointMutation,
+  useUpdateSchoolPickupPointMutation,
+  useUnlinkSchoolPickupPointMutation,
+  useCreateSchoolPickupPointWindowMutation,
+  useUpdateSchoolPickupPointWindowMutation,
+  useDeleteSchoolPickupPointWindowMutation,
+  usePreviewPlanningDemandMutation,
+  useCreatePlanningSessionMutation,
+  useGenerateGreedyForSessionMutation,
+  usePublishPlanningSessionMutation,
+  useCancelPlanningSessionMutation,
+  useCreateRouteInSessionMutation,
+  useAssignStudentToRouteMutation,
+};

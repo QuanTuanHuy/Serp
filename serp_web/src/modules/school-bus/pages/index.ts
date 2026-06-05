@@ -13,6 +13,7 @@ export * from './SchoolBusRouteDetailPage';
 export * from './SchoolBusAttendancePage';
 export * from './SchoolBusTripOperationsPage';
 export * from './SchoolBusSubscriptionsPage';
+export * from './SchoolBusSubscriptionDetailPage';
 export * from './SchoolBusTripsPage';
 export * from './SchoolBusDemoPage';
 export * from './SchoolBusReportsPage';

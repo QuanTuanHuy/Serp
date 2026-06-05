@@ -400,15 +400,6 @@ export function SchoolBusSchoolDetailPage({
       <SchoolBusPageShell
         title={school.name}
         description={school.address || 'Manage school profiles, associated schedules, and pickup points.'}
-        breadcrumb={
-          <SchoolBusBreadcrumb
-            items={[
-              { label: 'School Bus', href: '/school-bus/dispatch' },
-              { label: 'Schools', href: '/school-bus/schools' },
-              { label: String(cleanSchoolId), current: true },
-            ]}
-          />
-        }
         actions={
           <div className="flex items-center gap-2">
             <Button onClick={onClose} variant="outline" className="rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200">

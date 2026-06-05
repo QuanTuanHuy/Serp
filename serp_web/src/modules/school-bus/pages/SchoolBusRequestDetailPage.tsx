@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import * as React from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, MapPin, Pencil, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, MapPin, Pencil, XCircle, Clock, Check, AlertOctagon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -31,8 +31,8 @@ import type { SchoolBusRequestStudent } from '../types';
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
-  MORNING: 'To school',
-  AFTERNOON: 'From school',
+  MORNING: 'To school only',
+  AFTERNOON: 'From school only',
   ROUND_TRIP: 'Round trip',
 };
 
@@ -62,9 +62,9 @@ function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): 
   issues: string[];
 } {
   const issues: string[] = [];
-  if (!s.studentId) issues.push('Missing student');
+  if (!s.studentId) issues.push('Missing student selection');
   if (requiresRouting) {
-    if (!s.schoolScheduleId) issues.push('Missing schedule');
+    if (!s.schoolScheduleId) issues.push('Missing school schedule');
     if (!s.tripOption) issues.push('Missing trip option');
     const opt = (s.tripOption || '').toUpperCase();
     const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
@@ -72,9 +72,22 @@ function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): 
     if (needsPickup && !s.pickupPointId) issues.push('Missing pickup point');
     if (needsDropoff && !s.dropoffPointId) issues.push('Missing drop-off point');
   }
-  if (issues.length > 0) return { state: 'blocking', label: 'Missing required fields', issues };
+  
+  // Check if at least one day is selected
+  const hasDays = s.monday || s.tuesday || s.wednesday || s.thursday || s.friday || s.saturday || s.sunday;
+  if (!hasDays) {
+    issues.push('Missing selected days');
+  }
 
-  // With snapshot we can't check window/coord — show "ready" or neutral
+  // Check coordinates if points are selected
+  if (s.pickupPointId && (typeof s.pickupPointLatitude !== 'number' || typeof s.pickupPointLongitude !== 'number')) {
+    issues.push('Missing coordinates for pickup point');
+  }
+  if (s.dropoffPointId && (typeof s.dropoffPointLatitude !== 'number' || typeof s.dropoffPointLongitude !== 'number')) {
+    issues.push('Missing coordinates for drop-off point');
+  }
+
+  if (issues.length > 0) return { state: 'blocking', label: 'Needs configuration', issues };
   return { state: 'ready', label: 'Ready', issues: [] };
 }
 
@@ -82,7 +95,7 @@ function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): 
 
 function Pill({ label, className }: { label: string; className: string }) {
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', className)}>
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm', className)}>
       {label}
     </span>
   );
@@ -90,15 +103,15 @@ function Pill({ label, className }: { label: string; className: string }) {
 
 function DayBadges({ student }: { student: SchoolBusRequestStudent }) {
   return (
-    <div className='flex flex-wrap gap-1'>
+    <div className='flex flex-wrap gap-1.5'>
       {DAY_KEYS.map(({ key, label }) => (
         <span
           key={key}
           className={cn(
-            'rounded px-1.5 py-0.5 text-[10px] font-semibold',
+            'rounded-md px-2 py-0.5 text-[10px] font-bold transition-all',
             student[key]
-              ? 'bg-[#FDECEF] text-[#C81E3A]'
-              : 'bg-slate-100 text-slate-400 line-through'
+              ? 'bg-[#FDECEF] text-[#C81E3A] border border-[#F6CDD5]'
+              : 'bg-slate-50 text-slate-400 border border-slate-200/60 line-through'
           )}
         >
           {label}
@@ -108,11 +121,11 @@ function DayBadges({ student }: { student: SchoolBusRequestStudent }) {
   );
 }
 
-function InfoRow({ label, value, wide }: { label: string; value: React.ReactNode; wide?: boolean }) {
+function InfoRow({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('flex flex-col gap-0.5', wide && 'md:col-span-2')}>
-      <span className='text-[11px] font-semibold uppercase tracking-wide text-slate-400'>{label}</span>
-      <span className='text-sm font-medium text-slate-900 break-words'>{value}</span>
+    <div className={cn('flex items-start justify-between py-2.5 border-b border-slate-100 last:border-0 text-sm gap-4', className)}>
+      <span className='text-slate-500 font-medium shrink-0'>{label}</span>
+      <span className='text-slate-900 font-semibold text-right break-words max-w-[70%]'>{value}</span>
     </div>
   );
 }
@@ -163,13 +176,6 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
       <SchoolBusPageShell
         title='Transport request detail'
         description='Loading…'
-        breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Requests', href: '/school-bus/requests' },
-            { label: 'Detail', current: true },
-          ]} />
-        }
       >
         <SchoolBusEmptyState title='Loading request detail' description='Fetching data…' />
       </SchoolBusPageShell>
@@ -218,20 +224,34 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
       return acc;
     }, []);
 
+  // ── Approval Checklist metrics
+  const checklist = [
+    { label: 'Students selected', passed: students.length > 0 && students.every(s => s.studentId) },
+    { label: 'Schedule configured', passed: !requiresRouting || students.every(s => s.schoolScheduleId) },
+    { label: 'Trip options set', passed: !requiresRouting || students.every(s => s.tripOption) },
+    { label: 'Points selected', passed: !requiresRouting || students.every(s => {
+        const opt = (s.tripOption || '').toUpperCase();
+        if ((opt === 'MORNING' || opt === 'ROUND_TRIP') && !s.pickupPointId) return false;
+        if ((opt === 'AFTERNOON' || opt === 'ROUND_TRIP') && !s.dropoffPointId) return false;
+        return true;
+      })
+    },
+    { label: 'Active days active', passed: students.every(s => s.monday || s.tuesday || s.wednesday || s.thursday || s.friday || s.saturday || s.sunday) },
+    { label: 'Coordinates verified', passed: students.every(s => {
+        if (s.pickupPointId && (typeof s.pickupPointLatitude !== 'number' || typeof s.pickupPointLongitude !== 'number')) return false;
+        if (s.dropoffPointId && (typeof s.dropoffPointLatitude !== 'number' || typeof s.dropoffPointLongitude !== 'number')) return false;
+        return true;
+      })
+    }
+  ];
+
   return (
     <>
       <SchoolBusPageShell
         title={`Transport request #${request.id}`}
         description='Inspect the full request payload, review the student list, and take approval actions.'
-        breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Requests', href: '/school-bus/requests' },
-            { label: `#${request.id} — ${request.parentProfileName ?? 'Request'}`, current: true },
-          ]} />
-        }
         actions={
-          <>
+          <div className='flex flex-wrap items-center gap-2'>
             {isSubmitted && (
               <Button variant='outline' className='rounded-full' asChild>
                 <Link href={`/school-bus/requests/${request.id}/edit`}>
@@ -249,7 +269,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
             )}
             {isSubmitted && (
               <Button
-                className='rounded-full bg-[#C81E3A] text-white hover:bg-[#B31B34]'
+                className='rounded-full bg-[#C81E3A] text-white hover:bg-[#B31B34] font-medium px-6'
                 disabled={!allReady}
                 onClick={handleApprove}
               >
@@ -257,251 +277,338 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
                 {approving ? 'Approving…' : 'Approve'}
               </Button>
             )}
-          </>
+          </div>
         }
       >
-        {/* ── Status subtitle row */}
-        <div className='flex flex-wrap items-center gap-2'>
-          <SchoolBusStatusBadge status={request.status} />
-          <span className='text-slate-300'>·</span>
-          <span className='text-sm text-slate-600'>{REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}</span>
-          <span className='text-slate-300'>·</span>
-          <span className='text-sm text-slate-500'>
-            Effective {formatDate(request.effectiveFrom)}{request.effectiveTo ? ` – ${formatDate(request.effectiveTo)}` : ''}
-          </span>
-        </div>
-
-        {/* ── Approval Readiness Banner */}
-        {isSubmitted && (
-          <div className={cn(
-            'flex items-start gap-3 rounded-2xl border p-4',
-            allReady
-              ? 'border-emerald-200 bg-emerald-50'
-              : 'border-amber-200 bg-amber-50'
-          )}>
-            {allReady ? (
-              <CheckCircle2 className='mt-0.5 h-5 w-5 shrink-0 text-emerald-600' />
-            ) : (
-              <AlertTriangle className='mt-0.5 h-5 w-5 shrink-0 text-amber-600' />
-            )}
-            <div className='min-w-0'>
-              <p className={cn('font-semibold text-sm', allReady ? 'text-emerald-800' : 'text-amber-800')}>
-                {allReady ? 'Ready to approve' : `Cannot approve yet — ${blockingIssues.length} issue${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
-              </p>
-              {allReady ? (
-                <p className='text-xs text-emerald-700 mt-0.5'>All required student, schedule and pickup/drop-off fields are present.</p>
-              ) : (
-                <ul className='mt-1.5 space-y-0.5'>
-                  {blockingIssues.map((msg, i) => (
-                    <li key={i} className='flex items-center gap-1.5 text-xs text-amber-700'>
-                      <AlertCircle className='h-3.5 w-3.5 shrink-0' /> {msg}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+        <div className='space-y-6'>
+          {/* ── Status subtitle row */}
+          <div className='flex flex-wrap items-center gap-2.5 bg-slate-50 border border-slate-200/60 rounded-xl p-3.5'>
+            <SchoolBusStatusBadge status={request.status} />
+            <span className='text-slate-300'>·</span>
+            <span className='text-sm font-semibold text-slate-700'>{REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}</span>
+            <span className='text-slate-300'>·</span>
+            <span className='text-sm font-medium text-slate-500'>
+              Effective {formatDate(request.effectiveFrom)}{request.effectiveTo ? ` – ${formatDate(request.effectiveTo)}` : ''}
+            </span>
           </div>
-        )}
 
-        {/* ── Summary + Students side-by-side on xl */}
-        <div className='grid gap-6 xl:grid-cols-[0.85fr_1.15fr]'>
-          {/* Request Summary */}
-          <SchoolBusSection title='Request summary' description='Operational metadata and approval state.'>
-            <div className='grid grid-cols-2 gap-x-4 gap-y-5'>
-              <InfoRow label='Parent' value={request.parentProfileName} />
-              <InfoRow label='School' value={request.schoolName} />
-              <InfoRow label='Request type' value={
-                <Pill label={REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}
-                  className='bg-slate-100 text-slate-700' />
-              } />
-              <InfoRow label='Status' value={<SchoolBusStatusBadge status={request.status} />} />
-              <InfoRow label='Effective from' value={formatDate(request.effectiveFrom)} />
-              <InfoRow label='Effective to' value={request.effectiveTo ? formatDate(request.effectiveTo) : 'Open-ended'} />
-              <InfoRow label='Submitted at' value={formatDateTime(request.requestedAt)} />
-              <InfoRow label='Approved at' value={request.approvedAt ? formatDateTime(request.approvedAt) : '—'} />
-              {request.rejectionReason && (
-                <InfoRow wide label='Rejection reason' value={
-                  <span className='text-red-600'>{request.rejectionReason}</span>
-                } />
+          {/* ── Approval Readiness Banner */}
+          {request.status === 'SUBMITTED' ? (
+            <div className={cn(
+              'flex items-start gap-3.5 rounded-2xl border p-5 shadow-sm transition-all',
+              allReady
+                ? 'border-emerald-200 bg-emerald-50/60'
+                : 'border-amber-200 bg-amber-50/60'
+            )}>
+              {allReady ? (
+                <CheckCircle2 className='mt-0.5 h-6 w-6 shrink-0 text-emerald-600' />
+              ) : (
+                <AlertTriangle className='mt-0.5 h-6 w-6 shrink-0 text-amber-600' />
               )}
-              {request.notes && (
-                <InfoRow wide label='Notes' value={request.notes} />
-              )}
+              <div className='min-w-0'>
+                <p className={cn('font-bold text-base', allReady ? 'text-emerald-900' : 'text-amber-900')}>
+                  {allReady ? 'Ready to approve' : `Cannot approve yet — ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
+                </p>
+                {allReady ? (
+                  <p className='text-xs text-emerald-700 mt-1 font-medium'>
+                    All required student, schedule, pickup/drop-off, and coordinate checks passed.
+                  </p>
+                ) : (
+                  <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
+                    {blockingIssues.map((msg, i) => (
+                      <li key={i} className='flex items-center gap-2 text-xs font-semibold text-amber-800'>
+                        <AlertCircle className='h-4 w-4 shrink-0 text-amber-600' /> {msg}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </SchoolBusSection>
+          ) : (
+            <div className={cn(
+              'flex items-center gap-3 rounded-2xl border p-4.5 shadow-sm',
+              request.status === 'APPROVED' && 'border-emerald-200 bg-emerald-50/40 text-emerald-800',
+              request.status === 'REJECTED' && 'border-red-200 bg-red-50/40 text-red-800',
+              ['CANCELLED', 'DRAFT'].includes(request.status) && 'border-slate-200 bg-slate-50 text-slate-700'
+            )}>
+              {request.status === 'APPROVED' && <CheckCircle2 className='h-5 w-5 shrink-0 text-emerald-600' />}
+              {request.status === 'REJECTED' && <XCircle className='h-5 w-5 shrink-0 text-red-600' />}
+              {['CANCELLED', 'DRAFT'].includes(request.status) && <Clock className='h-5 w-5 shrink-0 text-slate-500' />}
+              <span className='text-sm font-bold'>
+                Request is currently {request.status.toLowerCase()} — no further actions required.
+              </span>
+            </div>
+          )}
 
-          {/* Requested Students */}
-          <SchoolBusSection title='Requested students' description='Student details, schedule, pickup/drop-off and readiness.'>
-            <div className='space-y-3'>
-              {students.map((s, i) => {
-                const r = rowReadiness[i];
-                const opt = (s.tripOption || '').toUpperCase();
-                const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
-                const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
-                return (
-                  <div key={s.id} className='rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-3'>
-                    {/* Row header */}
-                    <div className='flex items-start justify-between gap-2'>
-                      <div className='min-w-0'>
-                        <p className='font-semibold text-slate-900 truncate'>{s.studentName}</p>
-                        {s.studentCode && <p className='text-xs text-slate-400'>{s.studentCode}</p>}
-                      </div>
-                      {/* Readiness badge */}
-                      <span className={cn(
-                        'shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                        r.state === 'ready'
-                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                          : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-                      )}>
-                        {r.state === 'ready' ? <CheckCircle2 className='h-3 w-3' /> : <AlertTriangle className='h-3 w-3' />}
-                        {r.label}
-                      </span>
-                    </div>
+          {/* ── Main layout grid */}
+          <div className='grid gap-6 lg:grid-cols-12 items-start'>
+            {/* ── Left column (Main content) */}
+            <div className='lg:col-span-8 space-y-6'>
+              
+              {/* Requested students */}
+              <SchoolBusSection
+                title='Requested students'
+                description='Linked students, school schedule, trip option, stops and schedule detail.'
+              >
+                <div className='grid gap-4 sm:grid-cols-1'>
+                  {students.map((s, i) => {
+                    const r = rowReadiness[i];
+                    const opt = (s.tripOption || '').toUpperCase();
+                    const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
+                    const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+                    return (
+                      <div
+                        key={s.id}
+                        className='rounded-2xl border border-slate-200 bg-white p-5 hover:border-slate-300 hover:shadow-md transition-all duration-200 space-y-4'
+                      >
+                        {/* Student card header */}
+                        <div className='flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3'>
+                          <div className='min-w-0'>
+                            <p className='font-bold text-slate-900 text-base truncate'>{s.studentName}</p>
+                            {s.studentCode && <p className='text-xs font-bold text-slate-400 mt-0.5'>{s.studentCode}</p>}
+                          </div>
+                          <span className={cn(
+                            'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset',
+                            r.state === 'ready'
+                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                              : 'bg-amber-50 text-amber-700 ring-amber-600/20'
+                          )}>
+                            {r.state === 'ready' ? <CheckCircle2 className='h-3.5 w-3.5' /> : <AlertTriangle className='h-3.5 w-3.5' />}
+                            {r.label}
+                          </span>
+                        </div>
 
-                    {/* Detail grid */}
-                    <div className='grid grid-cols-2 gap-x-4 gap-y-3 text-xs'>
-                      {/* Trip option */}
-                      <div className='col-span-1'>
-                        <p className='text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5'>Trip option</p>
-                        {s.tripOption
-                          ? <Pill label={TRIP_OPTION_LABELS[opt] ?? s.tripOption} className='bg-blue-50 text-blue-700' />
-                          : <span className='text-amber-600 font-medium'>Not set</span>}
-                      </div>
-
-                      {/* Schedule */}
-                      <div className='col-span-1'>
-                        <p className='text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5'>Schedule</p>
-                        {s.schoolScheduleName ? (
+                        {/* Student card details grid */}
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs sm:text-sm'>
                           <div>
-                            <p className='font-medium text-slate-800 truncate'>{s.schoolScheduleName}</p>
-                            {(s.arrivalDeadline || s.departureTime) && (
-                              <p className='text-slate-500'>
-                                {s.departureTime ?? '—'} → {s.arrivalDeadline ?? '—'}
-                              </p>
+                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>Trip option</span>
+                            {s.tripOption ? (
+                              <Pill label={TRIP_OPTION_LABELS[opt] ?? s.tripOption} className='bg-blue-50 text-blue-700 border border-blue-200' />
+                            ) : (
+                              <span className='text-red-500 font-bold'>Not configured</span>
                             )}
                           </div>
-                        ) : (
-                          <span className='text-amber-600 font-medium'>Not set</span>
-                        )}
-                      </div>
 
-                      {/* Pickup */}
-                      {(needsPickup || !s.tripOption) && (
-                        <div className='col-span-1'>
-                          <p className='text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5'>Pickup</p>
-                          {s.pickupPointName
-                            ? <p className='font-medium text-slate-800 truncate'>{s.pickupPointName}</p>
-                            : <span className={cn('font-medium', needsPickup ? 'text-red-500' : 'text-slate-400')}>
-                                {needsPickup ? 'Required — not set' : 'Not required'}
-                              </span>
-                          }
+                          <div>
+                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>School schedule</span>
+                            {s.schoolScheduleName ? (
+                              <div className='space-y-0.5'>
+                                <p className='font-semibold text-slate-800 truncate'>{s.schoolScheduleName}</p>
+                                {(s.arrivalDeadline || s.departureTime) && (
+                                  <p className='text-xs font-medium text-slate-500 flex items-center gap-1'>
+                                    <Clock className='h-3 w-3 shrink-0' />
+                                    {s.departureTime ?? '—'} → {s.arrivalDeadline ?? '—'}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className='text-red-500 font-bold'>Not configured</span>
+                            )}
+                          </div>
+
+                          {/* Pickup point */}
+                          {(needsPickup || !s.tripOption) && (
+                            <div className='md:col-span-1'>
+                              <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>Pickup point</span>
+                              {s.pickupPointName ? (
+                                <div className='space-y-0.5 min-w-0'>
+                                  <p className='font-semibold text-slate-800 truncate flex items-center gap-1.5'>
+                                    <MapPin className='h-3.5 w-3.5 shrink-0 text-[#C81E3A]' />
+                                    {s.pickupPointName}
+                                  </p>
+                                  {s.pickupPointAddress && (
+                                    <p className='text-xs text-slate-500 truncate pl-5'>{s.pickupPointAddress}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className={cn('font-bold', needsPickup ? 'text-red-500' : 'text-slate-400 pl-5')}>
+                                  {needsPickup ? 'Required — not configured' : 'Not required'}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Drop-off point */}
+                          {(needsDropoff || !s.tripOption) && (
+                            <div className='md:col-span-1'>
+                              <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>Drop-off point</span>
+                              {s.dropoffPointName ? (
+                                <div className='space-y-0.5 min-w-0'>
+                                  <p className='font-semibold text-slate-800 truncate flex items-center gap-1.5'>
+                                    <MapPin className='h-3.5 w-3.5 shrink-0 text-blue-500' />
+                                    {s.dropoffPointName}
+                                  </p>
+                                  {s.dropoffPointAddress && (
+                                    <p className='text-xs text-slate-500 truncate pl-5'>{s.dropoffPointAddress}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className={cn('font-bold', needsDropoff ? 'text-red-500' : 'text-slate-400 pl-5')}>
+                                  {needsDropoff ? 'Required — not configured' : 'Not required'}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Days active */}
+                          <div className='md:col-span-2 border-t border-slate-100 pt-3'>
+                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>Active schedule days</span>
+                            <DayBadges student={s} />
+                          </div>
                         </div>
-                      )}
-
-                      {/* Drop-off */}
-                      {(needsDropoff || !s.tripOption) && (
-                        <div className='col-span-1'>
-                          <p className='text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5'>Drop-off</p>
-                          {s.dropoffPointName
-                            ? <p className='font-medium text-slate-800 truncate'>{s.dropoffPointName}</p>
-                            : <span className={cn('font-medium', needsDropoff ? 'text-red-500' : 'text-slate-400')}>
-                                {needsDropoff ? 'Required — not set' : 'Not required'}
-                              </span>
-                          }
-                        </div>
-                      )}
-
-                      {/* Days */}
-                      <div className='col-span-2'>
-                        <p className='text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1'>Days</p>
-                        <DayBadges student={s} />
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </SchoolBusSection>
+
+              {/* Request map */}
+              <SchoolBusSection
+                title='Request map'
+                description='Geographical overview of the school hub, configured stops, and students.'
+              >
+                <div className='mt-2 rounded-2xl overflow-hidden border border-slate-200 shadow-sm'>
+                  <SchoolBusMapWorkspace
+                    defaultPreset='map-focus'
+                    map={
+                      <OperationsMap
+                        schools={[{
+                          id: request.schoolId,
+                          name: request.schoolName,
+                          latitude: request.schoolLatitude,
+                          longitude: request.schoolLongitude,
+                          address: undefined,
+                        }]}
+                        pickupPoints={[
+                          ...uniquePickupPoints.map((p) => ({ ...p, schoolId: request.schoolId, schoolName: request.schoolName })),
+                          ...uniqueDropoffPoints.map((p) => ({ ...p, schoolId: request.schoolId, schoolName: request.schoolName })),
+                        ]}
+                        studentMarkers={studentMarkers}
+                        selectedSchoolId={request.schoolId}
+                        fitAllKey={fitAllKey}
+                        className='h-full w-full'
+                      />
+                    }
+                    onFitAll={() => setFitAllKey((k) => k + 1)}
+                    canFitAll
+                    legend={<SchoolBusMapLegend />}
+                    panel={
+                      <div className='space-y-4'>
+                        <div>
+                          <p className='text-sm font-bold text-slate-900'>Stop context</p>
+                          <p className='text-xs text-slate-500 mt-0.5'>{REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}</p>
+                        </div>
+                        <div className='grid grid-cols-3 gap-2 text-center'>
+                          {[
+                            { label: 'Students', value: students.length },
+                            { label: 'Pickups', value: uniquePickupPoints.length },
+                            { label: 'Dropoffs', value: uniqueDropoffPoints.length },
+                          ].map(({ label, value }) => (
+                            <div key={label} className='rounded-xl bg-slate-50 border border-slate-200/60 p-2 shadow-sm'>
+                              <p className='text-base font-bold text-slate-900'>{value}</p>
+                              <p className='text-[9px] font-semibold text-slate-400 uppercase'>{label}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className='space-y-2 max-h-[250px] overflow-auto pr-1'>
+                          {students.map((s) => (
+                            <div key={s.id} className='rounded-xl border border-slate-150 bg-white p-3 hover:shadow-sm transition-all'>
+                              <p className='text-xs font-bold text-slate-900 truncate'>{s.studentName}</p>
+                              {s.pickupPointId && (
+                                <p className='flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500 truncate'>
+                                  <MapPin className='h-3 w-3 shrink-0 text-[#C81E3A]' />
+                                  <span className='font-medium truncate'>{s.pickupPointName}</span>
+                                </p>
+                              )}
+                              {s.dropoffPointId && s.dropoffPointId !== s.pickupPointId && (
+                                <p className='flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 truncate'>
+                                  <MapPin className='h-3 w-3 shrink-0 text-blue-500' />
+                                  <span className='font-medium truncate'>{s.dropoffPointName}</span>
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    }
+                  />
+                </div>
+              </SchoolBusSection>
+
             </div>
-          </SchoolBusSection>
-        </div>
 
-        {/* ── Request Map */}
-        <SchoolBusSection title='Request map' description='School hub and all pickup/drop-off points included in this request.'>
-          <SchoolBusMapWorkspace
-            defaultPreset='map-focus'
-            map={
-              <OperationsMap
-                schools={[{
-                  id: request.schoolId,
-                  name: request.schoolName,
-                  latitude: request.schoolLatitude,
-                  longitude: request.schoolLongitude,
-                  address: undefined,
-                }]}
-                pickupPoints={[
-                  ...uniquePickupPoints.map((p) => ({ ...p, schoolId: request.schoolId, schoolName: request.schoolName })),
-                  ...uniqueDropoffPoints.map((p) => ({ ...p, schoolId: request.schoolId, schoolName: request.schoolName })),
-                ]}
-                studentMarkers={studentMarkers}
-                selectedSchoolId={request.schoolId}
-                fitAllKey={fitAllKey}
-                className='h-full w-full'
-              />
-            }
-            onFitAll={() => setFitAllKey((k) => k + 1)}
-            canFitAll
-            legend={<SchoolBusMapLegend />}
-            panel={
-              <div className='space-y-4'>
-                <div>
-                  <p className='text-sm font-semibold text-slate-900'>Route context</p>
-                  <p className='text-xs text-slate-500 mt-0.5'>{REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}</p>
-                </div>
-                <div className='grid grid-cols-3 gap-2 text-center'>
-                  {[
-                    { label: 'Students', value: students.length },
-                    { label: 'Pickup pts', value: uniquePickupPoints.length },
-                    { label: 'Drop-off pts', value: uniqueDropoffPoints.length },
-                  ].map(({ label, value }) => (
-                    <div key={label} className='rounded-xl bg-slate-50 border border-slate-100 p-2'>
-                      <p className='text-lg font-bold text-slate-900'>{value}</p>
-                      <p className='text-[10px] text-slate-400'>{label}</p>
+            {/* ── Right column (Sidebar panel) */}
+            <div className='lg:col-span-4 space-y-6'>
+              
+              {/* Request summary */}
+              <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
+                <h3 className='font-bold text-slate-900 text-base'>Request summary</h3>
+                <div className='flex flex-col border-t border-slate-100 mt-1'>
+                  <InfoRow label='Parent name' value={request.parentProfileName} />
+                  <InfoRow label='School name' value={request.schoolName} />
+                  <InfoRow label='Request type' value={REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType} />
+                  <InfoRow label='Status' value={<SchoolBusStatusBadge status={request.status} />} />
+                  <InfoRow label='Effective from' value={formatDate(request.effectiveFrom)} />
+                  <InfoRow label='Effective to' value={request.effectiveTo ? formatDate(request.effectiveTo) : 'Open-ended'} />
+                  <InfoRow label='Submitted at' value={formatDateTime(request.requestedAt)} />
+                  <InfoRow label='Approved at' value={request.approvedAt ? formatDateTime(request.approvedAt) : '—'} />
+                  {request.rejectionReason && (
+                    <InfoRow label='Rejection reason' value={<span className='text-red-600 font-semibold'>{request.rejectionReason}</span>} />
+                  )}
+                  {request.notes && (
+                    <div className='py-3 text-sm'>
+                      <p className='text-slate-500 font-medium mb-1'>User notes</p>
+                      <p className='text-slate-800 bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-semibold leading-relaxed'>{request.notes}</p>
                     </div>
-                  ))}
-                </div>
-                <div className='space-y-2 max-h-[280px] overflow-auto pr-1'>
-                  {students.map((s) => (
-                    <div key={s.id} className='rounded-xl border border-slate-200 bg-white p-3'>
-                      <p className='text-xs font-semibold text-slate-900 truncate'>{s.studentName}</p>
-                      {s.pickupPointId && (
-                        <p className='flex items-center gap-1 mt-1 text-[11px] text-slate-500 truncate'>
-                          <MapPin className='h-3 w-3 shrink-0 text-[#C81E3A]' />
-                          {s.pickupPointName}
-                        </p>
-                      )}
-                      {s.dropoffPointId && s.dropoffPointId !== s.pickupPointId && (
-                        <p className='flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 truncate'>
-                          <MapPin className='h-3 w-3 shrink-0 text-blue-500' />
-                          {s.dropoffPointName}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                  )}
                 </div>
               </div>
-            }
-          />
-        </SchoolBusSection>
 
-        {/* ── History */}
-        <SchoolBusSection title='Request history' description='All status transitions and notes for this request.'>
-          <SchoolBusTimeline
-            events={mapRequestHistoryToTimeline(historyData?.data ?? [])}
-            mode='compact'
-            isLoading={historyLoading}
-            isError={historyError}
-            maxHeight='400px'
-          />
-        </SchoolBusSection>
+              {/* Approval checklist */}
+              {isSubmitted && (
+                <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
+                  <h3 className='font-bold text-slate-900 text-base'>Approval checklist</h3>
+                  <div className='space-y-3 mt-1'>
+                    {checklist.map((item, idx) => (
+                      <div key={idx} className='flex items-start gap-3 text-xs sm:text-sm'>
+                        {item.passed ? (
+                          <div className='rounded-full bg-emerald-50 p-1 border border-emerald-200 shrink-0'>
+                            <Check className='h-3.5 w-3.5 text-emerald-600 font-bold' />
+                          </div>
+                        ) : (
+                          <div className='rounded-full bg-red-50 p-1 border border-red-200 shrink-0'>
+                            <AlertOctagon className='h-3.5 w-3.5 text-red-500' />
+                          </div>
+                        )}
+                        <span className={cn(
+                          'font-semibold mt-0.5',
+                          item.passed ? 'text-slate-700' : 'text-slate-500'
+                        )}>
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Request history */}
+              <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
+                <h3 className='font-bold text-slate-900 text-base'>Request history</h3>
+                <div className='border-t border-slate-100 pt-3'>
+                  <SchoolBusTimeline
+                    events={mapRequestHistoryToTimeline(historyData?.data ?? [])}
+                    mode='compact'
+                    isLoading={historyLoading}
+                    isError={historyError}
+                    maxHeight='320px'
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
       </SchoolBusPageShell>
 
       <RejectTransportRequestDialog

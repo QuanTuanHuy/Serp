@@ -162,15 +162,6 @@ export function SchoolBusRouteDetailPage({
       <SchoolBusPageShell
         title={`${route.routeCode} - ${route.routeName}`}
         description='Inspect route state, stop plan, and assignment details before and during execution.'
-        breadcrumb={
-          <SchoolBusBreadcrumb
-            items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Dispatch', href: '/school-bus/dispatch' },
-              { label: `${route.routeCode} - ${route.routeName}`, current: true },
-            ]}
-          />
-        }
         actions={
           <>
             {['DRAFT', 'PLANNED', 'ASSIGNED'].includes(route.status) ? (

@@ -5,7 +5,7 @@ import { cn } from '@/shared/utils';
 
 interface SchoolBusPageHeaderProps {
   title: string;
-  description?: string;
+  description?: ReactNode;
   breadcrumb?: ReactNode;
   actions?: ReactNode;
   compact?: boolean;
@@ -46,14 +46,14 @@ export function SchoolBusPageHeader({
             {title}
           </h1>
           {description && (
-            <p
+            <div
               className={cn(
                 'text-slate-500 leading-normal',
                 compact ? 'text-xs mt-0.5' : 'text-sm mt-1.5 max-w-3xl'
               )}
             >
               {description}
-            </p>
+            </div>
           )}
         </div>
         

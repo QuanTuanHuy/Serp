@@ -441,12 +441,17 @@ export interface SchoolBusSubscription extends SchoolBusBaseRecord {
   subscriptionCode: string;
   studentId: number;
   studentName: string;
+  studentCode?: string | null;
+  parentName?: string | null;
   schoolId: number;
   schoolName: string;
+  schoolCode?: string | null;
   pickupPointId?: number | null;
   pickupPointName?: string | null;
+  pickupPointCode?: string | null;
   dropoffPointId?: number | null;
   dropoffPointName?: string | null;
+  dropoffPointCode?: string | null;
   tripOption: 'MORNING' | 'AFTERNOON' | 'ROUND_TRIP';
   status: string;
   monday: boolean;
@@ -459,8 +464,13 @@ export interface SchoolBusSubscription extends SchoolBusBaseRecord {
   effectiveFrom: string;
   effectiveTo?: string | null;
   sourceRequestId?: number | null;
+  sourceRequestCode?: string | null;
   schoolScheduleId?: number | null;
   schoolScheduleName?: string | null;
+  scheduleCode?: string | null;
+  shiftType?: string | null;
+  arrivalDeadline?: string | null;
+  departureTime?: string | null;
 }
 
 export interface SchoolBusTripStopLog extends SchoolBusBaseRecord {

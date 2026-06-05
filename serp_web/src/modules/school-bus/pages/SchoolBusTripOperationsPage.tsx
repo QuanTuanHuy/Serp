@@ -323,15 +323,6 @@ export function SchoolBusTripOperationsPage({ tripId }: SchoolBusTripOperationsP
     <SchoolBusPageShell
       title={tripCode}
       description='Manage student attendance and execute real-time terminal and stop sequence operations.'
-      breadcrumb={
-        <SchoolBusBreadcrumb
-          items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Trip Operations', href: '/school-bus/attendance' },
-            { label: tripCode, current: true },
-          ]}
-        />
-      }
     >
       <div className='flex flex-col gap-6'>
         {/* Back navigation & banners */}
