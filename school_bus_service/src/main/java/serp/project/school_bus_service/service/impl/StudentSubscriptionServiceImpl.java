@@ -116,6 +116,11 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     }
 
     @Override
+    public List<StudentSubscriptionEntity> findAllBySchoolIdAndTenantId(Long schoolId, Long tenantId) {
+        return subscriptionRepository.findAllBySchoolIdAndTenantId(schoolId, tenantId);
+    }
+
+    @Override
     public StudentSubscriptionEntity getSubscriptionEntity(Long id, Long tenantId) {
         return findById(id, tenantId);
     }

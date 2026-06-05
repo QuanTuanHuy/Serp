@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { formatDate } from '../../utils';
 import { SchoolBusConfirmDialog, useSchoolBusConfirm } from '../SchoolBusConfirmDialog';
 import { schoolBusUi } from '../../theme';
 import { ManualDemandAssignPanel } from './ManualDemandAssignPanel';
@@ -16,6 +17,8 @@ import {
   useRemoveRouteStopMutation,
   useRemoveRouteStudentMutation,
   useGetDepotsQuery,
+  useGetSchoolByIdQuery,
+  useGetSchoolScheduleByIdQuery,
 } from '../../api/schoolBusApi';
 import type {
   SchoolBusPlanningPreview,
@@ -660,6 +663,11 @@ interface PlanningResultsPanelProps {
   onSelectRoute: (id: number | null) => void;
   onCreateManualRoute: (req: CreateRouteInSessionRequest) => void;
   creatingRoute?: boolean;
+  form?: any;
+  rightPanelTab: 'demand-preview' | 'route-builder';
+  onTabChange: (tab: 'demand-preview' | 'route-builder') => void;
+  onPreviewDemandClick?: () => void;
+  previewing?: boolean;
 }
 
 export function PlanningResultsPanel({
@@ -672,96 +680,681 @@ export function PlanningResultsPanel({
   onSelectRoute,
   onCreateManualRoute,
   creatingRoute,
+  form,
+  rightPanelTab,
+  onTabChange,
+  onPreviewDemandClick,
+  previewing,
 }: PlanningResultsPanelProps) {
 
   const isManual = activeSession?.planningMethod === 'MANUAL';
 
-  /* True empty state — no session, no preview, nothing at all */
-  if (!preview && !greedyResult && sessionRoutes.length === 0 && !activeSession) {
-    return (
-      <div className='flex h-full flex-col items-center justify-center gap-5 p-6'>
-        <div className='flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-slate-250 bg-slate-50 shadow-sm'>
-          <MapPin className='h-7 w-7 text-slate-350' />
-        </div>
-        <div className='text-center'>
-          <p className='text-sm font-semibold text-slate-700'>No planning session yet</p>
-          <p className='mt-1 text-xs text-slate-450 max-w-[220px]'>
-            Complete the Planning Context on the left and click Preview Demand to get started.
-          </p>
-        </div>
-        <ol className='space-y-2.5 text-left border-t border-slate-100 pt-4 w-full max-w-[260px]'>
-          {([
-            { text: 'Fill in context values on the left', icon: '1' },
-            { text: 'Click Preview to see draft map', icon: '2' },
-            { text: 'Start session & configure routes', icon: '3' }
-          ] as const).map((step, i) => (
-            <li key={i} className='flex items-start gap-2.5'>
-              <span className='mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 border border-slate-200'>{step.icon}</span>
-              <span className='text-xs leading-5 text-slate-500 font-semibold'>{step.text}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-    );
-  }
+  const [previewTab, setPreviewTab] = useState<'summary' | 'demands' | 'points' | 'context'>('summary');
+  const [demandFilter, setDemandFilter] = useState<'all' | 'eligible' | 'blocked'>('all');
+
+  const schoolId = Number(preview?.schoolId ?? form?.schoolId) || 0;
+  const { data: schoolData } = useGetSchoolByIdQuery(schoolId, { skip: !schoolId });
+  const currentSchool = schoolData?.data ?? null;
+
+  const scheduleId = Number(preview?.schoolScheduleId ?? form?.schoolScheduleId) || 0;
+  const { data: scheduleData } = useGetSchoolScheduleByIdQuery(scheduleId, { skip: !scheduleId });
+  const currentSchedule = scheduleData?.data ?? null;
+
+  const { data: depotsData } = useGetDepotsQuery({ page: 1, size: 200 } as any);
+  const depots = depotsData?.data?.items ?? [];
+  const selectedDepot = depots.find((d: any) => String(d.id) === String(preview?.depotId ?? form?.depotId));
+
+  const isPreviewStale = preview ? (
+    Number(preview.schoolId) !== Number(form?.schoolId) ||
+    Number(preview.schoolScheduleId) !== Number(form?.schoolScheduleId) ||
+    preview.serviceDate !== form?.serviceDate ||
+    preview.routeDirection !== form?.routeDirection ||
+    preview.planningMethod !== form?.planningMethod ||
+    (form?.depotId ? Number(preview.depotId) !== Number(form.depotId) : false) ||
+    (form?.defaultBusCapacity ? Number(preview.defaultBusCapacity) !== Number(form.defaultBusCapacity) : false)
+  ) : false;
 
   return (
-    <div className='space-y-0 divide-y divide-slate-150'>
-      {/* Demand Preview */}
-      {preview && !greedyResult && sessionRoutes.length === 0 && (
-        <div className='p-5 space-y-4'>
-          <div className='border-b border-slate-100 pb-2.5'>
-            <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
-              <Users className='h-4 w-4 text-violet-650 shrink-0' />
-              Demand Preview — {preview.totalEligibleStudents} eligible
-            </h3>
-          </div>
-          <div className='grid grid-cols-2 gap-2 text-xs'>
-            <div className='p-3 rounded-xl bg-slate-50 border border-slate-100 shadow-sm'>
-              <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wide'>Eligible Students</p>
-              <p className='text-lg font-extrabold text-slate-800 mt-0.5'>{preview.totalEligibleStudents}</p>
+    <div className='flex h-full flex-col bg-white overflow-hidden'>
+      {/* Premium Tab Selector */}
+      <div className='shrink-0 flex border-b border-slate-200 bg-slate-50/50 p-1.5 gap-1.5'>
+        <button
+          onClick={() => onTabChange('demand-preview')}
+          className={cn(
+            'flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl border transition-all text-center',
+            rightPanelTab === 'demand-preview'
+              ? 'bg-white border-slate-200 shadow-sm text-[#C81E3A] font-bold'
+              : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100/50 hover:text-slate-700'
+          )}
+        >
+          <span className='text-xs font-bold'>Demand Preview</span>
+          <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
+            {preview && !isPreviewStale
+              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} · Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} · Blocked ${preview.summary?.blockedStudents ?? 0}`
+              : isPreviewStale
+                ? 'Out of date'
+                : 'No preview'}
+          </span>
+        </button>
+        <button
+          onClick={() => onTabChange('route-builder')}
+          className={cn(
+            'flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl border transition-all text-center',
+            rightPanelTab === 'route-builder'
+              ? 'bg-white border-slate-200 shadow-sm text-[#C81E3A] font-bold'
+              : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100/50 hover:text-slate-700'
+          )}
+        >
+          <span className='text-xs font-bold'>Route Builder</span>
+          <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
+            {activeSession
+              ? `${activeSession.planningMethod === 'MANUAL' ? 'Manual' : 'Greedy'} (${sessionRoutes.length || (greedyResult?.routes.length ?? 0)})`
+              : 'No session'}
+          </span>
+        </button>
+      </div>
+
+      <div className='flex-1 overflow-y-auto divide-y divide-slate-150'>
+        {/* Tab 1: Demand Preview */}
+        {rightPanelTab === 'demand-preview' && (
+          <>
+            {/* Case A: Stale Preview */}
+            {isPreviewStale && (
+              <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px]'>
+                <div className='flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100 text-amber-500 mb-3 shadow-sm'>
+                  <AlertTriangle className='h-6 w-6' />
+                </div>
+                <p className='text-sm font-bold text-slate-700'>Preview is out of date</p>
+                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                  Planning context has changed. Click Preview to refresh.
+                </p>
+                {onPreviewDemandClick && (
+                  <Button
+                    size='sm'
+                    onClick={onPreviewDemandClick}
+                    disabled={previewing}
+                    className='mt-4 rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm'
+                  >
+                    {previewing ? 'Previewing...' : 'Preview Demand'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Case B: No Preview at all */}
+            {!preview && !isPreviewStale && (
+              <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px]'>
+                <div className='flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 border border-slate-150 text-slate-400 mb-3 shadow-sm'>
+                  <Users className='h-6 w-6' />
+                </div>
+                <p className='text-sm font-bold text-slate-700'>
+                  {activeSession ? 'Preview demand for this session' : 'No demand preview yet'}
+                </p>
+                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                  {activeSession
+                    ? 'Preview demand for this session to inspect eligible and blocked students.'
+                    : 'Complete planning context and click Preview to inspect eligible students.'}
+                </p>
+                {onPreviewDemandClick && (
+                  <Button
+                    size='sm'
+                    onClick={onPreviewDemandClick}
+                    disabled={previewing}
+                    className='mt-4 rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm'
+                  >
+                    {previewing ? 'Previewing...' : 'Preview Demand'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Case C: Active Preview Data */}
+            {preview && !isPreviewStale && (() => {
+        const summary = preview?.summary;
+        const eligibleDemands = preview?.eligibleDemands ?? [];
+        const blockedDemands = preview?.blockedDemands ?? [];
+        const allDemands = [...eligibleDemands, ...blockedDemands];
+        const points = preview?.points ?? [];
+        const issues = preview?.issues ?? [];
+
+        // Derived variables for display
+        const totalSubs = preview ? (summary?.totalSubscriptions ?? preview.totalEligibleStudents) : '—';
+        const eligibleCount = preview ? (summary?.eligibleStudents ?? preview.totalEligibleStudents) : '—';
+        const blockedCount = preview ? (summary?.blockedStudents ?? 0) : '—';
+        const pointsCount = preview ? (summary?.pointCount ?? preview.totalEligiblePickupPoints) : '—';
+
+        // Filter demands based on filter selection
+        const filteredDemands = allDemands.filter(d => {
+          if (demandFilter === 'eligible') return d.readinessStatus === 'READY';
+          if (demandFilter === 'blocked') return d.readinessStatus === 'BLOCKED';
+          return true;
+        });
+
+        const currentDirection = preview?.routeDirection ?? form?.routeDirection;
+
+        return (
+          <div className='p-5 space-y-4 bg-white rounded-2xl'>
+            <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
+              <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
+                <Users className='h-4 w-4 text-[#C81E3A] shrink-0' />
+                Planning Readiness Preview
+              </h3>
+              <span className='px-2 py-0.5 bg-red-50 border border-red-100 text-[#C81E3A] text-[10px] font-bold rounded-full'>
+                {currentDirection === 'RETURN' ? 'Chiều về' : 'Chiều đi'}
+              </span>
             </div>
-            <div className='p-3 rounded-xl bg-slate-50 border border-slate-100 shadow-sm'>
-              <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wide'>Pickup Points</p>
-              <p className='text-lg font-extrabold text-slate-800 mt-0.5'>{preview.totalEligiblePickupPoints}</p>
+
+            {/* KPI Summary Cards */}
+            <div className='grid grid-cols-4 gap-2 text-xs'>
+              <div className='p-2.5 rounded-2xl bg-slate-50 border border-slate-150 shadow-sm flex flex-col justify-between'>
+                <span className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider leading-none'>Total</span>
+                <span className='text-sm font-black text-slate-850 mt-1.5'>{totalSubs}</span>
+              </div>
+              <div className='p-2.5 rounded-2xl bg-emerald-50/50 border border-emerald-100 shadow-sm flex flex-col justify-between'>
+                <span className='text-[9px] font-extrabold text-emerald-650 uppercase tracking-wider leading-none'>Eligible</span>
+                <span className='text-sm font-black text-emerald-700 mt-1.5'>{eligibleCount}</span>
+              </div>
+              <div className='p-2.5 rounded-2xl bg-red-50/50 border border-red-100 shadow-sm flex flex-col justify-between'>
+                <span className='text-[9px] font-extrabold text-red-650 uppercase tracking-wider leading-none'>Blocked</span>
+                <span className='text-sm font-black text-red-700 mt-1.5'>{blockedCount}</span>
+              </div>
+              <div className='p-2.5 rounded-2xl bg-blue-50/50 border border-blue-100 shadow-sm flex flex-col justify-between'>
+                <span className='text-[9px] font-extrabold text-blue-650 uppercase tracking-wider leading-none'>Points</span>
+                <span className='text-sm font-black text-blue-700 mt-1.5'>{pointsCount}</span>
+              </div>
             </div>
-          </div>
-          {preview.issues.length > 0 && <div className='mb-4 flex flex-wrap gap-1.5'>{preview.issues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>}
-          
-          <div className='pt-2'>
-            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5'>Pickup Points</p>
-            <div className='grid gap-2 sm:grid-cols-2'>
-              {preview.eligiblePickupPoints.map(pp => (
-                <div key={pp.pickupPointId} className={cn(
-                  'rounded-xl border p-3 flex flex-col justify-between gap-1 shadow-sm transition-all',
-                  pp.hasWindow ? 'border-emerald-100 bg-emerald-50/20' : 'border-amber-100 bg-amber-50/20'
-                )}>
-                  <div>
-                    <p className='text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate'>
-                      <MapPin className='h-3.5 w-3.5 text-sky-600 shrink-0' />
-                      {pp.pickupPointName}
+
+            {/* Tab Navigation */}
+            <div className='flex border-b border-slate-150 text-xs font-bold'>
+              <button
+                onClick={() => setPreviewTab('summary')}
+                className={cn(
+                  'px-3 py-2 border-b-2 transition-all -mb-px',
+                  previewTab === 'summary' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setPreviewTab('demands')}
+                className={cn(
+                  'px-3 py-2 border-b-2 transition-all -mb-px',
+                  previewTab === 'demands' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Students ({preview ? allDemands.length : 0})
+              </button>
+              <button
+                onClick={() => setPreviewTab('points')}
+                className={cn(
+                  'px-3 py-2 border-b-2 transition-all -mb-px',
+                  previewTab === 'points' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Points ({preview ? points.length : 0})
+              </button>
+              <button
+                onClick={() => setPreviewTab('context')}
+                className={cn(
+                  'px-3 py-2 border-b-2 transition-all -mb-px',
+                  previewTab === 'context' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                )}
+              >
+                Context
+              </button>
+            </div>
+
+            {/* Tab 1: Overview & Diagnostics */}
+            {previewTab === 'summary' && (() => {
+              if (!preview) {
+                return (
+                  <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
+                    <Users className='h-8 w-8 text-slate-350 mb-2' />
+                    <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
+                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                      Fill context on the left and click "Preview Demand" to load diagnostics.
                     </p>
                   </div>
-                  <div className='flex items-center justify-between mt-2 pt-2 border-t border-slate-100/50 text-[10px] text-slate-500'>
-                    <span className='font-bold'>{pp.studentCount} student(s)</span>
-                    <span className={cn(
-                      'inline-flex items-center rounded px-1.5 py-0.5 font-bold border',
-                      pp.hasWindow
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        : 'bg-amber-50 text-amber-700 border-amber-100'
-                    )}>
-                      {pp.hasWindow ? '✅ Window' : '⚠️ No window'}
-                    </span>
+                );
+              }
+              return (
+                <div className='space-y-4 pt-1'>
+                  {summary && (
+                    <div className='rounded-2xl border border-slate-150 bg-slate-50/35 p-4 space-y-3 shadow-sm'>
+                      <h4 className='text-[10px] font-extrabold text-slate-450 uppercase tracking-wider'>Readiness Diagnostics</h4>
+                      <div className='grid grid-cols-2 gap-2 text-xs'>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.pausedCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>⏸️</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.pausedCount} paused</p>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.inactiveCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>🚫</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.inactiveCount} inactive</p>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.dayMismatchCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>📅</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.dayMismatchCount} day mismatch</p>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.outOfEffectiveRangeCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>⏳</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.outOfEffectiveRangeCount} expired/range</p>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.missingCoordinateCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>📍</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.missingCoordinateCount} missing coords</p>
+                          </div>
+                        </div>
+                        <div className='flex items-center gap-2 text-slate-650'>
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                            summary.missingWindowCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                          )}>🕒</span>
+                          <div className='min-w-0'>
+                            <p className='font-bold truncate'>{summary.missingWindowCount} missing window</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {issues.length > 0 ? (
+                    <div className='space-y-2'>
+                      <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Blocking Issues</p>
+                      <div className='flex flex-wrap gap-1.5'>
+                        {issues.map((issue, i) => (
+                          <IssueBadge key={i} issue={issue} />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='p-4 bg-emerald-50/35 border border-emerald-100 rounded-2xl text-xs flex gap-2.5 shadow-sm'>
+                      <CheckCircle2 className='h-4 w-4 text-emerald-600 shrink-0 mt-0.5' />
+                      <div>
+                        <p className='font-bold text-emerald-800'>All Clear</p>
+                        <p className='text-[10px] text-emerald-600/80 mt-0.5'>No blocking issues found for eligible subscriptions.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Tab 2: Students List */}
+            {previewTab === 'demands' && (() => {
+              if (!preview) {
+                return (
+                  <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
+                    <Users className='h-8 w-8 text-slate-350 mb-2' />
+                    <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
+                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                      Fill context on the left and click "Preview Demand" to load students.
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className='space-y-3 pt-1'>
+                  <div className='flex gap-1.5 p-1 bg-slate-100 rounded-xl text-[10px] font-bold text-slate-500'>
+                    {(['all', 'eligible', 'blocked'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setDemandFilter(tab)}
+                        className={cn(
+                          'flex-1 py-1 rounded-lg capitalize transition-all',
+                          demandFilter === tab ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-850'
+                        )}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  {filteredDemands.length === 0 ? (
+                    <div className='text-center py-8 text-slate-400 text-xs'>No students found.</div>
+                  ) : (
+                    <div className='space-y-2 max-h-[380px] overflow-y-auto pr-1'>
+                      {filteredDemands.map(d => (
+                        <div
+                          key={d.subscriptionId}
+                          className={cn(
+                            'rounded-xl border p-3 flex flex-col gap-1.5 shadow-sm bg-white',
+                            d.readinessStatus === 'BLOCKED' ? 'border-red-150 border-l-4 border-l-red-500' : 'border-slate-150'
+                          )}
+                        >
+                          <div className='flex items-start justify-between gap-2'>
+                            <div className='min-w-0'>
+                              <p className='text-xs font-bold text-slate-800 truncate'>{d.studentName}</p>
+                              <p className='text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5'>
+                                <span className='font-bold'>{d.studentCode}</span>
+                                <span>•</span>
+                                <span>{d.tripOption}</span>
+                              </p>
+                            </div>
+                            <span className={cn(
+                              'rounded-full px-2 py-0.5 text-[9px] font-bold border shrink-0',
+                              d.readinessStatus === 'READY'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                : 'bg-red-50 text-red-700 border-red-100'
+                            )}>
+                              {d.readinessStatus === 'READY' ? 'Eligible' : 'Blocked'}
+                            </span>
+                          </div>
+
+                          {d.pointName && (
+                            <div className='flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 mt-0.5'>
+                              <MapPin className='h-3 w-3 text-slate-400 shrink-0' />
+                              <span className='font-bold truncate'>{d.pointName}</span>
+                              {d.windowStart && (
+                                <>
+                                  <span>•</span>
+                                  <Clock className='h-3 w-3 text-slate-400 shrink-0' />
+                                  <span className='font-medium'>{d.windowStart.slice(0, 5)} - {d.windowEnd?.slice(0, 5)}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {d.readinessStatus === 'BLOCKED' && d.issueLabels && d.issueLabels.length > 0 && (
+                            <div className='flex flex-wrap gap-1 mt-1'>
+                              {d.issueLabels.map((label, i) => (
+                                <span key={i} className='inline-flex items-center gap-0.5 bg-red-50 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-red-100'>
+                                  <XCircle className='h-2.5 w-2.5 shrink-0' /> {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Tab 3: Points List */}
+            {previewTab === 'points' && (() => {
+              if (!preview) {
+                return (
+                  <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
+                    <MapPin className='h-8 w-8 text-slate-350 mb-2' />
+                    <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
+                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                      Fill context on the left and click "Preview Demand" to load points.
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className='space-y-3 pt-1'>
+                  {points.length === 0 ? (
+                    <div className='text-center py-8 text-slate-400 text-xs'>No points mapped.</div>
+                  ) : (
+                    <div className='grid gap-2 max-h-[380px] overflow-y-auto pr-1 sm:grid-cols-2'>
+                      {points.map(pp => (
+                        <div
+                          key={pp.pointId}
+                          className={cn(
+                            'rounded-xl border p-3 flex flex-col justify-between gap-1 shadow-sm bg-white transition-all',
+                            pp.readinessStatus === 'BLOCKED' ? 'border-red-200 bg-red-50/10' : 'border-slate-150'
+                          )}
+                        >
+                          <div className='min-w-0'>
+                            <p className='text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate'>
+                              <MapPin className={cn('h-3.5 w-3.5 shrink-0', pp.readinessStatus === 'BLOCKED' ? 'text-red-500' : 'text-[#C81E3A]')} />
+                              {pp.pointName}
+                            </p>
+                            {pp.pointCode && (
+                              <p className='text-[9px] font-bold text-slate-400 mt-0.5'>{pp.pointCode}</p>
+                            )}
+                          </div>
+
+                          {pp.windowStart && (
+                            <div className='flex items-center gap-1 text-[9px] text-slate-500 mt-1'>
+                              <Clock className='h-3 w-3 text-slate-400 shrink-0' />
+                              <span>{pp.windowStart.slice(0, 5)} - {pp.windowEnd?.slice(0, 5)}</span>
+                            </div>
+                          )}
+
+                          <div className='flex items-center justify-between mt-2 pt-2 border-t border-slate-100/50 text-[10px] text-slate-500'>
+                            <span className='font-bold'>{pp.studentCount} student(s)</span>
+                            <span className={cn(
+                              'inline-flex items-center rounded px-1.5 py-0.5 font-bold border',
+                              pp.readinessStatus === 'READY'
+                                ? 'bg-emerald-55/10 text-emerald-700 border-emerald-100'
+                                : 'bg-red-55/10 text-red-700 border-red-100'
+                            )}>
+                              {pp.readinessStatus === 'READY' ? '✅ Ready' : '⚠️ Blocked'}
+                            </span>
+                          </div>
+
+                          {pp.readinessStatus === 'BLOCKED' && pp.issueLabels && pp.issueLabels.length > 0 && (
+                            <div className='flex flex-wrap gap-1 mt-1.5'>
+                              {pp.issueLabels.map((lbl, idx) => (
+                                <span key={idx} className='text-[8px] font-bold bg-red-55/10 text-red-700 px-1 py-0.5 rounded border border-red-100 truncate max-w-full'>{lbl}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Tab 4: Context */}
+            {previewTab === 'context' && (() => {
+              // 1. School Info
+              const schName = preview?.schoolName ?? currentSchool?.name ?? '—';
+              const schCode = preview?.schoolCode ?? currentSchool?.code ?? '—';
+              const schAddr = preview?.schoolAddress ?? currentSchool?.address ?? '—';
+
+              // 2. Schedule Info
+              const sName = preview?.scheduleName ?? currentSchedule?.scheduleName ?? '—';
+              const sCode = preview?.scheduleCode ?? currentSchedule?.scheduleCode ?? '—';
+              const sShift = preview?.shiftType ?? currentSchedule?.shiftType ?? '—';
+              const sArrival = preview?.arrivalDeadline ?? currentSchedule?.arrivalDeadline ?? '—';
+              const sDeparture = preview?.departureTime ?? currentSchedule?.departureTime ?? '—';
+              const effFrom = preview?.effectiveFrom ?? currentSchedule?.effectiveFrom;
+              const effTo = preview?.effectiveTo ?? currentSchedule?.effectiveTo;
+              const effRange = effFrom && effTo ? `${formatDate(effFrom)} - ${formatDate(effTo)}` : effFrom ? formatDate(effFrom) : '—';
+
+              // 3. Active Days
+              const pActiveDays = preview?.activeDays;
+              const rawActiveDays = pActiveDays ?? currentSchedule?.daysOfWeek ?? [];
+              const activeDaysSet = new Set(rawActiveDays.map((d: string) => d.toUpperCase()));
+
+              const daysOfWeek = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+              const dayLabels: Record<string, string> = {
+                MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun'
+              };
+
+              // Check if service date matches schedule days
+              const sDate = preview?.serviceDate ?? form?.serviceDate;
+              let dateMatchText = '';
+              let dateMatchColor = '';
+              if (sDate) {
+                const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+                const dateDayName = dayNames[new Date(sDate).getDay()];
+                const isMatch = activeDaysSet.has(dateDayName);
+                if (isMatch) {
+                  dateMatchText = 'Service date matches schedule day';
+                  dateMatchColor = 'text-emerald-700 bg-emerald-55/10 border-emerald-100';
+                } else {
+                  dateMatchText = 'Service date is not included in schedule days';
+                  dateMatchColor = 'text-red-700 bg-red-55/10 border-red-100';
+                }
+              }
+
+              // 4. Planning Context
+              const serviceDateFormatted = sDate ? formatDate(sDate) : '—';
+              const dirVal = preview?.direction ?? form?.routeDirection;
+              const dirLabel = dirVal === 'OUTBOUND' ? 'Home → School' : dirVal === 'RETURN' ? 'School → Home' : dirVal ?? '—';
+              const methodVal = preview?.planningMethod ?? form?.planningMethod;
+              const methodLabel = methodVal === 'MANUAL' ? 'Manual' : methodVal === 'GREEDY' ? 'Greedy auto-generate' : methodVal ?? '—';
+              const depName = preview?.depotName ?? selectedDepot?.name ?? '—';
+              const capVal = preview?.defaultBusCapacity ?? form?.defaultBusCapacity ?? '—';
+
+              const hasContext = !!(form?.schoolId || preview?.schoolId);
+              if (!hasContext) {
+                return (
+                  <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 w-full'>
+                    <Calendar className='h-8 w-8 text-slate-350 mb-2' />
+                    <p className='text-xs font-bold text-slate-650'>Select Context</p>
+                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                      Select planning context and preview demand.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className='space-y-3 pt-1 text-xs text-slate-700 w-full'>
+                  {/* School Section */}
+                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-1.5 shadow-sm'>
+                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>School</p>
+                    <div>
+                      <p className='font-bold text-slate-800 text-sm leading-snug'>{schName}</p>
+                      <p className='text-[10px] text-slate-400 font-semibold mt-0.5'>{schCode}</p>
+                      {schAddr && schAddr !== '—' && (
+                        <p className='text-[10px] text-slate-500 mt-1 truncate'>{schAddr}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Schedule Section */}
+                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2 shadow-sm'>
+                    <div className='flex items-start justify-between'>
+                      <div className='space-y-1'>
+                        <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Schedule</p>
+                        <p className='font-bold text-slate-800 leading-snug'>{sName}</p>
+                        <p className='text-[10px] text-slate-400 font-bold mt-0.5'>
+                          {sCode} <span className='text-slate-300 mx-1'>·</span> <span className='text-[#C81E3A]'>{sShift}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className='grid grid-cols-2 gap-2 text-[10px] pt-1.5 border-t border-slate-100/60 text-slate-500'>
+                      <div>
+                        <span className='font-semibold text-slate-400'>Arrival:</span>{' '}
+                        <span className='font-bold text-slate-700'>{sArrival ? sArrival.slice(0, 5) : '—'}</span>
+                      </div>
+                      <div>
+                        <span className='font-semibold text-slate-400'>Departure:</span>{' '}
+                        <span className='font-bold text-slate-700'>{sDeparture ? sDeparture.slice(0, 5) : '—'}</span>
+                      </div>
+                      <div className='col-span-2'>
+                        <span className='font-semibold text-slate-400'>Effective:</span>{' '}
+                        <span className='font-bold text-slate-700'>{effRange}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Days Section */}
+                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2.5 shadow-sm'>
+                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Active Days</p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {daysOfWeek.map(day => {
+                        const isActive = activeDaysSet.has(day);
+                        return (
+                          <span
+                            key={day}
+                            className={cn(
+                              'px-2 py-0.5 rounded-lg border text-[10px] font-bold transition-all',
+                              isActive
+                                ? 'bg-red-50 text-[#C81E3A] border-red-100'
+                                : 'bg-slate-50 text-slate-400 border-slate-100'
+                            )}
+                          >
+                            {dayLabels[day]}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {dateMatchText && (
+                      <div className={cn(
+                        'flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-bold shadow-sm',
+                        dateMatchColor
+                      )}>
+                        <span>{dateMatchText === 'Service date matches schedule day' ? '✓' : '⚠️'}</span>
+                        <span>{dateMatchText}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Planning Section */}
+                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2 shadow-sm'>
+                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Planning</p>
+                    <div className='grid grid-cols-2 gap-x-3 gap-y-2 pt-1 text-[11px]'>
+                      <div className='flex flex-col'>
+                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Service Date</span>
+                        <span className='font-bold text-slate-800 mt-0.5'>{serviceDateFormatted}</span>
+                      </div>
+                      <div className='flex flex-col'>
+                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Direction</span>
+                        <span className='font-bold text-slate-800 mt-0.5'>{dirLabel}</span>
+                      </div>
+                      <div className='flex flex-col'>
+                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Planning Method</span>
+                        <span className='font-bold text-slate-800 mt-0.5'>{methodLabel}</span>
+                      </div>
+                      <div className='flex flex-col'>
+                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Depot</span>
+                        <span className='font-bold text-slate-800 mt-0.5 truncate max-w-full'>{depName}</span>
+                      </div>
+                      <div className='flex flex-col col-span-2'>
+                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Default Bus Capacity</span>
+                        <span className='font-bold text-slate-800 mt-0.5'>{capVal}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
-        </div>
-      )}
+        );
+      })()}
+          </>
+        )}
 
-      {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
-      {isManual && activeSession && (
+        {/* Tab 2: Route Builder */}
+        {rightPanelTab === 'route-builder' && (
+          <>
+            {/* Case A: No active session */}
+            {!activeSession && (
+              <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px]'>
+                <div className='flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 border border-slate-150 text-slate-400 mb-3 shadow-sm'>
+                  <Route className='h-6 w-6' />
+                </div>
+                <p className='text-sm font-bold text-slate-700'>No planning session yet</p>
+                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                  Create a session before building routes.
+                </p>
+              </div>
+            )}
+
+            {/* Case B: Active Session exists */}
+            {activeSession && (
+              <>
+                {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
+                {isManual && activeSession && (
         <div className='p-5 space-y-4'>
           <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
             <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
@@ -883,9 +1476,14 @@ export function PlanningResultsPanel({
           </div>
         </div>
       )}
+              </>
+            )}
+          </>
+        )}
 
-      {/* Route detail (shared — works for both GREEDY detail and MANUAL selected route) */}
-      {selectedRouteId && <RouteDetailPanel routeId={selectedRouteId} />}
+        {/* Route detail (shared — works for both GREEDY detail and MANUAL selected route) */}
+        {selectedRouteId && rightPanelTab === 'route-builder' && <RouteDetailPanel routeId={selectedRouteId} />}
+      </div>
     </div>
   );
 }

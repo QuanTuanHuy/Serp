@@ -31,10 +31,7 @@ public interface IRouteEligibilityService {
      * Build the full preview response: eligible students, pickup/dropoff point summaries, and issues.
      */
     PlanningPreviewResponse buildPreview(
-            Long schoolId,
-            Long schoolScheduleId,
-            String routeDirection,
-            LocalDate serviceDate,
+            serp.project.school_bus_service.dto.request.PlanningSessionPreviewRequest request,
             Long tenantId);
 
     /**

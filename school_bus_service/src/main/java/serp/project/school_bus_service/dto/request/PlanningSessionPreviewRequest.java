@@ -26,4 +26,11 @@ public class PlanningSessionPreviewRequest {
     /** OUTBOUND or RETURN */
     @NotBlank
     private String routeDirection;
+
+    @NotBlank
+    private String planningMethod;
+
+    private Long depotId;
+
+    private Integer defaultBusCapacity;
 }

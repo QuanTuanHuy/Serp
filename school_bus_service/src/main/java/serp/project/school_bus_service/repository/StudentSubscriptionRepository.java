@@ -14,6 +14,19 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
 
     List<StudentSubscriptionEntity> findByStudentIdAndTenantIdAndIsDeletedFalse(Long studentId, Long tenantId);
 
+    @Query("""
+            SELECT s FROM StudentSubscriptionEntity s
+             JOIN FETCH s.student
+             LEFT JOIN FETCH s.pickupPoint
+             LEFT JOIN FETCH s.dropoffPoint
+             WHERE s.school.id = :schoolId
+               AND s.tenantId = :tenantId
+               AND s.isDeleted = false
+            """)
+    List<StudentSubscriptionEntity> findAllBySchoolIdAndTenantId(
+            @Param("schoolId") Long schoolId,
+            @Param("tenantId") Long tenantId);
+
     List<StudentSubscriptionEntity> findBySchoolIdAndTenantIdAndStatusAndIsDeletedFalse(
             Long schoolId,
             Long tenantId,

@@ -111,6 +111,7 @@ export default function SchoolBusRoutePlanningPage() {
   });
 
   const [preview, setPreview] = useState<SchoolBusPlanningPreview | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<'demand-preview' | 'route-builder'>('demand-preview');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [greedyResult, setGreedyResult] = useState<SchoolBusGreedyGenerateResult | null>(null);
@@ -184,6 +185,24 @@ export default function SchoolBusRoutePlanningPage() {
   );
   const selectedRoutePath = selectedRoutePathData?.data ?? null;
 
+  // Clear greedy result and check session context alignment when planning context changes
+  React.useEffect(() => {
+    setGreedyResult(null);
+    setSelectedRouteId(null);
+    if (activeSession) {
+      const isContextMatch =
+        Number(form.schoolId) === activeSession.schoolId &&
+        Number(form.schoolScheduleId) === activeSession.schoolScheduleId &&
+        form.serviceDate === activeSession.serviceDate &&
+        form.routeDirection === activeSession.routeDirection &&
+        form.planningMethod === activeSession.planningMethod;
+
+      if (!isContextMatch) {
+        setActiveSessionId(null);
+      }
+    }
+  }, [form.schoolId, form.schoolScheduleId, form.serviceDate, form.routeDirection, form.planningMethod, form.depotId, form.defaultBusCapacity, activeSession]);
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
     if (!form.schoolId || !form.schoolScheduleId || !form.serviceDate) {
@@ -191,10 +210,16 @@ export default function SchoolBusRoutePlanningPage() {
     }
     try {
       const res = await previewMutation({
-        schoolId: Number(form.schoolId), schoolScheduleId: Number(form.schoolScheduleId),
-        serviceDate: form.serviceDate, routeDirection: form.routeDirection,
+        schoolId: Number(form.schoolId),
+        schoolScheduleId: Number(form.schoolScheduleId),
+        serviceDate: form.serviceDate,
+        routeDirection: form.routeDirection,
+        planningMethod: form.planningMethod,
+        depotId: form.depotId ? Number(form.depotId) : undefined,
+        defaultBusCapacity: form.defaultBusCapacity ? Number(form.defaultBusCapacity) : undefined,
       }).unwrap();
       setPreview(res.data);
+      setRightPanelTab('demand-preview');
       // Auto-fit to show all pickup points
       setFitTarget('all');
       setFitKey((k) => k + 1);
@@ -210,6 +235,7 @@ export default function SchoolBusRoutePlanningPage() {
         planningMethod: form.planningMethod,
       }).unwrap();
       setActiveSessionId(res.data.id);
+      setRightPanelTab('route-builder');
       toast.success(`Session #${res.data.id} created`);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
@@ -287,6 +313,19 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, []);
 
+  const handleSelectSession = useCallback((s: SchoolBusPlanningSession) => {
+    setActiveSessionId(s.id);
+    setRightPanelTab('route-builder');
+    setForm(prev => ({
+      ...prev,
+      schoolId: String(s.schoolId),
+      schoolScheduleId: String(s.schoolScheduleId),
+      serviceDate: s.serviceDate,
+      routeDirection: s.routeDirection,
+      planningMethod: s.planningMethod,
+    }));
+  }, []);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const unassignedStudents =
     activeSession?.totalUnassignedStudents ?? greedyResult?.totalUnassignedStudents ?? 0;
@@ -301,14 +340,20 @@ export default function SchoolBusRoutePlanningPage() {
     hasRoutes &&
     unassignedStudents === 0;
 
+  const hasBlockingIssues = preview?.issues?.some((issue) => issue.severity === 'BLOCKING') ?? false;
+
   // Map pickup points from preview (or from greedy result when preview was skipped)
-  const rawPickupPoints = preview?.eligiblePickupPoints ?? greedyResult?.eligiblePickupPoints ?? [];
-  const mapPickupPoints = rawPickupPoints.map((pp) => ({
-    pickupPointId: pp.pickupPointId,
-    pickupPointName: pp.pickupPointName,
+  const rawPickupPoints = preview?.points
+    ? preview.points
+    : (preview?.eligiblePickupPoints ?? greedyResult?.eligiblePickupPoints ?? []);
+  const mapPickupPoints = rawPickupPoints.map((pp: any) => ({
+    pickupPointId: pp.pointId ?? pp.pickupPointId,
+    pickupPointName: pp.pointName ?? pp.pickupPointName,
     latitude: pp.latitude,
     longitude: pp.longitude,
     studentCount: pp.studentCount,
+    pointRole: pp.pointRole,
+    readinessStatus: pp.readinessStatus,
   }));
 
   const hasMapData =
@@ -374,6 +419,7 @@ export default function SchoolBusRoutePlanningPage() {
                 previewing={previewing} creating={creating}
                 sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
                 depots={depots}
+                hasBlockingIssues={hasBlockingIssues}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
@@ -381,7 +427,7 @@ export default function SchoolBusRoutePlanningPage() {
                 canPublish={canPublish} generating={generating} publishing={publishing}
                 cancelling={cancelling} hasRoutes={hasRoutes}
                 onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
-                onSelectSession={(s) => setActiveSessionId(s.id)}
+                onSelectSession={handleSelectSession}
                 hidePastSessions
               />
             </div>
@@ -467,6 +513,7 @@ export default function SchoolBusRoutePlanningPage() {
                 previewing={previewing} creating={creating}
                 sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
                 depots={depots}
+                hasBlockingIssues={hasBlockingIssues}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
@@ -474,7 +521,7 @@ export default function SchoolBusRoutePlanningPage() {
                 canPublish={canPublish} generating={generating} publishing={publishing}
                 cancelling={cancelling} hasRoutes={hasRoutes}
                 onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
-                onSelectSession={(s) => setActiveSessionId(s.id)}
+                onSelectSession={handleSelectSession}
               />
             </div>
           </div>
@@ -546,6 +593,11 @@ export default function SchoolBusRoutePlanningPage() {
                 onSelectRoute={handleSelectRoute}
                 onCreateManualRoute={handleCreateManualRoute}
                 creatingRoute={creatingRoute}
+                form={form}
+                rightPanelTab={rightPanelTab}
+                onTabChange={setRightPanelTab}
+                onPreviewDemandClick={handlePreview}
+                previewing={previewing}
               />
             </div>
           </div>

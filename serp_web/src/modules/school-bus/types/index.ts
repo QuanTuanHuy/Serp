@@ -1003,6 +1003,72 @@ export interface SchoolBusPlanningPickupPoint {
   hasWindow?: boolean;
 }
 
+export interface PlanningReadinessSummary {
+  totalSubscriptions: number;
+  eligibleStudents: number;
+  blockedStudents: number;
+  warningStudents: number;
+  pointCount: number;
+  pickupPointCount: number;
+  dropoffPointCount: number;
+  missingCoordinateCount: number;
+  missingWindowCount: number;
+  pausedCount: number;
+  inactiveCount: number;
+  outOfEffectiveRangeCount: number;
+  dayMismatchCount: number;
+}
+
+export interface PlanningDemandResponse {
+  subscriptionId: number;
+  subscriptionCode: string;
+  studentId: number;
+  studentCode: string;
+  studentName: string;
+  schoolId: number;
+  schoolName: string;
+  schoolScheduleId: number;
+  scheduleCode?: string;
+  scheduleName?: string;
+  tripOption: string;
+  tripOptionLabel?: string;
+  pointId?: number;
+  pointCode?: string;
+  pointName?: string;
+  latitude?: number;
+  longitude?: number;
+  windowStart?: string;
+  windowEnd?: string;
+  readinessStatus: 'READY' | 'BLOCKED';
+  reasonCode?: string;
+  reasonLabel?: string;
+  issueCodes?: string[];
+  issueLabels?: string[];
+}
+
+export interface PlanningPointResponse {
+  pointId: number;
+  pointCode: string;
+  pointName: string;
+  latitude?: number;
+  longitude?: number;
+  pointRole: 'PICKUP' | 'DROPOFF';
+  windowStart?: string;
+  windowEnd?: string;
+  studentCount: number;
+  issueLabels?: string[];
+  readinessStatus: 'READY' | 'BLOCKED';
+}
+
+export interface PlanningReadinessIssueResponse {
+  severity: 'BLOCKING' | 'WARNING' | 'INFO';
+  code: string;
+  label: string;
+  subscriptionId?: number;
+  studentId?: number;
+  pointId?: number;
+}
+
 export interface SchoolBusPlanningPreview {
   schoolId: number;
   schoolName: string;
@@ -1015,6 +1081,29 @@ export interface SchoolBusPlanningPreview {
   eligibleStudents: SchoolBusEligibleStudent[];
   eligiblePickupPoints: SchoolBusPlanningPickupPoint[];
   issues: SchoolBusPlanningIssue[];
+  
+  // New fields from Phase 2
+  schoolCode?: string;
+  schoolAddress?: string;
+  scheduleCode?: string;
+  scheduleName?: string;
+  shiftType?: string;
+  arrivalDeadline?: string;
+  departureTime?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  activeDays?: string[];
+  serviceDayOfWeek?: string;
+  direction?: string;
+  planningMethod?: string;
+  depotId?: number;
+  depotCode?: string;
+  depotName?: string;
+  defaultBusCapacity?: number;
+  summary?: PlanningReadinessSummary;
+  eligibleDemands?: PlanningDemandResponse[];
+  blockedDemands?: PlanningDemandResponse[];
+  points?: PlanningPointResponse[];
 }
 
 export interface SchoolBusRouteQuality {
@@ -1062,6 +1151,9 @@ export interface PlanningSessionPreviewRequest {
   schoolScheduleId: number;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
+  planningMethod?: PlanningMethod;
+  depotId?: number;
+  defaultBusCapacity?: number;
 }
 
 export interface GreedyGenerateRequest {

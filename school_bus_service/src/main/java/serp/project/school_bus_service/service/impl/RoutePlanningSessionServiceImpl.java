@@ -131,9 +131,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     @Override
     @Transactional(readOnly = true)
     public PlanningPreviewResponse preview(PlanningSessionPreviewRequest req, Long tenantId) {
-        return eligibilityService.buildPreview(
-                req.getSchoolId(), req.getSchoolScheduleId(),
-                req.getRouteDirection(), req.getServiceDate(), tenantId);
+        return eligibilityService.buildPreview(req, tenantId);
     }
 
     // ── Create session ───────────────────────────────────────────────────────
