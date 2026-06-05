@@ -27,8 +27,11 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import serp.project.school_bus_service.dto.response.SchoolPickupPointWindowResponse;
+import serp.project.school_bus_service.dto.response.SchoolPickupPointCompatibilityResponse;
 import serp.project.school_bus_service.entity.SchoolPickupPointWindowEntity;
 
 @Service
@@ -206,5 +209,131 @@ public class SchoolPickupPointServiceImpl extends AbstractBaseService<SchoolPick
             return List.of();
         }
         return repository.findBySchoolIdInAndTenantIdAndIsDeletedFalse(schoolIds, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SchoolPickupPointCompatibilityResponse> getCompatibility(Long schoolId, Long schoolScheduleId, Long tenantId) {
+        List<SchoolPickupPointEntity> links = repository.findBySchoolIdAndTenantIdAndIsDeletedFalseAndIsActiveTrue(schoolId, tenantId);
+        List<SchoolPickupPointCompatibilityResponse> result = new ArrayList<>();
+        if (links.isEmpty()) {
+            return result;
+        }
+
+        List<Long> linkIds = links.stream().map(SchoolPickupPointEntity::getId).toList();
+        List<SchoolPickupPointWindowEntity> windowEntities = windowService.getWindowsForLinks(linkIds, tenantId);
+
+        Map<Long, Map<String, SchoolPickupPointWindowEntity>> windowsByLinkId = new HashMap<>();
+        for (SchoolPickupPointWindowEntity win : windowEntities) {
+            if (schoolScheduleId != null) {
+                if (win.getSchoolSchedule() == null || !schoolScheduleId.equals(win.getSchoolSchedule().getId())) {
+                    continue;
+                }
+            }
+            if (win.getSchoolPickupPoint() != null) {
+                windowsByLinkId.computeIfAbsent(win.getSchoolPickupPoint().getId(), k -> new HashMap<>())
+                        .put(win.getDirection(), win);
+            }
+        }
+
+        for (SchoolPickupPointEntity link : links) {
+            PickupPointEntity pp = link.getPickupPoint();
+            if (pp == null || Boolean.TRUE.equals(pp.getIsDeleted())) {
+                continue;
+            }
+
+            SchoolPickupPointCompatibilityResponse resp = new SchoolPickupPointCompatibilityResponse();
+            resp.setPickupPointId(pp.getId());
+            resp.setPickupPointCode(pp.getCode());
+            resp.setPickupPointName(pp.getName());
+
+            boolean hasCoords = pp.getLatitude() != null && pp.getLongitude() != null;
+            String usage = pp.getUsageType() != null ? pp.getUsageType().toUpperCase() : "PICKUP_DROPOFF";
+            boolean supportsPickup = usage.equals("PICKUP_ONLY") || usage.equals("PICKUP_DROPOFF");
+            boolean supportsDropoff = usage.equals("DROPOFF_ONLY") || usage.equals("PICKUP_DROPOFF");
+
+            resp.setUsageType(usage);
+            resp.setHasCoordinates(hasCoords);
+
+            Map<String, SchoolPickupPointWindowEntity> directionsMap = windowsByLinkId.get(link.getId());
+
+            // ── Pickup Compatibility ─────────────────────────────────────────
+            if (!supportsPickup) {
+                resp.setPickupReadinessCode("UNSUPPORTED_USAGE_TYPE");
+                resp.setPickupReadinessLabel("Unsupported usage type");
+                resp.setPickupReadinessStatus("Unsupported usage");
+                resp.setPickupMissingConfigReason("Usage type " + usage + " does not support PICKUP");
+                resp.setCompatibleForPickup(false);
+            } else if (!hasCoords) {
+                resp.setPickupReadinessCode("MISSING_COORDINATES");
+                resp.setPickupReadinessLabel("Missing coordinates");
+                resp.setPickupReadinessStatus("Missing coordinates");
+                resp.setPickupMissingConfigReason("Missing coordinates");
+                resp.setCompatibleForPickup(false);
+            } else if (schoolScheduleId != null) {
+                SchoolPickupPointWindowEntity pickupWin = directionsMap != null ? directionsMap.get("PICKUP_TO_SCHOOL") : null;
+                if (pickupWin != null) {
+                    resp.setPickupReadinessCode("READY");
+                    resp.setPickupReadinessLabel("Ready");
+                    resp.setPickupReadinessStatus("Ready");
+                    resp.setPickupWindowStart(pickupWin.getWindowStart());
+                    resp.setPickupWindowEnd(pickupWin.getWindowEnd());
+                    resp.setCompatibleForPickup(true);
+                } else {
+                    resp.setPickupReadinessCode("MISSING_PICKUP_WINDOW");
+                    resp.setPickupReadinessLabel("Missing pickup window");
+                    resp.setPickupReadinessStatus("Missing window");
+                    resp.setPickupMissingConfigReason("Missing PICKUP_TO_SCHOOL window");
+                    resp.setCompatibleForPickup(false);
+                }
+            } else {
+                // No schedule selected — window cannot be checked
+                resp.setPickupReadinessCode("NOT_CHECKED");
+                resp.setPickupReadinessLabel("Select schedule to check window");
+                resp.setPickupReadinessStatus("Ready");
+                resp.setCompatibleForPickup(true);
+            }
+
+            // ── Dropoff Compatibility ────────────────────────────────────────
+            if (!supportsDropoff) {
+                resp.setDropoffReadinessCode("UNSUPPORTED_USAGE_TYPE");
+                resp.setDropoffReadinessLabel("Unsupported usage type");
+                resp.setDropoffReadinessStatus("Unsupported usage");
+                resp.setDropoffMissingConfigReason("Usage type " + usage + " does not support DROPOFF");
+                resp.setCompatibleForDropoff(false);
+            } else if (!hasCoords) {
+                resp.setDropoffReadinessCode("MISSING_COORDINATES");
+                resp.setDropoffReadinessLabel("Missing coordinates");
+                resp.setDropoffReadinessStatus("Missing coordinates");
+                resp.setDropoffMissingConfigReason("Missing coordinates");
+                resp.setCompatibleForDropoff(false);
+            } else if (schoolScheduleId != null) {
+                SchoolPickupPointWindowEntity dropoffWin = directionsMap != null ? directionsMap.get("DROPOFF_FROM_SCHOOL") : null;
+                if (dropoffWin != null) {
+                    resp.setDropoffReadinessCode("READY");
+                    resp.setDropoffReadinessLabel("Ready");
+                    resp.setDropoffReadinessStatus("Ready");
+                    resp.setDropoffWindowStart(dropoffWin.getWindowStart());
+                    resp.setDropoffWindowEnd(dropoffWin.getWindowEnd());
+                    resp.setCompatibleForDropoff(true);
+                } else {
+                    resp.setDropoffReadinessCode("MISSING_DROPOFF_WINDOW");
+                    resp.setDropoffReadinessLabel("Missing drop-off window");
+                    resp.setDropoffReadinessStatus("Missing window");
+                    resp.setDropoffMissingConfigReason("Missing DROPOFF_FROM_SCHOOL window");
+                    resp.setCompatibleForDropoff(false);
+                }
+            } else {
+                // No schedule selected — window cannot be checked
+                resp.setDropoffReadinessCode("NOT_CHECKED");
+                resp.setDropoffReadinessLabel("Select schedule to check window");
+                resp.setDropoffReadinessStatus("Ready");
+                resp.setCompatibleForDropoff(true);
+            }
+
+            result.add(resp);
+        }
+
+        return result;
     }
 }

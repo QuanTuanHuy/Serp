@@ -1554,6 +1554,68 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusSchoolPickupPoint[]>(),
       providesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' }],
     }),
+    getSchoolPickupPointsCompatibility: builder.query<
+      ApiResponse<Array<{
+        pickupPointId: number;
+        pickupPointCode: string | null;
+        pickupPointName: string | null;
+        usageType: string | null;
+        hasCoordinates: boolean | null;
+        // Stable enum code for logic — READY | MISSING_PICKUP_WINDOW | MISSING_COORDINATES | UNSUPPORTED_USAGE_TYPE | NOT_CHECKED
+        pickupReadinessCode: string;
+        // Human-readable label — display directly in UI
+        pickupReadinessLabel: string;
+        // Legacy — kept for backward compat
+        pickupReadinessStatus: string;
+        pickupMissingConfigReason: string | null;
+        pickupWindowStart: string | null;
+        pickupWindowEnd: string | null;
+        compatibleForPickup: boolean | null;
+        // Stable enum code
+        dropoffReadinessCode: string;
+        // Human-readable label
+        dropoffReadinessLabel: string;
+        // Legacy
+        dropoffReadinessStatus: string;
+        dropoffMissingConfigReason: string | null;
+        dropoffWindowStart: string | null;
+        dropoffWindowEnd: string | null;
+        compatibleForDropoff: boolean | null;
+      }>>,
+      { schoolId: number; schoolScheduleId: number }
+    >({
+      query: ({ schoolId, schoolScheduleId }) => ({
+        url: '/school-pickup-points/compatibility',
+        method: 'GET',
+        params: { schoolId, schoolScheduleId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<Array<{
+        pickupPointId: number;
+        pickupPointCode: string | null;
+        pickupPointName: string | null;
+        usageType: string | null;
+        hasCoordinates: boolean | null;
+        pickupReadinessCode: string;
+        pickupReadinessLabel: string;
+        pickupReadinessStatus: string;
+        pickupMissingConfigReason: string | null;
+        pickupWindowStart: string | null;
+        pickupWindowEnd: string | null;
+        compatibleForPickup: boolean | null;
+        dropoffReadinessCode: string;
+        dropoffReadinessLabel: string;
+        dropoffReadinessStatus: string;
+        dropoffMissingConfigReason: string | null;
+        dropoffWindowStart: string | null;
+        dropoffWindowEnd: string | null;
+        compatibleForDropoff: boolean | null;
+      }>>(),
+      providesTags: (_result, _error, { schoolId, schoolScheduleId }) => [
+        { type: 'schoolBus/PickupPoint', id: `COMPATIBILITY-${schoolId}-${schoolScheduleId}` }
+      ],
+    }),
+
     getAllActiveSchoolPickupLinks: builder.query<
       ApiResponse<SchoolBusSchoolPickupPoint[]>,
       void
@@ -1934,6 +1996,7 @@ export const {
   // School Pickup Point
   useGetSchoolPickupPointsQuery,
   useGetActiveSchoolPickupPointsQuery,
+  useGetSchoolPickupPointsCompatibilityQuery,
   useGetAllActiveSchoolPickupLinksQuery,
   useLinkSchoolPickupPointMutation,
   useUpdateSchoolPickupPointMutation,

@@ -185,6 +185,7 @@ export interface SchoolBusDepot extends SchoolBusBaseRecord {
 export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   requestId: number;
   studentId: number;
+  studentCode?: string | null;
   studentName: string;
   pickupPointId?: number | null;
   pickupPointName?: string | null;
@@ -197,7 +198,11 @@ export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   dropoffPointLatitude?: number | null;
   dropoffPointLongitude?: number | null;
   schoolScheduleId?: number | null;
+  schoolScheduleCode?: string | null;
   schoolScheduleName?: string | null;
+  shiftType?: string | null;
+  arrivalDeadline?: string | null;
+  departureTime?: string | null;
   tripOption?: string | null;
   monday?: boolean;
   tuesday?: boolean;

@@ -8,8 +8,8 @@ export const REQUEST_TYPE_OPTIONS = [
 ] as const;
 
 export const TRIP_OPTION_OPTIONS = [
-  { value: 'MORNING', label: 'Morning (pickup)' },
-  { value: 'AFTERNOON', label: 'Afternoon (drop-off)' },
+  { value: 'MORNING', label: 'To school only (Morning)' },
+  { value: 'AFTERNOON', label: 'From school only (Afternoon)' },
   { value: 'ROUND_TRIP', label: 'Round trip' },
 ] as const;
 

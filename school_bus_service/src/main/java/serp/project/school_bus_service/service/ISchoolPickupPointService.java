@@ -7,6 +7,8 @@ import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.SchoolPickupPointResponse;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 
+import serp.project.school_bus_service.dto.response.SchoolPickupPointCompatibilityResponse;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -41,4 +43,6 @@ public interface ISchoolPickupPointService extends IBaseService<SchoolPickupPoin
     boolean isLinkedAndActive(Long schoolId, Long pickupPointId, Long tenantId);
 
     List<SchoolPickupPointEntity> getPickupPointLinksForSchools(List<Long> schoolIds, Long tenantId);
+
+    List<SchoolPickupPointCompatibilityResponse> getCompatibility(Long schoolId, Long schoolScheduleId, Long tenantId);
 }

@@ -55,6 +55,7 @@ import type {
 } from '../types';
 import {
   useGetActiveSchoolPickupPointsQuery,
+  useGetSchoolPickupPointsCompatibilityQuery,
   useGetActiveSchoolSchedulesQuery,
   useGetSubscriptionsQuery,
 } from '../api/schoolBusApi';
@@ -94,31 +95,84 @@ export function SchoolBusFormSection({
   );
 }
 
-function getRowReadiness(sv: any, needsTarget: boolean) {
+/** Blocking: missing required field → cannot save.
+ *  Needs-config: all required fields present but approval blocker exists (missing window / coords).
+ *  Ready: fully configured, can be approved. */
+type RowReadiness =
+  | 'missing-student'
+  | 'missing-schedule'
+  | 'missing-tripopt'
+  | 'missing-pickup'
+  | 'missing-dropoff'
+  | 'missing-target'
+  | 'needs-config'
+  | 'ready';
+
+interface CompatibilityEntry {
+  pickupReadinessCode: string;
+  dropoffReadinessCode: string;
+}
+
+function getRowReadiness(
+  sv: any,
+  needsTarget: boolean,
+  requiresRouting: boolean,
+  compatibilityMapBySchedule?: Map<string, CompatibilityEntry>
+): RowReadiness {
+  // ── Blocking checks ────────────────────────────────────────────────
   if (!sv.studentId || Number(sv.studentId) === 0) return 'missing-student';
-  
-  const opt = (sv.tripOption || '').toUpperCase();
-  const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP' || opt === '';
-  const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
-  
-  if (needsPickup && (!sv.pickupPointId || sv.pickupPointId === '__none__')) return 'missing-pickup';
-  if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__')) return 'missing-dropoff';
+
+  if (!requiresRouting) {
+    if (needsTarget && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
+    return 'ready';
+  }
+
   if (!sv.schoolScheduleId || sv.schoolScheduleId === '__none__') return 'missing-schedule';
-  if (needsTarget && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
-  
+
+  const opt = (sv.tripOption || '').toUpperCase();
+  if (!opt || opt === '__NONE__') return 'missing-tripopt';
+
+  const needsPickup  = opt === 'MORNING'   || opt === 'ROUND_TRIP';
+  const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+
+  if (needsPickup  && (!sv.pickupPointId  || sv.pickupPointId  === '__none__')) return 'missing-pickup';
+  if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__')) return 'missing-dropoff';
+  if (needsTarget  && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
+
+  // ── Approval-blocker check (needs-config) ─────────────────────────
+  if (compatibilityMapBySchedule) {
+    const schId = Number(sv.schoolScheduleId);
+    if (schId) {
+      if (needsPickup && sv.pickupPointId) {
+        const comp = compatibilityMapBySchedule.get(`${schId}-${sv.pickupPointId}`);
+        if (comp && comp.pickupReadinessCode !== 'READY' && comp.pickupReadinessCode !== 'NOT_CHECKED') {
+          return 'needs-config';
+        }
+      }
+      if (needsDropoff && sv.dropoffPointId) {
+        const comp = compatibilityMapBySchedule.get(`${schId}-${sv.dropoffPointId}`);
+        if (comp && comp.dropoffReadinessCode !== 'READY' && comp.dropoffReadinessCode !== 'NOT_CHECKED') {
+          return 'needs-config';
+        }
+      }
+    }
+  }
+
   return 'ready';
 }
 
-function ReadinessBadge({ readiness }: { readiness: string }) {
+function ReadinessBadge({ readiness }: { readiness: RowReadiness }) {
   const configs: Record<string, { label: string; className: string }> = {
-    'missing-student': { label: 'Missing student', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-pickup': { label: 'Missing pickup', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-    'missing-dropoff': { label: 'Missing drop-off', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-    'missing-schedule': { label: 'Missing schedule', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-    'missing-target': { label: 'Missing subscription', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+    'missing-student': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'missing-schedule': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'missing-tripopt': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'missing-pickup': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'missing-dropoff': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'missing-target': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
+    'needs-config': { label: 'Needs configuration', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
     ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   };
-  const cfg = configs[readiness] || configs.ready;
+  const cfg = configs[readiness] ?? configs.ready;
   return (
     <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ring-1', cfg.className)}>
       {cfg.label}
@@ -156,6 +210,78 @@ const transportRequestSchema = z.object({
     )
     .min(1, 'At least one student is required'),
   isActive: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  const reqType = data.requestType;
+  const isNewOrChangeOrRenew = reqType === 'NEW_SERVICE' || reqType === 'CHANGE_SERVICE' || reqType === 'RENEW_SERVICE';
+  const requiresTarget = reqType !== 'NEW_SERVICE';
+
+  data.students.forEach((student, index) => {
+    if (!student.studentId || Number(student.studentId) === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Student is required',
+        path: ['students', index, 'studentId'],
+      });
+      return;
+    }
+
+    if (requiresTarget) {
+      if (!student.targetSubscriptionId || student.targetSubscriptionId === '' || student.targetSubscriptionId === '__none__') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Target subscription is required for request type ${reqType}`,
+          path: ['students', index, 'targetSubscriptionId'],
+        });
+      }
+    }
+
+    if (isNewOrChangeOrRenew) {
+      if (!student.schoolScheduleId || student.schoolScheduleId === '' || student.schoolScheduleId === '__none__') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'School schedule is required',
+          path: ['students', index, 'schoolScheduleId'],
+        });
+      }
+
+      if (!student.tripOption || student.tripOption === '' || student.tripOption === '__none__') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Trip option is required',
+          path: ['students', index, 'tripOption'],
+        });
+      }
+
+      const opt = student.tripOption || '';
+      const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
+      const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+
+      if (needsPickup && (!student.pickupPointId || student.pickupPointId === '' || student.pickupPointId === '__none__')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Pickup point is required',
+          path: ['students', index, 'pickupPointId'],
+        });
+      }
+
+      if (needsDropoff && (!student.dropoffPointId || student.dropoffPointId === '' || student.dropoffPointId === '__none__')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Drop-off point is required',
+          path: ['students', index, 'dropoffPointId'],
+        });
+      }
+
+      const hasDays = student.monday || student.tuesday || student.wednesday || student.thursday || student.friday || student.saturday || student.sunday;
+      if (!hasDays) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'At least one day must be selected',
+          path: ['students', index, 'monday'],
+        });
+      }
+    }
+  });
 });
 
 const routeSchema = z.object({
@@ -200,6 +326,146 @@ interface TransportRequestFormProps {
   onCancel?: () => void;
   submitLabel?: string;
 }
+
+interface PickupDropoffPointsFieldsProps {
+  index: number;
+  form: any;
+  schoolId: number;
+  schoolScheduleId: number | null;
+  pickupCapablePoints: any[];
+  dropoffCapablePoints: any[];
+  pickupRequired: boolean;
+  dropoffRequired: boolean;
+}
+
+function PickupDropoffPointsFields({
+  index,
+  form,
+  schoolId,
+  schoolScheduleId,
+  pickupCapablePoints,
+  dropoffCapablePoints,
+  pickupRequired,
+  dropoffRequired,
+}: PickupDropoffPointsFieldsProps) {
+  const { data: compData } = useGetSchoolPickupPointsCompatibilityQuery(
+    { schoolId, schoolScheduleId: schoolScheduleId! },
+    { skip: !schoolId || !schoolScheduleId }
+  );
+
+  const compatibilityMap = React.useMemo(() => {
+    const map = new Map<number, {
+      pickupReadinessCode: string;
+      pickupReadinessLabel: string;
+      dropoffReadinessCode: string;
+      dropoffReadinessLabel: string;
+    }>();
+    compData?.data?.forEach((item) => {
+      map.set(item.pickupPointId, item);
+    });
+    return map;
+  }, [compData]);
+
+  // Watch currently selected values to show inline readiness badge
+  const currentPickupId  = form.watch(`students.${index}.pickupPointId`);
+  const currentDropoffId = form.watch(`students.${index}.dropoffPointId`);
+
+  const selectedPickupComp  = (currentPickupId  && currentPickupId  !== '__none__') ? compatibilityMap.get(Number(currentPickupId))  : null;
+  const selectedDropoffComp = (currentDropoffId && currentDropoffId !== '__none__') ? compatibilityMap.get(Number(currentDropoffId)) : null;
+
+  /** Badge config for a readiness code: returns label + tailwind classes. */
+  const readinessBadgeConfig = (code: string | undefined, direction: 'pickup' | 'dropoff'): { label: string; className: string } | null => {
+    if (!schoolScheduleId || !code) return null;
+    if (code === 'READY') return { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
+    if (code === 'NOT_CHECKED') return null;
+    if (code === (direction === 'pickup' ? 'MISSING_PICKUP_WINDOW' : 'MISSING_DROPOFF_WINDOW'))
+      return { label: 'Missing window', className: 'bg-amber-50 text-amber-700 ring-amber-200' };
+    if (code === 'MISSING_COORDINATES')
+      return { label: 'Missing coordinates', className: 'bg-red-50 text-red-600 ring-red-200' };
+    if (code === 'UNSUPPORTED_USAGE_TYPE')
+      return { label: 'Unsupported usage', className: 'bg-red-50 text-red-600 ring-red-200' };
+    return { label: 'Needs config', className: 'bg-amber-50 text-amber-700 ring-amber-200' };
+  };
+
+  const pickupBadge  = readinessBadgeConfig(selectedPickupComp?.pickupReadinessCode,  'pickup');
+  const dropoffBadge = readinessBadgeConfig(selectedDropoffComp?.dropoffReadinessCode, 'dropoff');
+
+  /** Option: name only as label (for truncation in trigger), readiness as description (second line in dropdown). */
+  const makePickupOptions = React.useMemo(
+    () => pickupCapablePoints.map((pp) => {
+      const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+      const comp = compatibilityMap.get(pp.pickupPointId);
+      let description: string | undefined;
+      if (schoolScheduleId && comp) {
+        if (comp.pickupReadinessCode === 'READY') description = 'Ready';
+        else if (comp.pickupReadinessCode !== 'NOT_CHECKED') description = comp.pickupReadinessLabel;
+      }
+      return { value: String(pp.pickupPointId), label: name, description };
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pickupCapablePoints, compatibilityMap, schoolScheduleId]
+  );
+
+  const makeDropoffOptions = React.useMemo(
+    () => dropoffCapablePoints.map((pp) => {
+      const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+      const comp = compatibilityMap.get(pp.pickupPointId);
+      let description: string | undefined;
+      if (schoolScheduleId && comp) {
+        if (comp.dropoffReadinessCode === 'READY') description = 'Ready';
+        else if (comp.dropoffReadinessCode !== 'NOT_CHECKED') description = comp.dropoffReadinessLabel;
+      }
+      return { value: String(pp.pickupPointId), label: name, description };
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dropoffCapablePoints, compatibilityMap, schoolScheduleId]
+  );
+
+  return (
+    <>
+      <div className='min-w-0 space-y-1'>
+        <SelectField
+          form={form}
+          name={`students.${index}.pickupPointId`}
+          label={pickupRequired ? 'Pickup point *' : 'Pickup point'}
+          allowEmpty
+          emptyValue='__none__'
+          emptyLabel='No pickup point'
+          options={makePickupOptions}
+        />
+        {pickupBadge && (
+          <span className={cn(
+            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ml-0.5',
+            pickupBadge.className
+          )}>
+            {pickupBadge.label}
+          </span>
+        )}
+      </div>
+
+      <div className='min-w-0 space-y-1'>
+        <SelectField
+          form={form}
+          name={`students.${index}.dropoffPointId`}
+          label={dropoffRequired ? 'Drop-off point *' : 'Drop-off point'}
+          allowEmpty
+          emptyValue='__none__'
+          emptyLabel='No drop-off point'
+          options={makeDropoffOptions}
+        />
+        {dropoffBadge && (
+          <span className={cn(
+            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ml-0.5',
+            dropoffBadge.className
+          )}>
+            {dropoffBadge.label}
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
 
 const EMPTY_STUDENT = {
   studentId: 0,
@@ -265,11 +531,13 @@ export function TransportRequestForm({
     },
   });
 
+  // Reset form ONLY when initialData changes (edit mode data arrives or is cleared).
+  // Do NOT include parents/schools in deps — they are option lists only.
+  // Including them caused re-reset after async API data loaded, destroying user input.
   React.useEffect(() => {
     form.reset({
-      parentProfileId:
-        initialData?.request.parentProfileId ?? parents[0]?.id ?? 0,
-      schoolId: initialData?.request.schoolId ?? schools[0]?.id ?? 0,
+      parentProfileId: initialData?.request.parentProfileId ?? 0,
+      schoolId: initialData?.request.schoolId ?? 0,
       requestType:
         initialData?.request.requestType || REQUEST_TYPE_OPTIONS[0].value,
       effectiveFrom: initialData?.request.effectiveFrom || '',
@@ -281,7 +549,8 @@ export function TransportRequestForm({
         : [EMPTY_STUDENT],
       isActive: initialData?.request.isActive ?? true,
     });
-  }, [form, initialData, parents, schools, mapStudentDefaults]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -293,6 +562,11 @@ export function TransportRequestForm({
   const parentProfileId = form.watch('parentProfileId');
   const requestType = form.watch('requestType');
   const needsTarget = requestType !== 'NEW_SERVICE';
+  // PAUSE / STOP / RESUME do not require routing data (schedule, tripOption, pickup, dropoff)
+  const requiresRouting =
+    requestType === 'NEW_SERVICE' ||
+    requestType === 'CHANGE_SERVICE' ||
+    requestType === 'RENEW_SERVICE';
 
   const filteredStudents = React.useMemo(() => {
     return students.filter(
@@ -423,6 +697,102 @@ export function TransportRequestForm({
 
 
   // ── Derived state per active student row ──────────────────────────
+  const uniqueScheduleIds = React.useMemo(() => {
+    const ids = new Set<number>();
+    allStudentValues.forEach((s) => {
+      const idNum = Number(s.schoolScheduleId);
+      if (idNum) ids.add(idNum);
+    });
+    return Array.from(ids);
+  }, [allStudentValues]);
+
+  const { data: comp1 } = useGetSchoolPickupPointsCompatibilityQuery(
+    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[0]! },
+    { skip: !schoolId || !uniqueScheduleIds[0] }
+  );
+  const { data: comp2 } = useGetSchoolPickupPointsCompatibilityQuery(
+    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[1]! },
+    { skip: !schoolId || !uniqueScheduleIds[1] }
+  );
+  const { data: comp3 } = useGetSchoolPickupPointsCompatibilityQuery(
+    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[2]! },
+    { skip: !schoolId || !uniqueScheduleIds[2] }
+  );
+
+  const compatibilityMapBySchedule = React.useMemo(() => {
+    const map = new Map<string, CompatibilityEntry>();
+
+    const addItems = (scheduleId: number, items: any[]) => {
+      items.forEach((item) => {
+        map.set(`${scheduleId}-${item.pickupPointId}`, {
+          pickupReadinessCode: item.pickupReadinessCode ?? 'NOT_CHECKED',
+          dropoffReadinessCode: item.dropoffReadinessCode ?? 'NOT_CHECKED',
+        });
+      });
+    };
+
+    if (comp1?.data && uniqueScheduleIds[0]) addItems(uniqueScheduleIds[0], comp1.data);
+    if (comp2?.data && uniqueScheduleIds[1]) addItems(uniqueScheduleIds[1], comp2.data);
+    if (comp3?.data && uniqueScheduleIds[2]) addItems(uniqueScheduleIds[2], comp3.data);
+
+    return map;
+  }, [comp1, comp2, comp3, uniqueScheduleIds]);
+
+  // \u2500\u2500 Auto-fill default pickup/dropoff when studentId changes \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Compares against a stable ref to detect which rows changed their student selection.
+  // Only fills in pickup/dropoffPointId when the field is still empty \u2014 never overwrites.
+  const prevStudentIdRef = React.useRef<Record<number, string>>({});
+
+  React.useEffect(() => {
+    allStudentValues.forEach((sv, idx) => {
+      const rawId = sv.studentId;
+      const currentKey = String(rawId ?? '');
+      const prevKey = String(prevStudentIdRef.current[idx] ?? '');
+
+      // A valid id is non-empty and not '0'
+      const isValidId =
+        rawId !== undefined &&
+        rawId !== null &&
+        String(rawId) !== '' &&
+        String(rawId) !== '0' &&
+        Number(rawId) !== 0;
+
+      if (!isValidId || currentKey === prevKey) {
+        prevStudentIdRef.current[idx] = currentKey;
+        return;
+      }
+
+      prevStudentIdRef.current[idx] = currentKey;
+
+      // Look up student in the full students list (not filteredStudents which may be empty)
+      const st = students.find((s) => s.id === Number(rawId));
+      if (!st) return;
+
+      // Auto-fill pickup from student default (entity field: pickup_point_id)
+      const defaultPickup = st.pickupPointId ?? null;
+      const currentPickup = sv.pickupPointId;
+      if (defaultPickup && (!currentPickup || currentPickup === '' || currentPickup === '__none__')) {
+        form.setValue(`students.${idx}.pickupPointId`, String(defaultPickup), {
+          shouldDirty: true,
+          shouldValidate: false,
+        });
+      }
+
+      // Auto-fill dropoff from student default (entity field: default_dropoff_point_id)
+      const defaultDropoff = st.defaultDropoffPointId ?? null;
+      const currentDropoff = sv.dropoffPointId;
+      if (defaultDropoff && (!currentDropoff || currentDropoff === '' || currentDropoff === '__none__')) {
+        form.setValue(`students.${idx}.dropoffPointId`, String(defaultDropoff), {
+          shouldDirty: true,
+          shouldValidate: false,
+        });
+      }
+    });
+  // Rerun when any studentId in any row changes, or when student list (option data) updates
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(allStudentValues.map((s) => String(s.studentId ?? ''))), students]);
+
+
   const selectedPickupPointId = form.watch(`students.${activeStudentIndex}.pickupPointId`);
   const selectedDropoffPointId = form.watch(`students.${activeStudentIndex}.dropoffPointId`);
   const activeStudentId = form.watch(`students.${activeStudentIndex}.studentId`);
@@ -510,46 +880,121 @@ export function TransportRequestForm({
     }
   }, [form, activeStudentIndex, activeTripOption]);
 
-  const validationSummary = React.useMemo(() => {
-    let missingStudentCount = 0;
-    let missingPickupCount = 0;
-    let missingDropoffCount = 0;
-    let missingScheduleCount = 0;
-    let missingTargetCount = 0;
-    let readyCount = 0;
+  // ── Single source of truth: compute readiness for each student row ──
+  // MUST NOT be wrapped in useMemo — form.watch('students') can return the same
+  // array reference even after RHF mutates internal state in-place, causing a
+  // stale memo hit. Direct computation on each render is always fresh.
+  const rowReadinessList: RowReadiness[] = allStudentValues.map((sv) =>
+    getRowReadiness(sv, needsTarget, requiresRouting, compatibilityMapBySchedule)
+  );
 
-    allStudentValues.forEach((sv) => {
-      const state = getRowReadiness(sv, needsTarget);
-      if (state === 'missing-student') missingStudentCount++;
-      else if (state === 'missing-pickup') missingPickupCount++;
-      else if (state === 'missing-dropoff') missingDropoffCount++;
-      else if (state === 'missing-schedule') missingScheduleCount++;
-      else if (state === 'missing-target') missingTargetCount++;
-      else if (state === 'ready') readyCount++;
-    });
+  // Derive validation summary from rowReadinessList (same render cycle, guaranteed consistent)
+  let _readyCount = 0;
+  let _needsConfigCount = 0;
+  const _blockingMessages: string[] = [];
+  const _approvalBlockerMessages: string[] = [];
 
-    const messages: string[] = [];
-    if (missingStudentCount > 0) messages.push(`${missingStudentCount} row(s) missing student selection`);
-    if (missingPickupCount > 0) messages.push(`${missingPickupCount} student(s) missing pickup point`);
-    if (missingDropoffCount > 0) messages.push(`${missingDropoffCount} student(s) missing drop-off point`);
-    if (missingScheduleCount > 0) messages.push(`${missingScheduleCount} student(s) missing schedule`);
-    if (missingTargetCount > 0) messages.push(`${missingTargetCount} student(s) missing target subscription`);
+  allStudentValues.forEach((sv, idx) => {
+    const studentName =
+      students.find((s) => s.id === Number(sv.studentId))?.fullName || `Student ${idx + 1}`;
+    const state = rowReadinessList[idx];
 
-    const isAllReady = readyCount === allStudentValues.length;
+    switch (state) {
+      case 'missing-student':
+        _blockingMessages.push(`${studentName}: Student selection is required`);
+        break;
+      case 'missing-schedule':
+        _blockingMessages.push(`${studentName}: School schedule is required`);
+        break;
+      case 'missing-tripopt':
+        _blockingMessages.push(`${studentName}: Trip option is required (Morning / Afternoon / Round trip)`);
+        break;
+      case 'missing-pickup':
+        _blockingMessages.push(`${studentName}: Pickup point is required for the selected trip option`);
+        break;
+      case 'missing-dropoff':
+        _blockingMessages.push(`${studentName}: Drop-off point is required for the selected trip option`);
+        break;
+      case 'missing-target':
+        _blockingMessages.push(`${studentName}: Target subscription is required`);
+        break;
+      case 'needs-config': {
+        _needsConfigCount++;
+        const schId = Number(sv.schoolScheduleId);
+        const opt = (sv.tripOption || '').toUpperCase();
+        const needsPickup  = opt === 'MORNING'   || opt === 'ROUND_TRIP';
+        const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+        if (needsPickup && sv.pickupPointId) {
+          const comp = compatibilityMapBySchedule.get(`${schId}-${sv.pickupPointId}`);
+          if (comp && comp.pickupReadinessCode !== 'READY' && comp.pickupReadinessCode !== 'NOT_CHECKED') {
+            const label = comp.pickupReadinessCode === 'MISSING_PICKUP_WINDOW'
+              ? 'Pickup window is not configured'
+              : comp.pickupReadinessCode === 'MISSING_COORDINATES'
+              ? 'Pickup point is missing coordinates'
+              : 'Pickup point configuration is incomplete';
+            _approvalBlockerMessages.push(`${studentName}: ${label} — cannot approve until fixed`);
+          }
+        }
+        if (needsDropoff && sv.dropoffPointId) {
+          const comp = compatibilityMapBySchedule.get(`${schId}-${sv.dropoffPointId}`);
+          if (comp && comp.dropoffReadinessCode !== 'READY' && comp.dropoffReadinessCode !== 'NOT_CHECKED') {
+            const label = comp.dropoffReadinessCode === 'MISSING_DROPOFF_WINDOW'
+              ? 'Drop-off window is not configured'
+              : comp.dropoffReadinessCode === 'MISSING_COORDINATES'
+              ? 'Drop-off point is missing coordinates'
+              : 'Drop-off point configuration is incomplete';
+            _approvalBlockerMessages.push(`${studentName}: ${label} — cannot approve until fixed`);
+          }
+        }
+        break;
+      }
+      case 'ready':
+        _readyCount++;
+        break;
+    }
+  });
 
-    return {
-      messages,
-      isAllReady,
-      readyCount,
-      totalCount: allStudentValues.length,
-    };
-  }, [allStudentValues, needsTarget]);
+  const validationSummary = {
+    blockingMessages: _blockingMessages,
+    approvalBlockerMessages: _approvalBlockerMessages,
+    isAllReady: _blockingMessages.length === 0 && _needsConfigCount === 0,
+    readyCount: _readyCount,
+    needsConfigCount: _needsConfigCount,
+    totalCount: allStudentValues.length,
+  };
+
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(async (values) =>
-          onSubmit({
+        onSubmit={form.handleSubmit(async (values) => {
+          let hasDayErrors = false;
+          values.students.forEach((item, index) => {
+            if (item.schoolScheduleId) {
+              const schedDays = getScheduleDays(String(item.schoolScheduleId));
+              const daysToCheck = [
+                { name: 'monday' as const, key: 'MONDAY' },
+                { name: 'tuesday' as const, key: 'TUESDAY' },
+                { name: 'wednesday' as const, key: 'WEDNESDAY' },
+                { name: 'thursday' as const, key: 'THURSDAY' },
+                { name: 'friday' as const, key: 'FRIDAY' },
+                { name: 'saturday' as const, key: 'SATURDAY' },
+                { name: 'sunday' as const, key: 'SUNDAY' },
+              ];
+              daysToCheck.forEach(({ name, key }) => {
+                if (item[name] && !schedDays.has(key)) {
+                  form.setError(`students.${index}.${name}`, {
+                    type: 'manual',
+                    message: `${key} is not supported by the selected schedule`,
+                  });
+                  hasDayErrors = true;
+                }
+              });
+            }
+          });
+          if (hasDayErrors) return;
+
+          return onSubmit({
             parentProfileId: values.parentProfileId,
             schoolId: values.schoolId,
             requestType: values.requestType,
@@ -574,8 +1019,8 @@ export function TransportRequestForm({
               studentNote: item.studentNote || null,
             })),
             isActive: values.isActive,
-          })
-        )}
+          });
+        })}
         className='space-y-6'
       >
         <div className='grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]'>
@@ -680,7 +1125,7 @@ export function TransportRequestForm({
                           {index + 1}
                         </span>
                         <span className='font-semibold text-slate-800 text-xs'>Student details</span>
-                        <ReadinessBadge readiness={getRowReadiness(allStudentValues[index] || {}, needsTarget)} />
+                        <ReadinessBadge readiness={rowReadinessList[index] ?? 'missing-student'} />
                       </div>
                       <Button
                         type='button'
@@ -713,10 +1158,10 @@ export function TransportRequestForm({
                       <SelectField
                         form={form}
                         name={`students.${index}.tripOption`}
-                        label='Trip option'
+                        label={requiresRouting ? 'Trip option *' : 'Trip option'}
                         allowEmpty
                         emptyValue='__none__'
-                        emptyLabel='Default (round trip)'
+                        emptyLabel='Select trip option'
                         options={TRIP_OPTION_OPTIONS.map((o) => ({
                           value: o.value,
                           label: o.label,
@@ -727,35 +1172,21 @@ export function TransportRequestForm({
                     <div className='grid gap-4 md:grid-cols-2'>
                       {(() => {
                         const rowOpt = (form.watch(`students.${index}.tripOption`) || '').toUpperCase();
-                        const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP' || rowOpt === '';
+                        // Only mark required when tripOption is explicitly set to a value needing that direction
+                        const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP';
                         const dropoffRequired = rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
+                        const rowScheduleId = form.watch(`students.${index}.schoolScheduleId`);
                         return (
-                          <>
-                            <SelectField
-                              form={form}
-                              name={`students.${index}.pickupPointId`}
-                              label={pickupRequired ? 'Pickup point *' : 'Pickup point'}
-                              allowEmpty
-                              emptyValue='__none__'
-                              emptyLabel='No pickup point'
-                              options={pickupCapablePoints.map((pp) => ({
-                                value: String(pp.pickupPointId),
-                                label: pp.pickupPointName,
-                              }))}
-                            />
-                            <SelectField
-                              form={form}
-                              name={`students.${index}.dropoffPointId`}
-                              label={dropoffRequired ? 'Drop-off point *' : 'Drop-off point'}
-                              allowEmpty
-                              emptyValue='__none__'
-                              emptyLabel='Same as pickup'
-                              options={dropoffCapablePoints.map((pp) => ({
-                                value: String(pp.pickupPointId),
-                                label: pp.pickupPointName,
-                              }))}
-                            />
-                          </>
+                          <PickupDropoffPointsFields
+                            index={index}
+                            form={form}
+                            schoolId={Number(schoolId)}
+                            schoolScheduleId={rowScheduleId ? Number(rowScheduleId) : null}
+                            pickupCapablePoints={pickupCapablePoints}
+                            dropoffCapablePoints={dropoffCapablePoints}
+                            pickupRequired={pickupRequired}
+                            dropoffRequired={dropoffRequired}
+                          />
                         );
                       })()}
                     </div>
@@ -879,25 +1310,62 @@ export function TransportRequestForm({
 
               {/* Validation Summary */}
               <div className={cn(
-                'rounded-xl p-4 text-xs border mt-4',
-                validationSummary.isAllReady
-                  ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800'
-                  : 'bg-amber-50/50 border-amber-100 text-amber-800'
+                'rounded-xl p-4 text-xs border mt-4 space-y-3',
+                validationSummary.blockingMessages.length > 0
+                  ? 'bg-red-50/60 border-red-200 text-red-900'
+                  : validationSummary.approvalBlockerMessages.length > 0
+                  ? 'bg-amber-50/60 border-amber-200 text-amber-900'
+                  : 'bg-emerald-50/50 border-emerald-100 text-emerald-800'
               )}>
-                <div className='flex items-center justify-between font-semibold'>
-                  <span>Validation summary:</span>
-                  <span>{validationSummary.readyCount} / {validationSummary.totalCount} Ready</span>
+                <div className='flex items-center justify-between font-semibold border-b pb-2 border-slate-100/60'>
+                  <span>Validation summary</span>
+                  <span>
+                    {validationSummary.readyCount} / {validationSummary.totalCount}
+                    {validationSummary.readyCount === validationSummary.totalCount && validationSummary.isAllReady
+                      ? ' · All ready'
+                      : validationSummary.needsConfigCount > 0
+                      ? ' ready · ' + validationSummary.needsConfigCount + ' need config'
+                      : ' ready'
+                    }
+                  </span>
                 </div>
-                {validationSummary.messages.length > 0 ? (
-                  <ul className='list-disc list-inside mt-2 space-y-1 text-[11px] opacity-90'>
-                    {validationSummary.messages.map((msg, i) => (
-                      <li key={i}>{msg}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className='mt-1.5 text-[11px] opacity-90'>All requested students are ready for transport planning.</p>
+
+                {/* Blocking issues — prevent save */}
+                {validationSummary.blockingMessages.length > 0 && (
+                  <div className='space-y-1'>
+                    <p className='font-bold text-red-700 uppercase text-[10px] tracking-wider'>
+                      Missing required fields — prevent submission:
+                    </p>
+                    <ul className='list-disc list-inside space-y-1 text-[11px] font-medium'>
+                      {validationSummary.blockingMessages.map((msg, i) => (
+                        <li key={i}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Approval blockers — can save, but cannot approve */}
+                {validationSummary.approvalBlockerMessages.length > 0 && (
+                  <div className='space-y-1 pt-1'>
+                    <p className='font-bold text-amber-700 uppercase text-[10px] tracking-wider'>
+                      Configuration required — can save but cannot approve:
+                    </p>
+                    <ul className='list-disc list-inside space-y-1 text-[11px] font-medium text-amber-800'>
+                      {validationSummary.approvalBlockerMessages.map((msg, i) => (
+                        <li key={i}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* All clear */}
+                {validationSummary.isAllReady && validationSummary.blockingMessages.length === 0 && validationSummary.approvalBlockerMessages.length === 0 && (
+                  <p className='text-[11px] font-medium text-emerald-700'>
+                    ✓ All students are fully configured and ready for transport planning.
+                  </p>
                 )}
               </div>
+
             </SchoolBusFormSection>
           </div>
 
@@ -1027,7 +1495,7 @@ export function TransportRequestForm({
           <Button
             type='submit'
             className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-semibold shadow-sm'
-            disabled={isLoading}
+            disabled={isLoading || !validationSummary.isAllReady}
           >
             {isLoading ? 'Saving...' : submitLabel}
           </Button>
@@ -1582,7 +2050,8 @@ function SelectField({
   form: any;
   name: string;
   label: string;
-  options: Array<{ value: string; label: string }>;
+  // description field is forwarded as a second line inside dropdown options
+  options: Array<{ value: string; label: string; description?: string }>;
   allowEmpty?: boolean;
   emptyLabel?: string;
   emptyValue?: string;
@@ -1594,9 +2063,10 @@ function SelectField({
   searchable?: boolean;
 }) {
   const selectOptions = React.useMemo(() => {
-    const list = options.map((opt) => ({ label: opt.label, value: opt.value }));
+    // Pass through description so SchoolBusSelect renders it as a second line in the dropdown
+    const list = options.map((opt) => ({ label: opt.label, value: opt.value, description: opt.description }));
     if (allowEmpty) {
-      list.unshift({ label: emptyLabel, value: emptyValue });
+      list.unshift({ label: emptyLabel, value: emptyValue, description: undefined });
     }
     return list;
   }, [options, allowEmpty, emptyLabel, emptyValue]);
@@ -1608,13 +2078,14 @@ function SelectField({
       control={form.control}
       name={name as any}
       render={({ field }) => (
-        <FormItem className={className}>
+        // min-w-0 + overflow-hidden prevent the select from overflowing its grid cell
+        <FormItem className={cn('min-w-0 overflow-hidden', className)}>
           <FormLabel>{label}</FormLabel>
           <FormControl>
             <SchoolBusSelect
               fullWidth
               size='md'
-              className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
+              className='h-11 rounded-xl w-full max-w-full text-slate-900 border-slate-200 shadow-sm'
               disabled={disabled}
               value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
               onChange={(value) => {
