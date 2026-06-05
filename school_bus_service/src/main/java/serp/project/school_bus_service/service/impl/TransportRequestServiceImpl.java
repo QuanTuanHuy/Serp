@@ -28,6 +28,9 @@ import serp.project.school_bus_service.enums.RequestType;
 import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.RequestStudentEntity;
+import serp.project.school_bus_service.entity.PickupPointEntity;
+import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
+import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.entity.TransportRequestHistoryEntity;
@@ -192,6 +195,82 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             throw new AppException(AppErrorCode.Request.ONLY_SUBMITTED_APPROVED, messageCommon.getMessage(AppErrorCode.Request.ONLY_SUBMITTED_APPROVED));
         }
 
+        List<RequestStudentEntity> requestStudents = requestStudentRepository
+                .findByRequestIdAndTenantIdAndIsDeletedFalse(entity.getId(), tenantId);
+
+        boolean requiresRoutingValidation = entity.getRequestType() == RequestType.NEW_SERVICE 
+                || entity.getRequestType() == RequestType.CHANGE_SERVICE 
+                || entity.getRequestType() == RequestType.RENEW_SERVICE;
+
+        if (requiresRoutingValidation) {
+            for (RequestStudentEntity rs : requestStudents) {
+                SchoolScheduleEntity schedule = rs.getSchoolSchedule();
+                if (schedule == null) {
+                    throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                            "Missing school schedule for student #" + rs.getStudent().getId()
+                                    + ". Please edit the request and select a schedule before approving.");
+                }
+
+                TripOption opt = rs.getTripOption();
+                if (opt == null) {
+                    // For routing types, tripOption must have been set at create/update time.
+                    // A null value here means the request was created before this rule was enforced.
+                    throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                            "Missing trip option for student #" + rs.getStudent().getId()
+                                    + ". Please edit the request and select a trip option before approving.");
+                }
+
+                boolean needsPickup = opt == TripOption.MORNING || opt == TripOption.ROUND_TRIP;
+                boolean needsDropoff = opt == TripOption.AFTERNOON || opt == TripOption.ROUND_TRIP;
+
+                if (needsPickup) {
+                    PickupPointEntity pickup = rs.getPickupPoint();
+                    if (pickup == null) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Missing pickup point for student #" + rs.getStudent().getId()
+                                        + " (trip option: " + opt + ")");
+                    }
+                    if (pickup.getLatitude() == null || pickup.getLongitude() == null) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Pickup point '" + pickup.getName() + "' is missing coordinates for student #"
+                                        + rs.getStudent().getId() + ". Configure coordinates on the pickup point before approving.");
+                    }
+                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
+                            .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
+                                    "Pickup point '" + pickup.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
+                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "PICKUP_TO_SCHOOL", tenantId)) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Pickup window is not configured for pickup point '" + pickup.getName()
+                                        + "' and schedule '" + schedule.getScheduleName()
+                                        + "'. Configure a PICKUP_TO_SCHOOL window before approving.");
+                    }
+                }
+
+                if (needsDropoff) {
+                    PickupPointEntity dropoff = rs.getDropoffPoint();
+                    if (dropoff == null) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Missing drop-off point for student #" + rs.getStudent().getId()
+                                        + " (trip option: " + opt + ")");
+                    }
+                    if (dropoff.getLatitude() == null || dropoff.getLongitude() == null) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Drop-off point '" + dropoff.getName() + "' is missing coordinates for student #"
+                                        + rs.getStudent().getId() + ". Configure coordinates on the drop-off point before approving.");
+                    }
+                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
+                            .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
+                                    "Drop-off point '" + dropoff.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
+                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "DROPOFF_FROM_SCHOOL", tenantId)) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Drop-off window is not configured for drop-off point '" + dropoff.getName()
+                                        + "' and schedule '" + schedule.getScheduleName()
+                                        + "'. Configure a DROPOFF_FROM_SCHOOL window before approving.");
+                    }
+                }
+            }
+        }
+
         entity.markUpdated(actor(actorId));
         RequestStatus oldStatus = entity.getStatus();
         entity.setStatus(RequestStatus.APPROVED);
@@ -199,10 +278,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setApprovedAt(LocalDateTime.now());
         entity.setRejectionReason(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
-
-        // Dispatch approve to subscription service based on request type
-        List<RequestStudentEntity> requestStudents = requestStudentRepository
-                .findByRequestIdAndTenantIdAndIsDeletedFalse(saved.getId(), tenantId);
 
         for (RequestStudentEntity requestStudent : requestStudents) {
             dispatchApprove(saved, requestStudent, tenantId, actorId);
@@ -312,11 +387,40 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         for (RequestStudentItemRequest studentRequest : students) {
 
-            // ── Load entities ────────────────────────────────────────────────
             RequestStudentEntity rs = new RequestStudentEntity();
             rs.markCreated(tenantId, actor(actorId));
             rs.setRequest(entity);
-            rs.setStudent(masterDataService.getStudent(studentRequest.getStudentId(), tenantId));
+
+            StudentEntity student = masterDataService.getStudent(studentRequest.getStudentId(), tenantId);
+            if (student == null || Boolean.TRUE.equals(student.getIsDeleted()) || Boolean.FALSE.equals(student.getIsActive())) {
+                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
+                        "Student #" + studentRequest.getStudentId() + " is inactive or deleted");
+            }
+            if (student.getParentProfile() == null || !student.getParentProfile().getId().equals(entity.getParentProfile().getId())) {
+                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
+                        "Student #" + student.getId() + " does not belong to the selected parent profile");
+            }
+            if (student.getSchool() == null || !student.getSchool().getId().equals(schoolId)) {
+                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
+                        "Student #" + student.getId() + " does not belong to the selected school");
+            }
+            rs.setStudent(student);
+
+            // ── Routing requirement check: NEW/CHANGE/RENEW must supply schedule + tripOption ──
+            boolean requiresRouting = requestType == RequestType.NEW_SERVICE
+                    || requestType == RequestType.CHANGE_SERVICE
+                    || requestType == RequestType.RENEW_SERVICE;
+
+            if (requiresRouting && studentRequest.getSchoolScheduleId() == null) {
+                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
+                        "School schedule is required for request type " + requestType
+                                + " (student #" + studentRequest.getStudentId() + ")");
+            }
+            if (requiresRouting && (studentRequest.getTripOption() == null || studentRequest.getTripOption().isBlank())) {
+                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
+                        "Trip option is required for request type " + requestType
+                                + " (student #" + studentRequest.getStudentId() + ")");
+            }
 
             // ── Schedule validation ─────────────────────────────────────────
             SchoolScheduleEntity schedule = null;
@@ -509,17 +613,39 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                             "Target subscription #" + studentRequest.getTargetSubscriptionId()
                                     + " does not belong to the selected school");
                 }
-                // STOPPED / EXPIRED cannot be reactivated directly
+                
                 SubscriptionStatus ts = target.getStatus();
-                if (requestType == RequestType.PAUSE_SERVICE
-                        || requestType == RequestType.RESUME_SERVICE
-                        || requestType == RequestType.STOP_SERVICE
-                        || requestType == RequestType.CHANGE_SERVICE) {
-                    if (ts == SubscriptionStatus.STOPPED
-                            || ts == SubscriptionStatus.EXPIRED) {
+                if (requestType == RequestType.PAUSE_SERVICE) {
+                    if (ts != SubscriptionStatus.ACTIVE) {
                         throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                                "Cannot apply " + requestType + " to a " + ts + " subscription. "
-                                        + "Use RENEW_SERVICE or NEW_SERVICE to restart service.");
+                                "Cannot pause subscription with status " + ts + ". Only ACTIVE subscriptions can be paused.");
+                    }
+                    if (subscriptionService.hasOverlappingPausePeriod(target.getId(), requestFrom, requestTo, tenantId)) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Cannot pause subscription: there is already an overlapping active/scheduled pause period.");
+                    }
+                } else if (requestType == RequestType.RESUME_SERVICE) {
+                    if (ts == SubscriptionStatus.PAUSED) {
+                        // OK
+                    } else if (ts == SubscriptionStatus.ACTIVE) {
+                        boolean hasPauses = subscriptionService.hasActiveOrScheduledPause(target.getId(), tenantId);
+                        if (!hasPauses) {
+                            throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                    "Cannot resume subscription: subscription is already ACTIVE and has no active or scheduled pause periods.");
+                        }
+                    } else {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Cannot resume subscription with status " + ts + ". Only PAUSED or ACTIVE (with pause periods) subscriptions can be resumed.");
+                    }
+                } else if (requestType == RequestType.STOP_SERVICE) {
+                    if (ts == SubscriptionStatus.STOPPED || ts == SubscriptionStatus.EXPIRED) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Cannot stop subscription: subscription is already " + ts);
+                    }
+                } else if (requestType == RequestType.CHANGE_SERVICE) {
+                    if (ts == SubscriptionStatus.STOPPED || ts == SubscriptionStatus.EXPIRED) {
+                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                                "Cannot apply CHANGE_SERVICE to a " + ts + " subscription.");
                     }
                 }
 

@@ -61,6 +61,7 @@ import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { SchoolBusCheckbox } from '../components/ui/SchoolBusCheckbox';
 import { DemoMap } from '../components/map/DemoMap';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
+import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { getPageItems } from '../utils';
 
@@ -408,31 +409,24 @@ export function SchoolBusDemoPage() {
             {/* Map Column */}
             <div className='relative h-[650px] overflow-hidden rounded-2xl border border-slate-200 shadow-xs bg-slate-50'>
               {routeStops.length > 0 ? (
-                <>
-                  <DemoMap
-                    stops={routeStops}
-                    routePath={routePath}
-                    busPosition={busPosition}
-                    currentStopOrder={currentStopOrder}
-                    className='h-full w-full rounded-2xl'
-                    fitKey={fitKey}
-                  />
-
-                  {/* Floating Legend */}
-                  <SchoolBusMapLegend className='absolute bottom-3 left-3 z-[1000] shadow-sm max-w-[190px]' />
-
-                  {/* Floating center bus button */}
-                  {busPosition && (
-                    <button
-                      type='button'
-                      className='absolute bottom-3 right-3 z-[1000] rounded-full border border-slate-200 bg-white p-2.5 shadow-md hover:bg-slate-50 transition-all outline-none'
-                      title='Center on bus'
-                      onClick={() => setFitKey((k) => k + 1)}
-                    >
-                      <Bus className='h-4.5 w-4.5 text-[#C81E3A]' />
-                    </button>
-                  )}
-                </>
+                <SchoolBusMapWorkspace
+                  flat
+                  mapHeightClassName='h-full'
+                  map={
+                    <DemoMap
+                      stops={routeStops}
+                      routePath={routePath}
+                      busPosition={busPosition}
+                      currentStopOrder={currentStopOrder}
+                      className='h-full w-full'
+                      fitKey={fitKey}
+                    />
+                  }
+                  legend={<SchoolBusMapLegend />}
+                  onFitAll={() => setFitKey((k) => k + 1)}
+                  canFitAll={true}
+                  allowFullscreen={true}
+                />
               ) : (
                 <div className='flex h-full flex-col items-center justify-center gap-3 text-center p-6'>
                   <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 border border-slate-200/80 shadow-2xs'>

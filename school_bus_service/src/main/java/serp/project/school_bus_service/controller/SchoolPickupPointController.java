@@ -11,6 +11,8 @@ import serp.project.school_bus_service.service.ISchoolPickupPointService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
 
+import serp.project.school_bus_service.dto.response.SchoolPickupPointCompatibilityResponse;
+
 import java.util.List;
 
 @RestController
@@ -38,6 +40,14 @@ public class SchoolPickupPointController extends AbstractBaseController {
             @RequestParam Long schoolId) {
         return ok("Fetched active school pickup points",
                 service.getActiveBySchool(schoolId, getCurrentTenantId()));
+    }
+
+    @GetMapping("/compatibility")
+    public ResponseEntity<GeneralResponse<List<SchoolPickupPointCompatibilityResponse>>> getCompatibility(
+            @RequestParam Long schoolId,
+            @RequestParam(required = false) Long schoolScheduleId) {
+        return ok("Fetched school pickup points compatibility",
+                service.getCompatibility(schoolId, schoolScheduleId, getCurrentTenantId()));
     }
 
     /** Get all active school-pickup links across all schools (for student form filtering) */

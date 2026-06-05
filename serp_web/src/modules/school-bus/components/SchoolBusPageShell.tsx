@@ -6,7 +6,7 @@ import { SchoolBusPageHeader } from './layout/SchoolBusPageHeader';
 
 interface SchoolBusPageShellProps {
   title: string;
-  description?: string;
+  description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;

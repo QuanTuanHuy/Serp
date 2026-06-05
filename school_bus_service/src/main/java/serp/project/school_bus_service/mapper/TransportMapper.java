@@ -14,6 +14,7 @@ public class TransportMapper extends BaseMapper {
         RequestStudentResponse r = enrich(new RequestStudentResponse(), entity);
         r.setRequestId(entity.getRequest().getId());
         r.setStudentId(entity.getStudent().getId());
+        r.setStudentCode(entity.getStudent().getStudentCode());
         r.setStudentName(entity.getStudent().getFullName());
 
         r.setPickupPointId(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getId());
@@ -29,7 +30,13 @@ public class TransportMapper extends BaseMapper {
         r.setDropoffPointLongitude(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getLongitude());
 
         r.setSchoolScheduleId(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getId());
+        r.setSchoolScheduleCode(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleCode());
         r.setSchoolScheduleName(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleName());
+        r.setShiftType(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getShiftType());
+        r.setArrivalDeadline(entity.getSchoolSchedule() == null || entity.getSchoolSchedule().getArrivalDeadline() == null
+                ? null : entity.getSchoolSchedule().getArrivalDeadline().toString());
+        r.setDepartureTime(entity.getSchoolSchedule() == null || entity.getSchoolSchedule().getDepartureTime() == null
+                ? null : entity.getSchoolSchedule().getDepartureTime().toString());
 
         r.setTripOption(entity.getTripOption() == null ? null : entity.getTripOption().name());
 
@@ -87,12 +94,17 @@ public class TransportMapper extends BaseMapper {
         r.setSubscriptionCode(entity.getSubscriptionCode());
         r.setStudentId(entity.getStudent().getId());
         r.setStudentName(entity.getStudent().getFullName());
+        r.setStudentCode(entity.getStudent().getStudentCode());
+        r.setParentName(entity.getStudent().getParentProfile() == null ? null : entity.getStudent().getParentProfile().getFullName());
         r.setSchoolId(entity.getSchool().getId());
         r.setSchoolName(entity.getSchool().getName());
+        r.setSchoolCode(entity.getSchool().getCode());
         r.setPickupPointId(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getId());
         r.setPickupPointName(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getName());
+        r.setPickupPointCode(entity.getPickupPoint() == null ? null : entity.getPickupPoint().getCode());
         r.setDropoffPointId(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getId());
         r.setDropoffPointName(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getName());
+        r.setDropoffPointCode(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getCode());
         r.setTripOption(entity.getTripOption().name());
         r.setMonday(entity.getMonday());
         r.setTuesday(entity.getTuesday());
@@ -105,8 +117,13 @@ public class TransportMapper extends BaseMapper {
         r.setEffectiveTo(entity.getEffectiveTo());
         r.setStatus(entity.getStatus().name());
         r.setSourceRequestId(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getId());
+        r.setSourceRequestCode(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getRequestCode());
         r.setSchoolScheduleId(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getId());
         r.setSchoolScheduleName(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleName());
+        r.setScheduleCode(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleCode());
+        r.setShiftType(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getShiftType());
+        r.setArrivalDeadline(entity.getSchoolSchedule() == null ? null : (entity.getSchoolSchedule().getArrivalDeadline() != null ? entity.getSchoolSchedule().getArrivalDeadline().toString() : null));
+        r.setDepartureTime(entity.getSchoolSchedule() == null ? null : (entity.getSchoolSchedule().getDepartureTime() != null ? entity.getSchoolSchedule().getDepartureTime().toString() : null));
         return r;
     }
 

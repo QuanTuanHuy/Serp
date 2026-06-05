@@ -10,7 +10,8 @@ public enum SchoolBusCode {
     DEMO("DEMO", "DEM"),
     DEPOT("DEPOT", "DPT"),
     SCHEDULE("SCHEDULE", "SCH"),
-    SESSION("SESSION", "SES");
+    SESSION("SESSION", "SES"),
+    PICKUP_POINT("PICKUP_POINT", "PKP");
 
     private final String sequenceKey;
     private final String prefix;

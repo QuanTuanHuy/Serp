@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   AlertTriangle,
@@ -8,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Eye,
   GraduationCap,
   Link2,
   Map,
@@ -21,7 +23,8 @@ import {
   Unlink,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/shared/components/ui';
+import { Button, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui';
+import { SchoolBusSchoolDetailPage } from './SchoolBusSchoolDetailPage';
 import { cn } from '@/shared/utils';
 import {
   useCreatePickupPointMutation,
@@ -359,10 +362,192 @@ function NetworkDetailPanel({
   return null;
 }
 
+interface SchoolScheduleTooltipContentProps {
+  schedule: {
+    id: number;
+    name?: string | null;
+    code?: string | null;
+    shift?: string | null;
+    days?: string[] | null;
+    arrivalDeadline?: string | null;
+    departureTime?: string | null;
+    isActive?: boolean;
+    isDefault?: boolean;
+    effectiveFrom?: string | null;
+    effectiveTo?: string | null;
+  };
+}
+
+function SchoolScheduleTooltipContent({ schedule }: SchoolScheduleTooltipContentProps) {
+  const formatShiftName = (shift: string | undefined | null) => {
+    if (!shift) return '—';
+    const s = shift.toUpperCase();
+    if (s === 'MORNING') return 'Morning';
+    if (s === 'AFTERNOON') return 'Afternoon';
+    return shift.charAt(0).toUpperCase() + shift.slice(1).toLowerCase();
+  };
+
+  const formatDaysList = (days: string[] | undefined | null) => {
+    if (!days || days.length === 0) return '—';
+    const dayMap: Record<string, string> = {
+      MONDAY: 'Mon',
+      TUESDAY: 'Tue',
+      WEDNESDAY: 'Wed',
+      THURSDAY: 'Thu',
+      FRIDAY: 'Fri',
+      SATURDAY: 'Sat',
+      SUNDAY: 'Sun',
+    };
+    const mapped = days.map((d) => dayMap[d.toUpperCase()] || d);
+    if (mapped.length <= 5) {
+      return mapped.join(', ');
+    }
+    return `${mapped.slice(0, 3).join(', ')} +${mapped.length - 3}`;
+  };
+
+  const formatTimeStr = (time: string | undefined | null) => {
+    if (!time) return '—';
+    const parts = time.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return time;
+  };
+
+  const formatDateStr = (date: string | undefined | null) => {
+    if (!date) return '—';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return date;
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return date;
+    }
+  };
+
+  const shiftFormatted = formatShiftName(schedule.shift);
+  const daysFormatted = formatDaysList(schedule.days);
+  const timeFormatted = `${formatTimeStr(schedule.arrivalDeadline)} - ${formatTimeStr(schedule.departureTime)}`;
+  
+  const fromStr = formatDateStr(schedule.effectiveFrom);
+  const toStr = formatDateStr(schedule.effectiveTo);
+  const effectiveFormatted = fromStr !== '—' || toStr !== '—' 
+    ? `${fromStr} - ${toStr}` 
+    : '—';
+
+  return (
+    <div className="w-[280px] sm:w-[300px] bg-white text-slate-900 rounded-xl border border-slate-200 p-4 shadow-xl text-xs space-y-3.5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2.5 pb-2 border-b border-slate-100">
+        <h4 className="font-bold text-slate-900 leading-snug truncate flex-1" title={schedule.name ?? undefined}>
+          {schedule.name || '—'}
+        </h4>
+        <span className={cn(
+          "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border shrink-0",
+          schedule.isActive
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+            : "bg-slate-50 text-slate-500 border-slate-200"
+        )}>
+          {schedule.isActive ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+
+      {/* Details Grid */}
+      <div className="grid grid-cols-3 gap-y-2 gap-x-1.5">
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Code</span>
+        <span className="col-span-2 font-mono text-[10px] font-bold text-[#C81E3A] bg-red-50/50 px-1.5 py-0.5 rounded border border-red-100/50 w-fit">
+          {schedule.code || '—'}
+        </span>
+
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Shift</span>
+        <span className="col-span-2 font-medium text-slate-700">{shiftFormatted}</span>
+
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Days</span>
+        <span className="col-span-2 font-medium text-slate-700 truncate" title={schedule.days?.join(', ')}>
+          {daysFormatted}
+        </span>
+
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Time</span>
+        <span className="col-span-2 font-mono font-semibold text-slate-700">{timeFormatted}</span>
+
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Effective</span>
+        <span className="col-span-2 font-medium text-slate-600">{effectiveFormatted}</span>
+      </div>
+
+      {schedule.isDefault && (
+        <div className="pt-1.5 border-t border-slate-50">
+          <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-650/10">
+            Default Schedule
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function SchoolBusSchoolsPage() {
-  const [viewMode, setViewMode] = React.useState<ViewMode>('network');
+  return (
+    <React.Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]" />
+          <p className="text-sm font-semibold">Loading schools workspace...</p>
+        </div>
+      </div>
+    }>
+      <SchoolBusSchoolsPageContent />
+    </React.Suspense>
+  );
+}
+
+function SchoolBusSchoolsPageContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Parse ID and parameters from dynamic path or query params
+  let rawId = params?.id ? String(params.id) : searchParams.get('id');
+  if ((!rawId || !rawId.includes('&')) && typeof window !== 'undefined') {
+    const windowPath = window.location.pathname;
+    const match = windowPath.match(/\/school-bus\/schools\/(.+)$/);
+    if (match && match[1]) {
+      rawId = decodeURIComponent(match[1]);
+    }
+  }
+
+  let schoolId: number | null = null;
+  let urlTab = searchParams.get('tab') || 'general';
+  let viewParam = searchParams.get('view') || 'directory';
+
+  if (rawId) {
+    const decoded = decodeURIComponent(rawId);
+    if (decoded.includes('&')) {
+      const parts = decoded.split('&');
+      schoolId = parts[0] ? Number(parts[0]) : null;
+      for (let i = 1; i < parts.length; i++) {
+        const [k, v] = parts[i].split('=');
+        if (k === 'tab') urlTab = v;
+        if (k === 'view') viewParam = v;
+      }
+    } else {
+      schoolId = Number(decoded);
+    }
+  }
+
+  const selectedDetailSchoolId = (schoolId && !isNaN(schoolId)) ? schoolId : null;
+  const viewMode = viewParam === 'directory' ? 'directory' : 'network';
+
+  const setViewMode = (mode: ViewMode) => {
+    router.push(`/school-bus/schools?view=${mode}`);
+  };
+
   const [activeTab, setActiveTab] = React.useState('schools');
   const [networkFilter, setNetworkFilter] = React.useState('');
 
@@ -381,11 +566,11 @@ export function SchoolBusSchoolsPage() {
   const schoolsPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
   const pickupPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
 
-  const { data, isLoading: loadingSchools } = useGetSchoolsQuery(schoolsPagination.params);
-  const { data: allSchoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: pickupPointsData, isLoading: loadingPickups } = useGetPickupPointsQuery(pickupPagination.params);
-  const { data: depotsData } = useGetDepotsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: allLinksData } = useGetAllActiveSchoolPickupLinksQuery();
+  const { data, isLoading: loadingSchools, refetch: refetchSchools } = useGetSchoolsQuery(schoolsPagination.params);
+  const { data: allSchoolsData, refetch: refetchAllSchools } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+  const { data: pickupPointsData, isLoading: loadingPickups, refetch: refetchPickups } = useGetPickupPointsQuery(pickupPagination.params);
+  const { data: depotsData, refetch: refetchDepots } = useGetDepotsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+  const { data: allLinksData, refetch: refetchLinks } = useGetAllActiveSchoolPickupLinksQuery();
 
   const [createSchool, { isLoading: creatingSchool }] = useCreateSchoolMutation();
   const [updateSchool, { isLoading: updatingSchool }] = useUpdateSchoolMutation();
@@ -424,6 +609,20 @@ export function SchoolBusSchoolsPage() {
   const [editingWindow, setEditingWindow] = React.useState<SchoolBusSchoolPickupPointWindow | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget>(null);
   const [expandedSppId, setExpandedSppId] = React.useState<number | null>(null);
+  const isMountedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    if (selectedDetailSchoolId === null) {
+      refetchSchools?.();
+      refetchAllSchools?.();
+      refetchPickups?.();
+      refetchLinks?.();
+      refetchDepots?.();
+    }
+  }, [selectedDetailSchoolId, refetchSchools, refetchAllSchools, refetchPickups, refetchLinks, refetchDepots]);
 
   // ─── Map fit controls ────────────────────────────────────────────
   const [fitAllKey, setFitAllKey] = React.useState(0);
@@ -817,9 +1016,9 @@ export function SchoolBusSchoolsPage() {
                           >
                             <div className='flex items-center justify-between w-full gap-2'>
                               <span className='truncate text-xs font-semibold text-slate-900'>{p.name}</span>
-                              {p.zoneCode && (
+                              {p.code && (
                                 <span className='shrink-0 rounded bg-blue-50 px-1 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
-                                  {p.zoneCode}
+                                  {p.code}
                                 </span>
                               )}
                             </div>
@@ -884,7 +1083,11 @@ export function SchoolBusSchoolsPage() {
                   onEditSchool={(s) => { setEditingSchool(s); setSchoolDialogOpen(true); }}
                   onEditPickup={(p) => { setEditingPickup(p); setPickupDialogOpen(true); }}
                   onLinkPickup={() => setLinkDialogOpen(true)}
-                  onManageSchedules={() => setViewMode('directory')}
+                  onManageSchedules={() => {
+                    if (selectedSchoolObj) {
+                      router.push(`/school-bus/schools/${selectedSchoolObj.id}&tab=schedules&view=network`);
+                    }
+                  }}
                 />
               }
             />
@@ -931,6 +1134,7 @@ export function SchoolBusSchoolsPage() {
       headerClassName: 'pl-6',
       render: (school) => {
         const isSelected = selectedSchoolId === school.id;
+        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
         return (
           <div className='flex items-center gap-3'>
             <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#C81E3A] border border-red-100/50'>
@@ -945,10 +1149,22 @@ export function SchoolBusSchoolsPage() {
                   setSelectedPickupPointId(null);
                 }}
               >
-                <p className={cn(
-                  'font-bold text-sm transition-colors',
-                  isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
-                )}>{school.name}</p>
+                <div className='flex items-center gap-1.5'>
+                  <p className={cn(
+                    'font-bold text-sm transition-colors',
+                    isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
+                  )}>{school.name}</p>
+                  {!hasCoords && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertTriangle className='h-3.5 w-3.5 text-amber-500 cursor-help shrink-0' />
+                      </TooltipTrigger>
+                      <TooltipContent className='bg-slate-900 text-white p-2 rounded-lg text-xs max-w-[200px]'>
+                        School profile is missing geocoding coordinates.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
                 <p className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate' title={school.address || undefined}>
                   {school.address || 'No address'}
                 </p>
@@ -962,19 +1178,139 @@ export function SchoolBusSchoolsPage() {
       key: 'network',
       header: 'Network',
       render: (school) => {
-        const linkedCount = allLinks.filter((l) => l.schoolId === school.id).length;
-        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
+        const linkedCount = school.pickupPointCount ?? 0;
+        const missingLinked = school.anyLinkedPointMissingCoordinates;
         return (
           <div className='flex items-center gap-2'>
-            <span className='inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10'>
+            <span className={cn(
+              'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset',
+              missingLinked
+                ? 'bg-amber-50 text-amber-800 ring-amber-600/15'
+                : 'bg-slate-100 text-slate-700 ring-slate-600/10'
+            )}>
               {linkedCount} linked pickups
+              {missingLinked && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertTriangle className='h-3 w-3 text-amber-600 ml-1 cursor-help' />
+                  </TooltipTrigger>
+                  <TooltipContent className='bg-white text-slate-800 border border-slate-200 p-2.5 rounded-xl text-xs max-w-[220px] shadow-lg font-medium leading-normal flex items-start gap-2'>
+                    <AlertTriangle className='h-4 w-4 text-amber-500 shrink-0 mt-0.5' />
+                    <span>Some linked pickup points are missing coordinates.</span>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </span>
-            {!hasCoords && (
-              <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
-                No coords
-              </span>
-            )}
           </div>
+        );
+      }
+    },
+    {
+      key: 'schedules',
+      header: 'Schedules',
+      render: (school) => {
+        const schedules = school.schedules || [];
+        if (schedules.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
+
+        const limit = 2;
+        const visible = schedules.slice(0, limit);
+        const extra = schedules.length - limit;
+
+        return (
+          <TooltipProvider>
+            <div className='flex flex-col gap-1 items-start py-1'>
+              {visible.map((sch) => (
+                <Tooltip key={sch.id}>
+                  <TooltipTrigger asChild>
+                    <span className={cn(
+                      'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
+                      sch.shift === 'MORNING'
+                        ? 'bg-blue-50 text-blue-700 border-blue-100'
+                        : 'bg-orange-50 text-orange-700 border-orange-100'
+                    )}>
+                      {sch.code}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className='p-0 bg-transparent border-none shadow-none rounded-none'>
+                    <SchoolScheduleTooltipContent schedule={sch} />
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+              {extra > 0 && (
+                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
+                  +{extra} more
+                </span>
+              )}
+            </div>
+          </TooltipProvider>
+        );
+      }
+    },
+    {
+      key: 'pickupPoints',
+      header: 'Pickup points',
+      render: (school) => {
+        const points = school.pickupPoints || [];
+        if (points.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
+
+        const limit = 2;
+        const visible = points.slice(0, limit);
+        const extra = points.length - limit;
+
+        return (
+          <TooltipProvider>
+            <div className='flex flex-col gap-1 items-start py-1'>
+              {visible.map((pt) => {
+                const hasCoords = !!pt.hasCoordinates;
+                const isPickup = pt.usageType === 'PICKUP' || pt.usageType === 'PICKUP_ONLY';
+                const isDropoff = pt.usageType === 'DROPOFF' || pt.usageType === 'DROPOFF_ONLY';
+
+                return (
+                  <Tooltip key={pt.code}>
+                    <TooltipTrigger asChild>
+                      <span className={cn(
+                        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
+                        !hasCoords
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : isPickup
+                          ? 'bg-blue-50 text-blue-700 border-blue-150'
+                          : isDropoff
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                      )}>
+                        {!hasCoords && <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />}
+                        {pt.code}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className='p-3.5 max-w-[260px] bg-white text-slate-900 rounded-[16px] shadow-xl border border-slate-200 space-y-2 text-xs'>
+                      <div className='flex items-center justify-between gap-3 border-b border-slate-100 pb-2 mb-2'>
+                        <p className='font-bold text-slate-900 truncate'>{pt.name}</p>
+                        {pt.isDefault && (
+                          <span className='bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 text-[8px] font-bold font-sans shrink-0'>
+                            Default Link
+                          </span>
+                        )}
+                      </div>
+                      <div className='space-y-1 text-slate-600 font-medium'>
+                        <p>Usage: <span className='text-slate-800 font-semibold'>{pt.usageType}</span></p>
+                        <p className='truncate'>Address: <span className='text-slate-800 font-semibold' title={pt.address || ''}>{pt.address || 'No address'}</span></p>
+                        <p>Coordinates: {hasCoords ? (
+                          <span className='text-emerald-650 font-semibold'>Configured</span>
+                        ) : (
+                          <span className='text-amber-600 font-semibold inline-flex items-center gap-0.5'><AlertTriangle className='h-3 w-3 shrink-0 text-amber-500' /> Missing</span>
+                        )}</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+              {extra > 0 && (
+                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
+                  +{extra} more
+                </span>
+              )}
+            </div>
+          </TooltipProvider>
         );
       }
     },
@@ -1010,6 +1346,16 @@ export function SchoolBusSchoolsPage() {
       headerClassName: 'pr-6 text-right',
       render: (school) => (
         <div className='flex justify-end gap-1.5'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              router.push(`/school-bus/schools/${school.id}&tab=general&view=directory`);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
           <Button
             size='icon'
             variant='outline'
@@ -1082,6 +1428,19 @@ export function SchoolBusSchoolsPage() {
           </div>
         );
       }
+    },
+    {
+      key: 'code',
+      header: 'Code',
+      render: (pp) => (
+        pp.code ? (
+          <span className='inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
+            {pp.code}
+          </span>
+        ) : (
+          <span className='text-slate-400 font-medium'>—</span>
+        )
+      )
     },
     {
       key: 'zone',
@@ -1577,6 +1936,17 @@ export function SchoolBusSchoolsPage() {
     </div>
   );
 
+  if (selectedDetailSchoolId != null) {
+    return (
+      <SchoolBusSchoolDetailPage
+        schoolId={selectedDetailSchoolId}
+        onClose={() => {
+          router.push(`/school-bus/schools?view=${viewMode}`);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <SchoolBusPageShell
@@ -1619,8 +1989,6 @@ export function SchoolBusSchoolsPage() {
             tabs={[
               { key: 'schools', label: 'Schools', count: schools.length },
               { key: 'pickup-points', label: 'Pickup points', count: pickupPoints.length },
-              { key: 'schedules', label: 'Schedules', count: schedules.length },
-              { key: 'linked-pickups', label: 'Linked pickups', count: linkedPickupPoints.length },
             ]}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -1662,9 +2030,9 @@ export function SchoolBusSchoolsPage() {
             }
             pagination={
               activeTab === 'schools' && data
-                ? { page: data, onPageChange: schoolsPagination.setPage }
+                ? { page: data?.data, onPageChange: schoolsPagination.setPage }
                 : activeTab === 'pickup-points' && pickupPointsData
-                  ? { page: pickupPointsData, onPageChange: pickupPagination.setPage }
+                  ? { page: pickupPointsData?.data, onPageChange: pickupPagination.setPage }
                   : undefined
             }
           >

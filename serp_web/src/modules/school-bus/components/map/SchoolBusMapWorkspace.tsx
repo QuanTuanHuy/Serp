@@ -21,6 +21,8 @@ interface SchoolBusMapWorkspaceProps {
   fitRouteLabel?: string;
   compact?: boolean;
   flat?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
   // Legacy / backward compatibility props
   defaultPreset?: any;
   defaultShowLegend?: boolean;
@@ -41,8 +43,12 @@ export function SchoolBusMapWorkspace({
   fitRouteLabel = 'Fit Selected',
   compact,
   flat = false,
+  isExpanded,
+  onToggleExpand,
 }: SchoolBusMapWorkspaceProps) {
-  const [expanded, setExpanded] = React.useState(false);
+  const [internalExpanded, setInternalExpanded] = React.useState(false);
+  const expanded = isExpanded !== undefined ? isExpanded : internalExpanded;
+  const toggleExpand = onToggleExpand !== undefined ? onToggleExpand : () => setInternalExpanded((v) => !v);
   const [expandKey, setExpandKey] = React.useState(0);
 
   React.useEffect(() => {
@@ -89,7 +95,7 @@ export function SchoolBusMapWorkspace({
                   canFitRoute={canFitRoute}
                   fitRouteLabel={fitRouteLabel}
                   isExpanded={expanded}
-                  onToggleExpand={() => setExpanded((v) => !v)}
+                  onToggleExpand={toggleExpand}
                   showExpand={allowFullscreen}
                   compact={compact ?? Boolean(panel)}
                 />
