@@ -8,6 +8,7 @@ export * from './product-types';
 export * from './import-history';
 export * from './vehicles';
 export * from './routes';
+export * from './bags';
 export * from './orders';
 export * from './dispatchers';
 export * from './handover-manifests';

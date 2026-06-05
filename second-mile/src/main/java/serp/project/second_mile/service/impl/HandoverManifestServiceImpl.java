@@ -290,7 +290,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, null, true, request, photo);
+        return processDriverArrivalCheckin(manifest, request, photo);
     }
 
     @Override
@@ -942,6 +942,37 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             return null;
         }
         return secondMileAccessUtils.getCurrentActiveDriverStaffIdOrThrow();
+    }
+
+    private HandoverManifestResponse processDriverArrivalCheckin(
+            HandoverManifest manifest,
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
+    ) {
+        if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
+            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
+        }
+        if (manifest.getVehicleId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in requires an assigned vehicle.");
+        }
+
+        Vehicle vehicle = loadVehicle(manifest.getVehicleId());
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        validateVehicleHasAssignedDriver(manifest.getTenantId(), vehicle);
+        secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+        validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
+        recordDriverEndCheckin(manifest, request, photo);
+
+        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+        List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
+        return toResponse(
+                savedManifest,
+                manifestOrders,
+                vehicle,
+                loadRoute(savedManifest.getRouteId())
+        );
     }
 
     private HandoverManifestResponse processInboundCheckin(

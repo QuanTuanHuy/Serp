@@ -15,6 +15,15 @@ import type {
   ImportHistoryStatus,
   ImportType,
   PostOfficeStaffAssignment,
+  AutoSecondMileBaggingPlan,
+  SecondMileBag,
+  SecondMileBagDestinationType,
+  SecondMileBagOrder,
+  SecondMileBagStatus,
+  SecondMileBagSuggestion,
+  SecondMileBaggingKpi,
+  SecondMileBaggingValidation,
+  SecondMileBaggingValidationItem,
   SecondMileHubStaffAssignment,
   SecondMileHubStaff,
   SecondMileOrder,
@@ -222,6 +231,79 @@ export const normalizeSecondMileVehicle = (raw: unknown): SecondMileVehicle => {
     createdBy: readField<string>(record, 'created_by', 'createdBy'),
     updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
     tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagOrder = (
+  raw: unknown
+): SecondMileBagOrder => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    orderId: readOptionalNumber(record, 'order_id', 'orderId'),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+  };
+};
+
+export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const orders = readField<unknown[]>(record, 'orders', 'orders') ?? [];
+
+  return {
+    id: Number(record.id ?? 0),
+    bagCode: readField<string>(record, 'bag_code', 'bagCode'),
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    destinationType: readField<SecondMileBagDestinationType>(
+      record,
+      'destination_type',
+      'destinationType'
+    ),
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,
+    currentWeight:
+      readOptionalNumber(record, 'current_weight', 'currentWeight') ?? 0,
+    currentVolume:
+      readOptionalNumber(record, 'current_volume', 'currentVolume') ?? 0,
+    currentOrders:
+      readOptionalNumber(record, 'current_orders', 'currentOrders') ?? 0,
+    status:
+      readField<SecondMileBagStatus>(record, 'status', 'status') ?? 'CREATED',
+    sealedAt: readField<string>(record, 'sealed_at', 'sealedAt'),
+    note: readField<string>(record, 'note', 'note'),
+    orders: orders.map((order) => normalizeSecondMileBagOrder(order)),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagSuggestion = (
+  raw: unknown
+): SecondMileBagSuggestion => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    bagId: readOptionalNumber(record, 'bag_id', 'bagId') ?? 0,
+    bagCode: readField<string>(record, 'bag_code', 'bagCode'),
+    remainingWeight:
+      readOptionalNumber(record, 'remaining_weight', 'remainingWeight') ?? 0,
+    remainingVolume:
+      readOptionalNumber(record, 'remaining_volume', 'remainingVolume') ?? 0,
+    remainingOrders:
+      readOptionalNumber(record, 'remaining_orders', 'remainingOrders') ?? 0,
   };
 };
 
@@ -481,6 +563,18 @@ export const normalizeSecondMileVehiclePage = (
   };
 };
 
+export const normalizeSecondMileBagPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileBag>>
+    | FirstMilePageResponse<SecondMileBag>
+): FirstMilePaginatedData<SecondMileBag> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileBag>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileBag(item)),
+  };
+};
+
 export const normalizeSecondMileRoutePage = (
   response:
     | FirstMileApiResponse<FirstMilePageResponse<SecondMileRoute>>
@@ -525,6 +619,76 @@ export const unwrapFirstMileResultOrRaw = <T>(
   }
 
   return transformTimestampFields(response as T);
+};
+
+export const normalizeSecondMileBaggingValidation = (
+  raw: unknown
+): SecondMileBaggingValidation => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const items = readField<unknown[]>(record, 'items', 'items') ?? [];
+
+  return {
+    bagId: readOptionalNumber(record, 'bag_id', 'bagId') ?? 0,
+    acceptedCount:
+      readOptionalNumber(record, 'accepted_count', 'acceptedCount') ?? 0,
+    rejectedCount:
+      readOptionalNumber(record, 'rejected_count', 'rejectedCount') ?? 0,
+    items: items.map((item) => {
+      const itemRecord = (item ?? {}) as Record<string, unknown>;
+      return {
+        orderCode:
+          readField<string>(itemRecord, 'order_code', 'orderCode') ?? '',
+        accepted: Boolean(
+          readField<boolean>(itemRecord, 'accepted', 'accepted') ?? false
+        ),
+        reason: readField<string>(itemRecord, 'reason', 'reason'),
+      } satisfies SecondMileBaggingValidationItem;
+    }),
+  };
+};
+
+export const normalizeAutoSecondMileBaggingPlan = (
+  raw: unknown
+): AutoSecondMileBaggingPlan => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const items = readField<unknown[]>(record, 'items', 'items') ?? [];
+
+  return {
+    executed: Boolean(readField<boolean>(record, 'executed', 'executed')),
+    bagCount: readOptionalNumber(record, 'bag_count', 'bagCount') ?? 0,
+    items: items.map((item) => {
+      const itemRecord = (item ?? {}) as Record<string, unknown>;
+      return {
+        bagCode: readField<string>(itemRecord, 'bag_code', 'bagCode') ?? '',
+        orderCodes:
+          readField<string[]>(itemRecord, 'order_codes', 'orderCodes') ?? [],
+        totalWeight:
+          readOptionalNumber(itemRecord, 'total_weight', 'totalWeight') ?? 0,
+        totalVolume:
+          readOptionalNumber(itemRecord, 'total_volume', 'totalVolume') ?? 0,
+      };
+    }),
+  };
+};
+
+export const normalizeSecondMileBaggingKpi = (
+  raw: unknown
+): SecondMileBaggingKpi => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    originHubId:
+      readOptionalNumber(record, 'origin_hub_id', 'originHubId') ?? 0,
+    sealedBagCount:
+      readOptionalNumber(record, 'sealed_bag_count', 'sealedBagCount') ?? 0,
+    avgFillRateWeight:
+      readOptionalNumber(record, 'avg_fill_rate_weight', 'avgFillRateWeight') ??
+      0,
+    avgFillRateVolume:
+      readOptionalNumber(record, 'avg_fill_rate_volume', 'avgFillRateVolume') ??
+      0,
+    avgOrdersPerBag:
+      readOptionalNumber(record, 'avg_orders_per_bag', 'avgOrdersPerBag') ?? 0,
+  };
 };
 
 export const unwrapFirstMilePageResult = <T>(

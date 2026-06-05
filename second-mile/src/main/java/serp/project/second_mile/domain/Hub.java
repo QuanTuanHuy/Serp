@@ -75,6 +75,7 @@ public class Hub extends AbstractAudit {
     private Integer currentLoad = 0;
 
     @Column(name = "status")
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     private HubStatus status = HubStatus.ACTIVE;
 

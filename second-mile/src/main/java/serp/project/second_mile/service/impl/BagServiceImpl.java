@@ -410,7 +410,7 @@ public class BagServiceImpl implements BagService {
         }
 
         Long resolvedOriginHubId = originHubId != null ? originHubId : resolveOriginHubIdByOrder(tenantId, order);
-        BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order);
+        BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order, resolvedOriginHubId);
         List<Bag> candidates = findEditableBagsByTarget(tenantId, resolvedOriginHubId, destinationTarget);
 
         return candidates.stream()
@@ -511,7 +511,7 @@ public class BagServiceImpl implements BagService {
             if (!isReadyForBagging(order.getStatus())) {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Only inbound orders can be auto-bagged.");
             }
-            validateOrderDestinationMatchesTarget(tenantId, request.getDestinationType(), request.getDestinationHubId(),
+            validateOrderDestinationMatchesTarget(tenantId, request.getOriginHubId(), request.getDestinationType(), request.getDestinationHubId(),
                     request.getDestinationPostOfficeCode(), order);
         }
 
@@ -710,6 +710,12 @@ public class BagServiceImpl implements BagService {
             if (!tenantId.equals(destinationHub.getTenantId())) {
                 throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
             }
+            if (Objects.equals(originHubId, destinationHubId)) {
+                throw new AppException(
+                        ErrorCode.BAG_DESTINATION_INVALID,
+                        "Same-hub orders must use a destination post office bag."
+                );
+            }
             return;
         }
 
@@ -779,6 +785,7 @@ public class BagServiceImpl implements BagService {
     private void validateOrderDestinationMatchesBag(Long tenantId, Bag bag, TmsOrderOperationView order) {
         validateOrderDestinationMatchesTarget(
                 tenantId,
+                bag.getOriginHubId(),
                 bag.getDestinationType(),
                 bag.getDestinationHubId(),
                 bag.getDestinationPostOfficeCode(),
@@ -788,6 +795,7 @@ public class BagServiceImpl implements BagService {
 
     private void validateOrderDestinationMatchesTarget(
             Long tenantId,
+            Long originHubId,
             BagDestinationType destinationType,
             Long destinationHubId,
             String destinationPostOfficeCode,
@@ -811,6 +819,12 @@ public class BagServiceImpl implements BagService {
                     .findByTenantIdAndPostOfficeCode(tenantId, orderDestinationPo)
                     .orElseThrow(() -> new AppException(ErrorCode.BAG_POST_OFFICE_INVALID));
             Long resolvedDestinationHubId = destinationMapping.getHub() == null ? null : destinationMapping.getHub().getId();
+            if (Objects.equals(originHubId, resolvedDestinationHubId)) {
+                throw new AppException(
+                        ErrorCode.BAG_DESTINATION_INVALID,
+                        "Same-hub destination orders must be bagged to a destination post office."
+                );
+            }
             if (!Objects.equals(resolvedDestinationHubId, destinationHubId)) {
                 throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
             }
@@ -829,17 +843,23 @@ public class BagServiceImpl implements BagService {
         return mapping.getHub() == null ? null : mapping.getHub().getId();
     }
 
-    private BagDestinationTarget resolveDestinationTargetForOrder(Long tenantId, TmsOrderOperationView order) {
+    private BagDestinationTarget resolveDestinationTargetForOrder(
+            Long tenantId,
+            TmsOrderOperationView order,
+            Long originHubId
+    ) {
         String destinationPostOfficeCode = normalizeText(order.getDestinationPostOfficeCode());
         if (destinationPostOfficeCode == null) {
             throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
         }
         return hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, destinationPostOfficeCode)
-                .map(mapping -> new BagDestinationTarget(
-                        BagDestinationType.HUB,
-                        mapping.getHub() == null ? null : mapping.getHub().getId(),
-                        destinationPostOfficeCode
-                ))
+                .map(mapping -> {
+                    Long destinationHubId = mapping.getHub() == null ? null : mapping.getHub().getId();
+                    if (destinationHubId == null || Objects.equals(originHubId, destinationHubId)) {
+                        return new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode);
+                    }
+                    return new BagDestinationTarget(BagDestinationType.HUB, destinationHubId, destinationPostOfficeCode);
+                })
                 .orElse(new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode));
     }
 

@@ -65,6 +65,18 @@ import type {
   SecondMileVehicle,
   SecondMileVehicleImportItem,
   SecondMileVehicleListFilters,
+  AddSecondMileBagOrderRequest,
+  AutoSecondMileBaggingPlan,
+  AutoSecondMileBaggingPlanRequest,
+  CreateSecondMileBagRequest,
+  ReopenSecondMileBagRequest,
+  SecondMileBag,
+  SecondMileBagListFilters,
+  SecondMileBagSuggestion,
+  SecondMileBaggingKpi,
+  SecondMileBaggingValidation,
+  UpdateSecondMileBagRequest,
+  ValidateSecondMileBaggingRequest,
   SecondMileRoute,
   SecondMileRouteListFilters,
   SecondMileCreateRouteRequest,
@@ -93,6 +105,12 @@ import {
   normalizeHandoverManifestPage,
   normalizeSecondMileRoute,
   normalizeSecondMileRoutePage,
+  normalizeAutoSecondMileBaggingPlan,
+  normalizeSecondMileBag,
+  normalizeSecondMileBagPage,
+  normalizeSecondMileBagSuggestion,
+  normalizeSecondMileBaggingKpi,
+  normalizeSecondMileBaggingValidation,
   normalizeSecondMileVehicle,
   normalizeSecondMileVehiclePage,
   normalizeSecondMileOrderPage,
@@ -484,6 +502,252 @@ export const firstMileApi = api.injectEndpoints({
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (response: unknown) =>
         normalizeSecondMileHubImportHistory(response),
+    }),
+
+    getSecondMileBags: builder.query<
+      FirstMilePaginatedData<SecondMileBag>,
+      { page?: number; size?: number } & SecondMileBagListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        bagCode,
+        originHubId,
+        destinationType,
+        destinationHubId,
+        destinationPostOfficeCode,
+        vehicleId,
+        status,
+      }) => ({
+        url: '/bags',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(keyword ? { keyword } : {}),
+          ...(bagCode ? { bag_code: bagCode } : {}),
+          ...(originHubId !== undefined ? { origin_hub_id: originHubId } : {}),
+          ...(destinationType ? { destination_type: destinationType } : {}),
+          ...(destinationHubId !== undefined
+            ? { destination_hub_id: destinationHubId }
+            : {}),
+          ...(destinationPostOfficeCode
+            ? { destination_post_office_code: destinationPostOfficeCode }
+            : {}),
+          ...(vehicleId !== undefined ? { vehicle_id: vehicleId } : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeSecondMileBagPage,
+      providesTags: (result) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        ...(result?.items ?? []).map((bag) => ({
+          type: 'SecondMileBag' as const,
+          id: String(bag.id),
+        })),
+      ],
+    }),
+
+    getSecondMileBagById: builder.query<SecondMileBag, number>({
+      query: (id) => ({
+        url: `/bags/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      providesTags: (_result, _error, id) => [
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    createSecondMileBag: builder.mutation<
+      SecondMileBag,
+      CreateSecondMileBagRequest
+    >({
+      query: (body) => ({
+        url: '/bags',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: [{ type: 'SecondMileBag', id: 'LIST' }],
+    }),
+
+    updateSecondMileBag: builder.mutation<
+      SecondMileBag,
+      { id: number; body: UpdateSecondMileBagRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/bags/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    deleteSecondMileBag: builder.mutation<string, number>({
+      query: (id) => ({
+        url: `/bags/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<void>) =>
+        response?.message || 'Deleted successfully',
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    addSecondMileBagOrder: builder.mutation<
+      SecondMileBag,
+      { id: number; body: AddSecondMileBagOrderRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/bags/${id}/orders`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    removeSecondMileBagOrder: builder.mutation<
+      SecondMileBag,
+      { id: number; orderCode: string }
+    >({
+      query: ({ id, orderCode }) => ({
+        url: `/bags/${id}/orders/${encodeURIComponent(orderCode)}`,
+        method: 'DELETE',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    sealSecondMileBag: builder.mutation<SecondMileBag, number>({
+      query: (id) => ({
+        url: `/bags/${id}/seal`,
+        method: 'POST',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    reopenSecondMileBag: builder.mutation<
+      SecondMileBag,
+      { id: number; body: ReopenSecondMileBagRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/bags/${id}/reopen`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (response: FirstMileApiResponse<SecondMileBag>) =>
+        normalizeSecondMileBag(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'SecondMileBag', id: 'LIST' },
+        { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    getSecondMileBagSuggestions: builder.query<
+      SecondMileBagSuggestion[],
+      { orderCode: string; originHubId?: number }
+    >({
+      query: ({ orderCode, originHubId }) => ({
+        url: '/bags/suggestions',
+        method: 'GET',
+        params: {
+          order_code: orderCode,
+          ...(originHubId !== undefined ? { origin_hub_id: originHubId } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBagSuggestion[]>
+      ) =>
+        (unwrapFirstMileResult(response) ?? []).map((item) =>
+          normalizeSecondMileBagSuggestion(item)
+        ),
+    }),
+
+    validateSecondMileBagging: builder.mutation<
+      SecondMileBaggingValidation,
+      ValidateSecondMileBaggingRequest
+    >({
+      query: (body) => ({
+        url: '/bags/validate',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBaggingValidation>
+      ) =>
+        normalizeSecondMileBaggingValidation(unwrapFirstMileResult(response)),
+    }),
+
+    autoPlanSecondMileBags: builder.mutation<
+      AutoSecondMileBaggingPlan,
+      AutoSecondMileBaggingPlanRequest
+    >({
+      query: (body) => ({
+        url: '/bags/auto-plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<AutoSecondMileBaggingPlan>
+      ) => normalizeAutoSecondMileBaggingPlan(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, request) =>
+        request.execute ? [{ type: 'SecondMileBag', id: 'LIST' }] : [],
+    }),
+
+    getSecondMileBaggingKpis: builder.query<
+      SecondMileBaggingKpi,
+      { originHubId: number; from: string; to: string }
+    >({
+      query: ({ originHubId, from, to }) => ({
+        url: '/bags/kpis',
+        method: 'GET',
+        params: {
+          origin_hub_id: originHubId,
+          from,
+          to,
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBaggingKpi>
+      ) => normalizeSecondMileBaggingKpi(unwrapFirstMileResult(response)),
     }),
 
     getSecondMileRoutes: builder.query<
@@ -1712,6 +1976,19 @@ export const {
   useLazyExportSecondMileVehicleTemplateQuery,
   useValidateSecondMileVehicleImportMutation,
   useImportSecondMileVehiclesMutation,
+  useGetSecondMileBagsQuery,
+  useGetSecondMileBagByIdQuery,
+  useCreateSecondMileBagMutation,
+  useUpdateSecondMileBagMutation,
+  useDeleteSecondMileBagMutation,
+  useAddSecondMileBagOrderMutation,
+  useRemoveSecondMileBagOrderMutation,
+  useSealSecondMileBagMutation,
+  useReopenSecondMileBagMutation,
+  useGetSecondMileBagSuggestionsQuery,
+  useValidateSecondMileBaggingMutation,
+  useAutoPlanSecondMileBagsMutation,
+  useGetSecondMileBaggingKpisQuery,
   useGetSecondMileRoutesQuery,
   useGetSecondMileRouteByIdQuery,
   useCreateSecondMileRouteMutation,
