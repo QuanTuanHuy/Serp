@@ -50,6 +50,8 @@ import { ScrollArea } from '@/shared/components/ui/scroll-area';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/utils';
 import { useGetPmProjectSummaryQuery } from '../api/projectApi';
+import { PMDateRangePicker } from '../components/shared';
+import { parseLocalDateValue, toLocalDateEpoch } from '../utils/date';
 import type {
   PMProjectSummaryBreakdownItemApi,
   PMProjectSummaryDashboardApi,
@@ -96,27 +98,10 @@ function toNumber(value: string) {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-function toDateInputValue(value?: number) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
-}
-
-function dateInputToEpoch(value: string, endOfDay = false) {
-  if (!value) return undefined;
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-  return date.getTime();
-}
-
 function formatRelativeDate(value?: number | string | null) {
   if (!value) return 'Unknown time';
-  const date = typeof value === 'number' ? new Date(value) : new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown time';
+  const date = parseLocalDateValue(value);
+  if (!date) return 'Unknown time';
   const diffMs = Date.now() - date.getTime();
   const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
   if (diffDays <= 0) return 'today';
@@ -415,24 +400,15 @@ function DateRangeFilter({
 }) {
   return (
     <FilterSection title={title}>
-      <div className='grid grid-cols-2 gap-2 px-2'>
-        <Input
-          type='date'
-          value={toDateInputValue(from)}
-          onChange={(event) =>
-            onFromChange(dateInputToEpoch(event.target.value))
-          }
-          aria-label={`${title} from`}
-        />
-        <Input
-          type='date'
-          value={toDateInputValue(to)}
-          onChange={(event) =>
-            onToChange(dateInputToEpoch(event.target.value, true))
-          }
-          aria-label={`${title} to`}
-        />
-      </div>
+      <PMDateRangePicker
+        from={from}
+        to={to}
+        onFromChange={(date) => onFromChange(date ? date.getTime() : undefined)}
+        onToChange={(date) =>
+          onToChange(date ? toLocalDateEpoch(date, true) : undefined)
+        }
+        className='px-2'
+      />
     </FilterSection>
   );
 }

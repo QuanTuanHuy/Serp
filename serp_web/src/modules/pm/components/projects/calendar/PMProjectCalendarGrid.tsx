@@ -24,6 +24,7 @@ interface PMProjectCalendarGridProps {
   days: moment.Moment[];
   mode: PMProjectCalendarMode;
   view: PMProjectCalendarView;
+  showWeekends: boolean;
   deadlineItemsByDay: Map<string, PMWorkItemSearchApi[]>;
   scheduleItemsByDay: Map<
     string,
@@ -37,15 +38,25 @@ export function PMProjectCalendarGrid({
   days,
   mode,
   view,
+  showWeekends,
   deadlineItemsByDay,
   scheduleItemsByDay,
   onDeadlineClick,
   onScheduleClick,
 }: PMProjectCalendarGridProps) {
+  const dayLabels = showWeekends
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
   return (
     <div className='overflow-hidden rounded-lg border bg-background'>
-      <div className='grid grid-cols-5 border-b bg-muted/20'>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((label) => (
+      <div
+        className={cn(
+          'grid border-b bg-muted/20',
+          showWeekends ? 'grid-cols-7' : 'grid-cols-5'
+        )}
+      >
+        {dayLabels.map((label) => (
           <div
             key={label}
             className='border-r px-3 py-2 text-center text-xs font-semibold text-muted-foreground last:border-r-0'
@@ -54,7 +65,7 @@ export function PMProjectCalendarGrid({
           </div>
         ))}
       </div>
-      <div className='grid grid-cols-5'>
+      <div className={cn('grid', showWeekends ? 'grid-cols-7' : 'grid-cols-5')}>
         {days.map((day) => {
           const dayKey = day.format('YYYY-MM-DD');
           const deadlineItems = deadlineItemsByDay.get(dayKey) || [];

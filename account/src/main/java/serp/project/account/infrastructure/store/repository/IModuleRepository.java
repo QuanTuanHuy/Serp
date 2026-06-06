@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
+import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.infrastructure.store.model.ModuleModel;
 
 @Repository
@@ -20,4 +21,6 @@ public interface IModuleRepository extends IBaseRepository<ModuleModel> {
     boolean existsByModuleName(String moduleName);
 
     boolean existsByCode(String code);
+
+    Long countByStatus(ModuleStatus status);
 }

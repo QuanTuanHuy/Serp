@@ -11,6 +11,12 @@ import {
   selectUsersUiState,
   openCreateUserDialog,
   openEditUserDialog,
+  openUserDetailDrawer,
+  closeUserDetailDrawer,
+  openUserAccessDialog,
+  closeUserAccessDialog,
+  openUserStatusDialog,
+  closeUserStatusDialog,
   closeUserDialog,
   selectSelectedOrganizationId,
   selectSelectedUserId,
@@ -20,6 +26,9 @@ import {
   setUsersSearch,
   setUsersStatus,
   setUsersOrganizationId,
+  setUsersUserType,
+  setUsersRoleId,
+  setUsersDepartmentId,
   setUsersPage,
   setUsersPageSize,
   setUsersSort,
@@ -33,7 +42,7 @@ import type {
   CreateUserForOrganizationRequest,
   UpdateUserInfoRequest,
   UserFilters,
-  UserProfile,
+  UserStatus,
 } from '../types';
 import { useNotification } from '@/shared/hooks/use-notification';
 import { getErrorMessage } from '@/lib/store/api/utils';
@@ -86,13 +95,36 @@ export function useUsers() {
   );
 
   const handleFilterChange = useCallback(
-    (key: keyof UserFilters, value: any) => {
+    <K extends keyof UserFilters>(key: K, value: UserFilters[K]) => {
       switch (key) {
         case 'status':
-          dispatch(setUsersStatus(value || undefined));
+          dispatch(
+            setUsersStatus((value || undefined) as UserFilters['status'])
+          );
           break;
         case 'organizationId':
-          dispatch(setUsersOrganizationId(value || undefined));
+          dispatch(
+            setUsersOrganizationId(
+              (value || undefined) as UserFilters['organizationId']
+            )
+          );
+          break;
+        case 'userType':
+          dispatch(
+            setUsersUserType((value || undefined) as UserFilters['userType'])
+          );
+          break;
+        case 'roleId':
+          dispatch(
+            setUsersRoleId((value || undefined) as UserFilters['roleId'])
+          );
+          break;
+        case 'departmentId':
+          dispatch(
+            setUsersDepartmentId(
+              (value || undefined) as UserFilters['departmentId']
+            )
+          );
           break;
         case 'page':
           dispatch(setUsersPage(value as number));
@@ -112,7 +144,7 @@ export function useUsers() {
           );
           break;
         default:
-          dispatch(setUsersFilters({ [key]: value } as any));
+          dispatch(setUsersFilters({ [key]: value } as Partial<UserFilters>));
       }
     },
     [dispatch, filters.sortBy, filters.sortDir]
@@ -136,6 +168,18 @@ export function useUsers() {
   const openCreate = (organizationId?: number) =>
     dispatch(openCreateUserDialog({ organizationId }));
   const openEdit = (userId: number) => dispatch(openEditUserDialog({ userId }));
+  const openDetails = (userId: number, organizationId?: number) =>
+    dispatch(openUserDetailDrawer({ userId, organizationId }));
+  const closeDetails = () => dispatch(closeUserDetailDrawer());
+  const openAccess = (userId: number, organizationId?: number) =>
+    dispatch(openUserAccessDialog({ userId, organizationId }));
+  const closeAccess = () => dispatch(closeUserAccessDialog());
+  const openStatus = (
+    userId: number,
+    organizationId?: number,
+    status?: UserStatus
+  ) => dispatch(openUserStatusDialog({ userId, organizationId, status }));
+  const closeStatus = () => dispatch(closeUserStatusDialog());
   const closeDialog = () => dispatch(closeUserDialog());
 
   // Mutations wrappers
@@ -193,6 +237,12 @@ export function useUsers() {
     ui,
     openCreate,
     openEdit,
+    openDetails,
+    closeDetails,
+    openAccess,
+    closeAccess,
+    openStatus,
+    closeStatus,
     closeDialog,
     // Mutations
     create,

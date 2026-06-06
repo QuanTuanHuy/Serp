@@ -3,13 +3,22 @@
  * Description: Part of Serp Project - Admin API barrel exports
  */
 
+// Dashboard API
+export {
+  dashboardApi,
+  useGetAdminDashboardQuery,
+} from './dashboard/dashboardApi';
+
 // Organizations API
 export {
   organizationsApi,
   useGetOrganizationsQuery,
   useGetOrganizationByIdQuery,
+  useGetOrganizationUserStatsQuery,
   useLazyGetOrganizationsQuery,
   useLazyGetOrganizationByIdQuery,
+  useLazyGetOrganizationUserStatsQuery,
+  useUpdateOrganizationStatusMutation,
 } from './organizations/organizationsApi';
 
 // Users API
@@ -17,9 +26,23 @@ export {
   usersApi,
   useGetUsersQuery,
   useLazyGetUsersQuery,
+  useGetUserStatsQuery,
+  useGetUserDetailQuery,
+  useLazyGetUserDetailQuery,
+  useGetOrganizationRolesQuery,
   useUpdateUserInfoMutation,
+  useUpdateUserStatusMutation,
+  useUpdateUserRolesMutation,
+  useUpdateUserTypeMutation,
   useCreateUserForOrganizationMutation,
 } from './users/usersApi';
+
+// Departments API
+export {
+  departmentsApi,
+  useGetDepartmentsQuery,
+  useLazyGetDepartmentsQuery,
+} from './departments/departmentsApi';
 
 // Subscriptions API
 export {

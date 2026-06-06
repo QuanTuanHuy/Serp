@@ -13,10 +13,12 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
+import serp.project.account.core.domain.dto.request.UpdateOrganizationStatusRequest;
 import serp.project.account.core.domain.dto.response.OrganizationSettingsResponse;
 import serp.project.account.core.domain.dto.response.OrganizationSettingsSummaryResponse;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.service.IOrganizationService;
+import serp.project.account.core.usecase.organization.command.OrganizationStatusCommandService;
 import serp.project.account.kernel.utils.PaginationUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
@@ -25,6 +27,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 @Slf4j
 public class OrganizationUseCase {
     private final IOrganizationService organizationService;
+    private final OrganizationStatusCommandService organizationStatusCommandService;
     private final ResponseUtils responseUtils;
     private final PaginationUtils paginationUtils;
 
@@ -71,6 +74,19 @@ public class OrganizationUseCase {
             return responseUtils.success(toSettingsResponse(organization));
         } catch (Exception e) {
             log.error("Error updating organization settings: {}", e.getMessage());
+            return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    public GeneralResponse<?> updateOrganizationStatus(
+            Long organizationId,
+            Long updatedBy,
+            UpdateOrganizationStatusRequest request) {
+        try {
+            var result = organizationStatusCommandService.updateOrganizationStatus(organizationId, updatedBy, request);
+            return responseUtils.success(result);
+        } catch (Exception e) {
+            log.error("Error updating organization status {}: {}", organizationId, e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
         }
     }

@@ -156,8 +156,9 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                                                             List<OptimizationConstraintViolation> warnings) {
         Set<Long> selectedIds = new LinkedHashSet<>(idsOf(selected));
         // Load all link types to determine dependency behavior (blocks, blocked-by, etc.)
-        Map<Long, IssueLinkTypeEntity> types = issueLinkTypePort.listByTenant(tenantId).stream()
+        Map<Long, IssueLinkTypeEntity> types = issueLinkTypePort.listByTenantIncludingSystem(tenantId).stream()
                 .collect(Collectors.toMap(IssueLinkTypeEntity::getId, type -> type, (left, right) -> left));
+        log.info("Loaded issue link types: tenantId={}, count={}", tenantId, types.size());
         // Collect all issue links for selected work items, deduplicated by link ID
         Map<Long, IssueLinkDetailEntity> linksById = new LinkedHashMap<>();
         for (Long workItemId : selectedIds) {

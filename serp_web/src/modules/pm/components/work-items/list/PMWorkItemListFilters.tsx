@@ -145,8 +145,6 @@ export function PMWorkItemListFilters({
     onUpdate({ [key]: serializeNumberList(nextValues) });
   };
 
-  const close = () => onOpenChange(false);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-5xl gap-0 p-0 sm:max-h-[85vh] sm:max-w-5xl'>
@@ -164,9 +162,6 @@ export function PMWorkItemListFilters({
                 Pick criterion on left, values on right.
               </p>
             </div>
-            <Button type='button' variant='ghost' size='sm' onClick={close}>
-              Close
-            </Button>
           </div>
         </DialogHeader>
 

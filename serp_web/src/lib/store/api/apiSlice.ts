@@ -179,6 +179,7 @@ export const api = createApi({
     'Territory',
     // Admin tags
     'admin/Organization',
+    'admin/Dashboard',
     'admin/Subscription',
     'admin/Plan',
     'admin/PlanModule',
@@ -271,6 +272,7 @@ export const api = createApi({
     'pm/ProjectRole',
     'pm/ProjectComponent',
     'pm/ProjectSummary',
+    'pm/ProjectSettingsOverview',
     'pm/IssueType',
     'pm/IssueTypeScheme',
     'pm/IssueTypeSettings',
@@ -285,6 +287,7 @@ export const api = createApi({
     'pm/WorkItemComments',
     'pm/WorkItemActivities',
     'pm/WorkItemChildren',
+    'pm/WorkItemDependencies',
     'pm/WorkItemLinks',
     'pm/WorkItemWorklogs',
     'pm/Skill',

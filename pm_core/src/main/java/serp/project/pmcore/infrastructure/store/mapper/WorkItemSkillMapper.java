@@ -22,8 +22,7 @@ public class WorkItemSkillMapper extends BaseMapper {
                 .requirementType(entity.getRequirementType()).minProficiency(entity.getMinProficiency())
                 .weight(entity.getWeight()).source(entity.getSource())
                 .createdAt(longToLocalDateTime(entity.getCreatedAt())).createdBy(entity.getCreatedBy())
-                .updatedAt(longToLocalDateTime(entity.getUpdatedAt())).updatedBy(entity.getUpdatedBy())
-                .deletedAt(longToLocalDateTime(entity.getDeletedAt())).build();
+                .updatedAt(longToLocalDateTime(entity.getUpdatedAt())).updatedBy(entity.getUpdatedBy()).build();
     }
 
     public WorkItemSkillEntity toEntity(WorkItemSkillModel model) {
@@ -34,8 +33,7 @@ public class WorkItemSkillMapper extends BaseMapper {
                 .requirementType(model.getRequirementType()).minProficiency(model.getMinProficiency())
                 .weight(model.getWeight()).source(model.getSource())
                 .createdAt(localDateTimeToLong(model.getCreatedAt())).createdBy(model.getCreatedBy())
-                .updatedAt(localDateTimeToLong(model.getUpdatedAt())).updatedBy(model.getUpdatedBy())
-                .deletedAt(localDateTimeToLong(model.getDeletedAt())).build();
+                .updatedAt(localDateTimeToLong(model.getUpdatedAt())).updatedBy(model.getUpdatedBy()).build();
     }
 
     public List<WorkItemSkillEntity> toEntities(List<WorkItemSkillModel> models) {

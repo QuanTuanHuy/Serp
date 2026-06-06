@@ -15,14 +15,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.SQLRestriction;
 import serp.project.pmcore.domain.skill.enums.SkillProficiency;
 import serp.project.pmcore.domain.skill.enums.SkillRequirementType;
 import serp.project.pmcore.domain.skill.enums.SkillSource;
 
 @Entity
 @Table(name = "work_item_skills")
-@SQLRestriction("deleted_at IS NULL")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import serp.project.pmcore.domain.issuelink.enums.IssueLinkDependencyBehavior;
 
 @Getter
 @Setter
@@ -22,6 +23,7 @@ public class IssueLinkDetailEntity {
     private Long targetId;
     private Long linkTypeId;
     private String linkTypeName;
+    private IssueLinkDependencyBehavior dependencyBehavior;
     private String outwardDescription;
     private String inwardDescription;
     private Long relatedWorkItemId;

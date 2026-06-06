@@ -23,6 +23,7 @@ import {
 import { cn } from '@/shared/utils';
 import type { PMWorkItemBoardCardApi } from '../../../types/api';
 import { formatDate, getInitials } from '../workItemView.utils';
+import { parseLocalDateValue } from '../../../utils/date';
 import { getBoardCardDndId } from './pmWorkItemBoard.utils';
 
 interface PMWorkItemBoardCardProps {
@@ -42,8 +43,8 @@ function getDueDateState(
 ): 'normal' | 'soon' | 'overdue' | null {
   if (!value) return null;
 
-  const dueDate = new Date(value);
-  if (Number.isNaN(dueDate.getTime())) return null;
+  const dueDate = parseLocalDateValue(value);
+  if (!dueDate) return null;
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

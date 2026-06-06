@@ -18,5 +18,9 @@ public interface IIssueLinkPort {
 
     Optional<IssueLinkEntity> getActiveDuplicate(Long tenantId, Long sourceId, Long targetId, Long linkTypeId);
 
+    void delete(Long id, Long tenantId);
+
     List<IssueLinkDetailEntity> listByWorkItemId(Long tenantId, Long workItemId);
+
+    List<IssueLinkDetailEntity> listByWorkItemIds(Long tenantId, List<Long> workItemIds);
 }

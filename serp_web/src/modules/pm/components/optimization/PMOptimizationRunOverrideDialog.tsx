@@ -13,8 +13,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
 } from '@/shared/components/ui';
+import { PMDatePicker } from '../shared';
+import { toLocalDateInputValue } from '../../utils/date';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunItemApi,
@@ -133,22 +134,28 @@ export function PMOptimizationRunOverrideDialog({
             <div className='grid gap-3 md:grid-cols-2'>
               <label className='space-y-1'>
                 <span className='text-sm font-medium'>Planned start</span>
-                <Input
-                  type='date'
+                <PMDatePicker
                   value={overridePlannedStart}
-                  onChange={(event) =>
-                    onOverridePlannedStartChange(event.target.value)
+                  onChange={(date) =>
+                    onOverridePlannedStartChange(
+                      date ? toLocalDateInputValue(date) : ''
+                    )
                   }
+                  className='w-full'
+                  buttonClassName='flex-1'
                 />
               </label>
               <label className='space-y-1'>
                 <span className='text-sm font-medium'>Planned end</span>
-                <Input
-                  type='date'
+                <PMDatePicker
                   value={overridePlannedEnd}
-                  onChange={(event) =>
-                    onOverridePlannedEndChange(event.target.value)
+                  onChange={(date) =>
+                    onOverridePlannedEndChange(
+                      date ? toLocalDateInputValue(date) : ''
+                    )
                   }
+                  className='w-full'
+                  buttonClassName='flex-1'
                 />
               </label>
             </div>

@@ -12,8 +12,8 @@ import {
   OrganizationStatus,
   SubscriptionStatus,
   UserStatus,
+  ModuleStatus,
 } from '../../types';
-import { ModuleStatus } from 'vm';
 
 type StatusType =
   | OrganizationStatus

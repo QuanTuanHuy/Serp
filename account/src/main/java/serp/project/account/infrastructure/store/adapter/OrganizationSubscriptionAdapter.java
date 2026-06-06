@@ -15,12 +15,18 @@ import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
 import serp.project.account.infrastructure.store.mapper.OrganizationSubscriptionMapper;
+import serp.project.account.infrastructure.store.model.OrganizationSubscriptionModel;
 import serp.project.account.infrastructure.store.repository.IOrganizationSubscriptionRepository;
 import serp.project.account.infrastructure.store.specification.SubscriptionSpecification;
 import serp.project.account.kernel.utils.PaginationUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
@@ -106,5 +112,46 @@ public class OrganizationSubscriptionAdapter implements IOrganizationSubscriptio
     public Optional<OrganizationSubscriptionEntity> getActiveOrPendingUpgradeByOrganizationId(Long organizationId) {
         return organizationSubscriptionRepository.findActiveOrPendingUpgradeByOrganizationId(organizationId)
                 .map(organizationSubscriptionMapper::toEntity);
+    }
+
+    @Override
+    public Long countSubscriptions() {
+        return organizationSubscriptionRepository.count();
+    }
+
+    @Override
+    public Long countSubscriptionsByStatus(SubscriptionStatus status) {
+        return organizationSubscriptionRepository.countByStatus(status);
+    }
+
+    @Override
+    public Long countSubscriptionsEndingSoon(Long fromTimestamp, Long toTimestamp) {
+        return organizationSubscriptionRepository.countActiveEndingSoon(
+                toLocalDateTime(fromTimestamp),
+                toLocalDateTime(toTimestamp));
+    }
+
+    @Override
+    public Long countTrialsEndingSoon(Long fromTimestamp, Long toTimestamp) {
+        return organizationSubscriptionRepository.countTrialsEndingSoon(
+                toLocalDateTime(fromTimestamp),
+                toLocalDateTime(toTimestamp));
+    }
+
+    @Override
+    public Map<Long, String> getLatestSubscriptionStatusByOrganizationIds(List<Long> organizationIds) {
+        if (organizationIds == null || organizationIds.isEmpty()) {
+            return Map.of();
+        }
+        return organizationSubscriptionRepository.findByOrganizationIdInOrderByCreatedAtDesc(organizationIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        OrganizationSubscriptionModel::getOrganizationId,
+                        subscription -> subscription.getStatus().name(),
+                        (existing, ignored) -> existing));
+    }
+
+    private LocalDateTime toLocalDateTime(Long timestamp) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
     }
 }

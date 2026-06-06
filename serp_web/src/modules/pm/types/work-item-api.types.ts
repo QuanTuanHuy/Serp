@@ -738,6 +738,68 @@ export interface PMWorkItemTimelineResponse {
   pageSize: number;
 }
 
+export interface PMWorkItemDependencyNodeApi {
+  id: number;
+  projectId: number;
+  key: string;
+  summary: string;
+  statusId?: number | null;
+  statusName?: string | null;
+  issueTypeId?: number | null;
+  issueTypeName?: string | null;
+  priorityId?: number | null;
+  priorityName?: string | null;
+  assigneeId?: number | null;
+  assigneeName?: string | null;
+  dueDate?: number | null;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  outsideFilter: boolean;
+  blockedByCount: number;
+  blocksCount: number;
+  hasCycle: boolean;
+}
+
+export interface PMWorkItemDependencyEdgeApi {
+  linkId: number;
+  id?: number | null;
+  sourceId: number;
+  targetId: number;
+  predecessorId: number;
+  successorId: number;
+  linkTypeId?: number | null;
+  linkTypeName?: string | null;
+  dependencyBehavior?: string | null;
+  outsideFilter: boolean;
+  externalProject: boolean;
+  relatedLink: boolean;
+  cycle: boolean;
+}
+
+export interface PMWorkItemDependencySummaryApi {
+  nodeCount: number;
+  dependencyCount: number;
+  outsideDependencyCount: number;
+  blockerCount: number;
+  blockedItemCount: number;
+  relatedLinkCount: number;
+  cycleCount: number;
+}
+
+export interface PMWorkItemDependenciesResponse {
+  projectId: number;
+  nodes: PMWorkItemDependencyNodeApi[];
+  edges: PMWorkItemDependencyEdgeApi[];
+  summary: PMWorkItemDependencySummaryApi;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  depth: number;
+  includeOutside: boolean;
+  includeRelatedLinks: boolean;
+}
+
 export interface PMWorkItemCalendarIssueTypeApi {
   id?: number | null;
   name?: string | null;
@@ -769,9 +831,12 @@ export interface PMWorkItemScheduleAllocationCalendarItemApi {
   start?: number | null;
   end?: number | null;
   effortMillis?: number | null;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
   source?: string | null;
   sourceRunId?: number | null;
   sourceRunItemId?: number | null;
+  locked?: boolean | null;
   issueType?: PMWorkItemCalendarIssueTypeApi | null;
   status?: PMWorkItemCalendarStatusApi | null;
   priority?: PMWorkItemCalendarPriorityApi | null;
@@ -783,6 +848,39 @@ export interface PMWorkItemScheduleCalendarResponse {
   totalPages: number;
   currentPage: number;
   pageSize: number;
+}
+
+export interface PMUpdateWorkItemScheduleAllocationRequest {
+  assigneeId: number;
+  start: number;
+  end: number;
+  effortMillis: number;
+}
+
+export interface PMUpdateWorkItemScheduleRequest {
+  plannedStart: number;
+  plannedEnd: number;
+  locked?: boolean | null;
+  allocations: PMUpdateWorkItemScheduleAllocationRequest[];
+}
+
+export interface PMUpdateWorkItemScheduleAllocationResponse {
+  id?: number | null;
+  assigneeId?: number | null;
+  start?: number | null;
+  end?: number | null;
+  effortMillis?: number | null;
+}
+
+export interface PMUpdateWorkItemScheduleResponse {
+  id: number;
+  workItemId: number;
+  projectId: number;
+  plannedStart?: number | null;
+  plannedEnd?: number | null;
+  source?: string | null;
+  locked?: boolean | null;
+  allocations: PMUpdateWorkItemScheduleAllocationResponse[];
 }
 
 export interface PMGetWorkItemTimelineParams {
@@ -797,6 +895,21 @@ export interface PMGetWorkItemTimelineParams {
   issueTypeIds?: number[];
   priorityIds?: number[];
   keyword?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PMGetWorkItemDependenciesParams {
+  keyword?: string;
+  statusIds?: number[];
+  assigneeIds?: number[];
+  issueTypeIds?: number[];
+  priorityIds?: number[];
+  parentId?: number;
+  componentIds?: number[];
+  includeOutside?: boolean;
+  includeRelatedLinks?: boolean;
+  depth?: number;
   page?: number;
   pageSize?: number;
 }

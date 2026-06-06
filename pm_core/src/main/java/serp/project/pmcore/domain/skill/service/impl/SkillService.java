@@ -108,7 +108,7 @@ public class SkillService implements ISkillService {
         validateUniqueSkillIds(skillIds);
         validateActiveSkillIds(tenantId, skillIds);
         long now = System.currentTimeMillis();
-        workItemSkillWritePort.softDeleteActive(tenantId, projectId, workItemId, userId, now);
+        workItemSkillWritePort.deleteActive(tenantId, projectId, workItemId);
         List<WorkItemSkillEntity> newSkills = drafts.stream()
                 .map(draft -> {
                     WorkItemSkillEntity entity = WorkItemSkillEntity.builder()
@@ -120,7 +120,6 @@ public class SkillService implements ISkillService {
                             .minProficiency(draft.minProficiency())
                             .weight(draft.weight())
                             .source(draft.source() == null ? SkillSource.MANUAL : draft.source())
-                            .deletedAt(null)
                             .build();
                     entity.applyCreate(userId, now);
                     return entity;

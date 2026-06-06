@@ -18,4 +18,6 @@ public interface IMenuDisplayRepository extends IBaseRepository<MenuDisplayModel
     List<MenuDisplayModel> findByModuleId(Long moduleId);
 
     MenuDisplayModel findByModuleIdAndName(Long moduleId, String name);
+
+    Long countByIsVisible(Boolean isVisible);
 }

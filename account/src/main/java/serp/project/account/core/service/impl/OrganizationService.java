@@ -21,6 +21,7 @@ import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
@@ -104,6 +105,15 @@ public class OrganizationService implements IOrganizationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity updateOrganizationStatus(Long organizationId, OrganizationStatus status) {
+        var organization = getOrganizationById(organizationId);
+        organization.setStatus(status);
+        organization.setUpdatedAt(System.currentTimeMillis());
+        return organizationPort.save(organization);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public OrganizationEntity updateSubscription(Long organizationId,
             OrganizationSubscriptionEntity subscription) {
         var organization = getOrganizationById(organizationId);
@@ -122,6 +132,21 @@ public class OrganizationService implements IOrganizationService {
     @Override
     public Pair<List<OrganizationEntity>, Long> getOrganizations(GetOrganizationParams params) {
         return organizationPort.getOrganizations(params);
+    }
+
+    @Override
+    public Long countOrganizations() {
+        return organizationPort.countOrganizations();
+    }
+
+    @Override
+    public Long countOrganizationsByStatus(OrganizationStatus status) {
+        return organizationPort.countOrganizationsByStatus(status);
+    }
+
+    @Override
+    public List<OrganizationEntity> getRecentOrganizations(int limit) {
+        return organizationPort.getRecentOrganizations(limit);
     }
 
     private void applySettingsUpdate(OrganizationEntity organization, UpdateOrganizationSettingsRequest request) {

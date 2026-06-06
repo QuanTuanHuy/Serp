@@ -6,6 +6,7 @@
 import { combineReducers } from '@reduxjs/toolkit';
 import { plansReducer } from './plans/plansSlice';
 import { organizationsReducer } from './organizations/organizationsSlice';
+import { organizationsUiReducer } from './organizations/organizationsUiSlice';
 import { modulesReducer } from './modules/modulesSlice';
 import { rolesReducer } from './roles/rolesSlice';
 import { subscriptionsReducer } from './subscriptions/subscriptionsSlice';
@@ -16,6 +17,7 @@ import menuDisplaysReducer from './menu-displays/menuDisplaysSlice';
 export const adminReducer = combineReducers({
   plans: plansReducer,
   organizations: organizationsReducer,
+  organizationsUi: organizationsUiReducer,
   modules: modulesReducer,
   roles: rolesReducer,
   subscriptions: subscriptionsReducer,
@@ -45,6 +47,18 @@ export {
   setSort as setOrganizationsSort,
   selectOrganizationsFilters,
 } from './organizations/organizationsSlice';
+
+export {
+  openOrganizationDetailDrawer,
+  closeOrganizationDetailDrawer,
+  openOrganizationStatusDialog,
+  closeOrganizationStatusDialog,
+  selectOrganizationsUiState,
+  selectSelectedOrganizationId as selectSelectedAdminOrganizationId,
+  selectOrganizationsDetailDrawerOpen,
+  selectOrganizationsStatusDialogOpen,
+  selectOrganizationsStatusDialogStatus,
+} from './organizations/organizationsUiSlice';
 
 export {
   setModulesDialogOpen,
@@ -100,12 +114,22 @@ export {
 export {
   openCreateUserDialog,
   openEditUserDialog,
+  openUserDetailDrawer,
+  closeUserDetailDrawer,
+  openUserAccessDialog,
+  closeUserAccessDialog,
+  openUserStatusDialog,
+  closeUserStatusDialog,
   closeUserDialog,
   selectUsersUiState,
   selectUsersDialogOpen,
   selectUsersViewMode,
   selectSelectedUserId,
   selectSelectedOrganizationId,
+  selectUsersDetailDrawerOpen,
+  selectUsersAccessDialogOpen,
+  selectUsersStatusDialogOpen,
+  selectUsersSelectedStatus,
 } from './users/usersSlice';
 
 export {
@@ -113,6 +137,9 @@ export {
   setUsersSearch,
   setUsersStatus,
   setUsersOrganizationId,
+  setUsersUserType,
+  setUsersRoleId,
+  setUsersDepartmentId,
   setUsersPage,
   setUsersPageSize,
   setUsersSort,

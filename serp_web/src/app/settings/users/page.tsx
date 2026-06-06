@@ -33,9 +33,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -662,10 +659,10 @@ export default function SettingsUsersPage() {
           </p>
         </div>
         <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={handleExport}>
+          {/* <Button variant='outline' size='sm' onClick={handleExport}>
             <Download className='h-4 w-4 mr-2' />
             Export
-          </Button>
+          </Button> */}
           <Button variant='outline' onClick={() => setOpenCreateDialog(true)}>
             <Plus className='h-4 w-4 mr-2' />
             Create User

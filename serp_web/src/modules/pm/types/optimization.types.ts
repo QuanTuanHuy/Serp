@@ -138,12 +138,17 @@ export interface PMGenerateOptimizationRunRequest {
   selectedWorkItemIds: number[];
 }
 
-export interface PMUpdateOptimizationRunItemDecisionRequest {
+export interface PMOptimizationRunDecisionItemRequest {
+  workItemId: number;
   assignmentDecision?: PMOptimizationDecision | null;
   scheduleDecision?: PMOptimizationDecision | null;
   overrideAssigneeId?: number | null;
   overridePlannedStart?: number | null;
   overridePlannedEnd?: number | null;
+}
+
+export interface PMBatchUpdateOptimizationRunItemDecisionsRequest {
+  items: PMOptimizationRunDecisionItemRequest[];
 }
 
 export interface PMApplyOptimizationRunRequest {

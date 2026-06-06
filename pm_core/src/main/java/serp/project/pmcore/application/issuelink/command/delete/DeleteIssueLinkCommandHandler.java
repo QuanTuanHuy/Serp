@@ -64,12 +64,12 @@ public class DeleteIssueLinkCommandHandler implements ICommandHandler<DeleteIssu
         ensureWorkItemOwnsLink(issueLink, ownerWorkItem.getId());
 
         long deletedAt = System.currentTimeMillis();
-        IssueLinkEntity deleted = issueLinkService.softDelete(issueLink, command.userId(), deletedAt);
+        IssueLinkEntity deleted = issueLinkService.delete(issueLink);
         issueLinkOutboxPublisher.publishIssueLinkDeleted(
                 command.tenantId(),
                 IssueLinkEventPayload.from(deleted, command.userId(), deletedAt)
         );
-        return DeleteIssueLinkResult.from(deleted);
+        return DeleteIssueLinkResult.from(deleted, command.userId(), deletedAt);
     }
 
     private void ensureWorkItemBelongsToProject(WorkItemEntity workItem, ProjectEntity project) {

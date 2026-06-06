@@ -59,4 +59,8 @@ public interface ISubscriptionPlanService {
     boolean isModuleInPlan(Long planId, Long moduleId);
 
     void validatePlanCodeUniqueness(String planCode, Long excludePlanId);
+
+    Long countPlans();
+
+    Long countActivePlans();
 }

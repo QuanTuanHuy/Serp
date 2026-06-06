@@ -30,6 +30,9 @@ import serp.project.pmcore.application.workitem.command.create.CreateWorkItemCom
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.delete.DeleteWorkItemResult;
+import serp.project.pmcore.application.workitem.command.schedule.UpdateWorkItemPlanCommand;
+import serp.project.pmcore.application.workitem.command.schedule.UpdateWorkItemPlanCommandHandler;
+import serp.project.pmcore.application.workitem.command.schedule.UpdateWorkItemPlanResult;
 import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommand;
 import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemCommandHandler;
 import serp.project.pmcore.application.workitem.command.update.UpdateWorkItemResult;
@@ -79,6 +82,7 @@ import serp.project.pmcore.ui.rest.workitem.dto.request.ManageWorkItemComponents
 import serp.project.pmcore.ui.rest.workitem.dto.request.PatchWorkItemScheduleRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.TransitionWorkItemStatusRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemCommentRequest;
+import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemPlanRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.request.UpdateWorkItemRequest;
 import serp.project.pmcore.ui.rest.workitem.dto.response.WorkItemResponse;
 
@@ -95,6 +99,7 @@ public class WorkItemController {
     private final CreateWorkItemCommandHandler createWorkItemCommandHandler;
     private final DeleteWorkItemCommandHandler deleteWorkItemCommandHandler;
     private final UpdateWorkItemCommandHandler updateWorkItemCommandHandler;
+    private final UpdateWorkItemPlanCommandHandler updateWorkItemPlanCommandHandler;
     private final TransitionWorkItemCommandHandler transitionWorkItemCommandHandler;
     private final ManageWorkItemComponentsCommandHandler manageWorkItemComponentsCommandHandler;
     private final RemoveWorkItemComponentCommandHandler removeWorkItemComponentCommandHandler;
@@ -272,6 +277,31 @@ public class WorkItemController {
                 request.toData(),
                 tenantId,
                 userId,
+                authUtils.getCurrentGroups()
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(result));
+    }
+
+    @PutMapping("/{id}/schedule")
+    public ResponseEntity<GeneralResponse<UpdateWorkItemPlanResult>> updateWorkItemSchedulePlan(
+            @PathVariable Long projectId,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateWorkItemPlanRequest request) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        UpdateWorkItemPlanResult result = updateWorkItemPlanCommandHandler.handle(new UpdateWorkItemPlanCommand(
+                tenantId,
+                userId,
+                projectId,
+                id,
+                request.getPlannedStart(),
+                request.getPlannedEnd(),
+                request.getLocked(),
+                request.toAllocationCommands(),
                 authUtils.getCurrentGroups()
         ));
 

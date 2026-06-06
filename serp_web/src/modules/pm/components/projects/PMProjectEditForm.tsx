@@ -52,6 +52,8 @@ import {
   getPMProjectTemplateDefinition,
   normalizePMProjectKey,
 } from '../../utils/projectForm';
+import { toLocalDateInputValue } from '../../utils/date';
+import { PMDatePicker } from '../shared';
 import { PMProjectTemplateBadge } from './PMProjectTemplateBadge';
 import {
   editProjectSchema,
@@ -341,6 +343,7 @@ export function PMProjectEditForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value='ALL'>Uncategorized</SelectItem>
                       {categoryOptions.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
@@ -454,7 +457,14 @@ export function PMProjectEditForm({
                 <FormItem>
                   <FormLabel>Start date</FormLabel>
                   <FormControl>
-                    <Input type='date' {...field} />
+                    <PMDatePicker
+                      value={field.value}
+                      onChange={(date) =>
+                        field.onChange(date ? toLocalDateInputValue(date) : '')
+                      }
+                      className='w-full'
+                      buttonClassName='flex-1'
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -468,7 +478,14 @@ export function PMProjectEditForm({
                 <FormItem>
                   <FormLabel>Target date</FormLabel>
                   <FormControl>
-                    <Input type='date' {...field} />
+                    <PMDatePicker
+                      value={field.value}
+                      onChange={(date) =>
+                        field.onChange(date ? toLocalDateInputValue(date) : '')
+                      }
+                      className='w-full'
+                      buttonClassName='flex-1'
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -9,6 +9,7 @@ export type {
   OrganizationType,
   BillingCycle,
   Organization,
+  OrganizationStatusUpdateResponse,
   OrganizationFilters,
   OrganizationsResponse,
   OrganizationResponse,
@@ -50,9 +51,17 @@ export type {
   UserStatus,
   UserType,
   UserProfile,
+  UserStats,
+  UserDetailResponse,
+  UserDetailRole,
+  UserDetailDepartment,
+  UserDetailModuleAccess,
+  DepartmentOption,
   UserFilters,
   UsersResponse,
   UserResponse,
+  UserStatsResponse,
+  UserDetailApiResponse,
   UpdateUserInfoRequest,
   CreateUserForOrganizationRequest,
 } from './user.types';
@@ -74,6 +83,16 @@ export type {
 
 // Stats types
 export type { AdminStats } from './stats.types';
+
+// Dashboard types
+export type {
+  AdminDashboard,
+  AdminDashboardActionQueue,
+  AdminDashboardConfigurationCoverage,
+  AdminDashboardMetrics,
+  AdminDashboardRecentOrganization,
+  AdminDashboardStatusCount,
+} from './dashboard.types';
 
 // Menu Display types
 export type {

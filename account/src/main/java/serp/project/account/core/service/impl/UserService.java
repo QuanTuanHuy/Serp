@@ -218,6 +218,21 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public Long countUsers() {
+        return userPort.countUsers();
+    }
+
+    @Override
+    public Long countUsersByStatus(UserStatus status) {
+        return userPort.countUsersByStatus(status);
+    }
+
+    @Override
+    public Map<Long, Long> countUsersByOrganizationIds(List<Long> organizationIds) {
+        return userPort.countUsersByOrganizationIds(organizationIds);
+    }
+
+    @Override
     public List<UserEntity> getUsersByIds(List<Long> userIds) {
         return userPort.getUsersByIds(userIds);
     }
