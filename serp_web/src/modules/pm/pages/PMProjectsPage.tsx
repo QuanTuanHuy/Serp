@@ -19,15 +19,18 @@ import type { PMProjectSummaryApi } from '../types/api';
 import type {
   PMProjectListItem,
   PMProjectSort,
+  PMProjectViewMode,
 } from '../types/project-list.types';
 import {
   type PMProjectCategoryFilter,
   PMProjectListToolbar,
   type PMProjectStatusFilter,
 } from '../components/projects/PMProjectListToolbar';
+import { PMProjectListFilters } from '../components/projects/PMProjectListFilters';
+import { PMProjectListGrid } from '../components/projects/PMProjectListGrid';
 import { PMProjectListTable } from '../components/projects/PMProjectListTable';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 6;
 
 function mapSortToApi(sortBy: PMProjectSort) {
   if (sortBy === 'name') {
@@ -89,6 +92,8 @@ export function PMProjectsPage() {
   const [statusFilter, setStatusFilter] =
     useState<PMProjectStatusFilter>('ALL');
   const [sortBy, setSortBy] = useState<PMProjectSort>('recentlyUpdated');
+  const [viewMode, setViewMode] = useState<PMProjectViewMode>('grid');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const sortConfig = useMemo(() => mapSortToApi(sortBy), [sortBy]);
@@ -149,6 +154,8 @@ export function PMProjectsPage() {
     searchQuery.trim().length > 0 ||
     categoryFilter !== 'ALL' ||
     statusFilter !== 'ALL';
+  const activeFilterCount =
+    (categoryFilter === 'ALL' ? 0 : 1) + (statusFilter === 'ALL' ? 0 : 1);
 
   const tableEmptyTitle = projectsError
     ? 'Unable to load projects'
@@ -208,32 +215,66 @@ export function PMProjectsPage() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
         categoryOptions={categoryOptions}
         statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
         sortBy={sortBy}
         onSortByChange={setSortBy}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        activeFilterCount={activeFilterCount}
+        onOpenFilters={() => setFiltersOpen(true)}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={clearFilters}
         resultCount={totalFilteredCount}
         totalCount={totalProjectsCount}
       />
 
-      <PMProjectListTable
-        projects={filteredProjects}
-        isLoading={isProjectsLoading || isProjectsFetching || isCategoryLoading}
-        currentPage={currentPage}
-        pageSize={PAGE_SIZE}
-        totalCount={totalProjectsCount}
-        totalFilteredCount={totalFilteredCount}
-        totalPages={totalPages}
-        emptyTitle={tableEmptyTitle}
-        emptyDescription={tableEmptyDescription}
-        onPageChange={setCurrentPage}
-        onOpen={handleOpenProject}
-        onEdit={handleEditProject}
+      <PMProjectListFilters
+        open={filtersOpen}
+        categoryFilter={categoryFilter}
+        categoryOptions={categoryOptions}
+        statusFilter={statusFilter}
+        onOpenChange={setFiltersOpen}
+        onCategoryFilterChange={setCategoryFilter}
+        onStatusFilterChange={setStatusFilter}
+        onClear={clearFilters}
       />
+
+      {viewMode === 'list' ? (
+        <PMProjectListTable
+          projects={filteredProjects}
+          isLoading={
+            isProjectsLoading || isProjectsFetching || isCategoryLoading
+          }
+          currentPage={currentPage}
+          pageSize={PAGE_SIZE}
+          totalCount={totalProjectsCount}
+          totalFilteredCount={totalFilteredCount}
+          totalPages={totalPages}
+          emptyTitle={tableEmptyTitle}
+          emptyDescription={tableEmptyDescription}
+          onPageChange={setCurrentPage}
+          onOpen={handleOpenProject}
+          onEdit={handleEditProject}
+        />
+      ) : (
+        <PMProjectListGrid
+          projects={filteredProjects}
+          isLoading={
+            isProjectsLoading || isProjectsFetching || isCategoryLoading
+          }
+          currentPage={currentPage}
+          pageSize={PAGE_SIZE}
+          totalCount={totalProjectsCount}
+          totalFilteredCount={totalFilteredCount}
+          totalPages={totalPages}
+          emptyTitle={tableEmptyTitle}
+          emptyDescription={tableEmptyDescription}
+          onPageChange={setCurrentPage}
+          onOpen={handleOpenProject}
+          onEdit={handleEditProject}
+        />
+      )}
     </div>
   );
 }

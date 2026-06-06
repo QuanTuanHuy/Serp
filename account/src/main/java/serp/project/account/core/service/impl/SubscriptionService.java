@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -481,5 +482,30 @@ public class SubscriptionService implements ISubscriptionService {
                     organizationId, ex.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public Long countSubscriptions() {
+        return subscriptionPort.countSubscriptions();
+    }
+
+    @Override
+    public Long countSubscriptionsByStatus(SubscriptionStatus status) {
+        return subscriptionPort.countSubscriptionsByStatus(status);
+    }
+
+    @Override
+    public Long countSubscriptionsEndingSoon(Long fromTimestamp, Long toTimestamp) {
+        return subscriptionPort.countSubscriptionsEndingSoon(fromTimestamp, toTimestamp);
+    }
+
+    @Override
+    public Long countTrialsEndingSoon(Long fromTimestamp, Long toTimestamp) {
+        return subscriptionPort.countTrialsEndingSoon(fromTimestamp, toTimestamp);
+    }
+
+    @Override
+    public Map<Long, String> getLatestSubscriptionStatusByOrganizationIds(List<Long> organizationIds) {
+        return subscriptionPort.getLatestSubscriptionStatusByOrganizationIds(organizationIds);
     }
 }

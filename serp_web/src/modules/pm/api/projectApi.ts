@@ -21,6 +21,7 @@ import type {
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
   PMProjectComponentApi,
+  PMProjectSettingsOverviewApi,
   PMProjectSummaryDashboardApi,
   PMProjectSummaryApi,
   PMProjectDetailApi,
@@ -128,6 +129,21 @@ export const pmProjectApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMProjectDetailApi>(),
       providesTags: (result, error, id) => [
         { type: 'pm/Project' as const, id },
+      ],
+    }),
+
+    getPmProjectSettingsOverview: builder.query<
+      PMProjectSettingsOverviewApi,
+      string
+    >({
+      query: (id) => ({
+        url: `/projects/${id}/settings-overview`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectSettingsOverviewApi>(),
+      providesTags: (_result, _error, id) => [
+        { type: 'pm/ProjectSettingsOverview' as const, id },
       ],
     }),
 
@@ -318,6 +334,7 @@ export const pmProjectApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'pm/Project' as const, id },
         { type: 'pm/Project' as const, id: 'LIST' },
+        { type: 'pm/ProjectSettingsOverview' as const, id },
       ],
     }),
 
@@ -331,6 +348,7 @@ export const pmProjectApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'pm/Project' as const, id },
         { type: 'pm/Project' as const, id: 'LIST' },
+        { type: 'pm/ProjectSettingsOverview' as const, id },
       ],
     }),
   }),
@@ -343,6 +361,7 @@ export const {
   useGetPmProjectRolesQuery,
   useGetPmProjectsQuery,
   useGetPmProjectByIdQuery,
+  useGetPmProjectSettingsOverviewQuery,
   useGetPmProjectSummaryQuery,
   useGetPmProjectPeopleQuery,
   useGetPmProjectComponentsQuery,

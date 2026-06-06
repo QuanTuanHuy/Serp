@@ -31,9 +31,11 @@ import {
   useSearchParams,
 } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import {
   useGetPmWorkItemScheduleCalendarQuery,
   useSearchPmWorkItemsQuery,
+  useUpdatePmWorkItemScheduleMutation,
 } from '../api/workItemApi';
 import { PMProjectCalendarFilters } from '../components/projects/calendar/PMProjectCalendarFilters';
 import { PMProjectCalendarGrid } from '../components/projects/calendar/PMProjectCalendarGrid';
@@ -76,6 +78,8 @@ export function PMProjectCalendarPage() {
   const [workItemDetailOpen, setWorkItemDetailOpen] = useState(false);
   const [selectedAllocation, setSelectedAllocation] =
     useState<PMWorkItemScheduleAllocationCalendarItemApi | null>(null);
+  const [updateWorkItemSchedule, updateWorkItemScheduleState] =
+    useUpdatePmWorkItemScheduleMutation();
 
   const assigneeIds = parseNumberList(searchParams.get('assigneeIds'));
   const issueTypeIds = parseNumberList(searchParams.get('issueTypeIds'));
@@ -86,7 +90,11 @@ export function PMProjectCalendarPage() {
     statusIds,
   ]);
 
-  const days = useMemo(() => getVisibleCalendarDays(date, view), [date, view]);
+  const showWeekends = calendarMode === 'deadline';
+  const days = useMemo(
+    () => getVisibleCalendarDays(date, view, { includeWeekends: showWeekends }),
+    [date, showWeekends, view]
+  );
   const viewport = useMemo(() => {
     const range = getCalendarViewport(date, view);
     return {
@@ -206,6 +214,86 @@ export function PMProjectCalendarPage() {
   const openWorkItemDetail = (workItemId: number) => {
     setSelectedWorkItemId(workItemId);
     setWorkItemDetailOpen(true);
+  };
+
+  const saveScheduleAllocation = async (input: {
+    allocationId: number;
+    start: number;
+    end: number;
+    effortMillis: number;
+    assigneeId: number;
+    locked: boolean;
+  }) => {
+    if (!selectedAllocation) return;
+
+    const planAllocations = scheduleItems.filter(
+      (item) => item.workItemId === selectedAllocation.workItemId
+    );
+    if (!planAllocations.length) {
+      toast.error('Unable to locate schedule allocations.');
+      return;
+    }
+
+    const allocations = planAllocations.map((item) => {
+      if (item.allocationId === input.allocationId) {
+        return {
+          assigneeId: input.assigneeId,
+          start: input.start,
+          end: input.end,
+          effortMillis: input.effortMillis,
+        };
+      }
+      return {
+        assigneeId: item.assigneeId,
+        start: item.start,
+        end: item.end,
+        effortMillis: item.effortMillis,
+      };
+    });
+
+    const invalidAllocation = allocations.some(
+      (item) =>
+        typeof item.assigneeId !== 'number' ||
+        typeof item.start !== 'number' ||
+        typeof item.end !== 'number' ||
+        typeof item.effortMillis !== 'number'
+    );
+    if (invalidAllocation) {
+      toast.error('Schedule allocation data is incomplete.');
+      return;
+    }
+
+    const plannedStart = Math.min(
+      ...allocations.map((item) => item.start as number)
+    );
+    const plannedEnd = Math.max(
+      ...allocations.map((item) => item.end as number)
+    );
+
+    try {
+      await updateWorkItemSchedule({
+        projectId: numericProjectId,
+        workItemId: selectedAllocation.workItemId,
+        body: {
+          plannedStart,
+          plannedEnd,
+          locked: input.locked,
+          allocations: allocations.map((item) => ({
+            assigneeId: item.assigneeId as number,
+            start: item.start as number,
+            end: item.end as number,
+            effortMillis: item.effortMillis as number,
+          })),
+        },
+      }).unwrap();
+      toast.success('Schedule updated.');
+      await scheduleQuery.refetch();
+      setSelectedAllocation(null);
+    } catch (error) {
+      toast.error('Failed to update schedule', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const totalItems =
@@ -329,6 +417,7 @@ export function PMProjectCalendarPage() {
               days={days}
               mode={calendarMode}
               view={view}
+              showWeekends={showWeekends}
               deadlineItemsByDay={deadlineItemsByDay}
               scheduleItemsByDay={scheduleItemsByDay}
               onDeadlineClick={(item) => openWorkItemDetail(item.id)}
@@ -360,6 +449,7 @@ export function PMProjectCalendarPage() {
             allocation={selectedAllocation}
             relatedAllocations={relatedAllocations}
             open={Boolean(selectedAllocation)}
+            isSaving={updateWorkItemScheduleState.isLoading}
             onOpenChange={(open) => {
               if (!open) setSelectedAllocation(null);
             }}
@@ -367,6 +457,7 @@ export function PMProjectCalendarPage() {
               setSelectedAllocation(null);
               openWorkItemDetail(workItemId);
             }}
+            onSaveSchedule={saveScheduleAllocation}
           />
           <PMWorkItemDetailDialog
             projectId={numericProjectId}

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
 import serp.project.account.core.domain.entity.OrganizationEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.infrastructure.store.mapper.OrganizationMapper;
 import serp.project.account.infrastructure.store.model.OrganizationModel;
@@ -71,5 +72,20 @@ public class OrganizationAdapter implements IOrganizationPort {
 
         var organizations = organizationMapper.toEntityList(page.getContent());
         return Pair.of(organizations, page.getTotalElements());
+    }
+
+    @Override
+    public Long countOrganizations() {
+        return organizationRepository.count();
+    }
+
+    @Override
+    public Long countOrganizationsByStatus(OrganizationStatus status) {
+        return organizationRepository.countByStatus(status);
+    }
+
+    @Override
+    public List<OrganizationEntity> getRecentOrganizations(int limit) {
+        return organizationMapper.toEntityList(organizationRepository.findTop5ByOrderByCreatedAtDesc());
     }
 }

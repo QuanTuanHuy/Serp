@@ -19,6 +19,7 @@ import {
   useGeneratePmOptimizationRunMutation,
   useSearchPmWorkItemsQuery,
 } from '../api';
+import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import type {
   PMGenerateOptimizationRunRequest,
   PMOptimizationChangeScope,
@@ -36,21 +37,6 @@ type DateInputState = {
   planningStart: string;
   planningEnd: string;
 };
-
-function toDateInputValue(value?: number | null) {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function dateInputToEpoch(value: string, endOfDay = false) {
-  if (!value) return undefined;
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-  return date.getTime();
-}
 
 export function PMProjectOptimizationPage({
   projectId,
@@ -81,8 +67,8 @@ export function PMProjectOptimizationPage({
     PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY
   );
   const [dateState, setDateState] = useState<DateInputState>({
-    planningStart: toDateInputValue(Date.now()),
-    planningEnd: toDateInputValue(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    planningStart: toLocalDateInputValue(Date.now()),
+    planningEnd: toLocalDateInputValue(Date.now() + 14 * 24 * 60 * 60 * 1000),
   });
 
   const searchQuery = useSearchPmWorkItemsQuery(
@@ -154,8 +140,8 @@ export function PMProjectOptimizationPage({
   };
 
   const handleGenerate = async () => {
-    const planningStart = dateInputToEpoch(dateState.planningStart);
-    const planningEnd = dateInputToEpoch(dateState.planningEnd, true);
+    const planningStart = fromLocalDateInputValue(dateState.planningStart);
+    const planningEnd = fromLocalDateInputValue(dateState.planningEnd, true);
 
     if (!planningStart || !planningEnd) {
       toast.error('Planning range is required.');

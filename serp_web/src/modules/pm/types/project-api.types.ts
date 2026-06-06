@@ -163,6 +163,59 @@ export interface PMProjectSummaryApi {
   updatedAt?: string;
 }
 
+export type PMProjectSettingsSchemeType =
+  | 'ISSUE_TYPE'
+  | 'WORKFLOW'
+  | 'FIELD_CONFIG'
+  | 'SCREEN'
+  | 'PERMISSION'
+  | 'NOTIFICATION'
+  | 'PRIORITY'
+  | 'ISSUE_SECURITY';
+
+export interface PMProjectSettingsOverviewApi {
+  project: {
+    id: number;
+    key: string;
+    name: string;
+    description?: string | null;
+    url?: string | null;
+    projectTypeKey: string;
+    isArchived: boolean;
+    archivedAt?: number | string | null;
+    leadUserId?: number | null;
+    leadUserName?: string | null;
+    category?: {
+      id: number;
+      name: string;
+    } | null;
+  };
+  people: {
+    leadUserId?: number | null;
+    leadUserName?: string | null;
+    memberCount: number;
+    roleCount: number;
+  };
+  components: {
+    totalCount: number;
+    preview: Array<{
+      id: number;
+      name: string;
+      description?: string | null;
+      issueCount: number;
+      assigneeType: string;
+    }>;
+  };
+  schemes: Array<{
+    type: PMProjectSettingsSchemeType;
+    label: string;
+    schemeId?: number | null;
+    schemeName?: string | null;
+    globalSection?: string | null;
+    available: boolean;
+  }>;
+}
+
 export interface PMListProjectsParams {
   search?: string;
   categoryId?: number;

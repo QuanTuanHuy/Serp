@@ -4,6 +4,7 @@
  */
 
 export {
+  PMWorkItemDetailContent,
   PMWorkItemDetailDialog,
   type PMWorkItemDetailFallback,
 } from './PMWorkItemDetailDialog';

@@ -48,6 +48,7 @@ import {
   TabsTrigger,
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { cn } from '@/shared/utils';
 import { PMWorkItemSkillPanel } from '../../skills';
 import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import {
@@ -118,6 +119,14 @@ interface PMWorkItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+export interface PMWorkItemDetailContentProps {
+  projectId: number;
+  workItemId?: number;
+  fallbackItem?: PMWorkItemDetailFallback;
+  onClose?: () => void;
+  className?: string;
+}
+
 export function PMWorkItemDetailDialog({
   projectId,
   workItemId,
@@ -125,8 +134,36 @@ export function PMWorkItemDetailDialog({
   fallbackItem,
   onOpenChange,
 }: PMWorkItemDetailDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className='h-[min(860px,calc(100vh-6rem))] w-[calc(100vw-1rem)] !max-w-[1280px] gap-0 overflow-hidden p-0 sm:rounded-xl lg:w-[min(1280px,calc(100vw-2rem))]'
+        showCloseButton={false}
+      >
+        <DialogTitle className='sr-only'>Work item detail</DialogTitle>
+        <DialogDescription className='sr-only'>
+          Work item detail dialog
+        </DialogDescription>
+        <PMWorkItemDetailContent
+          projectId={projectId}
+          workItemId={workItemId}
+          fallbackItem={fallbackItem}
+          onClose={() => onOpenChange(false)}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function PMWorkItemDetailContent({
+  projectId,
+  workItemId,
+  fallbackItem,
+  onClose,
+  className,
+}: PMWorkItemDetailContentProps) {
   const [activityTab, setActivityTab] = useState<ActivityTab>('comments');
-  const shouldFetch = open && Boolean(workItemId);
+  const shouldFetch = Boolean(workItemId);
   const showComments = shouldFetch && activityTab === 'comments';
   const showHistory = shouldFetch && activityTab === 'history';
 
@@ -159,57 +196,56 @@ export function PMWorkItemDetailDialog({
 
   const item = toDetailModel(workItemId, detailQuery.data, fallbackItem);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className='h-[min(860px,calc(100vh-6rem))] w-[calc(100vw-1rem)] !max-w-[1280px] gap-0 overflow-hidden p-0 sm:rounded-xl lg:w-[min(1280px,calc(100vw-2rem))]'
-        showCloseButton={false}
-      >
-        <DialogTitle className='sr-only'>{item.summary}</DialogTitle>
-        <DialogDescription className='sr-only'>
-          Work item detail dialog
-        </DialogDescription>
+  if (detailQuery.isLoading && !fallbackItem) {
+    return <PMWorkItemDetailSkeleton />;
+  }
 
-        {detailQuery.isLoading && !fallbackItem ? (
-          <PMWorkItemDetailSkeleton />
-        ) : detailQuery.error ? (
-          <div className='p-6'>
-            <Alert variant='destructive'>
-              <AlertTitle>Detail unavailable</AlertTitle>
-              <AlertDescription>
-                {getErrorMessage(detailQuery.error)}
-              </AlertDescription>
-            </Alert>
-          </div>
-        ) : (
-          <div className='flex h-full min-h-0 flex-col bg-background text-foreground'>
-            <PMWorkItemDetailHeader
-              item={item}
-              isFetching={detailQuery.isFetching}
-              onClose={() => onOpenChange(false)}
-            />
-            <div className='grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_432px]'>
-              <PMWorkItemDetailMain
-                projectId={projectId}
-                workItemId={workItemId}
-                item={item}
-                activityTab={activityTab}
-                activitiesQuery={activitiesQuery}
-                childrenQuery={childrenQuery}
-                commentsQuery={commentsQuery}
-                linksQuery={linksQuery}
-                onActivityTabChange={setActivityTab}
-              />
-              <PMWorkItemDetailSidebar
-                projectId={projectId}
-                workItemId={workItemId}
-                item={item}
-              />
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+  if (detailQuery.error) {
+    return (
+      <div className='p-6'>
+        <Alert variant='destructive'>
+          <AlertTitle>Detail unavailable</AlertTitle>
+          <AlertDescription>
+            {getErrorMessage(detailQuery.error)}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-0 flex-col bg-background text-foreground',
+        className
+      )}
+    >
+      <h1 className='sr-only'>{item.summary}</h1>
+      <p className='sr-only'>Work item detail</p>
+      <PMWorkItemDetailHeader
+        item={item}
+        isFetching={detailQuery.isFetching}
+        onClose={onClose}
+      />
+      <div className='grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_432px]'>
+        <PMWorkItemDetailMain
+          projectId={projectId}
+          workItemId={workItemId}
+          item={item}
+          activityTab={activityTab}
+          activitiesQuery={activitiesQuery}
+          childrenQuery={childrenQuery}
+          commentsQuery={commentsQuery}
+          linksQuery={linksQuery}
+          onActivityTabChange={setActivityTab}
+        />
+        <PMWorkItemDetailSidebar
+          projectId={projectId}
+          workItemId={workItemId}
+          item={item}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -220,7 +256,7 @@ function PMWorkItemDetailHeader({
 }: {
   item: WorkItemDetailModel;
   isFetching: boolean;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   return (
     <header className='flex h-16 shrink-0 items-center justify-between gap-3 border-b px-4 sm:px-6'>
@@ -257,14 +293,16 @@ function PMWorkItemDetailHeader({
         >
           <Maximize2 className='h-4 w-4' />
         </Button>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-8 w-8'
-          onClick={onClose}
-        >
-          <X className='h-4 w-4' />
-        </Button>
+        {onClose ? (
+          <Button
+            variant='ghost'
+            size='icon'
+            className='h-8 w-8'
+            onClick={onClose}
+          >
+            <X className='h-4 w-4' />
+          </Button>
+        ) : null}
       </div>
     </header>
   );
@@ -297,6 +335,8 @@ function PMWorkItemDetailMain({
   const [deleteWorkItemLink, deleteWorkItemLinkState] =
     useDeletePmWorkItemLinkMutation();
   const [deletingLinkId, setDeletingLinkId] = useState<number | null>(null);
+  const [subtasksOpen, setSubtasksOpen] = useState(true);
+  const [linkedItemsOpen, setLinkedItemsOpen] = useState(true);
 
   const handleUpdate = async (body: PMUpdateWorkItemRequest) => {
     if (!workItemId) return;
@@ -359,36 +399,82 @@ function PMWorkItemDetailMain({
           />
         </DetailSection>
 
-        <DetailSection
-          title={`Subtasks${item.subtaskTotal !== undefined ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})` : ''}`}
-        >
-          <div className='flex items-center justify-between gap-3'>
-            <p className='text-sm text-muted-foreground'>
-              Add child issues under this work item.
-            </p>
-            <PMWorkItemSubtaskActions
-              projectId={projectId}
-              workItemId={workItemId}
-            />
+        <section className='space-y-2'>
+          <div className='flex items-center gap-3'>
+            <button
+              type='button'
+              className='flex min-w-0 items-center gap-2 text-left text-base font-semibold'
+              aria-expanded={subtasksOpen}
+              onClick={() => setSubtasksOpen((current) => !current)}
+            >
+              {subtasksOpen ? (
+                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+              ) : (
+                <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+              )}
+              <span className='truncate'>
+                Subtasks
+                {item.subtaskTotal !== undefined
+                  ? ` (${item.subtaskDone ?? 0}/${item.subtaskTotal})`
+                  : ''}
+              </span>
+            </button>
           </div>
-          <WorkItemChildrenList query={childrenQuery} />
-        </DetailSection>
+          {subtasksOpen ? (
+            <>
+              <div className='flex items-center justify-between gap-3'>
+                <p className='text-sm text-muted-foreground'>
+                  Add child issues under this work item.
+                </p>
+                <PMWorkItemSubtaskActions
+                  projectId={projectId}
+                  workItemId={workItemId}
+                />
+              </div>
+              <WorkItemChildrenList
+                projectId={projectId}
+                query={childrenQuery}
+              />
+            </>
+          ) : null}
+        </section>
 
-        <DetailSection
-          title={`Linked work items${item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}`}
-        >
-          <PMWorkItemLinkActions
-            projectId={projectId}
-            workItemId={workItemId}
-          />
-          <WorkItemLinksList
-            query={linksQuery}
-            onDeleteLink={handleDeleteLink}
-            deletingLinkId={
-              deleteWorkItemLinkState.isLoading ? deletingLinkId : null
-            }
-          />
-        </DetailSection>
+        <section className='space-y-2'>
+          <div className='flex items-center gap-3'>
+            <button
+              type='button'
+              className='flex min-w-0 items-center gap-2 text-left text-base font-semibold'
+              aria-expanded={linkedItemsOpen}
+              onClick={() => setLinkedItemsOpen((current) => !current)}
+            >
+              {linkedItemsOpen ? (
+                <ChevronDown className='h-4 w-4 shrink-0 text-muted-foreground' />
+              ) : (
+                <ChevronRight className='h-4 w-4 shrink-0 text-muted-foreground' />
+              )}
+              <span className='truncate'>
+                Linked work items
+                {item.linkTotal !== undefined ? ` (${item.linkTotal})` : ''}
+              </span>
+            </button>
+          </div>
+          {linkedItemsOpen ? (
+            <>
+              <PMWorkItemLinkActions
+                projectId={projectId}
+                workItemId={workItemId}
+              />
+              <WorkItemLinksList
+                projectId={projectId}
+                query={linksQuery}
+                onDeleteLink={handleDeleteLink}
+                deletingLinkId={
+                  deleteWorkItemLinkState.isLoading ? deletingLinkId : null
+                }
+              />
+            </>
+          ) : null}
+        </section>
 
         <DetailSection
           title={`Activity${item.commentTotal !== undefined ? ` (${item.commentTotal} comments)` : ''}`}

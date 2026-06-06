@@ -32,7 +32,7 @@ public class ProjectDetailViewAssembler {
             return null;
         }
 
-        return projectCategoryPort.getCategoryById(categoryId, tenantId)
+        return projectCategoryPort.getCategoryByIdIncludingSystem(categoryId, tenantId)
                 .map(category -> new CategorySummaryView(category.getId(), category.getName()))
                 .orElse(null);
     }

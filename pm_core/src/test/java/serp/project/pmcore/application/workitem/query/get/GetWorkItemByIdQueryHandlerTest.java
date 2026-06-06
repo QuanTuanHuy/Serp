@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import serp.project.pmcore.application.shared.dto.user.UserSummary;
-import serp.project.pmcore.application.workitem.WorkItemComponentView;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanAllocationEntity;
 import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.WorkItemPlanSource;
@@ -26,14 +24,12 @@ import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.user.service.IUserService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -123,6 +119,7 @@ class GetWorkItemByIdQueryHandlerTest {
         WorkItemDetailView result = handler.handle(query);
 
         assertNotNull(result.schedule());
+        assertNull(result.startDate());
         assertEquals(1_700_000_000_000L, result.schedule().plannedStart());
         assertEquals(1_710_000_000_000L, result.schedule().plannedEnd());
         assertEquals("OPTIMIZATION", result.schedule().source());

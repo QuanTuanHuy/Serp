@@ -9,6 +9,8 @@ export type PMProjectStatus = 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
 
 export type PMProjectSort = 'recentlyUpdated' | 'name' | 'createdDate';
 
+export type PMProjectViewMode = 'list' | 'grid';
+
 export interface PMProjectLead {
   id: string;
   name: string;

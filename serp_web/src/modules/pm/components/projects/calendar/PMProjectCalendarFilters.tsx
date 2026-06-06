@@ -96,8 +96,6 @@ export function PMProjectCalendarFilters({
     onUpdate({ [key]: serializeNumberList(nextValues) });
   };
 
-  const close = () => onOpenChange(false);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-4xl gap-0 p-0 sm:max-h-[85vh] sm:max-w-4xl'>
@@ -110,9 +108,6 @@ export function PMProjectCalendarFilters({
                 <Badge variant='secondary'>{activeCount}</Badge>
               ) : null}
             </DialogTitle>
-            <Button type='button' variant='ghost' size='sm' onClick={close}>
-              Close
-            </Button>
           </div>
         </DialogHeader>
 

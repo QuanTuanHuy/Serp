@@ -29,5 +29,4 @@ public class WorkItemSkillEntity extends BaseEntity {
     private SkillProficiency minProficiency;
     private Integer weight;
     private SkillSource source;
-    private Long deletedAt;
 }

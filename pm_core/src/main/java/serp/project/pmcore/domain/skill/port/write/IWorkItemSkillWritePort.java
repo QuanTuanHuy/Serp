@@ -10,7 +10,7 @@ import serp.project.pmcore.domain.skill.entity.WorkItemSkillEntity;
 import java.util.List;
 
 public interface IWorkItemSkillWritePort {
-    void softDeleteActive(Long tenantId, Long projectId, Long workItemId, Long userId, Long now);
+    void deleteActive(Long tenantId, Long projectId, Long workItemId);
 
     List<WorkItemSkillEntity> saveAll(List<WorkItemSkillEntity> skills);
 }

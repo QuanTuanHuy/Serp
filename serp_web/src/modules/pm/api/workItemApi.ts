@@ -18,6 +18,7 @@ import type {
   PMDeleteWorkItemLinkResponse,
   PMGetWorkItemBoardParams,
   PMGetWorkItemCalendarParams,
+  PMGetWorkItemDependenciesParams,
   PMGetWorkItemTimelineParams,
   PMIssueLinkTypeApi,
   PMIssueTypeApi,
@@ -30,12 +31,15 @@ import type {
   PMTransitionWorkItemStatusResponse,
   PMUpdateWorkItemRequest,
   PMUpdateWorkItemResponse,
+  PMUpdateWorkItemScheduleRequest,
+  PMUpdateWorkItemScheduleResponse,
   PMUpsertWorklogRequest,
   PMWorkItemActivityApi,
   PMWorkItemBoardResponse,
   PMWorkItemChildApi,
   PMWorkItemCommentApi,
   PMWorkItemCreateMetaResponse,
+  PMWorkItemDependenciesResponse,
   PMWorkItemDetailApi,
   PMWorkItemLinkApi,
   PMWorkItemScheduleCalendarResponse,
@@ -49,6 +53,7 @@ import {
   buildProjectScopedListParams,
   buildWorkItemCalendarParams,
   buildWorkItemBoardParams,
+  buildWorkItemDependencyParams,
   buildWorkItemSearchParams,
   buildWorkItemTimelineParams,
 } from './queryParams';
@@ -627,6 +632,22 @@ export const pmWorkItemApi = api.injectEndpoints({
           : [{ type: 'pm/WorkItem', id: 'LIST' }],
     }),
 
+    getPmWorkItemDependencies: builder.query<
+      PMWorkItemDependenciesResponse,
+      { projectId: number; params?: PMGetWorkItemDependenciesParams }
+    >({
+      query: ({ projectId, params }) => ({
+        url: `/projects/${projectId}/work-items/dependencies`,
+        method: 'GET',
+        params: buildWorkItemDependencyParams(params),
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMWorkItemDependenciesResponse>(),
+      providesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/WorkItemDependencies', id: projectId },
+      ],
+    }),
+
     getPmWorkItemScheduleCalendar: builder.query<
       PMWorkItemScheduleCalendarResponse,
       { projectId: number; params?: PMGetWorkItemCalendarParams }
@@ -650,6 +671,28 @@ export const pmWorkItemApi = api.injectEndpoints({
             ]
           : [{ type: 'pm/WorkItem', id: 'LIST' }],
     }),
+
+    updatePmWorkItemSchedule: builder.mutation<
+      PMUpdateWorkItemScheduleResponse,
+      {
+        projectId: number;
+        workItemId: number;
+        body: PMUpdateWorkItemScheduleRequest;
+      }
+    >({
+      query: ({ projectId, workItemId, body }) => ({
+        url: `/projects/${projectId}/work-items/${workItemId}/schedule`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMUpdateWorkItemScheduleResponse>(),
+      invalidatesTags: (_result, _error, { workItemId }) => [
+        { type: 'pm/WorkItem', id: workItemId },
+        { type: 'pm/WorkItem', id: 'LIST' },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -670,6 +713,7 @@ export const {
   useGetPmWorkItemChildrenQuery,
   useGetPmWorkItemCommentsQuery,
   useGetPmWorkItemCreateMetaQuery,
+  useGetPmWorkItemDependenciesQuery,
   useGetPmWorkItemLinksQuery,
   useGetPmWorkItemWorklogsQuery,
   useGetPmWorkItemTransitionsQuery,
@@ -684,5 +728,6 @@ export const {
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemCommentMutation,
   useUpdatePmWorkItemMutation,
+  useUpdatePmWorkItemScheduleMutation,
   useUpdatePmWorkItemWorklogMutation,
 } = pmWorkItemApi;

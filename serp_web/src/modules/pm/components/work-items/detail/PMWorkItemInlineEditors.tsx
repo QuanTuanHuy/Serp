@@ -8,6 +8,15 @@ import { CalendarDays, Clock3, Pencil, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, Textarea } from '@/shared/components/ui';
 import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
+import { PMDatePicker } from '../../shared';
+import {
+  fromLocalDateInputValue,
+  toLocalDateInputValue,
+} from '../../../utils/date';
+import {
+  formatDurationEstimate,
+  parseDurationEstimate,
+} from '../../../utils/durationEstimate';
 import { formatDetailDate, toDateInputValue } from './pmWorkItemDetail.utils';
 
 export function InlineSummaryEditor({
@@ -212,16 +221,18 @@ export function InlineDateField({
   }
 
   const save = async () => {
-    await onSave(draft ? new Date(`${draft}T00:00:00`).getTime() : null);
+    await onSave(fromLocalDateInputValue(draft) ?? null);
     setEditing(false);
   };
 
   return (
     <div className='space-y-2'>
-      <Input
-        type='date'
+      <PMDatePicker
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(date) => setDraft(date ? toLocalDateInputValue(date) : '')}
+        showClear={false}
+        className='w-full'
+        buttonClassName='h-8 flex-1'
       />
       <InlineEditorActions
         disabled={disabled}
@@ -243,7 +254,7 @@ export function InlineNumberField({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(
-    value === null || value === undefined ? '' : String(value)
+    value === null || value === undefined ? '' : formatDurationEstimate(value)
   );
 
   if (!editing) {
@@ -252,12 +263,16 @@ export function InlineNumberField({
         type='button'
         className='group inline-flex items-center gap-2 text-left hover:text-primary'
         onClick={() => {
-          setDraft(value === null || value === undefined ? '' : String(value));
+          setDraft(
+            value === null || value === undefined
+              ? ''
+              : formatDurationEstimate(value)
+          );
           setEditing(true);
         }}
       >
         <Clock3 className='h-4 w-4 text-muted-foreground' />
-        {value === null || value === undefined ? 'None' : `${value} min`}
+        {formatDurationEstimate(value)}
         <Pencil className='h-3.5 w-3.5 opacity-0 group-hover:opacity-100' />
       </button>
     );
@@ -270,9 +285,9 @@ export function InlineNumberField({
       setEditing(false);
       return;
     }
-    const nextValue = Number(trimmed);
-    if (!Number.isFinite(nextValue) || nextValue < 0) {
-      toast.error('Estimate must be zero or greater.');
+    const nextValue = parseDurationEstimate(trimmed);
+    if (nextValue === null || Number.isNaN(nextValue) || nextValue < 0) {
+      toast.error('Use a duration like 2w 4d 6h 45m.');
       return;
     }
     await onSave(nextValue);
@@ -282,11 +297,8 @@ export function InlineNumberField({
   return (
     <div className='space-y-2'>
       <Input
-        type='number'
-        min='0'
-        step='1'
         value={draft}
-        placeholder='Minutes'
+        placeholder='2w 4d 6h 45m'
         onChange={(event) => setDraft(event.target.value)}
       />
       <InlineEditorActions

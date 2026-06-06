@@ -21,4 +21,8 @@ public interface IMenuDisplayPort {
     void deleteMenuDisplay(Long id);
 
     Pair<List<MenuDisplayEntity>, Long> getAllMenuDisplays(GetMenuDisplayParams params);
+
+    Long countMenuDisplays();
+
+    Long countVisibleMenuDisplays();
 }

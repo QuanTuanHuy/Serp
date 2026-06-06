@@ -28,6 +28,12 @@ import {
 } from '@/shared/components/ui';
 import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
 import { cn } from '@/shared/utils';
+import { PMDatePicker } from '../../shared';
+import {
+  fromLocalDateInputValue,
+  parseLocalDateValue,
+  toLocalDateInputValue,
+} from '../../../utils/date';
 import type {
   PMWorkItemSearchApi,
   PMWorkItemTransitionApi,
@@ -258,15 +264,15 @@ export function WorkItemListDateEditor({
   onSave: (value: number | null) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(toDateInputValue(value));
+  const [draft, setDraft] = useState(toLocalDateInputValue(value));
 
   const cancel = () => {
-    setDraft(toDateInputValue(value));
+    setDraft(toLocalDateInputValue(value));
     setEditing(false);
   };
 
   const save = async () => {
-    const nextValue = draft ? new Date(`${draft}T00:00:00`).getTime() : null;
+    const nextValue = fromLocalDateInputValue(draft) ?? null;
     try {
       await onSave(nextValue);
       setEditing(false);
@@ -281,7 +287,7 @@ export function WorkItemListDateEditor({
         type='button'
         className='group inline-flex max-w-full min-w-0 items-center gap-1.5 rounded px-1 py-0.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground'
         onClick={() => {
-          setDraft(toDateInputValue(value));
+          setDraft(toLocalDateInputValue(value));
           setEditing(true);
         }}
       >
@@ -294,23 +300,13 @@ export function WorkItemListDateEditor({
 
   return (
     <div className='w-full min-w-0 space-y-1.5'>
-      <Input
-        autoFocus
-        type='date'
+      <PMDatePicker
         value={draft}
+        onChange={(date) => setDraft(date ? toLocalDateInputValue(date) : '')}
         disabled={disabled}
-        className='h-8 min-w-0'
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            void save();
-          }
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            cancel();
-          }
-        }}
+        showClear={false}
+        className='w-full'
+        buttonClassName='h-8 flex-1'
       />
       <div className='flex items-center gap-1'>
         <Button
@@ -472,17 +468,9 @@ function IconAction({
   );
 }
 
-function toDateInputValue(value?: number | string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
-}
-
 function formatShortDate(value?: number | string | null): string {
-  if (!value) return 'None';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'None';
+  const date = parseLocalDateValue(value);
+  if (!date) return 'None';
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

@@ -17,6 +17,7 @@ import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.enums.ModuleEnum;
+import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.client.ICachePort;
 import serp.project.account.core.port.store.IModulePort;
@@ -184,5 +185,15 @@ public class ModuleService implements IModuleService {
 
     private void clearCacheAllModules() {
         asyncTaskExecutor.execute(() -> cachePort.deleteFromCache(CacheConstants.ALL_MODULES));
+    }
+
+    @Override
+    public Long countModules() {
+        return modulePort.countModules();
+    }
+
+    @Override
+    public Long countAvailableModules() {
+        return modulePort.countModulesByStatus(ModuleStatus.ACTIVE);
     }
 }

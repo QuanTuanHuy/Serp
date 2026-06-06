@@ -36,4 +36,8 @@ public interface ISubscriptionPlanPort {
     void delete(Long id);
 
     boolean existsByPlanCode(String planCode);
+
+    Long countPlans();
+
+    Long countActivePlans();
 }

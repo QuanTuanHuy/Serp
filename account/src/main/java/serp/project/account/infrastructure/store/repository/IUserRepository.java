@@ -28,6 +28,14 @@ public interface IUserRepository extends IBaseRepository<UserModel> {
 
     Integer countByPrimaryOrganizationIdAndStatus(Long organizationId, UserStatus status);
 
+    Long countByStatus(UserStatus status);
+
+    @Query("SELECT u.primaryOrganizationId, COUNT(u) " +
+            "FROM UserModel u " +
+            "WHERE u.primaryOrganizationId IN :organizationIds " +
+            "GROUP BY u.primaryOrganizationId")
+    List<Object[]> countUsersByOrganizationIds(@Param("organizationIds") List<Long> organizationIds);
+
     @Query("SELECT COUNT(u) FROM UserModel u WHERE u.primaryOrganizationId = :orgId " +
             "AND u.createdAt >= :from AND u.createdAt < :to")
     Integer countByOrganizationIdAndCreatedAtBetween(

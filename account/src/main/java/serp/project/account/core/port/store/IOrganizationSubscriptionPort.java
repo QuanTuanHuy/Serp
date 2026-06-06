@@ -10,6 +10,7 @@ import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.enums.SubscriptionStatus;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.util.Pair;
@@ -45,4 +46,14 @@ public interface IOrganizationSubscriptionPort {
     boolean existsActiveSubscriptionForOrganization(Long organizationId);
 
     Pair<List<OrganizationSubscriptionEntity>, Long> getAllSubscriptions(GetSubscriptionParams params);
+
+    Long countSubscriptions();
+
+    Long countSubscriptionsByStatus(SubscriptionStatus status);
+
+    Long countSubscriptionsEndingSoon(Long fromTimestamp, Long toTimestamp);
+
+    Long countTrialsEndingSoon(Long fromTimestamp, Long toTimestamp);
+
+    Map<Long, String> getLatestSubscriptionStatusByOrganizationIds(List<Long> organizationIds);
 }

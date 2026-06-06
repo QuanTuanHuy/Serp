@@ -126,8 +126,8 @@ public record WorkItemDetailView(
                 .build();
     }
 
-    private static long instantToEpochMilli(Instant instant) {
-        return instant != null ? instant.toEpochMilli() : 0L;
+    private static Long instantToEpochMilli(Instant instant) {
+        return instant != null ? instant.toEpochMilli() : null;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

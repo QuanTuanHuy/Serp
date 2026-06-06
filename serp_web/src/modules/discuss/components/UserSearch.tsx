@@ -28,7 +28,7 @@ import {
   AvatarImage,
 } from '@/shared/components/ui/avatar';
 import { Badge } from '@/shared/components/ui/badge';
-import { useGetUsersQuery } from '../api/users.api';
+import { useGetDiscussUsersQuery } from '../api/users.api';
 import type { UserInfo } from '../types';
 
 export interface UserSearchProps {
@@ -74,7 +74,7 @@ export function UserSearch({
   // actually RTK Query has debounce built-in usually, or we can rely on local state debounce
   // For now, let's just pass query directly, usually API handles it fast enough or we add a small delay
 
-  const { data: usersResponse, isLoading } = useGetUsersQuery(
+  const { data: usersResponse, isLoading } = useGetDiscussUsersQuery(
     { query: searchQuery },
     { skip: !open } // Only fetch when open
   );

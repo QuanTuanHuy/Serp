@@ -13,8 +13,10 @@ import serp.project.account.core.domain.dto.response.UserProfileResponse;
 import serp.project.account.core.domain.dto.response.UserStatsResponse;
 import serp.project.account.core.domain.entity.PasswordResetRequestEntity;
 import serp.project.account.core.domain.entity.UserEntity;
+import serp.project.account.core.domain.enums.UserStatus;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface IUserService {
@@ -49,6 +51,12 @@ public interface IUserService {
     Integer countUsersByOrganizationId(Long organizationId);
 
     UserStatsResponse getUserStats(Long organizationId);
+
+    Long countUsers();
+
+    Long countUsersByStatus(UserStatus status);
+
+    Map<Long, Long> countUsersByOrganizationIds(List<Long> organizationIds);
 
     Optional<PasswordResetRequestEntity> getPasswordResetRequestByTokenHash(String tokenHash);
 

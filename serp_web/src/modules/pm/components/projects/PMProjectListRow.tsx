@@ -15,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Progress,
   TableCell,
   TableRow,
 } from '@/shared/components/ui';
@@ -25,7 +24,6 @@ import {
   MoreHorizontal,
   PencilLine,
 } from 'lucide-react';
-import { useMemo } from 'react';
 import type { PMProjectListItem } from '../../types/project-list.types';
 import { PMProjectStatusBadge } from './PMProjectStatusBadge';
 import { toast } from 'sonner';
@@ -132,14 +130,6 @@ export function PMProjectListRow({
     }
   };
 
-  // Generate a deterministic mock completion rate for modern presentation
-  const mockProgress = useMemo(() => {
-    const hash = project.id
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return (hash % 40) + 55; // 55% - 95%
-  }, [project.id]);
-
   return (
     <TableRow
       className='group cursor-pointer transition-all duration-200 hover:bg-muted/40 hover:shadow-[inset_0_0_12px_rgba(124,58,237,0.02)]'
@@ -211,23 +201,12 @@ export function PMProjectListRow({
       </TableCell>
 
       <TableCell className='hidden py-4.5 xl:table-cell'>
-        <div className='space-y-2 w-48'>
-          <div className='flex items-center justify-between text-xs'>
-            <span className='font-medium text-foreground/80'>
-              {project.category}
-            </span>
-            {project.status !== 'ARCHIVED' && (
-              <PMProjectStatusBadge status={project.status} />
-            )}
-          </div>
+        <div className='flex w-48 items-center justify-between gap-3 text-xs'>
+          <span className='truncate font-medium text-foreground/80'>
+            {project.category}
+          </span>
           {project.status !== 'ARCHIVED' && (
-            <div className='space-y-1'>
-              <div className='flex items-center justify-between text-[10px] text-muted-foreground'>
-                <span>Progress</span>
-                <span className='font-semibold'>{mockProgress}%</span>
-              </div>
-              <Progress value={mockProgress} className='h-1.5 bg-muted' />
-            </div>
+            <PMProjectStatusBadge status={project.status} />
           )}
         </div>
       </TableCell>

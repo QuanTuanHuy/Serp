@@ -40,6 +40,8 @@ import {
 import { Combobox } from '@/shared/components/ui/combobox';
 import { useCreatePmWorkItemMutation } from '../../api/workItemApi';
 import type { PMCreateWorkItemResponse } from '../../types/api';
+import { toLocalDateInputValue } from '../../utils/date';
+import { PMDatePicker } from '../shared';
 import {
   buildCreateWorkItemRequest,
   createWorkItemSchema,
@@ -446,7 +448,16 @@ export function CreateWorkItemDialog({
                   <FormItem>
                     <FormLabel>Due date</FormLabel>
                     <FormControl>
-                      <Input type='date' {...field} />
+                      <PMDatePicker
+                        value={field.value}
+                        onChange={(date) =>
+                          field.onChange(
+                            date ? toLocalDateInputValue(date) : ''
+                          )
+                        }
+                        className='w-full'
+                        buttonClassName='flex-1'
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -460,16 +471,10 @@ export function CreateWorkItemDialog({
                   <FormItem>
                     <FormLabel>Original estimate</FormLabel>
                     <FormControl>
-                      <Input
-                        type='number'
-                        min='0'
-                        step='1'
-                        placeholder='Minutes'
-                        {...field}
-                      />
+                      <Input placeholder='2w 4d 6h 45m' {...field} />
                     </FormControl>
                     <FormDescription>
-                      Send value in minutes to backend.
+                      Use Jira-style duration. Example: 2w 4d 6h 45m.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -511,7 +516,7 @@ export function CreateWorkItemDialog({
                     Creating...
                   </span>
                 ) : (
-                  'Create work item'
+                  'Create'
                 )}
               </Button>
             </DialogFooter>

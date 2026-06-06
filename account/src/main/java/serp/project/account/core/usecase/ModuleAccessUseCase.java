@@ -28,7 +28,6 @@ import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IKeycloakUserService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.INotificationService;
-import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.ISubscriptionService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.ISubscriptionPlanService;
@@ -50,7 +49,6 @@ public class ModuleAccessUseCase {
     private final IModuleService moduleService;
     private final IRoleService roleService;
     private final ICombineRoleService combineRoleService;
-    private final IOrganizationService organizationService;
 
     private final IKeycloakUserService keycloakUserService;
     private final INotificationService notificationService;
@@ -86,7 +84,6 @@ public class ModuleAccessUseCase {
         try {
             log.info("[UseCase] Getting accessible modules for organization {}", organizationId);
 
-            var organization = organizationService.getOrganizationById(organizationId);
             var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
             var plan = subscriptionPlanService.getPlanById(subscription.getSubscriptionPlanId());
             var planModules = subscriptionPlanService.getPlanModules(plan.getId());
@@ -97,8 +94,7 @@ public class ModuleAccessUseCase {
             var allRoles = roleService.getAllRoles();
             var allModules = moduleService.getAllModules();
 
-            int totalUsers = organization.getEmployeeCount() != null ? organization.getEmployeeCount()
-                    : userService.countUsersByOrganizationId(organizationId);
+            int totalUsers = userService.countUsersByOrganizationId(organizationId);
 
             List<OrgModuleAccessResponse> result = new ArrayList<>();
             result.addAll(allModules.stream()

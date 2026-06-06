@@ -43,6 +43,9 @@ public class UpdateWorkItemFieldWriteValidator {
     }
 
     private boolean isSystemFieldClientWritable(String fieldRef, WorkItemFieldPolicy fieldPolicy) {
+        if (WorkItemFieldConstants.START_DATE.equals(fieldRef)) {
+            return true;
+        }
         return WorkItemFieldConstants.SUPPORTED_UPDATE_SYSTEM_FIELDS.contains(fieldRef)
                 && fieldPolicy != null
                 && fieldPolicy.isClientWritable();

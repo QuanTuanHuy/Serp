@@ -5,6 +5,8 @@
 
 import { z } from 'zod';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { toLocalDateEpoch } from '../../utils/date';
+import { parseDurationEstimate } from '../../utils/durationEstimate';
 import type {
   PMCreateWorkItemRequest,
   PMProjectSummaryApi,
@@ -25,7 +27,14 @@ export const createWorkItemSchema = z.object({
   assigneeId: z.string().optional().or(z.literal('')),
   parentId: z.string().optional().or(z.literal('')),
   dueDate: z.string().optional().or(z.literal('')),
-  timeOriginalEstimate: z.string().optional().or(z.literal('')),
+  timeOriginalEstimate: z
+    .string()
+    .refine((value) => {
+      const parsed = parseDurationEstimate(value);
+      return parsed === null || (Number.isFinite(parsed) && parsed >= 0);
+    }, 'Use a duration like 2w 4d 6h 45m.')
+    .optional()
+    .or(z.literal('')),
   securityLevelId: z.string().optional().or(z.literal('')),
 });
 
@@ -94,9 +103,9 @@ export function buildCreateWorkItemRequest(
     priorityId: values.priorityId ? Number(values.priorityId) : undefined,
     assigneeId: values.assigneeId ? Number(values.assigneeId) : undefined,
     parentId: values.parentId ? Number(values.parentId) : undefined,
-    dueDate: values.dueDate ? new Date(values.dueDate).getTime() : undefined,
+    dueDate: toLocalDateEpoch(values.dueDate),
     timeOriginalEstimate: values.timeOriginalEstimate
-      ? Number(values.timeOriginalEstimate)
+      ? (parseDurationEstimate(values.timeOriginalEstimate) ?? undefined)
       : undefined,
     securityLevelId: values.securityLevelId
       ? Number(values.securityLevelId)

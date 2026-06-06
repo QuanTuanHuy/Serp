@@ -9,11 +9,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  CheckCircle2,
   CircleSlash,
-  History,
+  Eraser,
   PlayCircle,
   ShieldAlert,
   Sparkles,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
@@ -36,14 +38,16 @@ import {
   useApplyPmOptimizationRunMutation,
   useDiscardPmOptimizationRunMutation,
   useGetPmOptimizationRunQuery,
-  useUpdatePmOptimizationRunItemDecisionMutation,
+  useUpdatePmOptimizationRunItemDecisionsMutation,
 } from '../api';
+import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
 import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
 import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
 import type {
   PMOptimizationDecision,
+  PMOptimizationRunDecisionItemRequest,
   PMOptimizationRunApi,
   PMOptimizationRunItemApi,
 } from '../types/api';
@@ -62,21 +66,6 @@ function formatDate(value?: number | null) {
 function formatValue(value?: string | number | null) {
   if (value === undefined || value === null || value === '') return '-';
   return String(value);
-}
-
-function dateInputToEpoch(value: string, endOfDay = false) {
-  if (!value) return undefined;
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-  return date.getTime();
-}
-
-function toDateInputValue(value?: number | null) {
-  if (!value) return '';
-  return new Date(value).toISOString().slice(0, 10);
 }
 
 function metricValue(value?: number | null) {
@@ -121,8 +110,8 @@ export function PMProjectOptimizationRunPage({
     },
     { skip: !organizationId }
   );
-  const [updateDecision, updateState] =
-    useUpdatePmOptimizationRunItemDecisionMutation();
+  const [updateDecisions, updateState] =
+    useUpdatePmOptimizationRunItemDecisionsMutation();
   const [applyRun, applyState] = useApplyPmOptimizationRunMutation();
   const [discardRun, discardState] = useDiscardPmOptimizationRunMutation();
 
@@ -165,29 +154,61 @@ export function PMProjectOptimizationRunPage({
     );
   };
 
-  const handleDecision = async (
-    item: PMOptimizationRunItemApi,
-    body: {
-      assignmentDecision?: PMOptimizationDecision | null;
-      scheduleDecision?: PMOptimizationDecision | null;
-      overrideAssigneeId?: number | null;
-      overridePlannedStart?: number | null;
-      overridePlannedEnd?: number | null;
-    }
+  const handleDecisionBatch = async (
+    decisionItems: PMOptimizationRunDecisionItemRequest[],
+    successMessage = 'Decision updated.'
   ) => {
+    if (!decisionItems.length) {
+      toast.error('Select at least one work item to review.');
+      return false;
+    }
+
     try {
-      await updateDecision({
+      await updateDecisions({
         projectId: numericProjectId,
         runId: numericRunId,
-        workItemId: item.workItemId,
-        body,
+        body: { items: decisionItems },
       }).unwrap();
+      toast.success(successMessage);
       await refetch();
+      return true;
     } catch (patchError) {
-      toast.error('Failed to update decision', {
+      toast.error('Failed to update decisions', {
         description: getErrorMessage(patchError),
       });
+      return false;
     }
+  };
+
+  const handleDecision = (
+    item: PMOptimizationRunItemApi,
+    body: Omit<PMOptimizationRunDecisionItemRequest, 'workItemId'>
+  ) => handleDecisionBatch([{ workItemId: item.workItemId, ...body }]);
+
+  const handleBulkDecision = (decision: 'ACCEPTED' | 'REJECTED') => {
+    if (activeTab !== 'assignment' && activeTab !== 'schedule') {
+      toast.error('Open Assignment or Schedule to review selected items.');
+      return;
+    }
+    const selectedItems = items.filter((item) =>
+      selectedApplyIds.includes(item.workItemId)
+    );
+    if (!selectedItems.length) {
+      toast.error('Select at least one work item to review.');
+      return;
+    }
+    const decisionItems = selectedItems.map((item) =>
+      activeTab === 'assignment'
+        ? { workItemId: item.workItemId, assignmentDecision: decision }
+        : { workItemId: item.workItemId, scheduleDecision: decision }
+    );
+
+    void handleDecisionBatch(
+      decisionItems,
+      decision === 'ACCEPTED'
+        ? 'Selected suggestions accepted.'
+        : 'Selected suggestions rejected.'
+    );
   };
 
   const openOverride = (item: PMOptimizationRunItemApi) => {
@@ -195,23 +216,25 @@ export function PMProjectOptimizationRunPage({
     setOverrideAssignmentDecision(item.assignmentDecision || 'OVERRIDDEN');
     setOverrideScheduleDecision(item.scheduleDecision || 'OVERRIDDEN');
     setOverrideAssigneeId(item.overrideAssigneeId?.toString() || '');
-    setOverridePlannedStart(toDateInputValue(item.overridePlannedStart));
-    setOverridePlannedEnd(toDateInputValue(item.overridePlannedEnd));
+    setOverridePlannedStart(toLocalDateInputValue(item.overridePlannedStart));
+    setOverridePlannedEnd(toLocalDateInputValue(item.overridePlannedEnd));
   };
 
   const saveOverride = async () => {
     if (!reviewItem) return;
 
-    await handleDecision(reviewItem, {
+    const saved = await handleDecision(reviewItem, {
       assignmentDecision: overrideAssignmentDecision,
       scheduleDecision: overrideScheduleDecision,
       overrideAssigneeId: overrideAssigneeId
         ? Number(overrideAssigneeId)
         : undefined,
-      overridePlannedStart: dateInputToEpoch(overridePlannedStart),
-      overridePlannedEnd: dateInputToEpoch(overridePlannedEnd, true),
+      overridePlannedStart: fromLocalDateInputValue(overridePlannedStart),
+      overridePlannedEnd: fromLocalDateInputValue(overridePlannedEnd, true),
     });
-    setReviewItem(null);
+    if (saved) {
+      setReviewItem(null);
+    }
   };
 
   const handleApply = async () => {
@@ -295,6 +318,12 @@ export function PMProjectOptimizationRunPage({
 
   const assignmentTabDisabled = !canEditAssignment;
   const scheduleTabDisabled = !canEditSchedule;
+  const bulkReviewDisabled =
+    (activeTab !== 'assignment' && activeTab !== 'schedule') ||
+    updateState.isLoading ||
+    selectedApplyIds.length === 0 ||
+    (activeTab === 'assignment' && assignmentTabDisabled) ||
+    (activeTab === 'schedule' && scheduleTabDisabled);
 
   return (
     <div className='space-y-6'>
@@ -336,6 +365,33 @@ export function PMProjectOptimizationRunPage({
         </div>
 
         <div className='flex flex-wrap gap-2'>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => handleBulkDecision('ACCEPTED')}
+            disabled={bulkReviewDisabled}
+          >
+            <CheckCircle2 className='mr-2 h-4 w-4' />
+            Accept selected
+          </Button>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => handleBulkDecision('REJECTED')}
+            disabled={bulkReviewDisabled}
+          >
+            <XCircle className='mr-2 h-4 w-4' />
+            Reject selected
+          </Button>
+          <Button
+            type='button'
+            variant='ghost'
+            onClick={() => setSelectedApplyIds([])}
+            disabled={selectedApplyIds.length === 0}
+          >
+            <Eraser className='mr-2 h-4 w-4' />
+            Clear selection
+          </Button>
           <Button
             type='button'
             onClick={handleApply}
@@ -426,7 +482,7 @@ export function PMProjectOptimizationRunPage({
               handleDecision(item, { assignmentDecision: 'REJECTED' })
             }
             onOverride={openOverride}
-            disabled={assignmentTabDisabled}
+            disabled={assignmentTabDisabled || updateState.isLoading}
             disabledMessage={
               assignmentTabDisabled
                 ? 'This run was generated as schedule-only, so assignment changes are not editable.'
@@ -449,7 +505,7 @@ export function PMProjectOptimizationRunPage({
               handleDecision(item, { scheduleDecision: 'REJECTED' })
             }
             onOverride={openOverride}
-            disabled={scheduleTabDisabled}
+            disabled={scheduleTabDisabled || updateState.isLoading}
             disabledMessage={
               scheduleTabDisabled
                 ? 'This run was generated as assignment-only, so schedule changes are not editable.'

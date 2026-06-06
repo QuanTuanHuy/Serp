@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.core.port.store.IModulePort;
 import serp.project.account.infrastructure.store.mapper.ModuleMapper;
 import serp.project.account.infrastructure.store.model.ModuleModel;
@@ -60,5 +61,15 @@ public class ModuleAdapter implements IModulePort {
     @Override
     public boolean existsByCode(String code) {
         return moduleRepository.existsByCode(code);
+    }
+
+    @Override
+    public Long countModules() {
+        return moduleRepository.count();
+    }
+
+    @Override
+    public Long countModulesByStatus(ModuleStatus status) {
+        return moduleRepository.countByStatus(status);
     }
 }
