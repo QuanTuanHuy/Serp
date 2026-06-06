@@ -166,10 +166,14 @@ public class ProjectController {
         Long tenantId = authUtils.getCurrentTenantId()
                 .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
 
+        Set<ProjectExpandOption> expandOptions = expand == null
+                ? Set.of(ProjectExpandOption.CATEGORY)
+                : Set.copyOf(expand);
+
         GetProjectByIdQuery query = new GetProjectByIdQuery(
                 projectId,
                 tenantId,
-                expand == null ? Set.of() : Set.copyOf(expand));
+                expandOptions);
 
         ProjectDetailView response = getProjectByIdQueryHandler.handle(query);
         return ResponseEntity.ok(responseUtils.success(response));

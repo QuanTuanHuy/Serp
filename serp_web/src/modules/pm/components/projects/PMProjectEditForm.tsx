@@ -343,6 +343,7 @@ export function PMProjectEditForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value='ALL'>Uncategorized</SelectItem>
                       {categoryOptions.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}

@@ -21,11 +21,11 @@ const TABS: TabItem[] = [
     label: 'Summary',
     href: (projectId) => `/pm/projects/${projectId}/summary`,
   },
-  {
-    key: 'timeline',
-    label: 'Timeline',
-    href: (projectId) => `/pm/projects/${projectId}/timeline`,
-  },
+  // {
+  //   key: 'timeline',
+  //   label: 'Timeline',
+  //   href: (projectId) => `/pm/projects/${projectId}/timeline`,
+  // },
   {
     key: 'board',
     label: 'Board',
