@@ -63,6 +63,8 @@ export interface PostOffice {
   serviceRadiusM: number;
   dailyCapacity?: number;
   currentLoad?: number;
+  deliveryCapacity?: number;
+  currentDeliveryLoad?: number;
   priority?: number;
   latitude?: number;
   longitude?: number;
@@ -373,6 +375,139 @@ export interface SecondMileVehicleImportItem {
   vehicle_type?: SecondMileVehicleType;
   status?: SecondMileVehicleStatus;
   source_rows?: number[];
+}
+
+export type SecondMileBagDestinationType = 'HUB' | 'POST_OFFICE';
+
+export type SecondMileBagStatus =
+  | 'CREATED'
+  | 'SEALED'
+  | 'IN_TRANSIT'
+  | 'ARRIVED'
+  | 'CANCELLED';
+
+export interface SecondMileBagOrder {
+  id: number;
+  orderId?: number;
+  orderCode?: string;
+}
+
+export interface SecondMileBag {
+  id: number;
+  bagCode?: string;
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  vehicleId?: number;
+  maxWeight?: number;
+  maxVolume?: number;
+  maxOrders?: number;
+  currentWeight?: number;
+  currentVolume?: number;
+  currentOrders?: number;
+  status?: SecondMileBagStatus;
+  sealedAt?: string;
+  note?: string;
+  orders?: SecondMileBagOrder[];
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  tenantId?: number;
+}
+
+export interface SecondMileBagListFilters {
+  keyword?: string;
+  bagCode?: string;
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  vehicleId?: number;
+  status?: SecondMileBagStatus;
+}
+
+export interface CreateSecondMileBagRequest {
+  bag_code: string;
+  origin_hub_id: number;
+  destination_type: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  vehicle_id?: number;
+  max_weight?: number;
+  max_volume?: number;
+  max_orders?: number;
+  status?: SecondMileBagStatus;
+  note?: string;
+}
+
+export type UpdateSecondMileBagRequest = CreateSecondMileBagRequest & {
+  status: SecondMileBagStatus;
+};
+
+export interface AddSecondMileBagOrderRequest {
+  order_code: string;
+}
+
+export interface ReopenSecondMileBagRequest {
+  reason: string;
+}
+
+export interface ValidateSecondMileBaggingRequest {
+  bag_id: number;
+  order_codes: string[];
+}
+
+export interface SecondMileBaggingValidationItem {
+  orderCode: string;
+  accepted: boolean;
+  reason?: string;
+}
+
+export interface SecondMileBaggingValidation {
+  bagId: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  items: SecondMileBaggingValidationItem[];
+}
+
+export interface AutoSecondMileBaggingPlanRequest {
+  origin_hub_id: number;
+  destination_type: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  order_codes: string[];
+  execute?: boolean;
+}
+
+export interface AutoSecondMileBaggingPlanItem {
+  bagCode: string;
+  orderCodes: string[];
+  totalWeight?: number;
+  totalVolume?: number;
+}
+
+export interface AutoSecondMileBaggingPlan {
+  executed: boolean;
+  bagCount: number;
+  items: AutoSecondMileBaggingPlanItem[];
+}
+
+export interface SecondMileBagSuggestion {
+  bagId: number;
+  bagCode?: string;
+  remainingWeight?: number;
+  remainingVolume?: number;
+  remainingOrders?: number;
+}
+
+export interface SecondMileBaggingKpi {
+  originHubId: number;
+  sealedBagCount: number;
+  avgFillRateWeight: number;
+  avgFillRateVolume: number;
+  avgOrdersPerBag: number;
 }
 
 export type SecondMileRouteDestinationType = 'HUB' | 'POST_OFFICE';
@@ -771,6 +906,14 @@ export interface OrderConfirmationOriginPostOffice {
   dailyCapacity?: number;
 }
 
+export interface OrderConfirmationDestinationPostOffice {
+  id: number;
+  code: string;
+  name: string;
+  currentDeliveryLoad?: number;
+  deliveryCapacity?: number;
+}
+
 export interface OrderConfirmationResponse {
   orderId: number;
   orderCode: string;
@@ -778,6 +921,7 @@ export interface OrderConfirmationResponse {
   status: FirstMileOrderStatus;
   alreadyConfirmed: boolean;
   originPostOffice?: OrderConfirmationOriginPostOffice | null;
+  destinationPostOffice?: OrderConfirmationDestinationPostOffice | null;
 }
 
 export interface InitiateOrderPaymentRequest {
@@ -1201,6 +1345,10 @@ export interface PostOfficeListFilters {
   maxDailyCapacity?: number;
   minCurrentLoad?: number;
   maxCurrentLoad?: number;
+  minDeliveryCapacity?: number;
+  maxDeliveryCapacity?: number;
+  minCurrentDeliveryLoad?: number;
+  maxCurrentDeliveryLoad?: number;
   minPriority?: number;
   maxPriority?: number;
 }
@@ -1219,6 +1367,8 @@ export interface CreatePostOfficeRequest {
   service_radius_m: number;
   daily_capacity?: number;
   current_load?: number;
+  delivery_capacity?: number;
+  current_delivery_load?: number;
   priority?: number;
   latitude?: number;
   longitude?: number;

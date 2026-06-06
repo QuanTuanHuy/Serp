@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import serp.project.first_mile.dto.request.ReserveDestinationPostOfficeRequest;
 import serp.project.first_mile.dto.request.ReserveOriginPostOfficeRequest;
+import serp.project.first_mile.dto.response.DestinationPostOfficeReservationResponse;
 import serp.project.first_mile.dto.response.OriginPostOfficeReservationResponse;
 import serp.project.first_mile.service.PostOfficeReservationService;
 
@@ -34,6 +36,15 @@ public class PostOfficeReservationController {
     ) {
         log.info("REST request to reserve best origin post office");
         return postOfficeReservationService.reserveBestOriginPostOffice(request);
+    }
+
+    @PostMapping("/destination/best")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER', 'TMS_POSTOFFICER_MANAGER')")
+    public DestinationPostOfficeReservationResponse reserveBestDestinationPostOffice(
+            @Valid @RequestBody ReserveDestinationPostOfficeRequest request
+    ) {
+        log.info("REST request to reserve best destination post office");
+        return postOfficeReservationService.reserveBestDestinationPostOffice(request);
     }
 
     @PostMapping("/origin/{postOfficeId}/drop-off")

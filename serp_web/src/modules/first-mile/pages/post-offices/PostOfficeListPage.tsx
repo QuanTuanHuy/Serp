@@ -783,15 +783,27 @@ export const PostOfficeListPage: React.FC = () => {
                   <p className='font-medium'>{detailTarget.serviceRadiusM}</p>
                 </div>
                 <div>
-                  <p className='text-muted-foreground'>Daily capacity</p>
+                  <p className='text-muted-foreground'>Pickup order capacity</p>
                   <p className='font-medium'>
                     {detailTarget.dailyCapacity ?? '--'}
                   </p>
                 </div>
                 <div>
-                  <p className='text-muted-foreground'>Current load</p>
+                  <p className='text-muted-foreground'>Current pickup load</p>
                   <p className='font-medium'>
                     {detailTarget.currentLoad ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Delivery capacity</p>
+                  <p className='font-medium'>
+                    {detailTarget.deliveryCapacity ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Current delivery load</p>
+                  <p className='font-medium'>
+                    {detailTarget.currentDeliveryLoad ?? '--'}
                   </p>
                 </div>
                 <div>

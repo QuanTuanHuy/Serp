@@ -67,23 +67,27 @@ export const buildHubListFilters = (
 ): HubListFilters => {
   const minDailyCapacity = parseOptionalNonNegativeInteger(
     values.minDailyCapacity,
-    'Min daily capacity'
+    'Min hub order capacity'
   );
   const maxDailyCapacity = parseOptionalNonNegativeInteger(
     values.maxDailyCapacity,
-    'Max daily capacity'
+    'Max hub order capacity'
   );
   const minCurrentLoad = parseOptionalNonNegativeInteger(
     values.minCurrentLoad,
-    'Min current load'
+    'Min current hub load'
   );
   const maxCurrentLoad = parseOptionalNonNegativeInteger(
     values.maxCurrentLoad,
-    'Max current load'
+    'Max current hub load'
   );
 
-  validateNumericRange(minDailyCapacity, maxDailyCapacity, 'Daily capacity');
-  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Current load');
+  validateNumericRange(
+    minDailyCapacity,
+    maxDailyCapacity,
+    'Hub order capacity'
+  );
+  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Current hub load');
 
   return {
     keyword: normalizeFilterText(values.keyword),

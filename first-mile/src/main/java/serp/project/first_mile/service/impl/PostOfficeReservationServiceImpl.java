@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.dto.request.PostOfficeSuggestionRequest;
+import serp.project.first_mile.dto.request.ReserveDestinationPostOfficeRequest;
 import serp.project.first_mile.dto.request.ReserveOriginPostOfficeRequest;
+import serp.project.first_mile.dto.response.DestinationPostOfficeReservationResponse;
 import serp.project.first_mile.dto.response.OrderDropOffPostOfficeSuggestionResponse;
 import serp.project.first_mile.dto.response.OriginPostOfficeReservationResponse;
 import serp.project.first_mile.exception.AppException;
@@ -56,6 +58,28 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
 
         postOffice.addLoad(1);
         return toResponse(postOfficeRepository.save(postOffice));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DestinationPostOfficeReservationResponse reserveBestDestinationPostOffice(
+            ReserveDestinationPostOfficeRequest request
+    ) {
+        Point receiverLocation = toReceiverPoint(request);
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+
+        PostOffice postOffice = postOfficeRepository.findBestAssignablePostOfficeForReceiverForUpdate(
+                        tenantId,
+                        receiverLocation,
+                        LocalDate.now()
+                )
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.NO_SUITABLE_DESTINATION_POST_OFFICE,
+                        "No suitable destination post office found within service radius or available delivery capacity. Please try again later."
+                ));
+
+        postOffice.addDeliveryLoad(1);
+        return toDestinationResponse(postOfficeRepository.save(postOffice));
     }
 
     @Override
@@ -158,6 +182,20 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
         return GEOMETRY_FACTORY.createPoint(new Coordinate(
                 request.getSenderLongitude(),
                 request.getSenderLatitude()
+        ));
+    }
+
+    private Point toReceiverPoint(ReserveDestinationPostOfficeRequest request) {
+        if (request == null
+                || request.getReceiverLatitude() == null
+                || request.getReceiverLongitude() == null
+                || !isValidCoordinate(request.getReceiverLatitude(), request.getReceiverLongitude())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(
+                request.getReceiverLongitude(),
+                request.getReceiverLatitude()
         ));
     }
 
@@ -300,6 +338,16 @@ public class PostOfficeReservationServiceImpl implements PostOfficeReservationSe
                 postOffice.getName(),
                 postOffice.getCurrentLoad(),
                 postOffice.getDailyCapacity()
+        );
+    }
+
+    private DestinationPostOfficeReservationResponse toDestinationResponse(PostOffice postOffice) {
+        return new DestinationPostOfficeReservationResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                postOffice.getCurrentDeliveryLoad(),
+                postOffice.getDeliveryCapacity()
         );
     }
 

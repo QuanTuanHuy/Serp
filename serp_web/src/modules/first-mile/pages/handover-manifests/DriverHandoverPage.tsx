@@ -113,15 +113,15 @@ const getTripStep = (
 const getStepLabel = (manifest: HandoverManifest): string => {
   const step = getTripStep(manifest);
   if (step === 'RECEIVED') return 'Received at hub';
-  if (step === 'ARRIVED') return 'Arrival checked out';
+  if (step === 'ARRIVED') return 'Arrival checked in';
   if (step === 'IN_TRANSIT') return 'In transit';
   return 'Ready for departure';
 };
 
 const getActionLabel = (manifest: HandoverManifest): string => {
   if (!manifest.driverStartCheckinAt) return 'Departure check-in';
-  if (!manifest.driverEndCheckinAt) return 'Arrival check-out';
-  return 'Completed';
+  if (!manifest.driverEndCheckinAt) return 'Arrival check-in';
+  return 'Awaiting hub inbound';
 };
 
 const buildCheckinFormData = (
@@ -221,12 +221,19 @@ export function DriverHandoverPage() {
   const manifests = data?.items ?? [];
 
   const activeTrips = manifests.filter(
-    (manifest) =>
-      manifest.status === 'OUTBOUND_CONFIRMED' && !manifest.driverEndCheckinAt
+    (manifest) => manifest.status === 'OUTBOUND_CONFIRMED'
+  );
+  const readyTrips = activeTrips.filter(
+    (manifest) => !manifest.driverStartCheckinAt
+  );
+  const inTransitTrips = activeTrips.filter(
+    (manifest) => manifest.driverStartCheckinAt && !manifest.driverEndCheckinAt
+  );
+  const arrivedTrips = activeTrips.filter(
+    (manifest) => manifest.driverEndCheckinAt
   );
   const completedTrips = manifests.filter(
-    (manifest) =>
-      manifest.driverEndCheckinAt || manifest.status === 'INBOUND_CONFIRMED'
+    (manifest) => manifest.status === 'INBOUND_CONFIRMED'
   );
   const checkinAction: DriverHandoverAction =
     checkinManifest?.driverStartCheckinAt ? 'END' : 'START';
@@ -369,18 +376,10 @@ export function DriverHandoverPage() {
         </Button>
       </div>
 
-      <div className='grid gap-4 md:grid-cols-3'>
-        <MetricItem label='Ready' value={activeTrips.length} />
-        <MetricItem
-          label='In transit'
-          value={
-            manifests.filter(
-              (manifest) =>
-                Boolean(manifest.driverStartCheckinAt) &&
-                !manifest.driverEndCheckinAt
-            ).length
-          }
-        />
+      <div className='grid gap-4 md:grid-cols-4'>
+        <MetricItem label='Ready' value={readyTrips.length} />
+        <MetricItem label='In transit' value={inTransitTrips.length} />
+        <MetricItem label='Arrived' value={arrivedTrips.length} />
         <MetricItem label='Completed' value={completedTrips.length} />
       </div>
 
@@ -452,7 +451,9 @@ export function DriverHandoverPage() {
 
                     <Button
                       onClick={() => void handleOpenCheckinDialog(manifest)}
-                      disabled={isSubmitting}
+                      disabled={
+                        isSubmitting || Boolean(manifest.driverEndCheckinAt)
+                      }
                     >
                       {isCurrentSubmitting ? (
                         <Loader2 className='mr-2 h-4 w-4 animate-spin' />
@@ -477,7 +478,7 @@ export function DriverHandoverPage() {
                       active={step === 'IN_TRANSIT'}
                     />
                     <WorkflowStep
-                      label='Arrival check-out'
+                      label='Arrival check-in'
                       done={Boolean(manifest.driverEndCheckinAt)}
                       active={step === 'ARRIVED'}
                     />

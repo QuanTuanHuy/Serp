@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationRequest;
+import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationRequest;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.exception.AppException;
@@ -32,6 +34,9 @@ public class FirstMilePostOfficeCaller {
 
     @Value("${first-mile.service.reserve-drop-off-origin-path:/api/v1/internal/post-office-reservations/origin/%d/drop-off}")
     private String reserveDropOffOriginPath;
+
+    @Value("${first-mile.service.reserve-best-destination-path:/api/v1/internal/post-office-reservations/destination/best}")
+    private String reserveBestDestinationPath;
 
     @Value("${first-mile.service.validate-managed-post-office-path:/api/v1/internal/post-office-reservations/origin/%d/managed}")
     private String validateManagedPostOfficePath;
@@ -57,6 +62,13 @@ public class FirstMilePostOfficeCaller {
             Double longitude
     ) {
         return post(resolveReserveDropOffOriginPath(postOfficeId), buildRequest(latitude, longitude));
+    }
+
+    public DestinationPostOfficeReservationResponse reserveBestDestinationPostOffice(
+            Double latitude,
+            Double longitude
+    ) {
+        return postDestination(resolveReserveBestDestinationPath(), buildDestinationRequest(latitude, longitude));
     }
 
     public OriginPostOfficeReservationResponse validateManagedPostOffice(Long postOfficeId) {
@@ -104,10 +116,42 @@ public class FirstMilePostOfficeCaller {
         }
     }
 
+    private DestinationPostOfficeReservationResponse postDestination(
+            String path,
+            DestinationPostOfficeReservationRequest request
+    ) {
+        try {
+            DestinationPostOfficeReservationResponse response = restClient.post()
+                    .uri(path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .headers(this::applyAuthHeaders)
+                    .body(request)
+                    .retrieve()
+                    .body(DestinationPostOfficeReservationResponse.class);
+            if (response == null) {
+                throw new AppException(
+                        ErrorCode.UNCATEGORIZED_EXCEPTION,
+                        "First-mile service returned empty destination post-office reservation response."
+                );
+            }
+            return response;
+        } catch (RestClientException exception) {
+            log.error("Failed to call first-mile destination post-office reservation endpoint: {}", exception.getMessage(), exception);
+            throw toFirstMileDestinationException(exception);
+        }
+    }
+
     private OriginPostOfficeReservationRequest buildRequest(Double latitude, Double longitude) {
         return OriginPostOfficeReservationRequest.builder()
                 .senderLatitude(latitude)
                 .senderLongitude(longitude)
+                .build();
+    }
+
+    private DestinationPostOfficeReservationRequest buildDestinationRequest(Double latitude, Double longitude) {
+        return DestinationPostOfficeReservationRequest.builder()
+                .receiverLatitude(latitude)
+                .receiverLongitude(longitude)
                 .build();
     }
 
@@ -147,12 +191,42 @@ public class FirstMilePostOfficeCaller {
         );
     }
 
+    private AppException toFirstMileDestinationException(RestClientException exception) {
+        if (exception instanceof RestClientResponseException responseException) {
+            int statusCode = responseException.getStatusCode().value();
+            if (statusCode == 401 || statusCode == 403) {
+                return new AppException(ErrorCode.UNAUTHORIZED, "First-mile service rejected post-office access.");
+            }
+            if (statusCode == 404) {
+                return new AppException(ErrorCode.POST_OFFICE_NOT_FOUND);
+            }
+            if (statusCode == 400) {
+                return new AppException(
+                        ErrorCode.NO_SUITABLE_DESTINATION_POST_OFFICE,
+                        "No suitable destination post office found within service radius or available delivery capacity. Please try again later."
+                );
+            }
+            return new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "First-mile service returned HTTP " + statusCode + "."
+            );
+        }
+        return new AppException(
+                ErrorCode.UNCATEGORIZED_EXCEPTION,
+                "Cannot connect to first-mile service. Ensure first-mile is running and FIRST_MILE_SERVICE_BASE_URL is correct."
+        );
+    }
+
     private String resolveReserveBestOriginPath() {
         return reserveBestOriginPath;
     }
 
     private String resolveReserveDropOffOriginPath(Long postOfficeId) {
         return String.format(reserveDropOffOriginPath, postOfficeId);
+    }
+
+    private String resolveReserveBestDestinationPath() {
+        return reserveBestDestinationPath;
     }
 
     private String resolveValidateManagedPostOfficePath(Long postOfficeId) {

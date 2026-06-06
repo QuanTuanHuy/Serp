@@ -216,7 +216,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-daily-capacity'>Daily capacity *</Label>
+              <Label htmlFor='hub-daily-capacity'>Hub order capacity *</Label>
               <Input
                 id='hub-daily-capacity'
                 type='number'
@@ -231,7 +231,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-current-load'>Current load *</Label>
+              <Label htmlFor='hub-current-load'>Current hub load *</Label>
               <Input
                 id='hub-current-load'
                 type='number'

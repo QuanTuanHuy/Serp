@@ -290,7 +290,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow();
 
         HandoverManifest manifest = getManifestOrThrow(manifestId);
-        return processInboundCheckin(manifest, null, true, request, photo);
+        return processDriverArrivalCheckin(manifest, request, photo);
     }
 
     @Override
@@ -944,6 +944,37 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         return secondMileAccessUtils.getCurrentActiveDriverStaffIdOrThrow();
     }
 
+    private HandoverManifestResponse processDriverArrivalCheckin(
+            HandoverManifest manifest,
+            DriverHandoverCheckinRequest request,
+            MultipartFile photo
+    ) {
+        if (manifest.getStatus() != HandoverManifestStatus.OUTBOUND_CONFIRMED) {
+            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
+        }
+        if (manifest.getVehicleId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Driver check-in requires an assigned vehicle.");
+        }
+
+        Vehicle vehicle = loadVehicle(manifest.getVehicleId());
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.VEHICLE_NOT_FOUND);
+        }
+        validateVehicleHasAssignedDriver(manifest.getTenantId(), vehicle);
+        secondMileAccessUtils.ensureCurrentUserIsAssignedDriverOrThrow(vehicle.getAssignedStaffId());
+        validateDriverAssignedToHub(manifest.getTenantId(), vehicle.getAssignedStaffId(), manifest.getTargetHubId());
+        recordDriverEndCheckin(manifest, request, photo);
+
+        HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
+        List<HandoverManifestOrder> manifestOrders = findManifestOrders(manifest.getId(), manifest.getTenantId());
+        return toResponse(
+                savedManifest,
+                manifestOrders,
+                vehicle,
+                loadRoute(savedManifest.getRouteId())
+        );
+    }
+
     private HandoverManifestResponse processInboundCheckin(
             HandoverManifest manifest,
             ConfirmHandoverInboundRequest request,
@@ -991,9 +1022,16 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
+        List<HandoverManifestOrder> newlyInboundTargets = targets.stream()
+                .filter(item -> item.getScanInTime() == null)
+                .toList();
+        addHubInboundLoad(manifest, newlyInboundTargets.size());
+
         LocalDateTime now = LocalDateTime.now();
         for (HandoverManifestOrder target : targets) {
-            target.setScanInTime(now);
+            if (target.getScanInTime() == null) {
+                target.setScanInTime(now);
+            }
             target.setLastKnownStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB.name());
             if (target.getScanOutTime() == null) {
                 target.setScanOutTime(now);
@@ -1036,6 +1074,20 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 vehicle,
                 loadRoute(savedManifest.getRouteId())
         );
+    }
+
+    private void addHubInboundLoad(HandoverManifest manifest, int incomingOrders) {
+        if (incomingOrders <= 0) {
+            return;
+        }
+        if (manifest == null || manifest.getTargetHubId() == null || manifest.getTenantId() == null) {
+            throw new AppException(ErrorCode.HUB_NOT_FOUND);
+        }
+
+        Hub hub = hubRepository.findByIdAndTenantIdForUpdate(manifest.getTargetHubId(), manifest.getTenantId())
+                .orElseThrow(() -> new AppException(ErrorCode.HUB_NOT_FOUND));
+        hub.addLoad(incomingOrders);
+        hubRepository.save(hub);
     }
 
     private boolean shouldAdvanceToOutboundReady(OrderStatus currentStatus) {

@@ -66,6 +66,10 @@ public class PostOfficeController {
             @RequestParam(name = "max_daily_capacity", required = false) Integer maxDailyCapacity,
             @RequestParam(name = "min_current_load", required = false) Integer minCurrentLoad,
             @RequestParam(name = "max_current_load", required = false) Integer maxCurrentLoad,
+            @RequestParam(name = "min_delivery_capacity", required = false) Integer minDeliveryCapacity,
+            @RequestParam(name = "max_delivery_capacity", required = false) Integer maxDeliveryCapacity,
+            @RequestParam(name = "min_current_delivery_load", required = false) Integer minCurrentDeliveryLoad,
+            @RequestParam(name = "max_current_delivery_load", required = false) Integer maxCurrentDeliveryLoad,
             @RequestParam(name = "min_priority", required = false) Integer minPriority,
             @RequestParam(name = "max_priority", required = false) Integer maxPriority,
             @RequestParam(name = "hub_id", required = false) Long hubId
@@ -84,6 +88,10 @@ public class PostOfficeController {
                 .maxDailyCapacity(maxDailyCapacity)
                 .minCurrentLoad(minCurrentLoad)
                 .maxCurrentLoad(maxCurrentLoad)
+                .minDeliveryCapacity(minDeliveryCapacity)
+                .maxDeliveryCapacity(maxDeliveryCapacity)
+                .minCurrentDeliveryLoad(minCurrentDeliveryLoad)
+                .maxCurrentDeliveryLoad(maxCurrentDeliveryLoad)
                 .minPriority(minPriority)
                 .maxPriority(maxPriority)
                 .hubId(hubId)

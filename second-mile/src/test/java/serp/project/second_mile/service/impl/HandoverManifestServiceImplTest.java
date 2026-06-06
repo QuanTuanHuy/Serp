@@ -7,6 +7,8 @@ package serp.project.second_mile.service.impl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -44,6 +46,7 @@ import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -218,6 +222,72 @@ class HandoverManifestServiceImplTest {
 
         assertThrows(AppException.class, () -> service.driverCheckinStart(100L, request, photo));
         assertNull(manifest.getDriverStartCheckinAt());
+    }
+
+    @Test
+    void driverCheckinEndRecordsArrivalWithoutScanningOrdersInbound() {
+        HandoverManifest manifest = HandoverManifest.builder()
+                .id(100L)
+                .manifestCode("HM-001")
+                .originPostOfficeCode(POST_OFFICE_CODE)
+                .targetHubId(HUB_ID)
+                .vehicleId(VEHICLE_ID)
+                .assignedDriverId(DRIVER_ID)
+                .routeId(ROUTE_ID)
+                .plannedDepartureAt(DEPARTURE_AT)
+                .plannedArrivalAt(ARRIVAL_AT)
+                .originPostOfficeLatitude(10.0)
+                .originPostOfficeLongitude(106.0)
+                .driverStartCheckinAt(DEPARTURE_AT)
+                .status(HandoverManifestStatus.OUTBOUND_CONFIRMED)
+                .tenantId(TENANT_ID)
+                .build();
+        HandoverManifestOrder manifestOrder = HandoverManifestOrder.builder()
+                .id(500L)
+                .manifest(manifest)
+                .tmsOrderId(1L)
+                .orderCode("ORD-001")
+                .scanOutTime(DEPARTURE_AT)
+                .lastKnownStatus(OrderStatus.OUTBOUND_READY_FROM_PO.name())
+                .tenantId(TENANT_ID)
+                .build();
+        Hub hub = hub();
+        hub.setLocation(new GeometryFactory().createPoint(new Coordinate(106.0, 10.0)));
+
+        when(secondMileAccessUtils.getCurrentTenantIdOrThrow()).thenReturn(TENANT_ID);
+        when(handoverManifestRepository.findByIdAndTenantId(100L, TENANT_ID)).thenReturn(Optional.of(manifest));
+        when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle()));
+        when(hubStaffAssignmentRepository.findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
+                eq(DRIVER_ID), eq(HUB_ID), eq(TENANT_ID), any(LocalDate.class)
+        )).thenReturn(Optional.of(HubStaffAssignment.builder().build()));
+        when(hubRepository.findById(HUB_ID)).thenReturn(Optional.of(hub));
+        when(fileStorageService.upload(any())).thenReturn(FileUploadResponse.builder()
+                .url("https://files.local/handover.jpg")
+                .build());
+        when(handoverManifestRepository.save(any(HandoverManifest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(handoverManifestOrderRepository.findByManifest_IdAndTenantId(100L, TENANT_ID))
+                .thenReturn(List.of(manifestOrder));
+        when(routeRepository.findById(ROUTE_ID)).thenReturn(Optional.of(route()));
+
+        DriverHandoverCheckinRequest request = new DriverHandoverCheckinRequest(10.0, 106.0, null);
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "handover.jpg",
+                "image/jpeg",
+                new byte[]{1}
+        );
+
+        service.driverCheckinEnd(100L, request, photo);
+
+        assertEquals(HandoverManifestStatus.OUTBOUND_CONFIRMED, manifest.getStatus());
+        assertEquals("https://files.local/handover.jpg", manifest.getDriverEndPhotoUrl());
+        assertNull(manifestOrder.getScanInTime());
+        assertEquals(OrderStatus.OUTBOUND_READY_FROM_PO.name(), manifestOrder.getLastKnownStatus());
+        verify(handoverManifestRepository).save(manifest);
+        verify(handoverManifestOrderRepository, never()).saveAll(any());
+        verify(tmsOrderTransitionOutboxService, never()).enqueue(any(), eq(TENANT_ID));
+        verify(handoverManifestSyncEventPublisher, never()).publish(any());
     }
 
     private HandoverManifestSyncEvent baseOutboundEvent() {

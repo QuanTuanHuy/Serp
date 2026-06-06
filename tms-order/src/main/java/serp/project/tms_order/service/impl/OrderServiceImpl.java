@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
 import serp.project.tms_order.caller.FirstMilePostOfficeSuggestionCaller;
 import serp.project.tms_order.caller.PaymentServiceCaller;
+import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.payment.PaymentCreateOrderRequest;
 import serp.project.tms_order.caller.dto.payment.PaymentCreateOrderResponse;
@@ -313,6 +314,10 @@ public class OrderServiceImpl implements OrderService {
 
         ensureSenderPaymentCompletedBeforeConfirmation(order);
 
+        validateOrderForConfirmation(order);
+        DestinationPostOfficeReservationResponse reservedDestinationPostOffice =
+                reserveDestinationPostOfficeIfNeeded(order);
+
         if (hasText(order.getOriginPostOfficeCode())) {
             order.setIsConfirm(true);
             Order savedOrder = orderRepository.save(order);
@@ -323,10 +328,8 @@ public class OrderServiceImpl implements OrderService {
                     null
             );
             publishOrderAfterCommit(savedOrder);
-            return toOrderConfirmationResponse(savedOrder, null, true);
+            return toOrderConfirmationResponse(savedOrder, null, reservedDestinationPostOffice, true);
         }
-
-        validateOrderForConfirmation(order);
 
         OriginPostOfficeReservationResponse reservedPostOffice =
                 firstMilePostOfficeCaller.reserveBestOriginPostOffice(
@@ -345,7 +348,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
-        return toOrderConfirmationResponse(savedOrder, reservedPostOffice, false);
+        return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
     @Override
@@ -381,9 +384,9 @@ public class OrderServiceImpl implements OrderService {
                             null
                     );
                     publishOrderAfterCommit(savedOrder);
-                    return toOrderConfirmationResponse(savedOrder, managedPostOffice, true);
+                    return toOrderConfirmationResponse(savedOrder, managedPostOffice, null, true);
                 }
-                return toOrderConfirmationResponse(order, managedPostOffice, true);
+                return toOrderConfirmationResponse(order, managedPostOffice, null, true);
             }
 
             throw new AppException(
@@ -396,6 +399,10 @@ public class OrderServiceImpl implements OrderService {
             OriginPostOfficeReservationResponse managedPostOffice =
                     firstMilePostOfficeCaller.validateManagedPostOffice(request.getPostOfficeId());
             if (hasSamePostOfficeCode(order.getOriginPostOfficeCode(), managedPostOffice.getCode())) {
+                validateOrderForConfirmation(order);
+                DestinationPostOfficeReservationResponse reservedDestinationPostOffice =
+                        reserveDestinationPostOfficeIfNeeded(order);
+
                 order.setIsConfirm(true);
                 order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
                 Order savedOrder = orderRepository.save(order);
@@ -406,7 +413,7 @@ public class OrderServiceImpl implements OrderService {
                         null
                 );
                 publishOrderAfterCommit(savedOrder);
-                return toOrderConfirmationResponse(savedOrder, managedPostOffice, true);
+                return toOrderConfirmationResponse(savedOrder, managedPostOffice, reservedDestinationPostOffice, true);
             }
 
             throw new AppException(
@@ -416,6 +423,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         validateOrderForConfirmation(order);
+        DestinationPostOfficeReservationResponse reservedDestinationPostOffice =
+                reserveDestinationPostOfficeIfNeeded(order);
 
         OriginPostOfficeReservationResponse reservedPostOffice =
                 firstMilePostOfficeCaller.reserveDropOffOriginPostOffice(
@@ -436,7 +445,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
-        return toOrderConfirmationResponse(savedOrder, reservedPostOffice, false);
+        return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
     @Override
@@ -983,16 +992,40 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
         }
 
-        Point senderLocation = order.getSenderLocation();
-        if (senderLocation == null) {
-            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        validateOrderLocation(
+                order.getSenderLocation(),
+                "Sender coordinates are required before order confirmation."
+        );
+        validateOrderLocation(
+                order.getReceiverLocation(),
+                "Receiver coordinates are required before order confirmation."
+        );
+    }
+
+    private void validateOrderLocation(Point location, String detail) {
+        if (location == null) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE, detail);
         }
 
-        double latitude = senderLocation.getY();
-        double longitude = senderLocation.getX();
+        double latitude = location.getY();
+        double longitude = location.getX();
         if (!isValidCoordinate(latitude, longitude)) {
-            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE, detail);
         }
+    }
+
+    private DestinationPostOfficeReservationResponse reserveDestinationPostOfficeIfNeeded(Order order) {
+        if (hasText(order.getDestinationPostOfficeCode())) {
+            return null;
+        }
+
+        DestinationPostOfficeReservationResponse reservedDestinationPostOffice =
+                firstMilePostOfficeCaller.reserveBestDestinationPostOffice(
+                        toLatitude(order.getReceiverLocation()),
+                        toLongitude(order.getReceiverLocation())
+                );
+        order.setDestinationPostOfficeCode(reservedDestinationPostOffice.getCode());
+        return reservedDestinationPostOffice;
     }
 
     private int normalizeDropOffSuggestionLimit(Integer limit) {
@@ -1042,20 +1075,36 @@ public class OrderServiceImpl implements OrderService {
     private OrderConfirmationResponse toOrderConfirmationResponse(
             Order order,
             OriginPostOfficeReservationResponse postOffice,
+            DestinationPostOfficeReservationResponse destinationPostOffice,
             boolean alreadyConfirmed
     ) {
         String postOfficeCode = postOffice == null
                 ? order.getOriginPostOfficeCode()
                 : postOffice.getCode();
 
-        OrderConfirmationResponse.OriginPostOfficeInfo originInfo =
-                new OrderConfirmationResponse.OriginPostOfficeInfo(
+        OrderConfirmationResponse.OriginPostOfficeInfo originInfo = hasText(postOfficeCode)
+                ? new OrderConfirmationResponse.OriginPostOfficeInfo(
                         postOffice == null ? null : postOffice.getId(),
                         postOfficeCode,
                         postOffice == null ? null : postOffice.getName(),
                         postOffice == null ? null : postOffice.getCurrentLoad(),
                         postOffice == null ? null : postOffice.getDailyCapacity()
-                );
+                )
+                : null;
+
+        String destinationPostOfficeCode = destinationPostOffice == null
+                ? order.getDestinationPostOfficeCode()
+                : destinationPostOffice.getCode();
+
+        OrderConfirmationResponse.DestinationPostOfficeInfo destinationInfo = hasText(destinationPostOfficeCode)
+                ? new OrderConfirmationResponse.DestinationPostOfficeInfo(
+                        destinationPostOffice == null ? null : destinationPostOffice.getId(),
+                        destinationPostOfficeCode,
+                        destinationPostOffice == null ? null : destinationPostOffice.getName(),
+                        destinationPostOffice == null ? null : destinationPostOffice.getCurrentDeliveryLoad(),
+                        destinationPostOffice == null ? null : destinationPostOffice.getDeliveryCapacity()
+                )
+                : null;
 
         return new OrderConfirmationResponse(
                 order.getId(),
@@ -1063,7 +1112,8 @@ public class OrderServiceImpl implements OrderService {
                 order.getCustomerOrderCode(),
                 order.getStatus(),
                 alreadyConfirmed,
-                originInfo
+                originInfo,
+                destinationInfo
         );
     }
 

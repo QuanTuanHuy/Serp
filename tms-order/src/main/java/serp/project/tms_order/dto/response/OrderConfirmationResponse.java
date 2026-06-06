@@ -13,7 +13,8 @@ public record OrderConfirmationResponse(
         String customerOrderCode,
         OrderStatus status,
         boolean alreadyConfirmed,
-        OriginPostOfficeInfo originPostOffice
+        OriginPostOfficeInfo originPostOffice,
+        DestinationPostOfficeInfo destinationPostOffice
 ) {
 
     public record OriginPostOfficeInfo(
@@ -22,6 +23,15 @@ public record OrderConfirmationResponse(
             String name,
             Integer currentLoad,
             Integer dailyCapacity
+    ) {
+    }
+
+    public record DestinationPostOfficeInfo(
+            Long id,
+            String code,
+            String name,
+            Integer currentDeliveryLoad,
+            Integer deliveryCapacity
     ) {
     }
 }
