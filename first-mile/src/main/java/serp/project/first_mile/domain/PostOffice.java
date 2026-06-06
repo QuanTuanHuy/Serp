@@ -7,6 +7,7 @@ package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.PostOfficeStatus;
@@ -65,6 +66,12 @@ public class PostOffice extends AbstractAudit {
 
     @Column(name = "location", columnDefinition = "geography(Point, 4326)")
     private Point location;
+
+    @Formula("ST_Y(CAST(location AS geometry))")
+    private Double locationLatitude;
+
+    @Formula("ST_X(CAST(location AS geometry))")
+    private Double locationLongitude;
 
     @Column(name = "service_radius_m", nullable = false)
     @Builder.Default

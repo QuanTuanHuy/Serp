@@ -1,6 +1,11 @@
+/**
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - TMS combobox adapter
+ */
+
 'use client';
 
-import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
+import { Combobox, type ComboboxItem } from './ui/combobox';
 
 export type TmsComboboxOption = ComboboxItem & {
   value: string;

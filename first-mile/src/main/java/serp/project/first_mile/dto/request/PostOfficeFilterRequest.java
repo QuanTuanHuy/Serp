@@ -23,6 +23,10 @@ public class PostOfficeFilterRequest {
     private String wardCode;
     private PostOfficeStatus status;
     private Boolean hasLocation;
+    private Double minLatitude;
+    private Double maxLatitude;
+    private Double minLongitude;
+    private Double maxLongitude;
 
     private Integer minServiceRadiusM;
     private Integer maxServiceRadiusM;

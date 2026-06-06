@@ -1324,6 +1324,10 @@ export interface HubListFilters {
   wardCode?: string;
   status?: HubStatus;
   hasLocation?: boolean;
+  minLatitude?: number;
+  maxLatitude?: number;
+  minLongitude?: number;
+  maxLongitude?: number;
   minDailyCapacity?: number;
   maxDailyCapacity?: number;
   minCurrentLoad?: number;
@@ -1339,6 +1343,10 @@ export interface PostOfficeListFilters {
   wardCode?: string;
   status?: PostOfficeStatus;
   hasLocation?: boolean;
+  minLatitude?: number;
+  maxLatitude?: number;
+  minLongitude?: number;
+  maxLongitude?: number;
   minServiceRadiusM?: number;
   maxServiceRadiusM?: number;
   minDailyCapacity?: number;
