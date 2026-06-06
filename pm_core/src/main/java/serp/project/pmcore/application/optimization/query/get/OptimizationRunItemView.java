@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 
@@ -22,11 +23,15 @@ import java.util.List;
 public class OptimizationRunItemView {
     private Long id;
     private Long workItemId;
+    private OptimizationWorkItemSummaryView workItem;
     private Long workItemUpdatedAtSnapshot;
     private Long planUpdatedAtSnapshot;
     private Long currentAssigneeId;
+    private UserSummary currentAssignee;
     private Long suggestedAssigneeId;
+    private UserSummary suggestedAssignee;
     private Long overrideAssigneeId;
+    private UserSummary overrideAssignee;
     private Long currentPlannedStart;
     private Long currentPlannedEnd;
     private Long suggestedPlannedStart;

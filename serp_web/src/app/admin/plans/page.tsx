@@ -9,6 +9,8 @@ import React, { useMemo, useState } from 'react';
 import {
   usePlans,
   useModules,
+  AdminFilterChips,
+  AdminFilterDialog,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
@@ -26,6 +28,7 @@ import {
 } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Combobox } from '@/shared/components/ui/combobox';
+import { Input } from '@/shared/components/ui/input';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
 import {
@@ -38,10 +41,16 @@ import {
   XCircle,
   LayoutGrid,
   List,
+  Check,
+  Search,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
 
 export default function PlansPage() {
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('organization');
+
   const {
     plans,
     stats,
@@ -96,6 +105,69 @@ export default function PlansPage() {
   const formatPrice = (price?: number) => {
     if (!price) return '$0';
     return `$${price.toFixed(2)}`;
+  };
+
+  const planTypeValue =
+    filters.isCustom === undefined
+      ? undefined
+      : filters.isCustom
+        ? 'custom'
+        : 'standard';
+
+  const statusValue =
+    filters.isActive === undefined
+      ? undefined
+      : filters.isActive
+        ? 'active'
+        : 'inactive';
+
+  const filterCriteria = [
+    {
+      id: 'organization',
+      label: 'Organization',
+      count: filters.organizationId ? 1 : 0,
+    },
+    { id: 'planType', label: 'Plan type', count: planTypeValue ? 1 : 0 },
+    { id: 'status', label: 'Status', count: statusValue ? 1 : 0 },
+  ];
+
+  const organizationLabel =
+    organizations.find((organization) => organization.id === filters.organizationId)
+      ?.name ??
+    (filters.organizationId ? `Organization #${filters.organizationId}` : '');
+
+  const filterChips = [
+    filters.organizationId
+      ? {
+          id: 'organization',
+          label: `Organization: ${organizationLabel}`,
+          onRemove: () => handleFilterChange('organizationId', undefined),
+        }
+      : null,
+    planTypeValue
+      ? {
+          id: 'planType',
+          label: `Type: ${planTypeValue === 'custom' ? 'Custom' : 'Standard'}`,
+          onRemove: () => handleFilterChange('isCustom', undefined),
+        }
+      : null,
+    statusValue
+      ? {
+          id: 'status',
+          label: `Status: ${statusValue === 'active' ? 'Active' : 'Inactive'}`,
+          onRemove: () => handleFilterChange('isActive', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('organizationId', undefined);
+    handleFilterChange('isCustom', undefined);
+    handleFilterChange('isActive', undefined);
   };
 
   // Define columns for DataTable
@@ -297,98 +369,31 @@ export default function PlansPage() {
         />
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base font-medium'>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid gap-4 md:grid-cols-4'>
-            {/* Organization Filter */}
-            <div>
-              <Combobox
-                value={filters.organizationId}
-                onChange={(val) =>
-                  handleFilterChange(
-                    'organizationId',
-                    val !== undefined ? Number(val) : undefined
-                  )
-                }
-                items={organizations.map((o) => ({
-                  value: o.id,
-                  label: o.name,
-                }))}
-                placeholder='All Organizations'
-                loading={isFetchingOrgs}
-                onSearch={(q) => setOrgSearch(q)}
-              />
-            </div>
-
-            {/* Plan Type Filter */}
-            <div>
-              <select
-                value={
-                  filters.isCustom === undefined
-                    ? ''
-                    : filters.isCustom
-                      ? 'custom'
-                      : 'standard'
-                }
-                onChange={(e) => {
-                  const value = e.target.value;
-                  handleFilterChange(
-                    'isCustom',
-                    value === '' ? undefined : value === 'custom'
-                  );
-                }}
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Types</option>
-                <option value='standard'>Standard Plans</option>
-                <option value='custom'>Custom Plans</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={
-                  filters.isActive === undefined
-                    ? ''
-                    : filters.isActive
-                      ? 'active'
-                      : 'inactive'
-                }
-                onChange={(e) => {
-                  const value = e.target.value;
-                  handleFilterChange(
-                    'isActive',
-                    value === '' ? undefined : value === 'active'
-                  );
-                }}
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Status</option>
-                <option value='active'>Active</option>
-                <option value='inactive'>Inactive</option>
-              </select>
-            </div>
-
-            {/* Search */}
-            <div>
-              <input
-                type='text'
-                value={filters.search || ''}
-                onChange={(e) =>
-                  handleFilterChange('search', e.target.value || undefined)
-                }
-                placeholder='Search by name or code...'
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              />
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search by name or code...'
+              value={filters.search || ''}
+              onChange={(event) =>
+                handleFilterChange('search', event.target.value || undefined)
+              }
+              className='pl-10'
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
+        </div>
+
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
 
       {/* Plans Grid View */}
       {viewMode === 'grid' && (
@@ -625,6 +630,120 @@ export default function PlansPage() {
           isRemoving={isRemovingModule}
         />
       )}
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'organization' ? (
+          <FilterPane title='Organization'>
+            <Combobox
+              value={filters.organizationId}
+              onChange={(value) =>
+                handleFilterChange(
+                  'organizationId',
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={organizations.map((organization) => ({
+                value: organization.id,
+                label: organization.name,
+              }))}
+              placeholder='All organizations'
+              loading={isFetchingOrgs}
+              onSearch={setOrgSearch}
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'planType' ? (
+          <FilterPane title='Plan type'>
+            <FilterOption
+              label='All plan types'
+              selected={planTypeValue === undefined}
+              onSelect={() => handleFilterChange('isCustom', undefined)}
+            />
+            <FilterOption
+              label='Standard plans'
+              selected={planTypeValue === 'standard'}
+              onSelect={() => handleFilterChange('isCustom', false)}
+            />
+            <FilterOption
+              label='Custom plans'
+              selected={planTypeValue === 'custom'}
+              onSelect={() => handleFilterChange('isCustom', true)}
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={statusValue === undefined}
+              onSelect={() => handleFilterChange('isActive', undefined)}
+            />
+            <FilterOption
+              label='Active'
+              selected={statusValue === 'active'}
+              onSelect={() => handleFilterChange('isActive', true)}
+            />
+            <FilterOption
+              label='Inactive'
+              selected={statusValue === 'inactive'}
+              onSelect={() => handleFilterChange('isActive', false)}
+            />
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <Check className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }

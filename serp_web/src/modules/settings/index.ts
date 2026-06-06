@@ -33,6 +33,17 @@ export type {
   SettingsActionMenuItem,
 } from './components/shared/SettingsActionMenu';
 
+export { SettingsFilterDialog } from './components/shared/SettingsFilterDialog';
+export type {
+  SettingsFilterCriterion,
+  SettingsFilterDialogProps,
+} from './components/shared/SettingsFilterDialog';
+export { SettingsFilterChips } from './components/shared/SettingsFilterChips';
+export type {
+  SettingsFilterChip,
+  SettingsFilterChipsProps,
+} from './components/shared/SettingsFilterChips';
+
 // Department Components
 export { CreateDepartmentDialog } from './components/departments/CreateDepartmentDialog';
 export { UpdateDepartmentDialog } from './components/departments/UpdateDepartmentDialog';

@@ -19,6 +19,7 @@ import { toLocalDateInputValue } from '../../utils/date';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunItemApi,
+  PMOptimizationUserSummaryApi,
 } from '../../types/api';
 
 type PMOptimizationRunOverrideDialogProps = {
@@ -67,12 +68,24 @@ export function PMOptimizationRunOverrideDialog({
         {item ? (
           <div className='space-y-4'>
             <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-              <Badge variant='secondary'>Work item #{item.workItemId}</Badge>
+              <Badge variant='secondary'>
+                {item.workItem?.key || `Work item #${item.workItemId}`}
+              </Badge>
+              {item.workItem?.summary ? (
+                <span className='font-medium text-foreground'>
+                  {item.workItem.summary}
+                </span>
+              ) : null}
               <span>
-                Current assignee: {formatValue(item.currentAssigneeId)}
+                Current assignee:{' '}
+                {formatAssignee(item.currentAssignee, item.currentAssigneeId)}
               </span>
               <span>
-                Suggested assignee: {formatValue(item.suggestedAssigneeId)}
+                Suggested assignee:{' '}
+                {formatAssignee(
+                  item.suggestedAssignee,
+                  item.suggestedAssigneeId
+                )}
               </span>
             </div>
 
@@ -174,7 +187,10 @@ export function PMOptimizationRunOverrideDialog({
   );
 }
 
-function formatValue(value?: string | number | null) {
-  if (value === undefined || value === null || value === '') return '-';
-  return String(value);
+function formatAssignee(
+  user?: PMOptimizationUserSummaryApi | null,
+  userId?: number | null
+) {
+  if (!userId) return '-';
+  return user?.displayName || `User #${userId}`;
 }

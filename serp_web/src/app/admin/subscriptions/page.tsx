@@ -9,16 +9,12 @@ import React, { useMemo, useState } from 'react';
 import {
   useSubscriptions,
   AdminActionMenu,
+  AdminFilterChips,
+  AdminFilterDialog,
   AdminStatusBadge,
 } from '@/modules/admin';
 import { SubscriptionDetailsDialog } from '@/modules/admin/components/subscriptions';
 import { Combobox } from '@/shared/components/ui/combobox';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -38,11 +34,15 @@ import {
   Eye,
   DollarSign,
   Users,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { Organization } from '@/modules/admin/types';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
 
 export default function SubscriptionsPage() {
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('status');
+
   const {
     filters,
     subscriptions,
@@ -93,6 +93,94 @@ export default function SubscriptionsPage() {
       (s) => String(s.subscriptionPlanId) === String(filters.planId)
     );
   }, [subscriptions, filters.planId]);
+
+  const statusOptions = [
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'PENDING_UPGRADE', label: 'Pending Upgrade' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'TRIAL', label: 'Trial' },
+    { value: 'EXPIRED', label: 'Expired' },
+    { value: 'CANCELLED', label: 'Cancelled' },
+    { value: 'PAYMENT_FAILED', label: 'Payment Failed' },
+    { value: 'GRACE_PERIOD', label: 'Grace Period' },
+  ];
+
+  const billingOptions = [
+    { value: 'MONTHLY', label: 'Monthly' },
+    { value: 'YEARLY', label: 'Yearly' },
+    { value: 'TRIAL', label: 'Trial' },
+  ];
+
+  const filterCriteria = [
+    { id: 'status', label: 'Status', count: filters.status ? 1 : 0 },
+    {
+      id: 'billingCycle',
+      label: 'Billing cycle',
+      count: filters.billingCycle ? 1 : 0,
+    },
+    {
+      id: 'organization',
+      label: 'Organization',
+      count: filters.organizationId ? 1 : 0,
+    },
+    { id: 'plan', label: 'Plan', count: filters.planId ? 1 : 0 },
+  ];
+
+  const organizationLabel =
+    organizations.find((organization) => organization.id === filters.organizationId)
+      ?.name ??
+    (filters.organizationId ? `Organization #${filters.organizationId}` : '');
+  const planLabel =
+    plans.find((plan) => plan.id === filters.planId)?.planName ??
+    (filters.planId ? `Plan #${filters.planId}` : '');
+
+  const filterChips = [
+    filters.status
+      ? {
+          id: 'status',
+          label: `Status: ${
+            statusOptions.find((item) => item.value === filters.status)?.label ??
+            filters.status
+          }`,
+          onRemove: () => handleFilterChange('status', undefined),
+        }
+      : null,
+    filters.billingCycle
+      ? {
+          id: 'billingCycle',
+          label: `Billing: ${
+            billingOptions.find((item) => item.value === filters.billingCycle)
+              ?.label ?? filters.billingCycle
+          }`,
+          onRemove: () => handleFilterChange('billingCycle', undefined),
+        }
+      : null,
+    filters.organizationId
+      ? {
+          id: 'organization',
+          label: `Organization: ${organizationLabel}`,
+          onRemove: () => handleFilterChange('organizationId', undefined),
+        }
+      : null,
+    filters.planId
+      ? {
+          id: 'plan',
+          label: `Plan: ${planLabel}`,
+          onRemove: () => handleFilterChange('planId', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('status', undefined);
+    handleFilterChange('billingCycle', undefined);
+    handleFilterChange('organizationId', undefined);
+    handleFilterChange('planId', undefined);
+  };
 
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
@@ -253,97 +341,22 @@ export default function SubscriptionsPage() {
             View and manage organization subscriptions
           </p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            Export
-          </Button>
-        </div>
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base font-medium'>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid gap-4 md:grid-cols-5'>
-            {/* Status */}
-            <div>
-              <select
-                value={filters.status || ''}
-                onChange={(e) =>
-                  handleFilterChange('status', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Statuses</option>
-                <option value='PENDING'>Pending</option>
-                <option value='PENDING_UPGRADE'>Pending Upgrade</option>
-                <option value='ACTIVE'>Active</option>
-                <option value='TRIAL'>Trial</option>
-                <option value='EXPIRED'>Expired</option>
-                <option value='CANCELLED'>Cancelled</option>
-                <option value='PAYMENT_FAILED'>Payment Failed</option>
-                <option value='GRACE_PERIOD'>Grace Period</option>
-              </select>
-            </div>
+      <div className='space-y-3'>
+        <div className='flex justify-end'>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
+        </div>
 
-            {/* Billing Cycle */}
-            <div>
-              <select
-                value={filters.billingCycle || ''}
-                onChange={(e) =>
-                  handleFilterChange(
-                    'billingCycle',
-                    e.target.value || undefined
-                  )
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Billing</option>
-                <option value='MONTHLY'>Monthly</option>
-                <option value='YEARLY'>Yearly</option>
-                <option value='TRIAL'>Trial</option>
-              </select>
-            </div>
-
-            {/* Organization */}
-            <div>
-              <Combobox
-                value={filters.organizationId}
-                onChange={(val) =>
-                  handleFilterChange(
-                    'organizationId',
-                    val !== undefined ? Number(val) : undefined
-                  )
-                }
-                items={organizations.map((o) => ({
-                  value: o.id,
-                  label: o.name,
-                }))}
-                placeholder='All Organizations'
-                loading={isFetchingOrgs}
-                onSearch={(q) => setOrgSearch(q)}
-              />
-            </div>
-
-            {/* Plan */}
-            <div>
-              <Combobox
-                value={filters.planId}
-                onChange={(val) =>
-                  handleFilterChange(
-                    'planId',
-                    val !== undefined ? Number(val) : undefined
-                  )
-                }
-                items={plans.map((p) => ({ value: p.id, label: p.planName }))}
-                placeholder='All Plans'
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
 
       {/* Table */}
       <DataTable
@@ -428,6 +441,137 @@ export default function SubscriptionsPage() {
         subscription={selectedSubscription}
         plan={selectedPlan}
       />
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={!filters.status}
+              onSelect={() => handleFilterChange('status', undefined)}
+            />
+            {statusOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.status === option.value}
+                onSelect={() => handleFilterChange('status', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'billingCycle' ? (
+          <FilterPane title='Billing cycle'>
+            <FilterOption
+              label='All billing cycles'
+              selected={!filters.billingCycle}
+              onSelect={() => handleFilterChange('billingCycle', undefined)}
+            />
+            {billingOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.billingCycle === option.value}
+                onSelect={() =>
+                  handleFilterChange('billingCycle', option.value)
+                }
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'organization' ? (
+          <FilterPane title='Organization'>
+            <Combobox
+              value={filters.organizationId}
+              onChange={(value) =>
+                handleFilterChange(
+                  'organizationId',
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={organizations.map((organization) => ({
+                value: organization.id,
+                label: organization.name,
+              }))}
+              placeholder='All organizations'
+              loading={isFetchingOrgs}
+              onSearch={setOrgSearch}
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'plan' ? (
+          <FilterPane title='Plan'>
+            <Combobox
+              value={filters.planId}
+              onChange={(value) =>
+                handleFilterChange(
+                  'planId',
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={plans.map((plan) => ({
+                value: plan.id,
+                label: plan.planName,
+              }))}
+              placeholder='All plans'
+            />
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }
