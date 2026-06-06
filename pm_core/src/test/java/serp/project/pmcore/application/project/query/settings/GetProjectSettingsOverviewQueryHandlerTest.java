@@ -26,7 +26,6 @@ import serp.project.pmcore.domain.project.query.ProjectComponentListCriteria;
 import serp.project.pmcore.domain.project.service.IProjectComponentService;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
 import serp.project.pmcore.domain.project.service.IProjectRoleActorService;
-import serp.project.pmcore.domain.project.service.IProjectRoleService;
 import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.constant.ProjectPermissionKeys;
 import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
@@ -68,8 +67,6 @@ class GetProjectSettingsOverviewQueryHandlerTest {
     @Mock
     private IProjectRoleActorService projectRoleActorService;
     @Mock
-    private IProjectRoleService projectRoleService;
-    @Mock
     private IProjectComponentService projectComponentService;
     @Mock
     private IProjectCategoryPort projectCategoryPort;
@@ -90,7 +87,6 @@ class GetProjectSettingsOverviewQueryHandlerTest {
                 projectService,
                 projectPermissionEvaluationService,
                 projectRoleActorService,
-                projectRoleService,
                 projectComponentService,
                 projectCategoryPort,
                 issueTypeSchemeService,
@@ -112,8 +108,6 @@ class GetProjectSettingsOverviewQueryHandlerTest {
                 roleActor(202L, "99"),
                 roleActor(201L, "100")
         ));
-        when(projectRoleService.getProjectRoleByIdIncludingSystem(201L, TENANT_ID)).thenReturn(null);
-        when(projectRoleService.getProjectRoleByIdIncludingSystem(202L, TENANT_ID)).thenReturn(null);
         when(projectComponentService.listComponents(eq(PROJECT_ID), eq(TENANT_ID), any(ProjectComponentListCriteria.class)))
                 .thenReturn(new PageResult<>(List.of(component(301L, "Backend")), 7L));
         when(issueTypeSchemeService.getVisibleIssueTypeSchemeById(ISSUE_TYPE_SCHEME_ID, TENANT_ID))
