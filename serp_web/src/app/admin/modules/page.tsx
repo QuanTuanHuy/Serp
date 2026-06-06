@@ -227,26 +227,9 @@ export default function ModulesPage() {
           <AdminActionMenu
             items={[
               {
-                label: 'View Details',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
                 label: 'Edit',
                 onClick: () => openEditDialog(row as unknown as Module),
                 icon: <Edit className='h-4 w-4' />,
-              },
-              {
-                label: row.status === 'ACTIVE' ? 'Disable' : 'Enable',
-                onClick: () => handleToggleStatus(String(row.id), row.status),
-                icon:
-                  row.status === 'ACTIVE' ? (
-                    <PowerOff className='h-4 w-4' />
-                  ) : (
-                    <Power className='h-4 w-4' />
-                  ),
-                separator: true,
-                variant: row.status === 'ACTIVE' ? 'destructive' : 'default',
               },
             ]}
           />
