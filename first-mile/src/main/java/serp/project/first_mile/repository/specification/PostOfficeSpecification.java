@@ -71,6 +71,19 @@ public final class PostOfficeSpecification {
                         : criteriaBuilder.isNull(root.get("location")));
             }
 
+            if (filterRequest.getMinLatitude() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("locationLatitude"), filterRequest.getMinLatitude()));
+            }
+            if (filterRequest.getMaxLatitude() != null) {
+                predicates.add(criteriaBuilder.le(root.get("locationLatitude"), filterRequest.getMaxLatitude()));
+            }
+            if (filterRequest.getMinLongitude() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("locationLongitude"), filterRequest.getMinLongitude()));
+            }
+            if (filterRequest.getMaxLongitude() != null) {
+                predicates.add(criteriaBuilder.le(root.get("locationLongitude"), filterRequest.getMaxLongitude()));
+            }
+
             if (filterRequest.getMinServiceRadiusM() != null) {
                 predicates.add(criteriaBuilder.ge(root.get("serviceRadiusM"), filterRequest.getMinServiceRadiusM()));
             }

@@ -8,6 +8,7 @@ package serp.project.second_mile.domain;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Formula;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
@@ -55,6 +56,12 @@ public class Hub extends AbstractAudit {
 
     @Column(name = "location", columnDefinition = "geography(Point, 4326)")
     private Point location;
+
+    @Formula("ST_Y(CAST(location AS geometry))")
+    private Double locationLatitude;
+
+    @Formula("ST_X(CAST(location AS geometry))")
+    private Double locationLongitude;
     
     @Column(name = "operational_start_date")
     private LocalDate operationalStartDate;
