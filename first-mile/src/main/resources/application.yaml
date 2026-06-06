@@ -36,10 +36,15 @@ spring:
         - classpath:db/migration/ward.sql
         - classpath:db/migration/post-office.sql
         - classpath:db/migration/post-office-add-hub-id.sql
+        - classpath:db/migration/post-office-delivery-capacity.sql
         - classpath:db/migration/post-office-staff.sql
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql
         - classpath:db/migration/pickup-checkin.sql
+        - classpath:db/migration/post-office-handover-manifests.sql
+        - classpath:db/migration/post-office-handover-manifest-assignment.sql
+        - classpath:db/migration/order-storage-compatibility.sql
+        - classpath:db/migration/order-transition-outbox.sql
         - classpath:db/migration/kafka-dlq-message.sql
   messages:
     basename: i18n/messages
@@ -58,14 +63,34 @@ app:
   kafka:
     topics:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
-      sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
+      sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
+    handover-manifest-sync:
+      consumer-group-id: ${KAFKA_FIRST_MILE_HANDOVER_MANIFEST_GROUP:first-mile-sync-handover-manifest}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
+
+internal-api:
+  api-key: ${INTERNAL_API_KEY:}
+  roles: ${INTERNAL_API_ROLES:TMS_ADMIN,TMS_POSTOFFICER_MANAGER,TMS_POSTOFFICER,TMS_HUB_MANAGER,TMS_HUB_EMPLOYEE}
+
+tms-order:
+  service:
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
+    pickup-candidates-path: ${TMS_ORDER_PICKUP_CANDIDATES_PATH:/api/v1/internal/orders/pickup-candidates}
+    status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
+  transition-outbox:
+    retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
+
+second-mile:
+  service:
+    base-url: ${SECOND_MILE_SERVICE_BASE_URL:http://localhost:8095}
+    validate-handover-outbound-sync-path: ${SECOND_MILE_VALIDATE_HANDOVER_OUTBOUND_SYNC_PATH:/api/v1/handover-manifests/internal/validate-outbound-sync}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

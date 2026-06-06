@@ -2,8 +2,10 @@ package serp.project.first_mile.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
 import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.TripStatus;
@@ -17,6 +19,18 @@ import java.util.Optional;
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
     Optional<Trip> findByIdAndTenantId(Long id, Long tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select t
+            from Trip t
+            where t.id = :id
+                and t.tenantId = :tenantId
+            """)
+    Optional<Trip> findByIdAndTenantIdForUpdate(
+            @Param("id") Long id,
+            @Param("tenantId") Long tenantId
+    );
 
     Optional<Trip> findFirstByTenantIdAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
             Long tenantId,

@@ -124,6 +124,14 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 		p.RateLimitMiddleware,
 	)
 
+	RegisterSchoolBusRoutes(
+		group,
+		p.WebSocketProxyController,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
 	RegisterFirstMileRoutes(
 		group,
 		p.GenericProxyController,
@@ -132,6 +140,27 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 	)
 
 	RegisterSecondMileRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterPaymentRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterTmsBillingRoutes(
+		group,
+		p.GenericProxyController,
+		p.JWTMiddleware,
+		p.RateLimitMiddleware,
+	)
+
+	RegisterTmsOrderRoutes(
 		group,
 		p.GenericProxyController,
 		p.JWTMiddleware,

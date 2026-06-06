@@ -18,6 +18,8 @@ CREATE TABLE post_offices (
                               service_radius_m INTEGER NOT NULL DEFAULT 5000,
                               daily_capacity INTEGER NOT NULL DEFAULT 0,
                               current_load INTEGER NOT NULL DEFAULT 0,
+                              delivery_capacity INTEGER NOT NULL DEFAULT 0,
+                              current_delivery_load INTEGER NOT NULL DEFAULT 0,
                               priority INTEGER NOT NULL DEFAULT 100,
 
     -- Enum PostOfficeStatus lưu dưới dạng String

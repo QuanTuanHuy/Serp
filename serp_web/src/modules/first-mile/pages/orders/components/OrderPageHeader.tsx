@@ -9,11 +9,13 @@ import { Plus } from 'lucide-react';
 
 interface OrderPageHeaderProps {
   canMutateOrders: boolean;
+  importAction?: React.ReactNode;
   onCreateOrder: () => void;
 }
 
 export const OrderPageHeader: React.FC<OrderPageHeaderProps> = ({
   canMutateOrders,
+  importAction,
   onCreateOrder,
 }) => {
   return (
@@ -25,12 +27,15 @@ export const OrderPageHeader: React.FC<OrderPageHeaderProps> = ({
         </p>
       </div>
 
-      {canMutateOrders ? (
-        <Button onClick={onCreateOrder}>
-          <Plus className='mr-2 h-4 w-4' />
-          New Order
-        </Button>
-      ) : null}
+      <div className='flex flex-wrap items-center gap-2'>
+        {importAction}
+        {canMutateOrders ? (
+          <Button onClick={onCreateOrder}>
+            <Plus className='mr-2 h-4 w-4' />
+            New Order
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 };

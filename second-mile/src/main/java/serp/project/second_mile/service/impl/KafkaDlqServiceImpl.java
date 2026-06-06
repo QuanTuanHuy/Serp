@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.second_mile.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +70,6 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
 
     @Override
     @Scheduled(fixedDelayString = "${app.kafka.dlq.retry-interval-ms:30000}")
-    @Transactional(rollbackFor = Exception.class)
     public void retryPendingMessages() {
         Pageable pageable = PageRequest.of(0, resolveConfiguredBatchSize());
         List<KafkaDlqMessage> retryableMessages = kafkaDlqMessageRepository.findRetryableMessages(
@@ -97,6 +101,7 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
             message.setStatus(KafkaDlqMessageStatus.PROCESSED);
             message.setErrorMessage(null);
             message.setNextRetryAt(null);
+            kafkaDlqMessageRepository.save(message);
             log.info("Kafka DLQ retry succeeded: dlqId={}, topic={}, key={}",
                     message.getId(),
                     message.getTopic(),
@@ -110,6 +115,7 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
             if (nextRetryCount > maxRetries) {
                 message.setStatus(KafkaDlqMessageStatus.DEAD);
                 message.setNextRetryAt(null);
+                kafkaDlqMessageRepository.save(message);
                 log.error("Kafka DLQ retry dead-lettered: dlqId={}, topic={}, key={}, retries={}",
                         message.getId(),
                         message.getTopic(),
@@ -121,6 +127,7 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
 
             message.setStatus(KafkaDlqMessageStatus.FAILED);
             message.setNextRetryAt(LocalDateTime.now().plusSeconds(resolveDelaySeconds(nextRetryCount)));
+            kafkaDlqMessageRepository.save(message);
             log.warn("Kafka DLQ retry failed: dlqId={}, topic={}, key={}, retries={}/{}",
                     message.getId(),
                     message.getTopic(),

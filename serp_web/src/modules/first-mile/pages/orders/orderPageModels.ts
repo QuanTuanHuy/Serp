@@ -41,6 +41,7 @@ export const ORDER_STATUS_OPTIONS: FirstMileOrderStatus[] = [
   'PICKING_UP',
   'PICKUP_FAILED',
   'PICKED_UP',
+  'PENDING_ORIGIN_POST_OFFICE_INBOUND',
   'AT_ORIGIN_POST_OFFICE',
   'CANCELLED',
   'LOST_OR_DAMAGED',
@@ -262,6 +263,7 @@ export const getStatusBadgeVariant = (
       return 'secondary';
     case 'PICKING_UP':
     case 'PICKED_UP':
+    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
     case 'AT_ORIGIN_POST_OFFICE':
       return 'default';
     case 'PICKUP_FAILED':
@@ -399,9 +401,18 @@ export const mapOrderToFormState = (
       order.codAmount > 0
         ? 'true'
         : 'false',
-    dimensionLengthCm: '',
-    dimensionWidthCm: '',
-    dimensionHeightCm: '',
+    dimensionLengthCm:
+      order.dimensionLengthCm === undefined || order.dimensionLengthCm === null
+        ? ''
+        : String(order.dimensionLengthCm),
+    dimensionWidthCm:
+      order.dimensionWidthCm === undefined || order.dimensionWidthCm === null
+        ? ''
+        : String(order.dimensionWidthCm),
+    dimensionHeightCm:
+      order.dimensionHeightCm === undefined || order.dimensionHeightCm === null
+        ? ''
+        : String(order.dimensionHeightCm),
     totalVolumeM3:
       order.totalVolume === undefined || order.totalVolume === null
         ? ''

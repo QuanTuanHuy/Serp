@@ -2,6 +2,7 @@ package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,9 @@ public class ImportHistoryServiceImpl implements ImportHistoryService {
     public ImportHistoryResponse getImportHistory(Long importHistoryId, Long tenantId) {
         ImportHistory importHistory = importHistoryRepository.findByIdAndTenantId(importHistoryId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+        if (ImportType.ORDER.equals(importHistory.getType())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
         return ImportHistoryResponseUtils.toResponse(importHistory, true);
     }
 
@@ -31,9 +35,16 @@ public class ImportHistoryServiceImpl implements ImportHistoryService {
     public PageResponse<ImportHistoryResponse> getAllImportHistory(int page, int size, ImportType type, Long tenantId) {
         Pageable pageable = PageRequest.of(page, size);
 
-        var importHistoryPage = (type == null
-            ? importHistoryRepository.findAllByTenantId(tenantId, pageable)
-            : importHistoryRepository.findAllByTenantIdAndType(tenantId, type, pageable))
+        Page<ImportHistory> sourcePage;
+        if (type == null) {
+            sourcePage = importHistoryRepository.findAllByTenantIdAndTypeNot(tenantId, ImportType.ORDER, pageable);
+        } else if (ImportType.ORDER.equals(type)) {
+            sourcePage = Page.empty(pageable);
+        } else {
+            sourcePage = importHistoryRepository.findAllByTenantIdAndType(tenantId, type, pageable);
+        }
+
+        var importHistoryPage = sourcePage
             .map(importHistory -> ImportHistoryResponseUtils.toResponse(importHistory, true));
         return PageResponse.<ImportHistoryResponse>builder()
                 .items(importHistoryPage.getContent())

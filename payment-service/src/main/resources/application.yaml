@@ -1,0 +1,92 @@
+server:
+  port: ${PAYMENT_SERVICE_PORT:8096}
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_service}
+    username: ${SPRING_DATASOURCE_USERNAME:serp}
+    password: ${SPRING_DATASOURCE_PASSWORD:serp123}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp/protocol/openid-connect/certs
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  cache:
+    type: redis
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      username: ${SPRING_DATA_REDIS_USERNAME:}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+# Kafka topics (defaults align with SERP conventions)
+app:
+  notification:
+    default-tenant-id: ${PAYMENT_NOTIFICATION_DEFAULT_TENANT_ID:1}
+  webhook:
+    tms-order:
+      payment-confirmed-url: ${TMS_ORDER_PAYMENT_CONFIRMED_WEBHOOK_URL:${FIRST_MILE_PAYMENT_CONFIRMED_WEBHOOK_URL:http://localhost:8099/api/v1/internal/payment-webhooks/orders/payment-confirmed}}
+      secret: ${TMS_ORDER_PAYMENT_WEBHOOK_SECRET:${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}}
+    retry:
+      max-attempts: ${WEBHOOK_MAX_ATTEMPTS:5}
+      initial-delay-seconds: ${WEBHOOK_INITIAL_DELAY_SECONDS:30}
+      scheduler-delay-ms: ${WEBHOOK_SCHEDULER_DELAY_MS:30000}
+  kafka:
+    source: ${PAYMENT_KAFKA_SOURCE:payment-service}
+    topics:
+      payment-success: ${PAYMENT_SUCCESS_TOPIC:PAYMENT_SUCCESS}
+      payment-failed: ${PAYMENT_FAILED_TOPIC:PAYMENT_FAILED}
+      refund-success: ${REFUND_SUCCESS_TOPIC:REFUND_SUCCESS}
+      refund-failed: ${REFUND_FAILED_TOPIC:REFUND_FAILED}
+      email-events: ${EMAIL_EVENTS_TOPIC:serp.email.events}
+      user-notification-events: ${USER_NOTIFICATION_EVENTS_TOPIC:serp.notification.user.events}
+    event-types:
+      email-send-requested: ${EMAIL_SEND_REQUESTED_EVENT_TYPE:email.send.requested}
+      notification-create-requested: ${NOTIFICATION_CREATE_REQUESTED_EVENT_TYPE:notification.create.requested}
+
+# ZaloPay Configuration
+zalopay:
+  # App ID được cấp bởi ZaloPay (Sandbox)
+  app-id: 2554
+  # Key1 dùng để tạo MAC
+  key1: sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn
+  # Key2 dùng để verify callback
+  key2: trMrHtvjo6myautxDUiAcYsVtaeQ8nhf
+  # Endpoint tạo đơn hàng (Sandbox)
+  create-order-url: https://sb-openapi.zalopay.vn/v2/create
+  # Endpoint query đơn hàng (Sandbox)
+  query-order-url: https://sb-openapi.zalopay.vn/v2/query
+  # Endpoint lấy danh sách ngân hàng (Sandbox)
+  get-bank-list-url: https://sbgateway.zalopay.vn/api/getlistmerchantbanks
+  # Endpoint hoàn tiền (Sandbox)
+  refund-url: https://sb-openapi.zalopay.vn/v2/refund
+  # Endpoint truy vấn trạng thái hoàn tiền (Sandbox)
+  query-refund-url: https://sb-openapi.zalopay.vn/v2/query_refund
+  # Callback URL (ZaloPay sẽ gọi endpoint này khi thanh toán hoàn tất)
+  # IMPORTANT: PHẢI dùng URL qua API Gateway để CORS hoạt động đúng
+  # Gateway routing: /api/payment/** -> payment-service (StripPrefix=2 bỏ /api/payment)
+  # Controller endpoint: /v1/payments/zalopay/callback
+  # Full Gateway URL: /payment/api/v1/payments/zalopay/callback
+  # Development: http://localhost:8080/payment/api/v1/payments/zalopay/callback
+  callback-url: ${ZALOPAY_CALLBACK_URL:http://localhost:8080/payment/api/v1/payments/zalopay/callback}
+  # Redirect URL sau khi thanh toán
+  redirect-url: ${ZALOPAY_REDIRECT_URL:http://localhost:3000/payment/result}
+  # Thời gian hết hạn đơn hàng (giây) - 15 phút
+  expire-duration-seconds: 900
+

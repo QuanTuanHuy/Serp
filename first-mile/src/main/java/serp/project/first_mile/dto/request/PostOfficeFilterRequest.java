@@ -33,6 +33,12 @@ public class PostOfficeFilterRequest {
     private Integer minCurrentLoad;
     private Integer maxCurrentLoad;
 
+    private Integer minDeliveryCapacity;
+    private Integer maxDeliveryCapacity;
+
+    private Integer minCurrentDeliveryLoad;
+    private Integer maxCurrentDeliveryLoad;
+
     private Integer minPriority;
     private Integer maxPriority;
 

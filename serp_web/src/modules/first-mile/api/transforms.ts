@@ -8,10 +8,596 @@ import type {
   FirstMileApiResponse,
   FirstMilePageResponse,
   FirstMilePaginatedData,
+  HandoverManifest,
+  HandoverManifestOrderItem,
+  HubPostOfficeMapping,
   ImportHistory,
   ImportHistoryStatus,
   ImportType,
+  PostOfficeStaffAssignment,
+  AutoSecondMileBaggingPlan,
+  SecondMileBag,
+  SecondMileBagDestinationType,
+  SecondMileBagOrder,
+  SecondMileBagStatus,
+  SecondMileBagSuggestion,
+  SecondMileBaggingKpi,
+  SecondMileBaggingValidation,
+  SecondMileBaggingValidationItem,
+  SecondMileHubStaffAssignment,
+  SecondMileHubStaff,
+  SecondMileOrder,
+  SecondMileRoute,
+  SecondMileRouteDestinationType,
+  SecondMileRouteEndpointType,
+  SecondMileRouteStatus,
+  SecondMileVehicle,
+  SecondMileVehicleStatus,
+  SecondMileVehicleType,
 } from '../types';
+
+const readField = <T>(
+  raw: Record<string, unknown>,
+  snakeKey: string,
+  camelKey: string,
+  ...alternateKeys: string[]
+): T | undefined => {
+  for (const key of [snakeKey, camelKey, ...alternateKeys]) {
+    const value = raw[key];
+    if (value !== undefined && value !== null) {
+      return value as T;
+    }
+  }
+  return undefined;
+};
+
+const readOptionalNumber = (
+  raw: Record<string, unknown>,
+  snakeKey: string,
+  camelKey: string
+): number | undefined => {
+  const value = readField<unknown>(raw, snakeKey, camelKey);
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
+export const normalizeHubPostOfficeMapping = (
+  raw: unknown
+): HubPostOfficeMapping => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    hubId: Number(readField(record, 'hub_id', 'hubId') ?? 0),
+    postOfficeCode: String(
+      readField(record, 'post_office_code', 'postOfficeCode') ?? ''
+    ),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileHubStaffAssignment = (
+  raw: unknown
+): SecondMileHubStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    hubId: readField<number>(record, 'hub_id', 'hubId'),
+    hubCode: readField<string>(record, 'hub_code', 'hubCode'),
+    hubName: readField<string>(record, 'hub_name', 'hubName'),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(
+      record,
+      'staff_full_name',
+      'staffFullName'
+    ),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    staffStatus: readField(record, 'staff_status', 'staffStatus'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
+export const normalizeSecondMileHubStaff = (
+  raw: unknown
+): SecondMileHubStaff => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    code: readField<string>(record, 'code', 'code'),
+    fullName: readField<string>(record, 'full_name', 'fullName'),
+    role: readField(record, 'role', 'role'),
+    status: readField(record, 'status', 'status'),
+  };
+};
+
+export const normalizePostOfficeStaffAssignment = (
+  raw: unknown
+): PostOfficeStaffAssignment => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    postOfficeId: readField<number>(record, 'post_office_id', 'postOfficeId'),
+    postOfficeCode: readField<string>(
+      record,
+      'post_office_code',
+      'postOfficeCode'
+    ),
+    postOfficeName: readField<string>(
+      record,
+      'post_office_name',
+      'postOfficeName'
+    ),
+    staffId: readField<number>(record, 'staff_id', 'staffId'),
+    staffCode: readField<string>(record, 'staff_code', 'staffCode'),
+    staffFullName: readField<string>(
+      record,
+      'staff_full_name',
+      'staffFullName'
+    ),
+    staffRole: readField(record, 'staff_role', 'staffRole'),
+    assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
+    assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
+    shiftStartTime: readField<string>(
+      record,
+      'shift_start_time',
+      'shiftStartTime'
+    ),
+    shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
+    isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
+    notes: readField<string>(record, 'notes', 'notes'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileOrder = (raw: unknown): SecondMileOrder => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+    customerOrderCode: readField<string>(
+      record,
+      'customer_order_code',
+      'customerOrderCode'
+    ),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    status: readField(record, 'status', 'status'),
+    totalWeight: readField<number>(record, 'total_weight', 'totalWeight'),
+    totalVolume: readField<number>(record, 'total_volume', 'totalVolume'),
+  };
+};
+
+export const normalizeSecondMileVehicle = (raw: unknown): SecondMileVehicle => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    licensePlate: String(
+      readField(record, 'license_plate', 'licensePlate') ?? ''
+    ),
+    vehicleType:
+      readField<SecondMileVehicleType>(record, 'vehicle_type', 'vehicleType') ??
+      'TRUCK',
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxBags: readOptionalNumber(record, 'max_bags', 'maxBags') ?? 0,
+    imageUrl: readField<string>(record, 'image_url', 'imageUrl'),
+    hubId: readOptionalNumber(record, 'hub_id', 'hubId') ?? 0,
+    assignedStaffId: readOptionalNumber(
+      record,
+      'assigned_staff_id',
+      'assignedStaffId'
+    ),
+    assignedStaffCode: readField<string>(
+      record,
+      'assigned_staff_code',
+      'assignedStaffCode',
+      'driver_code',
+      'driverCode'
+    ),
+    assignedStaffFullName: readField<string>(
+      record,
+      'assigned_staff_full_name',
+      'assignedStaffFullName',
+      'driver_name',
+      'driverName'
+    ),
+    status:
+      readField<SecondMileVehicleStatus>(record, 'status', 'status') ??
+      'ACTIVE',
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagOrder = (
+  raw: unknown
+): SecondMileBagOrder => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    orderId: readOptionalNumber(record, 'order_id', 'orderId'),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+  };
+};
+
+export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const orders = readField<unknown[]>(record, 'orders', 'orders') ?? [];
+
+  return {
+    id: Number(record.id ?? 0),
+    bagCode: readField<string>(record, 'bag_code', 'bagCode'),
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    destinationType: readField<SecondMileBagDestinationType>(
+      record,
+      'destination_type',
+      'destinationType'
+    ),
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,
+    currentWeight:
+      readOptionalNumber(record, 'current_weight', 'currentWeight') ?? 0,
+    currentVolume:
+      readOptionalNumber(record, 'current_volume', 'currentVolume') ?? 0,
+    currentOrders:
+      readOptionalNumber(record, 'current_orders', 'currentOrders') ?? 0,
+    status:
+      readField<SecondMileBagStatus>(record, 'status', 'status') ?? 'CREATED',
+    sealedAt: readField<string>(record, 'sealed_at', 'sealedAt'),
+    note: readField<string>(record, 'note', 'note'),
+    orders: orders.map((order) => normalizeSecondMileBagOrder(order)),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagSuggestion = (
+  raw: unknown
+): SecondMileBagSuggestion => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    bagId: readOptionalNumber(record, 'bag_id', 'bagId') ?? 0,
+    bagCode: readField<string>(record, 'bag_code', 'bagCode'),
+    remainingWeight:
+      readOptionalNumber(record, 'remaining_weight', 'remainingWeight') ?? 0,
+    remainingVolume:
+      readOptionalNumber(record, 'remaining_volume', 'remainingVolume') ?? 0,
+    remainingOrders:
+      readOptionalNumber(record, 'remaining_orders', 'remainingOrders') ?? 0,
+  };
+};
+
+export const normalizeSecondMileRoute = (raw: unknown): SecondMileRoute => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    routeCode: String(readField(record, 'route_code', 'routeCode') ?? ''),
+    routeName: String(readField(record, 'route_name', 'routeName') ?? ''),
+    originType:
+      readField<SecondMileRouteEndpointType>(
+        record,
+        'origin_type',
+        'originType'
+      ) ?? 'HUB',
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    destinationType:
+      readField<SecondMileRouteDestinationType>(
+        record,
+        'destination_type',
+        'destinationType'
+      ) ?? 'HUB',
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    estimatedDistanceKm: readOptionalNumber(
+      record,
+      'estimated_distance_km',
+      'estimatedDistanceKm'
+    ),
+    estimatedDurationMinutes: readOptionalNumber(
+      record,
+      'estimated_duration_minutes',
+      'estimatedDurationMinutes'
+    ),
+    fixedDepartureTime: readField<string>(
+      record,
+      'fixed_departure_time',
+      'fixedDepartureTime'
+    ),
+    status:
+      readField<SecondMileRouteStatus>(record, 'status', 'status') ?? 'ACTIVE',
+    note: readField<string>(record, 'note', 'note'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeHandoverManifestOrder = (
+  raw: unknown
+): HandoverManifestOrderItem => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: readField<number>(record, 'id', 'id'),
+    orderId: readField<number>(record, 'order_id', 'orderId'),
+    orderCode: readField<string>(record, 'order_code', 'orderCode'),
+    customerOrderCode: readField<string>(
+      record,
+      'customer_order_code',
+      'customerOrderCode'
+    ),
+    status: readField(record, 'status', 'status'),
+    scanOutTime: readField<string>(record, 'scan_out_time', 'scanOutTime'),
+    scanInTime: readField<string>(record, 'scan_in_time', 'scanInTime'),
+  };
+};
+
+export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const ordersRaw = record.orders;
+  const orders = Array.isArray(ordersRaw)
+    ? ordersRaw.map(normalizeHandoverManifestOrder)
+    : undefined;
+
+  return {
+    id: Number(record.id ?? 0),
+    manifestCode: readField<string>(record, 'manifest_code', 'manifestCode'),
+    originPostOfficeId: readField<number>(
+      record,
+      'origin_post_office_id',
+      'originPostOfficeId'
+    ),
+    originPostOfficeCode: readField<string>(
+      record,
+      'origin_post_office_code',
+      'originPostOfficeCode'
+    ),
+    targetHubId: readField<number>(record, 'target_hub_id', 'targetHubId'),
+    vehicleId: readField<number>(record, 'vehicle_id', 'vehicleId'),
+    vehicleLicensePlate: readField<string>(
+      record,
+      'vehicle_license_plate',
+      'vehicleLicensePlate'
+    ),
+    assignedDriverId: readField<number>(
+      record,
+      'assigned_driver_id',
+      'assignedDriverId'
+    ),
+    routeId: readField<number>(record, 'route_id', 'routeId'),
+    routeCode: readField<string>(record, 'route_code', 'routeCode'),
+    plannedDepartureAt: readField<string>(
+      record,
+      'planned_departure_at',
+      'plannedDepartureAt'
+    ),
+    plannedArrivalAt: readField<string>(
+      record,
+      'planned_arrival_at',
+      'plannedArrivalAt'
+    ),
+    originPostOfficeLatitude: readField<number>(
+      record,
+      'origin_post_office_latitude',
+      'originPostOfficeLatitude'
+    ),
+    originPostOfficeLongitude: readField<number>(
+      record,
+      'origin_post_office_longitude',
+      'originPostOfficeLongitude'
+    ),
+    targetHubLatitude: readField<number>(
+      record,
+      'target_hub_latitude',
+      'targetHubLatitude'
+    ),
+    targetHubLongitude: readField<number>(
+      record,
+      'target_hub_longitude',
+      'targetHubLongitude'
+    ),
+    driverStartCheckinAt: readField<string>(
+      record,
+      'driver_start_checkin_at',
+      'driverStartCheckinAt'
+    ),
+    driverStartLatitude: readField<number>(
+      record,
+      'driver_start_latitude',
+      'driverStartLatitude'
+    ),
+    driverStartLongitude: readField<number>(
+      record,
+      'driver_start_longitude',
+      'driverStartLongitude'
+    ),
+    driverStartDistanceM: readField<number>(
+      record,
+      'driver_start_distance_m',
+      'driverStartDistanceM'
+    ),
+    driverStartPhotoUrl: readField<string>(
+      record,
+      'driver_start_photo_url',
+      'driverStartPhotoUrl'
+    ),
+    driverEndCheckinAt: readField<string>(
+      record,
+      'driver_end_checkin_at',
+      'driverEndCheckinAt'
+    ),
+    driverEndLatitude: readField<number>(
+      record,
+      'driver_end_latitude',
+      'driverEndLatitude'
+    ),
+    driverEndLongitude: readField<number>(
+      record,
+      'driver_end_longitude',
+      'driverEndLongitude'
+    ),
+    driverEndDistanceM: readField<number>(
+      record,
+      'driver_end_distance_m',
+      'driverEndDistanceM'
+    ),
+    driverEndPhotoUrl: readField<string>(
+      record,
+      'driver_end_photo_url',
+      'driverEndPhotoUrl'
+    ),
+    status: readField(record, 'status', 'status'),
+    totalOrders: readField<number>(record, 'total_orders', 'totalOrders'),
+    scannedOutOrders: readField<number>(
+      record,
+      'scanned_out_orders',
+      'scannedOutOrders'
+    ),
+    scannedInOrders: readField<number>(
+      record,
+      'scanned_in_orders',
+      'scannedInOrders'
+    ),
+    dispatchedAt: readField<string>(record, 'dispatched_at', 'dispatchedAt'),
+    inboundConfirmedAt: readField<string>(
+      record,
+      'inbound_confirmed_at',
+      'inboundConfirmedAt'
+    ),
+    sealCode: readField<string>(record, 'seal_code', 'sealCode'),
+    note: readField<string>(record, 'note', 'note'),
+    orders,
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
+export const normalizeHubPostOfficeMappingPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<HubPostOfficeMapping>>
+    | FirstMilePageResponse<HubPostOfficeMapping>
+): FirstMilePaginatedData<HubPostOfficeMapping> => {
+  const page = unwrapFirstMilePageResultOrRaw<HubPostOfficeMapping>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeHubPostOfficeMapping(item)),
+  };
+};
+
+export const normalizeSecondMileOrderPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileOrder>>
+    | FirstMilePageResponse<SecondMileOrder>
+): FirstMilePaginatedData<SecondMileOrder> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileOrder>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileOrder(item)),
+  };
+};
+
+export const normalizeSecondMileVehiclePage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileVehicle>>
+    | FirstMilePageResponse<SecondMileVehicle>
+): FirstMilePaginatedData<SecondMileVehicle> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileVehicle>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileVehicle(item)),
+  };
+};
+
+export const normalizeSecondMileBagPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileBag>>
+    | FirstMilePageResponse<SecondMileBag>
+): FirstMilePaginatedData<SecondMileBag> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileBag>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileBag(item)),
+  };
+};
+
+export const normalizeSecondMileRoutePage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<SecondMileRoute>>
+    | FirstMilePageResponse<SecondMileRoute>
+): FirstMilePaginatedData<SecondMileRoute> => {
+  const page = unwrapFirstMilePageResultOrRaw<SecondMileRoute>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeSecondMileRoute(item)),
+  };
+};
+
+export const normalizeHandoverManifestPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<HandoverManifest>>
+    | FirstMilePageResponse<HandoverManifest>
+): FirstMilePaginatedData<HandoverManifest> => {
+  const page = unwrapFirstMilePageResultOrRaw<HandoverManifest>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeHandoverManifest(item)),
+  };
+};
 
 export const unwrapFirstMileResult = <T>(
   response: FirstMileApiResponse<T>
@@ -33,6 +619,76 @@ export const unwrapFirstMileResultOrRaw = <T>(
   }
 
   return transformTimestampFields(response as T);
+};
+
+export const normalizeSecondMileBaggingValidation = (
+  raw: unknown
+): SecondMileBaggingValidation => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const items = readField<unknown[]>(record, 'items', 'items') ?? [];
+
+  return {
+    bagId: readOptionalNumber(record, 'bag_id', 'bagId') ?? 0,
+    acceptedCount:
+      readOptionalNumber(record, 'accepted_count', 'acceptedCount') ?? 0,
+    rejectedCount:
+      readOptionalNumber(record, 'rejected_count', 'rejectedCount') ?? 0,
+    items: items.map((item) => {
+      const itemRecord = (item ?? {}) as Record<string, unknown>;
+      return {
+        orderCode:
+          readField<string>(itemRecord, 'order_code', 'orderCode') ?? '',
+        accepted: Boolean(
+          readField<boolean>(itemRecord, 'accepted', 'accepted') ?? false
+        ),
+        reason: readField<string>(itemRecord, 'reason', 'reason'),
+      } satisfies SecondMileBaggingValidationItem;
+    }),
+  };
+};
+
+export const normalizeAutoSecondMileBaggingPlan = (
+  raw: unknown
+): AutoSecondMileBaggingPlan => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const items = readField<unknown[]>(record, 'items', 'items') ?? [];
+
+  return {
+    executed: Boolean(readField<boolean>(record, 'executed', 'executed')),
+    bagCount: readOptionalNumber(record, 'bag_count', 'bagCount') ?? 0,
+    items: items.map((item) => {
+      const itemRecord = (item ?? {}) as Record<string, unknown>;
+      return {
+        bagCode: readField<string>(itemRecord, 'bag_code', 'bagCode') ?? '',
+        orderCodes:
+          readField<string[]>(itemRecord, 'order_codes', 'orderCodes') ?? [],
+        totalWeight:
+          readOptionalNumber(itemRecord, 'total_weight', 'totalWeight') ?? 0,
+        totalVolume:
+          readOptionalNumber(itemRecord, 'total_volume', 'totalVolume') ?? 0,
+      };
+    }),
+  };
+};
+
+export const normalizeSecondMileBaggingKpi = (
+  raw: unknown
+): SecondMileBaggingKpi => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    originHubId:
+      readOptionalNumber(record, 'origin_hub_id', 'originHubId') ?? 0,
+    sealedBagCount:
+      readOptionalNumber(record, 'sealed_bag_count', 'sealedBagCount') ?? 0,
+    avgFillRateWeight:
+      readOptionalNumber(record, 'avg_fill_rate_weight', 'avgFillRateWeight') ??
+      0,
+    avgFillRateVolume:
+      readOptionalNumber(record, 'avg_fill_rate_volume', 'avgFillRateVolume') ??
+      0,
+    avgOrdersPerBag:
+      readOptionalNumber(record, 'avg_orders_per_bag', 'avgOrdersPerBag') ?? 0,
+  };
 };
 
 export const unwrapFirstMilePageResult = <T>(

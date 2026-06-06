@@ -20,5 +20,7 @@ public interface ImportHistoryRepository extends JpaRepository<ImportHistory, Lo
 
     Page<ImportHistory> findAllByTenantId(Long tenantId, Pageable pageable);
 
+    Page<ImportHistory> findAllByTenantIdAndTypeNot(Long tenantId, ImportType type, Pageable pageable);
+
     Page<ImportHistory> findAllByTenantIdAndType(Long tenantId, ImportType type, Pageable pageable);
 }

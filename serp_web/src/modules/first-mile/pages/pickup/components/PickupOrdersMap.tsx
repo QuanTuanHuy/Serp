@@ -219,7 +219,10 @@ export const PickupOrdersMap: React.FC<PickupOrdersMapProps> = ({
   return (
     <div
       ref={containerRef}
-      className={cn('h-[420px] w-full rounded-md border', className)}
+      className={cn(
+        'relative isolate z-0 h-[420px] w-full rounded-md border',
+        className
+      )}
     />
   );
 };

@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: "school-bus-service"
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/serp_school_bus}
+    username: ${DB_USERNAME:serp}
+    password: ${DB_PASSWORD:serp123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp
+
+server:
+  port: ${SERVER_PORT:8094}
+  servlet:
+    context-path: /school-bus/api/v1
+
+security:
+  role-prefix: ROLE_
+  roles:
+    serp_service: ${SECURITY_ROLE_SERP_SERVICE:SERP_SERVICES}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+map:
+  nominatim:
+    base-url: ${MAP_NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${MAP_NOMINATIM_USER_AGENT:SERP-SchoolBus/0.1 (local-dev)}
+  routing:
+    user-agent: ${MAP_ROUTING_USER_AGENT:SERP-SchoolBus/0.1 (local-dev)}
+    osrm:
+      base-url: ${MAP_ROUTING_OSRM_BASE_URL:https://router.project-osrm.org}
+      profile: ${MAP_ROUTING_OSRM_PROFILE:driving}
+
+websocket:
+  endpoint: ${WS_ENDPOINT:/ws/school-bus}
+  allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,https://serp.texkis.com}

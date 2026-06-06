@@ -37,9 +37,13 @@ type ExternalServiceProperties struct {
 	PurchaseService     ServiceProperty
 	LogisticsService    ServiceProperty
 	Logistics2Service   ServiceProperty
+	SchoolBusService    ServiceProperty
 	FirstMileService    ServiceProperty
 	SecondMileService   ServiceProperty
 	CrmService          ServiceProperty
+	PaymentService      ServiceProperty
+	TmsBillingService   ServiceProperty
+	TmsOrderService     ServiceProperty
 	NotificationService ServiceProperty
 	SalesService        ServiceProperty
 	DiscussService      ServiceProperty

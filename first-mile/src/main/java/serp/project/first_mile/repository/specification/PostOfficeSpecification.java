@@ -92,6 +92,20 @@ public final class PostOfficeSpecification {
                 predicates.add(criteriaBuilder.le(root.get("currentLoad"), filterRequest.getMaxCurrentLoad()));
             }
 
+            if (filterRequest.getMinDeliveryCapacity() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("deliveryCapacity"), filterRequest.getMinDeliveryCapacity()));
+            }
+            if (filterRequest.getMaxDeliveryCapacity() != null) {
+                predicates.add(criteriaBuilder.le(root.get("deliveryCapacity"), filterRequest.getMaxDeliveryCapacity()));
+            }
+
+            if (filterRequest.getMinCurrentDeliveryLoad() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("currentDeliveryLoad"), filterRequest.getMinCurrentDeliveryLoad()));
+            }
+            if (filterRequest.getMaxCurrentDeliveryLoad() != null) {
+                predicates.add(criteriaBuilder.le(root.get("currentDeliveryLoad"), filterRequest.getMaxCurrentDeliveryLoad()));
+            }
+
             if (filterRequest.getMinPriority() != null) {
                 predicates.add(criteriaBuilder.ge(root.get("priority"), filterRequest.getMinPriority()));
             }

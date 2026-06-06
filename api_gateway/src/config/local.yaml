@@ -95,6 +95,11 @@ external:
     logistics2Service:
       host: localhost
       port: "9004"
+    schoolBusService:
+      host: localhost
+      port: "8094"
+      timeout: 15s
+      webSocketPath: /school-bus/api/v1/ws/school-bus
     firstMileService:
       host: localhost
       port: "8093"
@@ -106,6 +111,18 @@ external:
     crmService:
       host: localhost
       port: "8086"
+      timeout: 15s
+    paymentService:
+      host: localhost
+      port: "8096"
+      timeout: 15s
+    tmsBillingService:
+      host: localhost
+      port: "8097"
+      timeout: 15s
+    tmsOrderService:
+      host: localhost
+      port: "8099"
       timeout: 15s
     notificationService:
       host: localhost
