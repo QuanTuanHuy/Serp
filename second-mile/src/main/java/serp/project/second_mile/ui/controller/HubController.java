@@ -60,6 +60,10 @@ public class HubController {
             @RequestParam(name = "ward_code", required = false) String wardCode,
             @RequestParam(required = false) HubStatus status,
             @RequestParam(name = "has_location", required = false) Boolean hasLocation,
+            @RequestParam(name = "min_latitude", required = false) Double minLatitude,
+            @RequestParam(name = "max_latitude", required = false) Double maxLatitude,
+            @RequestParam(name = "min_longitude", required = false) Double minLongitude,
+            @RequestParam(name = "max_longitude", required = false) Double maxLongitude,
             @RequestParam(name = "min_daily_capacity", required = false) Integer minDailyCapacity,
             @RequestParam(name = "max_daily_capacity", required = false) Integer maxDailyCapacity,
             @RequestParam(name = "min_current_load", required = false) Integer minCurrentLoad,
@@ -74,6 +78,10 @@ public class HubController {
                 .wardCode(wardCode)
                 .status(status)
                 .hasLocation(hasLocation)
+                .minLatitude(minLatitude)
+                .maxLatitude(maxLatitude)
+                .minLongitude(minLongitude)
+                .maxLongitude(maxLongitude)
                 .minDailyCapacity(minDailyCapacity)
                 .maxDailyCapacity(maxDailyCapacity)
                 .minCurrentLoad(minCurrentLoad)

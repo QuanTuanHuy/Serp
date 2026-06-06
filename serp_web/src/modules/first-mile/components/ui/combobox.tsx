@@ -1,14 +1,14 @@
+/**
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - TMS combobox primitive
+ */
+
 'use client';
 
 import * as React from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import { Button } from './button';
-import { cn } from '@/shared/utils';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/shared/components/ui/popover';
+
+import { Button } from '@/shared/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -17,6 +17,12 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
+import { cn } from '@/shared/utils';
 
 export type ComboboxItem = {
   value: string | number;
@@ -24,6 +30,7 @@ export type ComboboxItem = {
 };
 
 export interface ComboboxProps {
+  id?: string;
   value?: string | number;
   onChange: (value: string | number | undefined) => void;
   items: ComboboxItem[];
@@ -32,11 +39,15 @@ export interface ComboboxProps {
   disabled?: boolean;
   loading?: boolean;
   clearable?: boolean;
-  onSearch?: (query: string) => void; // if provided, caller controls filtering via items
+  clearText?: string;
+  onSearch?: (query: string) => void;
   className?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
+  id,
   value,
   onChange,
   items,
@@ -45,8 +56,11 @@ export const Combobox: React.FC<ComboboxProps> = ({
   disabled,
   loading,
   clearable = true,
+  clearText = 'Clear selection',
   onSearch,
   className,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -66,10 +80,13 @@ export const Combobox: React.FC<ComboboxProps> = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type='button'
           variant='outline'
           role='combobox'
           aria-expanded={open}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           className={cn('w-full justify-between', className)}
           disabled={disabled}
         >
@@ -99,21 +116,20 @@ export const Combobox: React.FC<ComboboxProps> = ({
             <CommandGroup>
               {clearable && value !== undefined && (
                 <CommandItem
-                  value='__clear__'
+                  value={clearText}
                   onSelect={() => {
                     setQuery('');
                     handleSelect('');
                   }}
                 >
-                  Clear selection
+                  {clearText}
                 </CommandItem>
               )}
               {items.map((item) => (
                 <CommandItem
                   key={item.value}
-                  value={String(item.value)}
-                  keywords={[item.label, String(item.value)]}
-                  onSelect={handleSelect}
+                  value={`${item.label} ${item.value}`}
+                  onSelect={() => handleSelect(String(item.value))}
                 >
                   <Check
                     className={cn(

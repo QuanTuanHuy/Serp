@@ -38,7 +38,12 @@ import {
   useUpdatePostOfficeMutation,
   useValidatePostOfficeImportMutation,
 } from '../../api';
-import { CoordinatePickerMap, TmsCombobox } from '../../components';
+import {
+  CoordinatePickerMap,
+  TmsCombobox,
+  TmsEntityLocationMap,
+  type TmsMapBounds,
+} from '../../components';
 import type {
   ImportHistory,
   PostOffice,
@@ -73,7 +78,20 @@ import {
 import { usePostOfficeLocations } from './usePostOfficeLocations';
 
 const PAGE_SIZE = 20;
+const MAP_PAGE_SIZE = 500;
 const IMPORT_PREVIEW_LIMIT = 5;
+
+function areMapBoundsEqual(
+  current: TmsMapBounds | null,
+  next: TmsMapBounds
+): boolean {
+  return (
+    current?.minLatitude === next.minLatitude &&
+    current.maxLatitude === next.maxLatitude &&
+    current.minLongitude === next.minLongitude &&
+    current.maxLongitude === next.maxLongitude
+  );
+}
 
 export const PostOfficeListPage: React.FC = () => {
   const notification = useNotification();
@@ -87,6 +105,7 @@ export const PostOfficeListPage: React.FC = () => {
     React.useState<PostOfficeFilterFormState>(DEFAULT_POST_OFFICE_FILTER_FORM);
   const [appliedFilters, setAppliedFilters] =
     React.useState<PostOfficeListFilters>({});
+  const [mapBounds, setMapBounds] = React.useState<TmsMapBounds | null>(null);
   const [formMode, setFormMode] = React.useState<PostOfficeFormMode>('create');
   const [viewMode, setViewMode] = React.useState<PostOfficeViewMode>('list');
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
@@ -126,6 +145,54 @@ export const PostOfficeListPage: React.FC = () => {
     size: PAGE_SIZE,
     ...appliedFilters,
   });
+
+  const {
+    data: mapPostOfficeData,
+    isFetching: isFetchingMapPostOffices,
+    refetch: refetchMapPostOffices,
+  } = useGetPostOfficesQuery(
+    {
+      page: 0,
+      size: MAP_PAGE_SIZE,
+      ...appliedFilters,
+      hasLocation: true,
+      ...(mapBounds ?? {}),
+    },
+    { skip: !mapBounds }
+  );
+
+  const mapPostOfficePoints = React.useMemo(
+    () =>
+      (mapPostOfficeData?.items ?? []).flatMap((postOffice) => {
+        if (
+          postOffice.latitude === undefined ||
+          postOffice.latitude === null ||
+          postOffice.longitude === undefined ||
+          postOffice.longitude === null
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: postOffice.id,
+            code: postOffice.code,
+            name: postOffice.name,
+            latitude: postOffice.latitude,
+            longitude: postOffice.longitude,
+            address: postOffice.addressDetail,
+            status: postOffice.status,
+          },
+        ];
+      }),
+    [mapPostOfficeData]
+  );
+
+  const handleMapBoundsChange = React.useCallback((bounds: TmsMapBounds) => {
+    setMapBounds((current) =>
+      areMapBoundsEqual(current, bounds) ? current : bounds
+    );
+  }, []);
 
   const selectedFilterProvinceCode = React.useMemo(
     () => filterFormValues.provinceCode.trim(),
@@ -423,6 +490,9 @@ export const PostOfficeListPage: React.FC = () => {
       });
 
       void refetch();
+      if (mapBounds) {
+        void refetchMapPostOffices();
+      }
     } catch (error) {
       notification.error('Failed to import post office file.', {
         description: getErrorMessage(error),
@@ -494,6 +564,10 @@ export const PostOfficeListPage: React.FC = () => {
         } else {
           void refetch();
         }
+
+        if (mapBounds) {
+          void refetchMapPostOffices();
+        }
       } else {
         if (editingId === null) {
           notification.error('Missing post office id for update.');
@@ -507,6 +581,9 @@ export const PostOfficeListPage: React.FC = () => {
 
         notification.success('Post office updated successfully.');
         void refetch();
+        if (mapBounds) {
+          void refetchMapPostOffices();
+        }
       }
 
       setIsFormDialogOpen(false);
@@ -622,6 +699,9 @@ export const PostOfficeListPage: React.FC = () => {
       } else {
         void refetch();
       }
+      if (mapBounds) {
+        void refetchMapPostOffices();
+      }
     } catch (error) {
       notification.error('Failed to delete post office.', {
         description: getErrorMessage(error),
@@ -688,6 +768,18 @@ export const PostOfficeListPage: React.FC = () => {
           onRefresh={() => {
             void refetch();
           }}
+        />
+
+        <TmsEntityLocationMap
+          title='Post office map'
+          description='Markers are loaded only for post offices inside the visible map area.'
+          points={mapPostOfficePoints}
+          markerColor='#1d4ed8'
+          markerFillColor='#2563eb'
+          loading={!mapBounds || isFetchingMapPostOffices}
+          totalItems={mapPostOfficeData?.totalItems}
+          emptyText='No geocoded post offices in this map area.'
+          onBoundsChange={handleMapBoundsChange}
         />
 
         <PostOfficeResultsCard

@@ -128,6 +128,10 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 .wardCode(normalizeText(filterRequest.getWardCode()))
                 .status(filterRequest.getStatus())
                 .hasLocation(filterRequest.getHasLocation())
+                .minLatitude(filterRequest.getMinLatitude())
+                .maxLatitude(filterRequest.getMaxLatitude())
+                .minLongitude(filterRequest.getMinLongitude())
+                .maxLongitude(filterRequest.getMaxLongitude())
                 .minServiceRadiusM(filterRequest.getMinServiceRadiusM())
                 .maxServiceRadiusM(filterRequest.getMaxServiceRadiusM())
                 .minDailyCapacity(filterRequest.getMinDailyCapacity())
@@ -153,12 +157,40 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     }
 
     private void validateFilterRanges(PostOfficeFilterRequest filterRequest) {
+        validateCoordinateBounds(filterRequest);
         validateRange(filterRequest.getMinServiceRadiusM(), filterRequest.getMaxServiceRadiusM());
         validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
         validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
         validateRange(filterRequest.getMinDeliveryCapacity(), filterRequest.getMaxDeliveryCapacity());
         validateRange(filterRequest.getMinCurrentDeliveryLoad(), filterRequest.getMaxCurrentDeliveryLoad());
         validateRange(filterRequest.getMinPriority(), filterRequest.getMaxPriority());
+    }
+
+    private void validateCoordinateBounds(PostOfficeFilterRequest filterRequest) {
+        validateLatitude(filterRequest.getMinLatitude());
+        validateLatitude(filterRequest.getMaxLatitude());
+        validateLongitude(filterRequest.getMinLongitude());
+        validateLongitude(filterRequest.getMaxLongitude());
+        validateCoordinateRange(filterRequest.getMinLatitude(), filterRequest.getMaxLatitude());
+        validateCoordinateRange(filterRequest.getMinLongitude(), filterRequest.getMaxLongitude());
+    }
+
+    private void validateLatitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -90.0 || value > 90.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateLongitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -180.0 || value > 180.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateCoordinateRange(Double minValue, Double maxValue) {
+        if (minValue != null && maxValue != null && minValue > maxValue) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
     private void validateRange(Integer minValue, Integer maxValue) {

@@ -141,6 +141,10 @@ export const firstMileApi = api.injectEndpoints({
         wardCode,
         status,
         hasLocation,
+        minLatitude,
+        maxLatitude,
+        minLongitude,
+        maxLongitude,
         minDailyCapacity,
         maxDailyCapacity,
         minCurrentLoad,
@@ -159,6 +163,14 @@ export const firstMileApi = api.injectEndpoints({
           ...(wardCode ? { ward_code: wardCode } : {}),
           ...(status ? { status } : {}),
           ...(hasLocation !== undefined ? { has_location: hasLocation } : {}),
+          ...(minLatitude !== undefined ? { min_latitude: minLatitude } : {}),
+          ...(maxLatitude !== undefined ? { max_latitude: maxLatitude } : {}),
+          ...(minLongitude !== undefined
+            ? { min_longitude: minLongitude }
+            : {}),
+          ...(maxLongitude !== undefined
+            ? { max_longitude: maxLongitude }
+            : {}),
           ...(minDailyCapacity !== undefined
             ? { min_daily_capacity: minDailyCapacity }
             : {}),
@@ -1117,6 +1129,10 @@ export const firstMileApi = api.injectEndpoints({
         wardCode,
         status,
         hasLocation,
+        minLatitude,
+        maxLatitude,
+        minLongitude,
+        maxLongitude,
         minServiceRadiusM,
         maxServiceRadiusM,
         minDailyCapacity,
@@ -1143,6 +1159,14 @@ export const firstMileApi = api.injectEndpoints({
           ...(wardCode ? { ward_code: wardCode } : {}),
           ...(status ? { status } : {}),
           ...(hasLocation !== undefined ? { has_location: hasLocation } : {}),
+          ...(minLatitude !== undefined ? { min_latitude: minLatitude } : {}),
+          ...(maxLatitude !== undefined ? { max_latitude: maxLatitude } : {}),
+          ...(minLongitude !== undefined
+            ? { min_longitude: minLongitude }
+            : {}),
+          ...(maxLongitude !== undefined
+            ? { max_longitude: maxLongitude }
+            : {}),
           ...(minServiceRadiusM !== undefined
             ? { min_service_radius_m: minServiceRadiusM }
             : {}),

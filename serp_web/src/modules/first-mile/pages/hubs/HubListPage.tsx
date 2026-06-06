@@ -40,7 +40,11 @@ import {
   UserCog,
 } from 'lucide-react';
 import type { TmsFilterMode } from '../../components/list';
-import { TmsCombobox } from '../../components';
+import {
+  TmsCombobox,
+  TmsEntityLocationMap,
+  type TmsMapBounds,
+} from '../../components';
 import {
   useGetHubsQuery,
   useGetHubPostOfficesQuery,
@@ -92,6 +96,19 @@ import {
 } from './hubForm';
 
 const PAGE_SIZE = 20;
+const MAP_PAGE_SIZE = 500;
+
+function areMapBoundsEqual(
+  current: TmsMapBounds | null,
+  next: TmsMapBounds
+): boolean {
+  return (
+    current?.minLatitude === next.minLatitude &&
+    current.maxLatitude === next.maxLatitude &&
+    current.minLongitude === next.minLongitude &&
+    current.maxLongitude === next.maxLongitude
+  );
+}
 
 function getHubStatusBadgeVariant(
   status: HubStatus
@@ -124,6 +141,7 @@ export function HubListPage() {
     {}
   );
   const [currentPage, setCurrentPage] = React.useState(0);
+  const [mapBounds, setMapBounds] = React.useState<TmsMapBounds | null>(null);
 
   const {
     data: hubsData,
@@ -134,6 +152,54 @@ export function HubListPage() {
     size: PAGE_SIZE,
     ...appliedFilters,
   });
+
+  const {
+    data: mapHubsData,
+    isFetching: isFetchingMapHubs,
+    refetch: refetchMapHubs,
+  } = useGetHubsQuery(
+    {
+      page: 0,
+      size: MAP_PAGE_SIZE,
+      ...appliedFilters,
+      hasLocation: true,
+      ...(mapBounds ?? {}),
+    },
+    { skip: !mapBounds }
+  );
+
+  const mapHubPoints = React.useMemo(
+    () =>
+      (mapHubsData?.items ?? []).flatMap((hub) => {
+        if (
+          hub.latitude === undefined ||
+          hub.latitude === null ||
+          hub.longitude === undefined ||
+          hub.longitude === null
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: hub.id,
+            code: hub.code,
+            name: hub.name,
+            latitude: hub.latitude,
+            longitude: hub.longitude,
+            address: hub.addressDetail,
+            status: hub.status,
+          },
+        ];
+      }),
+    [mapHubsData]
+  );
+
+  const handleMapBoundsChange = React.useCallback((bounds: TmsMapBounds) => {
+    setMapBounds((current) =>
+      areMapBoundsEqual(current, bounds) ? current : bounds
+    );
+  }, []);
 
   const selectedFilterProvinceCode = React.useMemo(
     () => filterFormValues.provinceCode.trim(),
@@ -447,6 +513,9 @@ export function HubListPage() {
       }
       setFormDialogOpen(false);
       refetch();
+      if (mapBounds) {
+        void refetchMapHubs();
+      }
     } catch (error) {
       notification.error('Failed to save hub.', {
         description: getErrorMessage(error),
@@ -516,6 +585,9 @@ export function HubListPage() {
       notification.success('Hub deleted successfully.');
       setDeleteTarget(null);
       refetch();
+      if (mapBounds) {
+        void refetchMapHubs();
+      }
     } catch (error) {
       notification.error('Failed to delete hub.', {
         description: getErrorMessage(error),
@@ -596,6 +668,9 @@ export function HubListPage() {
       });
       resetImportFileSelection();
       refetch();
+      if (mapBounds) {
+        void refetchMapHubs();
+      }
     } catch (error) {
       notification.error('Failed to import hub file.', {
         description: getErrorMessage(error),
@@ -854,6 +929,18 @@ export function HubListPage() {
           onRefresh={() => {
             void refetch();
           }}
+        />
+
+        <TmsEntityLocationMap
+          title='Hub map'
+          description='Markers are loaded only for hubs inside the visible map area.'
+          points={mapHubPoints}
+          markerColor='#b45309'
+          markerFillColor='#f59e0b'
+          loading={!mapBounds || isFetchingMapHubs}
+          totalItems={mapHubsData?.totalItems}
+          emptyText='No geocoded hubs in this map area.'
+          onBoundsChange={handleMapBoundsChange}
         />
 
         <Card>

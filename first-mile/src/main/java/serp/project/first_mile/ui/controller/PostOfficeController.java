@@ -60,6 +60,10 @@ public class PostOfficeController {
             @RequestParam(name = "ward_code", required = false) String wardCode,
             @RequestParam(required = false) PostOfficeStatus status,
             @RequestParam(name = "has_location", required = false) Boolean hasLocation,
+            @RequestParam(name = "min_latitude", required = false) Double minLatitude,
+            @RequestParam(name = "max_latitude", required = false) Double maxLatitude,
+            @RequestParam(name = "min_longitude", required = false) Double minLongitude,
+            @RequestParam(name = "max_longitude", required = false) Double maxLongitude,
             @RequestParam(name = "min_service_radius_m", required = false) Integer minServiceRadiusM,
             @RequestParam(name = "max_service_radius_m", required = false) Integer maxServiceRadiusM,
             @RequestParam(name = "min_daily_capacity", required = false) Integer minDailyCapacity,
@@ -82,6 +86,10 @@ public class PostOfficeController {
                 .wardCode(wardCode)
                 .status(status)
                 .hasLocation(hasLocation)
+                .minLatitude(minLatitude)
+                .maxLatitude(maxLatitude)
+                .minLongitude(minLongitude)
+                .maxLongitude(maxLongitude)
                 .minServiceRadiusM(minServiceRadiusM)
                 .maxServiceRadiusM(maxServiceRadiusM)
                 .minDailyCapacity(minDailyCapacity)

@@ -237,6 +237,10 @@ public class HubServiceImpl implements HubService {
                 .wardCode(normalizeText(filterRequest.getWardCode()))
                 .status(filterRequest.getStatus())
                 .hasLocation(filterRequest.getHasLocation())
+                .minLatitude(filterRequest.getMinLatitude())
+                .maxLatitude(filterRequest.getMaxLatitude())
+                .minLongitude(filterRequest.getMinLongitude())
+                .maxLongitude(filterRequest.getMaxLongitude())
                 .minDailyCapacity(filterRequest.getMinDailyCapacity())
                 .maxDailyCapacity(filterRequest.getMaxDailyCapacity())
                 .minCurrentLoad(filterRequest.getMinCurrentLoad())
@@ -253,8 +257,36 @@ public class HubServiceImpl implements HubService {
     }
 
     private void validateFilterRanges(HubFilterRequest filterRequest) {
+        validateCoordinateBounds(filterRequest);
         validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
         validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
+    }
+
+    private void validateCoordinateBounds(HubFilterRequest filterRequest) {
+        validateLatitude(filterRequest.getMinLatitude());
+        validateLatitude(filterRequest.getMaxLatitude());
+        validateLongitude(filterRequest.getMinLongitude());
+        validateLongitude(filterRequest.getMaxLongitude());
+        validateCoordinateRange(filterRequest.getMinLatitude(), filterRequest.getMaxLatitude());
+        validateCoordinateRange(filterRequest.getMinLongitude(), filterRequest.getMaxLongitude());
+    }
+
+    private void validateLatitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -90.0 || value > 90.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateLongitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -180.0 || value > 180.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateCoordinateRange(Double minValue, Double maxValue) {
+        if (minValue != null && maxValue != null && minValue > maxValue) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
     private void validateRange(Integer minValue, Integer maxValue) {
