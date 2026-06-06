@@ -135,6 +135,8 @@ export type {
   PMOptimizationRunItemApi,
   PMOptimizationRunStatus,
   PMOptimizationRunSummaryApi,
+  PMOptimizationUserSummaryApi,
+  PMOptimizationWorkItemSummaryApi,
   PMOptimizationRunWarningApi,
   PMPriorityApi,
   PMPriorityProjectRefApi,

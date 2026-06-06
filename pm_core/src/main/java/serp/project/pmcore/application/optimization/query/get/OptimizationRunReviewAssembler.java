@@ -8,6 +8,7 @@ package serp.project.pmcore.application.optimization.query.get;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunWarningEntity;
@@ -35,6 +36,14 @@ public class OptimizationRunReviewAssembler {
     public OptimizationRunReviewView toView(OptimizationRunEntity run,
                                             List<OptimizationRunItemEntity> items,
                                             List<OptimizationRunWarningEntity> warnings) {
+        return toView(run, items, warnings, Map.of(), Map.of());
+    }
+
+    public OptimizationRunReviewView toView(OptimizationRunEntity run,
+                                            List<OptimizationRunItemEntity> items,
+                                            List<OptimizationRunWarningEntity> warnings,
+                                            Map<Long, OptimizationWorkItemSummaryView> workItemsById,
+                                            Map<Long, UserSummary> usersById) {
         OptimizationRunSummary summary = parseSummary(run.getSummaryJson());
         Map<Long, OptimizationCandidateSkillFit> skillFitByWorkItemId = selectedSkillFitByWorkItemId(summary);
         return OptimizationRunReviewView.builder()
@@ -59,7 +68,12 @@ public class OptimizationRunReviewAssembler {
                 .updatedBy(run.getUpdatedBy())
                 .items(items.stream()
                         .sorted(Comparator.comparing(OptimizationRunItemEntity::getWorkItemId))
-                        .map(item -> toItemView(item, skillFitByWorkItemId.get(item.getWorkItemId())))
+                        .map(item -> toItemView(
+                                item,
+                                skillFitByWorkItemId.get(item.getWorkItemId()),
+                                workItemsById,
+                                usersById
+                        ))
                         .toList())
                 .warnings(warnings.stream()
                         .sorted(Comparator.comparing(OptimizationRunWarningEntity::getId, Comparator.nullsLast(Long::compareTo)))
@@ -68,15 +82,22 @@ public class OptimizationRunReviewAssembler {
                 .build();
     }
 
-    private OptimizationRunItemView toItemView(OptimizationRunItemEntity item, OptimizationCandidateSkillFit skillFit) {
+    private OptimizationRunItemView toItemView(OptimizationRunItemEntity item,
+                                               OptimizationCandidateSkillFit skillFit,
+                                               Map<Long, OptimizationWorkItemSummaryView> workItemsById,
+                                               Map<Long, UserSummary> usersById) {
         return OptimizationRunItemView.builder()
                 .id(item.getId())
                 .workItemId(item.getWorkItemId())
+                .workItem(workItemsById.get(item.getWorkItemId()))
                 .workItemUpdatedAtSnapshot(item.getWorkItemUpdatedAtSnapshot())
                 .planUpdatedAtSnapshot(item.getPlanUpdatedAtSnapshot())
                 .currentAssigneeId(item.getCurrentAssigneeId())
+                .currentAssignee(resolveUser(usersById, item.getCurrentAssigneeId()))
                 .suggestedAssigneeId(item.getSuggestedAssigneeId())
+                .suggestedAssignee(resolveUser(usersById, item.getSuggestedAssigneeId()))
                 .overrideAssigneeId(item.getOverrideAssigneeId())
+                .overrideAssignee(resolveUser(usersById, item.getOverrideAssigneeId()))
                 .currentPlannedStart(item.getCurrentPlannedStart())
                 .currentPlannedEnd(item.getCurrentPlannedEnd())
                 .suggestedPlannedStart(item.getSuggestedPlannedStart())
@@ -100,6 +121,13 @@ public class OptimizationRunReviewAssembler {
                 .assignmentSkippedReason(item.getAssignmentSkippedReason())
                 .scheduleSkippedReason(item.getScheduleSkippedReason())
                 .build();
+    }
+
+    private UserSummary resolveUser(Map<Long, UserSummary> usersById, Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return usersById.getOrDefault(userId, UserSummary.missing(userId));
     }
 
     private Map<Long, OptimizationCandidateSkillFit> selectedSkillFitByWorkItemId(OptimizationRunSummary summary) {
