@@ -16,5 +16,7 @@ public interface IPermissionSchemeEntryPort {
 
     List<PermissionSchemeEntryEntity> getPermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId);
 
+    void deletePermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId, Long userId);
+
     boolean existsByProjectRoleId(Long tenantId, Long roleId);
 }
