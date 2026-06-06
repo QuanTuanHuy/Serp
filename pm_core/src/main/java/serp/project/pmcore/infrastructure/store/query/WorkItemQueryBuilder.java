@@ -141,6 +141,7 @@ public class WorkItemQueryBuilder {
         if (Boolean.TRUE.equals(f.getHasTimeLogged())) {
             base.appendRaw(where, "w.time_spent > 0");
         }
+        appendActivePlanFilter(where, f.getHasActivePlan());
 
         SortSpec sort = (f.getSort() != null) ? f.getSort()
                 : SortSpec.builder().field(DEFAULT_SORT).direction("ASC").build();
@@ -153,6 +154,21 @@ public class WorkItemQueryBuilder {
         String countSql = "SELECT COUNT(*)" + BASE_FROM + BASE_WHERE + where;
 
         return new QueryResult(dataSql, countSql, params);
+    }
+
+    private void appendActivePlanFilter(StringBuilder where, Boolean hasActivePlan) {
+        if (hasActivePlan == null) {
+            return;
+        }
+        where.append(Boolean.TRUE.equals(hasActivePlan) ? " AND EXISTS (" : " AND NOT EXISTS (")
+                .append("""
+                        SELECT 1 FROM work_item_plans plan
+                        WHERE plan.tenant_id = w.tenant_id
+                          AND plan.project_id = w.project_id
+                          AND plan.work_item_id = w.id
+                          AND plan.deleted_at IS NULL
+                        """)
+                .append(")");
     }
 
 }
