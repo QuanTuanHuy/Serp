@@ -12,28 +12,16 @@ import {
   Search,
   Users,
   UserPlus,
-  Building2,
-  Filter,
   Eye,
   Edit,
   Trash2,
   X,
-  ChevronDown,
-  ChevronUp,
+  SlidersHorizontal,
+  CheckCircle,
 } from 'lucide-react';
-import { Card, CardContent } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
-import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
-import { Badge } from '@/shared/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
+import { Combobox } from '@/shared/components/ui/combobox';
 import {
   Tabs,
   TabsContent,
@@ -44,12 +32,15 @@ import {
   SettingsStatsCard,
   SettingsActionMenu,
   SettingsStatusBadge,
+  SettingsFilterDialog,
+  SettingsFilterChips,
   CreateDepartmentDialog,
   UpdateDepartmentDialog,
   DeleteDepartmentDialog,
   DepartmentDetailDialog,
   useSettingsDepartments,
 } from '@/modules/settings';
+import type { SettingsFilterChip } from '@/modules/settings';
 import { DepartmentOrgChart } from '@/modules/settings/components/departments/DepartmentOrgChart';
 import { AddMemberDialog } from '@/modules/settings/components/departments/AddMemberDialog';
 import { DataTable } from '@/shared/components';
@@ -79,14 +70,12 @@ const ManagerCell = ({ row }: { row: Department }) => {
   }
   return (
     <div className='flex items-center gap-2'>
-      <Avatar className='h-6 w-6'>
-        <AvatarFallback className='text-[10px] bg-purple-100 text-purple-700'>
-          {row.managerName
-            .split(' ')
-            .map((n) => n[0])
-            .join('')}
-        </AvatarFallback>
-      </Avatar>
+      <div className='h-6 w-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-[10px] font-medium'>
+        {row.managerName
+          .split(' ')
+          .map((n) => n[0])
+          .join('')}
+      </div>
       <span className='text-sm truncate'>{row.managerName}</span>
     </div>
   );
@@ -101,10 +90,49 @@ const formatDate = (timestamp?: number) => {
   });
 };
 
+const FilterPane = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className='flex min-h-0 flex-1 flex-col p-4'>
+    <div className='mb-3'>
+      <h3 className='text-sm font-semibold'>{title}</h3>
+      <p className='text-sm text-muted-foreground'>Select one value.</p>
+    </div>
+    <div className='space-y-1'>{children}</div>
+  </div>
+);
+
+const FilterOption = ({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) => (
+  <button
+    type='button'
+    onClick={onSelect}
+    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+      selected ? 'bg-muted font-medium' : ''
+    }`}
+  >
+    {label}
+    {selected ? <CheckCircle className='h-4 w-4 text-primary' /> : null}
+  </button>
+);
+
 // ==================== Main Page ====================
 
 export default function SettingsDepartmentsPage() {
   const [activeTab, setActiveTab] = useState('departments');
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('status');
 
   const {
     organizationId,
@@ -142,9 +170,6 @@ export default function SettingsDepartmentsPage() {
     // Tree
     departmentTree,
     isLoadingTree,
-    // Filter helpers
-    activeFilterCount,
-    activeFilterBadges,
   } = useSettingsDepartments();
 
   // Dialog states
@@ -163,10 +188,6 @@ export default function SettingsDepartmentsPage() {
   const [memberTargetDepartment, setMemberTargetDepartment] =
     useState<Department | null>(null);
 
-  // Advanced filters UI
-  const [showFilters, setShowFilters] = useState(false);
-  const hasAdvancedFilters = filters.managerId !== undefined;
-
   // Search debounce
   const [searchInput, setSearchInput] = useState(search || '');
   const debouncedSearch = useDebounce(searchInput, 400);
@@ -179,9 +200,84 @@ export default function SettingsDepartmentsPage() {
     clearFilters();
   }, [clearFilters]);
 
-  const clearAdvancedFilters = useCallback(() => {
-    setManagerFilter(undefined);
-  }, [setManagerFilter]);
+  const filterChips = useMemo<SettingsFilterChip[]>(() => {
+    const chips: SettingsFilterChip[] = [];
+
+    if (search) {
+      chips.push({
+        id: 'search',
+        label: `Keyword: "${search}"`,
+        onRemove: () => {
+          setSearchInput('');
+          setSearch('');
+        },
+      });
+    }
+
+    if (filters.isActive !== undefined) {
+      chips.push({
+        id: 'status',
+        label: `Status: ${filters.isActive ? 'Active' : 'Inactive'}`,
+        onRemove: () => setActiveFilter(undefined),
+      });
+    }
+
+    if (filters.parentDepartmentId !== undefined) {
+      const label =
+        filters.parentDepartmentId === 0
+          ? 'Top Level Only'
+          : (activeDepartments.find((d) => d.id === filters.parentDepartmentId)
+              ?.name ?? `Department #${filters.parentDepartmentId}`);
+      chips.push({
+        id: 'parent',
+        label: `Parent: ${label}`,
+        onRemove: () => setParentFilter(undefined),
+      });
+    }
+
+    if (filters.managerId !== undefined) {
+      const manager = managers.find((m) => m.id === filters.managerId);
+      chips.push({
+        id: 'manager',
+        label: `Manager: ${manager?.name || `Manager #${filters.managerId}`}`,
+        onRemove: () => setManagerFilter(undefined),
+      });
+    }
+
+    return chips;
+  }, [
+    search,
+    filters.isActive,
+    filters.parentDepartmentId,
+    filters.managerId,
+    activeDepartments,
+    managers,
+    setSearch,
+    setActiveFilter,
+    setParentFilter,
+    setManagerFilter,
+  ]);
+
+  const filterCriteria = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        count: filters.isActive !== undefined ? 1 : 0,
+      },
+      {
+        id: 'parent',
+        label: 'Parent department',
+        count: filters.parentDepartmentId !== undefined ? 1 : 0,
+      },
+      {
+        id: 'manager',
+        label: 'Manager',
+        count: filters.managerId !== undefined ? 1 : 0,
+      },
+    ],
+    [filters.isActive, filters.parentDepartmentId, filters.managerId]
+  );
 
   // Handlers
   const handleView = useCallback((dept: Department) => {
@@ -442,227 +538,47 @@ export default function SettingsDepartmentsPage() {
 
         {/* ==================== Departments Tab ==================== */}
         <TabsContent value='departments' className='space-y-4'>
-          {/* Filters */}
-          <Card className='border-border/70 shadow-sm'>
-            <CardContent className='p-4 md:p-5'>
-              <div className='space-y-4'>
-                <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
-                  <div>
-                    <h2 className='text-sm font-semibold'>Search & Filters</h2>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      Find departments by name, status, hierarchy, or manager.
-                    </p>
-                  </div>
-
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setShowFilters((prev) => !prev)}
-                      className='gap-2'
-                    >
-                      <Filter className='h-4 w-4' />
-                      {showFilters ? 'Hide advanced' : 'Show advanced'}
-                      {hasAdvancedFilters && (
-                        <Badge
-                          variant='secondary'
-                          className='px-1.5 py-0 text-xs'
-                        >
-                          {filters.managerId !== undefined ? 1 : 0}
-                        </Badge>
-                      )}
-                      {showFilters ? (
-                        <ChevronUp className='h-4 w-4 text-muted-foreground' />
-                      ) : (
-                        <ChevronDown className='h-4 w-4 text-muted-foreground' />
-                      )}
-                    </Button>
-
-                    {activeFilterCount > 0 && (
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={clearAllFilters}
-                        className='gap-1.5 text-muted-foreground hover:text-foreground'
-                      >
-                        <X className='h-3.5 w-3.5' />
-                        Reset all
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Main filters row */}
-                <div className='grid gap-3 md:grid-cols-12'>
-                  <div className='md:col-span-5 lg:col-span-6'>
-                    <Label
-                      htmlFor='dept-search'
-                      className='mb-2 text-xs font-medium text-muted-foreground'
-                    >
-                      Search departments
-                    </Label>
-                    <div className='relative'>
-                      <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                      <Input
-                        id='dept-search'
-                        placeholder='Name, code, or description...'
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        className='h-10 pl-10 pr-10'
-                      />
-                      {searchInput && (
-                        <Button
-                          type='button'
-                          variant='ghost'
-                          size='icon'
-                          onClick={() => {
-                            setSearchInput('');
-                            setSearch('');
-                          }}
-                          className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
-                          aria-label='Clear search'
-                        >
-                          <X className='h-4 w-4' />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='md:col-span-3 lg:col-span-3'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      Status
-                    </Label>
-                    <Select
-                      value={
-                        filters.isActive === undefined
-                          ? 'all'
-                          : filters.isActive
-                            ? 'active'
-                            : 'inactive'
-                      }
-                      onValueChange={(value) =>
-                        setActiveFilter(
-                          value === 'all' ? undefined : value === 'active'
-                        )
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='All statuses' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Statuses</SelectItem>
-                        <SelectItem value='active'>Active</SelectItem>
-                        <SelectItem value='inactive'>Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className='md:col-span-4 lg:col-span-3'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      Parent department
-                    </Label>
-                    <Select
-                      value={
-                        filters.parentDepartmentId !== undefined
-                          ? String(filters.parentDepartmentId)
-                          : 'all'
-                      }
-                      onValueChange={(value) =>
-                        setParentFilter(
-                          value === 'all' ? undefined : Number(value)
-                        )
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='All departments' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Departments</SelectItem>
-                        <SelectItem value='0'>Top Level Only</SelectItem>
-                        {activeDepartments.map((dept) => (
-                          <SelectItem key={dept.id} value={String(dept.id)}>
-                            Under {dept.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Active filter badges */}
-                {activeFilterBadges.length > 0 && (
-                  <div className='flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/30 p-2.5'>
-                    {activeFilterBadges.map((badge) => (
-                      <Badge
-                        key={badge}
-                        variant='secondary'
-                        className='font-normal'
-                      >
-                        {badge}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Advanced filters */}
-                {showFilters && (
-                  <div className='rounded-lg border bg-muted/40 p-3 md:p-4'>
-                    <div className='grid gap-3 md:grid-cols-2'>
-                      <div className='space-y-2'>
-                        <Label
-                          htmlFor='dept-manager-filter'
-                          className='text-xs font-medium text-muted-foreground'
-                        >
-                          Manager
-                        </Label>
-                        <Select
-                          value={
-                            filters.managerId !== undefined
-                              ? String(filters.managerId)
-                              : 'all'
-                          }
-                          onValueChange={(v) =>
-                            setManagerFilter(
-                              v === 'all' ? undefined : Number(v)
-                            )
-                          }
-                        >
-                          <SelectTrigger
-                            id='dept-manager-filter'
-                            className='h-10'
-                          >
-                            <SelectValue placeholder='All managers' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='all'>All Managers</SelectItem>
-                            {managers.map((mgr) => (
-                              <SelectItem key={mgr.id} value={String(mgr.id)}>
-                                {mgr.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {hasAdvancedFilters && (
-                      <div className='mt-3 flex justify-end'>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={clearAdvancedFilters}
-                          className='gap-1 text-muted-foreground hover:text-foreground'
-                        >
-                          <X className='h-3.5 w-3.5' />
-                          Clear advanced
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+          {/* Search + Filters */}
+          <div className='space-y-3'>
+            <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+              <div className='relative w-full md:max-w-md'>
+                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                <Input
+                  placeholder='Search by name, code, or description...'
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  className='pl-10 pr-10'
+                />
+                {searchInput && (
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => {
+                      setSearchInput('');
+                      setSearch('');
+                    }}
+                    className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                    aria-label='Clear search'
+                  >
+                    <X className='h-4 w-4' />
+                  </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setFilterDialogOpen(true)}
+              >
+                <SlidersHorizontal className='h-4 w-4' />
+                Filters
+              </Button>
+            </div>
+            <SettingsFilterChips
+              chips={filterChips}
+              onClearAll={clearAllFilters}
+            />
+          </div>
 
           {/* Departments Table */}
           <DataTable
@@ -684,22 +600,92 @@ export default function SettingsDepartmentsPage() {
 
         {/* ==================== Organization Chart Tab ==================== */}
         <TabsContent value='orgchart' className='space-y-4'>
-          <Card>
-            <CardContent className='p-4 md:p-6'>
-              <DepartmentOrgChart
-                tree={departmentTree}
-                isLoading={isLoadingTree}
-                onView={handleTreeView}
-                onEdit={handleTreeEdit}
-                onAddChild={handleTreeAddChild}
-                onDelete={handleTreeDelete}
-              />
-            </CardContent>
-          </Card>
+          <div className='rounded-lg border bg-card p-4 md:p-6 shadow-sm'>
+            <DepartmentOrgChart
+              tree={departmentTree}
+              isLoading={isLoadingTree}
+              onView={handleTreeView}
+              onEdit={handleTreeEdit}
+              onAddChild={handleTreeAddChild}
+              onDelete={handleTreeDelete}
+            />
+          </div>
         </TabsContent>
       </Tabs>
 
       {/* ==================== Dialogs ==================== */}
+
+      <SettingsFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearAllFilters}
+      >
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={filters.isActive === undefined}
+              onSelect={() => setActiveFilter(undefined)}
+            />
+            <FilterOption
+              label='Active'
+              selected={filters.isActive === true}
+              onSelect={() => setActiveFilter(true)}
+            />
+            <FilterOption
+              label='Inactive'
+              selected={filters.isActive === false}
+              onSelect={() => setActiveFilter(false)}
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'parent' ? (
+          <FilterPane title='Parent department'>
+            <Combobox
+              value={
+                filters.parentDepartmentId === 0
+                  ? 0
+                  : filters.parentDepartmentId
+              }
+              onChange={(value) =>
+                setParentFilter(value !== undefined ? Number(value) : undefined)
+              }
+              items={[
+                { value: 0, label: 'Top Level Only' },
+                ...activeDepartments.map((dept) => ({
+                  value: dept.id,
+                  label: `Under ${dept.name}`,
+                })),
+              ]}
+              placeholder='All departments'
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'manager' ? (
+          <FilterPane title='Manager'>
+            <Combobox
+              value={filters.managerId}
+              onChange={(value) =>
+                setManagerFilter(
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={managers.map((mgr) => ({
+                value: mgr.id,
+                label: mgr.name,
+              }))}
+              placeholder='All managers'
+            />
+          </FilterPane>
+        ) : null}
+      </SettingsFilterDialog>
 
       <CreateDepartmentDialog
         open={createDialogOpen}

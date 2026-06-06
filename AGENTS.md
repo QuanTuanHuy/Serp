@@ -8,8 +8,8 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
   - `account/AGENTS.md`
   - `api_gateway/AGENTS.md`
   - `discuss_service/AGENTS.md`
-  - `first-mile/AGENTS.md` (TMS first-mile backend)
-  - `second-mile/AGENTS.md` (TMS second-mile backend)
+  - `first-mile/AGENTS.md`
+  - `second-mile/AGENTS.md`
   - `notification_service/AGENTS.md`
   - `pm_core/AGENTS.md`
   - `serp_web/AGENTS.md`

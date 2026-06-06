@@ -20,6 +20,7 @@ import { cn } from '@/shared/utils';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunItemApi,
+  PMOptimizationUserSummaryApi,
 } from '../../types/api';
 
 type PMOptimizationRunItemTableProps = {
@@ -71,13 +72,19 @@ export function PMOptimizationRunItemTable({
               items.map((item) => {
                 const currentValue =
                   mode === 'assignment'
-                    ? formatValue(item.currentAssigneeId)
+                    ? formatAssignee(
+                        item.currentAssignee,
+                        item.currentAssigneeId
+                      )
                     : `${formatDate(item.currentPlannedStart)} -> ${formatDate(
                         item.currentPlannedEnd
                       )}`;
                 const suggestedValue =
                   mode === 'assignment'
-                    ? formatValue(item.suggestedAssigneeId)
+                    ? formatAssignee(
+                        item.suggestedAssignee,
+                        item.suggestedAssigneeId
+                      )
                     : `${formatDate(item.suggestedPlannedStart)} -> ${formatDate(
                         item.suggestedPlannedEnd
                       )}`;
@@ -108,11 +115,33 @@ export function PMOptimizationRunItemTable({
                     <div className='min-w-0'>
                       <div className='flex items-center gap-2'>
                         <span className='text-xs font-semibold text-primary'>
-                          #{item.workItemId}
+                          {item.workItem?.key || `#${item.workItemId}`}
                         </span>
                         <Badge variant='secondary'>
                           {DECISION_LABELS[decision || 'PENDING']}
                         </Badge>
+                      </div>
+                      {item.workItem?.summary ? (
+                        <div className='mt-1 truncate text-sm font-medium'>
+                          {item.workItem.summary}
+                        </div>
+                      ) : null}
+                      <div className='mt-2 flex flex-wrap gap-1.5'>
+                        {[
+                          item.workItem?.issueTypeName,
+                          item.workItem?.statusName,
+                          item.workItem?.priorityName,
+                        ]
+                          .filter((label): label is string => Boolean(label))
+                          .map((label, index) => (
+                            <Badge
+                              key={`${label}-${index}`}
+                              variant='outline'
+                              className='h-5 px-1.5 text-xs'
+                            >
+                              {label}
+                            </Badge>
+                          ))}
                       </div>
                       <div className='mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground'>
                         <span>Score {formatValue(item.score)}</span>
@@ -219,4 +248,12 @@ function formatDate(value?: number | null) {
 function formatValue(value?: string | number | null) {
   if (value === undefined || value === null || value === '') return '-';
   return String(value);
+}
+
+function formatAssignee(
+  user?: PMOptimizationUserSummaryApi | null,
+  userId?: number | null
+) {
+  if (!userId) return '-';
+  return user?.displayName || `User #${userId}`;
 }

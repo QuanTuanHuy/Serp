@@ -7,11 +7,13 @@
 
 import React, { useState } from 'react';
 import { useMenuDisplays } from '@/modules/admin/hooks/useMenuDisplays';
+import { AdminFilterChips, AdminFilterDialog } from '@/modules/admin';
 import { MenuDisplayTree } from '@/modules/admin/components/menu-displays/MenuDisplayTree';
 import { MenuDisplayFormDialog } from '@/modules/admin/components/menu-displays/MenuDisplayFormDialog';
 import { RoleAssignmentDialog } from '@/modules/admin/components/menu-displays/RoleAssignmentDialog';
 import { MenuDisplayDetailsDialog } from '@/modules/admin/components/menu-displays/MenuDisplayDetailsDialog';
 import { Card, Button, Input } from '@/shared/components';
+import { Combobox } from '@/shared/components/ui/combobox';
 import {
   Menu,
   Plus,
@@ -22,6 +24,7 @@ import {
   Eye,
   EyeOff,
   BarChart3,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   Select,
@@ -30,11 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Badge } from '@/shared/components/ui/badge';
 import { useGetModulesQuery } from '@/modules/admin/services/adminApi';
 import { useDebounce } from '@/shared/hooks/use-debounce';
 
 export default function MenuDisplaysPage() {
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('module');
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 500);
 
@@ -84,6 +88,33 @@ export default function MenuDisplaysPage() {
   React.useEffect(() => {
     handleSearch(debouncedSearch);
   }, [debouncedSearch, handleSearch]);
+
+  const filterCriteria = [
+    { id: 'module', label: 'Module', count: filters.moduleId ? 1 : 0 },
+  ];
+
+  const moduleLabel =
+    modules.find((module) => module.id === filters.moduleId)?.code ??
+    (filters.moduleId ? `Module #${filters.moduleId}` : '');
+
+  const filterChips = [
+    filters.moduleId
+      ? {
+          id: 'module',
+          label: `Module: ${moduleLabel}`,
+          onRemove: () => handleModuleFilter(undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleClearFilters();
+    setSearchInput('');
+  };
 
   return (
     <div className='space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8'>
@@ -174,77 +205,29 @@ export default function MenuDisplaysPage() {
         </Card>
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <div className='p-4'>
-          <div className='grid gap-4 md:grid-cols-3'>
-            {/* Search */}
-            <div className='md:col-span-2'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Search by name, path, description, or module...'
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-            </div>
-
-            {/* Module Filter */}
-            <div>
-              <Select
-                value={filters.moduleId?.toString() || 'all'}
-                onValueChange={(value) =>
-                  handleModuleFilter(
-                    value === 'all' ? undefined : parseInt(value)
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='All Modules' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Modules</SelectItem>
-                  {modules.map((module) => (
-                    <SelectItem key={module.id} value={module.id.toString()}>
-                      {module.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+            <Input
+              placeholder='Search by name, path, description, or module...'
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              className='pl-10'
+            />
           </div>
-
-          {/* Active Filters */}
-          {(filters.search || filters.moduleId) && (
-            <div className='flex items-center gap-2 mt-3 pt-3 border-t'>
-              <span className='text-sm text-muted-foreground'>
-                Active filters:
-              </span>
-              {filters.search && (
-                <Badge variant='secondary'>Search: {filters.search}</Badge>
-              )}
-              {filters.moduleId && (
-                <Badge variant='secondary'>
-                  Module: {modules.find((m) => m.id === filters.moduleId)?.code}
-                </Badge>
-              )}
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => {
-                  setSearchInput('');
-                  handleClearFilters();
-                }}
-                className='ml-auto'
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
         </div>
-      </Card>
+
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
 
       {/* Menu Tree */}
       <Card>
@@ -391,6 +374,53 @@ export default function MenuDisplaysPage() {
         onOpenChange={closeDetailsDialog}
         menuDisplay={selectedMenuForDetails}
       />
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'module' ? (
+          <FilterPane title='Module'>
+            <Combobox
+              value={filters.moduleId}
+              onChange={(value) =>
+                handleModuleFilter(
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={modules.map((module) => ({
+                value: module.id,
+                label: module.code,
+              }))}
+              placeholder='All modules'
+            />
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
+    </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
     </div>
   );
 }

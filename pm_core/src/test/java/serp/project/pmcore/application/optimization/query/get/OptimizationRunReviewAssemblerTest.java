@@ -7,6 +7,7 @@ package serp.project.pmcore.application.optimization.query.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import serp.project.pmcore.application.shared.dto.user.UserSummary;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
@@ -21,6 +22,7 @@ import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -88,6 +90,39 @@ class OptimizationRunReviewAssemblerTest {
         assertEquals(200L, view.getItems().get(0).getAllocationChunks().get(0).getAssigneeId());
         assertEquals(1000L, view.getItems().get(0).getAllocationChunks().get(0).getStart());
         assertEquals(4000L, view.getItems().get(0).getAllocationChunks().get(1).getEnd());
+    }
+
+    @Test
+    void toViewShouldEnrichWorkItemAndAssigneeSummaries() {
+        OptimizationRunItemEntity item = item(10L, 200L);
+        item.setCurrentAssigneeId(100L);
+        item.setOverrideAssigneeId(300L);
+
+        OptimizationRunReviewView view = assembler.toView(
+                run(OptimizationRunSummary.builder().build()),
+                List.of(item),
+                List.of(),
+                Map.of(10L, new OptimizationWorkItemSummaryView(
+                        10L,
+                        "SERP-10",
+                        "Implement scheduling optimization review",
+                        "Task",
+                        "In Progress",
+                        "High"
+                )),
+                Map.of(
+                        100L, new UserSummary(100L, "Current User", "/current.png"),
+                        200L, new UserSummary(200L, "Suggested User", "/suggested.png"),
+                        300L, new UserSummary(300L, "Override User", "/override.png")
+                )
+        );
+
+        OptimizationRunItemView enrichedItem = view.getItems().get(0);
+        assertEquals("SERP-10", enrichedItem.getWorkItem().key());
+        assertEquals("Implement scheduling optimization review", enrichedItem.getWorkItem().summary());
+        assertEquals("Current User", enrichedItem.getCurrentAssignee().displayName());
+        assertEquals("Suggested User", enrichedItem.getSuggestedAssignee().displayName());
+        assertEquals("Override User", enrichedItem.getOverrideAssignee().displayName());
     }
 
     private OptimizationRunEntity run(OptimizationRunSummary summary) {

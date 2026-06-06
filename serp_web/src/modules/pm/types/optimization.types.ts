@@ -97,14 +97,33 @@ export interface PMOptimizationRunWarningApi {
   detailsJson?: string | null;
 }
 
+export interface PMOptimizationWorkItemSummaryApi {
+  id: number;
+  key?: string | null;
+  summary?: string | null;
+  issueTypeName?: string | null;
+  statusName?: string | null;
+  priorityName?: string | null;
+}
+
+export interface PMOptimizationUserSummaryApi {
+  id: number;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+}
+
 export interface PMOptimizationRunItemApi {
   id: number;
   workItemId: number;
+  workItem?: PMOptimizationWorkItemSummaryApi | null;
   workItemUpdatedAtSnapshot?: number | null;
   planUpdatedAtSnapshot?: number | null;
   currentAssigneeId?: number | null;
+  currentAssignee?: PMOptimizationUserSummaryApi | null;
   suggestedAssigneeId?: number | null;
+  suggestedAssignee?: PMOptimizationUserSummaryApi | null;
   overrideAssigneeId?: number | null;
+  overrideAssignee?: PMOptimizationUserSummaryApi | null;
   currentPlannedStart?: number | null;
   currentPlannedEnd?: number | null;
   suggestedPlannedStart?: number | null;

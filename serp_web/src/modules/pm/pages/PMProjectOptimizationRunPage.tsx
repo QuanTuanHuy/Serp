@@ -19,8 +19,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import {
   Badge,
   Button,
@@ -33,13 +31,13 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui';
-import { useAppSelector } from '@/shared/hooks';
 import {
   useApplyPmOptimizationRunMutation,
   useDiscardPmOptimizationRunMutation,
   useGetPmOptimizationRunQuery,
   useUpdatePmOptimizationRunItemDecisionsMutation,
 } from '../api';
+import { useGetPmProjectPeopleQuery } from '../api/projectApi';
 import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
@@ -77,7 +75,6 @@ export function PMProjectOptimizationRunPage({
   runId,
 }: PMProjectOptimizationRunPageProps) {
   const router = useRouter();
-  const organizationId = useAppSelector(selectOrganizationId);
   const numericProjectId = Number(projectId);
   const numericRunId = Number(runId);
   const [selectedApplyIds, setSelectedApplyIds] = useState<number[]>([]);
@@ -101,14 +98,9 @@ export function PMProjectOptimizationRunPage({
         !Number.isFinite(numericProjectId) || !Number.isFinite(numericRunId),
     }
   );
-  const { data: usersResponse } = useGetOrganizationUsersQuery(
-    {
-      organizationId: organizationId as number,
-      page: 0,
-      pageSize: 100,
-      status: 'ACTIVE',
-    },
-    { skip: !organizationId }
+  const { data: projectPeople = [] } = useGetPmProjectPeopleQuery(
+    numericProjectId,
+    { skip: !Number.isFinite(numericProjectId) }
   );
   const [updateDecisions, updateState] =
     useUpdatePmOptimizationRunItemDecisionsMutation();
@@ -129,14 +121,13 @@ export function PMProjectOptimizationRunPage({
 
   const users = useMemo(
     () =>
-      [...(usersResponse?.data.items || [])].map((user) => ({
-        id: Number(user.id),
-        label:
-          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-          user.email ||
-          `User #${user.id}`,
-      })),
-    [usersResponse]
+      [...projectPeople]
+        .map((person) => ({
+          id: Number(person.userId),
+          label: person.name || person.email || `User #${person.userId}`,
+        }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    [projectPeople]
   );
 
   const run = data as PMOptimizationRunApi | undefined;

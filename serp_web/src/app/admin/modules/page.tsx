@@ -5,8 +5,10 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  AdminFilterChips,
+  AdminFilterDialog,
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
@@ -25,10 +27,28 @@ import {
   Power,
   PowerOff,
   CheckCircle,
+  Search,
+  SlidersHorizontal,
   XCircle,
 } from 'lucide-react';
 
+const statusOptions = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'BETA', label: 'Beta' },
+  { value: 'DEPRECATED', label: 'Deprecated' },
+  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'DISABLED', label: 'Disabled' },
+];
+
+const typeOptions = [
+  { value: 'SYSTEM', label: 'System' },
+  { value: 'CUSTOM', label: 'Custom' },
+];
+
 export default function ModulesPage() {
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('status');
+
   const {
     modules,
     stats,
@@ -52,6 +72,43 @@ export default function ModulesPage() {
     currentStatus: string
   ) => {
     await toggleStatus(moduleId, currentStatus);
+  };
+
+  const filterCriteria = [
+    { id: 'status', label: 'Status', count: filters.status ? 1 : 0 },
+    { id: 'type', label: 'Type', count: filters.type ? 1 : 0 },
+  ];
+
+  const filterChips = [
+    filters.status
+      ? {
+          id: 'status',
+          label: `Status: ${
+            statusOptions.find((item) => item.value === filters.status)?.label ??
+            filters.status
+          }`,
+          onRemove: () => handleFilterChange('status', undefined),
+        }
+      : null,
+    filters.type
+      ? {
+          id: 'type',
+          label: `Type: ${
+            typeOptions.find((item) => item.value === filters.type)?.label ??
+            filters.type
+          }`,
+          onRemove: () => handleFilterChange('type', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('status', undefined);
+    handleFilterChange('type', undefined);
   };
 
   // Define columns for DataTable
@@ -170,26 +227,9 @@ export default function ModulesPage() {
           <AdminActionMenu
             items={[
               {
-                label: 'View Details',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
                 label: 'Edit',
                 onClick: () => openEditDialog(row as unknown as Module),
                 icon: <Edit className='h-4 w-4' />,
-              },
-              {
-                label: row.status === 'ACTIVE' ? 'Disable' : 'Enable',
-                onClick: () => handleToggleStatus(String(row.id), row.status),
-                icon:
-                  row.status === 'ACTIVE' ? (
-                    <PowerOff className='h-4 w-4' />
-                  ) : (
-                    <Power className='h-4 w-4' />
-                  ),
-                separator: true,
-                variant: row.status === 'ACTIVE' ? 'destructive' : 'default',
               },
             ]}
           />
@@ -238,57 +278,29 @@ export default function ModulesPage() {
         />
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <div className='p-4'>
-          <div className='grid gap-4 md:grid-cols-4'>
-            {/* Search */}
-            <div className='md:col-span-2'>
-              <div className='relative'>
-                <Input
-                  placeholder='Search by name, code, description...'
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className='pl-3'
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={filters.status || ''}
-                onChange={(e) =>
-                  handleFilterChange('status', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Statuses</option>
-                <option value='ACTIVE'>Active</option>
-                <option value='BETA'>Beta</option>
-                <option value='DEPRECATED'>Deprecated</option>
-                <option value='MAINTENANCE'>Maintenance</option>
-                <option value='DISABLED'>Disabled</option>
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div>
-              <select
-                value={filters.type || ''}
-                onChange={(e) =>
-                  handleFilterChange('type', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Types</option>
-                <option value='SYSTEM'>System</option>
-                <option value='CUSTOM'>Custom</option>
-              </select>
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search by name, code, description...'
+              value={filters.search || ''}
+              onChange={(event) => handleSearch(event.target.value)}
+              className='pl-10'
+            />
           </div>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
         </div>
-      </Card>
+
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
 
       {/* Modules Table */}
       <DataTable
@@ -333,6 +345,95 @@ export default function ModulesPage() {
         onSubmit={submitModule}
         isLoading={isCreating}
       />
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={!filters.status}
+              onSelect={() => handleFilterChange('status', undefined)}
+            />
+            {statusOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.status === option.value}
+                onSelect={() => handleFilterChange('status', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'type' ? (
+          <FilterPane title='Type'>
+            <FilterOption
+              label='All types'
+              selected={!filters.type}
+              onSelect={() => handleFilterChange('type', undefined)}
+            />
+            {typeOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.type === option.value}
+                onSelect={() => handleFilterChange('type', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }
