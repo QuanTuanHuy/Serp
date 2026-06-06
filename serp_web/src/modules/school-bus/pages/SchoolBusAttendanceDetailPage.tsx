@@ -362,7 +362,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
               </div>
               <Button
                 variant='outline'
-                size='xs'
+                size='sm'
                 className='h-7 rounded-lg text-[10px] font-bold border-blue-200 text-blue-650 hover:bg-blue-50'
                 asChild
               >
