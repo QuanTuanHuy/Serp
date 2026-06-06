@@ -54,7 +54,7 @@ function stopTypeLabel(stop: TripAttendanceStopItem): string {
   return locationType ?? 'Stop';
 }
 
-const statusMap: Record<string, { label: string; className: string }> = {
+const tripStatusMap: Record<string, { label: string; className: string }> = {
   CREATED: { label: 'Created', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
   PLANNED: { label: 'Planned', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
   IN_PROGRESS: { label: 'In progress', className: 'border-blue-200 bg-blue-55 text-blue-700 hover:bg-blue-55' },
@@ -67,18 +67,26 @@ const statusMap: Record<string, { label: string; className: string }> = {
   BOARDING: { label: 'Boarding', className: 'border-indigo-250 bg-indigo-50 text-indigo-700 hover:bg-indigo-50' },
   DEPARTED: { label: 'Departed', className: 'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
   SKIPPED: { label: 'Skipped', className: 'border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100' },
-  // Student statuses:
+};
+
+const studentStatusMap: Record<string, { label: string; className: string }> = {
   PLANNED: { label: 'Planned', className: 'border-amber-250 bg-amber-55 text-amber-700 hover:bg-amber-55' },
   BOARDED: { label: 'Boarded', className: 'border-blue-200 bg-blue-55 text-blue-700 hover:bg-blue-55' },
   DROPPED_OFF: { label: 'Dropped off', className: 'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
   ABSENT: { label: 'Absent', className: 'border-red-200 bg-red-55 text-red-700 hover:bg-red-55' },
   NO_SHOW: { label: 'No-show', className: 'border-red-250 bg-red-50 text-red-650 hover:bg-red-50' },
   NOT_SERVED: { label: 'Not served', className: 'border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-50' },
+  // Event types
+  STUDENT_BOARDED: { label: 'Student Boarded', className: 'border-blue-150 bg-blue-50 text-blue-650' },
+  STUDENT_ABSENT: { label: 'Student Absent', className: 'border-red-200 bg-red-50 text-red-700' },
+  STUDENT_NO_SHOW: { label: 'Student No-show', className: 'border-red-250 bg-red-50 text-red-650' },
+  STUDENT_DROPPED_OFF: { label: 'Student Dropped Off', className: 'border-emerald-200 bg-emerald-50 text-emerald-650' },
+  STUDENT_NOT_SERVED: { label: 'Student Not Served', className: 'border-slate-200 bg-slate-50 text-slate-400' },
 };
 
-const renderFriendlyBadge = (status: string) => {
+const renderTripBadge = (status: string) => {
   const normalized = (status || '').toUpperCase();
-  const config = statusMap[normalized] || {
+  const config = tripStatusMap[normalized] || {
     label: normalized,
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   };
@@ -88,6 +96,20 @@ const renderFriendlyBadge = (status: string) => {
     </Badge>
   );
 };
+
+const renderStudentBadge = (status: string) => {
+  const normalized = (status || '').toUpperCase();
+  const config = studentStatusMap[normalized] || {
+    label: normalized,
+    className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
+  };
+  return (
+    <Badge className={cn('rounded-full px-2 py-0.2 text-[10px] font-bold shadow-none border shrink-0 hover:bg-transparent', config.className)}>
+      {config.label}
+    </Badge>
+  );
+};
+
 
 const getFriendlyDirection = (dir?: string | null) => {
   if (dir === 'RETURN') return 'Return';
@@ -321,7 +343,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
             )}>
               {wsState} feed
             </span>
-            {renderFriendlyBadge(tripStatus || '')}
+            {renderTripBadge(tripStatus || '')}
           </div>
         </div>
 
@@ -514,7 +536,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                           </div>
 
                           <div className='flex items-center gap-2 shrink-0'>
-                            {renderFriendlyBadge(stStatus)}
+                            {renderStudentBadge(stStatus)}
 
                             {/* Attendance Action buttons */}
                             {tripIsActive && (canBoard || canDrop || canAbsent) && (
@@ -618,7 +640,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                             {formatDateTime(item.recordedAt)}
                           </p>
                         </div>
-                        {renderFriendlyBadge(item.eventType ?? item.attendanceType)}
+                        {renderStudentBadge(item.eventType ?? item.attendanceType)}
                       </div>
                       {item.notes && (
                         <p className='text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 truncate' title={item.notes}>
