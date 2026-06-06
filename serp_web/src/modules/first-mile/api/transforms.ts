@@ -17,6 +17,7 @@ import type {
   PostOfficeStaffAssignment,
   AutoSecondMileBaggingPlan,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagDestinationType,
   SecondMileBagOrder,
   SecondMileBagStatus,
@@ -288,6 +289,18 @@ export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
     createdBy: readField<string>(record, 'created_by', 'createdBy'),
     updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
     tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagCapacitySettings = (
+  raw: unknown
+): SecondMileBagCapacitySettings => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: readOptionalNumber(record, 'id', 'id'),
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,
   };
 };
 

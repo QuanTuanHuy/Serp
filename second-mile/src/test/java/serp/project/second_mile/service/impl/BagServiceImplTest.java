@@ -16,6 +16,7 @@ import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.dto.request.CreateBagRequest;
+import serp.project.second_mile.dto.response.BagCapacitySettingsResponse;
 import serp.project.second_mile.dto.response.BagSuggestionResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagStatus;
@@ -28,6 +29,7 @@ import serp.project.second_mile.repository.BagRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.VehicleRepository;
+import serp.project.second_mile.service.BagCapacitySettingsService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
 import java.util.List;
@@ -70,6 +72,9 @@ class BagServiceImplTest {
 
     @Mock
     private TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+
+    @Mock
+    private BagCapacitySettingsService bagCapacitySettingsService;
 
     @InjectMocks
     private BagServiceImpl service;
@@ -132,6 +137,8 @@ class BagServiceImplTest {
         when(bagOrderRepository.existsByTmsOrderIdAndTenantId(1L, TENANT_ID)).thenReturn(false);
         when(hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(TENANT_ID, DESTINATION_POST_OFFICE_CODE))
                 .thenReturn(Optional.of(mapping()));
+        when(bagCapacitySettingsService.getSettingsForTenant(TENANT_ID))
+                .thenReturn(new BagCapacitySettingsResponse(1L, 50.0, 0.5, 30));
         when(bagRepository.findByTenantIdAndOriginHubIdAndDestinationTypeAndDestinationPostOfficeCodeIgnoreCaseAndStatus(
                 TENANT_ID,
                 HUB_ID,

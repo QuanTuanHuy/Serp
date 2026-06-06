@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCcw,
   ShieldAlert,
+  SlidersHorizontal,
   WandSparkles,
 } from 'lucide-react';
 
@@ -44,8 +45,10 @@ import {
   useAutoPlanSecondMileBagsMutation,
   useCreateSecondMileBagMutation,
   useDeleteSecondMileBagMutation,
+  useGetHubPostOfficesQuery,
   useGetHubsQuery,
   useGetSecondMileBagByIdQuery,
+  useGetSecondMileBagCapacitySettingsQuery,
   useGetSecondMileBaggingKpisQuery,
   useGetSecondMileBagsQuery,
   useGetSecondMileOrdersQuery,
@@ -53,6 +56,7 @@ import {
   useRemoveSecondMileBagOrderMutation,
   useReopenSecondMileBagMutation,
   useSealSecondMileBagMutation,
+  useUpdateSecondMileBagCapacitySettingsMutation,
   useUpdateSecondMileBagMutation,
   useValidateSecondMileBaggingMutation,
 } from '../../api/firstMileApi';
@@ -60,6 +64,7 @@ import { TmsCombobox } from '../../components/TmsCombobox';
 import type {
   AutoSecondMileBaggingPlanRequest,
   AutoSecondMileBaggingPlan,
+  HubPostOfficeMapping,
   SecondMileBag,
   SecondMileBagDestinationType,
   SecondMileBagListFilters,
@@ -86,6 +91,7 @@ import {
   emptyBagFormValues,
   normalizeOrderCode,
   parseOrderCodes,
+  toDefaultedBagFormValues,
   toBagFormValues,
   toLocalDateTimeInputValue,
   type AutoBaggingFormValues,
@@ -96,6 +102,12 @@ import {
 
 const PAGE_SIZE = 20;
 const ALL_VALUE = '__ALL__';
+
+type BagCapacitySettingsFormValues = {
+  maxWeight: string;
+  maxVolume: string;
+  maxOrders: string;
+};
 
 export function BagListPage() {
   const notification = useNotification();
@@ -125,6 +137,13 @@ export function BagListPage() {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] =
     React.useState<BagFormValues>(emptyBagFormValues);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [settingsValues, setSettingsValues] =
+    React.useState<BagCapacitySettingsFormValues>({
+      maxWeight: '',
+      maxVolume: '',
+      maxOrders: '',
+    });
 
   const [selectedDetailId, setSelectedDetailId] = React.useState<number | null>(
     null
@@ -140,6 +159,15 @@ export function BagListPage() {
   );
   const [autoPlan, setAutoPlan] =
     React.useState<AutoSecondMileBaggingPlan | null>(null);
+  const autoOriginHubId = Number(autoValues.originHubId);
+  const autoDestinationHubId = Number(autoValues.destinationHubId);
+  const shouldLoadAutoOriginMappings =
+    autoOpen && Number.isFinite(autoOriginHubId) && autoOriginHubId > 0;
+  const shouldLoadAutoDestinationMappings =
+    autoOpen &&
+    autoValues.destinationType === 'HUB' &&
+    Number.isFinite(autoDestinationHubId) &&
+    autoDestinationHubId > 0;
 
   const [deleteTarget, setDeleteTarget] = React.useState<SecondMileBag | null>(
     null
@@ -156,15 +184,40 @@ export function BagListPage() {
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
+  const {
+    data: autoOriginPostOfficesData,
+    isFetching: isFetchingAutoOriginPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: autoOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadAutoOriginMappings }
+  );
+  const {
+    data: autoDestinationPostOfficesData,
+    isFetching: isFetchingAutoDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: autoDestinationHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadAutoDestinationMappings }
+  );
   const { data: ordersData, isFetching: isFetchingOrders } =
     useGetSecondMileOrdersQuery(
-      { page: 0, size: 500, status: 'INBOUND_AT_ORIGIN_HUB' },
+      {
+        page: 0,
+        size: 500,
+        statuses: ['INBOUND_AT_ORIGIN_HUB', 'BAGGING_IN_PROGRESS'],
+      },
       { skip: !canView || !autoOpen }
     );
   const { data: vehiclesData } = useGetSecondMileVehiclesQuery(
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
+  const {
+    data: bagCapacitySettings,
+    isFetching: isFetchingBagCapacitySettings,
+    refetch: refetchBagCapacitySettings,
+  } = useGetSecondMileBagCapacitySettingsQuery(undefined, {
+    skip: !canView,
+  });
   const {
     data: bagsData,
     isFetching: isFetchingBags,
@@ -209,6 +262,10 @@ export function BagListPage() {
   const [sealBag, { isLoading: isSealing }] = useSealSecondMileBagMutation();
   const [reopenBag, { isLoading: isReopening }] =
     useReopenSecondMileBagMutation();
+  const [
+    updateBagCapacitySettings,
+    { isLoading: isUpdatingBagCapacitySettings },
+  ] = useUpdateSecondMileBagCapacitySettingsMutation();
   const [validateBagging, { isLoading: isValidating }] =
     useValidateSecondMileBaggingMutation();
   const [autoPlanBags, { isLoading: isAutoPlanning }] =
@@ -216,8 +273,79 @@ export function BagListPage() {
 
   const hubs = hubsData?.items ?? [];
   const orders = ordersData?.items ?? [];
+  const autoOriginPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(autoOriginPostOfficesData?.items ?? []),
+    [autoOriginPostOfficesData?.items]
+  );
+  const autoDestinationPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(autoDestinationPostOfficesData?.items ?? []),
+    [autoDestinationPostOfficesData?.items]
+  );
+  const autoCandidateOrders = React.useMemo(
+    () =>
+      orders.filter((order) => {
+        const originPostOfficeCode = normalizeCode(order.originPostOfficeCode);
+        const destinationPostOfficeCode = normalizeCode(
+          order.destinationPostOfficeCode
+        );
+
+        if (
+          !originPostOfficeCode ||
+          !autoOriginPostOfficeCodes.has(originPostOfficeCode)
+        ) {
+          return false;
+        }
+
+        if (autoValues.destinationType === 'POST_OFFICE') {
+          const selectedDestinationPostOfficeCode = normalizeCode(
+            autoValues.destinationPostOfficeCode
+          );
+          return (
+            Boolean(selectedDestinationPostOfficeCode) &&
+            destinationPostOfficeCode === selectedDestinationPostOfficeCode
+          );
+        }
+
+        return (
+          Boolean(destinationPostOfficeCode) &&
+          autoDestinationPostOfficeCodes.has(destinationPostOfficeCode)
+        );
+      }),
+    [
+      autoDestinationPostOfficeCodes,
+      autoOriginPostOfficeCodes,
+      autoValues.destinationPostOfficeCode,
+      autoValues.destinationType,
+      orders,
+    ]
+  );
   const vehicles = vehiclesData?.items ?? [];
   const isSavingForm = isCreating || isUpdating;
+
+  React.useEffect(() => {
+    if (!autoOpen) {
+      return;
+    }
+
+    const candidateOrderCodes = new Set(
+      autoCandidateOrders
+        .map((order) => order.orderCode)
+        .filter((orderCode): orderCode is string => Boolean(orderCode))
+    );
+    const nextOrderCodes = autoValues.orderCodes.filter((orderCode) =>
+      candidateOrderCodes.has(orderCode)
+    );
+
+    if (nextOrderCodes.length !== autoValues.orderCodes.length) {
+      setAutoValues((current) => ({
+        ...current,
+        orderCodes: current.orderCodes.filter((orderCode) =>
+          candidateOrderCodes.has(orderCode)
+        ),
+      }));
+      setAutoPlan(null);
+    }
+  }, [autoCandidateOrders, autoOpen, autoValues.orderCodes]);
 
   const hubOptions = [
     { value: ALL_VALUE, label: 'All hubs' },
@@ -262,8 +390,28 @@ export function BagListPage() {
     }
     setFormMode('create');
     setEditingId(null);
-    setFormValues({ ...emptyBagFormValues });
+    setFormValues(toDefaultedBagFormValues(bagCapacitySettings));
     setFormOpen(true);
+  };
+
+  const openSettingsDialog = () => {
+    if (!canManage) {
+      notification.error('Bag settings require hub manager access.');
+      return;
+    }
+
+    setSettingsValues({
+      maxWeight: bagCapacitySettings?.maxWeight
+        ? String(bagCapacitySettings.maxWeight)
+        : '',
+      maxVolume: bagCapacitySettings?.maxVolume
+        ? String(bagCapacitySettings.maxVolume)
+        : '',
+      maxOrders: bagCapacitySettings?.maxOrders
+        ? String(bagCapacitySettings.maxOrders)
+        : '',
+    });
+    setSettingsOpen(true);
   };
 
   const handleEdit = (bag: SecondMileBag) => {
@@ -302,6 +450,42 @@ export function BagListPage() {
       void refetch();
     } catch (err) {
       notification.error('Failed to save bag.', {
+        description: getErrorMessage(err),
+      });
+    }
+  };
+
+  const handleSubmitSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const maxWeight = Number(settingsValues.maxWeight);
+    const maxVolume = Number(settingsValues.maxVolume);
+    const maxOrders = Number(settingsValues.maxOrders);
+
+    if (!Number.isFinite(maxWeight) || maxWeight <= 0) {
+      notification.error('Max weight must be greater than 0.');
+      return;
+    }
+    if (!Number.isFinite(maxVolume) || maxVolume <= 0) {
+      notification.error('Max volume must be greater than 0.');
+      return;
+    }
+    if (!Number.isInteger(maxOrders) || maxOrders <= 0) {
+      notification.error('Max orders must be a positive whole number.');
+      return;
+    }
+
+    try {
+      await updateBagCapacitySettings({
+        max_weight: maxWeight,
+        max_volume: maxVolume,
+        max_orders: maxOrders,
+      }).unwrap();
+      notification.success('Bag defaults updated successfully.');
+      setSettingsOpen(false);
+      void refetchBagCapacitySettings();
+      void refetch();
+    } catch (err) {
+      notification.error('Failed to update bag defaults.', {
         description: getErrorMessage(err),
       });
     }
@@ -509,6 +693,16 @@ export function BagListPage() {
             >
               <WandSparkles className='h-4 w-4' />
               Auto plan
+            </Button>
+          )}
+          {canManage && (
+            <Button
+              variant='outline'
+              disabled={isFetchingBagCapacitySettings}
+              onClick={openSettingsDialog}
+            >
+              <SlidersHorizontal className='h-4 w-4' />
+              Bag defaults
             </Button>
           )}
           <Button variant='outline' onClick={() => void refetch()}>
@@ -786,11 +980,15 @@ export function BagListPage() {
         open={autoOpen}
         values={autoValues}
         hubs={hubs}
-        orders={orders}
+        orders={autoCandidateOrders}
         plan={autoPlan}
         isPlanning={isAutoPlanning}
         isExecuting={isAutoPlanning}
-        isOrdersLoading={isFetchingOrders}
+        isOrdersLoading={
+          isFetchingOrders ||
+          isFetchingAutoOriginPostOffices ||
+          isFetchingAutoDestinationPostOffices
+        }
         onOpenChange={(open) => {
           setAutoOpen(open);
           if (!open) {
@@ -804,6 +1002,85 @@ export function BagListPage() {
           setAutoPlan(null);
         }}
       />
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className='sm:max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>Bag defaults</DialogTitle>
+            <DialogDescription>
+              Set the default capacity used for new bags and auto planning.
+            </DialogDescription>
+          </DialogHeader>
+          <form className='space-y-4' onSubmit={handleSubmitSettings}>
+            <div className='grid gap-3 sm:grid-cols-3'>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-weight'>Max weight (kg)</Label>
+                <Input
+                  id='bag-default-max-weight'
+                  type='number'
+                  min='0'
+                  step='0.01'
+                  value={settingsValues.maxWeight}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxWeight: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-volume'>Max volume (m3)</Label>
+                <Input
+                  id='bag-default-max-volume'
+                  type='number'
+                  min='0'
+                  step='0.001'
+                  value={settingsValues.maxVolume}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxVolume: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-orders'>Max orders</Label>
+                <Input
+                  id='bag-default-max-orders'
+                  type='number'
+                  min='1'
+                  step='1'
+                  value={settingsValues.maxOrders}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxOrders: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={isUpdatingBagCapacitySettings}
+                onClick={() => setSettingsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type='submit' disabled={isUpdatingBagCapacitySettings}>
+                {isUpdatingBagCapacitySettings && (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                )}
+                Save defaults
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
@@ -881,6 +1158,15 @@ export function BagListPage() {
     </div>
   );
 }
+
+const normalizeCode = (value?: string) => value?.trim().toUpperCase() ?? '';
+
+const toPostOfficeCodeSet = (mappings: HubPostOfficeMapping[]) =>
+  new Set(
+    mappings
+      .map((mapping) => normalizeCode(mapping.postOfficeCode))
+      .filter(Boolean)
+  );
 
 const buildAutoPlanRequest = (
   values: AutoBaggingFormValues,

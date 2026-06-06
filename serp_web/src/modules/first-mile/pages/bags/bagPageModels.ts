@@ -7,6 +7,7 @@ import type {
   CreateSecondMileBagRequest,
   Hub,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagDestinationType,
   SecondMileBagStatus,
   SecondMileVehicle,
@@ -67,9 +68,9 @@ export const emptyBagFormValues: BagFormValues = {
   destinationHubId: '',
   destinationPostOfficeCode: '',
   vehicleId: '',
-  maxWeight: '50',
-  maxVolume: '0.5',
-  maxOrders: '30',
+  maxWeight: '',
+  maxVolume: '',
+  maxOrders: '',
   note: '',
 };
 
@@ -126,6 +127,15 @@ export const toBagFormValues = (bag?: SecondMileBag): BagFormValues => {
     note: bag.note ?? '',
   };
 };
+
+export const toDefaultedBagFormValues = (
+  settings?: SecondMileBagCapacitySettings
+): BagFormValues => ({
+  ...emptyBagFormValues,
+  maxWeight: settings?.maxWeight ? String(settings.maxWeight) : '',
+  maxVolume: settings?.maxVolume ? String(settings.maxVolume) : '',
+  maxOrders: settings?.maxOrders ? String(settings.maxOrders) : '',
+});
 
 export const validateBagForm = (values: BagFormValues): string | null => {
   if (!values.bagCode.trim()) {

@@ -17,6 +17,10 @@ import {
   DialogTitle,
   Input,
   Label,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -26,6 +30,7 @@ import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
   useGetHubsQuery,
+  useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetWardsByProvinceCodeQuery,
   useGetPostOfficeStaffAssignmentsByPostOfficeQuery,
@@ -42,9 +47,12 @@ import {
   CoordinatePickerMap,
   TmsCombobox,
   TmsEntityLocationMap,
+  TmsEntityOrdersTab,
+  type TmsLocationMapPoint,
   type TmsMapBounds,
 } from '../../components';
 import type {
+  FirstMileOrderStatus,
   ImportHistory,
   PostOffice,
   PostOfficeImportItem,
@@ -80,6 +88,10 @@ import { usePostOfficeLocations } from './usePostOfficeLocations';
 const PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 500;
 const IMPORT_PREVIEW_LIMIT = 5;
+const POST_OFFICE_ORDER_PAGE_SIZE = 10;
+const POST_OFFICE_STOCK_ORDER_STATUSES: FirstMileOrderStatus[] = [
+  'AT_ORIGIN_POST_OFFICE',
+];
 
 function areMapBoundsEqual(
   current: TmsMapBounds | null,
@@ -116,6 +128,10 @@ export const PostOfficeListPage: React.FC = () => {
   const [detailTarget, setDetailTarget] = React.useState<PostOffice | null>(
     null
   );
+  const [detailTab, setDetailTab] = React.useState<'details' | 'orders'>(
+    'details'
+  );
+  const [detailOrdersPage, setDetailOrdersPage] = React.useState(0);
   const [deleteTarget, setDeleteTarget] = React.useState<PostOffice | null>(
     null
   );
@@ -160,6 +176,16 @@ export const PostOfficeListPage: React.FC = () => {
     },
     { skip: !mapBounds }
   );
+  const { data: detailOrdersData, isFetching: isFetchingDetailOrders } =
+    useGetOrdersQuery(
+      {
+        page: detailOrdersPage,
+        size: POST_OFFICE_ORDER_PAGE_SIZE,
+        originPostOfficeCode: detailTarget?.code,
+        statuses: POST_OFFICE_STOCK_ORDER_STATUSES,
+      },
+      { skip: !detailTarget }
+    );
 
   const mapPostOfficePoints = React.useMemo(
     () =>
@@ -606,7 +632,24 @@ export const PostOfficeListPage: React.FC = () => {
 
   const handleOpenDetail = (postOffice: PostOffice) => {
     setDetailTarget(postOffice);
+    setDetailTab('details');
+    setDetailOrdersPage(0);
   };
+
+  const handleMapPostOfficeClick = React.useCallback(
+    (point: TmsLocationMapPoint) => {
+      const postOffice =
+        (mapPostOfficeData?.items ?? []).find((item) => item.id === point.id) ??
+        (data?.items ?? []).find((item) => item.id === point.id);
+
+      if (postOffice) {
+        setDetailTarget(postOffice);
+        setDetailTab('details');
+        setDetailOrdersPage(0);
+      }
+    },
+    [data?.items, mapPostOfficeData?.items]
+  );
 
   const handleOpenManageStaff = (postOffice: PostOffice) => {
     if (!isTmsAdmin) {
@@ -780,6 +823,7 @@ export const PostOfficeListPage: React.FC = () => {
           totalItems={mapPostOfficeData?.totalItems}
           emptyText='No geocoded post offices in this map area.'
           onBoundsChange={handleMapBoundsChange}
+          onPointClick={handleMapPostOfficeClick}
         />
 
         <PostOfficeResultsCard
@@ -822,10 +866,12 @@ export const PostOfficeListPage: React.FC = () => {
         onOpenChange={(open) => {
           if (!open) {
             setDetailTarget(null);
+            setDetailTab('details');
+            setDetailOrdersPage(0);
           }
         }}
       >
-        <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
+        <DialogContent className='sm:max-w-5xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>Post Office Details</DialogTitle>
             <DialogDescription>
@@ -834,122 +880,161 @@ export const PostOfficeListPage: React.FC = () => {
           </DialogHeader>
 
           {detailTarget ? (
-            <div className='space-y-4'>
-              <div className='grid gap-3 md:grid-cols-2 text-sm'>
-                <div>
-                  <p className='text-muted-foreground'>Code</p>
-                  <p className='font-medium'>{detailTarget.code}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Name</p>
-                  <p className='font-medium'>{detailTarget.name}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Status</p>
-                  <Badge variant={getStatusBadgeVariant(detailTarget.status)}>
-                    {detailTarget.status}
-                  </Badge>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Phone</p>
-                  <p className='font-medium'>
-                    {detailTarget.phoneNumber || '--'}
-                  </p>
-                </div>
-                <div className='md:col-span-2'>
-                  <p className='text-muted-foreground'>Address</p>
-                  <p className='font-medium'>{detailTarget.addressDetail}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Province / Ward</p>
-                  <p className='font-medium'>
-                    {getProvinceLabel(detailTarget.provinceCode)} /{' '}
-                    {getWardLabel(
-                      detailTarget.provinceCode,
-                      detailTarget.wardCode
+            <Tabs
+              value={detailTab}
+              onValueChange={(value) => setDetailTab(value as typeof detailTab)}
+            >
+              <TabsList>
+                <TabsTrigger value='details'>Details</TabsTrigger>
+                <TabsTrigger value='orders'>Orders</TabsTrigger>
+              </TabsList>
+              <TabsContent value='details' className='mt-4'>
+                <div className='space-y-4'>
+                  <div className='grid gap-3 md:grid-cols-2 text-sm'>
+                    <div>
+                      <p className='text-muted-foreground'>Code</p>
+                      <p className='font-medium'>{detailTarget.code}</p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Name</p>
+                      <p className='font-medium'>{detailTarget.name}</p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Status</p>
+                      <Badge
+                        variant={getStatusBadgeVariant(detailTarget.status)}
+                      >
+                        {detailTarget.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Phone</p>
+                      <p className='font-medium'>
+                        {detailTarget.phoneNumber || '--'}
+                      </p>
+                    </div>
+                    <div className='md:col-span-2'>
+                      <p className='text-muted-foreground'>Address</p>
+                      <p className='font-medium'>
+                        {detailTarget.addressDetail}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Province / Ward</p>
+                      <p className='font-medium'>
+                        {getProvinceLabel(detailTarget.provinceCode)} /{' '}
+                        {getWardLabel(
+                          detailTarget.provinceCode,
+                          detailTarget.wardCode
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>
+                        Service radius (m)
+                      </p>
+                      <p className='font-medium'>
+                        {detailTarget.serviceRadiusM}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>
+                        Pickup order capacity
+                      </p>
+                      <p className='font-medium'>
+                        {detailTarget.dailyCapacity ?? '--'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>
+                        Current pickup load
+                      </p>
+                      <p className='font-medium'>
+                        {detailTarget.currentLoad ?? '--'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Delivery capacity</p>
+                      <p className='font-medium'>
+                        {detailTarget.deliveryCapacity ?? '--'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>
+                        Current delivery load
+                      </p>
+                      <p className='font-medium'>
+                        {detailTarget.currentDeliveryLoad ?? '--'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Priority</p>
+                      <p className='font-medium'>
+                        {detailTarget.priority ?? '--'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-muted-foreground'>Coordinates</p>
+                      <p className='font-medium'>
+                        {detailTarget.latitude ?? '--'},{' '}
+                        {detailTarget.longitude ?? '--'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <p className='text-sm font-medium'>Map</p>
+                    {detailTarget.latitude !== undefined &&
+                    detailTarget.latitude !== null &&
+                    detailTarget.longitude !== undefined &&
+                    detailTarget.longitude !== null ? (
+                      <CoordinatePickerMap
+                        latitude={detailTarget.latitude}
+                        longitude={detailTarget.longitude}
+                        disabled
+                        className='h-72'
+                        onChange={() => {
+                          // Read-only map in detail mode.
+                        }}
+                      />
+                    ) : (
+                      <p className='text-sm text-muted-foreground'>
+                        This post office does not have geocoded coordinates yet.
+                      </p>
                     )}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Service radius (m)</p>
-                  <p className='font-medium'>{detailTarget.serviceRadiusM}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Pickup order capacity</p>
-                  <p className='font-medium'>
-                    {detailTarget.dailyCapacity ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Current pickup load</p>
-                  <p className='font-medium'>
-                    {detailTarget.currentLoad ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Delivery capacity</p>
-                  <p className='font-medium'>
-                    {detailTarget.deliveryCapacity ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Current delivery load</p>
-                  <p className='font-medium'>
-                    {detailTarget.currentDeliveryLoad ?? '--'}
-                  </p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Priority</p>
-                  <p className='font-medium'>{detailTarget.priority ?? '--'}</p>
-                </div>
-                <div>
-                  <p className='text-muted-foreground'>Coordinates</p>
-                  <p className='font-medium'>
-                    {detailTarget.latitude ?? '--'},{' '}
-                    {detailTarget.longitude ?? '--'}
-                  </p>
-                </div>
-              </div>
+                  </div>
 
-              <div className='space-y-2'>
-                <p className='text-sm font-medium'>Map</p>
-                {detailTarget.latitude !== undefined &&
-                detailTarget.latitude !== null &&
-                detailTarget.longitude !== undefined &&
-                detailTarget.longitude !== null ? (
-                  <CoordinatePickerMap
-                    latitude={detailTarget.latitude}
-                    longitude={detailTarget.longitude}
-                    disabled
-                    className='h-72'
-                    onChange={() => {
-                      // Read-only map in detail mode.
-                    }}
-                  />
-                ) : (
-                  <p className='text-sm text-muted-foreground'>
-                    This post office does not have geocoded coordinates yet.
-                  </p>
-                )}
-              </div>
-
-              {isTmsAdmin ? (
-                <div className='flex justify-end border-t pt-3'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={() => {
-                      if (detailTarget) {
-                        handleOpenManageStaff(detailTarget);
-                      }
-                    }}
-                  >
-                    <UserCog className='h-4 w-4 mr-1' />
-                    Manage staff assignments
-                  </Button>
+                  {isTmsAdmin ? (
+                    <div className='flex justify-end border-t pt-3'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        onClick={() => {
+                          if (detailTarget) {
+                            handleOpenManageStaff(detailTarget);
+                          }
+                        }}
+                      >
+                        <UserCog className='h-4 w-4 mr-1' />
+                        Manage staff assignments
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
+              </TabsContent>
+              <TabsContent value='orders' className='mt-4'>
+                <TmsEntityOrdersTab
+                  data={detailOrdersData}
+                  isFetching={isFetchingDetailOrders}
+                  page={detailOrdersPage}
+                  emptyText='No orders are currently at this post office.'
+                  onPreviousPage={() =>
+                    setDetailOrdersPage((prev) => Math.max(prev - 1, 0))
+                  }
+                  onNextPage={() => setDetailOrdersPage((prev) => prev + 1)}
+                />
+              </TabsContent>
+            </Tabs>
           ) : null}
         </DialogContent>
       </Dialog>

@@ -71,10 +71,12 @@ import type {
   CreateSecondMileBagRequest,
   ReopenSecondMileBagRequest,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagListFilters,
   SecondMileBagSuggestion,
   SecondMileBaggingKpi,
   SecondMileBaggingValidation,
+  UpdateSecondMileBagCapacitySettingsRequest,
   UpdateSecondMileBagRequest,
   ValidateSecondMileBaggingRequest,
   SecondMileRoute,
@@ -107,6 +109,7 @@ import {
   normalizeSecondMileRoutePage,
   normalizeAutoSecondMileBaggingPlan,
   normalizeSecondMileBag,
+  normalizeSecondMileBagCapacitySettings,
   normalizeSecondMileBagPage,
   normalizeSecondMileBagSuggestion,
   normalizeSecondMileBaggingKpi,
@@ -572,6 +575,42 @@ export const firstMileApi = api.injectEndpoints({
         normalizeSecondMileBag(unwrapFirstMileResult(response)),
       providesTags: (_result, _error, id) => [
         { type: 'SecondMileBag', id: String(id) },
+      ],
+    }),
+
+    getSecondMileBagCapacitySettings: builder.query<
+      SecondMileBagCapacitySettings,
+      void
+    >({
+      query: () => ({
+        url: '/bags/capacity-settings',
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBagCapacitySettings>
+      ) =>
+        normalizeSecondMileBagCapacitySettings(unwrapFirstMileResult(response)),
+      providesTags: [{ type: 'SecondMileBag', id: 'CAPACITY_SETTINGS' }],
+    }),
+
+    updateSecondMileBagCapacitySettings: builder.mutation<
+      SecondMileBagCapacitySettings,
+      UpdateSecondMileBagCapacitySettingsRequest
+    >({
+      query: (body) => ({
+        url: '/bags/capacity-settings',
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBagCapacitySettings>
+      ) =>
+        normalizeSecondMileBagCapacitySettings(unwrapFirstMileResult(response)),
+      invalidatesTags: [
+        { type: 'SecondMileBag', id: 'CAPACITY_SETTINGS' },
+        { type: 'SecondMileBag', id: 'LIST' },
       ],
     }),
 
@@ -1096,7 +1135,9 @@ export const firstMileApi = api.injectEndpoints({
         keyword,
         orderCode,
         originPostOfficeCode,
+        originPostOfficeCodes,
         status,
+        statuses,
       }) => ({
         url: '/orders',
         method: 'GET',
@@ -1108,7 +1149,11 @@ export const firstMileApi = api.injectEndpoints({
           ...(originPostOfficeCode
             ? { origin_post_office_code: originPostOfficeCode }
             : {}),
+          ...(originPostOfficeCodes?.length
+            ? { origin_post_office_codes: originPostOfficeCodes }
+            : {}),
           ...(status ? { status } : {}),
+          ...(statuses?.length ? { statuses } : {}),
         },
       }),
       extraOptions: TMS_ORDER_SERVICE,
@@ -1559,8 +1604,10 @@ export const firstMileApi = api.injectEndpoints({
         senderPhone,
         receiverPhone,
         originPostOfficeCode,
+        originPostOfficeCodes,
         destinationPostOfficeCode,
         status,
+        statuses,
         isConfirm,
         createdFrom,
         createdTo,
@@ -1582,10 +1629,14 @@ export const firstMileApi = api.injectEndpoints({
           ...(originPostOfficeCode
             ? { origin_post_office_code: originPostOfficeCode }
             : {}),
+          ...(originPostOfficeCodes?.length
+            ? { origin_post_office_codes: originPostOfficeCodes }
+            : {}),
           ...(destinationPostOfficeCode
             ? { destination_post_office_code: destinationPostOfficeCode }
             : {}),
           ...(status ? { status } : {}),
+          ...(statuses?.length ? { statuses } : {}),
           ...(isConfirm !== undefined ? { is_confirm: isConfirm } : {}),
           ...(createdFrom ? { created_from: createdFrom } : {}),
           ...(createdTo ? { created_to: createdTo } : {}),
@@ -2018,6 +2069,8 @@ export const {
   useImportSecondMileVehiclesMutation,
   useGetSecondMileBagsQuery,
   useGetSecondMileBagByIdQuery,
+  useGetSecondMileBagCapacitySettingsQuery,
+  useUpdateSecondMileBagCapacitySettingsMutation,
   useCreateSecondMileBagMutation,
   useUpdateSecondMileBagMutation,
   useDeleteSecondMileBagMutation,

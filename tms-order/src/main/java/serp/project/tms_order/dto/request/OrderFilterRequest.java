@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import serp.project.tms_order.enums.OrderStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,8 +25,10 @@ public class OrderFilterRequest {
     private String senderPhone;
     private String receiverPhone;
     private String originPostOfficeCode;
+    private List<String> originPostOfficeCodes;
     private String destinationPostOfficeCode;
     private OrderStatus status;
+    private List<OrderStatus> statuses;
     private Boolean isConfirm;
     private LocalDateTime createdFrom;
     private LocalDateTime createdTo;

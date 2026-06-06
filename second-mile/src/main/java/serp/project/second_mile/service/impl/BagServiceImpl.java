@@ -30,6 +30,7 @@ import serp.project.second_mile.dto.request.UpdateBagRequest;
 import serp.project.second_mile.dto.request.ValidateBaggingRequest;
 import serp.project.second_mile.dto.response.AutoBaggingPlanItemResponse;
 import serp.project.second_mile.dto.response.AutoBaggingPlanResponse;
+import serp.project.second_mile.dto.response.BagCapacitySettingsResponse;
 import serp.project.second_mile.dto.response.BagResponse;
 import serp.project.second_mile.dto.response.BagSuggestionResponse;
 import serp.project.second_mile.dto.response.BaggingKpiResponse;
@@ -49,6 +50,7 @@ import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagSpecification;
+import serp.project.second_mile.service.BagCapacitySettingsService;
 import serp.project.second_mile.service.BagService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
@@ -69,9 +71,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BagServiceImpl implements BagService {
     private static final String TRANSITION_SOURCE = "SECOND_MILE";
-    private static final double DEFAULT_BAG_MAX_WEIGHT = 50.0;
-    private static final double DEFAULT_BAG_MAX_VOLUME = 0.5;
-    private static final int DEFAULT_BAG_MAX_ORDERS = 30;
     private static final DateTimeFormatter AUTO_BAG_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final BagRepository bagRepository;
@@ -82,6 +81,7 @@ public class BagServiceImpl implements BagService {
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final TmsOrderClient tmsOrderClient;
     private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final BagCapacitySettingsService bagCapacitySettingsService;
 
     @Override
     @Transactional(readOnly = true)
@@ -140,14 +140,15 @@ public class BagServiceImpl implements BagService {
         validateRouteAndTransport(tenantId, request.getOriginHubId(), request.getDestinationType(),
                 request.getDestinationHubId(), request.getDestinationPostOfficeCode(), request.getVehicleId());
 
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         Bag bag = BagMapper.toEntity(request);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
         bag.setStatus(BagStatus.CREATED);
         bag.setSealedAt(null);
-        bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), DEFAULT_BAG_MAX_WEIGHT));
-        bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), DEFAULT_BAG_MAX_VOLUME));
-        bag.setMaxOrders(normalizePositiveOrDefault(request.getMaxOrders(), DEFAULT_BAG_MAX_ORDERS));
+        bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
+        bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), capacitySettings.maxVolume()));
+        bag.setMaxOrders(normalizePositiveOrDefault(request.getMaxOrders(), capacitySettings.maxOrders()));
         bag.setCurrentWeight(0.0);
         bag.setCurrentVolume(0.0);
         bag.setCurrentOrders(0);
@@ -181,13 +182,14 @@ public class BagServiceImpl implements BagService {
         validateRouteAndTransport(tenantId, request.getOriginHubId(), request.getDestinationType(),
                 request.getDestinationHubId(), request.getDestinationPostOfficeCode(), request.getVehicleId());
 
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         BagMapper.mapForUpdate(request, bag);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
         bag.setStatus(BagStatus.CREATED);
-        bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), DEFAULT_BAG_MAX_WEIGHT));
-        bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), DEFAULT_BAG_MAX_VOLUME));
-        bag.setMaxOrders(normalizePositiveOrDefault(request.getMaxOrders(), DEFAULT_BAG_MAX_ORDERS));
+        bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
+        bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), capacitySettings.maxVolume()));
+        bag.setMaxOrders(normalizePositiveOrDefault(request.getMaxOrders(), capacitySettings.maxOrders()));
         recalculateBagMetrics(bag, tenantId);
         bag.setTenantId(tenantId);
 
@@ -232,7 +234,8 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.BAG_ORDER_ALREADY_ASSIGNED);
         }
 
-        validateOrderForBagAssignment(tenantId, bag, order, 0.0, 0.0, 0);
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
+        validateOrderForBagAssignment(tenantId, bag, order, 0.0, 0.0, 0, capacitySettings);
 
         BagOrder bagOrder = toBagOrder(bag, order, tenantId);
         BagOrder savedBagOrder = bagOrderRepository.save(bagOrder);
@@ -412,15 +415,16 @@ public class BagServiceImpl implements BagService {
         Long resolvedOriginHubId = originHubId != null ? originHubId : resolveOriginHubIdByOrder(tenantId, order);
         BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order, resolvedOriginHubId);
         List<Bag> candidates = findEditableBagsByTarget(tenantId, resolvedOriginHubId, destinationTarget);
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
 
         return candidates.stream()
-                .filter(candidate -> canFit(candidate, order, 0.0, 0.0, 0))
+                .filter(candidate -> canFit(candidate, order, 0.0, 0.0, 0, capacitySettings))
                 .map(candidate -> new BagSuggestionResponse(
                         candidate.getId(),
                         candidate.getBagCode(),
-                        remainingWeight(candidate),
-                        remainingVolume(candidate),
-                        remainingOrders(candidate)
+                        remainingWeight(candidate, capacitySettings),
+                        remainingVolume(candidate, capacitySettings),
+                        remainingOrders(candidate, capacitySettings)
                 ))
                 .sorted(Comparator
                         .comparing((BagSuggestionResponse item) -> nullSafeDouble(item.remainingWeight()))
@@ -450,6 +454,7 @@ public class BagServiceImpl implements BagService {
         double extraVolume = 0.0;
         int extraOrders = 0;
         int accepted = 0;
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
 
         for (String orderCode : normalizedOrderCodes) {
             TmsOrderOperationView order = orderByCode.get(orderCode);
@@ -462,7 +467,15 @@ public class BagServiceImpl implements BagService {
                 continue;
             }
             try {
-                validateOrderForBagAssignment(tenantId, bag, order, extraWeight, extraVolume, extraOrders);
+                validateOrderForBagAssignment(
+                        tenantId,
+                        bag,
+                        order,
+                        extraWeight,
+                        extraVolume,
+                        extraOrders,
+                        capacitySettings
+                );
                 extraWeight += safeDouble(order.getTotalWeight());
                 extraVolume += safeDouble(order.getTotalVolume());
                 extraOrders += 1;
@@ -511,12 +524,16 @@ public class BagServiceImpl implements BagService {
             if (!isReadyForBagging(order.getStatus())) {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Only inbound orders can be auto-bagged.");
             }
+            validateOrderOriginMatchesHub(tenantId, order, request.getOriginHubId());
             validateOrderDestinationMatchesTarget(tenantId, request.getOriginHubId(), request.getDestinationType(), request.getDestinationHubId(),
                     request.getDestinationPostOfficeCode(), order);
         }
 
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
+
         List<TmsOrderOperationView> sortedOrders = orders.stream()
-                .sorted(Comparator.comparing((TmsOrderOperationView order) -> sizeScore(order, DEFAULT_BAG_MAX_WEIGHT, DEFAULT_BAG_MAX_VOLUME))
+                .sorted(Comparator.comparing((TmsOrderOperationView order) ->
+                                sizeScore(order, capacitySettings.maxWeight(), capacitySettings.maxVolume()))
                         .reversed())
                 .toList();
 
@@ -530,7 +547,11 @@ public class BagServiceImpl implements BagService {
                 }
             }
             if (selected == null) {
-                selected = new AutoBagBin(DEFAULT_BAG_MAX_WEIGHT, DEFAULT_BAG_MAX_VOLUME, DEFAULT_BAG_MAX_ORDERS);
+                selected = new AutoBagBin(
+                        capacitySettings.maxWeight(),
+                        capacitySettings.maxVolume(),
+                        capacitySettings.maxOrders()
+                );
                 if (!selected.canFit(order)) {
                     throw new AppException(ErrorCode.INVALID_REQUEST, "Order exceeds single bag capacity.");
                 }
@@ -564,9 +585,9 @@ public class BagServiceImpl implements BagService {
                     .destinationType(request.getDestinationType())
                     .destinationHubId(request.getDestinationHubId())
                     .destinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()))
-                    .maxWeight(DEFAULT_BAG_MAX_WEIGHT)
-                    .maxVolume(DEFAULT_BAG_MAX_VOLUME)
-                    .maxOrders(DEFAULT_BAG_MAX_ORDERS)
+                    .maxWeight(capacitySettings.maxWeight())
+                    .maxVolume(capacitySettings.maxVolume())
+                    .maxOrders(capacitySettings.maxOrders())
                     .currentWeight(bin.totalWeight)
                     .currentVolume(bin.totalVolume)
                     .currentOrders(bin.orders.size())
@@ -630,9 +651,16 @@ public class BagServiceImpl implements BagService {
         double sumWeightRate = 0.0;
         double sumVolumeRate = 0.0;
         double sumOrders = 0.0;
+        BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         for (Bag bag : sealedBags) {
-            sumWeightRate += safeDouble(bag.getCurrentWeight()) / positiveOrDefault(bag.getMaxWeight(), DEFAULT_BAG_MAX_WEIGHT);
-            sumVolumeRate += safeDouble(bag.getCurrentVolume()) / positiveOrDefault(bag.getMaxVolume(), DEFAULT_BAG_MAX_VOLUME);
+            sumWeightRate += safeDouble(bag.getCurrentWeight()) / positiveOrDefault(
+                    bag.getMaxWeight(),
+                    capacitySettings.maxWeight()
+            );
+            sumVolumeRate += safeDouble(bag.getCurrentVolume()) / positiveOrDefault(
+                    bag.getMaxVolume(),
+                    capacitySettings.maxVolume()
+            );
             sumOrders += safeInt(bag.getCurrentOrders());
         }
         double size = sealedBags.size();
@@ -761,19 +789,17 @@ public class BagServiceImpl implements BagService {
             TmsOrderOperationView order,
             double extraWeight,
             double extraVolume,
-            int extraOrders
+            int extraOrders,
+            BagCapacitySettingsResponse capacitySettings
     ) {
         if (!isReadyForBagging(order.getStatus())) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Order is not ready for bagging.");
         }
 
-        Long originHubId = resolveOriginHubIdByOrder(tenantId, order);
-        if (!Objects.equals(originHubId, bag.getOriginHubId())) {
-            throw new AppException(ErrorCode.BAG_HUB_INVALID);
-        }
+        validateOrderOriginMatchesHub(tenantId, order, bag.getOriginHubId());
 
         validateOrderDestinationMatchesBag(tenantId, bag, order);
-        if (!canFit(bag, order, extraWeight, extraVolume, extraOrders)) {
+        if (!canFit(bag, order, extraWeight, extraVolume, extraOrders, capacitySettings)) {
             throw new AppException(ErrorCode.BAG_STATUS_INVALID, "Bag capacity exceeded.");
         }
     }
@@ -791,6 +817,13 @@ public class BagServiceImpl implements BagService {
                 bag.getDestinationPostOfficeCode(),
                 order
         );
+    }
+
+    private void validateOrderOriginMatchesHub(Long tenantId, TmsOrderOperationView order, Long originHubId) {
+        Long resolvedOriginHubId = resolveOriginHubIdByOrder(tenantId, order);
+        if (!Objects.equals(resolvedOriginHubId, originHubId)) {
+            throw new AppException(ErrorCode.BAG_HUB_INVALID);
+        }
     }
 
     private void validateOrderDestinationMatchesTarget(
@@ -897,27 +930,34 @@ public class BagServiceImpl implements BagService {
         bag.setCurrentOrders(totalOrders);
     }
 
-    private boolean canFit(Bag bag, TmsOrderOperationView order, double extraWeight, double extraVolume, int extraOrders) {
+    private boolean canFit(
+            Bag bag,
+            TmsOrderOperationView order,
+            double extraWeight,
+            double extraVolume,
+            int extraOrders,
+            BagCapacitySettingsResponse capacitySettings
+    ) {
         double nextWeight = safeDouble(bag.getCurrentWeight()) + safeDouble(order.getTotalWeight()) + extraWeight;
         double nextVolume = safeDouble(bag.getCurrentVolume()) + safeDouble(order.getTotalVolume()) + extraVolume;
         int nextOrders = safeInt(bag.getCurrentOrders()) + 1 + extraOrders;
 
-        boolean withinWeight = nextWeight <= positiveOrDefault(bag.getMaxWeight(), DEFAULT_BAG_MAX_WEIGHT);
-        boolean withinVolume = nextVolume <= positiveOrDefault(bag.getMaxVolume(), DEFAULT_BAG_MAX_VOLUME);
-        boolean withinOrders = nextOrders <= positiveOrDefault(bag.getMaxOrders(), DEFAULT_BAG_MAX_ORDERS);
+        boolean withinWeight = nextWeight <= positiveOrDefault(bag.getMaxWeight(), capacitySettings.maxWeight());
+        boolean withinVolume = nextVolume <= positiveOrDefault(bag.getMaxVolume(), capacitySettings.maxVolume());
+        boolean withinOrders = nextOrders <= positiveOrDefault(bag.getMaxOrders(), capacitySettings.maxOrders());
         return withinWeight && withinVolume && withinOrders;
     }
 
-    private double remainingWeight(Bag bag) {
-        return positiveOrDefault(bag.getMaxWeight(), DEFAULT_BAG_MAX_WEIGHT) - safeDouble(bag.getCurrentWeight());
+    private double remainingWeight(Bag bag, BagCapacitySettingsResponse capacitySettings) {
+        return positiveOrDefault(bag.getMaxWeight(), capacitySettings.maxWeight()) - safeDouble(bag.getCurrentWeight());
     }
 
-    private double remainingVolume(Bag bag) {
-        return positiveOrDefault(bag.getMaxVolume(), DEFAULT_BAG_MAX_VOLUME) - safeDouble(bag.getCurrentVolume());
+    private double remainingVolume(Bag bag, BagCapacitySettingsResponse capacitySettings) {
+        return positiveOrDefault(bag.getMaxVolume(), capacitySettings.maxVolume()) - safeDouble(bag.getCurrentVolume());
     }
 
-    private int remainingOrders(Bag bag) {
-        return positiveOrDefault(bag.getMaxOrders(), DEFAULT_BAG_MAX_ORDERS) - safeInt(bag.getCurrentOrders());
+    private int remainingOrders(Bag bag, BagCapacitySettingsResponse capacitySettings) {
+        return positiveOrDefault(bag.getMaxOrders(), capacitySettings.maxOrders()) - safeInt(bag.getCurrentOrders());
     }
 
     private TmsOrderOperationView lookupOrderByCode(Long tenantId, String orderCode) {

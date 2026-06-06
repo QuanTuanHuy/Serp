@@ -68,7 +68,11 @@ public final class OrderSpecification {
                 ));
             }
 
-            if (hasText(filterRequest.getOriginPostOfficeCode())) {
+            if (filterRequest.getOriginPostOfficeCodes() != null
+                    && !filterRequest.getOriginPostOfficeCodes().isEmpty()) {
+                predicates.add(criteriaBuilder.lower(root.get("originPostOfficeCode"))
+                        .in(filterRequest.getOriginPostOfficeCodes()));
+            } else if (hasText(filterRequest.getOriginPostOfficeCode())) {
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(root.get("originPostOfficeCode")),
                         filterRequest.getOriginPostOfficeCode().trim().toLowerCase(Locale.ROOT)
@@ -82,7 +86,9 @@ public final class OrderSpecification {
                 ));
             }
 
-            if (filterRequest.getStatus() != null) {
+            if (filterRequest.getStatuses() != null && !filterRequest.getStatuses().isEmpty()) {
+                predicates.add(root.get("status").in(filterRequest.getStatuses()));
+            } else if (filterRequest.getStatus() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filterRequest.getStatus()));
             }
 

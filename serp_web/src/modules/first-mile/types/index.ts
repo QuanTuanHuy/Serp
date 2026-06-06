@@ -417,6 +417,19 @@ export interface SecondMileBag {
   tenantId?: number;
 }
 
+export interface SecondMileBagCapacitySettings {
+  id?: number;
+  maxWeight: number;
+  maxVolume: number;
+  maxOrders: number;
+}
+
+export interface UpdateSecondMileBagCapacitySettingsRequest {
+  max_weight: number;
+  max_volume: number;
+  max_orders: number;
+}
+
 export interface SecondMileBagListFilters {
   keyword?: string;
   bagCode?: string;
@@ -706,7 +719,9 @@ export interface SecondMileOrderListFilters {
   keyword?: string;
   orderCode?: string;
   originPostOfficeCode?: string;
+  originPostOfficeCodes?: string[];
   status?: SecondMileOrderStatus;
+  statuses?: SecondMileOrderStatus[];
 }
 
 export type FirstMileOrderStatus =
@@ -843,8 +858,10 @@ export interface FirstMileOrderListFilters {
   senderPhone?: string;
   receiverPhone?: string;
   originPostOfficeCode?: string;
+  originPostOfficeCodes?: string[];
   destinationPostOfficeCode?: string;
   status?: FirstMileOrderStatus;
+  statuses?: FirstMileOrderStatus[];
   isConfirm?: boolean;
   createdFrom?: string;
   createdTo?: string;
