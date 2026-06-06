@@ -112,6 +112,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
                 <CommandItem
                   key={item.value}
                   value={String(item.value)}
+                  keywords={[item.label, String(item.value)]}
                   onSelect={handleSelect}
                 >
                   <Check

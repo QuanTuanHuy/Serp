@@ -6,14 +6,14 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useRoles, AdminActionMenu, RoleFormDialog } from '@/modules/admin';
-import type { Role, CreateRoleRequest } from '@/modules/admin';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
+  useRoles,
+  AdminActionMenu,
+  AdminFilterChips,
+  AdminFilterDialog,
+  RoleFormDialog,
+} from '@/modules/admin';
+import type { Role, CreateRoleRequest } from '@/modules/admin';
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { DataTable } from '@/shared/components';
@@ -28,6 +28,8 @@ import {
   Star,
   Building2,
   Package,
+  Check,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useModules } from '@/modules/admin/hooks/useModules';
 
@@ -53,6 +55,8 @@ export default function RolesPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('scope');
 
   const handleOpenCreateDialog = () => {
     setSelectedRole(undefined);
@@ -133,6 +137,59 @@ export default function RolesPage() {
     },
     [modules]
   );
+
+  const scopeOptions = [
+    { value: 'SYSTEM', label: 'System' },
+    { value: 'ORGANIZATION', label: 'Organization' },
+    { value: 'MODULE', label: 'Module' },
+    { value: 'DEPARTMENT', label: 'Department' },
+  ];
+
+  const roleTypeOptions = [
+    { value: 'OWNER', label: 'Owner' },
+    { value: 'ADMIN', label: 'Admin' },
+    { value: 'MANAGER', label: 'Manager' },
+    { value: 'USER', label: 'User' },
+    { value: 'VIEWER', label: 'Viewer' },
+    { value: 'CUSTOM', label: 'Custom' },
+  ];
+
+  const filterCriteria = [
+    { id: 'scope', label: 'Scope', count: filters.scope ? 1 : 0 },
+    { id: 'roleType', label: 'Role type', count: filters.roleType ? 1 : 0 },
+  ];
+
+  const filterChips = [
+    filters.scope
+      ? {
+          id: 'scope',
+          label: `Scope: ${
+            scopeOptions.find((item) => item.value === filters.scope)?.label ??
+            filters.scope
+          }`,
+          onRemove: () => handleFilterChange('scope', undefined),
+        }
+      : null,
+    filters.roleType
+      ? {
+          id: 'roleType',
+          label: `Role type: ${
+            roleTypeOptions.find((item) => item.value === filters.roleType)
+              ?.label ?? filters.roleType
+          }`,
+          onRemove: () => handleFilterChange('roleType', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('scope', undefined);
+    handleFilterChange('roleType', undefined);
+  };
 
   // Define columns for DataTable
   const columns = useMemo<ColumnDef<Role>[]>(
@@ -313,64 +370,29 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base font-medium'>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid gap-4 md:grid-cols-4'>
-            {/* Search */}
-            <div className='md:col-span-2'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search by name, description...'
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-            </div>
-
-            {/* Scope Filter */}
-            <div>
-              <select
-                value={filters.scope || ''}
-                onChange={(e) =>
-                  handleFilterChange('scope', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Scopes</option>
-                <option value='SYSTEM'>System</option>
-                <option value='ORGANIZATION'>Organization</option>
-                <option value='MODULE'>Module</option>
-                <option value='DEPARTMENT'>Department</option>
-              </select>
-            </div>
-
-            {/* Role Type Filter */}
-            <div>
-              <select
-                value={filters.roleType || ''}
-                onChange={(e) =>
-                  handleFilterChange('roleType', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Types</option>
-                <option value='OWNER'>Owner</option>
-                <option value='ADMIN'>Admin</option>
-                <option value='MANAGER'>Manager</option>
-                <option value='USER'>User</option>
-                <option value='VIEWER'>Viewer</option>
-                <option value='CUSTOM'>Custom</option>
-              </select>
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search by name, description...'
+              value={filters.search || ''}
+              onChange={(event) => handleSearch(event.target.value)}
+              className='pl-10'
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
+        </div>
+
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
 
       {/* Table Card */}
       <DataTable
@@ -407,6 +429,95 @@ export default function RolesPage() {
         onSubmit={handleSubmitRole}
         isLoading={isCreating || isUpdating}
       />
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'scope' ? (
+          <FilterPane title='Scope'>
+            <FilterOption
+              label='All scopes'
+              selected={!filters.scope}
+              onSelect={() => handleFilterChange('scope', undefined)}
+            />
+            {scopeOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.scope === option.value}
+                onSelect={() => handleFilterChange('scope', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'roleType' ? (
+          <FilterPane title='Role type'>
+            <FilterOption
+              label='All role types'
+              selected={!filters.roleType}
+              onSelect={() => handleFilterChange('roleType', undefined)}
+            />
+            {roleTypeOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.roleType === option.value}
+                onSelect={() => handleFilterChange('roleType', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <Check className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }

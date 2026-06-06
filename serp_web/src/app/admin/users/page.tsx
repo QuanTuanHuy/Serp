@@ -480,19 +480,20 @@ export default function UsersPage() {
 
         {selectedCriterion === 'role' ? (
           <FilterPane title='Role'>
-            <FilterOption
-              label='All roles'
-              selected={!filters.roleId}
-              onSelect={() => handleFilterChange('roleId', undefined)}
+            <Combobox
+              value={filters.roleId}
+              onChange={(value) =>
+                handleFilterChange(
+                  'roleId',
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={roles.map((role: Role) => ({
+                value: role.id,
+                label: role.name,
+              }))}
+              placeholder='All roles'
             />
-            {roles.map((role: Role) => (
-              <FilterOption
-                key={role.id}
-                label={role.name}
-                selected={filters.roleId === role.id}
-                onSelect={() => handleFilterChange('roleId', role.id)}
-              />
-            ))}
           </FilterPane>
         ) : null}
 
@@ -603,12 +604,13 @@ function FilterOption({
     <button
       type='button'
       onClick={onSelect}
-      className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
         selected ? 'bg-muted font-medium' : ''
       }`}
     >
-      {label}
-      {selected ? <CheckCircle className='h-4 w-4 text-primary' /> : null}
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
     </button>
   );
 }
