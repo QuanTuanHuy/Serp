@@ -1123,6 +1123,10 @@ export const firstMileApi = api.injectEndpoints({
         maxDailyCapacity,
         minCurrentLoad,
         maxCurrentLoad,
+        minDeliveryCapacity,
+        maxDeliveryCapacity,
+        minCurrentDeliveryLoad,
+        maxCurrentDeliveryLoad,
         minPriority,
         maxPriority,
         hubId,
@@ -1156,6 +1160,18 @@ export const firstMileApi = api.injectEndpoints({
             : {}),
           ...(maxCurrentLoad !== undefined
             ? { max_current_load: maxCurrentLoad }
+            : {}),
+          ...(minDeliveryCapacity !== undefined
+            ? { min_delivery_capacity: minDeliveryCapacity }
+            : {}),
+          ...(maxDeliveryCapacity !== undefined
+            ? { max_delivery_capacity: maxDeliveryCapacity }
+            : {}),
+          ...(minCurrentDeliveryLoad !== undefined
+            ? { min_current_delivery_load: minCurrentDeliveryLoad }
+            : {}),
+          ...(maxCurrentDeliveryLoad !== undefined
+            ? { max_current_delivery_load: maxCurrentDeliveryLoad }
             : {}),
           ...(minPriority !== undefined ? { min_priority: minPriority } : {}),
           ...(maxPriority !== undefined ? { max_priority: maxPriority } : {}),

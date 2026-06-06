@@ -36,6 +36,7 @@ spring:
         - classpath:db/migration/ward.sql
         - classpath:db/migration/post-office.sql
         - classpath:db/migration/post-office-add-hub-id.sql
+        - classpath:db/migration/post-office-delivery-capacity.sql
         - classpath:db/migration/post-office-staff.sql
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql

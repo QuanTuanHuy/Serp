@@ -275,7 +275,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-min-daily-capacity'>
-              Min daily capacity
+              Min pickup order capacity
             </Label>
             <Input
               id='post-office-filter-min-daily-capacity'
@@ -291,7 +291,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-max-daily-capacity'>
-              Max daily capacity
+              Max pickup order capacity
             </Label>
             <Input
               id='post-office-filter-max-daily-capacity'
@@ -307,7 +307,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-min-current-load'>
-              Min current load
+              Min current pickup load
             </Label>
             <Input
               id='post-office-filter-min-current-load'
@@ -323,7 +323,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-max-current-load'>
-              Max current load
+              Max current pickup load
             </Label>
             <Input
               id='post-office-filter-max-current-load'
@@ -333,6 +333,76 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
               value={filterFormValues.maxCurrentLoad}
               onChange={(event) =>
                 onFilterFieldChange('maxCurrentLoad', event.target.value)
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-min-delivery-capacity'>
+              Min delivery capacity
+            </Label>
+            <Input
+              id='post-office-filter-min-delivery-capacity'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.minDeliveryCapacity}
+              onChange={(event) =>
+                onFilterFieldChange('minDeliveryCapacity', event.target.value)
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-max-delivery-capacity'>
+              Max delivery capacity
+            </Label>
+            <Input
+              id='post-office-filter-max-delivery-capacity'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.maxDeliveryCapacity}
+              onChange={(event) =>
+                onFilterFieldChange('maxDeliveryCapacity', event.target.value)
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-min-current-delivery-load'>
+              Min current delivery load
+            </Label>
+            <Input
+              id='post-office-filter-min-current-delivery-load'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.minCurrentDeliveryLoad}
+              onChange={(event) =>
+                onFilterFieldChange(
+                  'minCurrentDeliveryLoad',
+                  event.target.value
+                )
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-max-current-delivery-load'>
+              Max current delivery load
+            </Label>
+            <Input
+              id='post-office-filter-max-current-delivery-load'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.maxCurrentDeliveryLoad}
+              onChange={(event) =>
+                onFilterFieldChange(
+                  'maxCurrentDeliveryLoad',
+                  event.target.value
+                )
               }
             />
           </div>

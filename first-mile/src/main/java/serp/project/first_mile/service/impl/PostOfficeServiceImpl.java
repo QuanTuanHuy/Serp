@@ -134,6 +134,10 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 .maxDailyCapacity(filterRequest.getMaxDailyCapacity())
                 .minCurrentLoad(filterRequest.getMinCurrentLoad())
                 .maxCurrentLoad(filterRequest.getMaxCurrentLoad())
+                .minDeliveryCapacity(filterRequest.getMinDeliveryCapacity())
+                .maxDeliveryCapacity(filterRequest.getMaxDeliveryCapacity())
+                .minCurrentDeliveryLoad(filterRequest.getMinCurrentDeliveryLoad())
+                .maxCurrentDeliveryLoad(filterRequest.getMaxCurrentDeliveryLoad())
                 .minPriority(filterRequest.getMinPriority())
                 .maxPriority(filterRequest.getMaxPriority())
                 .hubId(filterRequest.getHubId())
@@ -152,6 +156,8 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         validateRange(filterRequest.getMinServiceRadiusM(), filterRequest.getMaxServiceRadiusM());
         validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
         validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
+        validateRange(filterRequest.getMinDeliveryCapacity(), filterRequest.getMaxDeliveryCapacity());
+        validateRange(filterRequest.getMinCurrentDeliveryLoad(), filterRequest.getMaxCurrentDeliveryLoad());
         validateRange(filterRequest.getMinPriority(), filterRequest.getMaxPriority());
     }
 

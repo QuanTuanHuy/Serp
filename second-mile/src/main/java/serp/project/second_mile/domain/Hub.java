@@ -9,6 +9,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.second_mile.exception.AppException;
+import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.enums.HubStatus;
 import serp.project.second_mile.enums.HubType;
 import org.locationtech.jts.geom.Point;
@@ -66,10 +68,12 @@ public class Hub extends AbstractAudit {
     @Column(name = "working_end_time")
     private LocalDateTime workingEndTime;
 
+    // Total order load this hub can receive and process.
     @Column(name = "daily_capacity")
     @Builder.Default
     private Integer dailyCapacity = 0;
 
+    // Current order load confirmed inbound at this hub.
     @Column(name = "current_load")
     @Builder.Default
     private Integer currentLoad = 0;
@@ -88,6 +92,34 @@ public class Hub extends AbstractAudit {
 
     public boolean isActive() {
         return HubStatus.ACTIVE.equals(status);
+    }
+
+    public boolean canAccept(int incomingOrders) {
+        if (incomingOrders <= 0) {
+            return false;
+        }
+        return isActive() && safeInt(currentLoad) + incomingOrders <= safeInt(dailyCapacity);
+    }
+
+    public void addLoad(int incomingOrders) {
+        if (!canAccept(incomingOrders)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Hub capacity is not enough for inbound orders. Please try again later."
+            );
+        }
+        currentLoad = safeInt(currentLoad) + incomingOrders;
+    }
+
+    public void releaseLoad(int outgoingOrders) {
+        if (outgoingOrders <= 0) {
+            return;
+        }
+        currentLoad = Math.max(safeInt(currentLoad) - outgoingOrders, 0);
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
 }

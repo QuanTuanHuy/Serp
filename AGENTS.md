@@ -10,8 +10,6 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
   - `discuss_service/AGENTS.md`
   - `first-mile/AGENTS.md` (TMS first-mile backend)
   - `second-mile/AGENTS.md` (TMS second-mile backend)
-  - `tms-billing-service/AGENTS.md` (TMS billing / shipping fee)
-  - `tms-order/AGENTS.md` (TMS order management backend)
   - `notification_service/AGENTS.md`
   - `pm_core/AGENTS.md`
   - `serp_web/AGENTS.md`
@@ -132,13 +130,11 @@ poetry run alembic revision --autogenerate -m "message"
 
 
 ### File headers and comments
-- Many backend files start with an `Author:` / `Description:` header block; add it to new Go/Java files and match local Python header style when present.
-- **Default (most of the monorepo):**
+- Many backend files start with the repository header below; add it to new Go/Java files and match local Python header style when present.
 ```text
 Author: QuanTuanHuy
 Description: Part of Serp Project
 ```
-- **TMS modules override the default author** — do **not** use `QuanTuanHuy` in `first-mile/`, `second-mile/`, `tms-billing-service/`, `tms-order/`, or `serp_web/src/modules/first-mile/`. Those guides require `Author: Nguyen The Anh` (see each module’s `AGENTS.md`). When editing an existing TMS file, **preserve** its current `Author:` line; never replace `Nguyen The Anh` with `QuanTuanHuy`.
 - Add comments only for non-obvious business rules or tricky control flow.
 
 ### Imports
@@ -164,13 +160,6 @@ Description: Part of Serp Project
 - Go: prefer early returns, wrap lower-level failures with `%w`, return `error` instead of panicking, use transaction services for multi-step writes, and register new components in `cmd/bootstrap/all.go` when the service uses FX.
 - Java: throw module-specific business exceptions (`AppException` or the module's domain exception types), use `@Transactional` for write operations and `@Transactional(readOnly = true)` for read paths, and preserve `ResponseUtils` and `GeneralResponse<?>` response shapes.
 - Python: raise custom app exceptions or `HTTPException`, keep exception-to-response mapping in the shared FastAPI middleware or handlers, and do not swallow infrastructure errors silently.
-
-### Internal service authentication
-- Do not use hard-coded JWTs or service bearer-token env vars for backend-to-backend calls that may run without HTTP context.
-- For internal Spring service calls, prefer the shared API-key pattern: send `X-Internal-Api-Key`, `X-Tenant-Id`, and `X-Internal-Service`; receive them through the module's `InternalApiAuthenticationFilter`, then read tenant/roles through `AuthUtils`.
-- Internal service endpoints should be public at the Spring Security route layer (`permitAll`) so they do not require JWT, but the API-key filter must enforce `X-Internal-Api-Key` for internal paths before controller logic runs.
-- Internal service callers should send the API key headers even when a user JWT exists; use the JWT only for normal user-facing HTTP traffic, not service-to-service internal endpoints.
-- Keep `INTERNAL_API_KEY` out of source control. Configure it consistently on all participating services and rotate it like any other shared secret.
 
 ### Testing conventions
 - Java tests are JUnit 5; most modules use Mockito and `spring-boot-starter-test`.

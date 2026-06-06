@@ -280,6 +280,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         manifest.setNote(normalizeNullable(request.getNote()));
         HandoverManifestSyncEvent event = toOutboundSyncEvent(manifest, manifestOrders, originPostOfficeLocation);
         secondMileHandoverManifestClient.validateOutboundSync(event);
+        releaseOriginPostOfficeLoad(manifest, manifestOrders.size());
 
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
         TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
@@ -310,6 +311,20 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                     "planned_arrival_at must be after planned_departure_at."
             );
         }
+    }
+
+    private void releaseOriginPostOfficeLoad(PostOfficeHandoverManifest manifest, int outgoingOrders) {
+        if (manifest == null || manifest.getOriginPostOfficeId() == null || outgoingOrders <= 0) {
+            return;
+        }
+
+        PostOffice postOffice = postOfficeRepository.findByIdAndTenantIdForUpdate(
+                        manifest.getOriginPostOfficeId(),
+                        manifest.getTenantId()
+                )
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
+        postOffice.releaseLoad(outgoingOrders);
+        postOfficeRepository.save(postOffice);
     }
 
     @Override

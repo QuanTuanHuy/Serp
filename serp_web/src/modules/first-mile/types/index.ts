@@ -63,6 +63,8 @@ export interface PostOffice {
   serviceRadiusM: number;
   dailyCapacity?: number;
   currentLoad?: number;
+  deliveryCapacity?: number;
+  currentDeliveryLoad?: number;
   priority?: number;
   latitude?: number;
   longitude?: number;
@@ -904,6 +906,14 @@ export interface OrderConfirmationOriginPostOffice {
   dailyCapacity?: number;
 }
 
+export interface OrderConfirmationDestinationPostOffice {
+  id: number;
+  code: string;
+  name: string;
+  currentDeliveryLoad?: number;
+  deliveryCapacity?: number;
+}
+
 export interface OrderConfirmationResponse {
   orderId: number;
   orderCode: string;
@@ -911,6 +921,7 @@ export interface OrderConfirmationResponse {
   status: FirstMileOrderStatus;
   alreadyConfirmed: boolean;
   originPostOffice?: OrderConfirmationOriginPostOffice | null;
+  destinationPostOffice?: OrderConfirmationDestinationPostOffice | null;
 }
 
 export interface InitiateOrderPaymentRequest {
@@ -1334,6 +1345,10 @@ export interface PostOfficeListFilters {
   maxDailyCapacity?: number;
   minCurrentLoad?: number;
   maxCurrentLoad?: number;
+  minDeliveryCapacity?: number;
+  maxDeliveryCapacity?: number;
+  minCurrentDeliveryLoad?: number;
+  maxCurrentDeliveryLoad?: number;
   minPriority?: number;
   maxPriority?: number;
 }
@@ -1352,6 +1367,8 @@ export interface CreatePostOfficeRequest {
   service_radius_m: number;
   daily_capacity?: number;
   current_load?: number;
+  delivery_capacity?: number;
+  current_delivery_load?: number;
   priority?: number;
   latitude?: number;
   longitude?: number;

@@ -83,7 +83,7 @@ export const OrderDropOffSuggestionsDialog: React.FC<
                   </div>
                   <div className='flex flex-wrap gap-1'>
                     <Badge variant='secondary'>
-                      Remaining: {suggestion.remainingCapacity ?? '--'}
+                      Pickup remaining: {suggestion.remainingCapacity ?? '--'}
                     </Badge>
                     <Badge variant='outline'>
                       Distance: {suggestion.distanceMeters?.toFixed(0) ?? '--'}{' '}
@@ -92,7 +92,7 @@ export const OrderDropOffSuggestionsDialog: React.FC<
                   </div>
                 </div>
                 <p className='mt-2 text-xs text-muted-foreground'>
-                  Capacity: {suggestion.currentLoad ?? '--'} /
+                  Pickup load: {suggestion.currentLoad ?? '--'} /
                   {suggestion.dailyCapacity ?? '--'} | Priority:{' '}
                   {suggestion.priority ?? '--'}
                 </p>

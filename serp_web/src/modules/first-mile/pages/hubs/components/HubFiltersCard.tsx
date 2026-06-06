@@ -232,7 +232,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-min-daily-capacity'>
-              Min daily capacity
+              Min hub order capacity
             </Label>
             <Input
               id='hub-filter-min-daily-capacity'
@@ -248,7 +248,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-max-daily-capacity'>
-              Max daily capacity
+              Max hub order capacity
             </Label>
             <Input
               id='hub-filter-max-daily-capacity'
@@ -264,7 +264,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-min-current-load'>
-              Min current load
+              Min current hub load
             </Label>
             <Input
               id='hub-filter-min-current-load'
@@ -280,7 +280,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-max-current-load'>
-              Max current load
+              Max current hub load
             </Label>
             <Input
               id='hub-filter-max-current-load'

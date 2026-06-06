@@ -43,6 +43,7 @@ import type {
   FirstMileOrderListFilters,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
+  OrderConfirmationResponse,
   OrderImportItem,
   OrderPaymentInitResponse,
   PostOffice,
@@ -99,6 +100,43 @@ import {
 } from './orderPageModels';
 
 const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
+
+const formatConfirmationPostOffice = (
+  label: string,
+  postOffice: { code?: string | null; name?: string | null } | null | undefined
+): string | null => {
+  const code = postOffice?.code?.trim();
+  if (!code) {
+    return null;
+  }
+
+  const name = postOffice?.name?.trim();
+  return name ? `${label}: ${code} - ${name}` : `${label}: ${code}`;
+};
+
+const buildConfirmationPostOfficeDescription = (
+  confirmation: OrderConfirmationResponse
+): string | undefined => {
+  const details: string[] = [];
+
+  const originDetail = formatConfirmationPostOffice(
+    'Origin post office',
+    confirmation.originPostOffice
+  );
+  if (originDetail) {
+    details.push(originDetail);
+  }
+
+  const destinationDetail = formatConfirmationPostOffice(
+    'Destination post office',
+    confirmation.destinationPostOffice
+  );
+  if (destinationDetail) {
+    details.push(destinationDetail);
+  }
+
+  return details.length > 0 ? details.join(' | ') : undefined;
+};
 
 export const OrderListPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -1115,16 +1153,15 @@ export const OrderListPage: React.FC = () => {
   const confirmOrderAndRefresh = React.useCallback(
     async (order: FirstMileOrderDetail): Promise<boolean> => {
       const confirmationResult = await confirmOrder(order.id).unwrap();
-      const originPostOffice = confirmationResult.originPostOffice;
+      const confirmationDescription =
+        buildConfirmationPostOfficeDescription(confirmationResult);
 
       notification.success(
         confirmationResult.alreadyConfirmed
           ? 'Order was already confirmed.'
           : 'Order confirmed successfully.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
+        confirmationDescription
+          ? { description: confirmationDescription }
           : undefined
       );
 
@@ -1541,13 +1578,12 @@ export const OrderListPage: React.FC = () => {
         postOfficeId,
       }).unwrap();
 
-      const originPostOffice = confirmationResult.originPostOffice;
+      const confirmationDescription =
+        buildConfirmationPostOfficeDescription(confirmationResult);
       notification.success(
         'Drop-off order confirmed at post office.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
+        confirmationDescription
+          ? { description: confirmationDescription }
           : undefined
       );
 

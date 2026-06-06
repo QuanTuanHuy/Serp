@@ -15,6 +15,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
 import serp.project.tms_order.caller.PaymentServiceCaller;
+import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.domain.ProductType;
@@ -37,6 +38,7 @@ import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.ProductTypeRepository;
+import serp.project.tms_order.service.OrderTimelineService;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -75,6 +77,9 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderSyncEventPublisher orderSyncEventPublisher;
+
+    @Mock
+    private OrderTimelineService orderTimelineService;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -159,10 +164,20 @@ class OrderServiceImplTest {
                 .currentLoad(3)
                 .dailyCapacity(100)
                 .build();
+        DestinationPostOfficeReservationResponse destinationPostOffice =
+                DestinationPostOfficeReservationResponse.builder()
+                        .id(6L)
+                        .code("PO-HCM-01")
+                        .name("Ho Chi Minh 01")
+                        .currentDeliveryLoad(9)
+                        .deliveryCapacity(200)
+                        .build();
 
         when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
                 .thenReturn(Optional.of(order));
         when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+        when(firstMilePostOfficeCaller.reserveBestDestinationPostOffice(10.7769D, 106.7009D))
+                .thenReturn(destinationPostOffice);
         when(firstMilePostOfficeCaller.reserveBestOriginPostOffice(21.0278D, 105.8342D))
                 .thenReturn(postOffice);
         when(orderRepository.save(any(Order.class)))
@@ -172,8 +187,10 @@ class OrderServiceImplTest {
 
         assertTrue(response.alreadyConfirmed() == false);
         assertEquals("PO-HN-01", response.originPostOffice().code());
+        assertEquals("PO-HCM-01", response.destinationPostOffice().code());
         assertEquals(true, order.getIsConfirm());
         assertEquals("PO-HN-01", order.getOriginPostOfficeCode());
+        assertEquals("PO-HCM-01", order.getDestinationPostOfficeCode());
         verify(orderSyncEventPublisher).publish(order);
     }
 
@@ -272,6 +289,7 @@ class OrderServiceImplTest {
                 .feePayer(FeePayer.RECEIVER)
                 .paymentStatus(PaymentStatus.UNPAID)
                 .senderLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(105.8342D, 21.0278D)))
+                .receiverLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(106.7009D, 10.7769D)))
                 .tenantId(TENANT_ID)
                 .build();
     }

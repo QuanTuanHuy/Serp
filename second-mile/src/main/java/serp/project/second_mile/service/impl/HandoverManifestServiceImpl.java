@@ -1022,9 +1022,16 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
+        List<HandoverManifestOrder> newlyInboundTargets = targets.stream()
+                .filter(item -> item.getScanInTime() == null)
+                .toList();
+        addHubInboundLoad(manifest, newlyInboundTargets.size());
+
         LocalDateTime now = LocalDateTime.now();
         for (HandoverManifestOrder target : targets) {
-            target.setScanInTime(now);
+            if (target.getScanInTime() == null) {
+                target.setScanInTime(now);
+            }
             target.setLastKnownStatus(OrderStatus.INBOUND_AT_ORIGIN_HUB.name());
             if (target.getScanOutTime() == null) {
                 target.setScanOutTime(now);
@@ -1067,6 +1074,20 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                 vehicle,
                 loadRoute(savedManifest.getRouteId())
         );
+    }
+
+    private void addHubInboundLoad(HandoverManifest manifest, int incomingOrders) {
+        if (incomingOrders <= 0) {
+            return;
+        }
+        if (manifest == null || manifest.getTargetHubId() == null || manifest.getTenantId() == null) {
+            throw new AppException(ErrorCode.HUB_NOT_FOUND);
+        }
+
+        Hub hub = hubRepository.findByIdAndTenantIdForUpdate(manifest.getTargetHubId(), manifest.getTenantId())
+                .orElseThrow(() -> new AppException(ErrorCode.HUB_NOT_FOUND));
+        hub.addLoad(incomingOrders);
+        hubRepository.save(hub);
     }
 
     private boolean shouldAdvanceToOutboundReady(OrderStatus currentStatus) {

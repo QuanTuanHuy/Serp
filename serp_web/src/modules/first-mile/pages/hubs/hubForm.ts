@@ -187,10 +187,10 @@ export const validateHubForm = (values: HubFormState): string | null => {
   const dailyCapacity = Number(values.daily_capacity);
   const currentLoad = Number(values.current_load);
   if (!Number.isInteger(dailyCapacity) || dailyCapacity < 0) {
-    return 'Daily capacity must be a non-negative integer.';
+    return 'Hub order capacity must be a non-negative integer.';
   }
   if (!Number.isInteger(currentLoad) || currentLoad < 0) {
-    return 'Current load must be a non-negative integer.';
+    return 'Current hub load must be a non-negative integer.';
   }
 
   return null;

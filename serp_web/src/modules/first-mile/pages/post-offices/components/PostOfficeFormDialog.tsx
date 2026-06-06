@@ -217,7 +217,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-daily-capacity'>
-                Daily capacity *
+                Pickup order capacity *
               </Label>
               <Input
                 id='post-office-daily-capacity'
@@ -232,7 +232,9 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-current-load'>Current load *</Label>
+              <Label htmlFor='post-office-current-load'>
+                Current pickup load *
+              </Label>
               <Input
                 id='post-office-current-load'
                 type='number'
@@ -240,6 +242,38 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
                 value={formValues.current_load}
                 onChange={(event) =>
                   updateFormField('current_load', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='post-office-delivery-capacity'>
+                Delivery capacity *
+              </Label>
+              <Input
+                id='post-office-delivery-capacity'
+                type='number'
+                min={0}
+                value={formValues.delivery_capacity}
+                onChange={(event) =>
+                  updateFormField('delivery_capacity', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='post-office-current-delivery-load'>
+                Current delivery load *
+              </Label>
+              <Input
+                id='post-office-current-delivery-load'
+                type='number'
+                min={0}
+                value={formValues.current_delivery_load}
+                onChange={(event) =>
+                  updateFormField('current_delivery_load', event.target.value)
                 }
                 disabled={isSaving}
               />

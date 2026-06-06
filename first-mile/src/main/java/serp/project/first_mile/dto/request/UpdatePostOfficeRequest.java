@@ -75,6 +75,16 @@ public class UpdatePostOfficeRequest {
         @Min(0)
         private Integer currentLoad;
 
+        @JsonProperty("delivery_capacity")
+        @NotNull
+        @Min(0)
+        private Integer deliveryCapacity;
+
+        @JsonProperty("current_delivery_load")
+        @NotNull
+        @Min(0)
+        private Integer currentDeliveryLoad;
+
         @JsonProperty("priority")
         @NotNull
         @Min(0)

@@ -920,7 +920,7 @@ export function HubListPage() {
                       )}
                       {hub.dailyCapacity !== undefined && (
                         <div className='text-sm'>
-                          <span className='font-medium'>Load:</span>{' '}
+                          <span className='font-medium'>Hub load:</span>{' '}
                           {hub.currentLoad ?? 0}/{hub.dailyCapacity}
                         </div>
                       )}
@@ -1071,7 +1071,7 @@ export function HubListPage() {
                 </p>
               )}
               <p>
-                <span className='font-medium'>Capacity:</span>{' '}
+                <span className='font-medium'>Hub load:</span>{' '}
                 {detailHub.currentLoad ?? 0}/{detailHub.dailyCapacity ?? 0}
               </p>
               {(detailHub.latitude != null || detailHub.longitude != null) && (
