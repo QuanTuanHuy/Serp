@@ -5,6 +5,15 @@
 
 'use client';
 
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { getErrorMessage } from '@/lib/store/api';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -40,10 +49,14 @@ import {
 import { PMProjectCalendarFilters } from '../components/projects/calendar/PMProjectCalendarFilters';
 import { PMProjectCalendarGrid } from '../components/projects/calendar/PMProjectCalendarGrid';
 import { PMProjectScheduleAllocationSheet } from '../components/projects/calendar/PMProjectScheduleAllocationSheet';
+import { PMProjectUnscheduledWorkPanel } from '../components/projects/calendar/PMProjectUnscheduledWorkPanel';
 import {
   countCalendarFilters,
+  getDefaultDroppedScheduleEffort,
+  getDefaultDroppedScheduleRange,
   getCalendarDayKey,
   getCalendarViewport,
+  getProjectCalendarDragData,
   getVisibleCalendarDays,
   parseNumberList,
   toVietnamMoment,
@@ -78,6 +91,13 @@ export function PMProjectCalendarPage() {
   const [workItemDetailOpen, setWorkItemDetailOpen] = useState(false);
   const [selectedAllocation, setSelectedAllocation] =
     useState<PMWorkItemScheduleAllocationCalendarItemApi | null>(null);
+  const [activeUnscheduledWorkItemId, setActiveUnscheduledWorkItemId] =
+    useState<number>();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
   const [updateWorkItemSchedule, updateWorkItemScheduleState] =
     useUpdatePmWorkItemScheduleMutation();
 
@@ -144,9 +164,33 @@ export function PMProjectCalendarPage() {
         calendarMode !== 'schedule',
     }
   );
+  const unscheduledQuery = useSearchPmWorkItemsQuery(
+    {
+      projectId: numericProjectId,
+      params: {
+        keyword: viewport.keyword,
+        assigneeIds: viewport.assigneeIds,
+        issueTypeIds: viewport.issueTypeIds,
+        statusIds: viewport.statusIds,
+        hasActivePlan: false,
+        enriched: true,
+        page: 0,
+        pageSize: 100,
+        sortField: 'updated_at',
+        sortDirection: 'DESC',
+      },
+    },
+    {
+      skip:
+        !numericProjectId ||
+        Number.isNaN(numericProjectId) ||
+        calendarMode !== 'schedule',
+    }
+  );
 
   const deadlineItems = deadlineQuery.data?.data.items || [];
   const scheduleItems = scheduleQuery.data?.items || [];
+  const unscheduledItems = unscheduledQuery.data?.data.items || [];
   const isLoading =
     calendarMode === 'deadline'
       ? deadlineQuery.isLoading || deadlineQuery.isFetching
@@ -180,6 +224,15 @@ export function PMProjectCalendarPage() {
         item.allocationId !== selectedAllocation.allocationId
     );
   }, [scheduleItems, selectedAllocation]);
+  const activeUnscheduledWorkItem = useMemo(
+    () =>
+      activeUnscheduledWorkItemId
+        ? unscheduledItems.find(
+            (item) => item.id === activeUnscheduledWorkItemId
+          )
+        : undefined,
+    [activeUnscheduledWorkItemId, unscheduledItems]
+  );
 
   const updateFilterParams = (updates: Record<string, string | undefined>) => {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -214,6 +267,76 @@ export function PMProjectCalendarPage() {
   const openWorkItemDetail = (workItemId: number) => {
     setSelectedWorkItemId(workItemId);
     setWorkItemDetailOpen(true);
+  };
+
+  const handleCalendarDragStart = (event: DragStartEvent) => {
+    const activeData = getProjectCalendarDragData(event.active.data.current);
+    if (activeData?.type === 'unscheduled-work-item') {
+      setActiveUnscheduledWorkItemId(activeData.workItemId);
+    }
+  };
+
+  const handleCalendarDragEnd = async (event: DragEndEvent) => {
+    setActiveUnscheduledWorkItemId(undefined);
+
+    const activeData = getProjectCalendarDragData(event.active.data.current);
+    const overData = getProjectCalendarDragData(event.over?.data.current);
+    if (
+      activeData?.type !== 'unscheduled-work-item' ||
+      overData?.type !== 'calendar-day'
+    ) {
+      return;
+    }
+
+    const item = unscheduledItems.find(
+      (candidate) => candidate.id === activeData.workItemId
+    );
+    if (!item) {
+      toast.error('Unable to locate unscheduled work item.');
+      return;
+    }
+    if (!item.assigneeId) {
+      toast.error('Assign this work item before scheduling it.');
+      return;
+    }
+
+    const { plannedStart, plannedEnd } = getDefaultDroppedScheduleRange(
+      overData.dayStart
+    );
+    const effortMillis = getDefaultDroppedScheduleEffort(
+      item.timeRemainingEstimate,
+      item.timeOriginalEstimate
+    );
+
+    try {
+      await updateWorkItemSchedule({
+        projectId: numericProjectId,
+        workItemId: item.id,
+        body: {
+          plannedStart,
+          plannedEnd,
+          locked: true,
+          allocations: [
+            {
+              assigneeId: item.assigneeId,
+              start: plannedStart,
+              end: plannedEnd,
+              effortMillis,
+            },
+          ],
+        },
+      }).unwrap();
+      toast.success('Work item scheduled.');
+      await Promise.all([scheduleQuery.refetch(), unscheduledQuery.refetch()]);
+    } catch (error) {
+      toast.error('Failed to schedule work item', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleCalendarDragCancel = () => {
+    setActiveUnscheduledWorkItemId(undefined);
   };
 
   const saveScheduleAllocation = async (input: {
@@ -301,6 +424,69 @@ export function PMProjectCalendarPage() {
       ? (deadlineQuery.data?.data.totalItems ?? 0)
       : (scheduleQuery.data?.totalItems ?? 0);
   const emptyState = !isLoading && !error && totalItems === 0;
+  const calendarCard = (
+    <Card>
+      <CardHeader className='pb-3'>
+        <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
+          <CardTitle className='text-base'>
+            {calendarMode === 'schedule'
+              ? 'Schedule allocations'
+              : 'Work item deadlines'}
+          </CardTitle>
+          <div className='flex flex-1 flex-wrap items-center gap-2 lg:justify-end'>
+            <div className='relative w-full max-w-sm'>
+              <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder='Search calendar'
+                className='pl-9'
+              />
+            </div>
+            <Button
+              variant='outline'
+              size='sm'
+              className='gap-2'
+              onClick={() => setFilterOpen(true)}
+            >
+              <Filter className='h-4 w-4' />
+              Filters
+              {activeFilterCount > 0 ? (
+                <Badge variant='secondary'>{activeFilterCount}</Badge>
+              ) : null}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error ? (
+          <div className='mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive'>
+            {getErrorMessage(error)}
+          </div>
+        ) : null}
+
+        <div className={cn(isLoading && 'opacity-60')}>
+          <PMProjectCalendarGrid
+            days={days}
+            mode={calendarMode}
+            view={view}
+            showWeekends={showWeekends}
+            dropEnabled={calendarMode === 'schedule'}
+            deadlineItemsByDay={deadlineItemsByDay}
+            scheduleItemsByDay={scheduleItemsByDay}
+            onDeadlineClick={(item) => openWorkItemDetail(item.id)}
+            onScheduleClick={setSelectedAllocation}
+          />
+        </div>
+
+        {emptyState ? (
+          <div className='mt-4 rounded-lg border border-dashed p-6 text-sm text-muted-foreground'>
+            No calendar items in the current viewport.
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className='space-y-4'>
@@ -372,66 +558,40 @@ export function PMProjectCalendarPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className='pb-3'>
-          <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-            <CardTitle className='text-base'>
-              {calendarMode === 'schedule'
-                ? 'Schedule allocations'
-                : 'Work item deadlines'}
-            </CardTitle>
-            <div className='flex flex-1 flex-wrap items-center gap-2 lg:justify-end'>
-              <div className='relative w-full max-w-sm'>
-                <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder='Search calendar'
-                  className='pl-9'
-                />
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                className='gap-2'
-                onClick={() => setFilterOpen(true)}
-              >
-                <Filter className='h-4 w-4' />
-                Filters
-                {activeFilterCount > 0 ? (
-                  <Badge variant='secondary'>{activeFilterCount}</Badge>
-                ) : null}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <div className='mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive'>
-              {getErrorMessage(error)}
-            </div>
-          ) : null}
-
-          <div className={cn(isLoading && 'opacity-60')}>
-            <PMProjectCalendarGrid
-              days={days}
-              mode={calendarMode}
-              view={view}
-              showWeekends={showWeekends}
-              deadlineItemsByDay={deadlineItemsByDay}
-              scheduleItemsByDay={scheduleItemsByDay}
-              onDeadlineClick={(item) => openWorkItemDetail(item.id)}
-              onScheduleClick={setSelectedAllocation}
+      {calendarMode === 'schedule' ? (
+        <DndContext
+          sensors={sensors}
+          onDragCancel={handleCalendarDragCancel}
+          onDragEnd={handleCalendarDragEnd}
+          onDragStart={handleCalendarDragStart}
+        >
+          <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'>
+            <div className='min-w-0'>{calendarCard}</div>
+            <PMProjectUnscheduledWorkPanel
+              items={unscheduledItems}
+              totalItems={unscheduledQuery.data?.data.totalItems ?? 0}
+              isLoading={unscheduledQuery.isLoading}
+              isFetching={unscheduledQuery.isFetching}
+              activeWorkItemId={activeUnscheduledWorkItemId}
+              onOpenWorkItem={openWorkItemDetail}
             />
           </div>
-
-          {emptyState ? (
-            <div className='mt-4 rounded-lg border border-dashed p-6 text-sm text-muted-foreground'>
-              No calendar items in the current viewport.
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+          <DragOverlay>
+            {activeUnscheduledWorkItem ? (
+              <div className='w-[320px] rounded-md border bg-background p-3 text-sm shadow-lg'>
+                <div className='font-semibold'>
+                  {activeUnscheduledWorkItem.key}
+                </div>
+                <div className='truncate text-muted-foreground'>
+                  {activeUnscheduledWorkItem.summary}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        calendarCard
+      )}
 
       {numericProjectId && !Number.isNaN(numericProjectId) ? (
         <>
@@ -446,6 +606,7 @@ export function PMProjectCalendarPage() {
             onClear={clearFilters}
           />
           <PMProjectScheduleAllocationSheet
+            projectId={numericProjectId}
             allocation={selectedAllocation}
             relatedAllocations={relatedAllocations}
             open={Boolean(selectedAllocation)}

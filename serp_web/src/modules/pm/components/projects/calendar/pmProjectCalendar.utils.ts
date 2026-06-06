@@ -8,10 +8,70 @@ import moment from 'moment';
 export type PMProjectCalendarView = 'week' | 'month';
 export type PMProjectCalendarMode = 'schedule' | 'deadline';
 
+export const DEFAULT_SCHEDULE_EFFORT_MILLIS = 8 * 60 * 60 * 1000;
+
+export type PMProjectCalendarDragData =
+  | {
+      type: 'unscheduled-work-item';
+      workItemId: number;
+    }
+  | {
+      type: 'calendar-day';
+      dayStart: number;
+    };
+
 const VIETNAM_UTC_OFFSET_MINUTES = 7 * 60;
 
 export function toVietnamMoment(value: number | Date) {
   return moment(value).utcOffset(VIETNAM_UTC_OFFSET_MINUTES);
+}
+
+export function getProjectCalendarDragData(
+  value: unknown
+): PMProjectCalendarDragData | undefined {
+  if (!value || typeof value !== 'object' || !('type' in value)) {
+    return undefined;
+  }
+
+  const data = value as PMProjectCalendarDragData;
+  if (
+    data.type === 'unscheduled-work-item' &&
+    typeof data.workItemId === 'number'
+  ) {
+    return data;
+  }
+  if (data.type === 'calendar-day' && typeof data.dayStart === 'number') {
+    return data;
+  }
+  return undefined;
+}
+
+export function getDefaultDroppedScheduleRange(dayStart: number) {
+  const start = toVietnamMoment(dayStart)
+    .startOf('day')
+    .hour(9)
+    .minute(0)
+    .second(0)
+    .millisecond(0);
+  const end = start.clone().hour(17);
+
+  return {
+    plannedStart: start.valueOf(),
+    plannedEnd: end.valueOf(),
+  };
+}
+
+export function getDefaultDroppedScheduleEffort(
+  timeRemainingEstimate?: number | null,
+  timeOriginalEstimate?: number | null
+) {
+  if (typeof timeRemainingEstimate === 'number' && timeRemainingEstimate > 0) {
+    return timeRemainingEstimate;
+  }
+  if (typeof timeOriginalEstimate === 'number' && timeOriginalEstimate > 0) {
+    return timeOriginalEstimate;
+  }
+  return DEFAULT_SCHEDULE_EFFORT_MILLIS;
 }
 
 export function getCalendarViewport(date: Date, view: PMProjectCalendarView) {
