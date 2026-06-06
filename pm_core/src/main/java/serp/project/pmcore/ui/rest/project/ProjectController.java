@@ -40,6 +40,9 @@ import serp.project.pmcore.application.project.query.get.ProjectExpandOption;
 import serp.project.pmcore.application.project.query.list.ListProjectsQuery;
 import serp.project.pmcore.application.project.query.list.ListProjectsQueryHandler;
 import serp.project.pmcore.application.project.query.list.ProjectSummaryView;
+import serp.project.pmcore.application.project.query.settings.GetProjectSettingsOverviewQuery;
+import serp.project.pmcore.application.project.query.settings.GetProjectSettingsOverviewQueryHandler;
+import serp.project.pmcore.application.project.query.settings.ProjectSettingsOverviewView;
 import serp.project.pmcore.application.project.query.summary.GetProjectSummaryQuery;
 import serp.project.pmcore.application.project.query.summary.GetProjectSummaryQueryHandler;
 import serp.project.pmcore.application.shared.pagination.PageView;
@@ -68,6 +71,7 @@ public class ProjectController {
     private final GetProjectByKeyQueryHandler getProjectByKeyQueryHandler;
     private final ListProjectsQueryHandler listProjectsQueryHandler;
     private final GetProjectSummaryQueryHandler getProjectSummaryQueryHandler;
+    private final GetProjectSettingsOverviewQueryHandler getProjectSettingsOverviewQueryHandler;
 
     @PostMapping
     public ResponseEntity<GeneralResponse<CreateProjectResult>> createProject(
@@ -176,6 +180,25 @@ public class ProjectController {
                 expandOptions);
 
         ProjectDetailView response = getProjectByIdQueryHandler.handle(query);
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/{id}/settings-overview")
+    public ResponseEntity<GeneralResponse<ProjectSettingsOverviewView>> getProjectSettingsOverview(
+            @PathVariable("id") Long projectId) {
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.USER_NOT_FOUND));
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new AccessDeniedException(DomainErrorCode.TENANT_NOT_FOUND));
+
+        ProjectSettingsOverviewView response = getProjectSettingsOverviewQueryHandler.handle(
+                new GetProjectSettingsOverviewQuery(
+                        projectId,
+                        tenantId,
+                        userId,
+                        authUtils.getCurrentGroups()
+                )
+        );
         return ResponseEntity.ok(responseUtils.success(response));
     }
 
