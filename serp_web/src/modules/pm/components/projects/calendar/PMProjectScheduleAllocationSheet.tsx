@@ -6,7 +6,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Edit3, ExternalLink, Save, X } from 'lucide-react';
 import {
   Badge,
@@ -20,7 +20,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/shared/components/ui';
+import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
 import type { PMWorkItemScheduleAllocationCalendarItemApi } from '../../../types/api';
+import {
+  formatDurationEstimate,
+  parseDurationEstimate,
+} from '../../../utils/durationEstimate';
 import {
   fromCalendarDateTimeInputValue,
   formatCalendarDateRange,
@@ -38,6 +44,7 @@ interface PMProjectScheduleAllocationSaveInput {
 }
 
 interface PMProjectScheduleAllocationSheetProps {
+  projectId: number;
   allocation?: PMWorkItemScheduleAllocationCalendarItemApi | null;
   relatedAllocations: PMWorkItemScheduleAllocationCalendarItemApi[];
   open: boolean;
@@ -50,6 +57,7 @@ interface PMProjectScheduleAllocationSheetProps {
 }
 
 export function PMProjectScheduleAllocationSheet({
+  projectId,
   allocation,
   relatedAllocations,
   open,
@@ -61,22 +69,47 @@ export function PMProjectScheduleAllocationSheet({
   const [isEditing, setIsEditing] = useState(false);
   const [startInput, setStartInput] = useState('');
   const [endInput, setEndInput] = useState('');
-  const [effortMinutesInput, setEffortMinutesInput] = useState('');
-  const [assigneeIdInput, setAssigneeIdInput] = useState('');
+  const [effortInput, setEffortInput] = useState('');
+  const [assigneeValue, setAssigneeValue] = useState<string | number>();
   const [locked, setLocked] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: projectPeople = [], isLoading: isUserLoading } =
+    useGetPmProjectPeopleQuery(projectId, {
+      skip: !open || !projectId,
+    });
+
+  const assigneeOptions = useMemo<ComboboxItem[]>(() => {
+    const options = projectPeople
+      .map((person) => ({
+        value: person.userId,
+        label: person.name || person.email || `User #${person.userId}`,
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
+
+    if (
+      allocation?.assigneeId &&
+      allocation.assigneeName &&
+      !options.some((option) => Number(option.value) === allocation.assigneeId)
+    ) {
+      return [
+        { value: allocation.assigneeId, label: allocation.assigneeName },
+        ...options,
+      ];
+    }
+
+    return options;
+  }, [allocation?.assigneeId, allocation?.assigneeName, projectPeople]);
 
   useEffect(() => {
     setStartInput(toCalendarDateTimeInputValue(allocation?.start));
     setEndInput(toCalendarDateTimeInputValue(allocation?.end));
-    setEffortMinutesInput(
+    setEffortInput(
       allocation?.effortMillis
-        ? String(Math.round(allocation.effortMillis / 60000))
+        ? formatDurationEstimate(Math.round(allocation.effortMillis / 60000))
         : ''
     );
-    setAssigneeIdInput(
-      allocation?.assigneeId ? String(allocation.assigneeId) : ''
-    );
+    setAssigneeValue(allocation?.assigneeId ?? undefined);
     setLocked(allocation?.locked ?? true);
     setError(null);
     setIsEditing(false);
@@ -87,8 +120,8 @@ export function PMProjectScheduleAllocationSheet({
 
     const start = fromCalendarDateTimeInputValue(startInput);
     const end = fromCalendarDateTimeInputValue(endInput);
-    const assigneeId = Number(assigneeIdInput);
-    const effortMinutes = Number(effortMinutesInput);
+    const assigneeId = Number(assigneeValue);
+    const effortMinutes = parseDurationEstimate(effortInput);
 
     if (!start || !end) {
       setError('Start and end are required.');
@@ -102,8 +135,12 @@ export function PMProjectScheduleAllocationSheet({
       setError('Assignee is required.');
       return;
     }
-    if (!Number.isFinite(effortMinutes) || effortMinutes <= 0) {
-      setError('Effort must be greater than zero.');
+    if (
+      effortMinutes === null ||
+      !Number.isFinite(effortMinutes) ||
+      effortMinutes <= 0
+    ) {
+      setError('Use a duration like 2w 4d 6h 45m.');
       return;
     }
 
@@ -239,31 +276,26 @@ export function PMProjectScheduleAllocationSheet({
                       />
                     </div>
                     <div className='space-y-2'>
-                      <Label htmlFor='schedule-effort'>Effort minutes</Label>
+                      <Label htmlFor='schedule-effort'>Effort</Label>
                       <Input
                         id='schedule-effort'
-                        type='number'
-                        min='1'
-                        step='1'
-                        value={effortMinutesInput}
+                        value={effortInput}
+                        placeholder='2w 4d 6h 45m'
                         disabled={isSaving}
-                        onChange={(event) =>
-                          setEffortMinutesInput(event.target.value)
-                        }
+                        onChange={(event) => setEffortInput(event.target.value)}
                       />
                     </div>
                     <div className='space-y-2'>
-                      <Label htmlFor='schedule-assignee'>Assignee ID</Label>
-                      <Input
-                        id='schedule-assignee'
-                        type='number'
-                        min='1'
-                        step='1'
-                        value={assigneeIdInput}
-                        disabled={isSaving}
-                        onChange={(event) =>
-                          setAssigneeIdInput(event.target.value)
-                        }
+                      <Label>Assignee</Label>
+                      <Combobox
+                        value={assigneeValue}
+                        items={assigneeOptions}
+                        placeholder='Select assignee'
+                        emptyText='No project people found'
+                        loading={isUserLoading}
+                        disabled={isSaving || isUserLoading}
+                        clearable={false}
+                        onChange={setAssigneeValue}
                       />
                     </div>
                   </div>

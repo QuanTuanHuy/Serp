@@ -606,6 +606,7 @@ export function PMProjectCalendarPage() {
             onClear={clearFilters}
           />
           <PMProjectScheduleAllocationSheet
+            projectId={numericProjectId}
             allocation={selectedAllocation}
             relatedAllocations={relatedAllocations}
             open={Boolean(selectedAllocation)}
