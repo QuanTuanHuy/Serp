@@ -341,11 +341,6 @@ export default function SubscriptionsPage() {
             View and manage organization subscriptions
           </p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            Export
-          </Button>
-        </div>
       </div>
 
       <div className='space-y-3'>
