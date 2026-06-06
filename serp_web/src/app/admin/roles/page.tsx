@@ -267,11 +267,6 @@ export default function RolesPage() {
           <AdminActionMenu
             items={[
               {
-                label: 'View Details',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
                 label: 'Edit',
                 onClick: () => handleEditRole(row),
                 icon: <Edit className='h-4 w-4' />,
@@ -311,12 +306,9 @@ export default function RolesPage() {
         </div>
 
         <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            Export
-          </Button>
           <Button size='sm' onClick={handleOpenCreateDialog}>
-            <Plus className='h-4 w-4 mr-2' />
-            Create Role
+            <Plus className='h-4 w-4' />
+            Create
           </Button>
         </div>
       </div>

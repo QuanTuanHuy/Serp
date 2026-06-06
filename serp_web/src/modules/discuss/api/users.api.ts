@@ -11,14 +11,16 @@ export const userApi = api.injectEndpoints({
     /**
      * Get users in the current tenant (searchable)
      */
-    getUsers: builder.query<APIResponse<UserInfo[]>, { query?: string }>({
-      query: ({ query }) => ({
-        url: '/users',
-        params: { query },
-      }),
-      extraOptions: { service: 'discuss' },
-    }),
+    getDiscussUsers: builder.query<APIResponse<UserInfo[]>, { query?: string }>(
+      {
+        query: ({ query }) => ({
+          url: '/users',
+          params: { query },
+        }),
+        extraOptions: { service: 'discuss' },
+      }
+    ),
   }),
 });
 
-export const { useGetUsersQuery, useLazyGetUsersQuery } = userApi;
+export const { useGetDiscussUsersQuery, useLazyGetDiscussUsersQuery } = userApi;

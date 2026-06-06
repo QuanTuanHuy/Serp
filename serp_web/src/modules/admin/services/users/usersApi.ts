@@ -47,10 +47,14 @@ const buildUserQueryParams = (filters: UserFilters): string => {
 export const usersApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getUsers: builder.query<UsersResponse, UserFilters>({
-      query: (filters) => ({
-        url: `/users?${buildUserQueryParams(filters)}`,
-        method: 'GET',
-      }),
+      query: (filters) => {
+        const queryParams = buildUserQueryParams(filters);
+
+        return {
+          url: queryParams ? `/users?${queryParams}` : '/users',
+          method: 'GET',
+        };
+      },
       transformResponse: createPaginatedTransform<UserProfile>(),
       providesTags: (result) =>
         result?.data.items
