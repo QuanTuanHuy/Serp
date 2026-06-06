@@ -298,6 +298,7 @@ export interface PMSearchWorkItemsParams {
   fixVersionIds?: number[];
   isOverdue?: boolean;
   hasTimeLogged?: boolean;
+  hasActivePlan?: boolean;
   enriched?: boolean;
   page?: number;
   pageSize?: number;

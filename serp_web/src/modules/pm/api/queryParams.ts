@@ -92,6 +92,7 @@ export function buildWorkItemSearchParams(
     ...optionalNumberList('fixVersionIds', params?.fixVersionIds),
     ...optionalBoolean('isOverdue', params?.isOverdue),
     ...optionalBoolean('hasTimeLogged', params?.hasTimeLogged),
+    ...optionalBoolean('hasActivePlan', params?.hasActivePlan),
     ...optionalBoolean('enriched', params?.enriched),
     page: params?.page ?? 0,
     pageSize: params?.pageSize ?? 20,
