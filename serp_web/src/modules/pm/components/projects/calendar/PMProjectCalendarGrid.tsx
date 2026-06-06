@@ -5,7 +5,9 @@
 
 'use client';
 
+import { useDroppable } from '@dnd-kit/core';
 import type moment from 'moment';
+
 import { cn } from '@/shared/utils';
 import type {
   PMWorkItemSearchApi,
@@ -30,6 +32,7 @@ interface PMProjectCalendarGridProps {
     string,
     PMWorkItemScheduleAllocationCalendarItemApi[]
   >;
+  dropEnabled?: boolean;
   onDeadlineClick: (item: PMWorkItemSearchApi) => void;
   onScheduleClick: (item: PMWorkItemScheduleAllocationCalendarItemApi) => void;
 }
@@ -41,6 +44,7 @@ export function PMProjectCalendarGrid({
   showWeekends,
   deadlineItemsByDay,
   scheduleItemsByDay,
+  dropEnabled,
   onDeadlineClick,
   onScheduleClick,
 }: PMProjectCalendarGridProps) {
@@ -74,51 +78,105 @@ export function PMProjectCalendarGrid({
             mode === 'deadline' ? deadlineItems : scheduleItems;
 
           return (
-            <div
+            <CalendarDayCell
               key={dayKey}
-              className={cn(
-                'min-h-[145px] border-r border-b p-2 last:border-r-0',
-                view === 'week' && 'min-h-[680px]',
-                day.isSame(new Date(), 'day') && 'bg-primary/5',
-                day.month() !== days[Math.floor(days.length / 2)]?.month() &&
-                  view === 'month' &&
-                  'bg-muted/20'
-              )}
-            >
-              <div className='mb-2 flex items-center justify-between gap-2'>
-                <span className='text-xs font-medium text-muted-foreground'>
-                  {view === 'week'
-                    ? day.format('ddd D')
-                    : day.date() === 1
-                      ? day.format('MMM D')
-                      : day.format('D')}
-                </span>
-                {visibleItems.length > 0 ? (
-                  <span className='rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground'>
-                    {visibleItems.length}
-                  </span>
-                ) : null}
-              </div>
-              <div className='space-y-1.5'>
-                {mode === 'deadline'
-                  ? deadlineItems.map((item) => (
-                      <DeadlineCalendarChip
-                        key={item.id}
-                        item={item}
-                        onClick={() => onDeadlineClick(item)}
-                      />
-                    ))
-                  : scheduleItems.map((item) => (
-                      <ScheduleAllocationCalendarChip
-                        key={item.allocationId}
-                        item={item}
-                        onClick={() => onScheduleClick(item)}
-                      />
-                    ))}
-              </div>
-            </div>
+              day={day}
+              dayKey={dayKey}
+              days={days}
+              mode={mode}
+              view={view}
+              dropEnabled={Boolean(dropEnabled && mode === 'schedule')}
+              deadlineItems={deadlineItems}
+              scheduleItems={scheduleItems}
+              visibleItemCount={visibleItems.length}
+              onDeadlineClick={onDeadlineClick}
+              onScheduleClick={onScheduleClick}
+            />
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function CalendarDayCell({
+  day,
+  dayKey,
+  days,
+  mode,
+  view,
+  dropEnabled,
+  deadlineItems,
+  scheduleItems,
+  visibleItemCount,
+  onDeadlineClick,
+  onScheduleClick,
+}: {
+  day: moment.Moment;
+  dayKey: string;
+  days: moment.Moment[];
+  mode: PMProjectCalendarMode;
+  view: PMProjectCalendarView;
+  dropEnabled: boolean;
+  deadlineItems: PMWorkItemSearchApi[];
+  scheduleItems: PMWorkItemScheduleAllocationCalendarItemApi[];
+  visibleItemCount: number;
+  onDeadlineClick: (item: PMWorkItemSearchApi) => void;
+  onScheduleClick: (item: PMWorkItemScheduleAllocationCalendarItemApi) => void;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `calendar-day-${dayKey}`,
+    data: {
+      type: 'calendar-day',
+      dayStart: day.clone().startOf('day').valueOf(),
+    },
+    disabled: !dropEnabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'min-h-[145px] border-r border-b p-2 last:border-r-0',
+        view === 'week' && 'min-h-[680px]',
+        day.isSame(new Date(), 'day') && 'bg-primary/5',
+        day.month() !== days[Math.floor(days.length / 2)]?.month() &&
+          view === 'month' &&
+          'bg-muted/20',
+        dropEnabled && 'transition-colors',
+        isOver && 'bg-primary/10 ring-2 ring-inset ring-primary/30'
+      )}
+    >
+      <div className='mb-2 flex items-center justify-between gap-2'>
+        <span className='text-xs font-medium text-muted-foreground'>
+          {view === 'week'
+            ? day.format('ddd D')
+            : day.date() === 1
+              ? day.format('MMM D')
+              : day.format('D')}
+        </span>
+        {visibleItemCount > 0 ? (
+          <span className='rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground'>
+            {visibleItemCount}
+          </span>
+        ) : null}
+      </div>
+      <div className='space-y-1.5'>
+        {mode === 'deadline'
+          ? deadlineItems.map((item) => (
+              <DeadlineCalendarChip
+                key={item.id}
+                item={item}
+                onClick={() => onDeadlineClick(item)}
+              />
+            ))
+          : scheduleItems.map((item) => (
+              <ScheduleAllocationCalendarChip
+                key={item.allocationId}
+                item={item}
+                onClick={() => onScheduleClick(item)}
+              />
+            ))}
       </div>
     </div>
   );
