@@ -257,6 +257,7 @@ export const api = createApi({
     'pm/ProjectRole',
     'pm/ProjectComponent',
     'pm/ProjectSummary',
+    'pm/ProjectSettingsOverview',
     'pm/IssueType',
     'pm/IssueTypeScheme',
     'pm/IssueTypeSettings',
