@@ -327,9 +327,7 @@ function normalizeSettingsSection(
 ): PMProjectSettingsSectionKey {
   if (
     value &&
-    PROJECT_SETTINGS_SECTION_KEYS.includes(
-      value as PMProjectSettingsSectionKey
-    )
+    PROJECT_SETTINGS_SECTION_KEYS.includes(value as PMProjectSettingsSectionKey)
   ) {
     return value as PMProjectSettingsSectionKey;
   }
