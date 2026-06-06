@@ -68,4 +68,14 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
               AND r.isDeleted = false
             """)
     long countRoutesBySession(@Param("sessionId") Long sessionId);
+
+    @Query("""
+            SELECT ps FROM RoutePlanStudentEntity ps
+            WHERE ps.route.planningSession.id = :sessionId
+              AND ps.route.id <> :routeId
+              AND ps.isDeleted = false
+            """)
+    List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSession(
+            @Param("sessionId") Long sessionId,
+            @Param("routeId") Long routeId);
 }

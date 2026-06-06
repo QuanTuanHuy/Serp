@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.service.impl;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.request.SchoolPickupPointWindowUpsertRequest;
@@ -46,12 +47,12 @@ public class SchoolPickupPointWindowServiceImpl extends AbstractBaseService<Scho
 
 
     public SchoolPickupPointWindowServiceImpl(
-    SchoolPickupPointWindowRepository windowRepository,
-                                 ISchoolPickupPointService sppService,
-                                 ISchoolScheduleService scheduleService,
-                                 IAuditLogService auditLogService,
-                                 SchoolBusMapper mapper,
-                                 MessageCommon messageCommon) {
+            SchoolPickupPointWindowRepository windowRepository,
+            @Lazy ISchoolPickupPointService sppService,
+            ISchoolScheduleService scheduleService,
+            IAuditLogService auditLogService,
+            @Lazy SchoolBusMapper mapper,
+            MessageCommon messageCommon) {
         this.windowRepository = windowRepository;
         this.sppService = sppService;
         this.scheduleService = scheduleService;
@@ -332,5 +333,11 @@ public class SchoolPickupPointWindowServiceImpl extends AbstractBaseService<Scho
             return List.of();
         }
         return windowRepository.findBySchoolPickupPointIdInAndTenantIdAndIsDeletedFalse(linkIds, tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Optional<SchoolPickupPointWindowEntity> findWindow(Long schoolId, Long pointId, Long scheduleId, String direction, Long tenantId) {
+        return windowRepository.findWindow(schoolId, pointId, scheduleId, direction, tenantId);
     }
 }

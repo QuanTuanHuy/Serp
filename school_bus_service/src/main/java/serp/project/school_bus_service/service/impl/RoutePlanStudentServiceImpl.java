@@ -78,5 +78,15 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     public void saveAll(List<RoutePlanStudentEntity> entities) {
         routePlanStudentRepository.saveAll(entities);
     }
+
+    @Override
+    public List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSession(Long sessionId, Long routeId) {
+        return routePlanStudentRepository.findStudentsInOtherRoutesOfSession(sessionId, routeId);
+    }
+
+    @Override
+    public void deletePhysical(Long id) {
+        routePlanStudentRepository.deleteById(id);
+    }
 }
 

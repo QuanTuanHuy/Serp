@@ -22,6 +22,10 @@ import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
 
+import serp.project.school_bus_service.dto.response.ObjectiveScoreResponse;
+import serp.project.school_bus_service.service.IGreedyRouteGenerationService;
+import serp.project.school_bus_service.service.IRouteObjectiveScoringService;
+
 import java.util.List;
 
 @RestController
@@ -29,11 +33,17 @@ import java.util.List;
 public class RoutePlanningSessionController extends AbstractBaseController {
 
     private final IRoutePlanningSessionService sessionService;
+    private final IGreedyRouteGenerationService greedyRouteGenerationService;
+    private final IRouteObjectiveScoringService objectiveScoringService;
 
     public RoutePlanningSessionController(IRoutePlanningSessionService sessionService,
+                                          IGreedyRouteGenerationService greedyRouteGenerationService,
+                                          IRouteObjectiveScoringService objectiveScoringService,
                                           AuthUtils authUtils) {
         super(authUtils);
         this.sessionService = sessionService;
+        this.greedyRouteGenerationService = greedyRouteGenerationService;
+        this.objectiveScoringService = objectiveScoringService;
     }
 
     /** Preview eligible demand before creating a session. */
@@ -71,7 +81,21 @@ public class RoutePlanningSessionController extends AbstractBaseController {
             @RequestBody(required = false) GreedyGenerateRequest request) {
         GreedyGenerateRequest req = request != null ? request : new GreedyGenerateRequest();
         return ok("Greedy routes generated",
-                sessionService.generateGreedy(id, req, getCurrentTenantId(), getCurrentUserId()));
+                greedyRouteGenerationService.generateRoutes(id, req, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/{id}/objective-score")
+    public ResponseEntity<GeneralResponse<ObjectiveScoreResponse>> getSolutionObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Fetched solution objective score",
+                objectiveScoringService.calculateSolutionScore(id, getCurrentTenantId()));
+    }
+
+    @PostMapping("/{id}/objective-score/recalculate")
+    public ResponseEntity<GeneralResponse<ObjectiveScoreResponse>> recalculateSolutionObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Recalculated solution objective score",
+                objectiveScoringService.calculateSolutionScore(id, getCurrentTenantId()));
     }
 
     /** List routes belonging to a planning session (works for both MANUAL and GREEDY). */

@@ -27,11 +27,24 @@ import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
+import serp.project.school_bus_service.dto.request.RoutingPointRequest;
+import serp.project.school_bus_service.dto.response.RoutingMatrixResponse;
+import serp.project.school_bus_service.service.domain.IRoutingMatrixService;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.service.IRouteService;
+import serp.project.school_bus_service.service.IRouteCalculationTraceService;
+import serp.project.school_bus_service.mapper.RouteMapper;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
+import serp.project.school_bus_service.dto.response.RouteManualValidationResponse;
+import serp.project.school_bus_service.service.IRouteManualValidationService;
+import serp.project.school_bus_service.shared.export.IExportService;
+import serp.project.school_bus_service.shared.export.ExportRequest;
+import serp.project.school_bus_service.shared.export.ExportResult;
+import serp.project.school_bus_service.shared.export.ExportCode;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -40,10 +53,41 @@ import java.util.List;
 public class RouteController extends AbstractBaseController {
 
     private final IRouteService routeService;
+    private final IRoutingMatrixService routingMatrixService;
+    private final IRouteCalculationTraceService routeCalculationTraceService;
+    private final RouteMapper routeMapper;
+    private final IExportService exportService;
+    private final IRouteManualValidationService routeManualValidationService;
+    private final serp.project.school_bus_service.service.IRouteObjectiveScoringService objectiveScoringService;
 
-    public RouteController(IRouteService routeService, AuthUtils authUtils) {
+    public RouteController(
+            IRouteService routeService,
+            IRoutingMatrixService routingMatrixService,
+            IRouteCalculationTraceService routeCalculationTraceService,
+            RouteMapper routeMapper,
+            IExportService exportService,
+            IRouteManualValidationService routeManualValidationService,
+            serp.project.school_bus_service.service.IRouteObjectiveScoringService objectiveScoringService,
+            AuthUtils authUtils) {
         super(authUtils);
         this.routeService = routeService;
+        this.routingMatrixService = routingMatrixService;
+        this.routeCalculationTraceService = routeCalculationTraceService;
+        this.routeMapper = routeMapper;
+        this.exportService = exportService;
+        this.routeManualValidationService = routeManualValidationService;
+        this.objectiveScoringService = objectiveScoringService;
+    }
+
+    @PostMapping("/{id}/validate")
+    public ResponseEntity<GeneralResponse<RouteManualValidationResponse>> validateRoute(@PathVariable Long id) {
+        return ok("Validated route feasibility", routeManualValidationService.validateRoute(id, getCurrentTenantId()));
+    }
+
+    @PostMapping("/matrix")
+    public ResponseEntity<GeneralResponse<RoutingMatrixResponse>> getMatrix(
+            @Valid @RequestBody List<RoutingPointRequest> points) {
+        return ok("Computed routing matrix", routingMatrixService.buildMatrix(getCurrentTenantId(), points));
     }
 
     @GetMapping
@@ -167,5 +211,81 @@ public class RouteController extends AbstractBaseController {
             @RequestParam Long subscriptionId) {
         routeService.removeStudent(id, studentId, subscriptionId, getCurrentTenantId(), getCurrentUserId());
         return ok("Removed student", null);
+    }
+
+    @GetMapping("/{routePlanId}/calculation-traces/latest")
+    public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse>> getLatestCalculationTrace(
+            @PathVariable Long routePlanId) {
+        return ok("Fetched latest calculation trace",
+                routeCalculationTraceService.findLatestByRoutePlanId(routePlanId)
+                        .map(routeMapper::toRouteCalculationTraceResponse)
+                        .orElseThrow(() -> new serp.project.school_bus_service.shared.exception.AppException(
+                                serp.project.school_bus_service.shared.exception.AppErrorCode.NOT_FOUND,
+                                "No calculation trace found for route: " + routePlanId)));
+    }
+
+    @GetMapping("/{routePlanId}/calculation-traces")
+    public ResponseEntity<GeneralResponse<List<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse>>> getCalculationTraceHistory(
+            @PathVariable Long routePlanId) {
+        return ok("Fetched calculation trace history",
+                routeMapper.toRouteCalculationTraceResponseList(
+                        routeCalculationTraceService.findHistoryByRoutePlanId(routePlanId)));
+    }
+
+    /**
+     * TODO Phase 5/7:
+     * Persist and export planning-context full N x N matrix before route generation.
+     * This will be used by greedy route generation and experiment benchmark.
+     *
+     * Tiếng Việt:
+     * TODO Phase 5/7:
+     * Lưu và export ma trận N x N theo planning context trước khi tạo route.
+     * Ma trận này phục vụ thuật toán greedy và benchmark thực nghiệm.
+     */
+    @GetMapping("/{routePlanId}/calculation-traces/latest/export")
+    public ResponseEntity<byte[]> exportLatestCalculationTrace(@PathVariable Long routePlanId) {
+        ExportResult result = exportService.export(
+                ExportRequest.builder()
+                        .exportCode(ExportCode.ROUTING_TRACE)
+                        .routePlanId(routePlanId)
+                        .build()
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(result.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.getFileName() + "\"")
+                .body(result.getContent());
+    }
+
+    @GetMapping("/{routePlanId}/calculation-traces/{traceId}/export")
+    public ResponseEntity<byte[]> exportCalculationTrace(
+            @PathVariable Long routePlanId,
+            @PathVariable Long traceId) {
+        ExportResult result = exportService.export(
+                ExportRequest.builder()
+                        .exportCode(ExportCode.ROUTING_TRACE)
+                        .routePlanId(routePlanId)
+                        .traceId(traceId)
+                        .build()
+        );
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(result.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + result.getFileName() + "\"")
+                .body(result.getContent());
+    }
+
+    @GetMapping("/{id}/objective-score")
+    public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.ObjectiveScoreResponse>> getRouteObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Fetched route objective score",
+                objectiveScoringService.calculateRouteScore(id, getCurrentTenantId()));
+    }
+
+    @PostMapping("/{id}/objective-score/recalculate")
+    public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.ObjectiveScoreResponse>> recalculateRouteObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Recalculated route objective score",
+                objectiveScoringService.calculateRouteScore(id, getCurrentTenantId()));
     }
 }

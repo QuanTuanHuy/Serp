@@ -60,6 +60,7 @@ import type {
   SchoolBusSchoolPickupPointUpsertRequest,
   SchoolBusSchoolPickupPointWindow,
   SchoolPickupPointWindowUpsertRequest,
+  SchoolBusRouteCalculationTrace,
 } from '../types';
 
 const transformApiResponse = createApiResponseTransform;
@@ -1022,7 +1023,7 @@ export const schoolBusApi = api.injectEndpoints({
     }),
     reorderRouteStops: builder.mutation<
       ApiResponse<SchoolBusRouteStop[]>,
-      { id: number; orderedStopIds: number[] }
+      { id: number; orderedStopIds: number[]; sessionId: number }
     >({
       query: ({ id, orderedStopIds }) => ({
         url: `/routes/${id}/stops/reorder`,
@@ -1031,10 +1032,15 @@ export const schoolBusApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusRouteStop[]>(),
-      invalidatesTags: (_result, _error, { id }) => [
+      invalidatesTags: (_result, _error, { id, sessionId }) => [
         { type: 'schoolBus/Route', id },
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
+        { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `OBJECTIVE-${id}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${id}` },
       ],
     }),
     addRouteStop: builder.mutation<
@@ -1052,11 +1058,12 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id },
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${id}` },
       ],
     }),
     removeRouteStop: builder.mutation<
       ApiResponse<void>,
-      { routeId: number; stopId: number }
+      { routeId: number; stopId: number; sessionId: number }
     >({
       query: ({ routeId, stopId }) => ({
         url: `/routes/${routeId}/stops/${stopId}`,
@@ -1064,12 +1071,17 @@ export const schoolBusApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<void>(),
-      invalidatesTags: (_result, _error, { routeId }) => [
+      invalidatesTags: (_result, _error, { routeId, sessionId }) => [
         { type: 'schoolBus/Route', id: routeId },
         { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
         { type: 'schoolBus/Route', id: `PATH-${routeId}` },
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `OBJECTIVE-${routeId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${routeId}` },
       ],
     }),
     moveRouteStudent: builder.mutation<
@@ -1088,11 +1100,13 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
         { type: 'schoolBus/Route', id: body.targetRouteId },
         { type: 'schoolBus/Route', id: `DETAIL-${body.targetRouteId}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${routeId}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${body.targetRouteId}` },
       ],
     }),
     removeRouteStudent: builder.mutation<
       ApiResponse<void>,
-      { routeId: number; studentId: number; subscriptionId: number }
+      { routeId: number; studentId: number; subscriptionId: number; sessionId: number }
     >({
       query: ({ routeId, studentId, subscriptionId }) => ({
         url: `/routes/${routeId}/students/${studentId}?subscriptionId=${subscriptionId}`,
@@ -1100,12 +1114,17 @@ export const schoolBusApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<void>(),
-      invalidatesTags: (_result, _error, { routeId }) => [
+      invalidatesTags: (_result, _error, { routeId, sessionId }) => [
         { type: 'schoolBus/Route', id: routeId },
         { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
         { type: 'schoolBus/Route', id: `PATH-${routeId}` },
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `OBJECTIVE-${routeId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${routeId}` },
       ],
     }),
     computeRoutePath: builder.mutation<ApiResponse<SchoolBusRoutePath>, number>({
@@ -1118,7 +1137,65 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${id}` },
+        { type: 'schoolBus/Route', id: `TRACE-HISTORY-${id}` },
       ],
+    }),
+    validateRoute: builder.mutation<ApiResponse<any>, number>({
+      query: (id) => ({ url: `/routes/${id}/validate`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<any>(),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id },
+        { type: 'schoolBus/Route', id: `DETAIL-${id}` },
+        { type: 'schoolBus/Route', id: `PATH-${id}` },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${id}` },
+      ],
+    }),
+    getLatestRouteCalculationTrace: builder.query<
+      ApiResponse<SchoolBusRouteCalculationTrace>,
+      number
+    >({
+      query: (routeId) => ({
+        url: `/routes/${routeId}/calculation-traces/latest`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteCalculationTrace>(),
+      providesTags: (_result, _error, routeId) => [
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${routeId}` },
+      ],
+    }),
+    getRouteCalculationTraceHistory: builder.query<
+      ApiResponse<SchoolBusRouteCalculationTrace[]>,
+      number
+    >({
+      query: (routeId) => ({
+        url: `/routes/${routeId}/calculation-traces`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteCalculationTrace[]>(),
+      providesTags: (_result, _error, routeId) => [
+        { type: 'schoolBus/Route', id: `TRACE-HISTORY-${routeId}` },
+      ],
+    }),
+    exportLatestRouteCalculationTrace: builder.query<Blob, number>({
+      query: (routeId) => ({
+        url: `/routes/${routeId}/calculation-traces/latest/export`,
+        method: 'GET',
+        responseHandler: (response) => response.blob(),
+      }),
+      extraOptions: { service: 'school-bus' },
+    }),
+    exportRouteCalculationTrace: builder.query<Blob, { routeId: number; traceId: number }>({
+      query: ({ routeId, traceId }) => ({
+        url: `/routes/${routeId}/calculation-traces/${traceId}/export`,
+        method: 'GET',
+        responseHandler: (response) => response.blob(),
+      }),
+      extraOptions: { service: 'school-bus' },
     }),
 
     getAttendance: builder.query<
@@ -1757,6 +1834,39 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' }, { type: 'schoolBus/PickupPoint', id: 'SCHEDULE_WINDOWS' }],
     }),
 
+    getRouteObjectiveScore: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusObjectiveScore>,
+      number
+    >({
+      query: (id) => ({ url: `/routes/${id}/objective-score`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `OBJECTIVE-${id}` }],
+    }),
+    recalculateRouteObjectiveScore: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusObjectiveScore>,
+      number
+    >({
+      query: (id) => ({ url: `/routes/${id}/objective-score/recalculate`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `OBJECTIVE-${id}` }],
+    }),
+    getSessionObjectiveScore: builder.query<
+      import('../types').ApiResponse<import('../types').SchoolBusObjectiveScore>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/objective-score`, method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      providesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${id}` }],
+    }),
+    recalculateSessionObjectiveScore: builder.mutation<
+      import('../types').ApiResponse<import('../types').SchoolBusObjectiveScore>,
+      number
+    >({
+      query: (id) => ({ url: `/route-planning-sessions/${id}/objective-score/recalculate`, method: 'POST' }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, id) => [{ type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${id}` }],
+    }),
+
     // ── Planning Sessions ──────────────────────────────────────────────────
     previewPlanningDemand: builder.mutation<
       import('../types').ApiResponse<import('../types').SchoolBusPlanningPreview>,
@@ -1880,7 +1990,10 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
         { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
         { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-OBJECTIVE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `OBJECTIVE-${routeId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+        { type: 'schoolBus/Route', id: `TRACE-LATEST-${routeId}` },
       ],
     }),
   }),
@@ -1964,6 +2077,11 @@ const {
   useMoveRouteStudentMutation,
   useRemoveRouteStudentMutation,
   useComputeRoutePathMutation,
+  useValidateRouteMutation,
+  useGetLatestRouteCalculationTraceQuery: useGetLatestRouteCalculationTraceQueryOrig,
+  useGetRouteCalculationTraceHistoryQuery: useGetRouteCalculationTraceHistoryQueryOrig,
+  useLazyExportLatestRouteCalculationTraceQuery,
+  useLazyExportRouteCalculationTraceQuery,
   useCreateTripFromRouteMutation,
   useGetTripsQuery: useGetTripsQueryOrig,
   useGetTripByIdQuery: useGetTripByIdQueryOrig,
@@ -2027,6 +2145,10 @@ const {
   useCreateRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery: useGetSessionEligibleStudentsQueryOrig,
   useAssignStudentToRouteMutation,
+  useGetRouteObjectiveScoreQuery: useGetRouteObjectiveScoreQueryOrig,
+  useRecalculateRouteObjectiveScoreMutation,
+  useGetSessionObjectiveScoreQuery: useGetSessionObjectiveScoreQueryOrig,
+  useRecalculateSessionObjectiveScoreMutation,
 } = schoolBusApi;
 
 function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
@@ -2093,6 +2215,10 @@ export const useGetPlanningSessionsQueryQuery = wrapQueryHook(useGetPlanningSess
 export const useGetPlanningSessionQuery = wrapQueryHook(useGetPlanningSessionQueryOrig);
 export const useGetSessionRoutesQuery = wrapQueryHook(useGetSessionRoutesQueryOrig);
 export const useGetSessionEligibleStudentsQuery = wrapQueryHook(useGetSessionEligibleStudentsQueryOrig);
+export const useGetLatestRouteCalculationTraceQuery = wrapQueryHook(useGetLatestRouteCalculationTraceQueryOrig);
+export const useGetRouteCalculationTraceHistoryQuery = wrapQueryHook(useGetRouteCalculationTraceHistoryQueryOrig);
+export const useGetRouteObjectiveScoreQuery = wrapQueryHook(useGetRouteObjectiveScoreQueryOrig);
+export const useGetSessionObjectiveScoreQuery = wrapQueryHook(useGetSessionObjectiveScoreQueryOrig);
 
 export {
   useLazySearchMapLocationsQuery,
@@ -2139,6 +2265,8 @@ export {
   useMoveRouteStudentMutation,
   useRemoveRouteStudentMutation,
   useComputeRoutePathMutation,
+  useLazyExportLatestRouteCalculationTraceQuery,
+  useLazyExportRouteCalculationTraceQuery,
   useCreateTripFromRouteMutation,
   useStartTripMutation,
   useArriveTripStopMutation,
@@ -2177,4 +2305,7 @@ export {
   useCancelPlanningSessionMutation,
   useCreateRouteInSessionMutation,
   useAssignStudentToRouteMutation,
+  useValidateRouteMutation,
+  useRecalculateRouteObjectiveScoreMutation,
+  useRecalculateSessionObjectiveScoreMutation,
 };

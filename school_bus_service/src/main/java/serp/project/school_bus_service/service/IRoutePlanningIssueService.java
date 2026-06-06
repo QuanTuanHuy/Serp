@@ -16,4 +16,8 @@ public interface IRoutePlanningIssueService extends IBaseService<RoutePlanningIs
     List<RoutePlanningIssueEntity> findByRoute(Long routeId);
 
     long countBlockingByRoute(Long routeId);
+
+    void deletePhysical(Long id);
+
+    List<RoutePlanningIssueEntity> findAllByRoute(Long routeId);
 }

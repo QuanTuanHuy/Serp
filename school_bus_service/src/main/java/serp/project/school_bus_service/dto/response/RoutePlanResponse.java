@@ -43,4 +43,9 @@ public class RoutePlanResponse extends BaseResponse {
     private Boolean fallbackUsed;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
+    private Integer issueCount;
+    private Integer blockingIssueCount;
+    private Integer requiredCapacity;
+    private Long planningSessionId;
+    private String planningMethod;
 }

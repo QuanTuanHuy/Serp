@@ -179,6 +179,7 @@ public class AppErrorCode {
         public static final ErrorInfo SCHOOL_MISMATCH           = new ErrorInfo("route.school.mismatch",           "School mismatch.",                         HttpStatus.BAD_REQUEST);
         public static final ErrorInfo FIELD_INVALID             = new ErrorInfo("route.field.invalid",             "Invalid route field.",                     HttpStatus.BAD_REQUEST);
         public static final ErrorInfo INVALID_STATE             = new ErrorInfo("route.invalidState",              "Invalid route state transition.",          HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ROUTE_HAS_BLOCKING_ISSUES = new ErrorInfo("route.hasBlockingIssues",         "Route has blocking validation issues.",    HttpStatus.BAD_REQUEST);
         private Route() {}
     }
 
@@ -241,6 +242,15 @@ public class AppErrorCode {
         public static final ErrorInfo UNPROCESSED_STUDENTS    = new ErrorInfo("trip.unprocessedStudents",   "Cannot complete trip: some students are still unprocessed (PLANNED).",        HttpStatus.BAD_REQUEST);
         public static final ErrorInfo CANNOT_SKIP_TERMINAL    = new ErrorInfo("trip.cannotSkipTerminal",    "Terminal depot/school stops cannot be skipped.",                              HttpStatus.BAD_REQUEST);
         private Trip() {}
+    }
+
+    // ── Export ────────────────────────────────────────────────────────────────
+    public static class Export {
+        public static final ErrorInfo HANDLER_NOT_FOUND  = new ErrorInfo("export.handlerNotFound",  "No export handler found for the requested export code.", HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo TEMPLATE_NOT_FOUND = new ErrorInfo("export.templateNotFound", "Export template file could not be found.",                HttpStatus.INTERNAL_SERVER_ERROR);
+        public static final ErrorInfo TRACE_NOT_FOUND    = new ErrorInfo("export.traceNotFound",    "No routing calculation trace found. Please compute route first.", HttpStatus.NOT_FOUND);
+        public static final ErrorInfo EXPORT_FAILED      = new ErrorInfo("export.failed",          "Failed to export data to Excel.",                         HttpStatus.INTERNAL_SERVER_ERROR);
+        private Export() {}
     }
 
     private AppErrorCode() {}

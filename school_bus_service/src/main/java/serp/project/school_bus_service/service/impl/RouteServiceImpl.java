@@ -1,5 +1,7 @@
 package serp.project.school_bus_service.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -62,6 +64,8 @@ import java.util.ArrayList;
  */
 @Service
 public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long> implements IRouteService {
+
+    private static final Logger log = LoggerFactory.getLogger(RouteServiceImpl.class);
 
     private final RoutePlanRepository routePlanRepository;
     private final RoutePlanningSessionRepository planningSessionRepository;
@@ -216,10 +220,12 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
+    @Transactional
     public RoutePathResponse computePath(Long routeId, Long tenantId, Long actorId) {
         RoutePlanEntity route = findById(routePlanRepository, routeId, tenantId);
         List<RouteStopEntity> stops = routeStopService.findByRoute(routeId, tenantId);
         RoutePathResponse result = routeGeometryService.computeAndUpdate(route, stops);
+        routeStopService.saveAllRouteStops(stops);
         route.markUpdated(actor(actorId));
         routePlanRepository.save(route);
         if (route.getPlanningSession() != null) {
@@ -425,6 +431,15 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                     messageCommon.getMessage(AppErrorCode.Session.FROZEN, planningSession.getStatus()));
         }
 
+        if (request.getRouteDirection() != null) {
+            RouteDirection reqDir = RouteDirection.parse(request.getRouteDirection());
+            if (reqDir != planningSession.getRouteDirection()) {
+                throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Route direction must match planning session direction.");
+            }
+        } else {
+            request.setRouteDirection(planningSession.getRouteDirection().name());
+        }
+
         RoutePlanEntity route = new RoutePlanEntity();
         route.markCreated(tenantId, actor(actorId));
         applyRoute(route, request, tenantId);
@@ -444,13 +459,30 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         List<RouteStopEntity> terminals = routeStopFactory.buildFullStopList(saved, List.of(), tenantId, actor(actorId));
         routeStopService.saveAllRouteStops(terminals);
 
-        // Compute geometry terminal → terminal (depot → school or school → depot)
-        List<RouteStopEntity> allStops = routeStopService.findByRoute(saved.getId(), tenantId);
-        routeGeometryService.computeAndUpdate(saved, allStops);
-        routePlanRepository.save(saved);
+        log.info("Creating route in session: sessionId={}, routeId={}", sessionId, saved.getId());
+        log.info("Initial route stops created: count={}", terminals.size());
 
         auditLogService.log(tenantId, actorId, "RoutePlan", saved.getId(), "CREATE",
                 "Created route in planning session " + sessionId);
+        return mapper.toRoutePlanResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public RoutePlanResponse computeInitialRoutePath(Long routeId, Long tenantId, Long actorId) {
+        RoutePlanEntity route = routePlanRepository.findByIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "Route not found"));
+        List<RouteStopEntity> allStops = routeStopService.findByRoute(routeId, tenantId);
+
+        int stopCount = allStops.size();
+        if (stopCount < 2) {
+            log.warn("Skip initial trace because route has fewer than 2 stops: routeId={}, stopCount={}", routeId, stopCount);
+        } else {
+            log.info("Computing initial route path after create: routeId={}, stopCount={}", routeId, stopCount);
+        }
+
+        routeGeometryService.computeAndUpdate(route, allStops);
+        RoutePlanEntity saved = routePlanRepository.save(route);
         return mapper.toRoutePlanResponse(saved);
     }
 

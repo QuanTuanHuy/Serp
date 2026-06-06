@@ -35,5 +35,10 @@ public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentE
     RoutePlanStudentEntity save(RoutePlanStudentEntity entity);
 
     void saveAll(List<RoutePlanStudentEntity> entities);
+
+    List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSession(Long sessionId, Long routeId);
+
+    /** Internal: physically deletes a route plan student entry (used by greedy simulation). */
+    void deletePhysical(Long id);
 }
 

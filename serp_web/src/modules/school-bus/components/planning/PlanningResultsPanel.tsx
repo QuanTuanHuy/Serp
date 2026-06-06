@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, CheckCircle2, XCircle, AlertCircle, Loader2, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -19,6 +19,11 @@ import {
   useGetDepotsQuery,
   useGetSchoolByIdQuery,
   useGetSchoolScheduleByIdQuery,
+  useGetLatestRouteCalculationTraceQuery,
+  useGetRouteObjectiveScoreQuery,
+  useRecalculateRouteObjectiveScoreMutation,
+  useGetSessionObjectiveScoreQuery,
+  useRecalculateSessionObjectiveScoreMutation,
 } from '../../api/schoolBusApi';
 import type {
   SchoolBusPlanningPreview,
@@ -46,21 +51,16 @@ interface CreateRouteFormState {
   planningNotes: string;
 }
 
-/** Smart defaults: OUTBOUND starts at Depot → ends at School; RETURN is reversed. */
-function defaultsForDirection(dir: DirectionType): Pick<CreateRouteFormState, 'startLocationType' | 'endLocationType'> {
-  return dir === 'OUTBOUND'
-    ? { startLocationType: 'DEPOT', endLocationType: 'SCHOOL' }
-    : { startLocationType: 'SCHOOL', endLocationType: 'DEPOT' };
-}
-
 function CreateRoutePanel({
   session,
   onSubmit,
   submitting,
+  contextDepotId,
 }: {
   session: SchoolBusPlanningSession;
   onSubmit: (req: CreateRouteInSessionRequest) => void;
   submitting?: boolean;
+  contextDepotId?: number | '';
 }) {
   const [open, setOpen] = useState(false);
 
@@ -68,11 +68,34 @@ function CreateRoutePanel({
   const [form, setForm] = useState<CreateRouteFormState>({
     routeName: '',
     routeDirection: initDir,
-    ...defaultsForDirection(initDir),
-    startDepotId: '',
-    endDepotId: '',
+    startLocationType: initDir === 'OUTBOUND' ? 'DEPOT' : 'SCHOOL',
+    startDepotId: initDir === 'OUTBOUND' && contextDepotId ? Number(contextDepotId) : '',
+    endLocationType: initDir === 'OUTBOUND' ? 'SCHOOL' : 'DEPOT',
+    endDepotId: initDir === 'RETURN' && contextDepotId ? Number(contextDepotId) : '',
     planningNotes: '',
   });
+
+  useEffect(() => {
+    if (initDir === 'OUTBOUND') {
+      setForm(p => ({
+        ...p,
+        routeDirection: initDir,
+        startLocationType: 'DEPOT',
+        endLocationType: 'SCHOOL',
+        startDepotId: p.startDepotId === '' && contextDepotId ? Number(contextDepotId) : p.startDepotId,
+        endDepotId: ''
+      }));
+    } else {
+      setForm(p => ({
+        ...p,
+        routeDirection: initDir,
+        startLocationType: 'SCHOOL',
+        endLocationType: 'DEPOT',
+        startDepotId: '',
+        endDepotId: p.endDepotId === '' && contextDepotId ? Number(contextDepotId) : p.endDepotId
+      }));
+    }
+  }, [initDir, contextDepotId]);
 
   // Fetch depots for selectors
   const { data: depotsData } = useGetDepotsQuery({ page: 0, size: 100 });
@@ -86,10 +109,6 @@ function CreateRoutePanel({
     form.routeName.trim() !== '' &&
     (!needsStartDepot || form.startDepotId !== '') &&
     (!needsEndDepot || form.endDepotId !== '');
-
-  const handleDirectionChange = (dir: DirectionType) => {
-    setForm(p => ({ ...p, routeDirection: dir, ...defaultsForDirection(dir), startDepotId: '', endDepotId: '' }));
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,49 +161,32 @@ function CreateRoutePanel({
                 className={inputCls}
                 value={form.routeName}
                 onChange={e => setForm(p => ({ ...p, routeName: e.target.value }))}
-                placeholder='e.g. Morning Outbound Route A'
+                placeholder={initDir === 'OUTBOUND' ? 'e.g. Morning Outbound Route A' : 'e.g. Afternoon Return Route A'}
                 required
               />
             </div>
             <div>
               <label className={labelCls}>Direction</label>
-              <SchoolBusSelect
-                fullWidth
-                value={form.routeDirection}
-                onChange={val => handleDirectionChange(val as DirectionType)}
-                options={[
-                  { label: 'OUTBOUND (Depot → School)', value: 'OUTBOUND' },
-                  { label: 'RETURN (School → Depot)', value: 'RETURN' }
-                ]}
-              />
+              <div className='w-full rounded-xl border border-slate-150 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-none'>
+                {initDir === 'OUTBOUND' ? (
+                  <span>OUTBOUND — Depot → School <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
+                ) : (
+                  <span>RETURN — School → Depot <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Group 2: Start/End terminal */}
+          {/* Group 2: Start & End Terminals */}
           <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
             <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>2. Start & End Terminals</p>
             
             {/* Start location */}
-            <div className='space-y-2 pt-1.5 border-t border-slate-50 first:border-0 first:pt-0'>
-              <label className={labelCls}>Start Location</label>
-              <div className='flex gap-4'>
-                {(['DEPOT', 'SCHOOL'] as LocationType[]).map(t => (
-                  <label key={t} className='flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-600'>
-                    <input
-                      type='radio'
-                      name='startLocationType'
-                      value={t}
-                      checked={form.startLocationType === t}
-                      onChange={() => setForm(p => ({ ...p, startLocationType: t, startDepotId: '' }))}
-                      className='accent-[#C81E3A]'
-                    />
-                    {t === 'DEPOT' ? 'Depot' : 'School'}
-                  </label>
-                ))}
-              </div>
-              {needsStartDepot ? (
+            <div className='space-y-2 pt-1.5'>
+              <label className={labelCls}>Start Location ({initDir === 'OUTBOUND' ? 'DEPOT' : 'SCHOOL'})</label>
+              {initDir === 'OUTBOUND' ? (
                 hasDepots ? (
-                  <div className='mt-2'>
+                  <div className='mt-1'>
                     <SchoolBusSelect
                       fullWidth
                       value={form.startDepotId}
@@ -200,31 +202,18 @@ function CreateRoutePanel({
                   <p className='text-[11px] text-amber-600 font-medium'>⚠️ No depots available. Please create a depot first.</p>
                 )
               ) : (
-                <p className='text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100'>Starts at school (ID: {session.schoolId})</p>
+                <p className='text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-medium'>
+                  Starts at school: <span className='font-semibold text-slate-700'>{session.schoolName}</span> (ID: {session.schoolId})
+                </p>
               )}
             </div>
 
             {/* End location */}
             <div className='space-y-2 pt-3 border-t border-slate-100'>
-              <label className={labelCls}>End Location</label>
-              <div className='flex gap-4'>
-                {(['SCHOOL', 'DEPOT'] as LocationType[]).map(t => (
-                  <label key={t} className='flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-600'>
-                    <input
-                      type='radio'
-                      name='endLocationType'
-                      value={t}
-                      checked={form.endLocationType === t}
-                      onChange={() => setForm(p => ({ ...p, endLocationType: t, endDepotId: '' }))}
-                      className='accent-[#C81E3A]'
-                    />
-                    {t === 'DEPOT' ? 'Depot' : 'School'}
-                  </label>
-                ))}
-              </div>
-              {needsEndDepot ? (
+              <label className={labelCls}>End Location ({initDir === 'OUTBOUND' ? 'SCHOOL' : 'DEPOT'})</label>
+              {initDir === 'RETURN' ? (
                 hasDepots ? (
-                  <div className='mt-2'>
+                  <div className='mt-1'>
                     <SchoolBusSelect
                       fullWidth
                       value={form.endDepotId}
@@ -240,7 +229,9 @@ function CreateRoutePanel({
                   <p className='text-[11px] text-amber-600 font-medium'>⚠️ No depots available. Please create a depot first.</p>
                 )
               ) : (
-                <p className='text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100'>Ends at school (ID: {session.schoolId})</p>
+                <p className='text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-medium'>
+                  Ends at school: <span className='font-semibold text-slate-700'>{session.schoolName}</span> (ID: {session.schoolId})
+                </p>
               )}
             </div>
           </div>
@@ -258,7 +249,7 @@ function CreateRoutePanel({
               />
             </div>
             {((needsStartDepot && form.startDepotId === '') || (needsEndDepot && form.endDepotId === '')) && (
-              <p className='text-[11px] text-amber-600 font-semibold'>⚠️ Depot selection is required to build this route.</p>
+              <p className='text-[11px] text-amber-600 font-semibold'>⚠️ Depot is required to create this route.</p>
             )}
           </div>
 
@@ -289,6 +280,7 @@ function SessionRouteCard({
 
   return (
     <div
+      id={`route-card-${route.id}`}
       onClick={() => onSelect(route.id)}
       className={cn(
         'cursor-pointer rounded-2xl border p-4 transition-all duration-200 flex flex-col gap-2.5',
@@ -321,6 +313,20 @@ function SessionRouteCard({
           </span>
         </div>
       </div>
+      {((route.blockingIssueCount ?? 0) > 0 || ((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0) && (
+        <div className='flex flex-wrap gap-1.5 text-[10px]'>
+          {(route.blockingIssueCount ?? 0) > 0 && (
+            <span className='inline-flex items-center gap-1 rounded bg-red-50 text-red-700 px-1.5 py-0.5 border border-red-100 font-bold shadow-none'>
+              🚫 {route.blockingIssueCount} blocking
+            </span>
+          )}
+          {((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0 && (
+            <span className='inline-flex items-center gap-1 rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-100 font-bold shadow-none'>
+              ⚠️ {route.issueCount! - route.blockingIssueCount!} warning(s)
+            </span>
+          )}
+        </div>
+      )}
       <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
         <span>{route.serviceDate}</span>
         {isSelected && <span className='font-extrabold text-[#C81E3A] flex items-center gap-1'>▶ Selected</span>}
@@ -389,7 +395,7 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
   const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
 
   return (
-    <div onClick={() => onSelect(route.routeId)}
+    <div id={`route-card-${route.routeId}`} onClick={() => onSelect(route.routeId)}
       className={cn(
         'cursor-pointer rounded-2xl border p-4 transition-all duration-200 flex flex-col gap-2.5',
         isSelected
@@ -496,20 +502,224 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
   );
 }
 
+function SessionObjectiveScoreWidget({ sessionId }: { sessionId: number }) {
+  const { data: scoreData, refetch, isLoading } = useGetSessionObjectiveScoreQuery(sessionId);
+  const [recalculate, { isLoading: isRecalculating }] = useRecalculateSessionObjectiveScoreMutation();
+
+  const handleRecalculate = async () => {
+    try {
+      await recalculate(sessionId).unwrap();
+      toast.success('Recalculated session objective score');
+      refetch();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to recalculate session score');
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading solution score...</div>;
+  }
+
+  const score = scoreData?.data;
+  if (!score) {
+    return (
+      <div className="text-xs text-slate-450 py-2">
+        No solution score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-semibold text-[#C81E3A]">Calculate now</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-2xl border border-indigo-100 bg-indigo-50/20 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Solution Quality Score</h4>
+          <p className="text-[10px] text-indigo-600 mt-0.5">Overall session cost (includes unassigned student penalties)</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleRecalculate} 
+          disabled={isRecalculating} 
+          className="h-6 text-[10px] font-bold text-indigo-700 hover:bg-indigo-105/50 p-1 px-2 rounded-full"
+        >
+          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-medium text-slate-500 leading-none">Normalized Score</p>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className={cn(
+              "text-lg font-black",
+              score.feasible ? "text-emerald-700" : "text-rose-700"
+            )}>
+              {score.displayScore?.toFixed(2)}
+            </span>
+            <span className="text-slate-450 text-[10px]">/ 100</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-medium text-slate-500 leading-none">Total Objective Value</p>
+          <p className="text-sm font-extrabold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {/* Mini breakdown of session cost */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-slate-650 border-t border-indigo-100/40 pt-2.5">
+        <div className="flex justify-between">
+          <span>Distance cost:</span>
+          <span className="font-bold text-slate-750">{score.distanceCost?.toFixed(0)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Duration:</span>
+          <span className="font-bold text-slate-750">{score.durationCost?.toFixed(0)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Wait time:</span>
+          <span className="font-bold text-slate-750">{score.waitTimeCost?.toFixed(0)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Routes:</span>
+          <span className="font-bold text-slate-750">{score.routeCountCost?.toFixed(0)}</span>
+        </div>
+        {score.unassignedCost > 0 && (
+          <div className="flex justify-between text-rose-600 font-medium col-span-2">
+            <span>Unassigned penalty:</span>
+            <span>+{score.unassignedCost?.toFixed(0)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RouteObjectiveScoreWidget({ routeId }: { routeId: number }) {
+  const { data: scoreData, refetch, isLoading } = useGetRouteObjectiveScoreQuery(routeId);
+  const [recalculate, { isLoading: isRecalculating }] = useRecalculateRouteObjectiveScoreMutation();
+
+  const handleRecalculate = async () => {
+    try {
+      await recalculate(routeId).unwrap();
+      toast.success('Recalculated route objective score');
+      refetch();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to recalculate score');
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading score...</div>;
+  }
+
+  const score = scoreData?.data;
+  if (!score) {
+    return (
+      <div className="text-xs text-slate-450 py-2">
+        No score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-bold text-indigo-650">Calculate now</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objective Quality Score</h4>
+          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Normalized from travel duration & distance</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleRecalculate} 
+          disabled={isRecalculating} 
+          className="h-6 text-[10px] font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/50 p-1 px-2 rounded-full"
+        >
+          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
+        </Button>
+      </div>
+
+      <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-medium text-slate-400 leading-none">Normalized Score</p>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className={cn(
+              "text-lg font-extrabold",
+              score.feasible ? "text-emerald-600" : "text-rose-600"
+            )}>
+              {score.displayScore?.toFixed(2)}
+            </span>
+            <span className="text-slate-400 text-[10px]">/ 100</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-medium text-slate-400 leading-none">Objective Value</p>
+          <p className="text-sm font-bold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {/* Breakdown Details */}
+      <div className="space-y-1.5 text-xs">
+        <div className="flex justify-between items-center text-slate-650">
+          <span>Distance cost:</span>
+          <span className="font-semibold text-slate-800">{score.distanceCost?.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center text-slate-650">
+          <span>Duration cost:</span>
+          <span className="font-semibold text-slate-800">{score.durationCost?.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center text-slate-650">
+          <span>Wait time cost:</span>
+          <span className="font-semibold text-slate-800">{score.waitTimeCost?.toFixed(2)}</span>
+        </div>
+        {score.capacityExcessCost > 0 && (
+          <div className="flex justify-between items-center text-rose-600 font-medium">
+            <span>Capacity excess cost:</span>
+            <span>+{score.capacityExcessCost?.toFixed(2)}</span>
+          </div>
+        )}
+        {score.blockingIssueCost > 0 && (
+          <div className="flex justify-between items-center text-rose-600 font-medium">
+            <span>Blocking penalty:</span>
+            <span>+{score.blockingIssueCost?.toFixed(2)}</span>
+          </div>
+        )}
+        {score.warningIssueCost > 0 && (
+          <div className="flex justify-between items-center text-amber-600 font-medium">
+            <span>Warning penalty:</span>
+            <span>+{score.warningIssueCost?.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Route Detail Panel ─────────────────────────────────────────── */
 
-function RouteDetailPanel({ routeId }: { routeId: number }) {
+function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: number }) {
   const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId);
+  const { data: traceData } = useGetLatestRouteCalculationTraceQuery(routeId, { skip: !routeId });
   const [reorderStops] = useReorderRouteStopsMutation();
   const [removeStop, { isLoading: removingStop }] = useRemoveRouteStopMutation();
   const [removeStudent, { isLoading: removingStudent }] = useRemoveRouteStudentMutation();
   const detail = routeDetail?.data;
 
+  const issues = React.useMemo(() => {
+    if (!traceData?.data?.issuesJson) return [];
+    try {
+      return JSON.parse(traceData.data.issuesJson);
+    } catch {
+      return [];
+    }
+  }, [traceData]);
+
   // ── Confirm dialogs ──────────────────────────────────────────────────────
   const stopConfirm = useSchoolBusConfirm({
     onConfirm: async () => {
       const stopId = stopConfirm.confirmState.payload as number;
-      try { await removeStop({ routeId, stopId }).unwrap(); } catch (e: unknown) {
+      try { await removeStop({ routeId, stopId, sessionId }).unwrap(); } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
         toast.error(err?.data?.message ?? 'Failed to remove stop');
       }
@@ -523,7 +733,7 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
         studentId: number;
         subscriptionId: number;
       };
-      try { await removeStudent({ routeId, studentId, subscriptionId }).unwrap(); } catch (e: unknown) {
+      try { await removeStudent({ routeId, studentId, subscriptionId, sessionId }).unwrap(); } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
         toast.error(err?.data?.message ?? 'Failed to remove student');
       }
@@ -543,7 +753,7 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
     const ids = middleStops.map(s => s.id);
     [ids[i], ids[j]] = [ids[j], ids[i]];
     try {
-      await reorderStops({ id: routeId, orderedStopIds: ids }).unwrap();
+      await reorderStops({ id: routeId, orderedStopIds: ids, sessionId }).unwrap();
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       toast.error(err?.data?.message ?? 'Failed to reorder stops');
@@ -576,37 +786,71 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
     <>
       <div className='p-5 space-y-4 border-t border-slate-200 bg-slate-50/20'>
         <div className='border-b border-slate-100 pb-2'>
-          <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
+          <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
             <Route className='h-4 w-4 text-emerald-600 shrink-0' />
             {detail.route.routeName} — Detail
           </h3>
         </div>
+
+        {/* Validation Issues */}
+        {issues.length > 0 && (
+          <div className='rounded-2xl border border-slate-200 bg-white p-3 space-y-2.5 shadow-sm'>
+            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>Feasibility Validation</p>
+            <div className='flex flex-wrap gap-1.5'>
+              {issues.map((issue: SchoolBusPlanningIssue, idx: number) => (
+                <div key={idx} className='w-full'>
+                  <IssueBadge issue={issue} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         <div>
-          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2'>Stops ({stops.length})</p>
-          {stops.length === 0 ? (
-            <p className='text-xs text-slate-300'>No stops</p>
+          {/* Terminal route banner */}
+          {(() => {
+            const startTerminal = stops.find(s => s.stopPurpose === 'START_TERMINAL');
+            const endTerminal = stops.find(s => s.stopPurpose === 'END_TERMINAL');
+            if (!startTerminal && !endTerminal) return null;
+            return (
+              <div className='mb-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-600'>
+                <div className='flex items-center gap-2 font-bold text-slate-700 mb-2'>
+                  <Navigation className='h-3.5 w-3.5 text-blue-600' />
+                  <span className='text-[10px] font-extrabold uppercase tracking-wider text-slate-400'>Terminal Stops</span>
+                </div>
+                <div className='flex items-center gap-2 pl-5 text-[11px] font-semibold text-slate-700'>
+                  <span className='bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100'>
+                    {startTerminal?.depotName || startTerminal?.schoolName || 'Start Depot/School'}
+                  </span>
+                  <span className='text-slate-400'>➔</span>
+                  <span className='bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100'>
+                    {endTerminal?.depotName || endTerminal?.schoolName || 'End Depot/School'}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2'>
+            Pickup / Drop-off Stops ({middleStops.length})
+          </p>
+          {middleStops.length === 0 ? (
+            <p className='text-xs text-slate-400 italic bg-white border border-dashed border-slate-200 rounded-2xl p-4 text-center'>
+              No pickup/drop-off stops created yet. Assign students to auto-generate stops.
+            </p>
           ) : (
             <div className='space-y-1.5'>
-              {stops.map((stop, i) => {
-                const isTerminal = stop.stopPurpose === 'START_TERMINAL' || stop.stopPurpose === 'END_TERMINAL';
-                const middleIndex = isTerminal ? -1 : middleStops.findIndex(s => s.id === stop.id);
+              {middleStops.map((stop, middleIndex) => {
                 const isFirstMiddle = middleIndex === 0;
                 const isLastMiddle = middleIndex === middleStops.length - 1;
-                const terminalLabel = stop.stopPurpose === 'START_TERMINAL' ? 'Departure' : stop.stopPurpose === 'END_TERMINAL' ? 'Destination' : null;
                 return (
-                  <div key={stop.id} className={cn(
-                    'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs',
-                    isTerminal ? 'border-blue-105 bg-blue-50/50 text-blue-800' : 'border-slate-200 bg-white text-slate-700'
-                  )}>
-                    {isTerminal ? (
-                      <span className='flex h-5 items-center justify-center rounded bg-blue-100 px-1.5 text-[9px] font-bold text-blue-700'>{terminalLabel}</span>
-                    ) : (
-                      <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-650'>{stop.stopOrder + 1}</span>
-                    )}
+                  <div key={stop.id} className='flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700'>
+                    <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-650'>
+                      {middleIndex + 1}
+                    </span>
                     <span className='flex-1 font-semibold truncate'>{stop.pickupPointName || `Stop #${stop.id}`}</span>
-                    {!isTerminal && <span className='text-[10px] text-slate-450'>{stop.estimatedStudentCount ?? 0} students</span>}
-                    {editable && !isTerminal && (
+                    <span className='text-[10px] text-slate-450'>{stop.estimatedStudentCount ?? 0} students</span>
+                    {editable && (
                       <div className='flex gap-0.5' onClick={e => e.stopPropagation()}>
                         <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex - 1)} disabled={isFirstMiddle}><ChevronUp className='h-3 w-3' /></Button>
                         <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex + 1)} disabled={isLastMiddle}><ChevronDown className='h-3 w-3' /></Button>
@@ -641,6 +885,13 @@ function RouteDetailPanel({ routeId }: { routeId: number }) {
             </div>
           )}
         </div>
+
+        <hr className='border-slate-150 mt-4' />
+
+        {/* Route Objective Score */}
+        <div className="pt-2">
+          <RouteObjectiveScoreWidget routeId={routeId} />
+        </div>
       </div>
 
       {/* Confirm dialogs */}
@@ -659,6 +910,7 @@ interface PlanningResultsPanelProps {
   sessionRoutes: SchoolBusRoute[];
   activeSession: SchoolBusPlanningSession | null;
   eligibleStudents: SchoolBusEligibleStudent[];
+  loadingEligible?: boolean;
   selectedRouteId: number | null;
   onSelectRoute: (id: number | null) => void;
   onCreateManualRoute: (req: CreateRouteInSessionRequest) => void;
@@ -676,6 +928,7 @@ export function PlanningResultsPanel({
   sessionRoutes,
   activeSession,
   eligibleStudents,
+  loadingEligible,
   selectedRouteId,
   onSelectRoute,
   onCreateManualRoute,
@@ -1353,6 +1606,9 @@ export function PlanningResultsPanel({
             {/* Case B: Active Session exists */}
             {activeSession && (
               <>
+                <div className="px-5 pt-4">
+                  <SessionObjectiveScoreWidget sessionId={activeSession.id} />
+                </div>
                 {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
                 {isManual && activeSession && (
         <div className='p-5 space-y-4'>
@@ -1366,8 +1622,17 @@ export function PlanningResultsPanel({
             session={activeSession}
             onSubmit={onCreateManualRoute}
             submitting={creatingRoute}
+            contextDepotId={form?.depotId ? Number(form.depotId) : ''}
           />
-          {sessionRoutes.length === 0 ? (
+          {creatingRoute ? (
+            <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/50 border border-slate-200 rounded-2xl shadow-sm space-y-3 min-h-[160px] animate-pulse'>
+              <Loader2 className='h-7 w-7 text-blue-600 animate-spin' />
+              <div className='space-y-1'>
+                <p className='text-xs font-bold text-slate-700'>Creating route...</p>
+                <p className='text-[10px] text-slate-450 font-semibold'>Computing initial path and timeline...</p>
+              </div>
+            </div>
+          ) : sessionRoutes.length === 0 ? (
             <div className='flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center'>
               <Route className='h-8 w-8 text-slate-300 stroke-[1.5] mb-2' />
               <p className='text-xs font-bold text-slate-500'>No routes yet</p>
@@ -1394,6 +1659,7 @@ export function PlanningResultsPanel({
           selectedRoute={sessionRoutes.find(r => r.id === selectedRouteId) ?? null}
           eligibleStudents={eligibleStudents}
           sessionId={activeSession.id}
+          loadingEligible={loadingEligible}
         />
       )}
 
@@ -1481,8 +1747,9 @@ export function PlanningResultsPanel({
           </>
         )}
 
-        {/* Route detail (shared — works for both GREEDY detail and MANUAL selected route) */}
-        {selectedRouteId && rightPanelTab === 'route-builder' && <RouteDetailPanel routeId={selectedRouteId} />}
+        {selectedRouteId && rightPanelTab === 'route-builder' && (
+          <RouteDetailPanel routeId={selectedRouteId} sessionId={activeSession?.id ?? 0} />
+        )}
       </div>
     </div>
   );

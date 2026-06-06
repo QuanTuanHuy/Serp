@@ -1,11 +1,12 @@
 package serp.project.school_bus_service.service.domain.impl;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.dto.response.RoutePathCoordinateResponse;
 import serp.project.school_bus_service.dto.response.RoutePathLegInfo;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
+import serp.project.school_bus_service.dto.response.RoutingRuntimeConfig;
+import serp.project.school_bus_service.service.domain.IRoutingConfigResolver;
 import serp.project.school_bus_service.service.domain.IRoutingEngineService;
 
 import java.util.ArrayList;
@@ -20,30 +21,40 @@ import java.util.List;
 @Qualifier("straightLineRoutingEngine")
 public class StraightLineFallbackRoutingEngineServiceImpl implements IRoutingEngineService {
 
-    @Value("${map.routing.fallback.default-speed-kmh:30.0}")
-    private double defaultSpeedKmh;
+    private final IRoutingConfigResolver routingConfigResolver;
 
-    public StraightLineFallbackRoutingEngineServiceImpl() {
+    public StraightLineFallbackRoutingEngineServiceImpl(IRoutingConfigResolver routingConfigResolver) {
+        this.routingConfigResolver = routingConfigResolver;
     }
 
+    /**
+     * Calculates the estimated route using pairwise Haversine straight-line distance,
+     * adjusted by the road multiplier factor and average vehicle speed config.
+     */
     @Override
-    public RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints) {
+    public RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints, Long tenantId) {
+        // Load routing parameters globally
+        RoutingRuntimeConfig config = routingConfigResolver.resolve();
+        double averageSpeedKmph = config.getAverageSpeedKmph();
+        double roadFactor = config.getRoadFactor();
+
         double totalDistanceKm = 0D;
         List<RoutePathLegInfo> legs = new ArrayList<>();
 
         for (int i = 1; i < waypoints.size(); i++) {
             RoutePathCoordinateResponse from = waypoints.get(i - 1);
             RoutePathCoordinateResponse to = waypoints.get(i);
-            double legDist = haversineKm(from.getLatitude(), from.getLongitude(),
+            double haversineDist = haversineKm(from.getLatitude(), from.getLongitude(),
                     to.getLatitude(), to.getLongitude());
+            double legDist = haversineDist * roadFactor;
             totalDistanceKm += legDist;
             RoutePathLegInfo leg = new RoutePathLegInfo();
             leg.setDistanceKm(round(legDist));
-            leg.setDurationMin((int) Math.round((legDist / defaultSpeedKmh) * 60D));
+            leg.setDurationMin((int) Math.round((legDist / averageSpeedKmph) * 60D));
             legs.add(leg);
         }
 
-        int durationMin = (int) Math.round((totalDistanceKm / defaultSpeedKmh) * 60D);
+        int durationMin = (int) Math.round((totalDistanceKm / averageSpeedKmph) * 60D);
 
         // Use the waypoints themselves as coordinates (straight-line path)
         List<RoutePathCoordinateResponse> coordinates = new ArrayList<>(waypoints);

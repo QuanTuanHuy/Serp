@@ -56,7 +56,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
              WHERE s.school.id = :schoolId
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
-               AND s.status = 'ACTIVE'
+               AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE
                AND s.effectiveFrom <= :serviceDate
                AND (s.effectiveTo IS NULL OR s.effectiveTo >= :serviceDate)
                AND (:dayIndex = 1 AND s.monday = true
@@ -90,7 +90,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
                AND s.tripOption = :tripOption
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
-               AND s.status = 'ACTIVE'
+               AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE
                AND (:excludingId IS NULL OR s.id <> :excludingId)
                AND s.effectiveFrom <= COALESCE(:effectiveTo, CAST('9999-12-31' AS LocalDate))
                AND COALESCE(s.effectiveTo, CAST('9999-12-31' AS LocalDate)) >= :effectiveFrom

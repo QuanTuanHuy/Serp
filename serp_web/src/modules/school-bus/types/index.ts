@@ -326,6 +326,8 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   fallbackUsed?: boolean | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  issueCount?: number | null;
+  blockingIssueCount?: number | null;
 }
 
 export interface SchoolBusRoutePathCoordinate {
@@ -992,6 +994,8 @@ export interface SchoolBusEligibleStudent {
   windowStart?: string;
   windowEnd?: string;
   specialNote?: string;
+  assigned?: boolean;
+  assignedRouteId?: number;
 }
 
 export interface SchoolBusPlanningPickupPoint {
@@ -1180,3 +1184,39 @@ export interface AddStudentToStopRequest {
   studentId: number;
   subscriptionId: number;
 }
+
+export interface SchoolBusRouteCalculationTrace {
+  id: number;
+  routePlanId: number;
+  planningSessionId?: number | null;
+  calculationType: string;
+  calculationStatus: string;
+  sourceSummary?: string | null;
+  issueCount?: number;
+  blockingIssueCount?: number;
+  inputJson?: string | null;
+  matrixJson?: string | null;
+  timelineJson?: string | null;
+  issuesJson?: string | null;
+  configSnapshotJson?: string | null;
+  createdAt?: string;
+  createdBy?: string;
+}
+
+export interface SchoolBusObjectiveScore {
+  objectiveValue: number;
+  displayScore: number;
+  feasible: boolean;
+  distanceCost: number;
+  durationCost: number;
+  routeCountCost: number;
+  unassignedCost: number;
+  waitTimeCost: number;
+  blockingIssueCost: number;
+  warningIssueCost: number;
+  capacityExcessCost: number;
+  balanceCost: number;
+  weights: Record<string, number>;
+}
+
+

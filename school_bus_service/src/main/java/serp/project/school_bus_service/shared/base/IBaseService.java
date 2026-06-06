@@ -18,4 +18,6 @@ public interface IBaseService<T extends BaseModel, ID> {
     void activateByIds(Collection<ID> ids, Long tenantId, Long actorId);
 
     void validateTenantAccess(T entity, Long tenantId);
+
+    void flush();
 }

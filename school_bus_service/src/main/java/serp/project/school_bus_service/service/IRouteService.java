@@ -81,6 +81,9 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
     // Create a route linked to a planning session (MANUAL mode)
     RoutePlanResponse createRouteInSession(RoutePlanUpsertRequest request, Long sessionId, Long tenantId, Long actorId);
 
+    // Compute route path, timeline, and calculation trace after creation transaction is committed
+    RoutePlanResponse computeInitialRoutePath(Long routeId, Long tenantId, Long actorId);
+
     long countByTenantAndStatus(Long tenantId, RouteStatus status);
 }
 

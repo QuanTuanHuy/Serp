@@ -64,6 +64,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -376,7 +377,8 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
 
             route.setIssueCount(totalIssues);
             route.setBlockingIssueCount(blockingCount);
-            route.setQualityScore(blockingCount == 0 ? (totalIssues == 0 ? 100.0 : 75.0) : 30.0);
+            // TODO Phase 6: qualityScore/objectiveScore will be calculated by the formal
+            // weighted objective function. Phase 3 only calculates timing and feasibility issues.
             routeService.saveRouteEntity(route);
 
             totalPlanned += batch.getTotalStudents();
@@ -500,7 +502,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     }
 
     @Override
-    @Transactional
     public RoutePlanResponse createRouteInSession(Long sessionId, RoutePlanUpsertRequest request,
                                                    Long tenantId, Long actorId) {
         RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
@@ -510,6 +511,10 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         }
         requireSessionEditable(session);
         RoutePlanResponse response = routeService.createRouteInSession(request, sessionId, tenantId, actorId);
+        
+        // Trigger initial path calculation and trace generation in a separate transaction
+        response = routeService.computeInitialRoutePath(response.getId(), tenantId, actorId);
+        
         refreshSessionSummary(sessionId, tenantId);
         return response;
     }
@@ -525,12 +530,33 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                         session.getRouteDirection().name(),
                         session.getServiceDate(),
                         tenantId);
+
+        List<RoutePlanEntity> routes = routeService.findRoutesBySession(sessionId, tenantId);
+        Map<Long, Long> studentRouteMap = new HashMap<>();
+        for (RoutePlanEntity route : routes) {
+            if (Boolean.TRUE.equals(route.getIsDeleted()) || Boolean.FALSE.equals(route.getIsActive())) {
+                continue;
+            }
+            List<RoutePlanStudentEntity> rpsList = routePlanStudentService.findByRoute(route.getId());
+            for (RoutePlanStudentEntity rps : rpsList) {
+                if (rps.getStudent() != null && !Boolean.TRUE.equals(rps.getIsDeleted())) {
+                    studentRouteMap.put(rps.getStudent().getId(), route.getId());
+                }
+            }
+        }
+
         return eligible.stream()
-                .map(sub -> eligibilityService.toEligibleStudentResponse(
-                        sub,
-                        session.getSchoolSchedule().getId(),
-                        session.getRouteDirection().name(),
-                        tenantId))
+                .map(sub -> {
+                    EligibleStudentResponse resp = eligibilityService.toEligibleStudentResponse(
+                            sub,
+                            session.getSchoolSchedule().getId(),
+                            session.getRouteDirection().name(),
+                            tenantId);
+                    Long routeId = studentRouteMap.get(resp.getStudentId());
+                    resp.setAssigned(routeId != null);
+                    resp.setAssignedRouteId(routeId);
+                    return resp;
+                })
                 .toList();
     }
 
