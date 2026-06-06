@@ -24,6 +24,7 @@ import serp.project.school_bus_service.dto.response.TripAttendanceSummaryRespons
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ITripExecutionService;
+import serp.project.school_bus_service.service.ITripOperationService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
 
@@ -35,14 +36,17 @@ public class TripController extends AbstractBaseController {
 
     private final ITripExecutionService tripExecutionService;
     private final IAttendanceService attendanceService;
+    private final ITripOperationService tripOperationService;
 
     public TripController(
             ITripExecutionService tripExecutionService,
             IAttendanceService attendanceService,
+            ITripOperationService tripOperationService,
             AuthUtils authUtils) {
         super(authUtils);
         this.tripExecutionService = tripExecutionService;
         this.attendanceService = attendanceService;
+        this.tripOperationService = tripOperationService;
     }
 
     @PostMapping("/from-route/{routePlanId}")
@@ -68,7 +72,7 @@ public class TripController extends AbstractBaseController {
     @PostMapping("/{id}/start")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
     public ResponseEntity<GeneralResponse<TripExecutionResponse>> startTrip(@PathVariable Long id) {
-        return ok("Started trip", tripExecutionService.startTrip(id, getCurrentTenantId(), getCurrentUserId()));
+        return ok("Started trip", tripOperationService.startTrip(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/arrive-stop/{routeStopId}")
@@ -77,7 +81,16 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @PathVariable Long routeStopId) {
         return ok("Arrived route stop",
-                tripExecutionService.arriveStop(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.arriveStop(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/start-boarding/{routeStopId}")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
+    public ResponseEntity<GeneralResponse<TripExecutionResponse>> startBoarding(
+            @PathVariable Long id,
+            @PathVariable Long routeStopId) {
+        return ok("Started boarding at route stop",
+                tripOperationService.startBoarding(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/depart-stop/{routeStopId}")
@@ -86,7 +99,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @PathVariable Long routeStopId) {
         return ok("Departed route stop",
-                tripExecutionService.departStop(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.departStop(id, routeStopId, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/skip-stop/{routeStopId}")
@@ -96,7 +109,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long routeStopId,
             @Valid @RequestBody SkipStopRequest request) {
         return ok("Skipped route stop",
-                tripExecutionService.skipStop(id, routeStopId, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.skipStop(id, routeStopId, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/complete")
@@ -105,7 +118,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @RequestBody(required = false) CompleteTripRequest request) {
         return ok("Completed trip",
-                tripExecutionService.completeTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.completeTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/cancel")
@@ -114,7 +127,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @Valid @RequestBody CancelTripRequest request) {
         return ok("Cancelled trip",
-                tripExecutionService.cancelTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.cancelTrip(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}/stops")
@@ -141,7 +154,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student boarding",
-                attendanceService.boardTripStudent(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.boardStudent(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/attendance/dropoff")
@@ -150,7 +163,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student dropoff",
-                attendanceService.dropoffTripStudent(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.dropoffStudent(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/attendance/absent")
@@ -159,7 +172,7 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student absence",
-                attendanceService.markTripStudentAbsent(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.markStudentAbsent(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/attendance/no-show")
@@ -168,7 +181,16 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id,
             @Valid @RequestBody TripAttendanceActionRequest request) {
         return ok("Recorded student no-show",
-                attendanceService.markTripStudentNoShow(id, request, getCurrentTenantId(), getCurrentUserId()));
+                tripOperationService.markStudentNoShow(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{id}/attendance/not-served")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.check-in')")
+    public ResponseEntity<GeneralResponse<AttendanceResponse>> markStudentNotServed(
+            @PathVariable Long id,
+            @Valid @RequestBody TripAttendanceActionRequest request) {
+        return ok("Recorded student not served",
+                tripOperationService.markStudentNotServed(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}/attendance/manifest")

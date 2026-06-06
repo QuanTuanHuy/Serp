@@ -222,7 +222,7 @@ export function SchoolBusAttendancePage() {
       render: (trip) => {
         const normalized = trip.status.toUpperCase();
         
-        let label = 'Open operations';
+        let label = 'Open attendance';
         let icon = <ClipboardCheck className='mr-1.5 h-3.5 w-3.5' />;
         let btnVariant: 'default' | 'outline' = 'outline';
         let btnClass = '';
@@ -239,7 +239,7 @@ export function SchoolBusAttendancePage() {
           label = 'View details';
           icon = <XCircle className='mr-1.5 h-3.5 w-3.5 text-red-500' />;
         } else if (normalized === 'CREATED') {
-          label = 'Open operations';
+          label = 'Open attendance';
         }
 
         return (
@@ -301,13 +301,13 @@ export function SchoolBusAttendancePage() {
 
   return (
     <SchoolBusPageShell
-      title='Trip Operations Board'
-      description='Manage stop lifecycle, boarding, and drop-off attendance for active route execution records.'
+      title='Attendance Board'
+      description='Manage student boarding, absence, no-show and drop-off attendance for active trips.'
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Trip Operations', current: true },
+            { label: 'Attendance', current: true },
           ]}
         />
       }
@@ -347,8 +347,8 @@ export function SchoolBusAttendancePage() {
 
         {/* Data Table within Card */}
         <SchoolBusDataTable
-          title='Trip operations list'
-          description='Double click a row or click details to open the attendance and stop operation workspace for that trip.'
+          title='Trip Attendance List'
+          description='Double click a row or click details to open the attendance workspace for that trip.'
           toolbar={attendanceToolbar}
           data={filteredTrips}
           columns={attendanceColumns}

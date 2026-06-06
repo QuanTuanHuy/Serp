@@ -1,4 +1,4 @@
-import { SchoolBusAttendanceDetailPage } from '@/modules/school-bus';
+import { SchoolBusTripOperationDetailPage } from '@/modules/school-bus';
 
 interface PageProps {
   params: Promise<{ tripId: string }>;
@@ -6,5 +6,5 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { tripId } = await params;
-  return <SchoolBusAttendanceDetailPage tripId={Number(tripId)} />;
+  return <SchoolBusTripOperationDetailPage tripId={Number(tripId)} />;
 }

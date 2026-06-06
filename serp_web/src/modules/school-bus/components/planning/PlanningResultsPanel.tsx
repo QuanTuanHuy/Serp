@@ -793,15 +793,70 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
         </div>
 
         {/* Validation Issues */}
-        {issues.length > 0 && (
-          <div className='rounded-2xl border border-slate-200 bg-white p-3 space-y-2.5 shadow-sm'>
-            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>Feasibility Validation</p>
-            <div className='flex flex-wrap gap-1.5'>
-              {issues.map((issue: SchoolBusPlanningIssue, idx: number) => (
-                <div key={idx} className='w-full'>
-                  <IssueBadge issue={issue} />
+        {detail.issues && detail.issues.length > 0 && (
+          <div className='rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm'>
+            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none border-b border-slate-100 pb-2'>Feasibility Validation ({detail.issues.length})</p>
+            
+            <div className='space-y-3 max-h-[280px] overflow-y-auto pr-1'>
+              {/* Blocking Issues */}
+              {detail.blockingIssues && detail.blockingIssues.length > 0 && (
+                <div className='space-y-2'>
+                  <h4 className='text-[10px] font-bold text-rose-800 flex items-center gap-1.5'>
+                    <span className='h-1 w-1 rounded-full bg-rose-600' />
+                    Blocking ({detail.blockingIssues.length})
+                  </h4>
+                  <div className='grid gap-1.5'>
+                    {detail.blockingIssues.map((issue, idx) => (
+                      <div key={idx} className='bg-rose-50/40 border border-rose-100 rounded-xl p-2.5 space-y-1 text-xs'>
+                        <div className='flex justify-between items-start gap-2'>
+                          <div className='font-bold text-slate-800 leading-tight'>
+                            {issue.message}
+                          </div>
+                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-rose-100 text-rose-800 border border-rose-200/40 tracking-wider'>
+                            {issue.issueType}
+                          </span>
+                        </div>
+                        {issue.suggestedFix && (
+                          <div className='mt-1.5 pt-1.5 border-t border-rose-200/40 text-[10px] text-rose-900/90 leading-tight font-semibold flex items-start gap-1'>
+                            <span className='font-extrabold text-rose-955 shrink-0'>Fix:</span>
+                            <span>{issue.suggestedFix}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {/* Warning Issues */}
+              {detail.warningIssues && detail.warningIssues.length > 0 && (
+                <div className='space-y-2'>
+                  <h4 className='text-[10px] font-bold text-amber-800 flex items-center gap-1.5'>
+                    <span className='h-1 w-1 rounded-full bg-amber-600' />
+                    Warnings ({detail.warningIssues.length})
+                  </h4>
+                  <div className='grid gap-1.5'>
+                    {detail.warningIssues.map((issue, idx) => (
+                      <div key={idx} className='bg-amber-50/40 border border-amber-100 rounded-xl p-2.5 space-y-1 text-xs'>
+                        <div className='flex justify-between items-start gap-2'>
+                          <div className='font-bold text-slate-850 leading-tight'>
+                            {issue.message}
+                          </div>
+                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200/40 tracking-wider'>
+                            {issue.issueType}
+                          </span>
+                        </div>
+                        {issue.suggestedFix && (
+                          <div className='mt-1.5 pt-1.5 border-t border-amber-200/40 text-[10px] text-amber-900/90 leading-tight font-semibold flex items-start gap-1'>
+                            <span className='font-extrabold text-amber-955 shrink-0'>Fix:</span>
+                            <span>{issue.suggestedFix}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -832,11 +887,13 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
           })()}
 
           <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2'>
-            Pickup / Drop-off Stops ({middleStops.length})
+            {detail.route.routeDirection === 'OUTBOUND' ? 'Pickup Stops' : 'Drop-off Stops'} ({middleStops.length})
           </p>
           {middleStops.length === 0 ? (
             <p className='text-xs text-slate-400 italic bg-white border border-dashed border-slate-200 rounded-2xl p-4 text-center'>
-              No pickup/drop-off stops created yet. Assign students to auto-generate stops.
+              {detail.route.routeDirection === 'OUTBOUND'
+                ? 'No pickup stops created yet. Assign students to auto-generate stops.'
+                : 'No drop-off stops created yet. Assign students to auto-generate stops.'}
             </p>
           ) : (
             <div className='space-y-1.5'>
@@ -865,25 +922,74 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
         </div>
 
         <div>
-          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({students.length})</p>
-          {students.length === 0 ? (
-            <p className='text-xs text-slate-300'>No students assigned to stops</p>
-          ) : (
-            <div className='space-y-1.5'>
-              {students.map(ps => (
-                <div key={`${ps.studentId}-${ps.subscriptionId}-${ps.serviceAction}`} className='flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700'>
-                  <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-650'>
-                    <Users className='h-3 w-3' />
-                  </span>
-                  <span className='flex-1 font-semibold truncate'>{ps.studentName || `Student #${ps.studentId}`}</span>
-                  <span className='text-[10px] text-slate-450'>{ps.serviceAction} · {ps.stopName ?? '—'}</span>
-                  {editable && (
-                    <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const uniqueStudentCount = new Set(students.map(ps => ps.studentId)).size;
+            interface GroupedStudent {
+              studentId: number;
+              studentName: string;
+              subscriptionId: number;
+              actions: {
+                serviceAction: string;
+                stopName: string;
+              }[];
+            }
+
+            const groupedStudents: GroupedStudent[] = [];
+            students.forEach(ps => {
+              let existing = groupedStudents.find(g => g.studentId === ps.studentId);
+              if (!existing) {
+                existing = {
+                  studentId: ps.studentId,
+                  studentName: ps.studentName,
+                  subscriptionId: ps.subscriptionId,
+                  actions: []
+                };
+                groupedStudents.push(existing);
+              }
+              existing.actions.push({
+                serviceAction: ps.serviceAction === 'BOARD' ? 'BOARD' : ps.serviceAction === 'DROPOFF' ? 'DROPOFF' : ps.serviceAction,
+                stopName: ps.stopName ?? '—'
+              });
+            });
+
+            return (
+              <>
+                <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({uniqueStudentCount})</p>
+                {groupedStudents.length === 0 ? (
+                  <p className='text-xs text-slate-300'>No students assigned to stops</p>
+                ) : (
+                  <div className='space-y-1.5'>
+                    {groupedStudents.map(g => (
+                      <div key={g.studentId} className='flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm hover:shadow transition-shadow'>
+                        <div className='flex items-center gap-2'>
+                          <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-650'>
+                            <Users className='h-3 w-3' />
+                          </span>
+                          <span className='flex-1 font-bold text-slate-800 truncate'>{g.studentName || `Student #${g.studentId}`}</span>
+                          {editable && (
+                            <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(g.studentId, g.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
+                          )}
+                        </div>
+                        <div className='pl-7 text-[10px] text-slate-450 space-y-1.5 border-t border-slate-100/60 pt-2 mt-1'>
+                          {g.actions.map((act, aIdx) => (
+                            <div key={aIdx} className='flex items-center gap-1.5'>
+                              <span className={cn(
+                                'px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider',
+                                act.serviceAction.includes('BOARD') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
+                              )}>
+                                {act.serviceAction}
+                              </span>
+                              <span className='text-slate-600 font-semibold truncate'>{act.stopName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <hr className='border-slate-150 mt-4' />

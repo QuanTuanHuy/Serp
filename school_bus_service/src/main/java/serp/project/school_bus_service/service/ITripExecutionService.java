@@ -43,5 +43,7 @@ public interface ITripExecutionService extends IBaseService<TripExecutionEntity,
     List<TripStudentResponse> getTripStudents(Long id, Long tenantId);
 
     long countByTenantAndStatus(Long tenantId, TripStatus status);
+
+    TripExecutionEntity save(TripExecutionEntity entity);
 }
 

@@ -351,8 +351,67 @@ export default function SchoolBusRoutePlanningPage() {
       await publishSession(activeSession.id).unwrap();
       toast.success('Session published!');
     } catch (e: unknown) {
-      const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? 'Publish failed');
+      const err = e as { 
+        data?: { 
+          message?: string;
+          code?: string;
+          data?: {
+            blockingRouteCount: number;
+            totalBlockingIssues: number;
+            blockingRoutes: Array<{
+              routeId: number;
+              routeCode: string;
+              routeName: string;
+              issues: Array<{
+                issueType: string;
+                message: string;
+                stopName?: string;
+                studentName?: string;
+                suggestedFix?: string;
+              }>;
+            }>;
+          };
+        } 
+      };
+
+      const publishVal = err.data?.data;
+      if (err.data?.code === 'SESSION_BLOCKING_ISSUES' && publishVal) {
+        toast.error(
+          <div className='flex flex-col gap-2 max-w-[380px] text-xs leading-normal'>
+            <div className='font-bold text-slate-900 flex items-center gap-1.5'>
+              <span className='h-2 w-2 rounded-full bg-rose-600' />
+              Publish Blocked: {publishVal.blockingRouteCount} route(s) failed validation
+            </div>
+            <p className='text-[11px] text-slate-500 font-semibold'>
+              Total {publishVal.totalBlockingIssues} blocking issue(s) detected:
+            </p>
+            <div className='max-h-[220px] overflow-y-auto space-y-2.5 pr-1 border-t border-slate-100 pt-2'>
+              {publishVal.blockingRoutes.map(route => (
+                <div key={route.routeId} className='space-y-1'>
+                  <div className='font-bold text-rose-800 flex items-center justify-between'>
+                    <span>{route.routeCode} - {route.routeName}</span>
+                  </div>
+                  <ul className='space-y-1.5 pl-3 list-disc text-[11px] text-slate-700 font-medium'>
+                    {route.issues.map((issue, idx) => (
+                      <li key={idx} className='leading-relaxed'>
+                        <span className='font-bold text-slate-800'>{issue.issueType}:</span> {issue.message}
+                        {issue.suggestedFix && (
+                          <div className='text-rose-900 font-bold mt-0.5 bg-rose-50/50 px-1.5 py-0.5 rounded border border-rose-100/45'>
+                            💡 Fix: {issue.suggestedFix}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>,
+          { duration: 10000 }
+        );
+      } else {
+        toast.error(err?.data?.message ?? 'Publish failed');
+      }
     }
   }, [activeSession, publishSession]);
 

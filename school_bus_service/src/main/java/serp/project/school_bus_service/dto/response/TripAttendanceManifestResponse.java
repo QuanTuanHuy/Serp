@@ -30,6 +30,8 @@ public class TripAttendanceManifestResponse {
         /** Human-readable stop name. */
         private String displayName;
         private String stopStatus;
+        private Double latitude;
+        private Double longitude;
         private Integer plannedBoardingCount;
         private Integer plannedDropoffCount;
         private Integer actualBoardedCount;

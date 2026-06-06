@@ -623,4 +623,9 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     public long countByTenantAndStatus(Long tenantId, TripStatus status) {
         return tripRepository.countByTenantIdAndStatusAndIsDeletedFalse(tenantId, status);
     }
+
+    @Override
+    public TripExecutionEntity save(TripExecutionEntity entity) {
+        return tripRepository.save(entity);
+    }
 }

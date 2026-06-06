@@ -418,11 +418,25 @@ export interface SchoolBusRoutePlanStudent {
   plannedTime?: string | null;
 }
 
+export interface SchoolBusRouteIssueDetail {
+  issueType: string;
+  severity: 'INFO' | 'WARNING' | 'BLOCKING';
+  message: string;
+  routeStopId?: number | null;
+  stopName?: string | null;
+  studentId?: number | null;
+  studentName?: string | null;
+  suggestedFix?: string | null;
+}
+
 export interface SchoolBusRouteDetail {
   route: SchoolBusRoute;
   stops: SchoolBusRouteStop[];
   students: SchoolBusRoutePlanStudent[];
   assignment: SchoolBusRouteAssignment | null;
+  issues?: SchoolBusRouteIssueDetail[];
+  blockingIssues?: SchoolBusRouteIssueDetail[];
+  warningIssues?: SchoolBusRouteIssueDetail[];
 }
 
 export interface SchoolBusAttendance extends SchoolBusBaseRecord {
@@ -588,6 +602,8 @@ export interface TripAttendanceStopItem {
   plannedDropoffCount: number;
   actualBoardedCount: number;
   actualDroppedCount: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface TripAttendanceStudentItem {

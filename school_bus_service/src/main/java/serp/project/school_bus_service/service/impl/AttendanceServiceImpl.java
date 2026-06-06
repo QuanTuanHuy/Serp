@@ -396,6 +396,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setStopStatus(sl.getStatus().name());
                     item.setActualBoardedCount(sl.getActualBoardedCount() != null ? sl.getActualBoardedCount() : 0);
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
+                    item.setLatitude(rs.getLatitude());
+                    item.setLongitude(rs.getLongitude());
 
                     // Boarding count depends on purpose
                     // OUTBOUND PICKUP: students with pickupStopId == this stop

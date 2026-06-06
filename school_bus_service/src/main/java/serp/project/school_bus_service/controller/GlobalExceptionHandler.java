@@ -15,10 +15,10 @@ import serp.project.school_bus_service.shared.exception.AppException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<GeneralResponse<Void>> handleAppException(AppException e) {
+    public ResponseEntity<GeneralResponse<Object>> handleAppException(AppException e) {
         AppErrorCode.ErrorInfo errorCode = e.getErrorCode();
         return ResponseEntity.status(errorCode.status())
-                .body(GeneralResponse.error(errorCode.status(), "FAILED", e.getMessage()));
+                .body(GeneralResponse.error(errorCode.status(), "FAILED", e.getMessage(), e.getData()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

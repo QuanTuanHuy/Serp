@@ -52,6 +52,11 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
 
+import serp.project.school_bus_service.dto.response.RouteIssueDetailResponse;
+import serp.project.school_bus_service.service.IRoutePlanningIssueService;
+import serp.project.school_bus_service.entity.RoutePlanningIssueEntity;
+import serp.project.school_bus_service.enums.PlanningIssueSeverity;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +86,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final RouteStopFactory routeStopFactory;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final IRoutePlanningIssueService issueService;
 
     public RouteServiceImpl(RoutePlanRepository routePlanRepository,
                             RoutePlanningSessionRepository planningSessionRepository,
@@ -95,7 +101,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             IRouteDispatchService routeDispatchService,
                             RouteStopFactory routeStopFactory,
                             SchoolBusMapper mapper,
-                            MessageCommon messageCommon) {
+                            MessageCommon messageCommon,
+                            @org.springframework.context.annotation.Lazy IRoutePlanningIssueService issueService) {
         this.routePlanRepository = routePlanRepository;
         this.planningSessionRepository = planningSessionRepository;
         this.routePlanStudentService = routePlanStudentService;
@@ -110,6 +117,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.routeStopFactory = routeStopFactory;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.issueService = issueService;
     }
 
 
@@ -138,10 +146,41 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public RouteDetailResponse getRoute(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
-        return mapper.toRouteDetailResponse(route,
+        RouteDetailResponse detail = mapper.toRouteDetailResponse(route,
                 routeStopService.findByRoute(id, tenantId),
                 routePlanStudentService.findByRoute(id),
                 routeDispatchService.findAssignmentEntityByRoute(id, tenantId).orElse(null));
+
+        List<RoutePlanningIssueEntity> activeIssues = issueService.findByRoute(id).stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getIsResolved()))
+                .toList();
+
+        List<RouteIssueDetailResponse> issueResponses = activeIssues.stream()
+                .map(i -> new RouteIssueDetailResponse(
+                        i.getIssueType(),
+                        i.getSeverity().name(),
+                        i.getMessage(),
+                        i.getRouteStop() != null ? i.getRouteStop().getId() : null,
+                        i.getRouteStop() != null ? i.getRouteStop().getDisplayName() : null,
+                        i.getStudent() != null ? i.getStudent().getId() : null,
+                        i.getStudent() != null ? i.getStudent().getFullName() : null,
+                        RouteIssueDetailResponse.getSuggestedFix(i.getIssueType())
+                ))
+                .toList();
+
+        List<RouteIssueDetailResponse> blockingIssues = issueResponses.stream()
+                .filter(i -> "BLOCKING".equalsIgnoreCase(i.getSeverity()))
+                .toList();
+
+        List<RouteIssueDetailResponse> warningIssues = issueResponses.stream()
+                .filter(i -> "WARNING".equalsIgnoreCase(i.getSeverity()))
+                .toList();
+
+        detail.setIssues(issueResponses);
+        detail.setBlockingIssues(blockingIssues);
+        detail.setWarningIssues(warningIssues);
+
+        return detail;
     }
 
     @Override

@@ -236,8 +236,8 @@ public class TimelineCalculatorServiceImpl implements ITimelineCalculatorService
         // Pre-fetch other assigned students of session once to avoid N+1 queries
         List<Long> otherAssignedStudentIds = new ArrayList<>();
         if (route.getPlanningSession() != null) {
-            otherAssignedStudentIds = studentService.findStudentsInOtherRoutesOfSession(
-                    route.getPlanningSession().getId(), route.getId())
+            otherAssignedStudentIds = studentService.findStudentsInOtherRoutesOfSessionAndDirection(
+                    route.getPlanningSession().getId(), route.getId(), route.getRouteDirection())
                     .stream()
                     .map(ps -> ps.getStudent().getId())
                     .toList();

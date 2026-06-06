@@ -67,6 +67,4 @@ public class SchoolBusMapper extends BaseMapper {
 
     // --- Operations ---
     public AttendanceResponse toAttendanceResponse(AttendanceEntity e) { return operationsMapper.toAttendanceResponse(e); }
-    public DemoSessionResponse toDemoSessionResponse(DemoSessionEntity e, List<DemoEventLogEntity> ev) { return operationsMapper.toDemoSessionResponse(e, ev); }
-    public DemoEventLogResponse toDemoEventLogResponse(DemoEventLogEntity e) { return operationsMapper.toDemoEventLogResponse(e); }
 }

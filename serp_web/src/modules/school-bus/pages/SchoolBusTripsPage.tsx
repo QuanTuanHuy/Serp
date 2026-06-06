@@ -359,8 +359,8 @@ export function SchoolBusTripsPage() {
                 className='rounded-full h-8 text-xs font-semibold px-3'
                 asChild
               >
-                <Link href={`/school-bus/attendance/${trip.id}`}>
-                  Open manifest
+                <Link href={`/school-bus/trips/${trip.id}`}>
+                  Open operations
                 </Link>
               </Button>
             </div>
@@ -414,8 +414,8 @@ export function SchoolBusTripsPage() {
                   className='rounded-full h-8 text-xs font-semibold px-3'
                   asChild
                 >
-                  <Link href={`/school-bus/attendance/${trip.id}`}>
-                    Open attendance
+                  <Link href={`/school-bus/trips/${trip.id}`}>
+                    Open operations
                   </Link>
                 </Button>
               </div>
@@ -440,8 +440,8 @@ export function SchoolBusTripsPage() {
                   className='rounded-full h-8 text-xs font-semibold px-3'
                   asChild
                 >
-                  <Link href={`/school-bus/attendance/${trip.id}`}>
-                    Open attendance
+                  <Link href={`/school-bus/trips/${trip.id}`}>
+                    Open operations
                   </Link>
                 </Button>
               </div>
@@ -457,8 +457,8 @@ export function SchoolBusTripsPage() {
               className='rounded-full h-8 text-xs font-semibold px-3'
               asChild
             >
-              <Link href={`/school-bus/attendance/${trip.id}`}>
-                View summary
+              <Link href={`/school-bus/trips/${trip.id}`}>
+                Open details
               </Link>
             </Button>
             <Button

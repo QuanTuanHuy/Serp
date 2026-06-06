@@ -447,34 +447,98 @@ export function SchoolBusRouteDetailPage({
           </>
         }
       >
-        {/* Readiness Strip */}
-        {latestIssues.length > 0 && (
-          <div className='mb-6 bg-rose-50/55 border border-rose-150 rounded-2xl p-4 flex items-start gap-3.5 shadow-sm'>
-            <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-[#C81E3A] border border-rose-200'>
-              <AlertTriangle className='h-5 w-5' />
+        {/* Validation Issues Strip */}
+        {detail.issues && detail.issues.length > 0 && (
+          <div className='mb-6 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
+            <div className='flex items-center gap-2 pb-2.5 border-b border-slate-100'>
+              <AlertTriangle className='h-4.5 w-4.5 text-[#C81E3A] shrink-0' />
+              <h3 className='font-bold text-slate-900 text-sm'>Validation Issues ({detail.issues.length})</h3>
             </div>
-            <div className='flex-1 space-y-1.5'>
-              <h4 className='text-xs font-bold text-rose-955'>
-                Route Feasibility Issues Detected
-              </h4>
-              <p className='text-[10px] text-rose-700/90 leading-normal font-medium'>
-                Please resolve the following issue(s) before attempting to assign resources or publish this route:
-              </p>
-              <ul className='space-y-1.5 pt-1'>
-                {latestIssues.map((issue: any, index: number) => (
-                  <li key={index} className='flex items-start gap-2 text-[10px] text-slate-800 font-semibold'>
-                    <span className={cn(
-                      'px-1.5 py-0.2 rounded font-extrabold uppercase text-[8px] tracking-wider border shrink-0',
-                      (issue.severity || issue.level) === 'BLOCKING'
-                        ? 'bg-rose-50 text-[#C81E3A] border-rose-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                    )}>
-                      {issue.severity || issue.level || 'WARNING'}
-                    </span>
-                    <span className='leading-normal'>{issue.message || issue.description}</span>
-                  </li>
-                ))}
-              </ul>
+            
+            <div className='space-y-4'>
+              {/* Blocking Issues */}
+              {detail.blockingIssues && detail.blockingIssues.length > 0 && (
+                <div className='space-y-2.5'>
+                  <h4 className='text-xs font-bold text-rose-800 flex items-center gap-1.5'>
+                    <span className='h-1.5 w-1.5 rounded-full bg-rose-600' />
+                    Blocking Issues ({detail.blockingIssues.length})
+                  </h4>
+                  <div className='grid gap-2'>
+                    {detail.blockingIssues.map((issue, idx) => (
+                      <div key={idx} className='bg-rose-50/40 border border-rose-100 rounded-xl p-3.5 space-y-1.5 text-xs'>
+                        <div className='flex justify-between items-start gap-3'>
+                          <div className='font-bold text-slate-850 leading-normal'>
+                            {issue.message}
+                          </div>
+                          <span className='shrink-0 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-rose-100 text-rose-800 border border-rose-200/60 tracking-wider'>
+                            {issue.issueType}
+                          </span>
+                        </div>
+                        {issue.stopName && (
+                          <div className='text-slate-500 font-medium text-[11px] flex items-center gap-1'>
+                            <span>📍 Stop:</span>
+                            <span className='font-bold text-slate-700'>{issue.stopName}</span>
+                          </div>
+                        )}
+                        {issue.studentName && (
+                          <div className='text-slate-500 font-medium text-[11px] flex items-center gap-1'>
+                            <span>👤 Student:</span>
+                            <span className='font-bold text-slate-700'>{issue.studentName}</span>
+                          </div>
+                        )}
+                        {issue.suggestedFix && (
+                          <div className='mt-2 pt-2 border-t border-rose-250/40 text-[11px] text-rose-900/90 leading-normal font-semibold flex items-start gap-1'>
+                            <span className='font-extrabold text-rose-955 shrink-0'>Fix:</span>
+                            <span>{issue.suggestedFix}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Warning Issues */}
+              {detail.warningIssues && detail.warningIssues.length > 0 && (
+                <div className='space-y-2.5'>
+                  <h4 className='text-xs font-bold text-amber-800 flex items-center gap-1.5'>
+                    <span className='h-1.5 w-1.5 rounded-full bg-amber-600' />
+                    Warnings ({detail.warningIssues.length})
+                  </h4>
+                  <div className='grid gap-2'>
+                    {detail.warningIssues.map((issue, idx) => (
+                      <div key={idx} className='bg-amber-50/40 border border-amber-100 rounded-xl p-3.5 space-y-1.5 text-xs'>
+                        <div className='flex justify-between items-start gap-3'>
+                          <div className='font-bold text-slate-850 leading-normal'>
+                            {issue.message}
+                          </div>
+                          <span className='shrink-0 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200/60 tracking-wider'>
+                            {issue.issueType}
+                          </span>
+                        </div>
+                        {issue.stopName && (
+                          <div className='text-slate-500 font-medium text-[11px] flex items-center gap-1'>
+                            <span>📍 Stop:</span>
+                            <span className='font-bold text-slate-700'>{issue.stopName}</span>
+                          </div>
+                        )}
+                        {issue.studentName && (
+                          <div className='text-slate-500 font-medium text-[11px] flex items-center gap-1'>
+                            <span>👤 Student:</span>
+                            <span className='font-bold text-slate-700'>{issue.studentName}</span>
+                          </div>
+                        )}
+                        {issue.suggestedFix && (
+                          <div className='mt-2 pt-2 border-t border-amber-250/40 text-[11px] text-amber-900/90 leading-normal font-semibold flex items-start gap-1'>
+                            <span className='font-extrabold text-amber-955 shrink-0'>Fix:</span>
+                            <span>{issue.suggestedFix}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
