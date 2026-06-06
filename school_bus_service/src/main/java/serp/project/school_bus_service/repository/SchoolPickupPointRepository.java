@@ -2,6 +2,8 @@ package serp.project.school_bus_service.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
@@ -25,4 +27,8 @@ public interface SchoolPickupPointRepository extends BaseRepository<SchoolPickup
             Long schoolId, Long pickupPointId, Long tenantId);
 
     List<SchoolPickupPointEntity> findByTenantIdAndIsDeletedFalseAndIsActiveTrue(Long tenantId);
+
+    @Query("SELECT s FROM SchoolPickupPointEntity s JOIN FETCH s.pickupPoint WHERE s.school.id IN :schoolIds AND s.tenantId = :tenantId AND s.isDeleted = false")
+    List<SchoolPickupPointEntity> findBySchoolIdInAndTenantIdAndIsDeletedFalse(
+            @Param("schoolIds") List<Long> schoolIds, @Param("tenantId") Long tenantId);
 }

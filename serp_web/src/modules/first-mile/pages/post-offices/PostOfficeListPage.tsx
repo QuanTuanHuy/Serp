@@ -17,11 +17,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -43,7 +38,7 @@ import {
   useUpdatePostOfficeMutation,
   useValidatePostOfficeImportMutation,
 } from '../../api';
-import { CoordinatePickerMap } from '../../components';
+import { CoordinatePickerMap, TmsCombobox } from '../../components';
 import type {
   ImportHistory,
   PostOffice,
@@ -123,7 +118,8 @@ export const PostOfficeListPage: React.FC = () => {
   const [staffRoleToAssign, setStaffRoleToAssign] =
     React.useState<PostOfficeStaffRole>('COURIER');
   const [staffSearchKeyword, setStaffSearchKeyword] = React.useState('');
-  const [selectedStaffIdToAssign, setSelectedStaffIdToAssign] = React.useState('');
+  const [selectedStaffIdToAssign, setSelectedStaffIdToAssign] =
+    React.useState('');
 
   const { data, isLoading, isFetching, refetch } = useGetPostOfficesQuery({
     page,
@@ -216,16 +212,35 @@ export const PostOfficeListPage: React.FC = () => {
     { skip: !manageStaffPostOffice }
   );
 
-  const { data: assignablePostOfficeStaffs, isFetching: isFetchingAssignableStaffs } =
-    useGetAssignablePostOfficeStaffsQuery(
-      {
-        role: staffRoleToAssign,
-        ...(staffSearchKeyword.trim()
-          ? { keyword: staffSearchKeyword.trim() }
-          : {}),
-      },
-      { skip: !manageStaffPostOffice }
-    );
+  const {
+    data: assignablePostOfficeStaffs,
+    isFetching: isFetchingAssignableStaffs,
+  } = useGetAssignablePostOfficeStaffsQuery(
+    {
+      role: staffRoleToAssign,
+      ...(staffSearchKeyword.trim()
+        ? { keyword: staffSearchKeyword.trim() }
+        : {}),
+    },
+    { skip: !manageStaffPostOffice }
+  );
+  const staffRoleFilterOptions = [
+    { value: 'ALL', label: 'All roles' },
+    { value: 'MANAGER', label: 'Manager' },
+    { value: 'COURIER', label: 'Courier' },
+  ];
+  const staffRoleAssignOptions = [
+    { value: 'MANAGER', label: 'Manager' },
+    { value: 'COURIER', label: 'Courier' },
+  ];
+  const assignableStaffOptions = (assignablePostOfficeStaffs ?? []).map(
+    (staff) => ({
+      value: String(staff.id),
+      label:
+        (staff.fullName || staff.code || `#${staff.id}`) +
+        (staff.code ? ` (${staff.code})` : ''),
+    })
+  );
 
   const isSaving = isCreating || isUpdating;
   const isImportFlowBusy =
@@ -369,12 +384,6 @@ export const PostOfficeListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} row(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate post office import file.', {
@@ -395,9 +404,6 @@ export const PostOfficeListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -527,7 +533,9 @@ export const PostOfficeListPage: React.FC = () => {
 
   const handleOpenManageStaff = (postOffice: PostOffice) => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can manage post office staff assignments.');
+      notification.error(
+        'Only TMS_ADMIN can manage post office staff assignments.'
+      );
       return;
     }
     setManageStaffPostOffice(postOffice);
@@ -633,10 +641,27 @@ export const PostOfficeListPage: React.FC = () => {
           </div>
 
           {isTmsAdmin ? (
-            <Button onClick={handleOpenCreateDialog}>
-              <Plus className='h-4 w-4 mr-2' />
-              New Post Office
-            </Button>
+            <div className='flex flex-wrap items-center gap-2'>
+              <PostOfficeImportCard
+                isTmsAdmin={isTmsAdmin}
+                isImportFlowBusy={isImportFlowBusy}
+                isExportingTemplate={isExportingTemplate}
+                isValidatingImport={isValidatingImport}
+                isImportingPostOffices={isImportingPostOffices}
+                importFileInputKey={importFileInputKey}
+                selectedImportFile={selectedImportFile}
+                validateImportResult={validateImportResult}
+                lastImportJob={lastImportJob}
+                onSelectImportFile={handleSelectImportFile}
+                onDownloadTemplate={handleDownloadTemplate}
+                onValidateImportFile={handleValidateImportFile}
+                onImportFile={handleImportFile}
+              />
+              <Button onClick={handleOpenCreateDialog}>
+                <Plus className='h-4 w-4 mr-2' />
+                New Post Office
+              </Button>
+            </div>
           ) : (
             <Badge variant='outline' className='gap-1'>
               <ShieldAlert className='h-3.5 w-3.5' />
@@ -644,29 +669,6 @@ export const PostOfficeListPage: React.FC = () => {
             </Badge>
           )}
         </div>
-
-        {isTmsAdmin ? (
-          <PostOfficeImportCard
-            className='w-full'
-            isTmsAdmin={isTmsAdmin}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingPostOffices={isImportingPostOffices}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
-            lastImportJob={lastImportJob}
-            previewLimit={IMPORT_PREVIEW_LIMIT}
-            onSelectImportFile={handleSelectImportFile}
-            onDownloadTemplate={handleDownloadTemplate}
-            onValidateImportFile={handleValidateImportFile}
-            onImportFile={handleImportFile}
-            getProvinceLabel={getProvinceLabel}
-            getWardLabel={getWardLabel}
-          />
-        ) : null}
 
         <PostOfficeFiltersCard
           filterMode={filterMode}
@@ -781,15 +783,27 @@ export const PostOfficeListPage: React.FC = () => {
                   <p className='font-medium'>{detailTarget.serviceRadiusM}</p>
                 </div>
                 <div>
-                  <p className='text-muted-foreground'>Daily capacity</p>
+                  <p className='text-muted-foreground'>Pickup order capacity</p>
                   <p className='font-medium'>
                     {detailTarget.dailyCapacity ?? '--'}
                   </p>
                 </div>
                 <div>
-                  <p className='text-muted-foreground'>Current load</p>
+                  <p className='text-muted-foreground'>Current pickup load</p>
                   <p className='font-medium'>
                     {detailTarget.currentLoad ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Delivery capacity</p>
+                  <p className='font-medium'>
+                    {detailTarget.deliveryCapacity ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Current delivery load</p>
+                  <p className='font-medium'>
+                    {detailTarget.currentDeliveryLoad ?? '--'}
                   </p>
                 </div>
                 <div>
@@ -872,39 +886,30 @@ export const PostOfficeListPage: React.FC = () => {
             <div className='grid gap-3 sm:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='po-staff-role-filter'>Role filter</Label>
-                <Select
+                <TmsCombobox
+                  id='po-staff-role-filter'
                   value={staffRoleFilter}
                   onValueChange={(value) =>
                     setStaffRoleFilter(value as 'ALL' | PostOfficeStaffRole)
                   }
-                >
-                  <SelectTrigger id='po-staff-role-filter'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='ALL'>All roles</SelectItem>
-                    <SelectItem value='MANAGER'>Manager</SelectItem>
-                    <SelectItem value='COURIER'>Courier</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={staffRoleFilterOptions}
+                  placeholder='All roles'
+                  emptyText='No roles found'
+                />
               </div>
 
               <div className='space-y-2'>
                 <Label htmlFor='po-staff-role-assign'>Assign role</Label>
-                <Select
+                <TmsCombobox
+                  id='po-staff-role-assign'
                   value={staffRoleToAssign}
                   onValueChange={(value) =>
                     setStaffRoleToAssign(value as PostOfficeStaffRole)
                   }
-                >
-                  <SelectTrigger id='po-staff-role-assign'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='MANAGER'>Manager</SelectItem>
-                    <SelectItem value='COURIER'>Courier</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={staffRoleAssignOptions}
+                  placeholder='Select role'
+                  emptyText='No roles found'
+                />
               </div>
             </div>
 
@@ -921,34 +926,19 @@ export const PostOfficeListPage: React.FC = () => {
             <div className='space-y-2'>
               <Label htmlFor='po-staff-select'>Staff</Label>
               <div className='flex gap-2'>
-                <Select
-                  value={selectedStaffIdToAssign || undefined}
+                <TmsCombobox
+                  id='po-staff-select'
+                  value={selectedStaffIdToAssign}
                   onValueChange={setSelectedStaffIdToAssign}
-                >
-                  <SelectTrigger id='po-staff-select' className='w-full'>
-                    <SelectValue
-                      placeholder={
-                        isFetchingAssignableStaffs
-                          ? 'Loading staffs...'
-                          : 'Select staff'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(assignablePostOfficeStaffs ?? []).length === 0 ? (
-                      <SelectItem value='__empty__' disabled>
-                        No staffs found
-                      </SelectItem>
-                    ) : (
-                      (assignablePostOfficeStaffs ?? []).map((staff) => (
-                        <SelectItem key={staff.id} value={String(staff.id)}>
-                          {(staff.fullName || staff.code || `#${staff.id}`) +
-                            (staff.code ? ` (${staff.code})` : '')}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  options={assignableStaffOptions}
+                  placeholder={
+                    isFetchingAssignableStaffs
+                      ? 'Loading staffs...'
+                      : 'Select staff'
+                  }
+                  emptyText='No staffs found'
+                  loading={isFetchingAssignableStaffs}
+                />
                 <Button
                   onClick={() => void handleAssignStaffToPostOffice()}
                   disabled={
@@ -957,13 +947,17 @@ export const PostOfficeListPage: React.FC = () => {
                     !selectedStaffIdToAssign
                   }
                 >
-                  {isAssigningCourier || isAssigningManager ? 'Assigning...' : 'Assign'}
+                  {isAssigningCourier || isAssigningManager
+                    ? 'Assigning...'
+                    : 'Assign'}
                 </Button>
               </div>
             </div>
 
             {isFetchingStaffAssignments ? (
-              <p className='text-sm text-muted-foreground'>Loading assignments...</p>
+              <p className='text-sm text-muted-foreground'>
+                Loading assignments...
+              </p>
             ) : (staffAssignments ?? []).length === 0 ? (
               <p className='text-sm text-muted-foreground'>
                 No active staff assignments for this post office.
@@ -977,7 +971,9 @@ export const PostOfficeListPage: React.FC = () => {
                   >
                     <div className='text-sm'>
                       <p className='font-medium'>
-                        {assignment.staffFullName || assignment.staffCode || `#${assignment.staffId}`}
+                        {assignment.staffFullName ||
+                          assignment.staffCode ||
+                          `#${assignment.staffId}`}
                       </p>
                       <p className='text-muted-foreground'>
                         Role: {assignment.staffRole || '--'} · From:{' '}

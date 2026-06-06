@@ -4,14 +4,8 @@
  */
 
 import React from 'react';
-import {
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
+import { TmsCombobox } from '@/modules/first-mile/components';
+import { Label } from '@/shared/components/ui';
 import type { BillingSelectOption } from '../billingPageModels';
 
 interface BillingLocationFieldsProps {
@@ -51,52 +45,39 @@ export const BillingLocationFields: React.FC<BillingLocationFieldsProps> = ({
           <Label htmlFor={provinceId} className='text-xs'>
             Province
           </Label>
-          <Select value={provinceCode} onValueChange={onProvinceChange}>
-            <SelectTrigger id={provinceId}>
-              <SelectValue
-                placeholder={
-                  isFetchingProvinces ? 'Loading provinces...' : 'Select province'
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {provinceOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <TmsCombobox
+            id={provinceId}
+            value={provinceCode}
+            onValueChange={onProvinceChange}
+            options={provinceOptions}
+            placeholder={
+              isFetchingProvinces ? 'Loading provinces...' : 'Select province'
+            }
+            emptyText='No provinces found'
+            loading={isFetchingProvinces}
+          />
         </div>
 
         <div className='space-y-2'>
           <Label htmlFor={wardId} className='text-xs'>
             Ward
           </Label>
-          <Select
+          <TmsCombobox
+            id={wardId}
             value={wardCode}
             onValueChange={onWardChange}
+            options={wardOptions}
+            placeholder={
+              !hasProvince
+                ? 'Select province first'
+                : isFetchingWards
+                  ? 'Loading wards...'
+                  : 'Select ward'
+            }
+            emptyText='No wards found'
             disabled={!hasProvince}
-          >
-            <SelectTrigger id={wardId}>
-              <SelectValue
-                placeholder={
-                  !hasProvince
-                    ? 'Select province first'
-                    : isFetchingWards
-                      ? 'Loading wards...'
-                      : 'Select ward'
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {wardOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            loading={isFetchingWards}
+          />
         </div>
       </div>
     </div>

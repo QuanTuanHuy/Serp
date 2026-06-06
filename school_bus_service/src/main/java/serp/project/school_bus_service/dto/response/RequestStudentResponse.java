@@ -9,6 +9,7 @@ public class RequestStudentResponse extends BaseResponse {
 
     private Long requestId;
     private Long studentId;
+    private String studentCode;
     private String studentName;
 
     private Long pickupPointId;
@@ -24,7 +25,11 @@ public class RequestStudentResponse extends BaseResponse {
     private Double dropoffPointLongitude;
 
     private Long schoolScheduleId;
+    private String schoolScheduleCode;
     private String schoolScheduleName;
+    private String shiftType;
+    private String arrivalDeadline;   // formatted as HH:mm
+    private String departureTime;     // formatted as HH:mm
 
     private String tripOption;
 

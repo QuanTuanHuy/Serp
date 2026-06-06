@@ -28,6 +28,10 @@ export interface PostOfficeFilterFormState {
   maxDailyCapacity: string;
   minCurrentLoad: string;
   maxCurrentLoad: string;
+  minDeliveryCapacity: string;
+  maxDeliveryCapacity: string;
+  minCurrentDeliveryLoad: string;
+  maxCurrentDeliveryLoad: string;
   minPriority: string;
   maxPriority: string;
 }
@@ -47,6 +51,10 @@ export const DEFAULT_POST_OFFICE_FILTER_FORM: PostOfficeFilterFormState = {
   maxDailyCapacity: '',
   minCurrentLoad: '',
   maxCurrentLoad: '',
+  minDeliveryCapacity: '',
+  maxDeliveryCapacity: '',
+  minCurrentDeliveryLoad: '',
+  maxCurrentDeliveryLoad: '',
   minPriority: '',
   maxPriority: '',
 };
@@ -66,6 +74,10 @@ export const countActivePostOfficeAdvancedFilters = (
   if (values.maxDailyCapacity.trim()) count += 1;
   if (values.minCurrentLoad.trim()) count += 1;
   if (values.maxCurrentLoad.trim()) count += 1;
+  if (values.minDeliveryCapacity.trim()) count += 1;
+  if (values.maxDeliveryCapacity.trim()) count += 1;
+  if (values.minCurrentDeliveryLoad.trim()) count += 1;
+  if (values.maxCurrentDeliveryLoad.trim()) count += 1;
   if (values.minPriority.trim()) count += 1;
   if (values.maxPriority.trim()) count += 1;
 
@@ -85,19 +97,35 @@ export const buildPostOfficeListFilters = (
   );
   const minDailyCapacity = parseOptionalNonNegativeInteger(
     values.minDailyCapacity,
-    'Min daily capacity'
+    'Min pickup order capacity'
   );
   const maxDailyCapacity = parseOptionalNonNegativeInteger(
     values.maxDailyCapacity,
-    'Max daily capacity'
+    'Max pickup order capacity'
   );
   const minCurrentLoad = parseOptionalNonNegativeInteger(
     values.minCurrentLoad,
-    'Min current load'
+    'Min current pickup load'
   );
   const maxCurrentLoad = parseOptionalNonNegativeInteger(
     values.maxCurrentLoad,
-    'Max current load'
+    'Max current pickup load'
+  );
+  const minDeliveryCapacity = parseOptionalNonNegativeInteger(
+    values.minDeliveryCapacity,
+    'Min delivery capacity'
+  );
+  const maxDeliveryCapacity = parseOptionalNonNegativeInteger(
+    values.maxDeliveryCapacity,
+    'Max delivery capacity'
+  );
+  const minCurrentDeliveryLoad = parseOptionalNonNegativeInteger(
+    values.minCurrentDeliveryLoad,
+    'Min current delivery load'
+  );
+  const maxCurrentDeliveryLoad = parseOptionalNonNegativeInteger(
+    values.maxCurrentDeliveryLoad,
+    'Max current delivery load'
   );
   const minPriority = parseOptionalNonNegativeInteger(
     values.minPriority,
@@ -109,8 +137,22 @@ export const buildPostOfficeListFilters = (
   );
 
   validateNumericRange(minServiceRadiusM, maxServiceRadiusM, 'Service radius');
-  validateNumericRange(minDailyCapacity, maxDailyCapacity, 'Daily capacity');
-  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Current load');
+  validateNumericRange(
+    minDailyCapacity,
+    maxDailyCapacity,
+    'Pickup order capacity'
+  );
+  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Current pickup load');
+  validateNumericRange(
+    minDeliveryCapacity,
+    maxDeliveryCapacity,
+    'Delivery capacity'
+  );
+  validateNumericRange(
+    minCurrentDeliveryLoad,
+    maxCurrentDeliveryLoad,
+    'Current delivery load'
+  );
   validateNumericRange(minPriority, maxPriority, 'Priority');
 
   const hubIdRaw = values.hubId.trim();
@@ -138,6 +180,10 @@ export const buildPostOfficeListFilters = (
     maxDailyCapacity,
     minCurrentLoad,
     maxCurrentLoad,
+    minDeliveryCapacity,
+    maxDeliveryCapacity,
+    minCurrentDeliveryLoad,
+    maxCurrentDeliveryLoad,
     minPriority,
     maxPriority,
   };

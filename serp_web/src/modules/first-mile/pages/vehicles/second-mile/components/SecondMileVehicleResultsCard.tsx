@@ -22,7 +22,11 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import { Eye, Loader2, Pencil, Trash2 } from 'lucide-react';
-import type { FirstMilePaginatedData, Hub, SecondMileVehicle } from '../../../../types';
+import type {
+  FirstMilePaginatedData,
+  Hub,
+  SecondMileVehicle,
+} from '../../../../types';
 import {
   buildHubLabel,
   formatOptionalNumber,
@@ -34,7 +38,9 @@ import {
 interface SecondMileVehicleResultsCardProps {
   canManage: boolean;
   data?: FirstMilePaginatedData<SecondMileVehicle>;
+  driverLabelByStaffId: Record<number, string>;
   hubById: Record<number, Hub>;
+  imageRefreshKey?: number;
   isLoading: boolean;
   isFetching: boolean;
   isSaving: boolean;
@@ -51,7 +57,9 @@ export const SecondMileVehicleResultsCard: React.FC<
 > = ({
   canManage,
   data,
+  driverLabelByStaffId,
   hubById,
+  imageRefreshKey,
   isLoading,
   isFetching,
   isSaving,
@@ -84,7 +92,7 @@ export const SecondMileVehicleResultsCard: React.FC<
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hub</TableHead>
-                    <TableHead>Driver ID</TableHead>
+                    <TableHead>Driver</TableHead>
                     <TableHead>Capacity</TableHead>
                     <TableHead className='text-right'>Actions</TableHead>
                   </TableRow>
@@ -92,13 +100,21 @@ export const SecondMileVehicleResultsCard: React.FC<
                 <TableBody>
                   {data.items.map((vehicle) => {
                     const imageUrl = vehicle.imageUrl?.trim();
+                    const imageSrc =
+                      imageUrl && imageRefreshKey
+                        ? `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${imageRefreshKey}`
+                        : imageUrl;
+                    const driverLabel = vehicle.assignedStaffId
+                      ? (driverLabelByStaffId[vehicle.assignedStaffId] ??
+                        `Driver #${vehicle.assignedStaffId}`)
+                      : '—';
                     return (
                       <TableRow key={vehicle.id}>
                         <TableCell>
                           <div className='relative h-12 w-16 overflow-hidden rounded border bg-muted'>
-                            {imageUrl ? (
+                            {imageSrc ? (
                               <Image
-                                src={imageUrl}
+                                src={imageSrc}
                                 alt={vehicle.licensePlate}
                                 fill
                                 unoptimized
@@ -121,7 +137,9 @@ export const SecondMileVehicleResultsCard: React.FC<
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(vehicle.status)}>
+                          <Badge
+                            variant={getStatusBadgeVariant(vehicle.status)}
+                          >
                             {formatStatusLabel(vehicle.status)}
                           </Badge>
                         </TableCell>
@@ -129,10 +147,11 @@ export const SecondMileVehicleResultsCard: React.FC<
                           {buildHubLabel(vehicle.hubId, hubById)}
                         </TableCell>
                         <TableCell className='text-xs text-muted-foreground'>
-                          {vehicle.assignedStaffId ?? '—'}
+                          {driverLabel}
                         </TableCell>
                         <TableCell className='text-xs text-muted-foreground'>
-                          bags: {vehicle.maxBags} | {formatOptionalNumber(vehicle.maxWeight)} kg |{' '}
+                          bags: {vehicle.maxBags} |{' '}
+                          {formatOptionalNumber(vehicle.maxWeight)} kg |{' '}
                           {formatOptionalNumber(vehicle.maxVolume)} m³
                         </TableCell>
                         <TableCell className='text-right'>

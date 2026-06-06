@@ -77,6 +77,8 @@ Run from `second-mile/`. On Windows use `mvnw.cmd`.
 - Use `AuthUtils` for tenant/user context.
 - Hub-scoped operations may use `SecondMileAccessUtils` — follow existing service patterns.
 - When adding endpoints, align `@PreAuthorize` with first-mile TMS roles where the feature is shared (`TMS_ADMIN`, etc.).
+- Internal service calls use API key auth, not service bearer tokens or forwarded JWTs. Callers must send `X-Internal-Api-Key`, `X-Tenant-Id`, and `X-Internal-Service`, including from normal request handlers, Kafka consumers, DLQ retry, outbox retry, and scheduled jobs. Internal endpoints should be `permitAll` in `SecurityConfig` to avoid JWT requirements, while `InternalApiAuthenticationFilter` enforces the API key before controller logic.
+- Receiving services authenticate internal calls through `InternalApiAuthenticationFilter`; service code should still use `AuthUtils` for tenant/role context. Configure `INTERNAL_API_KEY` consistently across `first-mile`, `second-mile`, and `tms-order`; never commit its value.
 
 ## Persistence and Schema Changes
 
@@ -102,7 +104,20 @@ Run from `second-mile/`. On Windows use `mvnw.cmd`.
 
 ## Code Style
 
-- Standard file header (`Author:` / `Description: Part of Serp Project`).
+### File headers (required for TMS)
+
+- **Author must be `Nguyen The Anh`** on all new or touched Java/SQL files in this module. Do **not** use `QuanTuanHuy` from the root `AGENTS.md` example.
+- When editing a file that already has a header, **keep** `Author: Nguyen The Anh`; do not rewrite authorship.
+- New Java files:
+
+```text
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+```
+
+- New SQL under `db.migration/`: `-- Author: Nguyen The Anh` when sibling scripts use author comments.
 - `@RequiredArgsConstructor`, `@Slf4j` on controllers/services.
 - 4-space indent; early returns in services.
 - API message keys in `i18n/messages.properties` (English default); Vietnamese in `messages_vi.properties` if the product team maintains them — **web UI stays English** (see frontend AGENTS.md).

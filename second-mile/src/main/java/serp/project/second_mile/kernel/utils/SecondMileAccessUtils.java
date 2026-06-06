@@ -7,6 +7,7 @@ package serp.project.second_mile.kernel.utils;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import serp.project.second_mile.domain.HubStaff;
 import serp.project.second_mile.enums.HubStaffRole;
 import serp.project.second_mile.enums.HubStaffStatus;
 import serp.project.second_mile.exception.AppException;
@@ -46,12 +47,26 @@ public class SecondMileAccessUtils {
         return authUtils.hasAnyRole("TMS_HUB_EMPLOYEE");
     }
 
+    public boolean isHubDriver() {
+        return authUtils.hasAnyRole("TMS_HUB_DRIVER");
+    }
+
     public boolean hasHubOperationRole() {
         return isAdmin() || isHubManager() || isHubEmployee();
     }
 
+    public boolean hasHubOperationOrDriverRole() {
+        return hasHubOperationRole() || isHubDriver();
+    }
+
     public void ensureHubOperationRoleOrThrow() {
         if (!hasHubOperationRole()) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    public void ensureHubOperationOrDriverRoleOrThrow() {
+        if (!hasHubOperationOrDriverRole()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
     }
@@ -75,12 +90,37 @@ public class SecondMileAccessUtils {
         }
     }
 
-    public void ensureActiveDriverStaffOrThrow(Long staffId) {
-        if (staffId == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver is required.");
+    public void ensureCurrentUserHasActiveHubStaffOrDriverRoleOrThrow() {
+        if (isAdmin()) {
+            return;
         }
 
         Long tenantId = getCurrentTenantIdOrThrow();
+        Long userId = getCurrentUserIdOrThrow();
+
+        boolean hasActiveHubRole = hubStaffRepository.existsByTenantIdAndUserIdAndRoleInAndStatus(
+                tenantId,
+                userId,
+                List.of(HubStaffRole.MANAGER, HubStaffRole.EMPLOYEE, HubStaffRole.DRIVER),
+                HubStaffStatus.ACTIVE
+        );
+        if (!hasActiveHubRole) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    public void ensureActiveDriverStaffOrThrow(Long staffId) {
+        ensureActiveDriverStaffOrThrow(getCurrentTenantIdOrThrow(), staffId);
+    }
+
+    public void ensureActiveDriverStaffOrThrow(Long tenantId, Long staffId) {
+        if (staffId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver is required.");
+        }
+        if (tenantId == null || tenantId <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Tenant is required to validate assigned vehicle driver.");
+        }
+
         boolean activeDriver = hubStaffRepository.existsByTenantIdAndIdAndRoleAndStatus(
                 tenantId,
                 staffId,
@@ -113,5 +153,18 @@ public class SecondMileAccessUtils {
         if (!assignedDriver) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
+    }
+
+    public Long getCurrentActiveDriverStaffIdOrThrow() {
+        Long tenantId = getCurrentTenantIdOrThrow();
+        Long userId = getCurrentUserIdOrThrow();
+        return hubStaffRepository.findByTenantIdAndUserIdAndRoleAndStatus(
+                        tenantId,
+                        userId,
+                        HubStaffRole.DRIVER,
+                        HubStaffStatus.ACTIVE
+                )
+                .map(HubStaff::getId)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
     }
 }

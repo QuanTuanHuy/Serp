@@ -14,13 +14,9 @@ import {
   CardTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type { PickupShift, Province, Ward } from '../../../../types';
 import { OrderMultiSelect } from './OrderMultiSelect';
 import type { ManualDispatchCardProps } from './types';
@@ -64,6 +60,38 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
   activeAction,
 }) => {
   const canSelectPostOffice = Boolean(selectedProvinceCode);
+  const provinceComboboxOptions = provinceOptions.flatMap(
+    (province: Province) =>
+      province.provinceCode
+        ? [
+            {
+              value: province.provinceCode,
+              label: `${province.name} (${province.provinceCode})`,
+            },
+          ]
+        : []
+  );
+  const wardComboboxOptions = [
+    { value: 'ALL', label: 'All wards in province' },
+    ...wardOptions.flatMap((ward: Ward) =>
+      ward.wardCode
+        ? [
+            {
+              value: ward.wardCode,
+              label: `${ward.name} (${ward.wardCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const postOfficeComboboxOptions = postOfficeOptions.map((postOffice) => ({
+    value: String(postOffice.id),
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+  const courierComboboxOptions = courierOptions.map((courier) => ({
+    value: String(courier.id),
+    label: `${courier.code} - ${courier.fullName}`,
+  }));
 
   return (
     <Card>
@@ -79,72 +107,48 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
         <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
           <div className='space-y-2'>
             <Label htmlFor='manual-province'>Province</Label>
-            <Select
-              value={selectedProvinceCode || undefined}
+            <TmsCombobox
+              id='manual-province'
+              value={selectedProvinceCode}
               onValueChange={onProvinceChange}
+              options={provinceComboboxOptions}
+              placeholder='Select province'
+              emptyText='No provinces found'
               disabled={isLoadingProvinces}
-            >
-              <SelectTrigger id='manual-province'>
-                <SelectValue placeholder='Select province' />
-              </SelectTrigger>
-              <SelectContent>
-                {provinceOptions.map((province: Province) => (
-                  <SelectItem
-                    key={province.provinceCode}
-                    value={province.provinceCode}
-                  >
-                    {province.name} ({province.provinceCode})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingProvinces}
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='manual-ward'>Ward</Label>
-            <Select
-              value={selectedWardCode || undefined}
+            <TmsCombobox
+              id='manual-ward'
+              value={selectedWardCode}
               onValueChange={onWardChange}
+              options={wardComboboxOptions}
+              placeholder={
+                selectedProvinceCode
+                  ? 'Select ward (optional)'
+                  : 'Select province first'
+              }
+              emptyText={isLoadingWards ? 'Loading wards...' : 'No wards found'}
               disabled={!selectedProvinceCode || isLoadingWards}
-            >
-              <SelectTrigger id='manual-ward'>
-                <SelectValue
-                  placeholder={
-                    selectedProvinceCode
-                      ? 'Select ward (optional)'
-                      : 'Select province first'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All wards in province</SelectItem>
-                {wardOptions.map((ward: Ward) => (
-                  <SelectItem key={ward.wardCode} value={ward.wardCode}>
-                    {ward.name} ({ward.wardCode})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingWards}
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='manual-post-office'>Post office</Label>
-            <Select
-              value={selectedPostOfficeId || undefined}
+            <TmsCombobox
+              id='manual-post-office'
+              value={selectedPostOfficeId}
               onValueChange={onPostOfficeChange}
+              options={postOfficeComboboxOptions}
+              placeholder='Select post office'
+              emptyText='No post offices found'
               disabled={!canSelectPostOffice || isLoadingPostOffices}
-            >
-              <SelectTrigger id='manual-post-office'>
-                <SelectValue placeholder='Select post office' />
-              </SelectTrigger>
-              <SelectContent>
-                {postOfficeOptions.map((postOffice) => (
-                  <SelectItem key={postOffice.id} value={String(postOffice.id)}>
-                    {postOffice.code} - {postOffice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingPostOffices}
+            />
             {isLoadingPostOffices ? (
               <p className='text-xs text-muted-foreground'>
                 Loading post offices...
@@ -154,21 +158,14 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='manual-shift'>Shift</Label>
-            <Select
+            <TmsCombobox
+              id='manual-shift'
               value={shift}
               onValueChange={(value) => onShiftChange(value as PickupShift)}
-            >
-              <SelectTrigger id='manual-shift'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MANUAL_SHIFT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={MANUAL_SHIFT_OPTIONS}
+              placeholder='Select shift'
+              emptyText='No shifts found'
+            />
           </div>
 
           <div className='space-y-2'>
@@ -185,22 +182,16 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
         <div className='grid gap-3 md:grid-cols-2'>
           <div className='space-y-2'>
             <Label htmlFor='manual-courier-select'>Courier</Label>
-            <Select
-              value={selectedManualCourierId || undefined}
+            <TmsCombobox
+              id='manual-courier-select'
+              value={selectedManualCourierId}
               onValueChange={onManualCourierIdChange}
+              options={courierComboboxOptions}
+              placeholder='Select courier for manual assignment'
+              emptyText='No couriers found'
               disabled={!selectedPostOfficeId || isLoadingCouriers}
-            >
-              <SelectTrigger id='manual-courier-select'>
-                <SelectValue placeholder='Select courier for manual assignment' />
-              </SelectTrigger>
-              <SelectContent>
-                {courierOptions.map((courier) => (
-                  <SelectItem key={courier.id} value={String(courier.id)}>
-                    {courier.code} - {courier.fullName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingCouriers}
+            />
             {isLoadingCouriers ? (
               <p className='text-xs text-muted-foreground'>
                 Loading couriers...

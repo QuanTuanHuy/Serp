@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import {
   CALCULATION_TYPE_OPTIONS,
   VAS_RULE_CODE_OPTIONS,
@@ -66,7 +62,8 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
               <Label htmlFor='vasCode'>VAS Code</Label>
-              <Select
+              <TmsCombobox
+                id='vasCode'
                 value={form.code}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -75,19 +72,11 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
                     name: prev.name || value,
                   }))
                 }
+                options={VAS_RULE_CODE_OPTIONS}
+                placeholder='Select VAS code'
+                emptyText='No VAS codes found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='vasCode'>
-                  <SelectValue placeholder='Select VAS code' />
-                </SelectTrigger>
-                <SelectContent>
-                  {VAS_RULE_CODE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
@@ -108,7 +97,8 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='vasCalculationType'>Calculation Type</Label>
-              <Select
+              <TmsCombobox
+                id='vasCalculationType'
                 value={form.calculationType}
                 onValueChange={(value) =>
                   onFormChange((prev) => ({
@@ -117,19 +107,11 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
                       value as VasRuleFormState['calculationType'],
                   }))
                 }
+                options={CALCULATION_TYPE_OPTIONS}
+                placeholder='Select type'
+                emptyText='No calculation types found'
                 disabled={isLoading}
-              >
-                <SelectTrigger id='vasCalculationType'>
-                  <SelectValue placeholder='Select type' />
-                </SelectTrigger>
-                <SelectContent>
-                  {CALCULATION_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
               {calculationTypeHelper ? (
                 <p className='text-xs text-muted-foreground'>
                   {calculationTypeHelper}

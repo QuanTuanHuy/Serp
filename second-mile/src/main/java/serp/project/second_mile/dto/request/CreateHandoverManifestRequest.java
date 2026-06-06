@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -32,7 +33,22 @@ public class CreateHandoverManifestRequest {
     private Long vehicleId;
 
     @JsonProperty("route_id")
+    @NotNull
     private Long routeId;
+
+    @JsonProperty("planned_departure_at")
+    @NotNull
+    private LocalDateTime plannedDepartureAt;
+
+    @JsonProperty("planned_arrival_at")
+    @NotNull
+    private LocalDateTime plannedArrivalAt;
+
+    @JsonProperty("origin_post_office_latitude")
+    private Double originPostOfficeLatitude;
+
+    @JsonProperty("origin_post_office_longitude")
+    private Double originPostOfficeLongitude;
 
     @JsonProperty("order_codes")
     @NotEmpty

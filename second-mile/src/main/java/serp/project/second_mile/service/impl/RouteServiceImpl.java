@@ -22,6 +22,7 @@ import serp.project.second_mile.dto.request.RouteFilterRequest;
 import serp.project.second_mile.dto.request.UpdateRouteRequest;
 import serp.project.second_mile.dto.response.RouteResponse;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
@@ -91,7 +92,9 @@ public class RouteServiceImpl implements RouteService {
 
         validateRouteDefinition(
                 tenantId,
+                request.getOriginType(),
                 request.getOriginHubId(),
+                request.getOriginPostOfficeCode(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
                 request.getDestinationPostOfficeCode(),
@@ -102,6 +105,7 @@ public class RouteServiceImpl implements RouteService {
         route.setRouteCode(normalizedRouteCode);
         route.setRouteName(normalizeText(request.getRouteName()));
         route.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
+        applyNormalizedEndpoints(route);
         route.setStatus(request.getStatus() == null ? RouteStatus.ACTIVE : request.getStatus());
         route.setTenantId(tenantId);
 
@@ -129,7 +133,9 @@ public class RouteServiceImpl implements RouteService {
 
         validateRouteDefinition(
                 tenantId,
+                request.getOriginType(),
                 request.getOriginHubId(),
+                request.getOriginPostOfficeCode(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
                 request.getDestinationPostOfficeCode(),
@@ -140,6 +146,7 @@ public class RouteServiceImpl implements RouteService {
         route.setRouteCode(normalizedRouteCode);
         route.setRouteName(normalizedRouteName);
         route.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
+        applyNormalizedEndpoints(route);
         route.setTenantId(tenantId);
 
         Route updatedRoute = routeRepository.save(route);
@@ -168,25 +175,27 @@ public class RouteServiceImpl implements RouteService {
 
     private void validateRouteDefinition(
             Long tenantId,
+            RouteEndpointType originType,
             Long originHubId,
+            String originPostOfficeCode,
             RouteDestinationType destinationType,
             Long destinationHubId,
             String destinationPostOfficeCode,
             Long vehicleId
     ) {
-        if (originHubId == null || destinationType == null) {
+        RouteEndpointType normalizedOriginType = originType == null ? RouteEndpointType.HUB : originType;
+        if (destinationType == null) {
             throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
         }
 
-        Hub originHub = hubRepository.findById(originHubId)
-                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_HUB_INVALID));
-        if (!tenantId.equals(originHub.getTenantId())) {
-            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
-        }
-
-        if (vehicleId != null) {
-            validateVehicle(tenantId, vehicleId);
-        }
+        Long operatingHubId = resolveAndValidateOperatingHubId(
+                tenantId,
+                normalizedOriginType,
+                originHubId,
+                originPostOfficeCode,
+                destinationType,
+                destinationHubId
+        );
 
         if (destinationType == RouteDestinationType.HUB) {
             if (destinationHubId == null) {
@@ -197,13 +206,34 @@ public class RouteServiceImpl implements RouteService {
             if (!tenantId.equals(destinationHub.getTenantId())) {
                 throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
             }
-            if (originHubId.equals(destinationHubId)) {
+            if (normalizedOriginType == RouteEndpointType.HUB && originHubId.equals(destinationHubId)) {
                 throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
+            }
+            if (normalizedOriginType == RouteEndpointType.POST_OFFICE && vehicleId == null) {
+                throw new AppException(
+                        ErrorCode.ROUTE_VEHICLE_INVALID,
+                        "Post office to hub routes require a dedicated vehicle."
+                );
+            }
+            if (vehicleId != null) {
+                validateVehicle(tenantId, vehicleId, operatingHubId);
             }
             return;
         }
 
         if (destinationType == RouteDestinationType.POST_OFFICE) {
+            if (normalizedOriginType != RouteEndpointType.HUB) {
+                throw new AppException(
+                        ErrorCode.ROUTE_DEFINITION_INVALID,
+                        "Post office routes can only target a hub."
+                );
+            }
+            if (vehicleId == null) {
+                throw new AppException(
+                        ErrorCode.ROUTE_VEHICLE_INVALID,
+                        "Post office collection routes require a dedicated vehicle."
+                );
+            }
             String normalizedPostOfficeCode = normalizeText(destinationPostOfficeCode);
             if (normalizedPostOfficeCode == null) {
                 throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
@@ -214,18 +244,87 @@ public class RouteServiceImpl implements RouteService {
             if (mapping.getHub() == null || !originHubId.equals(mapping.getHub().getId())) {
                 throw new AppException(ErrorCode.ROUTE_POST_OFFICE_INVALID);
             }
+            validateVehicle(tenantId, vehicleId, operatingHubId);
             return;
         }
 
         throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
     }
 
-    private void validateVehicle(Long tenantId, Long vehicleId) {
+    private Long resolveAndValidateOperatingHubId(
+            Long tenantId,
+            RouteEndpointType originType,
+            Long originHubId,
+            String originPostOfficeCode,
+            RouteDestinationType destinationType,
+            Long destinationHubId
+    ) {
+        if (originType == RouteEndpointType.HUB) {
+            if (originHubId == null) {
+                throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
+            }
+            Hub originHub = hubRepository.findById(originHubId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ROUTE_HUB_INVALID));
+            if (!tenantId.equals(originHub.getTenantId())) {
+                throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
+            }
+            return originHubId;
+        }
+
+        if (originType == RouteEndpointType.POST_OFFICE) {
+            if (destinationType != RouteDestinationType.HUB || destinationHubId == null) {
+                throw new AppException(
+                        ErrorCode.ROUTE_DEFINITION_INVALID,
+                        "Post office routes must target a hub."
+                );
+            }
+            String normalizedPostOfficeCode = normalizeText(originPostOfficeCode);
+            if (normalizedPostOfficeCode == null) {
+                throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
+            }
+            HubPostOfficeMapping mapping = hubPostOfficeMappingRepository
+                    .findByTenantIdAndPostOfficeCode(tenantId, normalizedPostOfficeCode)
+                    .orElseThrow(() -> new AppException(ErrorCode.ROUTE_POST_OFFICE_INVALID));
+            if (mapping.getHub() == null || !destinationHubId.equals(mapping.getHub().getId())) {
+                throw new AppException(ErrorCode.ROUTE_POST_OFFICE_INVALID);
+            }
+            return destinationHubId;
+        }
+
+        throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
+    }
+
+    private void applyNormalizedEndpoints(Route route) {
+        RouteEndpointType originType = route.getOriginType() == null ? RouteEndpointType.HUB : route.getOriginType();
+        route.setOriginType(originType);
+        if (originType == RouteEndpointType.HUB) {
+            route.setOriginPostOfficeCode(null);
+        } else {
+            route.setOriginHubId(null);
+            route.setOriginPostOfficeCode(normalizeText(route.getOriginPostOfficeCode()));
+        }
+
+        if (route.getDestinationType() == RouteDestinationType.HUB) {
+            route.setDestinationPostOfficeCode(null);
+        } else {
+            route.setDestinationHubId(null);
+            route.setDestinationPostOfficeCode(normalizeText(route.getDestinationPostOfficeCode()));
+        }
+    }
+
+    private void validateVehicle(Long tenantId, Long vehicleId, Long originHubId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new AppException(ErrorCode.ROUTE_VEHICLE_INVALID));
         if (!tenantId.equals(vehicle.getTenantId()) || vehicle.getStatus() != VehicleStatus.ACTIVE) {
             throw new AppException(ErrorCode.ROUTE_VEHICLE_INVALID);
         }
+        if (!originHubId.equals(vehicle.getHubId())) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    "Route vehicle must belong to the origin hub."
+            );
+        }
+        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(vehicle.getAssignedStaffId());
     }
 
     private RouteFilterRequest normalizeFilterRequest(RouteFilterRequest filterRequest) {
@@ -235,7 +334,9 @@ public class RouteServiceImpl implements RouteService {
         return RouteFilterRequest.builder()
                 .keyword(normalizeText(filterRequest.getKeyword()))
                 .routeCode(normalizeText(filterRequest.getRouteCode()))
+                .originType(filterRequest.getOriginType())
                 .originHubId(filterRequest.getOriginHubId())
+                .originPostOfficeCode(normalizeText(filterRequest.getOriginPostOfficeCode()))
                 .destinationType(filterRequest.getDestinationType())
                 .destinationHubId(filterRequest.getDestinationHubId())
                 .destinationPostOfficeCode(normalizeText(filterRequest.getDestinationPostOfficeCode()))

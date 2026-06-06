@@ -141,6 +141,12 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                               {getProvinceLabel(item.provinceCode)} /{' '}
                               {getWardLabel(item.provinceCode, item.wardCode)}
                             </p>
+                            <p className='text-xs text-muted-foreground'>
+                              Pickup load: {item.currentLoad ?? '--'} /{' '}
+                              {item.dailyCapacity ?? '--'} | Delivery load:{' '}
+                              {item.currentDeliveryLoad ?? '--'} /{' '}
+                              {item.deliveryCapacity ?? '--'}
+                            </p>
                             {item.latitude !== undefined &&
                               item.latitude !== null &&
                               item.longitude !== undefined &&
@@ -236,6 +242,12 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                         <p className='text-xs text-muted-foreground'>
                           Province/Ward: {getProvinceLabel(item.provinceCode)} /{' '}
                           {getWardLabel(item.provinceCode, item.wardCode)}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          Pickup load: {item.currentLoad ?? '--'} /{' '}
+                          {item.dailyCapacity ?? '--'} | Delivery load:{' '}
+                          {item.currentDeliveryLoad ?? '--'} /{' '}
+                          {item.deliveryCapacity ?? '--'}
                         </p>
                         {item.latitude !== undefined &&
                           item.latitude !== null &&

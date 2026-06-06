@@ -44,6 +44,13 @@ public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSp
             HubStaffStatus status
     );
 
+    Optional<HubStaff> findByTenantIdAndUserIdAndRoleAndStatus(
+            Long tenantId,
+            Long userId,
+            HubStaffRole role,
+            HubStaffStatus status
+    );
+
     @Query("""
             select s
             from HubStaff s

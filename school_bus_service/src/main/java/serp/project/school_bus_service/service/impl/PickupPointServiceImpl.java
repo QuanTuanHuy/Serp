@@ -18,6 +18,8 @@ import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
+import serp.project.school_bus_service.service.ICodeGeneratorService;
+import serp.project.school_bus_service.shared.code.SchoolBusCode;
 
 import java.util.Set;
 
@@ -27,17 +29,20 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
     private final PickupPointRepository pickupPointRepository;
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
+    private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
 
 
     public PickupPointServiceImpl(
-    PickupPointRepository pickupPointRepository,
-                                 SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
-                                 MessageCommon messageCommon) {
+            PickupPointRepository pickupPointRepository,
+            SchoolBusMapper mapper,
+            IAuditLogService auditLogService,
+            ICodeGeneratorService codeGeneratorService,
+            MessageCommon messageCommon) {
         this.pickupPointRepository = pickupPointRepository;
         this.mapper = mapper;
         this.auditLogService = auditLogService;
+        this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
     }
 
@@ -52,9 +57,9 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         return PageResponse.from(pickupPointRepository.findAll(
                 BaseSpecification.tenantActiveWithKeyword(tenantId,
                         params == null ? null : params.getKeyword(),
-                        "name", "address"),
+                        "name", "address", "code", "zoneCode"),
                 PageableUtils.from(params,
-                        Set.of("id", "name", "createdAt", "updatedAt"), "name")),
+                        Set.of("id", "name", "code", "createdAt", "updatedAt"), "name")),
                 mapper::toPickupPointResponse);
     }
 
@@ -74,6 +79,12 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         PickupPointEntity pickupPoint = new PickupPointEntity();
         pickupPoint.markCreated(tenantId, actor(actorId));
         applyPickupPoint(pickupPoint, request);
+        String code = request.getCode();
+        if (code == null || code.isBlank()) {
+            code = codeGeneratorService.generate(
+                    SchoolBusCode.PICKUP_POINT.sequenceKey(), SchoolBusCode.PICKUP_POINT.prefix(), tenantId, actorId);
+        }
+        pickupPoint.setCode(code);
         PickupPointEntity saved = pickupPointRepository.save(pickupPoint);
         auditLogService.log(tenantId, actorId, "PickupPoint", saved.getId(), "CREATE", "Created pickup point");
         return mapper.toPickupPointResponse(saved);
@@ -113,7 +124,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         pickupPoint.setAddress(request.getAddress());
         pickupPoint.setLatitude(request.getLatitude());
         pickupPoint.setLongitude(request.getLongitude());
-        pickupPoint.setCode(request.getCode());
         pickupPoint.setZoneCode(request.getZoneCode());
         pickupPoint.setUsageType(request.getUsageType());
         pickupPoint.setPickupInstruction(request.getPickupInstruction());

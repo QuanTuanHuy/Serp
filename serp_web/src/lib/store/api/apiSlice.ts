@@ -297,6 +297,7 @@ export const api = createApi({
     'ttcrs/Resource',
     // TMS tags
     'HandoverManifest',
+    'SecondMileBag',
     // TMS billing tags
     'billing/Tariff',
     'billing/SurchargeRule',

@@ -38,8 +38,19 @@ public final class RouteSpecification {
                 ));
             }
 
+            if (filterRequest.getOriginType() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("originType"), filterRequest.getOriginType()));
+            }
+
             if (filterRequest.getOriginHubId() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("originHubId"), filterRequest.getOriginHubId()));
+            }
+
+            if (hasText(filterRequest.getOriginPostOfficeCode())) {
+                predicates.add(criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("originPostOfficeCode")),
+                        toLikePattern(filterRequest.getOriginPostOfficeCode())
+                ));
             }
 
             if (filterRequest.getDestinationType() != null) {

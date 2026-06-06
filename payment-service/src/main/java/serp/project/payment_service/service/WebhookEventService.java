@@ -36,11 +36,11 @@ public class WebhookEventService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${app.webhook.first-mile.payment-confirmed-url:http://localhost:8093/api/v1/internal/payment-webhooks/orders/payment-confirmed}")
-    private String firstMilePaymentConfirmedUrl;
+    @Value("${app.webhook.tms-order.payment-confirmed-url:${app.webhook.first-mile.payment-confirmed-url:http://localhost:8099/api/v1/internal/payment-webhooks/orders/payment-confirmed}}")
+    private String orderPaymentConfirmedUrl;
 
-    @Value("${app.webhook.first-mile.secret:}")
-    private String firstMileWebhookSecret;
+    @Value("${app.webhook.tms-order.secret:${app.webhook.first-mile.secret:}}")
+    private String orderWebhookSecret;
 
     @Value("${app.webhook.retry.max-attempts:5}")
     private int maxAttempts;
@@ -72,7 +72,7 @@ public class WebhookEventService {
         WebhookEvent event = WebhookEvent.builder()
                 .eventKey(eventKey)
                 .eventType(PAYMENT_CONFIRMED_EVENT_TYPE)
-                .targetUrl(firstMilePaymentConfirmedUrl)
+                .targetUrl(orderPaymentConfirmedUrl)
                 .payload(payload)
                 .status(WebhookEvent.WebhookStatus.PENDING)
                 .attemptCount(0)
@@ -135,8 +135,8 @@ public class WebhookEventService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            if (firstMileWebhookSecret != null && !firstMileWebhookSecret.isBlank()) {
-                headers.set(WEBHOOK_SECRET_HEADER, firstMileWebhookSecret.trim());
+            if (orderWebhookSecret != null && !orderWebhookSecret.isBlank()) {
+                headers.set(WEBHOOK_SECRET_HEADER, orderWebhookSecret.trim());
             }
 
             HttpEntity<String> httpEntity = new HttpEntity<>(event.getPayload(), headers);

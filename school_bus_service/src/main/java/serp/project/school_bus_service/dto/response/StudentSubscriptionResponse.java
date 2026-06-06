@@ -29,7 +29,17 @@ public class StudentSubscriptionResponse extends BaseResponse {
     private LocalDate effectiveTo;
     private String status;
     private Long sourceRequestId;
+    private String sourceRequestCode;
     private Long schoolScheduleId;
     private String schoolScheduleName;
+    private String studentCode;
+    private String parentName;
+    private String schoolCode;
+    private String scheduleCode;
+    private String shiftType;
+    private String arrivalDeadline;
+    private String departureTime;
+    private String pickupPointCode;
+    private String dropoffPointCode;
 }
 

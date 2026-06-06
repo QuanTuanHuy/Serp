@@ -45,15 +45,30 @@ app:
     topics:
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-user: ${SYNC_USER_TOPIC:SYNC_USER}
+      sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
+      sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
     order-sync:
       consumer-group-id: ${KAFKA_SECOND_MILE_ORDER_SYNC_GROUP:second-mile-sync-order}
-      sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_SECOND_MILE_HUB_PO_GROUP:second-mile-sync-hub-post-office}
+    handover-manifest-sync:
+      consumer-group-id: ${KAFKA_SECOND_MILE_HANDOVER_MANIFEST_GROUP:second-mile-sync-handover-manifest}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
+
+internal-api:
+  api-key: ${INTERNAL_API_KEY:}
+  roles: ${INTERNAL_API_ROLES:TMS_ADMIN,TMS_POSTOFFICER_MANAGER,TMS_POSTOFFICER,TMS_HUB_MANAGER,TMS_HUB_EMPLOYEE}
+
+tms-order:
+  service:
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
+    status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
+  transition-outbox:
+    retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

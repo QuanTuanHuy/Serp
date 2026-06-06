@@ -41,7 +41,6 @@ import {
 import {
   buildVehicleRequest,
   DEFAULT_VEHICLE_FORM,
-  IMPORT_PREVIEW_LIMIT,
   mapVehicleToFormState,
   PAGE_SIZE,
   parseOptionalPositiveInteger,
@@ -149,11 +148,6 @@ export const VehicleListPage: React.FC = () => {
   const isSaving = isCreating || isUpdating;
   const isImportFlowBusy =
     isExportingTemplate || isValidatingImport || isImportingVehicles;
-
-  const validatedPreviewItems = React.useMemo(
-    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
-    [validateImportResult]
-  );
 
   const formatCourierOptionLabel = React.useCallback(
     (courier: PostOfficeStaff & { id: number }) => {
@@ -631,12 +625,6 @@ export const VehicleListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} row(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate vehicle import file.', {
@@ -659,9 +647,6 @@ export const VehicleListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -694,6 +679,23 @@ export const VehicleListPage: React.FC = () => {
         <VehiclePageHeader
           canManageVehicles={canManageVehicles}
           onCreateVehicle={handleOpenCreateDialog}
+          importAction={
+            <VehicleImportCard
+              canManageVehicles={canManageVehicles}
+              isImportFlowBusy={isImportFlowBusy}
+              isExportingTemplate={isExportingTemplate}
+              isValidatingImport={isValidatingImport}
+              isImportingVehicles={isImportingVehicles}
+              importFileInputKey={importFileInputKey}
+              selectedImportFile={selectedImportFile}
+              validateImportResult={validateImportResult}
+              lastImportJob={lastImportJob}
+              onDownloadTemplate={handleDownloadTemplate}
+              onSelectImportFile={handleSelectImportFile}
+              onValidateFile={handleValidateImportFile}
+              onImportFile={handleImportFile}
+            />
+          }
         />
 
         <VehicleAccessScopeCard
@@ -710,23 +712,6 @@ export const VehicleListPage: React.FC = () => {
           onRefresh={() => {
             void refetch();
           }}
-        />
-
-        <VehicleImportCard
-          canManageVehicles={canManageVehicles}
-          isImportFlowBusy={isImportFlowBusy}
-          isExportingTemplate={isExportingTemplate}
-          isValidatingImport={isValidatingImport}
-          isImportingVehicles={isImportingVehicles}
-          importFileInputKey={importFileInputKey}
-          selectedImportFile={selectedImportFile}
-          validateImportResult={validateImportResult}
-          validatedPreviewItems={validatedPreviewItems}
-          lastImportJob={lastImportJob}
-          onDownloadTemplate={handleDownloadTemplate}
-          onSelectImportFile={handleSelectImportFile}
-          onValidateFile={handleValidateImportFile}
-          onImportFile={handleImportFile}
         />
 
         <VehicleResultsCard

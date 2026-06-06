@@ -216,6 +216,70 @@ func TestGenericProxyController_SecondMile_RewritePathAndForwardHeaders(t *testi
 	}
 }
 
+func TestGenericProxyController_TmsOrder_RewritePathAndForwardHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotPath string
+	var gotQuery string
+	var gotAuth string
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer upstream.Close()
+
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
+	host := u.Hostname()
+	port := u.Port()
+	if port == "" {
+		t.Fatalf("expected upstream port")
+	}
+
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			TmsOrderService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+	)
+
+	r := gin.New()
+	r.Any("/tms-order/api/v1/*proxyPath", controller.ProxyHandler("tms-order"))
+	gateway := httptest.NewServer(r)
+	defer gateway.Close()
+
+	req, err := http.NewRequest(http.MethodGet, gateway.URL+"/tms-order/api/v1/orders?x=1", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer test")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if gotPath != "/api/v1/orders" {
+		t.Fatalf("expected rewritten path %q, got %q", "/api/v1/orders", gotPath)
+	}
+	if gotQuery != "x=1" {
+		t.Fatalf("expected query %q, got %q", "x=1", gotQuery)
+	}
+	if gotAuth != "Bearer test" {
+		t.Fatalf("expected auth header %q, got %q", "Bearer test", gotAuth)
+	}
+}
+
 func TestGenericProxyController_CRM_CircuitBreakerCountsLogicalRequestsAfterRetries(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

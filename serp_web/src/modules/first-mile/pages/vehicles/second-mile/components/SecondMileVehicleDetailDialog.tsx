@@ -32,7 +32,9 @@ interface SecondMileVehicleDetailDialogProps {
   isFetching: boolean;
   isUploadingImage: boolean;
   vehicle?: SecondMileVehicle;
+  driverLabelByStaffId: Record<number, string>;
   hubById: Record<number, Hub>;
+  imageRefreshKey?: number;
   onOpenChange: (open: boolean) => void;
   onEdit: () => void;
   onUploadImage: (file: File) => void;
@@ -46,19 +48,31 @@ export const SecondMileVehicleDetailDialog: React.FC<
   isFetching,
   isUploadingImage,
   vehicle,
+  driverLabelByStaffId,
   hubById,
+  imageRefreshKey,
   onOpenChange,
   onEdit,
   onUploadImage,
 }) => {
   const imageUrl = vehicle?.imageUrl?.trim();
+  const imageSrc =
+    imageUrl && imageRefreshKey
+      ? `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${imageRefreshKey}`
+      : imageUrl;
+  const driverLabel = vehicle?.assignedStaffId
+    ? (driverLabelByStaffId[vehicle.assignedStaffId] ??
+      `Driver #${vehicle.assignedStaffId}`)
+    : '—';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>Vehicle details</DialogTitle>
-          <DialogDescription>Second-mile vehicle information.</DialogDescription>
+          <DialogDescription>
+            Second-mile vehicle information.
+          </DialogDescription>
         </DialogHeader>
 
         {isFetching ? (
@@ -69,9 +83,9 @@ export const SecondMileVehicleDetailDialog: React.FC<
         ) : vehicle ? (
           <div className='space-y-4'>
             <div className='relative h-40 w-full overflow-hidden rounded-lg border bg-muted'>
-              {imageUrl ? (
+              {imageSrc ? (
                 <Image
-                  src={imageUrl}
+                  src={imageSrc}
                   alt={vehicle.licensePlate}
                   fill
                   unoptimized
@@ -122,8 +136,8 @@ export const SecondMileVehicleDetailDialog: React.FC<
                 <dd>{buildHubLabel(vehicle.hubId, hubById)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Driver staff ID</dt>
-                <dd>{vehicle.assignedStaffId ?? '—'}</dd>
+                <dt className='text-muted-foreground'>Driver</dt>
+                <dd>{driverLabel}</dd>
               </div>
               <div>
                 <dt className='text-muted-foreground'>Max bags</dt>
@@ -158,7 +172,11 @@ export const SecondMileVehicleDetailDialog: React.FC<
               Edit
             </Button>
           )}
-          <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => onOpenChange(false)}
+          >
             Close
           </Button>
         </DialogFooter>

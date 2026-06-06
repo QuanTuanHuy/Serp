@@ -119,6 +119,10 @@ external:
       host: ${TMS_BILLING_SERVICE_HOST}
       port: ${TMS_BILLING_SERVICE_PORT}
       timeout: 15s
+    tmsOrderService:
+      host: ${TMS_ORDER_SERVICE_HOST}
+      port: ${TMS_ORDER_SERVICE_PORT}
+      timeout: 15s
     notificationService:
       host: ${NOTIFICATION_SERVICE_HOST}
       port: ${NOTIFICATION_SERVICE_PORT}

@@ -21,6 +21,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 
 import java.time.LocalTime;
@@ -44,8 +45,15 @@ public class Route extends AbstractAudit {
     @Column(name = "route_name", nullable = false, length = 255)
     private String routeName;
 
-    @Column(name = "origin_hub_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origin_type", nullable = false, length = 30)
+    private RouteEndpointType originType;
+
+    @Column(name = "origin_hub_id")
     private Long originHubId;
+
+    @Column(name = "origin_post_office_code", length = 255)
+    private String originPostOfficeCode;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "destination_type", nullable = false, length = 30)

@@ -27,6 +27,8 @@ public record PostOfficeResponse(
         Integer serviceRadiusM,
         Integer dailyCapacity,
         Integer currentLoad,
+        Integer deliveryCapacity,
+        Integer currentDeliveryLoad,
         Integer priority,
         Double latitude,
         Double longitude,

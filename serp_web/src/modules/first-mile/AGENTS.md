@@ -127,6 +127,20 @@ Reset dependent selections when parent location changes (`useEffect` on `provinc
 5. **English copy** for all new labels and messages.
 6. Run from `serp_web/`: `npm run type-check`, `npm run lint` on touched files.
 
+## File headers (required for TMS UI)
+
+- **Author must be `Nguyen The Anh`** on new or touched `.ts` / `.tsx` files under `src/modules/first-mile/`. Do **not** use `QuanTuanHuy` from the root `AGENTS.md` example.
+- Match the JSDoc style used on neighboring pages (billing, orders, hubs):
+
+```typescript
+/**
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - <short feature note>
+ */
+```
+
+- When editing an existing file, **preserve** its `Author:` line; never replace `Nguyen The Anh` with `QuanTuanHuy`.
+
 ## Styling and Components
 
 - Use `@/shared/components` / `@/shared/components/ui` (Shadcn-style).

@@ -22,6 +22,8 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 
+import java.time.LocalDateTime;
+
 @Setter
 @Getter
 @SuperBuilder
@@ -47,8 +49,53 @@ public class HandoverManifest extends AbstractAudit {
     @Column(name = "vehicle_id")
     private Long vehicleId;
 
+    @Column(name = "assigned_driver_id")
+    private Long assignedDriverId;
+
     @Column(name = "route_id")
     private Long routeId;
+
+    @Column(name = "planned_departure_at")
+    private LocalDateTime plannedDepartureAt;
+
+    @Column(name = "planned_arrival_at")
+    private LocalDateTime plannedArrivalAt;
+
+    @Column(name = "origin_post_office_latitude")
+    private Double originPostOfficeLatitude;
+
+    @Column(name = "origin_post_office_longitude")
+    private Double originPostOfficeLongitude;
+
+    @Column(name = "driver_start_checkin_at")
+    private LocalDateTime driverStartCheckinAt;
+
+    @Column(name = "driver_start_latitude")
+    private Double driverStartLatitude;
+
+    @Column(name = "driver_start_longitude")
+    private Double driverStartLongitude;
+
+    @Column(name = "driver_start_distance_m")
+    private Double driverStartDistanceM;
+
+    @Column(name = "driver_start_photo_url")
+    private String driverStartPhotoUrl;
+
+    @Column(name = "driver_end_checkin_at")
+    private LocalDateTime driverEndCheckinAt;
+
+    @Column(name = "driver_end_latitude")
+    private Double driverEndLatitude;
+
+    @Column(name = "driver_end_longitude")
+    private Double driverEndLongitude;
+
+    @Column(name = "driver_end_distance_m")
+    private Double driverEndDistanceM;
+
+    @Column(name = "driver_end_photo_url")
+    private String driverEndPhotoUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)

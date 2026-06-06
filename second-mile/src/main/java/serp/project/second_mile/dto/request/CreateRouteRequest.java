@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 
 import java.time.LocalTime;
@@ -32,9 +33,15 @@ public class CreateRouteRequest {
     @Size(max = 255)
     private String routeName;
 
+    @JsonProperty("origin_type")
+    private RouteEndpointType originType;
+
     @JsonProperty("origin_hub_id")
-    @NotNull
     private Long originHubId;
+
+    @JsonProperty("origin_post_office_code")
+    @Size(max = 255)
+    private String originPostOfficeCode;
 
     @JsonProperty("destination_type")
     @NotNull

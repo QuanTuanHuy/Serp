@@ -4,16 +4,9 @@
  */
 
 import React from 'react';
-import {
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
 import { Search } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
+import { Input, Label } from '@/shared/components/ui';
 import {
   TmsListFilterPanel,
   type TmsFilterMode,
@@ -58,6 +51,46 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
   onClearFilters,
   onRefresh,
 }) => {
+  const statusOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...HUB_STATUS_OPTIONS,
+  ];
+  const hubTypeOptions = [
+    { value: 'ALL', label: 'All types' },
+    ...HUB_TYPE_OPTIONS,
+  ];
+  const provinceOptions = [
+    { value: 'ALL', label: 'All provinces' },
+    ...provinceSelectOptions.flatMap((province) =>
+      province.provinceCode
+        ? [
+            {
+              value: province.provinceCode,
+              label: `${province.name} (${province.provinceCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const wardOptions = [
+    { value: 'ALL', label: 'All wards' },
+    ...filterWardOptions.flatMap((ward) =>
+      ward.wardCode
+        ? [
+            {
+              value: ward.wardCode,
+              label: `${ward.name} (${ward.wardCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const hasLocationOptions = [
+    { value: 'ALL', label: 'All records' },
+    { value: 'YES', label: 'Has location' },
+    { value: 'NO', label: 'No location' },
+  ];
+
   return (
     <TmsListFilterPanel
       title='Search & filters'
@@ -89,7 +122,8 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-status'>Status</Label>
-            <Select
+            <TmsCombobox
+              id='hub-filter-status'
               value={filterFormValues.status}
               onValueChange={(value) =>
                 onFilterFieldChange(
@@ -97,19 +131,10 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
                   value as HubFilterFormState['status']
                 )
               }
-            >
-              <SelectTrigger id='hub-filter-status' className='w-full'>
-                <SelectValue placeholder='All statuses' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All statuses</SelectItem>
-                {HUB_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={statusOptions}
+              placeholder='All statuses'
+              emptyText='No statuses found'
+            />
           </div>
         </>
       }
@@ -139,126 +164,75 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-hub-type'>Hub type</Label>
-            <Select
+            <TmsCombobox
+              id='hub-filter-hub-type'
               value={filterFormValues.hubType}
               onValueChange={(value) =>
                 onFilterFieldChange('hubType', value as 'ALL' | HubType)
               }
-            >
-              <SelectTrigger id='hub-filter-hub-type' className='w-full'>
-                <SelectValue placeholder='All types' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All types</SelectItem>
-                {HUB_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={hubTypeOptions}
+              placeholder='All types'
+              emptyText='No hub types found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-province'>Province</Label>
-            <Select
+            <TmsCombobox
+              id='hub-filter-province'
               value={selectedFilterProvinceCode || 'ALL'}
               onValueChange={(value) => {
                 const nextProvinceCode = value === 'ALL' ? '' : value;
                 onFilterFieldChange('provinceCode', nextProvinceCode);
                 onFilterFieldChange('wardCode', '');
               }}
-            >
-              <SelectTrigger id='hub-filter-province' className='w-full'>
-                <SelectValue placeholder='All provinces' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All provinces</SelectItem>
-                {provinceSelectOptions.map((province) => {
-                  if (!province.provinceCode) {
-                    return null;
-                  }
-
-                  return (
-                    <SelectItem
-                      key={province.provinceCode}
-                      value={province.provinceCode}
-                    >
-                      {province.name} ({province.provinceCode})
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+              options={provinceOptions}
+              placeholder='All provinces'
+              emptyText='No provinces found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-ward'>Ward</Label>
-            <Select
+            <TmsCombobox
+              id='hub-filter-ward'
               value={selectedFilterWardCode || 'ALL'}
               onValueChange={(value) =>
                 onFilterFieldChange('wardCode', value === 'ALL' ? '' : value)
               }
+              options={wardOptions}
+              placeholder={
+                selectedFilterProvinceCode
+                  ? 'All wards'
+                  : 'Select province first'
+              }
+              emptyText={
+                isFetchingWardsForFilter
+                  ? 'Loading wards...'
+                  : 'No wards available'
+              }
               disabled={!selectedFilterProvinceCode}
-            >
-              <SelectTrigger id='hub-filter-ward' className='w-full'>
-                <SelectValue
-                  placeholder={
-                    selectedFilterProvinceCode
-                      ? 'All wards'
-                      : 'Select province first'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All wards</SelectItem>
-                {selectedFilterProvinceCode && isFetchingWardsForFilter ? (
-                  <SelectItem value='__loading__' disabled>
-                    Loading wards...
-                  </SelectItem>
-                ) : filterWardOptions.length > 0 ? (
-                  filterWardOptions.map((ward) => {
-                    if (!ward.wardCode) {
-                      return null;
-                    }
-
-                    return (
-                      <SelectItem key={ward.wardCode} value={ward.wardCode}>
-                        {ward.name} ({ward.wardCode})
-                      </SelectItem>
-                    );
-                  })
-                ) : (
-                  <SelectItem value='__empty__' disabled>
-                    No wards available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+              loading={isFetchingWardsForFilter}
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-has-location'>Has location</Label>
-            <Select
+            <TmsCombobox
+              id='hub-filter-has-location'
               value={filterFormValues.hasLocation}
               onValueChange={(value) =>
                 onFilterFieldChange('hasLocation', value as HasLocationFilter)
               }
-            >
-              <SelectTrigger id='hub-filter-has-location' className='w-full'>
-                <SelectValue placeholder='All records' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All records</SelectItem>
-                <SelectItem value='YES'>Has location</SelectItem>
-                <SelectItem value='NO'>No location</SelectItem>
-              </SelectContent>
-            </Select>
+              options={hasLocationOptions}
+              placeholder='All records'
+              emptyText='No options found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-min-daily-capacity'>
-              Min daily capacity
+              Min hub order capacity
             </Label>
             <Input
               id='hub-filter-min-daily-capacity'
@@ -274,7 +248,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-max-daily-capacity'>
-              Max daily capacity
+              Max hub order capacity
             </Label>
             <Input
               id='hub-filter-max-daily-capacity'
@@ -289,7 +263,9 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-min-current-load'>Min current load</Label>
+            <Label htmlFor='hub-filter-min-current-load'>
+              Min current hub load
+            </Label>
             <Input
               id='hub-filter-min-current-load'
               type='number'
@@ -303,7 +279,9 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-max-current-load'>Max current load</Label>
+            <Label htmlFor='hub-filter-max-current-load'>
+              Max current hub load
+            </Label>
             <Input
               id='hub-filter-max-current-load'
               type='number'

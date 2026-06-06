@@ -41,4 +41,9 @@ public interface SchoolScheduleRepository extends BaseRepository<SchoolScheduleE
 
     @Query("SELECT COUNT(s) > 0 FROM SchoolScheduleEntity s WHERE s.school.id = :schoolId AND s.tenantId = :tenantId AND s.isDeleted = false AND s.isActive = true AND s.isDefaultSchedule = true AND s.id <> :excludeId")
     boolean existsDefaultActiveBySchoolExcluding(@Param("schoolId") Long schoolId, @Param("tenantId") Long tenantId, @Param("excludeId") Long excludeId);
+
+    @EntityGraph(attributePaths = "scheduleDays")
+    @Query("SELECT DISTINCT s FROM SchoolScheduleEntity s WHERE s.school.id IN :schoolIds AND s.tenantId = :tenantId AND s.isDeleted = false")
+    List<SchoolScheduleEntity> findBySchoolIdInWithDays(
+            @Param("schoolIds") List<Long> schoolIds, @Param("tenantId") Long tenantId);
 }

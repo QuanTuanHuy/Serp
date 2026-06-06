@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { Calendar as CalendarIcon, X, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { Button } from '@/shared/components/ui/button';
@@ -61,8 +61,26 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
     ref
   ) => {
     const [open, setOpen] = React.useState(false);
+    const [isPickingMonthYear, setIsPickingMonthYear] = React.useState(false);
     
     const dateValue = React.useMemo(() => parseDateString(value), [value]);
+    
+    // Controlled month state for Calendar view
+    const [currentMonth, setCurrentMonth] = React.useState<Date>(() => dateValue || new Date());
+
+    // Synchronize currentMonth when value changes
+    React.useEffect(() => {
+      if (dateValue) {
+        setCurrentMonth(dateValue);
+      }
+    }, [dateValue]);
+
+    // Reset views when picker popover closes
+    React.useEffect(() => {
+      if (!open) {
+        setIsPickingMonthYear(false);
+      }
+    }, [open]);
 
     const formattedDisplayValue = React.useMemo(() => {
       if (!dateValue) return '';
@@ -121,6 +139,35 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
       setOpen(false);
     };
 
+    // Browsing year state inside Month/Year selection panel
+    const [browsingYear, setBrowsingYear] = React.useState(() => currentMonth.getFullYear());
+    
+    // Sync browsingYear when currentMonth changes
+    React.useEffect(() => {
+      setBrowsingYear(currentMonth.getFullYear());
+    }, [currentMonth]);
+
+    const monthsList = [
+      { label: 'Jan', value: 0 },
+      { label: 'Feb', value: 1 },
+      { label: 'Mar', value: 2 },
+      { label: 'Apr', value: 3 },
+      { label: 'May', value: 4 },
+      { label: 'Jun', value: 5 },
+      { label: 'Jul', value: 6 },
+      { label: 'Aug', value: 7 },
+      { label: 'Sep', value: 8 },
+      { label: 'Oct', value: 9 },
+      { label: 'Nov', value: 10 },
+      { label: 'Dec', value: 11 },
+    ];
+
+    const handleMonthSelect = (monthVal: number) => {
+      const newMonth = new Date(browsingYear, monthVal, 1);
+      setCurrentMonth(newMonth);
+      setIsPickingMonthYear(false);
+    };
+
     return (
       <div className={cn('flex flex-col gap-1.5', fullWidth ? 'w-full' : 'w-auto', className)}>
         {label && (
@@ -168,48 +215,127 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
             sideOffset={6}
           >
             <div className='p-3 flex flex-col gap-3'>
-              <Calendar
-                mode='single'
-                selected={dateValue}
-                onSelect={handleSelect}
-                disabled={isDateDisabled}
-                className={cn(
-                  'p-0',
-                  '[&_button[data-selected-single=true]]:bg-[#C81E3A] [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-[#a6172e] [&_button[data-selected-single=true]]:font-semibold',
-                  '[&_button[data-range-start=true]]:bg-[#C81E3A] [&_button[data-range-start=true]]:text-white',
-                  '[&_button[data-range-end=true]]:bg-[#C81E3A] [&_button[data-range-end=true]]:text-white',
-                  '[&_button:hover:not([data-selected-single=true]):not([disabled])]:bg-[#FDECEF]/60 [&_button:hover:not([data-selected-single=true]):not([disabled])]:text-[#C81E3A]',
-                  '[&_button[disabled]]:opacity-30 [&_button[disabled]]:cursor-not-allowed [&_button[disabled]]:hover:bg-transparent [&_button[disabled]]:hover:text-slate-400',
-                  '[&_.rdp-today_button]:border [&_.rdp-today_button]:border-[#C81E3A]/40 [&_.rdp-today_button]:text-[#C81E3A] [&_.rdp-today_button]:font-semibold',
-                  '[&_button]:rounded-lg [&_button]:transition-all'
-                )}
-              />
-              
-              <div className='flex items-center justify-between border-t border-slate-100 pt-2 px-1 gap-2'>
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='sm'
-                  onClick={handleTodayClick}
-                  className='text-xs font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/40 hover:text-[#a6172e] rounded-lg'
-                >
-                  Today
-                </Button>
-                {clearable && value && (
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => {
-                      onChange('');
-                      setOpen(false);
+              {isPickingMonthYear ? (
+                <div className='flex flex-col w-[276px] p-1 bg-white'>
+                  {/* Header */}
+                  <div className='flex items-center justify-between border-b border-slate-100 pb-2 mb-3'>
+                    <button
+                      type='button'
+                      onClick={() => setIsPickingMonthYear(false)}
+                      className='p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors cursor-pointer'
+                    >
+                      <ArrowLeft className='h-4 w-4' />
+                    </button>
+                    <span className='text-xs font-bold text-slate-700 uppercase tracking-wider'>Select Month & Year</span>
+                    <div className='w-6 h-6' />
+                  </div>
+
+                  {/* Year selection panel */}
+                  <div className='flex items-center justify-between bg-slate-50 border border-slate-200/60 rounded-xl p-2 mb-4'>
+                    <button
+                      type='button'
+                      onClick={() => setBrowsingYear(prev => prev - 1)}
+                      className='p-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-600 active:scale-95 transition-all cursor-pointer'
+                    >
+                      <ChevronLeft className='h-4 w-4' />
+                    </button>
+                    <span className='text-sm font-bold text-slate-700'>{browsingYear}</span>
+                    <button
+                      type='button'
+                      onClick={() => setBrowsingYear(prev => prev + 1)}
+                      className='p-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-600 active:scale-95 transition-all cursor-pointer'
+                    >
+                      <ChevronRight className='h-4 w-4' />
+                    </button>
+                  </div>
+
+                  {/* Months selection grid */}
+                  <div className='grid grid-cols-3 gap-2'>
+                    {monthsList.map((m) => {
+                      const isCurrent = currentMonth.getMonth() === m.value && currentMonth.getFullYear() === browsingYear;
+                      return (
+                        <button
+                          key={m.value}
+                          type='button'
+                          onClick={() => handleMonthSelect(m.value)}
+                          className={cn(
+                            'py-2 px-3 text-xs font-semibold rounded-xl text-center transition-all cursor-pointer border border-transparent',
+                            isCurrent
+                              ? 'bg-[#C81E3A] text-white font-bold shadow-sm'
+                              : 'text-slate-600 hover:bg-[#FDECEF]/60 hover:text-[#C81E3A] hover:border-[#FDECEF]'
+                          )}
+                        >
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Calendar
+                    mode='single'
+                    selected={dateValue}
+                    onSelect={handleSelect}
+                    disabled={isDateDisabled}
+                    month={currentMonth}
+                    onMonthChange={setCurrentMonth}
+                    components={{
+                      CaptionLabel: (props: any) => {
+                        return (
+                          <button
+                            type='button'
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setIsPickingMonthYear(true);
+                            }}
+                            className='font-bold text-sm text-slate-700 hover:text-[#C81E3A] hover:bg-slate-50 px-2.5 py-1 rounded-xl transition-all cursor-pointer select-none border-none outline-none flex items-center gap-1 relative z-10'
+                          >
+                            {props.children}
+                          </button>
+                        );
+                      }
                     }}
-                    className='text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg'
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
+                    className={cn(
+                      'p-0',
+                      '[&_button[data-selected-single=true]]:bg-[#C81E3A] [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-[#a6172e] [&_button[data-selected-single=true]]:font-semibold',
+                      '[&_button[data-range-start=true]]:bg-[#C81E3A] [&_button[data-range-start=true]]:text-white',
+                      '[&_button[data-range-end=true]]:bg-[#C81E3A] [&_button[data-range-end=true]]:text-white',
+                      '[&_button:hover:not([data-selected-single=true]):not([disabled])]:bg-[#FDECEF]/60 [&_button:hover:not([data-selected-single=true]):not([disabled])]:text-[#C81E3A]',
+                      '[&_button[disabled]]:opacity-30 [&_button[disabled]]:cursor-not-allowed [&_button[disabled]]:hover:bg-transparent [&_button[disabled]]:hover:text-slate-400',
+                      '[&_.rdp-today_button]:border [&_.rdp-today_button]:border-[#C81E3A]/40 [&_.rdp-today_button]:text-[#C81E3A] [&_.rdp-today_button]:font-semibold',
+                      '[&_button]:rounded-lg [&_button]:transition-all'
+                    )}
+                  />
+                  
+                  <div className='flex items-center justify-between border-t border-slate-100 pt-2 px-1 gap-2'>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      onClick={handleTodayClick}
+                      className='text-xs font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/40 hover:text-[#a6172e] rounded-lg'
+                    >
+                      Today
+                    </Button>
+                    {clearable && value && (
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => {
+                          onChange('');
+                          setOpen(false);
+                        }}
+                        className='text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg'
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </PopoverContent>
         </Popover>

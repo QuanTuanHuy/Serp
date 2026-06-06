@@ -40,6 +40,9 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +52,8 @@ import java.util.Set;
 @Service
 public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentSubscriptionEntity, Long>
         implements IStudentSubscriptionService {
+
+    private static final Logger log = LoggerFactory.getLogger(StudentSubscriptionServiceImpl.class);
 
     private final StudentSubscriptionRepository subscriptionRepository;
     private final StudentSubscriptionHistoryRepository historyRepository;
@@ -186,10 +191,45 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     @Transactional
     public StudentSubscriptionEntity createFromApprovedRequest(TransportRequestEntity request,
             RequestStudentEntity rs, Long tenantId, Long actorId) {
+        // tripOption must have been set by replaceRequestStudents for new requests.
+        // The null→ROUND_TRIP fallback is kept only to support RENEW where renewFromApprovedRequest
+        // may fill tripOption from the target subscription before calling this method.
         TripOption tripOption = rs.getTripOption() != null ? rs.getTripOption() : TripOption.ROUND_TRIP;
         StudentEntity student = rs.getStudent();
-        PickupPointEntity pickup = rs.getPickupPoint() != null ? rs.getPickupPoint() : student.getPickupPoint();
+
+        // Pickup/dropoff must come from the RequestStudent snapshot (set at request create/update time).
+        // Do NOT fall back to Student defaults here — that would silently override the snapshot
+        // if the student's default pickup/dropoff changed between request creation and approval.
+        PickupPointEntity pickup = rs.getPickupPoint();
+        if (pickup == null && (tripOption == TripOption.MORNING || tripOption == TripOption.ROUND_TRIP)) {
+            // Legacy path: request was created before strict snapshot validation was introduced.
+            // Log a warning — approve validation upstream should have already caught this for new requests.
+            log.warn("Legacy fallback: RequestStudent {} for student {} has null pickupPoint snapshot " +
+                     "(request #{}). This indicates the request was created before snapshot enforcement. " +
+                     "Falling back to Student default pickup.", rs.getId(), student.getId(), request.getId());
+            pickup = student.getPickupPoint();
+            if (pickup == null) {
+                throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                        "RequestStudent #" + rs.getId() + " is missing a pickup point snapshot and the student "
+                                + "has no default pickup point. Edit the request to select a pickup point.");
+            }
+        }
+
         PickupPointEntity dropoff = rs.getDropoffPoint();
+        if (dropoff == null && (tripOption == TripOption.AFTERNOON || tripOption == TripOption.ROUND_TRIP)) {
+            // Legacy path: same rationale as pickup above.
+            log.warn("Legacy fallback: RequestStudent {} for student {} has null dropoffPoint snapshot " +
+                     "(request #{}). Falling back to Student default or pickup.", rs.getId(), student.getId(), request.getId());
+            dropoff = student.getDefaultDropoffPoint();
+            if (dropoff == null) {
+                dropoff = pickup;
+            }
+            if (dropoff == null) {
+                throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                        "RequestStudent #" + rs.getId() + " is missing a drop-off point snapshot and no default can be resolved. "
+                                + "Edit the request to select a drop-off point.");
+            }
+        }
 
         if (subscriptionRepository.existsOverlappingActiveSubscription(student.getId(), tripOption,
                 request.getEffectiveFrom(), request.getEffectiveTo(), tenantId, null)) {
@@ -202,7 +242,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.setStudent(student);
         entity.setSchool(request.getSchool());
         entity.setPickupPoint(tripOption == TripOption.AFTERNOON ? null : pickup);
-        entity.setDropoffPoint(tripOption == TripOption.MORNING ? null : (dropoff != null ? dropoff : pickup));
+        entity.setDropoffPoint(tripOption == TripOption.MORNING ? null : dropoff);
         entity.setTripOption(tripOption);
         copyDays(entity, rs);
         entity.setEffectiveFrom(request.getEffectiveFrom());
@@ -488,5 +528,31 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             return List.of();
         }
         return pausePeriodRepository.findPausedSubscriptionIds(subscriptionIds, tenantId, serviceDate);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasOverlappingPausePeriod(Long subscriptionId, LocalDate pauseFrom, LocalDate pauseTo, Long tenantId) {
+        List<SubscriptionPausePeriodEntity> activePauses = pausePeriodRepository.findBySubscriptionIdAndStatusIn(
+                subscriptionId, tenantId, List.of(PausePeriodStatus.ACTIVE, PausePeriodStatus.SCHEDULED));
+        for (SubscriptionPausePeriodEntity p : activePauses) {
+            LocalDate from = p.getPauseFrom();
+            LocalDate to = p.getPauseTo();
+
+            // Check overlap
+            boolean overlap = (pauseTo == null || !from.isAfter(pauseTo)) && (to == null || !pauseFrom.isAfter(to));
+            if (overlap) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveOrScheduledPause(Long subscriptionId, Long tenantId) {
+        List<SubscriptionPausePeriodEntity> activePauses = pausePeriodRepository.findBySubscriptionIdAndStatusIn(
+                subscriptionId, tenantId, List.of(PausePeriodStatus.ACTIVE, PausePeriodStatus.SCHEDULED));
+        return !activePauses.isEmpty();
     }
 }

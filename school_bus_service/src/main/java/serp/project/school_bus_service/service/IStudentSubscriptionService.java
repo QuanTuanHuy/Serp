@@ -82,4 +82,8 @@ public interface IStudentSubscriptionService extends IBaseService<StudentSubscri
 
     /** Batch check: which subscription IDs are paused on the given date? */
     List<Long> findPausedSubscriptionIds(List<Long> subscriptionIds, Long tenantId, LocalDate serviceDate);
+
+    boolean hasOverlappingPausePeriod(Long subscriptionId, LocalDate pauseFrom, LocalDate pauseTo, Long tenantId);
+
+    boolean hasActiveOrScheduledPause(Long subscriptionId, Long tenantId);
 }

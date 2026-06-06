@@ -14,14 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2, LocateFixed } from 'lucide-react';
-import { CoordinatePickerMap } from '../../../components';
+import { CoordinatePickerMap, TmsCombobox } from '../../../components';
 import type { Province, Ward } from '../../../types';
 import {
   HUB_FORM_STATUS_OPTIONS,
@@ -69,6 +64,30 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
   const lngNum = Number(formValues.longitude);
   const mapLat = Number.isFinite(latNum) ? latNum : undefined;
   const mapLng = Number.isFinite(lngNum) ? lngNum : undefined;
+  const provinceOptions = provinceSelectOptions.flatMap((province) => {
+    const code = normalizeLocationCode(province.provinceCode);
+
+    return code
+      ? [
+          {
+            value: code,
+            label: `${province.name} (${code})`,
+          },
+        ]
+      : [];
+  });
+  const wardOptions = wardSelectOptions.flatMap((ward) => {
+    const code = normalizeLocationCode(ward.wardCode);
+
+    return code
+      ? [
+          {
+            value: code,
+            label: `${ward.name} (${code})`,
+          },
+        ]
+      : [];
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,109 +127,68 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='hub-type'>Hub type *</Label>
-              <Select
+              <TmsCombobox
+                id='hub-type'
                 value={formValues.hub_type}
                 onValueChange={(v) =>
                   updateFormField('hub_type', v as HubFormState['hub_type'])
                 }
+                options={HUB_TYPE_OPTIONS}
+                placeholder='Select hub type'
+                emptyText='No hub types found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='hub-type' className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HUB_TYPE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='hub-status'>Status *</Label>
-              <Select
+              <TmsCombobox
+                id='hub-status'
                 value={formValues.status}
                 onValueChange={(v) =>
                   updateFormField('status', v as HubFormState['status'])
                 }
+                options={HUB_FORM_STATUS_OPTIONS}
+                placeholder='Select status'
+                emptyText='No statuses found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='hub-status' className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HUB_FORM_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='hub-province'>Province *</Label>
-              <Select
-                value={selectedProvinceCode || undefined}
+              <TmsCombobox
+                id='hub-province'
+                value={selectedProvinceCode}
                 onValueChange={(value) => {
                   updateFormField('province_code', value);
                   updateFormField('ward_code', '');
                 }}
+                options={provinceOptions}
+                placeholder='Select province'
+                emptyText='No provinces found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='hub-province' className='w-full'>
-                  <SelectValue placeholder='Select province' />
-                </SelectTrigger>
-                <SelectContent>
-                  {provinceSelectOptions.map((province) => {
-                    const code = normalizeLocationCode(province.provinceCode);
-                    if (!code) {
-                      return null;
-                    }
-                    return (
-                      <SelectItem key={code} value={code}>
-                        {province.name} ({code})
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='hub-ward'>Ward *</Label>
-              <Select
-                value={selectedWardCode || undefined}
+              <TmsCombobox
+                id='hub-ward'
+                value={selectedWardCode}
                 onValueChange={(value) => updateFormField('ward_code', value)}
+                options={wardOptions}
+                placeholder={
+                  selectedProvinceCode
+                    ? isFetchingWardsForForm
+                      ? 'Loading wards...'
+                      : 'Select ward'
+                    : 'Select province first'
+                }
+                emptyText='No wards found'
                 disabled={isSaving || !selectedProvinceCode}
-              >
-                <SelectTrigger id='hub-ward' className='w-full'>
-                  <SelectValue
-                    placeholder={
-                      selectedProvinceCode
-                        ? isFetchingWardsForForm
-                          ? 'Loading wards...'
-                          : 'Select ward'
-                        : 'Select province first'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {wardSelectOptions.map((ward) => {
-                    const code = normalizeLocationCode(ward.wardCode);
-                    if (!code) {
-                      return null;
-                    }
-                    return (
-                      <SelectItem key={code} value={code}>
-                        {ward.name} ({code})
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                loading={isFetchingWardsForForm}
+              />
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
@@ -238,7 +216,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-daily-capacity'>Daily capacity *</Label>
+              <Label htmlFor='hub-daily-capacity'>Hub order capacity *</Label>
               <Input
                 id='hub-daily-capacity'
                 type='number'
@@ -253,7 +231,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-current-load'>Current load *</Label>
+              <Label htmlFor='hub-current-load'>Current hub load *</Label>
               <Input
                 id='hub-current-load'
                 type='number'

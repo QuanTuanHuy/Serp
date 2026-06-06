@@ -26,6 +26,7 @@ import {
   useLazyGetOrderTimelineQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
+  useGetProductTypesQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useUpdateOrderMutation,
@@ -42,9 +43,11 @@ import type {
   FirstMileOrderListFilters,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
+  OrderConfirmationResponse,
   OrderImportItem,
   OrderPaymentInitResponse,
   PostOffice,
+  ProductType,
   Province,
   UpdateOrderRequest,
   ValidateImportFileResponse,
@@ -75,13 +78,11 @@ import {
   DEFAULT_CREATE_ORDER_FORM,
   formatDateTime,
   formatPickupMethodLabel,
-  formatOrderImportProductsPreview,
   formatStatusLabel,
   getProvinceNameByCode,
   getScopeBadgeLabel,
   getScopeDescription,
   getStatusBadgeVariant,
-  IMPORT_PREVIEW_LIMIT,
   isDropOffOrder,
   isConfirmableStatus,
   isDraftOrder,
@@ -99,6 +100,43 @@ import {
 } from './orderPageModels';
 
 const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
+
+const formatConfirmationPostOffice = (
+  label: string,
+  postOffice: { code?: string | null; name?: string | null } | null | undefined
+): string | null => {
+  const code = postOffice?.code?.trim();
+  if (!code) {
+    return null;
+  }
+
+  const name = postOffice?.name?.trim();
+  return name ? `${label}: ${code} - ${name}` : `${label}: ${code}`;
+};
+
+const buildConfirmationPostOfficeDescription = (
+  confirmation: OrderConfirmationResponse
+): string | undefined => {
+  const details: string[] = [];
+
+  const originDetail = formatConfirmationPostOffice(
+    'Origin post office',
+    confirmation.originPostOffice
+  );
+  if (originDetail) {
+    details.push(originDetail);
+  }
+
+  const destinationDetail = formatConfirmationPostOffice(
+    'Destination post office',
+    confirmation.destinationPostOffice
+  );
+  if (destinationDetail) {
+    details.push(destinationDetail);
+  }
+
+  return details.length > 0 ? details.join(' | ') : undefined;
+};
 
 export const OrderListPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -265,6 +303,11 @@ export const OrderListPage: React.FC = () => {
     page: 0,
     size: 200,
   });
+  const { data: productTypesData, isFetching: isFetchingProductTypes } =
+    useGetProductTypesQuery({
+      page: 0,
+      size: 200,
+    });
 
   const { data: senderWardsData, isFetching: isFetchingSenderWards } =
     useGetWardsByProvinceCodeQuery(
@@ -293,6 +336,11 @@ export const OrderListPage: React.FC = () => {
   const provinceSelectOptions = React.useMemo<Province[]>(
     () => provincesData?.items ?? [],
     [provincesData]
+  );
+
+  const productTypeOptions = React.useMemo<ProductType[]>(
+    () => productTypesData?.items.filter((item) => item.isActive) ?? [],
+    [productTypesData]
   );
 
   const managerPostOfficeOptions = React.useMemo<PostOffice[]>(
@@ -495,11 +543,6 @@ export const OrderListPage: React.FC = () => {
   const isSubmittingOrder = isCreatingOrder || isUpdatingOrder;
   const isImportFlowBusy =
     isExportingTemplate || isValidatingImport || isImportingOrders;
-
-  const validatedPreviewItems = React.useMemo(
-    () => validateImportResult?.data?.slice(0, IMPORT_PREVIEW_LIMIT) ?? [],
-    [validateImportResult]
-  );
 
   const handleApplyFilters = (event: React.FormEvent) => {
     event.preventDefault();
@@ -901,6 +944,32 @@ export const OrderListPage: React.FC = () => {
       return null;
     }
 
+    const products = (orderProducts ?? []).map((product) => ({
+      ...product,
+      name: product.name.trim(),
+      value: Math.round(product.value),
+      quantity: Math.trunc(product.quantity),
+    }));
+
+    const invalidProductIndex = products.findIndex(
+      (product) =>
+        !product.name ||
+        product.product_type_id <= 0 ||
+        !Number.isFinite(product.value) ||
+        product.value < 0 ||
+        !Number.isFinite(product.quantity) ||
+        product.quantity < 1 ||
+        !Number.isFinite(product.weight_gram) ||
+        product.weight_gram <= 0
+    );
+
+    if (invalidProductIndex >= 0) {
+      notification.error(
+        `Product #${invalidProductIndex + 1} is incomplete or invalid.`
+      );
+      return null;
+    }
+
     return {
       customer_order_code: createForm.customerOrderCode.trim(),
       sender_name: createForm.senderName.trim(),
@@ -944,7 +1013,7 @@ export const OrderListPage: React.FC = () => {
         ? { total_volume_m3: totalVolumeM3 }
         : {}),
       ...(createForm.note.trim() ? { note: createForm.note.trim() } : {}),
-      products: orderProducts ?? [],
+      products,
     };
   };
 
@@ -1062,7 +1131,9 @@ export const OrderListPage: React.FC = () => {
   );
 
   const calculateOrderShippingFee = React.useCallback(
-    async (order: FirstMileOrderDetail): Promise<CalculateShippingFeeResponse | null> => {
+    async (
+      order: FirstMileOrderDetail
+    ): Promise<CalculateShippingFeeResponse | null> => {
       try {
         const payload = buildShippingFeeRequestFromOrder(order);
         const feeResult = await calculateShippingFee(payload).unwrap();
@@ -1082,16 +1153,15 @@ export const OrderListPage: React.FC = () => {
   const confirmOrderAndRefresh = React.useCallback(
     async (order: FirstMileOrderDetail): Promise<boolean> => {
       const confirmationResult = await confirmOrder(order.id).unwrap();
-      const originPostOffice = confirmationResult.originPostOffice;
+      const confirmationDescription =
+        buildConfirmationPostOfficeDescription(confirmationResult);
 
       notification.success(
         confirmationResult.alreadyConfirmed
           ? 'Order was already confirmed.'
           : 'Order confirmed successfully.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
+        confirmationDescription
+          ? { description: confirmationDescription }
           : undefined
       );
 
@@ -1229,13 +1299,15 @@ export const OrderListPage: React.FC = () => {
         return;
       }
 
-      const payload = (event.data as {
-        payload?: {
-          orderId?: number | string;
-          appTransId?: string;
-          query?: Record<string, string>;
-        };
-      }).payload;
+      const payload = (
+        event.data as {
+          payload?: {
+            orderId?: number | string;
+            appTransId?: string;
+            query?: Record<string, string>;
+          };
+        }
+      ).payload;
 
       const rawOrderId = payload?.orderId ?? payload?.query?.orderId;
       const parsedOrderId = Number.parseInt(String(rawOrderId ?? ''), 10);
@@ -1506,13 +1578,12 @@ export const OrderListPage: React.FC = () => {
         postOfficeId,
       }).unwrap();
 
-      const originPostOffice = confirmationResult.originPostOffice;
+      const confirmationDescription =
+        buildConfirmationPostOfficeDescription(confirmationResult);
       notification.success(
         'Drop-off order confirmed at post office.',
-        originPostOffice
-          ? {
-              description: `Origin post office: ${originPostOffice.code} - ${originPostOffice.name}`,
-            }
+        confirmationDescription
+          ? { description: confirmationDescription }
           : undefined
       );
 
@@ -1602,12 +1673,6 @@ export const OrderListPage: React.FC = () => {
         notification.success('File validated successfully.', {
           description: `${result.data.length} order(s) are ready to import.`,
         });
-      } else {
-        notification.error('Validation completed with errors.', {
-          description:
-            result.error_message ||
-            'Please fix the Excel data before importing.',
-        });
       }
     } catch (error) {
       notification.error('Failed to validate order import file.', {
@@ -1628,9 +1693,6 @@ export const OrderListPage: React.FC = () => {
     }
 
     if (!validateImportResult.is_success) {
-      notification.error(
-        'Validation has errors. Please fix them before import.'
-      );
       return;
     }
 
@@ -1662,6 +1724,31 @@ export const OrderListPage: React.FC = () => {
       <OrderPageHeader
         canMutateOrders={canMutateOrders}
         onCreateOrder={handleOpenCreateDialog}
+        importAction={
+          canMutateOrders ? (
+            <OrderImportCard
+              canMutateOrders={canMutateOrders}
+              isImportFlowBusy={isImportFlowBusy}
+              isExportingTemplate={isExportingTemplate}
+              isValidatingImport={isValidatingImport}
+              isImportingOrders={isImportingOrders}
+              importFileInputKey={importFileInputKey}
+              selectedImportFile={selectedImportFile}
+              validateImportResult={validateImportResult}
+              lastImportJob={lastImportJob}
+              onDownloadTemplate={() => {
+                void handleDownloadTemplate();
+              }}
+              onSelectImportFile={handleSelectImportFile}
+              onValidateImportFile={() => {
+                void handleValidateImportFile();
+              }}
+              onImportFile={() => {
+                void handleImportFile();
+              }}
+            />
+          ) : null
+        }
       />
 
       <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
@@ -1671,34 +1758,6 @@ export const OrderListPage: React.FC = () => {
             badgeLabel={getScopeBadgeLabel(accessScope)}
             description={getScopeDescription(accessScope)}
             className='flex-1'
-          />
-        ) : null}
-
-        {canMutateOrders ? (
-          <OrderImportCard
-            className='w-full lg:max-w-2xl'
-            canMutateOrders={canMutateOrders}
-            isImportFlowBusy={isImportFlowBusy}
-            isExportingTemplate={isExportingTemplate}
-            isValidatingImport={isValidatingImport}
-            isImportingOrders={isImportingOrders}
-            importFileInputKey={importFileInputKey}
-            selectedImportFile={selectedImportFile}
-            validateImportResult={validateImportResult}
-            validatedPreviewItems={validatedPreviewItems}
-            importPreviewLimit={IMPORT_PREVIEW_LIMIT}
-            lastImportJob={lastImportJob}
-            onDownloadTemplate={() => {
-              void handleDownloadTemplate();
-            }}
-            onSelectImportFile={handleSelectImportFile}
-            onValidateImportFile={() => {
-              void handleValidateImportFile();
-            }}
-            onImportFile={() => {
-              void handleImportFile();
-            }}
-            formatProductsPreview={formatOrderImportProductsPreview}
           />
         ) : null}
       </div>
@@ -1785,12 +1844,16 @@ export const OrderListPage: React.FC = () => {
         provinceSelectOptions={provinceSelectOptions}
         senderWardSelectOptions={senderWardSelectOptions}
         receiverWardSelectOptions={receiverWardSelectOptions}
+        productTypeOptions={productTypeOptions}
+        orderProducts={orderProducts ?? []}
         isFetchingSenderWards={isFetchingSenderWards}
         isFetchingReceiverWards={isFetchingReceiverWards}
+        isFetchingProductTypes={isFetchingProductTypes}
         geocodingTarget={geocodingTarget}
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={handleCreateOrder}
         onFormChange={updateCreateFormField}
+        onProductsChange={setOrderProducts}
         onGeocodeFromAddress={(target) => {
           void handleGeocodeFromAddress(target);
         }}

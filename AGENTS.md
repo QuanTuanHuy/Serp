@@ -20,7 +20,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
 - Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
 - Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
 - Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
-- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `tms-billing-service/`, `tms-order/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
 - Shared Java libraries: `serp_java_platform/`.
 - Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
@@ -56,7 +56,7 @@ npx prettier --check src/path/to/file.tsx
 - There is currently no `test` script and no checked-in frontend test framework, so there is no supported single-test command today.
 
 ### Spring Boot services
-Applies to `account`, `crm`, `discuss_service`, `first-mile`, `second-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
+Applies to `account`, `crm`, `discuss_service`, `first-mile`, `second-mile`, `tms-order`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
 Run from the service directory.
 ```bash
 ./run-dev.sh                    # when present

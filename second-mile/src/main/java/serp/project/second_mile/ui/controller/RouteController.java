@@ -24,6 +24,7 @@ import serp.project.second_mile.dto.request.RouteFilterRequest;
 import serp.project.second_mile.dto.request.UpdateRouteRequest;
 import serp.project.second_mile.dto.response.RouteResponse;
 import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.exception.MessageService;
 import serp.project.second_mile.service.RouteService;
@@ -41,7 +42,9 @@ public class RouteController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(name = "route_code", required = false) String routeCode,
+            @RequestParam(name = "origin_type", required = false) RouteEndpointType originType,
             @RequestParam(name = "origin_hub_id", required = false) Long originHubId,
+            @RequestParam(name = "origin_post_office_code", required = false) String originPostOfficeCode,
             @RequestParam(name = "destination_type", required = false) RouteDestinationType destinationType,
             @RequestParam(name = "destination_hub_id", required = false) Long destinationHubId,
             @RequestParam(name = "destination_post_office_code", required = false) String destinationPostOfficeCode,
@@ -51,7 +54,9 @@ public class RouteController {
         RouteFilterRequest filterRequest = RouteFilterRequest.builder()
                 .keyword(keyword)
                 .routeCode(routeCode)
+                .originType(originType)
                 .originHubId(originHubId)
+                .originPostOfficeCode(originPostOfficeCode)
                 .destinationType(destinationType)
                 .destinationHubId(destinationHubId)
                 .destinationPostOfficeCode(destinationPostOfficeCode)

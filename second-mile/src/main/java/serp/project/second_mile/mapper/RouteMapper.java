@@ -9,6 +9,7 @@ import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.dto.request.CreateRouteRequest;
 import serp.project.second_mile.dto.request.UpdateRouteRequest;
 import serp.project.second_mile.dto.response.RouteResponse;
+import serp.project.second_mile.enums.RouteEndpointType;
 import serp.project.second_mile.enums.RouteStatus;
 
 public final class RouteMapper {
@@ -19,7 +20,9 @@ public final class RouteMapper {
         Route route = new Route();
         route.setRouteCode(request.getRouteCode());
         route.setRouteName(request.getRouteName());
+        route.setOriginType(request.getOriginType() == null ? RouteEndpointType.HUB : request.getOriginType());
         route.setOriginHubId(request.getOriginHubId());
+        route.setOriginPostOfficeCode(request.getOriginPostOfficeCode());
         route.setDestinationType(request.getDestinationType());
         route.setDestinationHubId(request.getDestinationHubId());
         route.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
@@ -35,7 +38,9 @@ public final class RouteMapper {
     public static void mapForUpdate(UpdateRouteRequest request, Route route) {
         route.setRouteCode(request.getRouteCode());
         route.setRouteName(request.getRouteName());
+        route.setOriginType(request.getOriginType() == null ? RouteEndpointType.HUB : request.getOriginType());
         route.setOriginHubId(request.getOriginHubId());
+        route.setOriginPostOfficeCode(request.getOriginPostOfficeCode());
         route.setDestinationType(request.getDestinationType());
         route.setDestinationHubId(request.getDestinationHubId());
         route.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
@@ -52,7 +57,9 @@ public final class RouteMapper {
                 route.getId(),
                 route.getRouteCode(),
                 route.getRouteName(),
+                route.getOriginType(),
                 route.getOriginHubId(),
+                route.getOriginPostOfficeCode(),
                 route.getDestinationType(),
                 route.getDestinationHubId(),
                 route.getDestinationPostOfficeCode(),

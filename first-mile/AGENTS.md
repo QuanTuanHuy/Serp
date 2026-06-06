@@ -92,6 +92,8 @@ Run from `first-mile/`. On Windows use `mvnw.cmd`.
   - `TMS_CUSTOMER` — customer-facing order APIs
 - Add or tighten `@PreAuthorize` on new endpoints; mirror checks in service layer when data must be scoped by post office or user.
 - Reuse `AuthUtils` / access helpers in `kernel/utils` instead of duplicating role parsing.
+- Internal service calls use API key auth, not service bearer tokens or forwarded JWTs. Callers must send `X-Internal-Api-Key`, `X-Tenant-Id`, and `X-Internal-Service`, including from normal request handlers and background jobs. Internal endpoints should be `permitAll` in `SecurityConfig` to avoid JWT requirements, while `InternalApiAuthenticationFilter` enforces the API key before controller logic. Service code should still read tenant through `AuthUtils`.
+- Configure `INTERNAL_API_KEY` consistently across `first-mile`, `second-mile`, and `tms-order`; never commit its value.
 
 ## Persistence and Schema Changes
 
@@ -118,7 +120,20 @@ Run from `first-mile/`. On Windows use `mvnw.cmd`.
 
 ## Code Style
 
-- New Java files: use the standard header block (`Author:` / `Description: Part of Serp Project`) like neighboring files.
+### File headers (required for TMS)
+
+- **Author must be `Nguyen The Anh`** on all new or touched Java/SQL files in this module. Do **not** use `QuanTuanHuy` from the root `AGENTS.md` example.
+- When editing a file that already has a header, **keep** `Author: Nguyen The Anh`; do not rewrite authorship.
+- New Java files — match neighboring block comment style:
+
+```text
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+```
+
+- New SQL under `db/migration/`: `-- Author: Nguyen The Anh` when the folder uses author comments.
 - Lombok: `@RequiredArgsConstructor`, `@Slf4j`, `@Builder` on DTOs where already used.
 - Imports: `jakarta.*`, Lombok, Spring, then `serp.project.first_mile.*`.
 - 4-space indent; parameterized logging `log.info("orderId={}", id)`.

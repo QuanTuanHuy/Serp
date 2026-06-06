@@ -1,11 +1,24 @@
 /**
- * Author: QuanTuanHuy
+ * Author: Nguyen The Anh
  * Description: Part of Serp Project - Post office to hub transport via handover manifests
  */
 
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import {
+  CheckCircle2,
+  Eye,
+  MapPin,
+  PackageCheck,
+  Plus,
+  RefreshCw,
+  ScanLine,
+  Send,
+  Truck,
+  XCircle,
+} from 'lucide-react';
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
   Badge,
@@ -15,6 +28,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,270 +37,566 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  Textarea,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
-import { Plus, RefreshCw, Truck } from 'lucide-react';
+import { TmsCombobox } from '../../components';
 import {
-  useCreateHandoverManifestMutation,
-  useDriverCheckinHandoverManifestEndMutation,
-  useDriverCheckinHandoverManifestStartMutation,
+  useCancelPostOfficeHandoverManifestMutation,
+  useConfirmHandoverManifestInboundMutation,
+  useCreatePostOfficeHandoverManifestMutation,
+  useDispatchPostOfficeHandoverManifestMutation,
+  useGetFirstMileOrdersQuery,
+  useGetHandoverManifestByIdQuery,
   useGetHandoverManifestsQuery,
-  useGetHubPostOfficesQuery,
   useGetHubsQuery,
-  useGetSecondMileOrdersQuery,
+  useGetPostOfficeHandoverManifestByIdQuery,
+  useGetPostOfficeHandoverManifestsQuery,
+  useGetPostOfficesQuery,
   useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
+  useScanOutPostOfficeHandoverOrderMutation,
 } from '../../api';
 import type {
   HandoverManifest,
+  HandoverManifestOrderItem,
   HandoverManifestStatus,
   Hub,
+  PostOffice,
+  SecondMileRoute,
+  SecondMileVehicle,
 } from '../../types';
+import {
+  DriverHandoverPage,
+  isHandoverDriverOnly,
+} from './DriverHandoverPage';
 
 const PAGE_SIZE = 20;
+const SELECT_PAGE_SIZE = 200;
+
+type ManifestMode = 'POST_OFFICE' | 'HUB';
 
 const MANIFEST_STATUS_OPTIONS: Array<{
   value: HandoverManifestStatus;
   label: string;
 }> = [
   { value: 'CREATED', label: 'Created' },
-  { value: 'OUTBOUND_CONFIRMED', label: 'In transit' },
+  { value: 'OUTBOUND_CONFIRMED', label: 'Dispatched to hub' },
   { value: 'INBOUND_CONFIRMED', label: 'Received at hub' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-const canManageHandoverManifests = (roles: string[]): boolean =>
+const MANIFEST_STATUS_LABELS: Record<HandoverManifestStatus, string> = {
+  CREATED: 'Created',
+  OUTBOUND_CONFIRMED: 'Dispatched to hub',
+  INBOUND_CONFIRMED: 'Received at hub',
+  CANCELLED: 'Cancelled',
+};
+
+const canManagePostOfficeHandover = (roles: string[]): boolean =>
+  roles.includes('TMS_ADMIN') || roles.includes('TMS_POSTOFFICER_MANAGER');
+
+const canReceiveHubHandover = (roles: string[]): boolean =>
   roles.includes('TMS_ADMIN') ||
   roles.includes('TMS_HUB_MANAGER') ||
-  roles.includes('TMS_HUB_EMPLOYEE');
+  roles.includes('TMS_HUB_EMPLOYEE') ||
+  roles.includes('TMS_HUB_DRIVER');
 
-function getStatusBadgeVariant(
+const getStatusBadgeVariant = (
   status?: HandoverManifestStatus
-): 'default' | 'secondary' | 'outline' {
+): 'default' | 'secondary' | 'outline' | 'destructive' => {
   if (status === 'INBOUND_CONFIRMED') {
     return 'default';
   }
   if (status === 'OUTBOUND_CONFIRMED') {
     return 'outline';
   }
+  if (status === 'CANCELLED') {
+    return 'destructive';
+  }
   return 'secondary';
+};
+
+const formatDateTime = (value?: string): string => {
+  if (!value) {
+    return '--';
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toLocaleString('en-US');
+};
+
+const getTotalOrders = (manifest?: HandoverManifest | null): number =>
+  manifest?.totalOrders ?? manifest?.orders?.length ?? 0;
+
+const getScannedOutOrders = (manifest?: HandoverManifest | null): number =>
+  manifest?.scannedOutOrders ??
+  manifest?.orders?.filter((order) => Boolean(order.scanOutTime)).length ??
+  0;
+
+const getScannedInOrders = (manifest?: HandoverManifest | null): number =>
+  manifest?.scannedInOrders ??
+  manifest?.orders?.filter((order) => Boolean(order.scanInTime)).length ??
+  0;
+
+const isReadyForDispatch = (manifest: HandoverManifest): boolean => {
+  const totalOrders = getTotalOrders(manifest);
+  return (
+    manifest.status === 'CREATED' &&
+    totalOrders > 0 &&
+    getScannedOutOrders(manifest) >= totalOrders
+  );
+};
+
+const normalizeScanCode = (value: string): string => value.trim();
+
+const padDatePart = (value: number): string => String(value).padStart(2, '0');
+
+const toDateTimeLocalValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const getDefaultDepartureTime = (): string => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 15);
+  return toDateTimeLocalValue(date);
+};
+
+const getDefaultArrivalTime = (): string => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + 75);
+  return toDateTimeLocalValue(date);
+};
+
+interface DetailItemProps {
+  label: string;
+  value: React.ReactNode;
 }
 
-export function HandoverManifestListPage() {
+function DetailItem({ label, value }: DetailItemProps) {
+  return (
+    <div className='space-y-1 rounded-md border p-3'>
+      <p className='text-xs font-medium uppercase text-muted-foreground'>
+        {label}
+      </p>
+      <div className='text-sm'>{value}</div>
+    </div>
+  );
+}
+
+interface ManifestOrdersTableProps {
+  actionMode?: 'SCAN_OUT' | 'RECEIVE';
+  isActionLoading?: boolean;
+  onScan?: (orderCode: string) => void;
+  orders?: HandoverManifestOrderItem[];
+  scannedOrderCodes?: string[];
+}
+
+function ManifestOrdersTable({
+  actionMode,
+  isActionLoading,
+  onScan,
+  orders = [],
+  scannedOrderCodes = [],
+}: ManifestOrdersTableProps) {
+  return (
+    <div className='overflow-x-auto rounded-md border'>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Order</TableHead>
+            <TableHead>Customer order</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Scan out</TableHead>
+            <TableHead>Scan in</TableHead>
+            {actionMode ? <TableHead>Action</TableHead> : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={actionMode ? 6 : 5}
+                className='py-8 text-center text-muted-foreground'
+              >
+                No orders in this manifest.
+              </TableCell>
+            </TableRow>
+          ) : (
+            orders.map((order) => {
+              const orderCode = order.orderCode ?? '';
+              const isScanned =
+                actionMode === 'SCAN_OUT'
+                  ? Boolean(order.scanOutTime)
+                  : Boolean(
+                      order.scanInTime ||
+                        (orderCode && scannedOrderCodes.includes(orderCode))
+                    );
+              const scannedLabel =
+                actionMode === 'SCAN_OUT' ? 'Scanned out' : 'Scanned in';
+
+              return (
+                <TableRow key={order.id ?? order.orderCode}>
+                  <TableCell className='font-medium'>
+                    {order.orderCode || '--'}
+                  </TableCell>
+                  <TableCell>{order.customerOrderCode || '--'}</TableCell>
+                  <TableCell>
+                    {order.status ? (
+                      <Badge variant='outline'>{order.status}</Badge>
+                    ) : (
+                      '--'
+                    )}
+                  </TableCell>
+                  <TableCell>{formatDateTime(order.scanOutTime)}</TableCell>
+                  <TableCell>{formatDateTime(order.scanInTime)}</TableCell>
+                  {actionMode ? (
+                    <TableCell>
+                      {isScanned ? (
+                        <Badge variant='secondary'>{scannedLabel}</Badge>
+                      ) : (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={!orderCode || isActionLoading}
+                          onClick={() => onScan?.(orderCode)}
+                        >
+                          Scan
+                        </Button>
+                      )}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function HandoverManifestManagementPage() {
   const notification = useNotification();
-  const roles = useAppSelector((state) => state.account.user.profile?.roles ?? []);
-  const canAccess = canManageHandoverManifests(roles);
+  const roles = useAppSelector(
+    (state) => state.account.user.profile?.roles ?? []
+  );
+  const canPostOfficeMode = canManagePostOfficeHandover(roles);
+  const canHubMode = canReceiveHubHandover(roles);
+  const canAccess = canPostOfficeMode || canHubMode;
+
+  const [mode, setMode] = React.useState<ManifestMode>('POST_OFFICE');
+  const effectiveMode = React.useMemo<ManifestMode>(() => {
+    if (mode === 'POST_OFFICE' && canPostOfficeMode) {
+      return 'POST_OFFICE';
+    }
+    if (mode === 'HUB' && canHubMode) {
+      return 'HUB';
+    }
+    return canPostOfficeMode ? 'POST_OFFICE' : 'HUB';
+  }, [canHubMode, canPostOfficeMode, mode]);
 
   const [page, setPage] = React.useState(0);
   const [filterHubId, setFilterHubId] = React.useState('');
+  const [filterPostOfficeId, setFilterPostOfficeId] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState<
     'ALL' | HandoverManifestStatus
   >('ALL');
 
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const [createHubId, setCreateHubId] = React.useState('');
-  const [createPostOfficeCode, setCreatePostOfficeCode] = React.useState('');
-  const [createVehicleId, setCreateVehicleId] = React.useState('');
-  const [createRouteId, setCreateRouteId] = React.useState('');
+  const [createPostOfficeId, setCreatePostOfficeId] = React.useState('');
+  const [createNote, setCreateNote] = React.useState('');
   const [selectedOrderCodes, setSelectedOrderCodes] = React.useState<string[]>(
     []
   );
 
+  const [scanManifest, setScanManifest] =
+    React.useState<HandoverManifest | null>(null);
+  const [scanOrderCode, setScanOrderCode] = React.useState('');
+
+  const [dispatchManifest, setDispatchManifest] =
+    React.useState<HandoverManifest | null>(null);
+  const [dispatchRouteId, setDispatchRouteId] = React.useState('');
+  const [dispatchVehicleId, setDispatchVehicleId] = React.useState('');
+  const [dispatchDepartureAt, setDispatchDepartureAt] = React.useState('');
+  const [dispatchArrivalAt, setDispatchArrivalAt] = React.useState('');
+  const [dispatchSealCode, setDispatchSealCode] = React.useState('');
+  const [dispatchNote, setDispatchNote] = React.useState('');
+
+  const [receiveManifest, setReceiveManifest] =
+    React.useState<HandoverManifest | null>(null);
+  const [receiveOrderCode, setReceiveOrderCode] = React.useState('');
+  const [receivedOrderCodes, setReceivedOrderCodes] = React.useState<string[]>(
+    []
+  );
+
+  const [detailTarget, setDetailTarget] = React.useState<{
+    manifest: HandoverManifest;
+    mode: ManifestMode;
+  } | null>(null);
+
   const targetHubId = filterHubId ? Number(filterHubId) : undefined;
-  const createHubNumericId = createHubId ? Number(createHubId) : undefined;
+  const filterPostOfficeNumericId = filterPostOfficeId
+    ? Number(filterPostOfficeId)
+    : undefined;
+
+  const { data: postOfficesData } = useGetPostOfficesQuery(
+    { page: 0, size: SELECT_PAGE_SIZE, status: 'ACTIVE' },
+    { skip: !canPostOfficeMode }
+  );
+
+  const { data: hubsData } = useGetHubsQuery(
+    { page: 0, size: SELECT_PAGE_SIZE },
+    { skip: !canHubMode }
+  );
+
+  const postOfficeOptions = postOfficesData?.items ?? [];
+  const hubOptions = hubsData?.items ?? [];
+  const postOfficeFilterOptions = [
+    { value: 'ALL', label: 'All post offices' },
+    ...postOfficeOptions.map((postOffice) => ({
+      value: String(postOffice.id),
+      label: `${postOffice.code} - ${postOffice.name}`,
+    })),
+  ];
+  const createPostOfficeOptions = postOfficeOptions.map((postOffice) => ({
+    value: String(postOffice.id),
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+  const hubFilterOptions = [
+    { value: 'ALL', label: 'All hubs' },
+    ...hubOptions.map((hub) => ({
+      value: String(hub.id),
+      label: `${hub.code} - ${hub.name}`,
+    })),
+  ];
+  const statusFilterOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...MANIFEST_STATUS_OPTIONS,
+  ];
+
+  const filterPostOffice = postOfficeOptions.find(
+    (postOffice) => postOffice.id === filterPostOfficeNumericId
+  );
 
   const {
-    data: manifestsData,
-    isFetching,
-    refetch,
+    data: postOfficeManifestsData,
+    isFetching: isFetchingPostOfficeManifests,
+    refetch: refetchPostOfficeManifests,
+  } = useGetPostOfficeHandoverManifestsQuery(
+    {
+      page,
+      size: PAGE_SIZE,
+      ...(filterPostOfficeNumericId
+        ? { postOfficeId: filterPostOfficeNumericId }
+        : {}),
+      ...(targetHubId ? { targetHubId } : {}),
+      ...(filterStatus !== 'ALL' ? { status: filterStatus } : {}),
+    },
+    { skip: !canPostOfficeMode || effectiveMode !== 'POST_OFFICE' }
+  );
+
+  const {
+    data: hubManifestsData,
+    isFetching: isFetchingHubManifests,
+    refetch: refetchHubManifests,
   } = useGetHandoverManifestsQuery(
     {
       page,
       size: PAGE_SIZE,
+      ...(filterPostOffice?.code
+        ? { originPostOfficeCode: filterPostOffice.code }
+        : {}),
       ...(targetHubId ? { targetHubId } : {}),
       ...(filterStatus !== 'ALL' ? { status: filterStatus } : {}),
     },
-    { skip: !canAccess }
+    { skip: !canHubMode || effectiveMode !== 'HUB' }
   );
 
-  const { data: hubsData } = useGetHubsQuery(
-    { page: 0, size: 200 },
-    { skip: !canAccess }
+  const selectedCreatePostOffice = postOfficeOptions.find(
+    (postOffice) => postOffice.id === Number(createPostOfficeId)
   );
+  const dispatchTargetHubId = dispatchManifest?.targetHubId;
+  const dispatchOriginPostOfficeCode = dispatchManifest?.originPostOfficeCode;
 
-  const { data: hubPostOfficesData } = useGetHubPostOfficesQuery(
-    { hubId: createHubNumericId ?? 0, page: 0, size: 200 },
-    { skip: !canAccess || !createHubNumericId }
-  );
-
-  const { data: vehiclesData } = useGetSecondMileVehiclesQuery(
-    {
-      page: 0,
-      size: 200,
-      ...(createHubNumericId ? { hubId: createHubNumericId } : {}),
-      status: 'ACTIVE',
-    },
-    { skip: !canAccess || !createHubNumericId }
-  );
-
-  const { data: routesData } = useGetSecondMileRoutesQuery(
-    {
-      page: 0,
-      size: 200,
-      ...(createHubNumericId ? { originHubId: createHubNumericId } : {}),
-      destinationType: 'POST_OFFICE',
-      status: 'ACTIVE',
-      ...(createPostOfficeCode
-        ? { destinationPostOfficeCode: createPostOfficeCode }
-        : {}),
-    },
-    { skip: !canAccess || !createHubNumericId || !createPostOfficeCode }
-  );
-
-  const { data: readyOrdersData, isFetching: isLoadingReadyOrders } =
-    useGetSecondMileOrdersQuery(
+  const { data: dispatchRoutesData, isFetching: isLoadingDispatchRoutes } =
+    useGetSecondMileRoutesQuery(
       {
         page: 0,
-        size: 200,
-        originPostOfficeCode: createPostOfficeCode,
+        size: SELECT_PAGE_SIZE,
+        originType: 'POST_OFFICE',
+        ...(dispatchOriginPostOfficeCode
+          ? { originPostOfficeCode: dispatchOriginPostOfficeCode }
+          : {}),
+        destinationType: 'HUB',
+        ...(dispatchTargetHubId
+          ? { destinationHubId: dispatchTargetHubId }
+          : {}),
+        status: 'ACTIVE',
+      },
+      {
+        skip:
+          !dispatchManifest ||
+          !dispatchTargetHubId ||
+          !dispatchOriginPostOfficeCode,
+      }
+    );
+
+  const { data: dispatchVehiclesData, isFetching: isLoadingDispatchVehicles } =
+    useGetSecondMileVehiclesQuery(
+      {
+        page: 0,
+        size: SELECT_PAGE_SIZE,
+        ...(dispatchTargetHubId ? { hubId: dispatchTargetHubId } : {}),
+        status: 'ACTIVE',
+      },
+      { skip: !dispatchManifest || !dispatchTargetHubId }
+    );
+
+  const { data: readyOrdersData, isFetching: isLoadingReadyOrders } =
+    useGetFirstMileOrdersQuery(
+      {
+        page: 0,
+        size: SELECT_PAGE_SIZE,
+        originPostOfficeCode: selectedCreatePostOffice?.code,
         status: 'AT_ORIGIN_POST_OFFICE',
       },
       {
         skip:
-          !canAccess || !createPostOfficeCode || !isCreateOpen,
+          !canPostOfficeMode ||
+          !isCreateOpen ||
+          !selectedCreatePostOffice?.code,
       }
     );
 
+  const scanManifestId = scanManifest?.id;
+  const { data: scanManifestDetail, isFetching: isFetchingScanManifest } =
+    useGetPostOfficeHandoverManifestByIdQuery(scanManifestId ?? 0, {
+      skip: !scanManifestId,
+    });
+
+  const receiveManifestId = receiveManifest?.id;
+  const { data: receiveManifestDetail, isFetching: isFetchingReceiveManifest } =
+    useGetHandoverManifestByIdQuery(receiveManifestId ?? 0, {
+      skip: !receiveManifestId,
+    });
+
+  const detailManifestId = detailTarget?.manifest.id;
+  const {
+    data: postOfficeDetailManifest,
+    isFetching: isFetchingPostOfficeDetail,
+  } = useGetPostOfficeHandoverManifestByIdQuery(detailManifestId ?? 0, {
+    skip: !detailManifestId || detailTarget?.mode !== 'POST_OFFICE',
+  });
+  const { data: hubDetailManifest, isFetching: isFetchingHubDetail } =
+    useGetHandoverManifestByIdQuery(detailManifestId ?? 0, {
+      skip: !detailManifestId || detailTarget?.mode !== 'HUB',
+    });
+
   const [createManifest, { isLoading: isCreating }] =
-    useCreateHandoverManifestMutation();
-  const [driverCheckinStart, { isLoading: isConfirmingOutbound }] =
-    useDriverCheckinHandoverManifestStartMutation();
-  const [driverCheckinEnd, { isLoading: isConfirmingInbound }] =
-    useDriverCheckinHandoverManifestEndMutation();
+    useCreatePostOfficeHandoverManifestMutation();
+  const [scanOutOrder, { isLoading: isScanningOut }] =
+    useScanOutPostOfficeHandoverOrderMutation();
+  const [dispatchManifestRun, { isLoading: isDispatching }] =
+    useDispatchPostOfficeHandoverManifestMutation();
+  const [cancelManifestRun, { isLoading: isCancelling }] =
+    useCancelPostOfficeHandoverManifestMutation();
+  const [confirmInbound, { isLoading: isConfirmingInbound }] =
+    useConfirmHandoverManifestInboundMutation();
 
-  const hubOptions = hubsData?.items ?? [];
-  const postOfficeOptions = hubPostOfficesData?.items ?? [];
-  const vehicleOptions = vehiclesData?.items ?? [];
-  const routeOptions = routesData?.items ?? [];
-  const readyOrders = readyOrdersData?.items ?? [];
+  const manifestsData =
+    effectiveMode === 'POST_OFFICE'
+      ? postOfficeManifestsData
+      : hubManifestsData;
+  const isFetching =
+    effectiveMode === 'POST_OFFICE'
+      ? isFetchingPostOfficeManifests
+      : isFetchingHubManifests;
   const manifests = manifestsData?.items ?? [];
+  const readyOrders = readyOrdersData?.items ?? [];
+  const dispatchRoutes = dispatchRoutesData?.items ?? [];
+  const dispatchVehicles = dispatchVehiclesData?.items ?? [];
+  const dispatchRouteOptions = dispatchRoutes.map((route: SecondMileRoute) => ({
+    value: String(route.id),
+    label: `${route.routeCode} - ${route.routeName}`,
+  }));
+  const dispatchVehicleOptions = dispatchVehicles.map(
+    (vehicle: SecondMileVehicle) => ({
+      value: String(vehicle.id),
+      label: `${vehicle.licensePlate} (${vehicle.vehicleType})`,
+    })
+  );
+  const selectedDispatchRoute = dispatchRoutes.find(
+    (route) => route.id === Number(dispatchRouteId)
+  );
 
-  React.useEffect(() => {
-    setCreatePostOfficeCode('');
-    setCreateVehicleId('');
-    setCreateRouteId('');
-    setSelectedOrderCodes([]);
-  }, [createHubId]);
+  const activeScanManifest = scanManifestDetail ?? scanManifest;
+  const scanOrders = activeScanManifest?.orders ?? [];
 
-  React.useEffect(() => {
-    setCreateVehicleId('');
-    setCreateRouteId('');
-    setSelectedOrderCodes([]);
-  }, [createPostOfficeCode]);
+  const activeReceiveManifest = receiveManifestDetail ?? receiveManifest;
+  const receiveOrders = activeReceiveManifest?.orders ?? [];
 
-  React.useEffect(() => {
-    setCreateRouteId('');
-  }, [createVehicleId]);
+  const detailManifest =
+    detailTarget?.mode === 'POST_OFFICE'
+      ? (postOfficeDetailManifest ?? detailTarget?.manifest)
+      : (hubDetailManifest ?? detailTarget?.manifest);
+  const isFetchingDetail =
+    detailTarget?.mode === 'POST_OFFICE'
+      ? isFetchingPostOfficeDetail
+      : isFetchingHubDetail;
 
-  const filteredRoutes = React.useMemo(() => {
-    if (!createVehicleId) {
-      return routeOptions;
-    }
-    const vehicleNumericId = Number(createVehicleId);
-    return routeOptions.filter(
-      (route) =>
-        !route.vehicleId || route.vehicleId === vehicleNumericId
+  const readyOrderCodes = React.useMemo(
+    () =>
+      readyOrders
+        .map((order) => order.orderCode)
+        .filter((orderCode): orderCode is string => Boolean(orderCode)),
+    [readyOrders]
+  );
+
+  const allReadyOrdersSelected =
+    readyOrderCodes.length > 0 &&
+    readyOrderCodes.every((orderCode) =>
+      selectedOrderCodes.includes(orderCode)
     );
-  }, [createVehicleId, routeOptions]);
 
-  const handleToggleOrder = (orderCode: string) => {
-    setSelectedOrderCodes((current) =>
-      current.includes(orderCode)
-        ? current.filter((code) => code !== orderCode)
-        : [...current, orderCode]
-    );
-  };
+  React.useEffect(() => {
+    setPage(0);
+    setFilterHubId('');
+    setFilterPostOfficeId('');
+    setFilterStatus('ALL');
+  }, [effectiveMode]);
 
-  const handleCreateManifest = async () => {
-    if (!createHubNumericId) {
-      notification.error('Target hub is required.');
-      return;
-    }
-    if (!createPostOfficeCode) {
-      notification.error('Origin post office is required.');
-      return;
-    }
-    if (!createVehicleId) {
-      notification.error('Transport vehicle is required.');
-      return;
-    }
-    if (selectedOrderCodes.length === 0) {
-      notification.error('Select at least one order to transport.');
-      return;
-    }
+  React.useEffect(() => {
+    setSelectedOrderCodes([]);
+  }, [createPostOfficeId]);
 
-    try {
-      await createManifest({
-        target_hub_id: createHubNumericId,
-        origin_post_office_code: createPostOfficeCode,
-        vehicle_id: Number(createVehicleId),
-        ...(createRouteId ? { route_id: Number(createRouteId) } : {}),
-        order_codes: selectedOrderCodes,
-      }).unwrap();
-      notification.success('Transport manifest created successfully.');
-      setIsCreateOpen(false);
-      setCreateHubId('');
-      setCreatePostOfficeCode('');
-      setCreateVehicleId('');
-      setCreateRouteId('');
-      setSelectedOrderCodes([]);
-      void refetch();
-    } catch (error) {
-      notification.error('Failed to create transport manifest.', {
-        description: getErrorMessage(error),
-      });
+  React.useEffect(() => {
+    if (selectedDispatchRoute?.vehicleId) {
+      setDispatchVehicleId(String(selectedDispatchRoute.vehicleId));
     }
-  };
+  }, [selectedDispatchRoute?.vehicleId]);
 
-  const handleConfirmOutbound = async (manifest: HandoverManifest) => {
-    if (!manifest.id) {
+  const refetchActiveManifests = () => {
+    if (effectiveMode === 'POST_OFFICE') {
+      void refetchPostOfficeManifests();
       return;
     }
-    try {
-      await driverCheckinStart(manifest.id).unwrap();
-      notification.success('Driver check-in at post office completed.');
-      void refetch();
-    } catch (error) {
-      notification.error('Failed to complete departure check-in.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleConfirmInbound = async (manifest: HandoverManifest) => {
-    if (!manifest.id) {
-      return;
-    }
-    try {
-      await driverCheckinEnd(manifest.id).unwrap();
-      notification.success('Driver check-in at hub completed.');
-      void refetch();
-    } catch (error) {
-      notification.error('Failed to complete arrival check-in.', {
-        description: getErrorMessage(error),
-      });
-    }
+    void refetchHubManifests();
   };
 
   const resolveHubLabel = (hubId?: number): string => {
@@ -300,14 +610,298 @@ export function HandoverManifestListPage() {
     return `${hub.code} - ${hub.name}`;
   };
 
+  const resolvePostOfficeLabel = (
+    postOfficeId?: number,
+    postOfficeCode?: string
+  ): string => {
+    const postOffice = postOfficeOptions.find(
+      (item: PostOffice) =>
+        (postOfficeId && item.id === postOfficeId) ||
+        (postOfficeCode && item.code === postOfficeCode)
+    );
+    if (postOffice) {
+      return `${postOffice.code} - ${postOffice.name}`;
+    }
+    return postOfficeCode || (postOfficeId ? `#${postOfficeId}` : '--');
+  };
+
+  const resolveRouteLabel = (routeId?: number, routeCode?: string): string => {
+    if (routeCode) {
+      return routeCode;
+    }
+    if (!routeId) {
+      return '--';
+    }
+    const route = dispatchRoutes.find((item) => item.id === routeId);
+    return route ? `${route.routeCode} - ${route.routeName}` : `#${routeId}`;
+  };
+
+  const resolveVehicleLabel = (
+    vehicleId?: number,
+    licensePlate?: string
+  ): string => {
+    if (licensePlate) {
+      return licensePlate;
+    }
+    if (!vehicleId) {
+      return '--';
+    }
+    const vehicle = dispatchVehicles.find((item) => item.id === vehicleId);
+    return vehicle ? vehicle.licensePlate : `#${vehicleId}`;
+  };
+
+  const resetCreateForm = () => {
+    setCreatePostOfficeId('');
+    setCreateNote('');
+    setSelectedOrderCodes([]);
+  };
+
+  const handleToggleOrder = (orderCode: string, checked?: boolean) => {
+    setSelectedOrderCodes((current) => {
+      const exists = current.includes(orderCode);
+      const shouldSelect = checked ?? !exists;
+
+      if (shouldSelect && !exists) {
+        return [...current, orderCode];
+      }
+      if (!shouldSelect && exists) {
+        return current.filter((code) => code !== orderCode);
+      }
+      return current;
+    });
+  };
+
+  const handleToggleAllReadyOrders = (checked: boolean) => {
+    setSelectedOrderCodes(checked ? readyOrderCodes : []);
+  };
+
+  const handleCreateManifest = async () => {
+    const postOfficeId = Number(createPostOfficeId);
+    if (!postOfficeId || !selectedCreatePostOffice) {
+      notification.error('Origin post office is required.');
+      return;
+    }
+    if (selectedOrderCodes.length === 0) {
+      notification.error('Select at least one order to hand over.');
+      return;
+    }
+
+    try {
+      await createManifest({
+        post_office_id: postOfficeId,
+        ...(selectedCreatePostOffice.hubId
+          ? { target_hub_id: selectedCreatePostOffice.hubId }
+          : {}),
+        order_codes: selectedOrderCodes,
+        ...(createNote.trim() ? { note: createNote.trim() } : {}),
+      }).unwrap();
+      notification.success('Handover manifest created successfully.');
+      setIsCreateOpen(false);
+      resetCreateForm();
+      void refetchPostOfficeManifests();
+    } catch (error) {
+      notification.error('Failed to create handover manifest.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleOpenDispatch = (manifest: HandoverManifest) => {
+    setDispatchManifest(manifest);
+    setDispatchRouteId(manifest.routeId ? String(manifest.routeId) : '');
+    setDispatchVehicleId(manifest.vehicleId ? String(manifest.vehicleId) : '');
+    setDispatchDepartureAt(
+      manifest.plannedDepartureAt
+        ? manifest.plannedDepartureAt.slice(0, 16)
+        : getDefaultDepartureTime()
+    );
+    setDispatchArrivalAt(
+      manifest.plannedArrivalAt
+        ? manifest.plannedArrivalAt.slice(0, 16)
+        : getDefaultArrivalTime()
+    );
+    setDispatchSealCode(manifest.sealCode ?? '');
+    setDispatchNote(manifest.note ?? '');
+  };
+
+  const handleScanOutOrder = async (orderCodeValue?: string) => {
+    if (!activeScanManifest?.id) {
+      return;
+    }
+    const orderCode = normalizeScanCode(orderCodeValue ?? scanOrderCode);
+    if (!orderCode) {
+      notification.error('Order code is required.');
+      return;
+    }
+
+    const matchedOrder = scanOrders.find(
+      (order) => order.orderCode === orderCode
+    );
+    if (scanOrders.length > 0 && !matchedOrder) {
+      notification.error('This order is not in the selected manifest.');
+      return;
+    }
+    if (matchedOrder?.scanOutTime) {
+      notification.error('This order has already been scanned out.');
+      return;
+    }
+
+    try {
+      await scanOutOrder({
+        manifestId: activeScanManifest.id,
+        body: { order_code: orderCode },
+      }).unwrap();
+      notification.success('Order scanned out successfully.');
+      setScanOrderCode('');
+    } catch (error) {
+      notification.error('Failed to scan order out.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDispatchManifest = async () => {
+    if (!dispatchManifest?.id) {
+      return;
+    }
+    if (!isReadyForDispatch(dispatchManifest)) {
+      notification.error('All orders must be scanned out before dispatch.');
+      return;
+    }
+    const routeId = Number(dispatchRouteId);
+    const vehicleId = Number(dispatchVehicleId);
+    if (!routeId) {
+      notification.error('Select a post office to hub route.');
+      return;
+    }
+    if (!vehicleId) {
+      notification.error('Select the route vehicle.');
+      return;
+    }
+    if (!dispatchDepartureAt || !dispatchArrivalAt) {
+      notification.error('Planned departure and arrival times are required.');
+      return;
+    }
+    if (new Date(dispatchArrivalAt) <= new Date(dispatchDepartureAt)) {
+      notification.error('Planned arrival must be after departure.');
+      return;
+    }
+
+    try {
+      await dispatchManifestRun({
+        manifestId: dispatchManifest.id,
+        body: {
+          vehicle_id: vehicleId,
+          route_id: routeId,
+          planned_departure_at: dispatchDepartureAt,
+          planned_arrival_at: dispatchArrivalAt,
+          ...(dispatchSealCode.trim()
+            ? { seal_code: dispatchSealCode.trim() }
+            : {}),
+          ...(dispatchNote.trim() ? { note: dispatchNote.trim() } : {}),
+        },
+      }).unwrap();
+      notification.success('Manifest dispatched to hub successfully.');
+      setDispatchManifest(null);
+      setDispatchRouteId('');
+      setDispatchVehicleId('');
+      setDispatchDepartureAt('');
+      setDispatchArrivalAt('');
+      setDispatchSealCode('');
+      setDispatchNote('');
+      void refetchPostOfficeManifests();
+    } catch (error) {
+      notification.error('Failed to dispatch manifest.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleCancelManifest = async (manifest: HandoverManifest) => {
+    if (!manifest.id) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Cancel manifest ${manifest.manifestCode || `#${manifest.id}`}?`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await cancelManifestRun(manifest.id).unwrap();
+      notification.success('Manifest cancelled successfully.');
+      void refetchPostOfficeManifests();
+    } catch (error) {
+      notification.error('Failed to cancel manifest.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleOpenReceive = (manifest: HandoverManifest) => {
+    setReceiveManifest(manifest);
+    setReceiveOrderCode('');
+    setReceivedOrderCodes([]);
+  };
+
+  const handleScanInboundOrder = (orderCodeValue?: string) => {
+    const orderCode = normalizeScanCode(orderCodeValue ?? receiveOrderCode);
+    if (!orderCode) {
+      notification.error('Order code is required.');
+      return;
+    }
+
+    const matchedOrder = receiveOrders.find(
+      (order) => order.orderCode === orderCode
+    );
+    if (receiveOrders.length > 0 && !matchedOrder) {
+      notification.error('This order is not in the selected manifest.');
+      return;
+    }
+    if (matchedOrder?.scanInTime || receivedOrderCodes.includes(orderCode)) {
+      notification.error('This order has already been scanned in.');
+      return;
+    }
+
+    setReceivedOrderCodes((current) => [...current, orderCode]);
+    setReceiveOrderCode('');
+  };
+
+  const handleConfirmInbound = async () => {
+    if (!activeReceiveManifest?.id) {
+      return;
+    }
+    if (receivedOrderCodes.length === 0) {
+      notification.error('Scan at least one order before confirming inbound.');
+      return;
+    }
+
+    try {
+      await confirmInbound({
+        manifestId: activeReceiveManifest.id,
+        orderCodes: receivedOrderCodes,
+      }).unwrap();
+      notification.success('Inbound receiving confirmed successfully.');
+      setReceiveManifest(null);
+      setReceiveOrderCode('');
+      setReceivedOrderCodes([]);
+      void refetchHubManifests();
+    } catch (error) {
+      notification.error('Failed to confirm inbound receiving.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
   if (!canAccess) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Access denied</CardTitle>
           <CardDescription>
-            Only TMS hub staff or TMS admin can manage post office to hub
-            transport.
+            Only post office managers, hub staff, or TMS admin can manage post
+            office to hub handover.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -319,79 +913,123 @@ export function HandoverManifestListPage() {
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>
-            Post Office to Hub Transport
+            Post Office to Hub Handover
           </h1>
           <p className='text-muted-foreground'>
-            Assign hub vehicles to move orders from post offices back to hubs.
+            Create manifests at post offices, scan orders out, dispatch them,
+            and receive them at hubs.
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
-          <Button variant='outline' onClick={() => void refetch()}>
+          <Button variant='outline' onClick={refetchActiveManifests}>
             <RefreshCw className='mr-2 h-4 w-4' />
             Refresh
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className='mr-2 h-4 w-4' />
-            New transport run
-          </Button>
+          {canHubMode ? (
+            <Button variant='outline' asChild>
+              <Link href='/first-mile/handover-manifests/driver'>
+                <MapPin className='mr-2 h-4 w-4' />
+                Driver handover
+              </Link>
+            </Button>
+          ) : null}
+          {effectiveMode === 'POST_OFFICE' ? (
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className='mr-2 h-4 w-4' />
+              New handover
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {canPostOfficeMode && canHubMode ? (
+        <Card>
+          <CardContent className='flex flex-col gap-3 pt-6 sm:flex-row'>
+            <Button
+              variant={effectiveMode === 'POST_OFFICE' ? 'default' : 'outline'}
+              onClick={() => setMode('POST_OFFICE')}
+            >
+              <Truck className='mr-2 h-4 w-4' />
+              Post office dispatch
+            </Button>
+            <Button
+              variant={effectiveMode === 'HUB' ? 'default' : 'outline'}
+              onClick={() => setMode('HUB')}
+            >
+              <PackageCheck className='mr-2 h-4 w-4' />
+              Hub receiving
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
-            <Truck className='h-5 w-5' />
-            Transport manifests
+            {effectiveMode === 'POST_OFFICE' ? (
+              <Truck className='h-5 w-5' />
+            ) : (
+              <PackageCheck className='h-5 w-5' />
+            )}
+            {effectiveMode === 'POST_OFFICE'
+              ? 'Post office manifests'
+              : 'Hub inbound manifests'}
           </CardTitle>
           <CardDescription>
-            Each manifest links orders, a vehicle, and optional collection route.
+            {effectiveMode === 'POST_OFFICE'
+              ? 'Build a handover manifest, scan every order out, then dispatch it to the mapped hub.'
+              : 'Receive dispatched manifests from post offices and confirm inbound orders at the hub.'}
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label htmlFor='filter-hub'>Target hub</Label>
-              <Select
-                value={filterHubId || 'ALL'}
-                onValueChange={(value) => {
-                  setFilterHubId(value === 'ALL' ? '' : value);
-                  setPage(0);
-                }}
-              >
-                <SelectTrigger id='filter-hub'>
-                  <SelectValue placeholder='All hubs' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='ALL'>All hubs</SelectItem>
-                  {hubOptions.map((hub) => (
-                    <SelectItem key={hub.id} value={String(hub.id)}>
-                      {hub.code} - {hub.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className='grid gap-4 md:grid-cols-3'>
+            {postOfficeOptions.length > 0 ? (
+              <div className='space-y-2'>
+                <Label htmlFor='filter-post-office'>Origin post office</Label>
+                <TmsCombobox
+                  id='filter-post-office'
+                  value={filterPostOfficeId || 'ALL'}
+                  onValueChange={(value) => {
+                    setFilterPostOfficeId(value === 'ALL' ? '' : value);
+                    setPage(0);
+                  }}
+                  options={postOfficeFilterOptions}
+                  placeholder='All post offices'
+                  emptyText='No post offices found'
+                />
+              </div>
+            ) : null}
+
+            {hubOptions.length > 0 ? (
+              <div className='space-y-2'>
+                <Label htmlFor='filter-hub'>Target hub</Label>
+                <TmsCombobox
+                  id='filter-hub'
+                  value={filterHubId || 'ALL'}
+                  onValueChange={(value) => {
+                    setFilterHubId(value === 'ALL' ? '' : value);
+                    setPage(0);
+                  }}
+                  options={hubFilterOptions}
+                  placeholder='All hubs'
+                  emptyText='No hubs found'
+                />
+              </div>
+            ) : null}
+
             <div className='space-y-2'>
               <Label htmlFor='filter-status'>Status</Label>
-              <Select
+              <TmsCombobox
+                id='filter-status'
                 value={filterStatus}
                 onValueChange={(value) => {
                   setFilterStatus(value as 'ALL' | HandoverManifestStatus);
                   setPage(0);
                 }}
-              >
-                <SelectTrigger id='filter-status'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='ALL'>All statuses</SelectItem>
-                  {MANIFEST_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={statusFilterOptions}
+                placeholder='All statuses'
+                emptyText='No statuses found'
+              />
             </div>
           </div>
 
@@ -402,10 +1040,13 @@ export function HandoverManifestListPage() {
                   <TableHead>Manifest</TableHead>
                   <TableHead>Post office</TableHead>
                   <TableHead>Hub</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Route</TableHead>
+                  <TableHead>Transport</TableHead>
+                  <TableHead>Planned</TableHead>
                   <TableHead>Orders</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Seal</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Updated</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -413,59 +1054,156 @@ export function HandoverManifestListPage() {
                 {manifests.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={11}
                       className='py-8 text-center text-muted-foreground'
                     >
                       {isFetching
-                        ? 'Loading transport manifests...'
-                        : 'No transport manifests found.'}
+                        ? 'Loading handover manifests...'
+                        : 'No handover manifests found.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  manifests.map((manifest) => (
-                    <TableRow key={manifest.id}>
-                      <TableCell className='font-medium'>
-                        {manifest.manifestCode || `#${manifest.id}`}
-                      </TableCell>
-                      <TableCell>{manifest.originPostOfficeCode || '--'}</TableCell>
-                      <TableCell>{resolveHubLabel(manifest.targetHubId)}</TableCell>
-                      <TableCell>
-                        {manifest.vehicleLicensePlate ||
-                          (manifest.vehicleId ? `#${manifest.vehicleId}` : '--')}
-                      </TableCell>
-                      <TableCell>{manifest.routeCode || '--'}</TableCell>
-                      <TableCell>{manifest.orders?.length ?? 0}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(manifest.status)}>
-                          {manifest.status || '--'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex flex-wrap gap-2'>
-                          {manifest.status === 'CREATED' ? (
+                  manifests.map((manifest) => {
+                    const totalOrders = getTotalOrders(manifest);
+                    const scannedOutOrders = getScannedOutOrders(manifest);
+                    const scannedInOrders = getScannedInOrders(manifest);
+
+                    return (
+                      <TableRow key={manifest.id}>
+                        <TableCell className='font-medium'>
+                          {manifest.manifestCode || `#${manifest.id}`}
+                        </TableCell>
+                        <TableCell>
+                          {resolvePostOfficeLabel(
+                            manifest.originPostOfficeId,
+                            manifest.originPostOfficeCode
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {resolveHubLabel(manifest.targetHubId)}
+                        </TableCell>
+                        <TableCell>
+                          <div className='space-y-1 text-xs'>
+                            <div>
+                              Route:{' '}
+                              {resolveRouteLabel(
+                                manifest.routeId,
+                                manifest.routeCode
+                              )}
+                            </div>
+                            <div>
+                              Vehicle:{' '}
+                              {resolveVehicleLabel(
+                                manifest.vehicleId,
+                                manifest.vehicleLicensePlate
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className='space-y-1 text-xs'>
+                            <div>
+                              Depart{' '}
+                              {formatDateTime(manifest.plannedDepartureAt)}
+                            </div>
+                            <div>
+                              Arrive {formatDateTime(manifest.plannedArrivalAt)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{totalOrders}</TableCell>
+                        <TableCell>
+                          {effectiveMode === 'POST_OFFICE'
+                            ? `${scannedOutOrders}/${totalOrders} out`
+                            : `${scannedInOrders}/${totalOrders} in`}
+                        </TableCell>
+                        <TableCell>{manifest.sealCode || '--'}</TableCell>
+                        <TableCell>
+                          {manifest.status ? (
+                            <Badge
+                              variant={getStatusBadgeVariant(manifest.status)}
+                            >
+                              {MANIFEST_STATUS_LABELS[manifest.status]}
+                            </Badge>
+                          ) : (
+                            '--'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatDateTime(manifest.updatedAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className='flex flex-wrap gap-2'>
                             <Button
                               size='sm'
                               variant='outline'
-                              disabled={isConfirmingOutbound}
-                              onClick={() => void handleConfirmOutbound(manifest)}
+                              onClick={() =>
+                                setDetailTarget({
+                                  manifest,
+                                  mode: effectiveMode,
+                                })
+                              }
                             >
-                              Driver check-in start
+                              <Eye className='mr-1 h-3.5 w-3.5' />
+                              View
                             </Button>
-                          ) : null}
-                          {manifest.status === 'CREATED' ||
-                          manifest.status === 'OUTBOUND_CONFIRMED' ? (
-                            <Button
-                              size='sm'
-                              disabled={isConfirmingInbound}
-                              onClick={() => void handleConfirmInbound(manifest)}
-                            >
-                              Driver check-in end
-                            </Button>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+
+                            {effectiveMode === 'POST_OFFICE' &&
+                            manifest.status === 'CREATED' ? (
+                              <>
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  onClick={() => {
+                                    setScanManifest(manifest);
+                                    setScanOrderCode('');
+                                  }}
+                                >
+                                  <ScanLine className='mr-1 h-3.5 w-3.5' />
+                                  Scan out
+                                </Button>
+                                <Button
+                                  size='sm'
+                                  disabled={
+                                    !isReadyForDispatch(manifest) ||
+                                    isDispatching
+                                  }
+                                  onClick={() => handleOpenDispatch(manifest)}
+                                >
+                                  <Send className='mr-1 h-3.5 w-3.5' />
+                                  Dispatch
+                                </Button>
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={isCancelling}
+                                  onClick={() =>
+                                    void handleCancelManifest(manifest)
+                                  }
+                                >
+                                  <XCircle className='mr-1 h-3.5 w-3.5' />
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : null}
+
+                            {effectiveMode === 'HUB' &&
+                            manifest.status === 'OUTBOUND_CONFIRMED' ? (
+                              <>
+                                <Button
+                                  size='sm'
+                                  onClick={() => handleOpenReceive(manifest)}
+                                >
+                                  <CheckCircle2 className='mr-1 h-3.5 w-3.5' />
+                                  Receive
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -490,8 +1228,7 @@ export function HandoverManifestListPage() {
                 variant='outline'
                 size='sm'
                 disabled={
-                  isFetching ||
-                  (manifestsData?.totalPages ?? 1) <= page + 1
+                  isFetching || (manifestsData?.totalPages ?? 1) <= page + 1
                 }
                 onClick={() => setPage((current) => current + 1)}
               >
@@ -502,110 +1239,81 @@ export function HandoverManifestListPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-2xl'>
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) {
+            resetCreateForm();
+          }
+        }}
+      >
+        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
           <DialogHeader>
-            <DialogTitle>New transport run</DialogTitle>
+            <DialogTitle>New post office handover</DialogTitle>
             <DialogDescription>
-              Select hub, post office, vehicle, and orders waiting at the post
-              office.
+              Select orders waiting at the post office. The target hub is read
+              from the post office mapping.
             </DialogDescription>
           </DialogHeader>
 
           <div className='space-y-4'>
             <div className='grid gap-4 sm:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='create-hub'>Target hub *</Label>
-                <Select value={createHubId} onValueChange={setCreateHubId}>
-                  <SelectTrigger id='create-hub'>
-                    <SelectValue placeholder='Select hub' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {hubOptions.map((hub) => (
-                      <SelectItem key={hub.id} value={String(hub.id)}>
-                        {hub.code} - {hub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor='create-post-office'>Origin post office *</Label>
+                <TmsCombobox
+                  id='create-post-office'
+                  value={createPostOfficeId}
+                  onValueChange={setCreatePostOfficeId}
+                  options={createPostOfficeOptions}
+                  placeholder='Select post office'
+                  emptyText='No post offices found'
+                />
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='create-po'>Origin post office *</Label>
-                <Select
-                  value={createPostOfficeCode}
-                  onValueChange={setCreatePostOfficeCode}
-                  disabled={!createHubId}
-                >
-                  <SelectTrigger id='create-po'>
-                    <SelectValue placeholder='Select post office' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {postOfficeOptions.map((mapping) => (
-                      <SelectItem
-                        key={mapping.postOfficeCode}
-                        value={mapping.postOfficeCode}
-                      >
-                        {mapping.postOfficeCode}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='create-vehicle'>Vehicle *</Label>
-                <Select
-                  value={createVehicleId}
-                  onValueChange={setCreateVehicleId}
-                  disabled={!createHubId}
-                >
-                  <SelectTrigger id='create-vehicle'>
-                    <SelectValue placeholder='Select vehicle' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicleOptions.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={String(vehicle.id)}>
-                        {vehicle.licensePlate} ({vehicle.vehicleType})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='create-route'>Route (optional)</Label>
-                <Select
-                  value={createRouteId || 'NONE'}
-                  onValueChange={(value) =>
-                    setCreateRouteId(value === 'NONE' ? '' : value)
-                  }
-                  disabled={!createPostOfficeCode}
-                >
-                  <SelectTrigger id='create-route'>
-                    <SelectValue placeholder='Optional collection route' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='NONE'>No route</SelectItem>
-                    {filteredRoutes.map((route) => (
-                      <SelectItem key={route.id} value={String(route.id)}>
-                        {route.routeCode} - {route.routeName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <DetailItem
+                label='Target hub'
+                value={
+                  selectedCreatePostOffice?.hubId
+                    ? resolveHubLabel(selectedCreatePostOffice.hubId)
+                    : 'No mapped hub'
+                }
+              />
             </div>
 
             <div className='space-y-2'>
-              <Label>Orders at post office *</Label>
-              {!createPostOfficeCode ? (
+              <Label htmlFor='create-note'>Note</Label>
+              <Textarea
+                id='create-note'
+                value={createNote}
+                onChange={(event) => setCreateNote(event.target.value)}
+                placeholder='Optional handover note'
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <div className='flex flex-wrap items-center justify-between gap-2'>
+                <Label>Orders ready at post office *</Label>
+                {readyOrderCodes.length > 0 ? (
+                  <label className='flex items-center gap-2 text-sm'>
+                    <Checkbox
+                      checked={allReadyOrdersSelected}
+                      onCheckedChange={(value) =>
+                        handleToggleAllReadyOrders(Boolean(value))
+                      }
+                    />
+                    Select all
+                  </label>
+                ) : null}
+              </div>
+
+              {!selectedCreatePostOffice ? (
                 <p className='text-sm text-muted-foreground'>
                   Select a post office to load ready orders.
                 </p>
               ) : isLoadingReadyOrders ? (
                 <p className='text-sm text-muted-foreground'>
-                  Loading orders at post office...
+                  Loading ready orders...
                 </p>
               ) : readyOrders.length === 0 ? (
                 <p className='text-sm text-muted-foreground'>
@@ -613,29 +1321,39 @@ export function HandoverManifestListPage() {
                   office.
                 </p>
               ) : (
-                <div className='max-h-56 space-y-2 overflow-y-auto rounded-md border p-3'>
+                <div className='max-h-72 space-y-2 overflow-y-auto rounded-md border p-3'>
                   {readyOrders.map((order) => {
-                    const orderCode = order.orderCode || '';
+                    const orderCode = order.orderCode;
                     if (!orderCode) {
                       return null;
                     }
                     const checked = selectedOrderCodes.includes(orderCode);
                     return (
-                      <label
+                      <div
                         key={order.id}
-                        className='flex cursor-pointer items-center gap-2 text-sm'
+                        className='flex items-start gap-3 rounded-md border p-3'
                       >
-                        <Input
-                          type='checkbox'
-                          className='h-4 w-4'
+                        <Checkbox
                           checked={checked}
-                          onChange={() => handleToggleOrder(orderCode)}
+                          onCheckedChange={(value) =>
+                            handleToggleOrder(orderCode, Boolean(value))
+                          }
+                          aria-label={`Select order ${orderCode}`}
                         />
-                        <span className='font-medium'>{orderCode}</span>
-                        <span className='text-muted-foreground'>
-                          {order.status}
-                        </span>
-                      </label>
+                        <div className='min-w-0 flex-1 space-y-1 text-sm'>
+                          <div className='flex flex-wrap items-center gap-2'>
+                            <span className='font-medium'>{orderCode}</span>
+                            <Badge variant='outline'>{order.status}</Badge>
+                          </div>
+                          <p className='text-xs text-muted-foreground'>
+                            Customer order: {order.customerOrderCode || '--'}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            Receiver: {order.receiverName || '--'} (
+                            {order.receiverPhone || '--'})
+                          </p>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -647,12 +1365,478 @@ export function HandoverManifestListPage() {
             <Button variant='outline' onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={isCreating} onClick={() => void handleCreateManifest()}>
-              {isCreating ? 'Creating...' : 'Create transport run'}
+            <Button
+              disabled={isCreating}
+              onClick={() => void handleCreateManifest()}
+            >
+              {isCreating ? 'Creating...' : 'Create manifest'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(scanManifest)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScanManifest(null);
+            setScanOrderCode('');
+          }
+        }}
+      >
+        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
+          <DialogHeader>
+            <DialogTitle>Scan orders out</DialogTitle>
+            <DialogDescription>
+              Scan each order before dispatching the manifest to the hub.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='grid gap-3 sm:grid-cols-3'>
+              <DetailItem
+                label='Manifest'
+                value={activeScanManifest?.manifestCode || '--'}
+              />
+              <DetailItem
+                label='Scanned out'
+                value={`${getScannedOutOrders(activeScanManifest)}/${getTotalOrders(
+                  activeScanManifest
+                )}`}
+              />
+              <DetailItem
+                label='Status'
+                value={activeScanManifest?.status || '--'}
+              />
+            </div>
+
+            <div className='flex flex-col gap-2 sm:flex-row'>
+              <Input
+                value={scanOrderCode}
+                onChange={(event) => setScanOrderCode(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleScanOutOrder();
+                  }
+                }}
+                placeholder='Scan or enter order code'
+              />
+              <Button
+                disabled={isScanningOut}
+                onClick={() => void handleScanOutOrder()}
+              >
+                <ScanLine className='mr-2 h-4 w-4' />
+                Scan out
+              </Button>
+            </div>
+
+            {isFetchingScanManifest ? (
+              <p className='text-sm text-muted-foreground'>
+                Loading manifest orders...
+              </p>
+            ) : (
+              <ManifestOrdersTable
+                actionMode='SCAN_OUT'
+                isActionLoading={isScanningOut}
+                orders={scanOrders}
+                onScan={(orderCode) => void handleScanOutOrder(orderCode)}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setScanManifest(null)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(dispatchManifest)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDispatchManifest(null);
+            setDispatchRouteId('');
+            setDispatchVehicleId('');
+            setDispatchDepartureAt('');
+            setDispatchArrivalAt('');
+            setDispatchSealCode('');
+            setDispatchNote('');
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Dispatch manifest to hub</DialogTitle>
+            <DialogDescription>
+              Dispatch is allowed only after all orders have been scanned out.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <DetailItem
+                label='Manifest'
+                value={dispatchManifest?.manifestCode || '--'}
+              />
+              <DetailItem
+                label='Scan progress'
+                value={`${getScannedOutOrders(dispatchManifest)}/${getTotalOrders(
+                  dispatchManifest
+                )}`}
+              />
+            </div>
+
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-route'>Route *</Label>
+                <TmsCombobox
+                  id='dispatch-route'
+                  value={dispatchRouteId}
+                  onValueChange={setDispatchRouteId}
+                  options={dispatchRouteOptions}
+                  placeholder={
+                    isLoadingDispatchRoutes
+                      ? 'Loading routes...'
+                      : 'Select route'
+                  }
+                  emptyText='No matching hub to post office routes'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-vehicle'>Vehicle *</Label>
+                <TmsCombobox
+                  id='dispatch-vehicle'
+                  value={dispatchVehicleId}
+                  onValueChange={setDispatchVehicleId}
+                  options={dispatchVehicleOptions}
+                  placeholder={
+                    isLoadingDispatchVehicles
+                      ? 'Loading vehicles...'
+                      : 'Select vehicle'
+                  }
+                  emptyText='No active vehicles found'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-departure'>Planned departure *</Label>
+                <Input
+                  id='dispatch-departure'
+                  type='datetime-local'
+                  value={dispatchDepartureAt}
+                  onChange={(event) =>
+                    setDispatchDepartureAt(event.target.value)
+                  }
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='dispatch-arrival'>Planned arrival *</Label>
+                <Input
+                  id='dispatch-arrival'
+                  type='datetime-local'
+                  value={dispatchArrivalAt}
+                  onChange={(event) => setDispatchArrivalAt(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='dispatch-seal'>Seal code</Label>
+              <Input
+                id='dispatch-seal'
+                value={dispatchSealCode}
+                onChange={(event) => setDispatchSealCode(event.target.value)}
+                placeholder='Optional seal code'
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='dispatch-note'>Dispatch note</Label>
+              <Textarea
+                id='dispatch-note'
+                value={dispatchNote}
+                onChange={(event) => setDispatchNote(event.target.value)}
+                placeholder='Optional dispatch note'
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setDispatchManifest(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                !dispatchManifest ||
+                !isReadyForDispatch(dispatchManifest) ||
+                !dispatchRouteId ||
+                !dispatchVehicleId ||
+                !dispatchDepartureAt ||
+                !dispatchArrivalAt ||
+                isDispatching
+              }
+              onClick={() => void handleDispatchManifest()}
+            >
+              {isDispatching ? 'Dispatching...' : 'Dispatch to hub'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(receiveManifest)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReceiveManifest(null);
+            setReceiveOrderCode('');
+            setReceivedOrderCodes([]);
+          }
+        }}
+      >
+        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
+          <DialogHeader>
+            <DialogTitle>Receive manifest at hub</DialogTitle>
+            <DialogDescription>
+              Scan received order codes, then confirm inbound for the scanned
+              orders.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='grid gap-3 sm:grid-cols-4'>
+              <DetailItem
+                label='Manifest'
+                value={activeReceiveManifest?.manifestCode || '--'}
+              />
+              <DetailItem
+                label='Post office'
+                value={activeReceiveManifest?.originPostOfficeCode || '--'}
+              />
+              <DetailItem
+                label='Seal'
+                value={activeReceiveManifest?.sealCode || '--'}
+              />
+              <DetailItem
+                label='Scanned in'
+                value={`${receivedOrderCodes.length}/${getTotalOrders(
+                  activeReceiveManifest
+                )}`}
+              />
+            </div>
+
+            <div className='flex flex-col gap-2 sm:flex-row'>
+              <Input
+                value={receiveOrderCode}
+                onChange={(event) => setReceiveOrderCode(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleScanInboundOrder();
+                  }
+                }}
+                placeholder='Scan or enter received order code'
+              />
+              <Button
+                variant='outline'
+                onClick={() => handleScanInboundOrder()}
+              >
+                <ScanLine className='mr-2 h-4 w-4' />
+                Scan received
+              </Button>
+            </div>
+
+            {isFetchingReceiveManifest ? (
+              <p className='text-sm text-muted-foreground'>
+                Loading manifest orders...
+              </p>
+            ) : (
+              <ManifestOrdersTable
+                actionMode='RECEIVE'
+                isActionLoading={isConfirmingInbound}
+                orders={receiveOrders}
+                scannedOrderCodes={receivedOrderCodes}
+                onScan={handleScanInboundOrder}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setReceiveManifest(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={receivedOrderCodes.length === 0 || isConfirmingInbound}
+              onClick={() => void handleConfirmInbound()}
+            >
+              {isConfirmingInbound ? 'Confirming...' : 'Confirm inbound'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(detailTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailTarget(null);
+          }
+        }}
+      >
+        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
+          <DialogHeader>
+            <DialogTitle>Handover manifest detail</DialogTitle>
+            <DialogDescription>
+              Manifest summary, timestamps, and order scan history.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailManifest ? (
+            <div className='space-y-4'>
+              <div className='grid gap-3 sm:grid-cols-3'>
+                <DetailItem
+                  label='Manifest'
+                  value={detailManifest.manifestCode || `#${detailManifest.id}`}
+                />
+                <DetailItem
+                  label='Status'
+                  value={
+                    detailManifest.status ? (
+                      <Badge
+                        variant={getStatusBadgeVariant(detailManifest.status)}
+                      >
+                        {MANIFEST_STATUS_LABELS[detailManifest.status]}
+                      </Badge>
+                    ) : (
+                      '--'
+                    )
+                  }
+                />
+                <DetailItem
+                  label='Target hub'
+                  value={resolveHubLabel(detailManifest.targetHubId)}
+                />
+                <DetailItem
+                  label='Route'
+                  value={resolveRouteLabel(
+                    detailManifest.routeId,
+                    detailManifest.routeCode
+                  )}
+                />
+                <DetailItem
+                  label='Vehicle'
+                  value={resolveVehicleLabel(
+                    detailManifest.vehicleId,
+                    detailManifest.vehicleLicensePlate
+                  )}
+                />
+                <DetailItem
+                  label='Origin post office'
+                  value={resolvePostOfficeLabel(
+                    detailManifest.originPostOfficeId,
+                    detailManifest.originPostOfficeCode
+                  )}
+                />
+                <DetailItem
+                  label='Scan out'
+                  value={`${getScannedOutOrders(detailManifest)}/${getTotalOrders(
+                    detailManifest
+                  )}`}
+                />
+                <DetailItem
+                  label='Scan in'
+                  value={`${getScannedInOrders(detailManifest)}/${getTotalOrders(
+                    detailManifest
+                  )}`}
+                />
+                <DetailItem
+                  label='Seal'
+                  value={detailManifest.sealCode || '--'}
+                />
+                <DetailItem
+                  label='Dispatched'
+                  value={formatDateTime(detailManifest.dispatchedAt)}
+                />
+                <DetailItem
+                  label='Planned departure'
+                  value={formatDateTime(detailManifest.plannedDepartureAt)}
+                />
+                <DetailItem
+                  label='Planned arrival'
+                  value={formatDateTime(detailManifest.plannedArrivalAt)}
+                />
+                <DetailItem
+                  label='Inbound confirmed'
+                  value={formatDateTime(detailManifest.inboundConfirmedAt)}
+                />
+                <DetailItem
+                  label='Departure check-in'
+                  value={
+                    detailManifest.driverStartCheckinAt
+                      ? `${formatDateTime(
+                          detailManifest.driverStartCheckinAt
+                        )} (${Math.round(
+                          detailManifest.driverStartDistanceM ?? 0
+                        )}m)`
+                      : '--'
+                  }
+                />
+                <DetailItem
+                  label='Arrival check-in'
+                  value={
+                    detailManifest.driverEndCheckinAt
+                      ? `${formatDateTime(
+                          detailManifest.driverEndCheckinAt
+                        )} (${Math.round(
+                          detailManifest.driverEndDistanceM ?? 0
+                        )}m)`
+                      : '--'
+                  }
+                />
+              </div>
+
+              {detailManifest.note ? (
+                <div className='space-y-1 rounded-md border p-3'>
+                  <p className='text-xs font-medium uppercase text-muted-foreground'>
+                    Note
+                  </p>
+                  <p className='text-sm'>{detailManifest.note}</p>
+                </div>
+              ) : null}
+
+              {isFetchingDetail ? (
+                <p className='text-sm text-muted-foreground'>
+                  Loading detail...
+                </p>
+              ) : (
+                <ManifestOrdersTable orders={detailManifest.orders ?? []} />
+              )}
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setDetailTarget(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+export function HandoverManifestListPage() {
+  const roles = useAppSelector(
+    (state) => state.account.user.profile?.roles ?? []
+  );
+
+  if (isHandoverDriverOnly(roles)) {
+    return <DriverHandoverPage />;
+  }
+
+  return <HandoverManifestManagementPage />;
 }

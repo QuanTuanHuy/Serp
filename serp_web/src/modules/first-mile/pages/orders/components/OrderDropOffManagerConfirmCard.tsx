@@ -13,13 +13,9 @@ import {
   CardTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type { PostOffice } from '../../../types';
 
 interface OrderDropOffManagerConfirmCardProps {
@@ -45,6 +41,11 @@ export const OrderDropOffManagerConfirmCard: React.FC<
   onPostOfficeIdInputChange,
   onSubmit,
 }) => {
+  const postOfficeOptions = postOffices.map((postOffice) => ({
+    value: String(postOffice.id),
+    label: `${postOffice.code} - ${postOffice.name}`,
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -70,22 +71,16 @@ export const OrderDropOffManagerConfirmCard: React.FC<
 
           <div className='space-y-2'>
             <Label htmlFor='dropOffPostOfficeId'>Post office *</Label>
-            <Select
-              value={postOfficeIdInput || undefined}
+            <TmsCombobox
+              id='dropOffPostOfficeId'
+              value={postOfficeIdInput}
               onValueChange={onPostOfficeIdInputChange}
+              options={postOfficeOptions}
+              placeholder='Select post office'
+              emptyText='No post offices found'
               disabled={isLoadingPostOffices || isSubmitting}
-            >
-              <SelectTrigger id='dropOffPostOfficeId'>
-                <SelectValue placeholder='Select post office' />
-              </SelectTrigger>
-              <SelectContent>
-                {postOffices.map((postOffice) => (
-                  <SelectItem key={postOffice.id} value={String(postOffice.id)}>
-                    {postOffice.code} - {postOffice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              loading={isLoadingPostOffices}
+            />
           </div>
         </div>
 

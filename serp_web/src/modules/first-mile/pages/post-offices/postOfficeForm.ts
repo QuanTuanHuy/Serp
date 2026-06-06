@@ -26,6 +26,8 @@ export interface PostOfficeFormState {
   service_radius_m: string;
   daily_capacity: string;
   current_load: string;
+  delivery_capacity: string;
+  current_delivery_load: string;
   priority: string;
   latitude: string;
   longitude: string;
@@ -61,6 +63,8 @@ export const DEFAULT_POST_OFFICE_FORM: PostOfficeFormState = {
   service_radius_m: '1',
   daily_capacity: '0',
   current_load: '0',
+  delivery_capacity: '0',
+  current_delivery_load: '0',
   priority: '0',
   latitude: '',
   longitude: '',
@@ -103,6 +107,8 @@ export const mapPostOfficeToFormState = (
     service_radius_m: String(postOffice.serviceRadiusM ?? 1),
     daily_capacity: String(postOffice.dailyCapacity ?? 0),
     current_load: String(postOffice.currentLoad ?? 0),
+    delivery_capacity: String(postOffice.deliveryCapacity ?? 0),
+    current_delivery_load: String(postOffice.currentDeliveryLoad ?? 0),
     priority: String(postOffice.priority ?? 0),
     latitude:
       postOffice.latitude === undefined || postOffice.latitude === null
@@ -146,12 +152,22 @@ export const validatePostOfficeForm = (
 
   const dailyCapacity = Number(values.daily_capacity);
   if (!Number.isInteger(dailyCapacity) || dailyCapacity < 0) {
-    return 'Daily capacity must be an integer greater than or equal to 0.';
+    return 'Pickup order capacity must be an integer greater than or equal to 0.';
   }
 
   const currentLoad = Number(values.current_load);
   if (!Number.isInteger(currentLoad) || currentLoad < 0) {
-    return 'Current load must be an integer greater than or equal to 0.';
+    return 'Current pickup load must be an integer greater than or equal to 0.';
+  }
+
+  const deliveryCapacity = Number(values.delivery_capacity);
+  if (!Number.isInteger(deliveryCapacity) || deliveryCapacity < 0) {
+    return 'Delivery capacity must be an integer greater than or equal to 0.';
+  }
+
+  const currentDeliveryLoad = Number(values.current_delivery_load);
+  if (!Number.isInteger(currentDeliveryLoad) || currentDeliveryLoad < 0) {
+    return 'Current delivery load must be an integer greater than or equal to 0.';
   }
 
   const priority = Number(values.priority);
@@ -188,6 +204,8 @@ export const buildCreatePostOfficeRequest = (
     service_radius_m: Number(values.service_radius_m),
     daily_capacity: Number(values.daily_capacity),
     current_load: Number(values.current_load),
+    delivery_capacity: Number(values.delivery_capacity),
+    current_delivery_load: Number(values.current_delivery_load),
     priority: Number(values.priority),
     status: values.status,
     ...(values.phone_number.trim()

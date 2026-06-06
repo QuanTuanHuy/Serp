@@ -324,4 +324,13 @@ public class SchoolPickupPointWindowServiceImpl extends AbstractBaseService<Scho
         }
         return windowRepository.findPointIdsWithWindow(schoolId, pointIds, scheduleId, direction, tenantId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SchoolPickupPointWindowEntity> getWindowsForLinks(List<Long> linkIds, Long tenantId) {
+        if (linkIds == null || linkIds.isEmpty()) {
+            return List.of();
+        }
+        return windowRepository.findBySchoolPickupPointIdInAndTenantIdAndIsDeletedFalse(linkIds, tenantId);
+    }
 }

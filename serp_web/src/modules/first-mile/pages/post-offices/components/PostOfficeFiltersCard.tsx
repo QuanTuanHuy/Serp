@@ -4,16 +4,9 @@
  */
 
 import React from 'react';
-import {
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui';
 import { Search } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
+import { Input, Label } from '@/shared/components/ui';
 import {
   TmsListFilterPanel,
   type TmsFilterMode,
@@ -63,6 +56,49 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
   onClearFilters,
   onRefresh,
 }) => {
+  const statusOptions = [
+    { value: 'ALL', label: 'All statuses' },
+    ...POST_OFFICE_STATUS_OPTIONS,
+  ];
+  const provinceOptions = [
+    { value: 'ALL', label: 'All provinces' },
+    ...provinceSelectOptions.flatMap((province) =>
+      province.provinceCode
+        ? [
+            {
+              value: province.provinceCode,
+              label: `${province.name} (${province.provinceCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const wardOptions = [
+    { value: 'ALL', label: 'All wards' },
+    ...filterWardOptions.flatMap((ward) =>
+      ward.wardCode
+        ? [
+            {
+              value: ward.wardCode,
+              label: `${ward.name} (${ward.wardCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const hasLocationOptions = [
+    { value: 'ALL', label: 'All records' },
+    { value: 'YES', label: 'Has location' },
+    { value: 'NO', label: 'No location' },
+  ];
+  const hubFilterOptions = [
+    { value: 'ALL', label: 'Any hub' },
+    ...hubOptions.map((hub) => ({
+      value: String(hub.id),
+      label: `${hub.code} - ${hub.name}`,
+    })),
+  ];
+
   return (
     <TmsListFilterPanel
       title='Search & filters'
@@ -94,7 +130,8 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-status'>Status</Label>
-            <Select
+            <TmsCombobox
+              id='post-office-filter-status'
               value={filterFormValues.status}
               onValueChange={(value) =>
                 onFilterFieldChange(
@@ -102,97 +139,50 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
                   value as PostOfficeFilterFormState['status']
                 )
               }
-            >
-              <SelectTrigger id='post-office-filter-status' className='w-full'>
-                <SelectValue placeholder='All statuses' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All statuses</SelectItem>
-                {POST_OFFICE_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={statusOptions}
+              placeholder='All statuses'
+              emptyText='No statuses found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-province'>Province</Label>
-            <Select
+            <TmsCombobox
+              id='post-office-filter-province'
               value={selectedFilterProvinceCode || 'ALL'}
               onValueChange={(value) => {
                 const nextProvinceCode = value === 'ALL' ? '' : value;
                 onFilterFieldChange('provinceCode', nextProvinceCode);
                 onFilterFieldChange('wardCode', '');
               }}
-            >
-              <SelectTrigger id='post-office-filter-province' className='w-full'>
-                <SelectValue placeholder='All provinces' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All provinces</SelectItem>
-                {provinceSelectOptions.map((province) => {
-                  if (!province.provinceCode) {
-                    return null;
-                  }
-
-                  return (
-                    <SelectItem
-                      key={province.provinceCode}
-                      value={province.provinceCode}
-                    >
-                      {province.name} ({province.provinceCode})
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+              options={provinceOptions}
+              placeholder='All provinces'
+              emptyText='No provinces found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-ward'>Ward</Label>
-            <Select
+            <TmsCombobox
+              id='post-office-filter-ward'
               value={selectedFilterWardCode || 'ALL'}
               onValueChange={(value) =>
                 onFilterFieldChange('wardCode', value === 'ALL' ? '' : value)
               }
+              options={wardOptions}
+              placeholder={
+                selectedFilterProvinceCode
+                  ? 'All wards'
+                  : 'Select province first'
+              }
+              emptyText={
+                isFetchingWardsForFilter
+                  ? 'Loading wards...'
+                  : 'No wards available'
+              }
               disabled={!selectedFilterProvinceCode}
-            >
-              <SelectTrigger id='post-office-filter-ward' className='w-full'>
-                <SelectValue
-                  placeholder={
-                    selectedFilterProvinceCode
-                      ? 'All wards'
-                      : 'Select province first'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All wards</SelectItem>
-                {selectedFilterProvinceCode && isFetchingWardsForFilter ? (
-                  <SelectItem value='__loading__' disabled>
-                    Loading wards...
-                  </SelectItem>
-                ) : filterWardOptions.length > 0 ? (
-                  filterWardOptions.map((ward) => {
-                    if (!ward.wardCode) {
-                      return null;
-                    }
-
-                    return (
-                      <SelectItem key={ward.wardCode} value={ward.wardCode}>
-                        {ward.name} ({ward.wardCode})
-                      </SelectItem>
-                    );
-                  })
-                ) : (
-                  <SelectItem value='__empty__' disabled>
-                    No wards available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+              loading={isFetchingWardsForFilter}
+            />
           </div>
         </>
       }
@@ -222,47 +212,33 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='post-office-filter-has-location'>Has location</Label>
-            <Select
+            <Label htmlFor='post-office-filter-has-location'>
+              Has location
+            </Label>
+            <TmsCombobox
+              id='post-office-filter-has-location'
               value={filterFormValues.hasLocation}
               onValueChange={(value) =>
                 onFilterFieldChange('hasLocation', value as HasLocationFilter)
               }
-            >
-              <SelectTrigger
-                id='post-office-filter-has-location'
-                className='w-full'
-              >
-                <SelectValue placeholder='All records' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>All records</SelectItem>
-                <SelectItem value='YES'>Has location</SelectItem>
-                <SelectItem value='NO'>No location</SelectItem>
-              </SelectContent>
-            </Select>
+              options={hasLocationOptions}
+              placeholder='All records'
+              emptyText='No options found'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-hub-id'>Hub ID</Label>
-            <Select
+            <TmsCombobox
+              id='post-office-filter-hub-id'
               value={filterFormValues.hubId || 'ALL'}
               onValueChange={(value) =>
                 onFilterFieldChange('hubId', value === 'ALL' ? '' : value)
               }
-            >
-              <SelectTrigger id='post-office-filter-hub-id' className='w-full'>
-                <SelectValue placeholder='Any hub' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>Any hub</SelectItem>
-                {hubOptions.map((hub) => (
-                  <SelectItem key={hub.id} value={String(hub.id)}>
-                    {hub.code} - {hub.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={hubFilterOptions}
+              placeholder='Any hub'
+              emptyText='No hubs found'
+            />
           </div>
 
           <div className='space-y-2'>
@@ -299,7 +275,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-min-daily-capacity'>
-              Min daily capacity
+              Min pickup order capacity
             </Label>
             <Input
               id='post-office-filter-min-daily-capacity'
@@ -315,7 +291,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-max-daily-capacity'>
-              Max daily capacity
+              Max pickup order capacity
             </Label>
             <Input
               id='post-office-filter-max-daily-capacity'
@@ -331,7 +307,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-min-current-load'>
-              Min current load
+              Min current pickup load
             </Label>
             <Input
               id='post-office-filter-min-current-load'
@@ -347,7 +323,7 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='post-office-filter-max-current-load'>
-              Max current load
+              Max current pickup load
             </Label>
             <Input
               id='post-office-filter-max-current-load'
@@ -362,7 +338,79 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='post-office-filter-min-priority'>Min priority</Label>
+            <Label htmlFor='post-office-filter-min-delivery-capacity'>
+              Min delivery capacity
+            </Label>
+            <Input
+              id='post-office-filter-min-delivery-capacity'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.minDeliveryCapacity}
+              onChange={(event) =>
+                onFilterFieldChange('minDeliveryCapacity', event.target.value)
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-max-delivery-capacity'>
+              Max delivery capacity
+            </Label>
+            <Input
+              id='post-office-filter-max-delivery-capacity'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.maxDeliveryCapacity}
+              onChange={(event) =>
+                onFilterFieldChange('maxDeliveryCapacity', event.target.value)
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-min-current-delivery-load'>
+              Min current delivery load
+            </Label>
+            <Input
+              id='post-office-filter-min-current-delivery-load'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.minCurrentDeliveryLoad}
+              onChange={(event) =>
+                onFilterFieldChange(
+                  'minCurrentDeliveryLoad',
+                  event.target.value
+                )
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-max-current-delivery-load'>
+              Max current delivery load
+            </Label>
+            <Input
+              id='post-office-filter-max-current-delivery-load'
+              type='number'
+              min={0}
+              step={1}
+              value={filterFormValues.maxCurrentDeliveryLoad}
+              onChange={(event) =>
+                onFilterFieldChange(
+                  'maxCurrentDeliveryLoad',
+                  event.target.value
+                )
+              }
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='post-office-filter-min-priority'>
+              Min priority
+            </Label>
             <Input
               id='post-office-filter-min-priority'
               type='number'
@@ -376,7 +424,9 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='post-office-filter-max-priority'>Max priority</Label>
+            <Label htmlFor='post-office-filter-max-priority'>
+              Max priority
+            </Label>
             <Input
               id='post-office-filter-max-priority'
               type='number'

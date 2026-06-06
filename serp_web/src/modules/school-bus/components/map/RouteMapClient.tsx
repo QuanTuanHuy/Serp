@@ -56,6 +56,7 @@ interface RouteMapClientProps {
   assignment?: SchoolBusRouteAssignment | null;
   routePath?: SchoolBusRoutePath | null;
   className?: string;
+  fitKey?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ export default function RouteMapClient({
   assignment,
   routePath,
   className,
+  fitKey,
 }: RouteMapClientProps) {
   const { isExpanded, expandKey } = useMapExpand();
 
@@ -252,7 +254,7 @@ export default function RouteMapClient({
 
   const shellContent = (
     <>
-      <FitBounds positions={allPositions} />
+      <FitBounds positions={allPositions} fitKey={fitKey} />
       <MapInvalidator trigger={isExpanded ? 1 : expandKey} />
       {markerContent}
     </>

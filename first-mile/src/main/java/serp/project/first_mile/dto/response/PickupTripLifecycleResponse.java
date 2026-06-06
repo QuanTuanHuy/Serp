@@ -15,6 +15,8 @@ public record PickupTripLifecycleResponse(
         Integer checkedInOrders,
         Integer pendingCheckinOrders,
         Integer returnedToPostOfficeOrders,
+        Integer pendingPostOfficeInboundOrders,
+        Integer receivedAtPostOfficeOrders,
         Boolean allOrdersCheckedIn
 ) {
 }

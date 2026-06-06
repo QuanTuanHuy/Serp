@@ -36,6 +36,33 @@ export interface SchoolBusBaseRecord {
   updatedBy?: string;
 }
 
+export interface SchoolScheduleSummary {
+  id: number;
+  code?: string | null;
+  name?: string | null;
+  shift?: string | null;
+  arrivalDeadline?: string | null;
+  departureTime?: string | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  days?: string[];
+}
+
+export interface LinkedPickupPointSummary {
+  id: number;
+  linkId?: number;
+  code?: string | null;
+  name?: string | null;
+  address?: string | null;
+  usageType?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  hasCoordinates?: boolean;
+  isDefault?: boolean;
+}
+
 export interface SchoolBusSchool extends SchoolBusBaseRecord {
   name: string;
   code?: string | null;
@@ -44,6 +71,14 @@ export interface SchoolBusSchool extends SchoolBusBaseRecord {
   contactEmail?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  schedules?: SchoolScheduleSummary[];
+  pickupPoints?: LinkedPickupPointSummary[];
+  scheduleCount?: number;
+  pickupPointCount?: number;
+  activeScheduleCount?: number;
+  pickupWindowCount?: number;
+  hasCoordinates?: boolean;
+  anyLinkedPointMissingCoordinates?: boolean;
 }
 
 export interface SchoolBusParent extends SchoolBusBaseRecord {
@@ -150,6 +185,7 @@ export interface SchoolBusDepot extends SchoolBusBaseRecord {
 export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   requestId: number;
   studentId: number;
+  studentCode?: string | null;
   studentName: string;
   pickupPointId?: number | null;
   pickupPointName?: string | null;
@@ -162,7 +198,11 @@ export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   dropoffPointLatitude?: number | null;
   dropoffPointLongitude?: number | null;
   schoolScheduleId?: number | null;
+  schoolScheduleCode?: string | null;
   schoolScheduleName?: string | null;
+  shiftType?: string | null;
+  arrivalDeadline?: string | null;
+  departureTime?: string | null;
   tripOption?: string | null;
   monday?: boolean;
   tuesday?: boolean;
@@ -401,12 +441,17 @@ export interface SchoolBusSubscription extends SchoolBusBaseRecord {
   subscriptionCode: string;
   studentId: number;
   studentName: string;
+  studentCode?: string | null;
+  parentName?: string | null;
   schoolId: number;
   schoolName: string;
+  schoolCode?: string | null;
   pickupPointId?: number | null;
   pickupPointName?: string | null;
+  pickupPointCode?: string | null;
   dropoffPointId?: number | null;
   dropoffPointName?: string | null;
+  dropoffPointCode?: string | null;
   tripOption: 'MORNING' | 'AFTERNOON' | 'ROUND_TRIP';
   status: string;
   monday: boolean;
@@ -419,8 +464,13 @@ export interface SchoolBusSubscription extends SchoolBusBaseRecord {
   effectiveFrom: string;
   effectiveTo?: string | null;
   sourceRequestId?: number | null;
+  sourceRequestCode?: string | null;
   schoolScheduleId?: number | null;
   schoolScheduleName?: string | null;
+  scheduleCode?: string | null;
+  shiftType?: string | null;
+  arrivalDeadline?: string | null;
+  departureTime?: string | null;
 }
 
 export interface SchoolBusTripStopLog extends SchoolBusBaseRecord {
@@ -846,6 +896,7 @@ export interface SchoolBusSchoolPickupPoint extends SchoolBusBaseRecord {
   pickupPointLongitude?: number | null;
   pickupPointUsageType?: string | null;
   isDefault?: boolean;
+  windows?: SchoolBusSchoolPickupPointWindow[];
 }
 
 export interface SchoolBusSchoolPickupPointUpsertRequest {
