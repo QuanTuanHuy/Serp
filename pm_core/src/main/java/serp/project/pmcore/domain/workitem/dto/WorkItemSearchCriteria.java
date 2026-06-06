@@ -56,6 +56,7 @@ public class WorkItemSearchCriteria extends PageCriteria {
 
     private Boolean isOverdue;
     private Boolean hasTimeLogged;
+    private Boolean hasActivePlan;
 
     private SortSpec sort;
 
