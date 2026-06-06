@@ -328,6 +328,8 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   completedAt?: string | null;
   issueCount?: number | null;
   blockingIssueCount?: number | null;
+  planningSessionId?: number | null;
+  planningMethod?: 'MANUAL' | 'GREEDY' | null;
 }
 
 export interface SchoolBusRoutePathCoordinate {
