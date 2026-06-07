@@ -3,13 +3,13 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.domain.optimization.port;
+package serp.project.pmcore.domain.optimization.service;
 
 import serp.project.pmcore.domain.optimization.model.CalendarCapacityResult;
 
 import java.util.List;
 
-public interface IResourceCalendarPort {
+public interface IResourceCalendarService {
     CalendarCapacityResult resolveWorkingCapacity(Long tenantId,
                                                   List<Long> userIds,
                                                   Long planningStart,

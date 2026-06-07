@@ -31,10 +31,10 @@ import serp.project.pmcore.domain.optimization.model.OptimizationSkillRequiremen
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
 import serp.project.pmcore.domain.optimization.model.WorkItemComponentLink;
-import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemComponentReadPort;
 import serp.project.pmcore.domain.optimization.port.IWorkItemPlanPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.optimization.service.IResourceCapacityService;
 import serp.project.pmcore.domain.project.entity.ProjectComponentEntity;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.IProjectComponentPort;
@@ -77,7 +77,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     private final IProjectComponentPort projectComponentPort;
     private final IWorkItemComponentReadPort workItemComponentReadPort;
     private final IProjectMemberService projectMemberService;
-    private final IResourceCapacityPort resourceCapacityPort;
+    private final IResourceCapacityService resourceCapacityService;
     private final IWorkItemSkillReadPort workItemSkillReadPort;
     private final IUserSkillReadPort userSkillReadPort;
 
@@ -123,7 +123,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 .collect(Collectors.toCollection(LinkedHashSet::new))
                 .stream()
                 .toList();
-        var capacityResolution = resourceCapacityPort.resolveCapacity(input.tenantId(), input.projectId(), candidateIds,
+        var capacityResolution = resourceCapacityService.resolveCapacity(input.tenantId(), input.projectId(), candidateIds,
                 input.planningStart(), input.planningEnd(), input.selectedWorkItemIds());
         List<ResourceCapacitySlot> capacitySlots = capacityResolution.slots();
         warnings.addAll(capacityResolution.warnings());

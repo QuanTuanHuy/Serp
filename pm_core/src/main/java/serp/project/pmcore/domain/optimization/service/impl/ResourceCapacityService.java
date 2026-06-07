@@ -3,9 +3,10 @@
  * Description: Part of Serp Project
  */
 
-package serp.project.pmcore.infrastructure.optimization.adapter;
+package serp.project.pmcore.domain.optimization.service.impl;
 
-import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.enums.CapacityCoverageStatus;
 import serp.project.pmcore.domain.optimization.enums.CapacitySourceMode;
@@ -15,20 +16,13 @@ import serp.project.pmcore.domain.optimization.model.CapacityWorkloadBucket;
 import serp.project.pmcore.domain.optimization.model.CalendarCapacityResult;
 import serp.project.pmcore.domain.optimization.model.OptimizationConstraintViolation;
 import serp.project.pmcore.domain.optimization.model.ResourceCapacitySlot;
-import serp.project.pmcore.domain.optimization.port.IResourceCalendarPort;
-import serp.project.pmcore.domain.optimization.port.IResourceCapacityPort;
-import serp.project.pmcore.infrastructure.store.mapper.WorkItemPlanMapper;
-import serp.project.pmcore.infrastructure.store.model.WorkItemModel;
-import serp.project.pmcore.infrastructure.store.model.WorkItemPlanAllocationModel;
-import serp.project.pmcore.infrastructure.store.model.WorkItemPlanModel;
-import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanAllocationRepository;
-import serp.project.pmcore.infrastructure.store.repository.IWorkItemPlanRepository;
-import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
+import serp.project.pmcore.domain.optimization.model.ResourceWorkloadAllocation;
+import serp.project.pmcore.domain.optimization.model.ResourceWorkloadItem;
+import serp.project.pmcore.domain.optimization.model.ResourceWorkloadPlan;
+import serp.project.pmcore.domain.optimization.port.IResourceWorkloadReadPort;
+import serp.project.pmcore.domain.optimization.service.IResourceCalendarService;
+import serp.project.pmcore.domain.optimization.service.IResourceCapacityService;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,32 +31,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-@Component
-public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
-    private final IWorkItemPlanRepository workItemPlanRepository;
-    private final IWorkItemRepository workItemRepository;
-    private final WorkItemPlanMapper workItemPlanMapper;
-    private final IResourceCalendarPort resourceCalendarPort;
-    private final IWorkItemPlanAllocationRepository workItemPlanAllocationRepository;
-
-    public FallbackResourceCapacityAdapter(IWorkItemPlanRepository workItemPlanRepository,
-                                           IWorkItemRepository workItemRepository,
-                                           WorkItemPlanMapper workItemPlanMapper,
-                                           IResourceCalendarPort resourceCalendarPort,
-                                           IWorkItemPlanAllocationRepository workItemPlanAllocationRepository) {
-        this.workItemPlanRepository = workItemPlanRepository;
-        this.workItemRepository = workItemRepository;
-        this.workItemPlanMapper = workItemPlanMapper;
-        this.resourceCalendarPort = resourceCalendarPort;
-        this.workItemPlanAllocationRepository = workItemPlanAllocationRepository;
-    }
+@Service
+@RequiredArgsConstructor
+public class ResourceCapacityService implements IResourceCapacityService {
+    private final IResourceCalendarService resourceCalendarService;
+    private final IResourceWorkloadReadPort resourceWorkloadReadPort;
 
     @Override
     public List<ResourceCapacitySlot> getCapacitySlots(Long tenantId,
                                                        List<Long> userIds,
                                                        Long planningStart,
                                                        Long planningEnd) {
-        return resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd).slots();
+        return resourceCalendarService.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd).slots();
     }
 
     @Override
@@ -72,7 +52,7 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
                                                     Long planningStart,
                                                     Long planningEnd,
                                                     List<Long> excludedWorkItemIds) {
-        CalendarCapacityResult calendar = resourceCalendarPort.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd);
+        CalendarCapacityResult calendar = resourceCalendarService.resolveWorkingCapacity(tenantId, userIds, planningStart, planningEnd);
         List<ResourceCapacitySlot> calendarSlots = calendar.slots();
         if (calendarSlots.isEmpty()) {
             return new CapacityResolutionResult(List.of(), capacitySourceMode(calendar.coverageStatus(), false),
@@ -83,54 +63,54 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         List<Long> safeExcludedIds = excludedWorkItemIds == null || excludedWorkItemIds.isEmpty()
                 ? List.of(-1L)
                 : excludedWorkItemIds;
-        List<WorkItemPlanModel> planModels = workItemPlanRepository.findActiveWorkloadPlans(
+        List<ResourceWorkloadPlan> plans = resourceWorkloadReadPort.findActiveWorkloadPlans(
                 tenantId,
                 userIds,
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningStart), ZoneOffset.UTC),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningEnd), ZoneOffset.UTC),
+                planningStart,
+                planningEnd,
                 safeExcludedIds
         );
-        List<WorkItemModel> unplannedWorkItems = workItemRepository.findActiveUnplannedWorkloadItems(
+        List<ResourceWorkloadItem> unplannedWorkItems = resourceWorkloadReadPort.findActiveUnplannedWorkloadItems(
                 tenantId,
                 userIds,
-                safeExcludedIds,
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningStart), ZoneOffset.UTC),
-                LocalDateTime.ofInstant(Instant.ofEpochMilli(planningEnd), ZoneOffset.UTC)
+                planningStart,
+                planningEnd,
+                safeExcludedIds
         );
-        if (planModels.isEmpty() && unplannedWorkItems.isEmpty()) {
+        if (plans.isEmpty() && unplannedWorkItems.isEmpty()) {
             return new CapacityResolutionResult(calendarSlots, capacitySourceMode(calendar.coverageStatus(), false),
                     calendar.coverageStatus(), CapacityCoverageStatus.FULL, calendar.fallbackUserIds(), calendar.fetchedAt(),
                     System.currentTimeMillis(), 0L, 0L, 0L, List.of(), calendar.warnings());
         }
-        Map<Long, WorkItemModel> workItemsById = planModels.isEmpty()
+
+        Map<Long, ResourceWorkloadItem> workItemsById = plans.isEmpty()
                 ? Map.of()
-                : workItemRepository.findAllByTenantIdAndIdIn(
+                : resourceWorkloadReadPort.findWorkItemsByIds(
                                 tenantId,
-                                planModels.stream().map(WorkItemPlanModel::getWorkItemId).distinct().toList()
+                                plans.stream().map(ResourceWorkloadPlan::workItemId).distinct().toList()
                         )
                         .stream()
-                        .filter(item -> item.getAssigneeId() != null && userIds.contains(item.getAssigneeId()))
-                        .filter(item -> item.getResolutionId() == null)
-                        .collect(Collectors.toMap(WorkItemModel::getId, item -> item, (left, right) -> left));
-        List<Long> planIds = planModels.stream()
-                .map(WorkItemPlanModel::getId)
+                        .filter(item -> item.assigneeId() != null && userIds.contains(item.assigneeId()))
+                        .collect(Collectors.toMap(ResourceWorkloadItem::id, item -> item, (left, right) -> left));
+        List<Long> planIds = plans.stream()
+                .map(ResourceWorkloadPlan::id)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        List<WorkItemPlanAllocationModel> allocationModels = planIds.isEmpty()
+        List<ResourceWorkloadAllocation> allocations = planIds.isEmpty()
                 ? List.of()
-                : workItemPlanAllocationRepository.findAllByTenantIdAndWorkItemPlanIdIn(tenantId, planIds);
-        Map<Long, List<WorkItemPlanAllocationModel>> allocationsByPlanId = allocationModels == null
+                : resourceWorkloadReadPort.findAllocationsByPlanIds(tenantId, planIds);
+        Map<Long, List<ResourceWorkloadAllocation>> allocationsByPlanId = allocations == null
                 ? Map.of()
-                : allocationModels.stream()
-                        .collect(Collectors.groupingBy(WorkItemPlanAllocationModel::getWorkItemPlanId));
+                : allocations.stream()
+                        .collect(Collectors.groupingBy(ResourceWorkloadAllocation::workItemPlanId));
         Map<Long, Long> sameProjectUnplannedByAssignee = unplannedWorkItems.stream()
-                .filter(item -> Objects.equals(item.getProjectId(), projectId))
-                .collect(Collectors.groupingBy(WorkItemModel::getAssigneeId,
+                .filter(item -> Objects.equals(item.projectId(), projectId))
+                .collect(Collectors.groupingBy(ResourceWorkloadItem::assigneeId,
                         Collectors.summingLong(this::remainingEstimateMillis)));
         Map<Long, Long> crossProjectUnplannedByAssignee = unplannedWorkItems.stream()
-                .filter(item -> !Objects.equals(item.getProjectId(), projectId))
-                .collect(Collectors.groupingBy(WorkItemModel::getAssigneeId,
+                .filter(item -> !Objects.equals(item.projectId(), projectId))
+                .collect(Collectors.groupingBy(ResourceWorkloadItem::assigneeId,
                         Collectors.summingLong(this::remainingEstimateMillis)));
 
         Map<BucketKey, BucketAccumulator> bucketAccumulators = new HashMap<>();
@@ -139,16 +119,16 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         for (ResourceCapacitySlot slot : calendarSlots) {
             long sameProject = 0L;
             long crossProject = 0L;
-            for (WorkItemPlanModel plan : planModels) {
-                WorkItemModel item = workItemsById.get(plan.getWorkItemId());
-                if (item == null || !Objects.equals(item.getAssigneeId(), slot.assigneeId())) {
+            for (ResourceWorkloadPlan plan : plans) {
+                ResourceWorkloadItem item = workItemsById.get(plan.workItemId());
+                if (item == null || !Objects.equals(item.assigneeId(), slot.assigneeId())) {
                     continue;
                 }
-                long overlap = plannedOverlapMillis(slot, plan, allocationsByPlanId.getOrDefault(plan.getId(), List.of()));
+                long overlap = plannedOverlapMillis(slot, plan, allocationsByPlanId.getOrDefault(plan.id(), List.of()));
                 if (overlap <= 0) {
                     continue;
                 }
-                if (Objects.equals(item.getProjectId(), projectId)) {
+                if (Objects.equals(item.projectId(), projectId)) {
                     sameProject += overlap;
                 } else {
                     crossProject += overlap;
@@ -207,42 +187,32 @@ public class FallbackResourceCapacityAdapter implements IResourceCapacityPort {
         return consumed;
     }
 
-    private long remainingEstimateMillis(WorkItemModel item) {
-        Long estimate = item.getTimeRemainingEstimate() != null
-                ? item.getTimeRemainingEstimate()
-                : item.getTimeOriginalEstimate();
+    private long remainingEstimateMillis(ResourceWorkloadItem item) {
+        Long estimate = item.timeRemainingEstimate() != null
+                ? item.timeRemainingEstimate()
+                : item.timeOriginalEstimate();
         return estimate == null || estimate <= 0 ? 0L : Math.multiplyExact(estimate, OptimizationConstants.MINUTE_MILLIS);
     }
 
     private long plannedOverlapMillis(ResourceCapacitySlot slot,
-                                      WorkItemPlanModel plan,
-                                      List<WorkItemPlanAllocationModel> allocations) {
+                                      ResourceWorkloadPlan plan,
+                                      List<ResourceWorkloadAllocation> allocations) {
         if (allocations != null && !allocations.isEmpty()) {
             return allocations.stream()
-                    .filter(allocation -> Objects.equals(allocation.getAssigneeId(), slot.assigneeId()))
+                    .filter(allocation -> Objects.equals(allocation.assigneeId(), slot.assigneeId()))
                     .mapToLong(allocation -> allocationOverlapMillis(slot, allocation))
                     .sum();
         }
-        var planEntity = workItemPlanMapper.toEntity(plan);
-        return overlapMillis(slot.slotStart(), slot.slotEnd(), planEntity.getPlannedStart(), planEntity.getPlannedEnd());
+        return overlapMillis(slot.slotStart(), slot.slotEnd(), plan.plannedStart(), plan.plannedEnd());
     }
 
-    private long allocationOverlapMillis(ResourceCapacitySlot slot, WorkItemPlanAllocationModel allocation) {
-        Long allocationStart = localDateTimeToLong(allocation.getStartTime());
-        Long allocationEnd = localDateTimeToLong(allocation.getEndTime());
-        long overlap = overlapMillis(slot.slotStart(), slot.slotEnd(), allocationStart, allocationEnd);
+    private long allocationOverlapMillis(ResourceCapacitySlot slot, ResourceWorkloadAllocation allocation) {
+        long overlap = overlapMillis(slot.slotStart(), slot.slotEnd(), allocation.startTime(), allocation.endTime());
         if (overlap <= 0) {
             return 0L;
         }
-        Long effortMillis = allocation.getEffortMillis();
+        Long effortMillis = allocation.effortMillis();
         return effortMillis == null || effortMillis <= 0 ? overlap : Math.min(overlap, effortMillis);
-    }
-
-    private Long localDateTimeToLong(LocalDateTime localDateTime) {
-        if (localDateTime == null) {
-            return null;
-        }
-        return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     private long overlapMillis(Long startA, Long endA, Long startB, Long endB) {
