@@ -114,6 +114,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({
 
   const suppliers = suppliersResponse?.data?.items || [];
   const products = productsResponse?.data?.items || [];
+  // Exclude products that are already added to the order from the dropdown
+  const availableProducts = products.filter(
+    (p) => !items.some((i) => i.productId === p.id)
+  );
   const preSelectedSupplier = preSelectedSupplierResponse?.data;
 
   const validateForm = (): boolean => {
@@ -191,6 +195,14 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   };
 
   const addItem = (productId: string) => {
+    // Prevent adding the same product multiple times
+    if (items.some((i) => i.productId === productId)) {
+      toast.error('Sản phẩm này đã được thêm vào đơn');
+      setProductSearch('');
+      setShowProductDropdown(false);
+      return;
+    }
+
     const maxSeqId = Math.max(0, ...items.map((i) => i.orderItemSeqId));
     setItems([
       ...items,
@@ -441,25 +453,31 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                     />
                   </div>
 
-                  {showProductDropdown && products.length > 0 && (
+                  {showProductDropdown && (
                     <div className='absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-auto'>
-                      {products.map((product) => (
-                        <button
-                          key={product.id}
-                          type='button'
-                          onClick={() => addItem(product.id)}
-                          className='w-full px-4 py-2 text-left hover:bg-muted transition-colors flex items-center justify-between'
-                        >
-                          <div>
-                            <p className='font-medium'>{product.name}</p>
-                            <p className='text-sm text-muted-foreground'>
-                              {product.skuCode || 'N/A'} • đ
-                              {product.costPrice?.toLocaleString()}
-                            </p>
-                          </div>
-                          <Plus className='h-4 w-4' />
-                        </button>
-                      ))}
+                      {availableProducts.length > 0 ? (
+                        availableProducts.map((product) => (
+                          <button
+                            key={product.id}
+                            type='button'
+                            onClick={() => addItem(product.id)}
+                            className='w-full px-4 py-2 text-left hover:bg-muted transition-colors flex items-center justify-between'
+                          >
+                            <div>
+                              <p className='font-medium'>{product.name}</p>
+                              <p className='text-sm text-muted-foreground'>
+                                {product.skuCode || 'N/A'} • đ
+                                {product.costPrice?.toLocaleString()}
+                              </p>
+                            </div>
+                            <Plus className='h-4 w-4' />
+                          </button>
+                        ))
+                      ) : (
+                        <div className='px-4 py-2 text-sm text-muted-foreground'>
+                          Không có sản phẩm khả dụng
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

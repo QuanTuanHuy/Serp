@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
+import { MapLocationPicker } from '@/shared/components';
 import { cn } from '@/shared/utils';
 import type {
   Customer,
@@ -43,6 +45,11 @@ const customerSchema = z.object({
 
 type CustomerFormData = z.infer<typeof customerSchema>;
 
+const DEFAULT_MAP_CENTER = {
+  lat: 21.028511,
+  lng: 105.804817,
+};
+
 interface CustomerFormProps {
   customer?: Customer;
   onSubmit: (data: CustomerCreationForm | CustomerUpdateForm) => Promise<void>;
@@ -59,6 +66,9 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   className,
 }) => {
   const isEditing = !!customer;
+  const [showMap, setShowMap] = useState(false);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const {
     register,
@@ -92,6 +102,52 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
   });
 
   const statusId = watch('statusId');
+  const fullAddress = watch('fullAddress');
+  const hasLocationError = Boolean(errors.latitude || errors.longitude);
+
+  const handleGeocodeAndShowMap = async () => {
+    if (!fullAddress?.trim()) {
+      toast.error('Vui lòng nhập địa chỉ đầy đủ trước');
+      return;
+    }
+
+    setIsGeocoding(true);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`
+      );
+      const data: Array<{ lat: string; lon: string }> = await response.json();
+
+      if (data && data.length > 0) {
+        const lat = Number.parseFloat(data[0].lat);
+        const lng = Number.parseFloat(data[0].lon);
+
+        setMapCenter({ lat, lng });
+        setValue('latitude', lat.toString(), {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        setValue('longitude', lng.toString(), {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      } else {
+        toast.error(
+          'Không tìm thấy tọa độ cho địa chỉ này, vui lòng ghim thủ công.'
+        );
+        setMapCenter(DEFAULT_MAP_CENTER);
+      }
+
+      setShowMap(true);
+    } catch (error) {
+      console.error('Lỗi khi tìm tọa độ:', error);
+      toast.error('Lỗi khi tìm tọa độ');
+      setShowMap(true);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   // Handle form submission
   const onFormSubmit = handleSubmit(async (data: CustomerFormData) => {
@@ -217,9 +273,9 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                       <SelectValue placeholder='Chọn loại địa chỉ' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='FACILIY'>Kho</SelectItem>
+                      <SelectItem value='FACILITY'>Kho</SelectItem>
                       <SelectItem value='SHIPPING'>Giao hàng</SelectItem>
-                      <SelectItem value='BUSSINESS'>Cơ sở</SelectItem>
+                      <SelectItem value='BUSINESS'>Cơ sở</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -228,40 +284,57 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
               {!isEditing && (
                 <div className='space-y-2 md:col-span-2'>
                   <Label htmlFor='fullAddress'>Địa chỉ đầy đủ</Label>
-                  <Input
-                    id='fullAddress'
-                    {...register('fullAddress')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='Nhập địa chỉ đầy đủ'
-                  />
+                  <div className='flex flex-col gap-2 md:flex-row'>
+                    <Input
+                      id='fullAddress'
+                      {...register('fullAddress')}
+                      className={cn(errors.fullAddress && 'border-destructive')}
+                      disabled={isLoading || isSubmitting}
+                      placeholder='Nhập địa chỉ đầy đủ (VD: Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội)'
+                    />
+                    <Button
+                      type='button'
+                      onClick={handleGeocodeAndShowMap}
+                      disabled={isGeocoding || !fullAddress?.trim()}
+                    >
+                      {isGeocoding ? 'Đang tìm...' : 'Tìm trên bản đồ'}
+                    </Button>
+                  </div>
+                  {errors.fullAddress && (
+                    <p className='text-sm text-destructive'>
+                      {errors.fullAddress.message}
+                    </p>
+                  )}
                 </div>
               )}
 
-              {!isEditing && (
-                <div className='space-y-2'>
-                  <Label htmlFor='latitude'>Vĩ độ (Latitude)</Label>
-                  <Input
-                    id='latitude'
-                    type='number'
-                    step='any'
-                    {...register('latitude')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='Nhập vĩ độ'
+              {!isEditing && showMap && (
+                <div className='space-y-2 md:col-span-2'>
+                  <Label>
+                    Kéo thả hoặc click trên bản đồ để chọn vị trí chính xác
+                  </Label>
+                  <MapLocationPicker
+                    initialLat={mapCenter.lat}
+                    initialLng={mapCenter.lng}
+                    className={cn(hasLocationError && 'border-destructive')}
+                    onLocationSelect={(lat, lng) => {
+                      setValue('latitude', lat.toString(), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setValue('longitude', lng.toString(), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
                   />
-                </div>
-              )}
-
-              {!isEditing && (
-                <div className='space-y-2'>
-                  <Label htmlFor='longitude'>Kinh độ (Longitude)</Label>
-                  <Input
-                    id='longitude'
-                    type='number'
-                    step='any'
-                    {...register('longitude')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='Nhập kinh độ'
-                  />
+                  {hasLocationError && (
+                    <p className='text-sm text-destructive'>
+                      {errors.latitude?.message ||
+                        errors.longitude?.message ||
+                        'Vui lòng ghim vị trí trên bản đồ'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
