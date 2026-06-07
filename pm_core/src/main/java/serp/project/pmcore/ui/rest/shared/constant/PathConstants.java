@@ -38,6 +38,9 @@ public class PathConstants {
     public static final String WORKFLOWS = API_BASE_PATH + "/workflows";
     public static final String WORKFLOW_SCHEMES = API_BASE_PATH + "/workflow-schemes";
     public static final String WORKFLOW_SETTINGS = API_BASE_PATH + "/workflow-settings";
+    public static final String RESOURCE_CALENDAR_SETTINGS = API_BASE_PATH + "/resource-calendar-settings";
+    public static final String RESOURCE_CALENDAR_PROFILES = API_BASE_PATH + "/resource-calendar-profiles";
+    public static final String RESOURCE_CALENDAR_EXCEPTIONS = API_BASE_PATH + "/resource-calendar-exceptions";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }
