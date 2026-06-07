@@ -31,6 +31,7 @@ import serp.project.school_bus_service.enums.TripStudentStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.service.IAuditLogService;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
@@ -77,6 +78,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     private final ICodeGeneratorService codeGeneratorService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public TripExecutionServiceImpl(TripExecutionRepository tripRepository,
@@ -90,7 +92,8 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                                      @Lazy IAttendanceService attendanceService,
                                      ICodeGeneratorService codeGeneratorService,
                                      SchoolBusMapper mapper,
-                                     MessageCommon messageCommon) {
+                                     MessageCommon messageCommon,
+                                     ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.tripRepository = tripRepository;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
@@ -103,6 +106,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         this.codeGeneratorService = codeGeneratorService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -135,12 +139,14 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
 
     @Override
     public TripExecutionResponse getTrip(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTrip(id);
         TripExecutionEntity trip = findById(id, tenantId);
         return toDetail(trip, tenantId);
     }
 
     @Override
     public TripExecutionEntity getTripEntity(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTrip(id);
         return findById(id, tenantId);
     }
 
@@ -219,6 +225,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse startTrip(Long id, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = findById(id, tenantId);
         if (trip.getStatus() != TripStatus.ASSIGNED && trip.getStatus() != TripStatus.PLANNED) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -243,6 +250,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse arriveStop(Long id, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = requireInProgress(id, tenantId);
         TripStopLogEntity stop = tripStopLogService
                 .findByTripAndRouteStop(id, routeStopId, tenantId)
@@ -275,6 +283,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse departStop(Long id, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = requireInProgress(id, tenantId);
         TripStopLogEntity stop = tripStopLogService
                 .findByTripAndRouteStop(id, routeStopId, tenantId)
@@ -299,6 +308,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse skipStop(Long id, Long routeStopId, SkipStopRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = requireInProgress(id, tenantId);
         TripStopLogEntity stop = tripStopLogService
                 .findByTripAndRouteStop(id, routeStopId, tenantId)
@@ -356,6 +366,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse completeTrip(Long id, CompleteTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = requireInProgress(id, tenantId);
 
         // All stops must be DEPARTED or SKIPPED
@@ -433,6 +444,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     @Transactional
     public TripExecutionResponse cancelTrip(Long id, CancelTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = findById(id, tenantId);
         if (trip.getStatus() == TripStatus.COMPLETED) {
             throw new AppException(AppErrorCode.Trip.ALREADY_COMPLETED, messageCommon.getMessage(AppErrorCode.Trip.ALREADY_COMPLETED));
@@ -492,6 +504,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
 
     @Override
     public List<TripStopLogResponse> getTripStops(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTrip(id);
         findById(id, tenantId);
         return tripStopLogService.findByTrip(id, tenantId)
                 .stream()
@@ -501,6 +514,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
 
     @Override
     public List<TripStudentResponse> getTripStudents(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTrip(id);
         findById(id, tenantId);
         return tripStudentService.findByTrip(id, tenantId)
                 .stream()

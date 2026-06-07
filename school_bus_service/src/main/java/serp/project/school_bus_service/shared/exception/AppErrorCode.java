@@ -253,5 +253,20 @@ public class AppErrorCode {
         private Export() {}
     }
 
+    // ── Security / Authorization ──────────────────────────────────────────────
+    public static class Security {
+        public static final ErrorInfo ACCESS_DENIED = new ErrorInfo("security.accessDenied", "Access denied.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo FORBIDDEN_DATA_SCOPE = new ErrorInfo("security.forbiddenDataScope", "You do not have permission to access this data scope.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo PARENT_PROFILE_NOT_FOUND = new ErrorInfo("security.parentProfileNotFound", "Parent profile not found for current user.", HttpStatus.NOT_FOUND);
+        public static final ErrorInfo DRIVER_PROFILE_NOT_FOUND = new ErrorInfo("security.driverProfileNotFound", "Driver profile not found for current user.", HttpStatus.NOT_FOUND);
+        public static final ErrorInfo ATTENDANT_PROFILE_NOT_FOUND = new ErrorInfo("security.attendantProfileNotFound", "Attendant profile not found for current user.", HttpStatus.NOT_FOUND);
+        public static final ErrorInfo TRIP_NOT_ASSIGNED_TO_DRIVER = new ErrorInfo("security.tripNotAssignedToDriver", "Trip is not assigned to current driver.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo TRIP_NOT_ASSIGNED_TO_ATTENDANT = new ErrorInfo("security.tripNotAssignedToAttendant", "Trip is not assigned to current attendant.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo STUDENT_NOT_BELONG_TO_PARENT = new ErrorInfo("security.studentNotBelongToParent", "Student does not belong to current parent.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo REQUEST_NOT_BELONG_TO_PARENT = new ErrorInfo("security.requestNotBelongToParent", "Request does not belong to current parent.", HttpStatus.FORBIDDEN);
+        public static final ErrorInfo SUBSCRIPTION_NOT_BELONG_TO_PARENT = new ErrorInfo("security.subscriptionNotBelongToParent", "Subscription does not belong to current parent.", HttpStatus.FORBIDDEN);
+        private Security() {}
+    }
+
     private AppErrorCode() {}
 }

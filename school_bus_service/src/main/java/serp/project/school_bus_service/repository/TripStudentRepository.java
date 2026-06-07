@@ -21,6 +21,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
             Long studentId,
             Long tenantId);
 
+    boolean existsByTripIdAndStudentParentProfileIdAndIsDeletedFalse(Long tripId, Long parentProfileId);
+
     @Query("""
         SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
         JOIN ts.trip t

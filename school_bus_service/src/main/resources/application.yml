@@ -24,6 +24,15 @@ spring:
         jwt:
           jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp/protocol/openid-connect/certs
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_SCHOOL_BUS_GROUP_ID:school-bus-sync-user}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
 
 server:
   port: ${SERVER_PORT:8094}
@@ -54,3 +63,20 @@ map:
 websocket:
   endpoint: ${WS_ENDPOINT:/ws/school-bus}
   allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,https://serp.texkis.com}
+
+school-bus:
+  kafka:
+    topics:
+      account-user-events: ${SYNC_USER_TOPIC:SYNC_USER}
+  account-sync:
+    enabled: ${SCHOOL_BUS_ACCOUNT_SYNC_ENABLED:true}
+    cron: ${SCHOOL_BUS_ACCOUNT_SYNC_CRON:0 */30 * * * *}
+    initial-lookback-days: ${SCHOOL_BUS_ACCOUNT_SYNC_INITIAL_LOOKBACK_DAYS:30}
+  account-service:
+    base-url: ${ACCOUNT_SERVICE_BASE_URL:http://localhost:8081/account-service}
+  keycloak:
+    url: ${KEYCLOAK_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_REALM:serp}
+    client-id: ${KEYCLOAK_CLIENT_ID:serp-school-bus}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:your-client-secret}
+

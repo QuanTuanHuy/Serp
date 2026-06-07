@@ -29,6 +29,7 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { Button, Badge } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { formatDate, getPageItems } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 const statusMap: Record<string, { label: string; className: string }> = {
   CREATED: { label: 'Created', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
@@ -60,6 +61,7 @@ const getFriendlyDirection = (dir?: string | null) => {
 
 export function SchoolBusAttendancePage() {
   const router = useRouter();
+  const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 20,
@@ -245,14 +247,17 @@ export function SchoolBusAttendancePage() {
         return (
           <div className='flex justify-end' onClick={(e) => e.stopPropagation()}>
             <Button
-              variant={btnVariant}
+              variant={!access.canMarkAttendance ? 'outline' : btnVariant}
               size='sm'
-              className={cn('h-8 rounded-full text-xs font-semibold px-4 shrink-0', btnClass)}
+              className={cn(
+                'h-8 rounded-full text-xs font-semibold px-4 shrink-0',
+                access.canMarkAttendance ? btnClass : ''
+              )}
               disabled={disabled}
               onClick={() => router.push(`/school-bus/attendance/${trip.id}`)}
             >
-              {icon}
-              {label}
+              {access.canMarkAttendance ? icon : <ExternalLink className='mr-1.5 h-3.5 w-3.5' />}
+              {access.canMarkAttendance ? label : 'View attendance'}
             </Button>
           </div>
         );
@@ -301,13 +306,17 @@ export function SchoolBusAttendancePage() {
 
   return (
     <SchoolBusPageShell
-      title='Attendance Board'
-      description='Manage student boarding, absence, no-show and drop-off attendance for active trips.'
+      title={access.isParent ? 'Child Attendance History' : 'Attendance Board'}
+      description={
+        access.isParent
+          ? 'View attendance records for your children across all trips.'
+          : 'Manage student boarding, absence, no-show and drop-off attendance for active trips.'
+      }
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Attendance', current: true },
+            { label: access.isParent ? 'Child Attendance' : 'Attendance', current: true },
           ]}
         />
       }

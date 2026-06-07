@@ -19,14 +19,17 @@ public class SchoolBusMapper extends BaseMapper {
     private final TripMapper tripMapper;
     private final TransportMapper transportMapper;
     private final OperationsMapper operationsMapper;
+    private final SchoolBusUserMapper schoolBusUserMapper;
 
     public SchoolBusMapper(MasterDataMapper masterDataMapper, RouteMapper routeMapper,
-            TripMapper tripMapper, TransportMapper transportMapper, OperationsMapper operationsMapper) {
+            TripMapper tripMapper, TransportMapper transportMapper, OperationsMapper operationsMapper,
+            SchoolBusUserMapper schoolBusUserMapper) {
         this.masterDataMapper = masterDataMapper;
         this.routeMapper = routeMapper;
         this.tripMapper = tripMapper;
         this.transportMapper = transportMapper;
         this.operationsMapper = operationsMapper;
+        this.schoolBusUserMapper = schoolBusUserMapper;
     }
 
     // --- Master Data ---
@@ -67,4 +70,7 @@ public class SchoolBusMapper extends BaseMapper {
 
     // --- Operations ---
     public AttendanceResponse toAttendanceResponse(AttendanceEntity e) { return operationsMapper.toAttendanceResponse(e); }
+
+    // --- Shadow User ---
+    public SchoolBusUserResponse toSchoolBusUserResponse(SchoolBusUserEntity e) { return schoolBusUserMapper.toResponse(e); }
 }

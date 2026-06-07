@@ -45,6 +45,7 @@ import { formatDate, formatDateTime, getPageItems } from '../utils';
 import type { TripAttendanceStopItem } from '../types';
 import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,7 @@ interface SchoolBusTripOperationDetailPageProps {
 }
 
 export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperationDetailPageProps) {
+  const access = useSchoolBusAccess();
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(null);
   const [showSkipForm, setShowSkipForm] = React.useState(false);
@@ -471,9 +473,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                   </div>
                 </div>
 
-                {/* Main operational control actions */}
+                {/* Main operational control actions — only for users who can operate trips */}
                 <div className='flex flex-col justify-center sm:col-span-2 lg:col-span-1 gap-2'>
-                  {!tripIsCompleted && !tripIsCancelled && (
+                  {access.canOperateTrip && !tripIsCompleted && !tripIsCancelled && (
                     <>
                       {tripStatus === 'CREATED' || tripStatus === 'PLANNED' || tripStatus === 'ASSIGNED' || tripStatus === 'READY' ? (
                         <Button
@@ -546,6 +548,12 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                         </Button>
                       )}
                     </>
+                  )}
+                  {/* Readonly badge for non-operators */}
+                  {!access.canOperateTrip && !tripIsCompleted && !tripIsCancelled && (
+                    <span className='inline-flex items-center justify-center rounded-full bg-slate-50 border border-slate-200 px-3 py-1 text-[10px] font-semibold text-slate-400'>
+                      View only
+                    </span>
                   )}
                 </div>
               </div>
@@ -788,9 +796,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                </p>
                              )}
 
-                             {/* Action Buttons */}
-                             {tripIsActive && !isFinished && (
-                               <div 
+                             {/* Action Buttons — only for users who can operate trips */}
+                             {tripIsActive && !isFinished && access.canOperateTrip && (
+                               <div
                                  className='flex flex-wrap items-center gap-1.5 pl-6 pt-1'
                                  title={!isNextActionableStop ? 'Process previous stops first.' : undefined}
                                >

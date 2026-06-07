@@ -16,6 +16,7 @@ import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import type { SchoolBusTransportRequestUpsertRequest } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 interface SchoolBusRequestFormPageProps {
   requestId?: number;
@@ -25,27 +26,46 @@ export function SchoolBusRequestFormPage({
   requestId,
 }: SchoolBusRequestFormPageProps) {
   const router = useRouter();
+  const access = useSchoolBusAccess();
+
   const isEditMode = Boolean(requestId);
   const { data: requestData, isLoading: loadingRequest } =
     useGetTransportRequestByIdQuery(requestId as number, {
       skip: !requestId,
     });
-  const { data: parentsData } = useGetParentsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'fullName',
-  });
+
+  // For Admin/Dispatcher: fetch all parents for the dropdown.
+  // For Parent role: skip the query — backend resolves identity from token.
+  const { data: parentsData } = useGetParentsQuery(
+    { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'fullName' },
+    { skip: access.isParent }
+  );
+
   const { data: schoolsData } = useGetSchoolsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'name',
   });
+
+  // Backend scopes students to own children for Parent role.
+  // For Admin/Dispatcher: fetch all students (form handles parent+school filtering).
   const { data: studentsData } = useGetStudentsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'fullName',
   });
+
   const [createTransportRequest, { isLoading: creating }] =
     useCreateTransportRequestMutation();
   const [updateTransportRequest, { isLoading: updating }] =
     useUpdateTransportRequestMutation();
+
+  // Derive current parent's parentProfileId from their student list.
+  // The User type does not carry parentProfileId directly;
+  // students always reference their parent — so we borrow it from there.
+  const students = getPageItems(studentsData?.data);
+  const currentParentId: number | undefined =
+    access.isParent && students.length > 0
+      ? (students[0].parentProfileId ?? undefined)
+      : undefined;
 
   const handleSubmit = async (values: SchoolBusTransportRequestUpsertRequest) => {
     try {
@@ -66,7 +86,10 @@ export function SchoolBusRequestFormPage({
     <SchoolBusBreadcrumb
       items={[
         { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-        { label: 'Requests', href: '/school-bus/requests' },
+        {
+          label: access.isParent ? 'My Requests' : 'Requests',
+          href: '/school-bus/requests',
+        },
         { label: isEditMode ? `Edit #${requestId}` : 'New request', current: true },
       ]}
     />
@@ -89,17 +112,23 @@ export function SchoolBusRequestFormPage({
 
   return (
     <SchoolBusPageShell
-      title={isEditMode ? 'Edit transport request' : 'Create transport request'}
-      description='Capture transport demand with effective dates, a parent profile, and the student list to be served.'
+      title={isEditMode ? 'Edit transport request' : 'New transport request'}
+      description={
+        access.isParent
+          ? 'Submit a transport request for your child. Our team will review and process it shortly.'
+          : 'Capture transport demand with effective dates, a parent profile, and the student list to be served.'
+      }
       breadcrumb={breadcrumb}
     >
       <TransportRequestForm
         initialData={requestData?.data}
         parents={getPageItems(parentsData?.data)}
         schools={getPageItems(schoolsData?.data)}
-        students={getPageItems(studentsData?.data)}
+        students={students}
         isLoading={creating || updating}
         submitLabel={isEditMode ? 'Update request' : 'Create request'}
+        isParentRole={access.isParent}
+        currentParentId={currentParentId}
         onCancel={() =>
           router.push(
             isEditMode

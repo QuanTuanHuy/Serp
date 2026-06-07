@@ -81,8 +81,7 @@ public class TripExecutionEntity extends BaseModel {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
-    @Column(name = "simulation_mode", nullable = false)
-    private Boolean simulationMode = Boolean.FALSE;
+
 
     @ManyToOne
     @JoinColumn(name = "bus_id")

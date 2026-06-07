@@ -1,6 +1,7 @@
 package serp.project.school_bus_service.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,14 +31,14 @@ public class AttendanceController extends AbstractBaseController {
     }
 
     @GetMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
     public ResponseEntity<GeneralResponse<PageResponse<AttendanceResponse>>> getAttendance(
             @ModelAttribute AttendanceParamsRequest params) {
         return ok("Fetched attendance", attendanceService.getAttendance(params, getCurrentTenantId()));
     }
 
     @GetMapping("/trip-history")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip-history.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.read')")
     public ResponseEntity<GeneralResponse<PageResponse<TripHistoryResponse>>> getTripHistory(
             @ModelAttribute TripHistoryParamsRequest params) {
         return ok("Fetched trip history", tripHistoryService.getTripHistory(params, getCurrentTenantId()));

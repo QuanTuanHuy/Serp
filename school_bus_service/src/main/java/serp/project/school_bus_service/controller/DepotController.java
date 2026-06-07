@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import serp.project.school_bus_service.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.dto.request.DepotUpsertRequest;
@@ -24,12 +25,14 @@ public class DepotController extends AbstractBaseController {
     }
 
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<PageResponse<DepotResponse>>> getDepots(
             @ModelAttribute DepotParamsRequest params) {
         return ok("Fetched depots", depotService.getDepots(params, getCurrentTenantId()));
     }
 
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<DepotResponse>> createDepot(
             @Valid @RequestBody DepotUpsertRequest request) {
         return created("Created depot",
@@ -37,11 +40,13 @@ public class DepotController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<DepotResponse>> getDepot(@PathVariable Long id) {
         return ok("Fetched depot", depotService.getDepotResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<DepotResponse>> updateDepot(@PathVariable Long id,
             @Valid @RequestBody DepotUpsertRequest request) {
         return ok("Updated depot",
@@ -49,6 +54,7 @@ public class DepotController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<Void>> deleteDepot(@PathVariable Long id) {
         depotService.deleteDepot(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted depot");

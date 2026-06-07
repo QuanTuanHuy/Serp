@@ -30,7 +30,7 @@ public class TripExecutionResponse extends BaseResponse {
     private LocalDateTime cancelledAt;
     private Long cancelledBy;
     private String cancellationReason;
-    private Boolean simulationMode;
+
     private Long busId;
     private String busPlateNumber;
     private Long driverId;

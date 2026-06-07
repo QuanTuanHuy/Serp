@@ -39,6 +39,7 @@ import { Button, Input, Badge } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
 import type { TripAttendanceStopItem, TripAttendanceStudentItem } from '../types';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ interface SchoolBusAttendanceDetailPageProps {
 }
 
 export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDetailPageProps) {
+  const access = useSchoolBusAccess();
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -654,8 +656,8 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                             )}
                           </div>
 
-                          {/* Attendance Action buttons */}
-                          {tripIsActive && isStopActionable && (
+                          {/* Attendance Action buttons — only for users who can mark attendance */}
+                          {tripIsActive && isStopActionable && access.canMarkAttendance && (
                             <div className='flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center'>
                               {canBoard && (
                                 <Button

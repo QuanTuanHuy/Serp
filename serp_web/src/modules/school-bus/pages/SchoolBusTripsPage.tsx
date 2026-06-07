@@ -35,6 +35,7 @@ import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 const statusMap: Record<string, { label: string; className: string }> = {
   CREATED: { label: 'Created', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
@@ -75,6 +76,7 @@ const getFriendlyDirection = (dir?: string | null) => {
 };
 
 export function SchoolBusTripsPage() {
+  const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 10,
@@ -339,6 +341,24 @@ export function SchoolBusTripsPage() {
       headerClassName: 'pr-6 text-right',
       render: (trip) => {
         const normalized = trip.status.toUpperCase();
+
+        // Non-operators (Attendant, Parent) see view-only link
+        if (!access.canOperateTrip) {
+          return (
+            <div className='flex items-center justify-end gap-1.5'>
+              <Button
+                size='sm'
+                variant='outline'
+                className='rounded-full h-8 text-xs font-semibold px-3'
+                asChild
+              >
+                <Link href={`/school-bus/trips/${trip.id}`}>
+                  View details
+                </Link>
+              </Button>
+            </div>
+          );
+        }
 
         if (normalized === 'CREATED') {
           return (

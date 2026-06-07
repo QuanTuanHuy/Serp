@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -80,31 +81,33 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/validate")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<RouteManualValidationResponse>> validateRoute(@PathVariable Long id) {
         return ok("Validated route feasibility", routeManualValidationService.validateRoute(id, getCurrentTenantId()));
     }
 
     @PostMapping("/matrix")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<RoutingMatrixResponse>> getMatrix(
             @Valid @RequestBody List<RoutingPointRequest> points) {
         return ok("Computed routing matrix", routingMatrixService.buildMatrix(getCurrentTenantId(), points));
     }
 
     @GetMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<PageResponse<RoutePlanResponse>>> getRoutes(
             @ModelAttribute RoutePlanParamsRequest params) {
         return ok("Fetched routes", routeService.getRoutes(params, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<RouteDetailResponse>> getRoute(@PathVariable Long id) {
         return ok("Fetched route", routeService.getRoute(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RoutePlanResponse>> updateRoute(
             @PathVariable Long id,
             @Valid @RequestBody RoutePlanUpsertRequest request) {
@@ -112,7 +115,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/assign")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.assign')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dispatch.assign')")
     public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> assignRoute(
             @PathVariable Long id,
             @Valid @RequestBody RouteAssignmentRequest request) {
@@ -120,7 +123,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/manual-dispatch")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.assign')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dispatch.assign')")
     public ResponseEntity<GeneralResponse<RouteAssignmentResponse>> manualDispatchRoute(
             @PathVariable Long id,
             @Valid @RequestBody ManualDispatchRequest request) {
@@ -129,7 +132,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PatchMapping("/{id}/stops/reorder")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<List<RouteStopResponse>>> reorderRouteStops(
             @PathVariable Long id,
             @Valid @RequestBody ReorderStopsRequest request) {
@@ -138,19 +141,19 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/compute-path")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RoutePathResponse>> computePath(@PathVariable Long id) {
         return ok("Computed route path", routeService.computePath(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}/path")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<RoutePathResponse>> getPath(@PathVariable Long id) {
         return ok("Fetched route path", routeService.getRoutePath(id, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}/assignment-history")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<List<AssignmentHistoryResponse>>> getAssignmentHistory(
             @PathVariable Long id) {
         return ok("Fetched assignment history", routeService.getAssignmentHistory(id, getCurrentTenantId()));
@@ -159,7 +162,7 @@ public class RouteController extends AbstractBaseController {
     // ── Manual editing endpoints ─────────────────────────────────────────
 
     @PostMapping("/{id}/stops")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RouteStopResponse>> addStop(
             @PathVariable Long id,
             @Valid @RequestBody AddRouteStopRequest request) {
@@ -167,7 +170,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}/stops/{stopId}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<Void>> removeStop(
             @PathVariable Long id,
             @PathVariable Long stopId) {
@@ -176,7 +179,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/stops/{stopId}/students")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RoutePlanStudentResponse>> addStudentToStop(
             @PathVariable Long id,
             @PathVariable Long stopId,
@@ -186,7 +189,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/students/assign")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RoutePlanStudentResponse>> assignStudentToRoute(
             @PathVariable Long id,
             @Valid @RequestBody AddStudentToStopRequest request) {
@@ -195,7 +198,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/students/move")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<Void>> moveStudent(
             @PathVariable Long id,
             @Valid @RequestBody MoveStudentRequest request) {
@@ -204,7 +207,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}/students/{studentId}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.route.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<Void>> removeStudent(
             @PathVariable Long id,
             @PathVariable Long studentId,
@@ -214,6 +217,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @GetMapping("/{routePlanId}/calculation-traces/latest")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse>> getLatestCalculationTrace(
             @PathVariable Long routePlanId) {
         return ok("Fetched latest calculation trace",
@@ -225,6 +229,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @GetMapping("/{routePlanId}/calculation-traces")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<List<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse>>> getCalculationTraceHistory(
             @PathVariable Long routePlanId) {
         return ok("Fetched calculation trace history",
@@ -243,6 +248,7 @@ public class RouteController extends AbstractBaseController {
      * Ma trận này phục vụ thuật toán greedy và benchmark thực nghiệm.
      */
     @GetMapping("/{routePlanId}/calculation-traces/latest/export")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.report.export')")
     public ResponseEntity<byte[]> exportLatestCalculationTrace(@PathVariable Long routePlanId) {
         ExportResult result = exportService.export(
                 ExportRequest.builder()
@@ -258,6 +264,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @GetMapping("/{routePlanId}/calculation-traces/{traceId}/export")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.report.export')")
     public ResponseEntity<byte[]> exportCalculationTrace(
             @PathVariable Long routePlanId,
             @PathVariable Long traceId) {
@@ -276,6 +283,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}/objective-score")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.ObjectiveScoreResponse>> getRouteObjectiveScore(
             @PathVariable Long id) {
         return ok("Fetched route objective score",
@@ -283,6 +291,7 @@ public class RouteController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/objective-score/recalculate")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<serp.project.school_bus_service.dto.response.ObjectiveScoreResponse>> recalculateRouteObjectiveScore(
             @PathVariable Long id) {
         return ok("Recalculated route objective score",

@@ -537,7 +537,6 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   cancelledAt?: string | null;
   cancelledBy?: number | null;
   cancellationReason?: string | null;
-  simulationMode?: boolean;
   busId?: number | null;
   busPlateNumber?: string | null;
   driverId?: number | null;
@@ -550,35 +549,6 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   startLocationName?: string | null;
   endLocationType?: string | null;
   endLocationName?: string | null;
-}
-
-export interface SchoolBusDemoEvent extends SchoolBusBaseRecord {
-  demoSessionId: number;
-  eventType: string;
-  eventTime: string;
-  payloadJson?: string | null;
-}
-
-export interface SchoolBusDemoSession extends SchoolBusBaseRecord {
-  demoCode: string;
-  tripId: number;
-  tripCode: string;
-  status: string;
-  speedMultiplier: number;
-  currentStopOrder?: number | null;
-  currentLatitude?: number | null;
-  currentLongitude?: number | null;
-  progressPercent: number;
-  durationSeconds?: number | null;
-  autoAdvanceStops?: boolean | null;
-  autoAttendance?: boolean | null;
-  lastTickAt?: string | null;
-  lastEventType?: string | null;
-  errorMessage?: string | null;
-  startedAt?: string | null;
-  pausedAt?: string | null;
-  completedAt?: string | null;
-  events: SchoolBusDemoEvent[];
 }
 
 export interface SchoolBusCapacityUtilization {
@@ -863,12 +833,6 @@ export interface SchoolBusTripAttendanceActionRequest {
   studentId: number;
   notes?: string;
   isActive?: boolean;
-}
-
-export interface CreateDemoSessionRequest {
-  durationSeconds?: number | null;
-  autoAdvanceStops?: boolean | null;
-  autoAttendance?: boolean | null;
 }
 
 export interface SchoolBusMapAddressParts {

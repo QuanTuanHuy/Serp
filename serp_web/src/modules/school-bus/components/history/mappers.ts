@@ -4,7 +4,6 @@ import type {
   SchoolBusTransportRequestHistory,
   SchoolBusSubscriptionHistory,
   SchoolBusSubscriptionPausePeriod,
-  SchoolBusDemoEvent,
   SchoolBusTripHistory,
 } from '../../types';
 import type { TimelineEvent } from './SchoolBusTimeline';
@@ -128,18 +127,3 @@ export function mapTripHistoryToTimeline(
   }));
 }
 
-// ─── Demo Events ────────────────────────────────────────────────────────────
-
-export function mapDemoEventsToTimeline(
-  items: SchoolBusDemoEvent[]
-): TimelineEvent[] {
-  return items.map((e) => ({
-    id: e.id ?? `demo-${e.eventType}-${e.eventTime}`,
-    occurredAt: e.eventTime,
-    title: e.eventType || 'Demo event',
-    description: undefined,
-    category: 'SYSTEM',
-    source: 'Demo',
-    metadata: e.payloadJson ? { payload: e.payloadJson } : undefined,
-  }));
-}

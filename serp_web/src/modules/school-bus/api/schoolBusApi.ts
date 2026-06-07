@@ -9,9 +9,6 @@ import type {
 
   PagedResponse,
   SchoolBusCapacityUtilization,
-  SchoolBusDemoEvent,
-  SchoolBusDemoSession,
-  CreateDemoSessionRequest,
   SchoolBusAttendance,
   SchoolBusListParams,
   SchoolBusMapLocation,
@@ -1481,101 +1478,6 @@ export const schoolBusApi = api.injectEndpoints({
       ],
     }),
 
-    // ===== Demo Sessions (session-centric API) =====
-    createDemoSession: builder.mutation<
-      ApiResponse<SchoolBusDemoSession>,
-      { tripId: number; body?: CreateDemoSessionRequest }
-    >({
-      query: ({ tripId, body }) => ({
-        url: `/demo-sessions/from-trip/${tripId}`,
-        method: 'POST',
-        body: body ?? {},
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    getDemoSession: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}`, method: 'GET' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      providesTags: (_result, _error, sessionId) => [
-        { type: 'schoolBus/TripHistory', id: `DEMO-${sessionId}` },
-      ],
-    }),
-    getDemoSessionByTrip: builder.query<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (tripId) => ({ url: `/demo-sessions/by-trip/${tripId}`, method: 'GET' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    startDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/start`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    pauseDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/pause`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    resumeDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/resume`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    tickDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/tick`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    stopDemoSession: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/stop`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    jumpDemoSessionToStop: builder.mutation<ApiResponse<SchoolBusDemoSession>, { sessionId: number; stopOrder: number }>({
-      query: ({ sessionId, stopOrder }) => ({ url: `/demo-sessions/${sessionId}/jump-to-stop/${stopOrder}`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    jumpDemoSessionToProgress: builder.mutation<ApiResponse<SchoolBusDemoSession>, { sessionId: number; progressPercent: number }>({
-      query: ({ sessionId, progressPercent }) => ({ url: `/demo-sessions/${sessionId}/jump-to-progress`, method: 'POST', body: { progressPercent } }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    jumpDemoSessionToStart: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/jump-to-start`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    jumpDemoSessionToEnd: builder.mutation<ApiResponse<SchoolBusDemoSession>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/jump-to-end`, method: 'POST' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    updateDemoAutomationSettings: builder.mutation<ApiResponse<SchoolBusDemoSession>, { sessionId: number; autoAdvanceStops?: boolean; autoAttendance?: boolean }>({
-      query: ({ sessionId, ...body }) => ({ url: `/demo-sessions/${sessionId}/automation-settings`, method: 'PATCH', body }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoSession>(),
-      invalidatesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-    getDemoSessionEvents: builder.query<ApiResponse<SchoolBusDemoEvent[]>, number>({
-      query: (sessionId) => ({ url: `/demo-sessions/${sessionId}/events`, method: 'GET' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusDemoEvent[]>(),
-      providesTags: [{ type: 'schoolBus/TripHistory', id: 'DEMO' }],
-    }),
-
     getTripHistory: builder.query<
       ApiResponse<PagedResponse<SchoolBusTripHistory>>,
       SchoolBusListParams | void
@@ -2158,20 +2060,6 @@ const {
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
   useStartBoardingTripStopMutation,
-  useCreateDemoSessionMutation,
-  useGetDemoSessionQuery: useGetDemoSessionQueryOrig,
-  useGetDemoSessionByTripQuery: useGetDemoSessionByTripQueryOrig,
-  useStartDemoSessionMutation,
-  usePauseDemoSessionMutation,
-  useResumeDemoSessionMutation,
-  useTickDemoSessionMutation,
-  useStopDemoSessionMutation,
-  useJumpDemoSessionToStopMutation,
-  useJumpDemoSessionToProgressMutation,
-  useJumpDemoSessionToStartMutation,
-  useJumpDemoSessionToEndMutation,
-  useUpdateDemoAutomationSettingsMutation,
-  useGetDemoSessionEventsQuery: useGetDemoSessionEventsQueryOrig,
   useGetAttendanceQuery: useGetAttendanceQueryOrig,
   useGetTripHistoryQuery: useGetTripHistoryQueryOrig,
   useGetSchoolSchedulesQuery: useGetSchoolSchedulesQueryOrig,
@@ -2257,9 +2145,6 @@ export const useGetTripStudentsQuery = wrapQueryHook(useGetTripStudentsQueryOrig
 export const useGetTripAttendanceQuery = wrapQueryHook(useGetTripAttendanceQueryOrig);
 export const useGetTripAttendanceManifestQuery = wrapQueryHook(useGetTripAttendanceManifestQueryOrig);
 export const useGetTripAttendanceSummaryQuery = wrapQueryHook(useGetTripAttendanceSummaryQueryOrig);
-export const useGetDemoSessionQuery = wrapQueryHook(useGetDemoSessionQueryOrig);
-export const useGetDemoSessionByTripQuery = wrapQueryHook(useGetDemoSessionByTripQueryOrig);
-export const useGetDemoSessionEventsQuery = wrapQueryHook(useGetDemoSessionEventsQueryOrig);
 export const useGetAttendanceQuery = wrapQueryHook(useGetAttendanceQueryOrig);
 export const useGetTripHistoryQuery = wrapQueryHook(useGetTripHistoryQueryOrig);
 export const useGetSchoolSchedulesQuery = wrapQueryHook(useGetSchoolSchedulesQueryOrig);
@@ -2342,17 +2227,6 @@ export {
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
   useStartBoardingTripStopMutation,
-  useCreateDemoSessionMutation,
-  useStartDemoSessionMutation,
-  usePauseDemoSessionMutation,
-  useResumeDemoSessionMutation,
-  useTickDemoSessionMutation,
-  useStopDemoSessionMutation,
-  useJumpDemoSessionToStopMutation,
-  useJumpDemoSessionToProgressMutation,
-  useJumpDemoSessionToStartMutation,
-  useJumpDemoSessionToEndMutation,
-  useUpdateDemoAutomationSettingsMutation,
   useCreateSchoolScheduleMutation,
   useUpdateSchoolScheduleMutation,
   useDeleteSchoolScheduleMutation,

@@ -26,6 +26,7 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 // Import Recharts chart wrappers
 import { DashboardDonutChart } from '../components/dashboard/DashboardDonutChart';
@@ -66,6 +67,7 @@ const REQUEST_COLORS = {
 };
 
 export function SchoolBusDashboardPage() {
+  const access = useSchoolBusAccess();
   // Filters State
   const [serviceDate, setServiceDate] = useState<string>('');
   const [schoolId, setSchoolId] = useState<number | undefined>(undefined);
@@ -105,15 +107,35 @@ export function SchoolBusDashboardPage() {
       }
       actions={
         <>
-          <Button asChild variant="outline" className="rounded-full border-zinc-300 dark:border-zinc-700">
-            <Link href="/school-bus/reports">Open reports</Link>
-          </Button>
-          <Button asChild className="rounded-full bg-red-800 hover:bg-red-900 text-white">
-            <Link href="/school-bus/dispatch">
-              Go to dispatch
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          </Button>
+          {access.canAccessReports && (
+            <Button asChild variant="outline" className="rounded-full border-zinc-300 dark:border-zinc-700">
+              <Link href="/school-bus/reports">Open reports</Link>
+            </Button>
+          )}
+          {access.canManageDispatching && (
+            <Button asChild className="rounded-full bg-red-800 hover:bg-red-900 text-white">
+              <Link href="/school-bus/dispatch">
+                Go to dispatch
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          )}
+          {access.isDriver && (
+            <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
+              <Link href="/school-bus/trips">
+                My Trips
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          )}
+          {access.isAttendant && (
+            <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
+              <Link href="/school-bus/attendance">
+                My Attendance
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          )}
         </>
       }
     >
@@ -314,21 +336,35 @@ export function SchoolBusDashboardPage() {
             >
               <div className="space-y-3">
                 {[
-                  {
+                  // Operator-only quick actions
+                  ...(access.canWriteRequest ? [{
                     href: '/school-bus/requests/new',
                     title: 'Create request',
                     description: 'Capture a new transport demand record.',
-                  },
-                  {
+                  }] : []),
+                  ...(access.canManageDispatching ? [{
                     href: '/school-bus/dispatch/planning',
                     title: 'Plan routes',
                     description: 'Open the session-based route planning workspace.',
-                  },
-                  {
+                  }] : []),
+                  // Attendant quick action
+                  ...(access.canMarkAttendance ? [{
                     href: '/school-bus/attendance',
                     title: 'Open attendance',
                     description: 'Open the manifest and record check-in or check-out.',
-                  },
+                  }] : []),
+                  // Driver quick action
+                  ...(access.isDriver ? [{
+                    href: '/school-bus/trips',
+                    title: 'My trips today',
+                    description: 'View and operate trips assigned to you.',
+                  }] : []),
+                  // Parent quick action
+                  ...(access.isParent ? [{
+                    href: '/school-bus/students',
+                    title: 'My children',
+                    description: 'View student profiles and status.',
+                  }] : []),
                 ].map((link) => (
                   <Link
                     key={link.href}

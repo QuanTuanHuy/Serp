@@ -11,6 +11,7 @@ import serp.project.school_bus_service.dto.response.TripAttendanceManifestRespon
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IRouteStopService;
@@ -56,6 +57,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     private final ITripStopLogService tripStopLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public AttendanceServiceImpl(
@@ -66,7 +68,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             ITripStudentService tripStudentService,
             ITripStopLogService tripStopLogService,
             SchoolBusMapper mapper,
-            MessageCommon messageCommon) {
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.attendanceRepository = attendanceRepository;
         this.tripExecutionService = tripExecutionService;
         this.auditLogService = auditLogService;
@@ -75,6 +78,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         this.tripStopLogService = tripStopLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -95,6 +99,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     @Override
     public List<AttendanceResponse> getTripAttendance(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
         return attendanceRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(tripId, tenantId)
                 .stream()
@@ -132,6 +137,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     private AttendanceResponse recordTripAttendance(Long tripId, TripAttendanceActionRequest request, Long tenantId,
             Long actorId, AttendanceEventType eventType) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
 
         // Trip must be IN_PROGRESS to record attendance
@@ -332,6 +338,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     @Transactional(readOnly = true)
     public TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
         List<serp.project.school_bus_service.entity.TripStudentEntity> students =
                 tripStudentService.findByTrip(tripId, tenantId);
@@ -349,6 +356,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     @Transactional(readOnly = true)
     public TripAttendanceManifestResponse getTripAttendanceManifest(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         List<serp.project.school_bus_service.entity.TripStudentEntity> tripStudents =
                 tripStudentService.findByTrip(tripId, tenantId);
