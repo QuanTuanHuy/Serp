@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Formula;
 import serp.project.logistics.dto.request.ProductCreationForm;
 import serp.project.logistics.dto.request.ProductUpdateForm;
 import serp.project.logistics.util.IdUtils;
@@ -75,9 +76,13 @@ public class ProductEntity {
     @Column(name = "tenant_id")
     private Long tenantId;
 
+    @Formula("(SELECT COALESCE(SUM(i.quantity_on_hand - i.quantity_reserved - i.quantity_committed), 0) " +
+            "FROM wms2_inventory_item i " +
+            "WHERE i.product_id = id AND i.expiration_date > CURRENT_DATE)")
+    private int quantityAvailable;
+
     public ProductEntity(ProductCreationForm form, Long tenantId) {
-        String productId = IdUtils.generateProductId();
-        this.id = productId;
+        this.id = IdUtils.generateProductId();
         this.name = form.getName();
         this.weight = form.getWeight();
         this.height = form.getHeight();

@@ -69,7 +69,7 @@ interface OrderDetailPageProps {
 // Order status configuration
 const STATUS_CONFIG = {
   CREATED: {
-    label: 'Đã tạo',
+    label: 'Chờ duyệt',
     color: 'text-blue-700 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     icon: Clock,

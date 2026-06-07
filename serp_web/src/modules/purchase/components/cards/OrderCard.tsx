@@ -1,37 +1,37 @@
-'use client';
-
 import {
+  Badge,
   Button,
   Card,
   CardContent,
-  Badge,
   CardHeader,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
 } from '@/shared/components/ui';
 import {
-  ShoppingCart,
-  Package,
-  Clock,
-  CheckCircle2,
-  XCircle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu';
+import {
+  AlertCircle,
   Calendar,
-  User,
-  TrendingUp,
+  CheckCircle2,
+  Clock,
   ExternalLink,
   MoreVertical,
+  Package,
+  ShoppingCart,
+  TrendingUp,
   TriangleAlert,
-  AlertCircle,
+  User,
+  XCircle,
 } from 'lucide-react';
-import { cn, formatCurrency } from '@/shared/utils';
-import type { Customer, Order } from '../../types';
-import { formatDateVN } from '@/shared/utils/format';
+import { cn } from '@/shared/utils';
+import { formatCurrency, formatDateVN } from '@/shared/utils/format';
+import type { Order, Supplier } from '../../types';
 
 const statusStyles = {
   CREATED: {
-    label: 'Chờ duyệt',
+    label: 'Chờ phê duyệt',
     bg: 'bg-blue-100 dark:bg-blue-900/30',
     text: 'text-blue-700 dark:text-blue-400',
     dot: 'bg-blue-500',
@@ -62,14 +62,7 @@ const statusStyles = {
     icon: Package,
     accent: '#a855f7',
   },
-} as const;
-
-interface OrderCardProps {
-  order: Order;
-  onClick?: () => void;
-  customer?: Customer;
-  viewMode?: 'grid' | 'list';
-}
+};
 
 const getPriorityMeta = (priority?: number) => {
   if (priority === undefined || priority === null) {
@@ -102,21 +95,26 @@ const getPriorityMeta = (priority?: number) => {
 export const OrderCard = ({
   order,
   onClick,
-  customer,
+  supplier,
   viewMode = 'grid',
-}: OrderCardProps) => {
+}: {
+  order: Order;
+  onClick?: () => void;
+  supplier?: Supplier;
+  viewMode?: 'grid' | 'list';
+}) => {
   const status =
     statusStyles[order.statusId as keyof typeof statusStyles] ||
     statusStyles.CREATED;
-  const StatusIcon = status.icon;
+  const StatusIcon = status.icon as any;
   const priorityMeta = getPriorityMeta(order.priority);
 
   const orderTitle =
     order.orderName || `Đơn hàng #${order.id?.slice(0, 8) || 'N/A'}`;
   const shortId = order.id ? `${order.id.slice(0, 10)}...` : 'N/A';
-  const customerLabel =
-    customer?.name ||
-    (order.toCustomerId ? `${order.toCustomerId.slice(0, 8)}...` : 'N/A');
+  const supplierLabel =
+    supplier?.name ||
+    (order.fromSupplierId ? `${order.fromSupplierId.slice(0, 8)}...` : 'N/A');
   const deliveryLabel = order.deliveryBeforeDate
     ? `Giao trước ngày ${formatDateVN(order.deliveryBeforeDate)}`
     : 'Không có hạn giao';
@@ -155,7 +153,7 @@ export const OrderCard = ({
             <p className='text-sm font-semibold truncate'>{orderTitle}</p>
 
             <p className='text-sm text-muted-foreground truncate'>
-              {customerLabel}
+              {supplierLabel}
             </p>
 
             <p
@@ -197,7 +195,7 @@ export const OrderCard = ({
       />
 
       <CardHeader className='pb-3'>
-        <div className='flex items-start justify-between gap-2'>
+        <div className='flex items-start justify-between gap-2 w-full'>
           <div className='flex items-start gap-3 flex-1 min-w-0'>
             <div
               className='w-1 h-12 rounded-full flex-shrink-0'
@@ -205,7 +203,7 @@ export const OrderCard = ({
             />
 
             <div className='grid flex-1'>
-              <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
+              <h3 className='font-semibold text-base leading-tight mb-1 truncate block w-full'>
                 {orderTitle}
               </h3>
               <p className='text-xs text-muted-foreground truncate'>
@@ -278,9 +276,9 @@ export const OrderCard = ({
             <div className='space-y-1'>
               <div className='flex items-center gap-1 text-muted-foreground'>
                 <User className='h-3 w-3' />
-                <span>Khách hàng</span>
+                <span>Nhà cung cấp</span>
               </div>
-              <p className='text-sm font-semibold truncate'>{customerLabel}</p>
+              <p className='text-sm font-semibold truncate'>{supplierLabel}</p>
             </div>
 
             <div className='space-y-1'>
@@ -341,3 +339,5 @@ export const OrderCard = ({
     </Card>
   );
 };
+
+export default OrderCard;

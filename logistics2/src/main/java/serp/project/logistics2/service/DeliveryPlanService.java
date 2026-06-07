@@ -182,7 +182,7 @@ public class DeliveryPlanService {
             throw new AppException(AppErrorCode.INVALID_STATUS_TRANSITION);
         }
 
-        plan.setOptimizationStatus(PlanOptimizationStatus.FAILED.name());
+        plan.setOptimizationStatus(PlanOptimizationStatus.DRAFT.name());
         deliveryPlanRepository.save(plan);
     }
 

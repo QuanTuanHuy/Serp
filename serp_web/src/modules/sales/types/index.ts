@@ -390,6 +390,6 @@ export interface OrderFilters {
   saleChannelId?: SaleChannel;
   orderDateAfter?: string;
   orderDateBefore?: string;
-  deliveryDateAfter?: string;
-  deliveryDateBefore?: string;
+  deliveryAfter?: string;
+  deliveryBefore?: string;
 }

@@ -1,10 +1,3 @@
-/**
- * Sales Main Page - Redirects to Dashboard
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Sales main entry point
- */
-
 'use client';
 
 import { useEffect } from 'react';
@@ -20,9 +13,16 @@ export default function SalesPage() {
   return (
     <div className='flex h-full items-center justify-center'>
       <div className='text-center'>
-        <div className='text-lg font-semibold'>Loading Sales Dashboard...</div>
+        <div className='text-lg font-semibold'>
+          Chuyển hướng đến dashboard bán hàng
+        </div>
         <div className='mt-2 text-sm text-muted-foreground'>
-          Redirecting to your sales management dashboard
+          Đang chuyển hướng đến bảng điều khiển quản lý bán hàng, nếu bạn không
+          được chuyển hướng tự động, vui lòng{' '}
+          <a href='/sales/dashboard' className='text-primary underline'>
+            nhấn vào đây
+          </a>
+          .
         </div>
       </div>
     </div>

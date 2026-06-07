@@ -59,39 +59,11 @@ import type {
   InventoryItemStatus,
   Product,
 } from '../../types';
+import { InventoryItemCard } from '../../components/cards/InventoryItemCard';
 
 interface InventoryListPageProps {
   className?: string;
 }
-
-const statusStyles = {
-  VALID: {
-    label: 'Còn hạn',
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    dot: 'bg-emerald-500',
-    icon: CheckCircle2,
-  },
-  EXPIRED: {
-    label: 'Đã hết hạn',
-    bg: 'bg-rose-100 dark:bg-rose-900/30',
-    text: 'text-rose-700 dark:text-rose-400',
-    dot: 'bg-rose-500',
-    icon: XCircle,
-  },
-  ABOUT_TO_EXPIRE: {
-    label: 'Sắp hết hạn',
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    dot: 'bg-amber-500',
-    icon: AlertTriangle,
-  },
-};
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('vi-VN');
-};
 
 // Enhanced StatsCard component
 const StatsCard = ({
@@ -180,181 +152,47 @@ const StatsCard = ({
   );
 };
 
-// Enhanced InventoryCard component
-const InventoryCard = ({
-  item,
-  onClick,
-  product,
-  facility,
-}: {
-  item: InventoryItem;
-  onClick?: () => void;
-  product?: Product;
-  facility?: Facility;
-}) => {
-  const status =
-    statusStyles[item.statusId as keyof typeof statusStyles] ||
-    statusStyles.VALID;
-  const StatusIcon = status.icon;
-
-  const isExpiringSoon =
-    item.expirationDate &&
-    new Date(item.expirationDate) <
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && // within 30 days
-    new Date(item.expirationDate) >= new Date(); // not yet expired
-
-  const isExpired =
-    item.expirationDate && new Date(item.expirationDate) < new Date(); // already expired
-
-  return (
-    <Card
-      className={cn(
-        'group relative overflow-hidden',
-        'hover:shadow-lg hover:border-primary/20 transition-all duration-200 cursor-pointer'
-      )}
-      onClick={onClick}
-    >
-      {/* Header with gradient accent */}
-      <div className='relative h-2 bg-gradient-to-r from-primary/60 via-primary/40 to-primary/20' />
-
-      <CardContent className='p-5'>
-        {/* Header */}
-        <div className='flex items-start justify-between mb-4'>
-          <div className='flex-1 min-w-0'>
-            <div className='flex items-center gap-2 mb-2'>
-              <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary'>
-                <Package className='h-5 w-5' />
-              </div>
-              <div className='flex-1 min-w-0'>
-                <h3 className='font-semibold text-foreground truncate'>
-                  {product?.name || item.productId.slice(0, 8)}
-                </h3>
-                <p className='text-xs text-muted-foreground'>
-                  Lô hàng: {item.lotId}
-                </p>
-              </div>
-            </div>
-
-            <div className='flex items-center gap-2 flex-wrap'>
-              {!isExpired && !isExpiringSoon && (
-                <Badge
-                  variant='secondary'
-                  className={cn('gap-1', status.bg, status.text)}
-                >
-                  <StatusIcon className='h-3 w-3' />
-                  <span
-                    className={cn('h-1.5 w-1.5 rounded-full', status.dot)}
-                  />
-                  {status.label}
-                </Badge>
-              )}
-              {isExpiringSoon && (
-                <Badge
-                  variant='secondary'
-                  className='gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                >
-                  <AlertTriangle className='h-3 w-3' />
-                  Sắp hết hạn
-                </Badge>
-              )}
-              {isExpired && (
-                <Badge
-                  variant='secondary'
-                  className='gap-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'
-                >
-                  <XCircle className='h-3 w-3' />
-                  Đã hết hạn
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Inventory Info */}
-        <div className='space-y-2 mb-4'>
-          <div className='flex items-center justify-between text-sm'>
-            <span className='text-muted-foreground'>Tồn kho thực:</span>
-            <span className='font-semibold text-purple-700 dark:text-purple-400'>
-              {item.quantityOnHand} {product?.unit || ''}
-            </span>
-          </div>
-
-          <div className='flex items-center gap-2 text-sm pt-2 border-t'>
-            <MapPin className='h-4 w-4 text-muted-foreground shrink-0' />
-            <span className='truncate text-muted-foreground'>
-              {facility?.name || item.facilityId.slice(0, 8)}
-            </span>
-          </div>
-
-          {item.manufacturingDate && (
-            <div className='flex items-center gap-2 text-sm'>
-              <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                NSX: {formatDate(item.manufacturingDate)}
-              </span>
-            </div>
-          )}
-
-          {item.expirationDate && (
-            <div className='flex items-center gap-2 text-sm'>
-              <Calendar className='h-4 w-4 text-muted-foreground shrink-0' />
-              <span className='text-muted-foreground'>
-                HSD: {formatDate(item.expirationDate)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className='flex items-center justify-between pt-3 border-t'>
-          <div>
-            <p className='text-xs text-muted-foreground'>Khả dụng</p>
-            <p className='text-lg font-bold text-emerald-600 dark:text-emerald-400'>
-              {item.quantityOnHand -
-                item.quantityCommitted -
-                item.quantityReserved}{' '}
-              {product?.unit || ''}
-            </p>
-          </div>
-
-          <Button
-            variant='ghost'
-            size='sm'
-            className='opacity-0 group-hover:opacity-100 transition-opacity'
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick?.();
-            }}
-          >
-            Xem chi tiết →
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 export const InventoryListPage: React.FC<InventoryListPageProps> = ({
   className,
 }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-
-  const pagination = useAppSelector(selectInventoryItemPagination);
-  const filters = useAppSelector(selectInventoryItemFilters);
-
-  const { data, isLoading, error } = useGetInventoryItemsQuery({
-    filters,
-    pagination,
-  });
+  const SEARCH_PAGE_SIZE = 9;
 
   // Local state
-  const [searchQuery, setSearchQuery] = useState(filters.query || '');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [facilityFilter, setFacilityFilter] = useState<string>('');
+  const [expirationDateFrom, setExpirationDateFrom] = useState<string>('');
+  const [expirationDateTo, setExpirationDateTo] = useState<string>('');
+  const [manufacturingDateFrom, setManufacturingDateFrom] =
+    useState<string>('');
+  const [manufacturingDateTo, setManufacturingDateTo] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<InventoryItemStatus | ''>(
     ''
   );
+
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: SEARCH_PAGE_SIZE,
+  });
+
+  const { data, isLoading, error } = useGetInventoryItemsQuery({
+    filters: {
+      query: searchQuery || undefined,
+      facilityId: facilityFilter || undefined,
+      expirationDateFrom: expirationDateFrom || undefined,
+      expirationDateTo: expirationDateTo || undefined,
+      manufacturingDateFrom: manufacturingDateFrom || undefined,
+      manufacturingDateTo: manufacturingDateTo || undefined,
+      statusId: statusFilter || undefined,
+    },
+    pagination: {
+      ...pagination,
+      size: SEARCH_PAGE_SIZE,
+    },
+  });
 
   const items = data?.data?.items || [];
 
@@ -362,12 +200,6 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
   const productIds = useMemo(() => {
     return Array.from(
       new Set(items.map((i: InventoryItem) => i.productId).filter(Boolean))
-    );
-  }, [items]);
-
-  const facilityIds = useMemo(() => {
-    return Array.from(
-      new Set(items.map((i: InventoryItem) => i.facilityId).filter(Boolean))
     );
   }, [items]);
 
@@ -380,13 +212,10 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
     { skip: productIds.length === 0 }
   );
 
-  const { data: facilitiesResponse } = useGetFacilitiesQuery(
-    {
-      filters: {},
-      pagination: { page: 0, size: 100 },
-    },
-    { skip: facilityIds.length === 0 }
-  );
+  const { data: facilitiesResponse } = useGetFacilitiesQuery({
+    filters: {},
+    pagination: { page: 0, size: 100 },
+  });
 
   // Create maps for quick lookup
   const productMap = useMemo(() => {
@@ -411,12 +240,11 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
 
   // Handle actions
   const handleSearch = () => {
-    dispatch(setInventoryItemFilters({ ...filters, query: searchQuery }));
-    dispatch(setInventoryItemPagination({ ...pagination, page: 0 }));
+    setPagination({ ...pagination, page: 0, size: SEARCH_PAGE_SIZE });
   };
 
   const handlePageChange = (newPage: number) => {
-    dispatch(setInventoryItemPagination({ ...pagination, page: newPage }));
+    setPagination({ ...pagination, page: newPage, size: SEARCH_PAGE_SIZE });
   };
 
   const handleViewItem = (itemId: string) => {
@@ -425,12 +253,32 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
 
   const clearFilters = () => {
     setSearchQuery('');
+    setFacilityFilter('');
     setStatusFilter('');
-    dispatch(setInventoryItemFilters({}));
-    dispatch(setInventoryItemPagination({ ...pagination, page: 0 }));
+    setExpirationDateFrom('');
+    setExpirationDateTo('');
+    setManufacturingDateFrom('');
+    setManufacturingDateTo('');
+    setPagination({ ...pagination, page: 0, size: SEARCH_PAGE_SIZE });
   };
 
-  const hasActiveFilters = searchQuery || statusFilter;
+  const hasActiveFilters =
+    !!searchQuery ||
+    !!statusFilter ||
+    !!expirationDateFrom ||
+    !!expirationDateTo ||
+    !!manufacturingDateFrom ||
+    !!manufacturingDateTo ||
+    !!facilityFilter;
+
+  const activeFilterCount =
+    (searchQuery ? 1 : 0) +
+    (statusFilter ? 1 : 0) +
+    (expirationDateFrom ? 1 : 0) +
+    (expirationDateTo ? 1 : 0) +
+    (manufacturingDateFrom ? 1 : 0) +
+    (manufacturingDateTo ? 1 : 0) +
+    (facilityFilter ? 1 : 0);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -587,37 +435,96 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
       {showFilters && (
         <Card>
           <CardContent className='p-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {/* Cột 1: Kho chứa (Đã xóa div thừa gây vỡ layout) */}
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
-                  Trạng thái
+                  Kho chứa
                 </label>
                 <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    const value = e.target.value as InventoryItemStatus | '';
-                    setStatusFilter(value);
-                    dispatch(
-                      setInventoryItemFilters({
-                        ...filters,
-                        statusId: value || undefined,
-                      })
-                    );
-                  }}
-                  className='w-full px-3 py-2 border rounded-lg bg-background'
+                  value={facilityFilter}
+                  onChange={(e) => setFacilityFilter(e.target.value)}
+                  className='w-full px-3 py-2 border rounded-lg bg-background text-sm'
                 >
-                  <option value=''>Tất cả trạng thái</option>
-                  <option value='VALID'>Hợp lệ</option>
-                  <option value='INVALID'>Không hợp lệ</option>
+                  <option value=''>Tất cả kho chứa</option>
+                  {(facilitiesResponse?.data?.items || []).map((facility) => (
+                    <option key={facility.id} value={facility.id}>
+                      {facility.name}
+                    </option>
+                  ))}
                 </select>
+              </div>
+
+              {/* Cột 2: Ngày hết hạn */}
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày hết hạn
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={expirationDateFrom}
+                      onChange={(e) => setExpirationDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={expirationDateTo}
+                      onChange={(e) => setExpirationDateTo(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 3: Ngày sản xuất */}
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày sản xuất
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={manufacturingDateFrom}
+                      onChange={(e) => setManufacturingDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={manufacturingDateTo}
+                      onChange={(e) => setManufacturingDateTo(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* Gộp chung Footer Filter (Đã tối ưu) */}
             {hasActiveFilters && (
-              <div className='mt-4 pt-4 border-t flex items-center justify-between'>
-                <p className='text-sm text-muted-foreground'>
-                  Đã tìm thấy {totalItems} kết quả phù hợp
-                </p>
+              <div className='mt-6 pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+                <div>
+                  <p className='text-sm text-foreground font-medium'>
+                    Đã tìm thấy {totalItems} kết quả
+                  </p>
+                  <p className='text-xs text-muted-foreground mt-0.5'>
+                    Đang bật {activeFilterCount} bộ lọc
+                  </p>
+                </div>
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
                   Xóa tất cả bộ lọc
                 </Button>
@@ -679,12 +586,13 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
           )}
         >
           {items.map((item: InventoryItem) => (
-            <InventoryCard
+            <InventoryItemCard
               key={item.id}
               item={item}
               onClick={() => handleViewItem(item.id)}
               product={productMap.get(item.productId)}
               facility={facilityMap.get(item.facilityId)}
+              viewMode={viewMode}
             />
           ))}
         </div>
