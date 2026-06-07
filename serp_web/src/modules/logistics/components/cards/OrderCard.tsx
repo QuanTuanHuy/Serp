@@ -34,7 +34,7 @@ import { Customer } from '../../types';
 
 const statusStyles = {
   CREATED: {
-    label: 'Đã tạo',
+    label: 'Chờ duyệt',
     bg: 'bg-blue-100 dark:bg-blue-900/30',
     text: 'text-blue-700 dark:text-blue-400',
     dot: 'bg-blue-500',

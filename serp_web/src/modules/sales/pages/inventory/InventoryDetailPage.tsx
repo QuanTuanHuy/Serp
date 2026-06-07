@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Inventory Item Detail Page
-*/
-
 'use client';
 
 import { useState } from 'react';
@@ -14,17 +9,12 @@ import {
   CardHeader,
   Button,
   Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
-  Label,
 } from '@/shared/components/ui';
 import {
   ArrowLeft,
@@ -33,14 +23,10 @@ import {
   Trash2,
   Package,
   MapPin,
-  Calendar,
-  Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Box,
-  TrendingUp,
-  TrendingDown,
   Archive,
   Save,
   Truck,
@@ -62,7 +48,7 @@ interface InventoryDetailPageProps {
 
 const STATUS_CONFIG = {
   VALID: {
-    label: 'Hợp lệ',
+    label: 'Còn hạn',
     color: 'text-emerald-700 dark:text-emerald-400',
     bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     icon: CheckCircle2,
@@ -73,8 +59,8 @@ const STATUS_CONFIG = {
     bgColor: 'bg-rose-100 dark:bg-rose-900/30',
     icon: XCircle,
   },
-  DAMAGED: {
-    label: 'Hư hỏng',
+  EXPIRING_SOON: {
+    label: 'Sắp hết hạn',
     color: 'text-amber-700 dark:text-amber-400',
     bgColor: 'bg-amber-100 dark:bg-amber-900/30',
     icon: AlertCircle,
@@ -114,10 +100,10 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
 
   // Edit form state
   const [editData, setEditData] = useState({
-    quantityOnHand: item?.quantityOnHand || 0,
-    expirationDate: item?.expirationDate || '',
-    manufacturingDate: item?.manufacturingDate || '',
-    statusId: item?.statusId || 'VALID',
+    quantityOnHand: 0,
+    expirationDate: '',
+    manufacturingDate: '',
+    statusId: 'VALID',
   });
 
   const statusConfig = item
@@ -129,8 +115,13 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
   const handleEdit = () => {
     setEditData({
       quantityOnHand: item?.quantityOnHand || 0,
-      expirationDate: item?.expirationDate || '',
-      manufacturingDate: item?.manufacturingDate || '',
+      // Cắt lấy 10 ký tự đầu (YYYY-MM-DD) để input date hiểu được
+      expirationDate: item?.expirationDate
+        ? item.expirationDate.slice(0, 10)
+        : '',
+      manufacturingDate: item?.manufacturingDate
+        ? item.manufacturingDate.slice(0, 10)
+        : '',
       statusId: item?.statusId || 'VALID',
     });
     setIsEditing(true);
@@ -168,7 +159,8 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
 
   const handleDelete = async () => {
     if (!item) return;
-    if (!confirm('Bạn có chắc chắn muốn xóa mục tồn kho này không?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa mục tồn kho này không?'))
+      return;
 
     try {
       await deleteInventoryItem(item.id).unwrap();
@@ -238,7 +230,10 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
           <div>
             <div className='flex items-center gap-3 mb-1'>
               <h1 className='text-2xl font-bold tracking-tight'>
-                {product?.name || item.productId.slice(0, 8)}
+                {/* Check an toàn đề phòng productId rỗng */}
+                {product?.name ||
+                  item.productId?.slice(0, 8) ||
+                  'Sản phẩm không rõ'}
               </h1>
               <Badge
                 variant='secondary'
@@ -253,9 +248,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               </Badge>
             </div>
             <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-              <span>Lô hàng: {item.lotId}</span>
+              <span>Lô hàng: {item.lotId || 'N/A'}</span>
               <span>•</span>
-              <span>ID: {item.id.slice(0, 8)}...</span>
+              <span>ID: {item.id?.slice(0, 8) || 'N/A'}...</span>
             </div>
           </div>
         </div>
@@ -310,7 +305,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
       {/* Warning Badges */}
       {(isExpiringSoon || isExpired) && (
         <div className='flex gap-2'>
-          {isExpiringSoon && (
+          {isExpiringSoon && !isExpired && (
             <Badge
               variant='secondary'
               className='gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
@@ -353,7 +348,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                     className='w-32'
                   />
                 ) : (
-                  <p className='text-2xl font-bold'>{item.quantityOnHand}</p>
+                  <p className='text-2xl font-bold'>
+                    {item.quantityOnHand || 0}
+                  </p>
                 )}
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30'>
@@ -369,7 +366,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground mb-1'>Chưa giao</p>
                 <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                  {item.quantityCommitted}
+                  {item.quantityCommitted || 0}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30'>
@@ -383,9 +380,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-muted-foreground mb-1'>Đã đặt</p>
+                <p className='text-sm text-muted-foreground mb-1'>Chưa xuất</p>
                 <p className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
-                  {item.quantityReserved}
+                  {item.quantityReserved || 0}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30'>
@@ -401,9 +398,10 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground mb-1'>Khả dụng</p>
                 <p className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>
-                  {item.quantityOnHand -
-                    item.quantityCommitted -
-                    item.quantityReserved}
+                  {/* Tránh lỗi NaN khi một trong các trường bị undefined */}
+                  {(item.quantityOnHand || 0) -
+                    (item.quantityCommitted || 0) -
+                    (item.quantityReserved || 0)}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30'>
@@ -428,25 +426,25 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <div className='flex justify-between'>
               <span className='text-muted-foreground'>Tên sản phẩm</span>
               <span className='font-medium'>
-                {product?.name || item.productId.slice(0, 8)}
+                {product?.name || item.productId?.slice(0, 8) || 'N/A'}
               </span>
             </div>
             {product && (
               <>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Đơn vị</span>
-                  <span className='font-medium'>{product.unit}</span>
+                  <span className='font-medium'>{product.unit || 'N/A'}</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Giá vốn</span>
                   <span className='font-medium'>
-                    đ{product.costPrice.toLocaleString()}
+                    đ{product.costPrice?.toLocaleString() || 0}
                   </span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Giá bán</span>
                   <span className='font-medium'>
-                    đ{product.retailPrice.toLocaleString()}
+                    đ{product.retailPrice?.toLocaleString() || 0}
                   </span>
                 </div>
               </>
@@ -466,25 +464,27 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <div className='flex justify-between'>
               <span className='text-muted-foreground'>Kho hàng</span>
               <span className='font-medium'>
-                {facility?.name || item.facilityId.slice(0, 8)}
+                {facility?.name || item.facilityId?.slice(0, 8) || 'N/A'}
               </span>
             </div>
             {facility?.address && (
               <div className='flex justify-between'>
                 <span className='text-muted-foreground'>Địa chỉ</span>
-                <span className='font-medium'>
+                <span className='font-medium text-right max-w-[200px]'>
                   {facility?.address.fullAddress}
                 </span>
               </div>
             )}
             <div className='flex justify-between pt-2 border-t'>
-              <span className='text-muted-foreground'>Ngày nhận</span>
+              <span className='text-muted-foreground'>Ngày nhập kho</span>
               <span className='font-medium'>
-                {formatDateStringVN(item.receivedDate)}
+                {item.receivedDate
+                  ? formatDateStringVN(item.receivedDate)
+                  : 'Chưa nhập'}
               </span>
             </div>
-            <div className='flex justify-between'>
-              <span className='text-muted-foreground'>Ngày SX</span>
+            <div className='flex justify-between items-center'>
+              <span className='text-muted-foreground'>Ngày sản xuất</span>
               {isEditing ? (
                 <Input
                   type='date'
@@ -499,12 +499,14 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 />
               ) : (
                 <span className='font-medium'>
-                  {formatDateStringVN(item.manufacturingDate)}
+                  {item.manufacturingDate
+                    ? formatDateStringVN(item.manufacturingDate)
+                    : 'Không có'}
                 </span>
               )}
             </div>
-            <div className='flex justify-between'>
-              <span className='text-muted-foreground'>Ngày HSD</span>
+            <div className='flex justify-between items-center'>
+              <span className='text-muted-foreground'>Hạn sử dụng</span>
               {isEditing ? (
                 <Input
                   type='date'
@@ -519,7 +521,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 />
               ) : (
                 <span className='font-medium'>
-                  {formatDateStringVN(item.expirationDate)}
+                  {item.expirationDate
+                    ? formatDateStringVN(item.expirationDate)
+                    : 'Không có'}
                 </span>
               )}
             </div>
