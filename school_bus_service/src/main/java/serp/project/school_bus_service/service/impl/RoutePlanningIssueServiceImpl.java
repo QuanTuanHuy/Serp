@@ -46,4 +46,14 @@ public class RoutePlanningIssueServiceImpl extends AbstractBaseService<RoutePlan
         return routePlanningIssueRepository.countByRouteIdAndSeverityAndIsDeletedFalseAndIsResolvedFalse(
                 routeId, PlanningIssueSeverity.BLOCKING);
     }
+
+    @Override
+    public void deletePhysical(Long id) {
+        routePlanningIssueRepository.deleteById(id);
+    }
+
+    @Override
+    public List<RoutePlanningIssueEntity> findAllByRoute(Long routeId) {
+        return routePlanningIssueRepository.findByRouteId(routeId);
+    }
 }

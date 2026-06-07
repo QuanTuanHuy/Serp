@@ -14,6 +14,19 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
 
     List<StudentSubscriptionEntity> findByStudentIdAndTenantIdAndIsDeletedFalse(Long studentId, Long tenantId);
 
+    @Query("""
+            SELECT s FROM StudentSubscriptionEntity s
+             JOIN FETCH s.student
+             LEFT JOIN FETCH s.pickupPoint
+             LEFT JOIN FETCH s.dropoffPoint
+             WHERE s.school.id = :schoolId
+               AND s.tenantId = :tenantId
+               AND s.isDeleted = false
+            """)
+    List<StudentSubscriptionEntity> findAllBySchoolIdAndTenantId(
+            @Param("schoolId") Long schoolId,
+            @Param("tenantId") Long tenantId);
+
     List<StudentSubscriptionEntity> findBySchoolIdAndTenantIdAndStatusAndIsDeletedFalse(
             Long schoolId,
             Long tenantId,
@@ -43,7 +56,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
              WHERE s.school.id = :schoolId
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
-               AND s.status = 'ACTIVE'
+               AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE
                AND s.effectiveFrom <= :serviceDate
                AND (s.effectiveTo IS NULL OR s.effectiveTo >= :serviceDate)
                AND (:dayIndex = 1 AND s.monday = true
@@ -77,7 +90,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
                AND s.tripOption = :tripOption
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
-               AND s.status = 'ACTIVE'
+               AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE
                AND (:excludingId IS NULL OR s.id <> :excludingId)
                AND s.effectiveFrom <= COALESCE(:effectiveTo, CAST('9999-12-31' AS LocalDate))
                AND COALESCE(s.effectiveTo, CAST('9999-12-31' AS LocalDate)) >= :effectiveFrom

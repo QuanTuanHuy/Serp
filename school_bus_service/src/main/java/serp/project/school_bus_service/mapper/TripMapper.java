@@ -56,8 +56,8 @@ public class TripMapper extends BaseMapper {
         response.setCancelledAt(entity.getCancelledAt());
         response.setCancelledBy(entity.getCancelledBy());
         response.setCancellationReason(entity.getCancellationReason());
-        response.setSimulationMode(entity.getSimulationMode());
         response.setBusId(entity.getBus() == null ? null : entity.getBus().getId());
+
         response.setBusPlateNumber(entity.getBus() == null ? null : entity.getBus().getPlateNumber());
         response.setDriverId(entity.getDriver() == null ? null : entity.getDriver().getId());
         response.setDriverName(entity.getDriver() == null ? null : entity.getDriver().getFullName());

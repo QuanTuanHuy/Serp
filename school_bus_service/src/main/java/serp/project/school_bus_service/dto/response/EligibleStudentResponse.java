@@ -39,4 +39,7 @@ public class EligibleStudentResponse {
     private LocalTime windowEnd;
 
     private String specialNote;
+
+    private Boolean assigned;
+    private Long assignedRouteId;
 }

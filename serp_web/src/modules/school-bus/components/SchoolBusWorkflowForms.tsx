@@ -325,6 +325,10 @@ interface TransportRequestFormProps {
   isLoading?: boolean;
   onCancel?: () => void;
   submitLabel?: string;
+  /** When true: hides parent dropdown, auto-resolves parentProfileId from currentParentId. */
+  isParentRole?: boolean;
+  /** The parentProfileId of the currently logged-in parent. Required when isParentRole=true. */
+  currentParentId?: number;
 }
 
 interface PickupDropoffPointsFieldsProps {
@@ -493,6 +497,8 @@ export function TransportRequestForm({
   isLoading = false,
   onCancel,
   submitLabel = 'Save request',
+  isParentRole = false,
+  currentParentId,
 }: TransportRequestFormProps) {
   const mapStudentDefaults = React.useCallback((items: any[]) =>
     items.map((item) => ({
@@ -516,7 +522,8 @@ export function TransportRequestForm({
     resolver: zodResolver(transportRequestSchema) as any,
     defaultValues: {
       parentProfileId:
-        initialData?.request.parentProfileId ?? parents[0]?.id ?? 0,
+        initialData?.request.parentProfileId ??
+        (isParentRole ? (currentParentId ?? 0) : (parents[0]?.id ?? 0)),
       schoolId: initialData?.request.schoolId ?? schools[0]?.id ?? 0,
       requestType:
         initialData?.request.requestType || REQUEST_TYPE_OPTIONS[0].value,
@@ -536,7 +543,9 @@ export function TransportRequestForm({
   // Including them caused re-reset after async API data loaded, destroying user input.
   React.useEffect(() => {
     form.reset({
-      parentProfileId: initialData?.request.parentProfileId ?? 0,
+      parentProfileId:
+        initialData?.request.parentProfileId ??
+        (isParentRole ? (currentParentId ?? 0) : 0),
       schoolId: initialData?.request.schoolId ?? 0,
       requestType:
         initialData?.request.requestType || REQUEST_TYPE_OPTIONS[0].value,
@@ -1030,16 +1039,19 @@ export function TransportRequestForm({
               title='Request Information'
               description='Effective dates define when this demand can be used for planning.'
             >
-              <div className='grid gap-4 grid-cols-1 md:grid-cols-3'>
-                <SelectField
-                  form={form}
-                  name='parentProfileId'
-                  label='Parent'
-                  options={parents.map((parent) => ({
-                    value: String(parent.id),
-                    label: parent.fullName,
-                  }))}
-                />
+              <div className={cn('grid gap-4', isParentRole ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+                {/* Parent dropdown — hidden for SCHOOL_BUS_PARENT role (backend resolves from token) */}
+                {!isParentRole && (
+                  <SelectField
+                    form={form}
+                    name='parentProfileId'
+                    label='Parent'
+                    options={parents.map((parent) => ({
+                      value: String(parent.id),
+                      label: parent.fullName,
+                    }))}
+                  />
+                )}
                 <SelectField
                   form={form}
                   name='schoolId'

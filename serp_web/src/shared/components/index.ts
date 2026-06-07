@@ -21,3 +21,4 @@ export {
   useSidebarContext,
 } from './DynamicSidebar';
 export { RouteGuard } from './RouteGuard';
+export { MapLocationPicker } from './map-location-picker';

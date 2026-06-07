@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.mapper;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
@@ -21,7 +22,7 @@ public class RouteMapper extends BaseMapper {
 
     private final IRouteGeometryService routeGeometryService;
 
-    public RouteMapper(IRouteGeometryService routeGeometryService) {
+    public RouteMapper(@Lazy IRouteGeometryService routeGeometryService) {
         this.routeGeometryService = routeGeometryService;
     }
 
@@ -57,6 +58,15 @@ public class RouteMapper extends BaseMapper {
         }
         response.setStartedAt(entity.getStartedAt());
         response.setCompletedAt(entity.getCompletedAt());
+        response.setIssueCount(entity.getIssueCount());
+        response.setBlockingIssueCount(entity.getBlockingIssueCount());
+        response.setRequiredCapacity(entity.getRequiredCapacity());
+        if (entity.getPlanningSession() != null) {
+            response.setPlanningSessionId(entity.getPlanningSession().getId());
+        }
+        if (entity.getRouteGenerationMethod() != null) {
+            response.setPlanningMethod(entity.getRouteGenerationMethod().name());
+        }
         return response;
     }
 
@@ -194,5 +204,32 @@ public class RouteMapper extends BaseMapper {
             response.setEndLocationLatitude(entity.getEndDepot().getLatitude());
             response.setEndLocationLongitude(entity.getEndDepot().getLongitude());
         }
+    }
+
+    public serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse toRouteCalculationTraceResponse(
+            serp.project.school_bus_service.entity.RouteCalculationTraceEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse response = enrich(
+                new serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse(), entity);
+        response.setRoutePlanId(entity.getRoutePlan().getId());
+        if (entity.getPlanningSession() != null) {
+            response.setPlanningSessionId(entity.getPlanningSession().getId());
+        }
+        response.setCalculationType(entity.getCalculationType().name());
+        response.setCalculationStatus(entity.getCalculationStatus().name());
+        response.setInputJson(entity.getInputJson());
+        response.setMatrixJson(entity.getMatrixJson());
+        response.setTimelineJson(entity.getTimelineJson());
+        response.setIssuesJson(entity.getIssuesJson());
+        response.setConfigSnapshotJson(entity.getConfigSnapshotJson());
+        response.setSourceSummary(entity.getSourceSummary());
+        return response;
+    }
+
+    public List<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse> toRouteCalculationTraceResponseList(
+            List<serp.project.school_bus_service.entity.RouteCalculationTraceEntity> entities) {
+        return mapList(entities, this::toRouteCalculationTraceResponse);
     }
 }

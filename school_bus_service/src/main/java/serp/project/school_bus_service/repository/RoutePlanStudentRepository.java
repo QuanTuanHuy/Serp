@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.enums.RoutePlanStudentAction;
+import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.util.List;
@@ -68,4 +69,52 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
               AND r.isDeleted = false
             """)
     long countRoutesBySession(@Param("sessionId") Long sessionId);
+
+    @Query("""
+            SELECT ps FROM RoutePlanStudentEntity ps
+            WHERE ps.route.planningSession.id = :sessionId
+              AND ps.route.id <> :routeId
+              AND ps.isDeleted = false
+            """)
+    List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSession(
+            @Param("sessionId") Long sessionId,
+            @Param("routeId") Long routeId);
+
+    @Query("""
+            SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
+            WHERE ps.route.planningSession.id = :sessionId
+              AND ps.route.id <> :routeId
+              AND ps.student.id = :studentId
+              AND ps.route.routeDirection = :direction
+              AND ps.isDeleted = false
+            """)
+    boolean existsInOtherRoutesOfSessionAndDirection(
+            @Param("sessionId") Long sessionId,
+            @Param("routeId") Long routeId,
+            @Param("studentId") Long studentId,
+            @Param("direction") RouteDirection direction);
+
+    @Query("""
+            SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
+            WHERE ps.route.id = :routeId
+              AND ps.student.id = :studentId
+              AND ps.serviceAction = :action
+              AND ps.isDeleted = false
+            """)
+    boolean existsByRouteAndStudentAndAction(
+            @Param("routeId") Long routeId,
+            @Param("studentId") Long studentId,
+            @Param("action") RoutePlanStudentAction action);
+
+    @Query("""
+            SELECT ps FROM RoutePlanStudentEntity ps
+            WHERE ps.route.planningSession.id = :sessionId
+              AND ps.route.id <> :routeId
+              AND ps.route.routeDirection = :direction
+              AND ps.isDeleted = false
+            """)
+    List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(
+            @Param("sessionId") Long sessionId,
+            @Param("routeId") Long routeId,
+            @Param("direction") RouteDirection direction);
 }

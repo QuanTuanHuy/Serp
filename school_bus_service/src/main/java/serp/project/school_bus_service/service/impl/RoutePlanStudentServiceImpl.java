@@ -2,6 +2,8 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
+import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 import serp.project.school_bus_service.repository.RoutePlanStudentRepository;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
@@ -77,6 +79,31 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     @Override
     public void saveAll(List<RoutePlanStudentEntity> entities) {
         routePlanStudentRepository.saveAll(entities);
+    }
+
+    @Override
+    public List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSession(Long sessionId, Long routeId) {
+        return routePlanStudentRepository.findStudentsInOtherRoutesOfSession(sessionId, routeId);
+    }
+
+    @Override
+    public boolean existsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, Long studentId, RouteDirection direction) {
+        return routePlanStudentRepository.existsInOtherRoutesOfSessionAndDirection(sessionId, routeId, studentId, direction);
+    }
+
+    @Override
+    public boolean existsByRouteAndStudentAndAction(Long routeId, Long studentId, RoutePlanStudentAction action) {
+        return routePlanStudentRepository.existsByRouteAndStudentAndAction(routeId, studentId, action);
+    }
+
+    @Override
+    public List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, RouteDirection direction) {
+        return routePlanStudentRepository.findStudentsInOtherRoutesOfSessionAndDirection(sessionId, routeId, direction);
+    }
+
+    @Override
+    public void deletePhysical(Long id) {
+        routePlanStudentRepository.deleteById(id);
     }
 }
 

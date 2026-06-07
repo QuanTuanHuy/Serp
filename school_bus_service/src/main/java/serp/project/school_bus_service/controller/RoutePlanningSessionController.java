@@ -1,6 +1,7 @@
 package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,10 @@ import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
 
+import serp.project.school_bus_service.dto.response.ObjectiveScoreResponse;
+import serp.project.school_bus_service.service.IGreedyRouteGenerationService;
+import serp.project.school_bus_service.service.IRouteObjectiveScoringService;
+
 import java.util.List;
 
 @RestController
@@ -29,15 +34,22 @@ import java.util.List;
 public class RoutePlanningSessionController extends AbstractBaseController {
 
     private final IRoutePlanningSessionService sessionService;
+    private final IGreedyRouteGenerationService greedyRouteGenerationService;
+    private final IRouteObjectiveScoringService objectiveScoringService;
 
     public RoutePlanningSessionController(IRoutePlanningSessionService sessionService,
+                                          IGreedyRouteGenerationService greedyRouteGenerationService,
+                                          IRouteObjectiveScoringService objectiveScoringService,
                                           AuthUtils authUtils) {
         super(authUtils);
         this.sessionService = sessionService;
+        this.greedyRouteGenerationService = greedyRouteGenerationService;
+        this.objectiveScoringService = objectiveScoringService;
     }
 
     /** Preview eligible demand before creating a session. */
     @PostMapping("/preview")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<PlanningPreviewResponse>> preview(
             @Valid @RequestBody PlanningSessionPreviewRequest request) {
         return ok("Eligible demand preview", sessionService.preview(request, getCurrentTenantId()));
@@ -45,6 +57,7 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** Create a new planning session (409 if duplicate active session). */
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<PlanningSessionResponse>> createSession(
             @Valid @RequestBody PlanningSessionCreateRequest request) {
         return created("Planning session created",
@@ -53,12 +66,14 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** List all planning sessions for the current tenant. */
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<List<PlanningSessionResponse>>> listSessions() {
         return ok("Planning sessions fetched", sessionService.listSessions(getCurrentTenantId()));
     }
 
     /** Get a single planning session by ID. */
     @GetMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<PlanningSessionResponse>> getSession(
             @PathVariable Long id) {
         return ok("Planning session fetched", sessionService.getSession(id, getCurrentTenantId()));
@@ -66,16 +81,34 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** Run greedy route generation on an existing session. */
     @PostMapping("/{id}/generate-greedy")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<GreedyGenerateResponse>> generateGreedy(
             @PathVariable Long id,
             @RequestBody(required = false) GreedyGenerateRequest request) {
         GreedyGenerateRequest req = request != null ? request : new GreedyGenerateRequest();
         return ok("Greedy routes generated",
-                sessionService.generateGreedy(id, req, getCurrentTenantId(), getCurrentUserId()));
+                greedyRouteGenerationService.generateRoutes(id, req, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @GetMapping("/{id}/objective-score")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
+    public ResponseEntity<GeneralResponse<ObjectiveScoreResponse>> getSolutionObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Fetched solution objective score",
+                objectiveScoringService.calculateSolutionScore(id, getCurrentTenantId()));
+    }
+
+    @PostMapping("/{id}/objective-score/recalculate")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
+    public ResponseEntity<GeneralResponse<ObjectiveScoreResponse>> recalculateSolutionObjectiveScore(
+            @PathVariable Long id) {
+        return ok("Recalculated solution objective score",
+                objectiveScoringService.calculateSolutionScore(id, getCurrentTenantId()));
     }
 
     /** List routes belonging to a planning session (works for both MANUAL and GREEDY). */
     @GetMapping("/{id}/routes")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<List<RoutePlanResponse>>> listSessionRoutes(
             @PathVariable Long id) {
         return ok("Session routes fetched", sessionService.listRoutesBySession(id, getCurrentTenantId()));
@@ -83,6 +116,7 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** Create a route manually in a MANUAL planning session. */
     @PostMapping("/{id}/routes")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<RoutePlanResponse>> createSessionRoute(
             @PathVariable Long id,
             @Valid @RequestBody RoutePlanUpsertRequest request) {
@@ -92,6 +126,7 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** List eligible students for a session (for MANUAL assignment). */
     @GetMapping("/{id}/eligible-students")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<List<EligibleStudentResponse>>> listEligibleStudents(
             @PathVariable Long id) {
         return ok("Eligible students fetched",
@@ -100,6 +135,7 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** Publish all routes in the session (fails if blocking issues exist or unassigned students remain). */
     @PostMapping("/{id}/publish")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.publish')")
     public ResponseEntity<GeneralResponse<PlanningSessionResponse>> publishSession(
             @PathVariable Long id) {
         return ok("Session published",
@@ -108,6 +144,7 @@ public class RoutePlanningSessionController extends AbstractBaseController {
 
     /** Cancel the session and soft-delete its routes. */
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
     public ResponseEntity<GeneralResponse<PlanningSessionResponse>> cancelSession(
             @PathVariable Long id) {
         return ok("Session cancelled",

@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import serp.project.school_bus_service.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
@@ -24,12 +25,14 @@ public class ParentController extends AbstractBaseController {
     }
 
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<PageResponse<ParentProfileResponse>>> getParents(
             @ModelAttribute ParentProfileParamsRequest params) {
         return ok("Fetched parents", parentService.getParents(params, getCurrentTenantId()));
     }
 
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<ParentProfileResponse>> createParent(
             @Valid @RequestBody ParentProfileUpsertRequest request) {
         return created("Created parent",
@@ -37,11 +40,13 @@ public class ParentController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<ParentProfileResponse>> getParent(@PathVariable Long id) {
         return ok("Fetched parent", parentService.getParentResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<ParentProfileResponse>> updateParent(@PathVariable Long id,
             @Valid @RequestBody ParentProfileUpsertRequest request) {
         return ok("Updated parent",
@@ -49,6 +54,7 @@ public class ParentController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<Void>> deleteParent(@PathVariable Long id) {
         parentService.deleteParent(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted parent");

@@ -24,6 +24,7 @@ import {
   Edit,
   Trash2,
   ExternalLink,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
@@ -167,9 +168,9 @@ const SupplierCard = ({
 
       <CardContent className='p-5'>
         {/* Top Row - Avatar & Actions */}
-        <div className='flex items-start justify-between mb-4'>
-          <div className='flex items-center gap-3'>
-            <div className='relative'>
+        <div className='flex items-start justify-between mb-4 w-full gap-2'>
+          <div className='flex items-center gap-3 flex-1 min-w-0'>
+            <div className='relative flex-shrink-0'>
               <div className='flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-lg shadow-sm'>
                 {getInitials(supplier.name)}
               </div>
@@ -180,7 +181,7 @@ const SupplierCard = ({
                 )}
               />
             </div>
-            <div className='min-w-0'>
+            <div className='flex-1 min-w-0'>
               <h3 className='font-semibold text-foreground truncate'>
                 {supplier.name}
               </h3>
@@ -383,18 +384,18 @@ export const SupplierListPage: React.FC<SupplierListPageProps> = ({
         <StatsCard
           title='Tổng số nhà cung cấp'
           value={stats.total}
-          icon={Truck}
+          icon={Users}
         />
         <StatsCard
           title='Nhà cung cấp hoạt động'
           value={stats.active}
-          icon={Truck}
+          icon={Users}
           variant='success'
         />
         <StatsCard
           title='Nhà cung cấp không hoạt động'
           value={stats.total - stats.active}
-          icon={Truck}
+          icon={Users}
           variant='warning'
         />
       </div>

@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import serp.project.school_bus_service.dto.request.SchoolPickupPointWindowUpsertRequest;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
@@ -25,6 +26,7 @@ public class SchoolPickupPointWindowController extends AbstractBaseController {
 
     /** List windows for a specific linked pickup point */
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<List<SchoolPickupPointWindowResponse>>> getBySchoolPickupPoint(
             @RequestParam Long schoolPickupPointId) {
         return ok("Fetched windows", service.getBySchoolPickupPoint(schoolPickupPointId, getCurrentTenantId()));
@@ -32,6 +34,7 @@ public class SchoolPickupPointWindowController extends AbstractBaseController {
 
     /** List windows for a specific schedule (across all linked pickup points) */
     @GetMapping("/by-schedule")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<List<SchoolPickupPointWindowResponse>>> getBySchedule(
             @RequestParam Long schoolScheduleId) {
         return ok("Fetched windows by schedule", service.getBySchedule(schoolScheduleId, getCurrentTenantId()));
@@ -39,6 +42,7 @@ public class SchoolPickupPointWindowController extends AbstractBaseController {
 
     /** Create a new window */
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<SchoolPickupPointWindowResponse>> create(
             @Valid @RequestBody SchoolPickupPointWindowUpsertRequest request) {
         return created("Created window",
@@ -47,6 +51,7 @@ public class SchoolPickupPointWindowController extends AbstractBaseController {
 
     /** Update an existing window */
     @PutMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<SchoolPickupPointWindowResponse>> update(
             @RequestParam Long id,
             @Valid @RequestBody SchoolPickupPointWindowUpsertRequest request) {
@@ -56,6 +61,7 @@ public class SchoolPickupPointWindowController extends AbstractBaseController {
 
     /** Soft-delete a window */
     @DeleteMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<Void>> delete(@RequestParam Long id) {
         service.delete(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted window");

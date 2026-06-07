@@ -67,7 +67,7 @@ const STATUS_CONFIG = {
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  CREATED: 'Mới tạo',
+  CREATED: 'Chờ phê duyệt',
   APPROVED: 'Đã duyệt',
   CANCELLED: 'Đã hủy',
   FULLY_DELIVERED: 'Đã giao',

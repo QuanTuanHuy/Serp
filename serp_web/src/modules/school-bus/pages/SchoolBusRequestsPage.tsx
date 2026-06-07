@@ -39,8 +39,10 @@ import { schoolBusUi } from '../theme';
 import type { SchoolBusTransportRequest } from '../types';
 import { REQUEST_TYPE_OPTIONS } from '../constants';
 import { formatDate, formatDateTime, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 export function SchoolBusRequestsPage() {
+  const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 10,
@@ -279,7 +281,7 @@ export function SchoolBusRequestsPage() {
               <Eye className='h-4 w-4 text-slate-600' />
             </Link>
           </Button>
-          {request.status === 'SUBMITTED' ? (
+          {request.status === 'SUBMITTED' && access.canApproveRequests ? (
             <>
               <Button size='icon' variant='outline' className='h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700' asChild>
                 <Link href={`/school-bus/requests/${request.id}/edit`} title='Edit Request'>
@@ -306,7 +308,7 @@ export function SchoolBusRequestsPage() {
             </>
           ) : (
             <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
-              Locked
+              {request.status === 'SUBMITTED' ? 'Pending' : 'Locked'}
             </span>
           )}
         </div>
@@ -364,23 +366,29 @@ export function SchoolBusRequestsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Transport request queue'
-        description='Manage the approval queue and move valid demand into planning without leaving the module.'
+        title={access.isParent ? 'My transport requests' : 'Transport request queue'}
+        description={
+          access.isParent
+            ? 'Track the status of your transport requests and create new ones.'
+            : 'Manage the approval queue and move valid demand into planning without leaving the module.'
+        }
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Requests', current: true },
+              { label: access.isParent ? 'My Requests' : 'Requests', current: true },
             ]}
           />
         }
         actions={
-          <Button asChild className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-medium'>
-            <Link href='/school-bus/requests/new'>
-              <Plus className='h-4 w-4' />
-              New request
-            </Link>
-          </Button>
+          access.canWriteRequest ? (
+            <Button asChild className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-medium'>
+              <Link href='/school-bus/requests/new'>
+                <Plus className='h-4 w-4' />
+                New request
+              </Link>
+            </Button>
+          ) : undefined
         }
       >
         <div className='flex flex-col gap-6'>
@@ -421,7 +429,7 @@ export function SchoolBusRequestsPage() {
             'grid gap-6',
             pendingRequests.length > 0 ? 'xl:grid-cols-[400px_1fr]' : 'grid-cols-1'
           )}>
-            {pendingRequests.length > 0 && (
+            {pendingRequests.length > 0 && access.canApproveRequests && (
               <SchoolBusSection
                 title='Approval focus'
                 description='The pending subset remains the highest-value operational queue.'

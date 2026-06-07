@@ -35,7 +35,8 @@ public enum AppErrorCode {
                         "Delivery slip is not available for assignment", HttpStatus.BAD_REQUEST),
         VEHICLE_SHIPPER_NOT_FOUND("LOGISTICS2-BIZ-015",
                         "Vehicle-shipper assignment not found or access denied", HttpStatus.NOT_FOUND),
-    INSUFFICIENT_QUANTITY("LOGISTICS2-BIZ-016", "Insufficient quantity available", HttpStatus.BAD_REQUEST),
+        INSUFFICIENT_QUANTITY("LOGISTICS2-BIZ-016", "Insufficient quantity available", HttpStatus.BAD_REQUEST),
+    VEHICLE_ALREADY_ASSIGNED("LOGISTICS2-BIZ-017", "Vehicle is already assigned for the given date", HttpStatus.BAD_REQUEST),
 
         UNKNOWN_ENUM_VALUE("LOGISTICS2-VAL-001", "Unknown enum value provided", HttpStatus.BAD_REQUEST),
         REQUEST_VALIDATION_FAILED("LOGISTICS2-VAL-002", "Request validation failed", HttpStatus.BAD_REQUEST),

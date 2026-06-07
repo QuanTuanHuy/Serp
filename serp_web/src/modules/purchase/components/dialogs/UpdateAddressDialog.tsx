@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
+import { MapLocationPicker } from '@/shared/components';
+import { cn } from '@/shared/utils';
 import { toast } from 'sonner';
 import {
   useUpdateAddressMutation,
@@ -36,6 +38,11 @@ const ADDRESS_TYPE_OPTIONS: { value: AddressType; label: string }[] = [
   { value: 'FACILITY', label: 'Kho' },
   { value: 'BUSINESS', label: 'Cơ sở' },
 ];
+
+const DEFAULT_MAP_CENTER = {
+  lat: 16.047079,
+  lng: 108.20623,
+};
 
 interface UpdateAddressDialogProps {
   open: boolean;
@@ -56,19 +63,28 @@ export const UpdateAddressDialog: React.FC<UpdateAddressDialogProps> = ({
   const [addressType, setAddressType] = useState<AddressType>('SHIPPING');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
 
   const [updateAddress, { isLoading: isUpdating }] = useUpdateAddressMutation();
   const [createAddress, { isLoading: isCreating }] = useCreateAddressMutation();
 
   const isLoading = isUpdating || isCreating;
+  const hasLocationError = !latitude.trim() || !longitude.trim();
 
   useEffect(() => {
-    if (open) {
-      setFullAddress(currentAddress?.fullAddress ?? '');
-      setAddressType(currentAddress?.addressType ?? 'SHIPPING');
-      setLatitude(currentAddress?.latitude?.toString() ?? '');
-      setLongitude(currentAddress?.longitude?.toString() ?? '');
+    if (!open) {
+      return;
     }
+
+    const initialLatitude = currentAddress?.latitude ?? DEFAULT_MAP_CENTER.lat;
+    const initialLongitude =
+      currentAddress?.longitude ?? DEFAULT_MAP_CENTER.lng;
+
+    setFullAddress(currentAddress?.fullAddress ?? '');
+    setAddressType(currentAddress?.addressType ?? 'SHIPPING');
+    setLatitude(currentAddress?.latitude?.toString() ?? '');
+    setLongitude(currentAddress?.longitude?.toString() ?? '');
+    setMapCenter({ lat: initialLatitude, lng: initialLongitude });
   }, [open, currentAddress]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,8 +95,13 @@ export const UpdateAddressDialog: React.FC<UpdateAddressDialogProps> = ({
       return;
     }
 
-    const lat = latitude ? parseFloat(latitude) : 0;
-    const lng = longitude ? parseFloat(longitude) : 0;
+    if (hasLocationError) {
+      toast.error('Vui lòng chọn vị trí trên bản đồ.');
+      return;
+    }
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
 
     try {
       if (currentAddress) {
@@ -89,6 +110,7 @@ export const UpdateAddressDialog: React.FC<UpdateAddressDialogProps> = ({
           addressType,
           latitude: lat,
           longitude: lng,
+          default: currentAddress.default,
         };
         await updateAddress({ addressId: currentAddress.id, data }).unwrap();
       } else {
@@ -99,7 +121,7 @@ export const UpdateAddressDialog: React.FC<UpdateAddressDialogProps> = ({
           fullAddress: fullAddress.trim(),
           latitude: lat,
           longitude: lng,
-          isDefault: true,
+          default: true,
         };
         await createAddress(data).unwrap();
       }
@@ -150,31 +172,24 @@ export const UpdateAddressDialog: React.FC<UpdateAddressDialogProps> = ({
             />
           </div>
 
-          <div className='grid grid-cols-2 gap-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='latitude'>Vĩ độ</Label>
-              <Input
-                id='latitude'
-                type='number'
-                step='any'
-                placeholder='VD: 10.7769'
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='longitude'>Kinh độ</Label>
-              <Input
-                id='longitude'
-                type='number'
-                step='any'
-                placeholder='VD: 106.7009'
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+          <div className='space-y-2'>
+            <Label>Chọn vị trí trên bản đồ để cập nhật kinh độ và vĩ độ</Label>
+            <MapLocationPicker
+              initialLat={mapCenter.lat}
+              initialLng={mapCenter.lng}
+              className={cn(hasLocationError && 'border-destructive')}
+              disabled={isLoading}
+              onLocationSelect={(lat, lng) => {
+                setLatitude(lat.toString());
+                setLongitude(lng.toString());
+                setMapCenter({ lat, lng });
+              }}
+            />
+            {hasLocationError && (
+              <p className='text-sm text-destructive'>
+                Vui lòng chọn vị trí trên bản đồ.
+              </p>
+            )}
           </div>
 
           <DialogFooter>

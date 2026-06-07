@@ -13,5 +13,5 @@ import java.util.List;
  */
 public interface IRoutingEngineService {
 
-    RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints);
+    RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints, Long tenantId);
 }

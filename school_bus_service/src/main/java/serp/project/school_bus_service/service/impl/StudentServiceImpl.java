@@ -12,6 +12,7 @@ import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.service.IParentService;
 import serp.project.school_bus_service.service.IStudentService;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
@@ -40,18 +41,20 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
     private final ICodeGeneratorService codeGeneratorService;
     private final SchoolPickupPointValidator pickupPointValidator;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public StudentServiceImpl(
-    StudentRepository studentRepository,
-                                 ISchoolService schoolService,
-                                 IParentService parentService,
-                                 IPickupPointService pickupPointService,
-                                 SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
-                                 ICodeGeneratorService codeGeneratorService,
-                                 SchoolPickupPointValidator pickupPointValidator,
-                                 MessageCommon messageCommon) {
+            StudentRepository studentRepository,
+            ISchoolService schoolService,
+            IParentService parentService,
+            IPickupPointService pickupPointService,
+            SchoolBusMapper mapper,
+            IAuditLogService auditLogService,
+            ICodeGeneratorService codeGeneratorService,
+            SchoolPickupPointValidator pickupPointValidator,
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.studentRepository = studentRepository;
         this.schoolService = schoolService;
         this.parentService = parentService;
@@ -61,6 +64,7 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         this.codeGeneratorService = codeGeneratorService;
         this.pickupPointValidator = pickupPointValidator;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -88,6 +92,7 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
 
     @Override
     public StudentEntity getStudent(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessStudent(id);
         return findById(studentRepository, id, tenantId);
     }
 
@@ -119,6 +124,7 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
     @Override
     @Transactional
     public void deleteStudent(Long id, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanAccessStudent(id);
         softDeleteById(studentRepository, id, tenantId, actorId);
         auditLogService.log(tenantId, actorId, "Student", id, "SOFT_DELETE", "Soft deleted student profile");
     }

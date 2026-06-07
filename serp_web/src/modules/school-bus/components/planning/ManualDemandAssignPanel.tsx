@@ -15,12 +15,15 @@ interface ManualDemandAssignPanelProps {
   eligibleStudents: SchoolBusEligibleStudent[];
   /** Session ID — used for cache invalidation */
   sessionId: number;
+  /** Loading state for eligible students query */
+  loadingEligible?: boolean;
 }
 
 export function ManualDemandAssignPanel({
   selectedRoute,
   eligibleStudents,
   sessionId,
+  loadingEligible,
 }: ManualDemandAssignPanelProps) {
   const [assignStudentToRoute] = useAssignStudentToRouteMutation();
   const [lastAssigned, setLastAssigned] = useState<number | null>(null);
@@ -71,10 +74,66 @@ export function ManualDemandAssignPanel({
     );
   }
 
-  if (eligibleStudents.length === 0) {
+  // Case C: Loading state
+  if (loadingEligible) {
     return (
       <SchoolBusSection title='Assign Demand'>
-        <p className='text-xs text-slate-400'>No eligible students for this session.</p>
+        <div className='flex items-center gap-2 py-8 justify-center text-slate-500'>
+          <Loader2 className='h-4 w-4 animate-spin text-blue-600' />
+          <p className='text-xs font-semibold'>Loading assignable demand...</p>
+        </div>
+      </SchoolBusSection>
+    );
+  }
+
+  const eligibleCount = eligibleStudents.length;
+  // Unassigned = has no assignedRouteId
+  const unassignedStudents = eligibleStudents.filter(s => !s.assignedRouteId);
+  const unassignedCount = unassignedStudents.length;
+
+  // Assignable = unassigned and has valid stop for current route direction
+  const assignableStudents = unassignedStudents.filter(student => {
+    const hasPoint = direction === 'OUTBOUND'
+      ? Boolean(student.pickupPointId)
+      : Boolean(student.dropoffPointId);
+    return hasPoint;
+  });
+  const assignableCount = assignableStudents.length;
+
+  if (eligibleCount === 0) {
+    return (
+      <SchoolBusSection title='Assign Demand'>
+        <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
+          <p className='text-xs text-slate-400'>No eligible students for this session.</p>
+        </div>
+      </SchoolBusSection>
+    );
+  }
+
+  // Case A: No unassigned students left
+  if (unassignedCount === 0) {
+    return (
+      <SchoolBusSection title='Assign Demand'>
+        <div className='rounded-2xl border border-emerald-100 bg-emerald-50/10 px-4 py-6 text-center'>
+          <CheckCircle2 className='mx-auto mb-2 h-8 w-8 text-emerald-500' />
+          <p className='text-sm font-semibold text-emerald-800'>All eligible students have been assigned.</p>
+          <p className='mt-1 text-xs text-slate-400'>Every student is assigned to a route in this session.</p>
+        </div>
+      </SchoolBusSection>
+    );
+  }
+
+  // Case B: Unassigned exist but none can be assigned to this route
+  if (assignableCount === 0) {
+    return (
+      <SchoolBusSection title='Assign Demand'>
+        <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
+          <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
+          <p className='text-sm font-bold text-amber-800'>No assignable students for this route.</p>
+          <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
+            There are unassigned students, but none can be added to this route because of direction, capacity, or pickup/drop-off constraints.
+          </p>
+        </div>
       </SchoolBusSection>
     );
   }
@@ -95,13 +154,29 @@ export function ManualDemandAssignPanel({
         </div>
       )}
 
-      <p className='mb-2 text-[11px] text-slate-400'>
+      {/* Demand state counters */}
+      <div className='grid grid-cols-3 gap-2 mb-3 bg-slate-50/60 p-2 rounded-xl border border-slate-100 text-center'>
+        <div className='flex flex-col items-center'>
+          <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Eligible</span>
+          <span className='text-sm font-extrabold text-slate-750 mt-0.5'>{eligibleCount}</span>
+        </div>
+        <div className='flex flex-col items-center border-x border-slate-200/50'>
+          <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Unassigned</span>
+          <span className='text-sm font-extrabold text-slate-750 mt-0.5'>{unassignedCount}</span>
+        </div>
+        <div className='flex flex-col items-center'>
+          <span className='text-[10px] font-bold text-[#C81E3A] uppercase tracking-wider'>Assignable</span>
+          <span className='text-sm font-extrabold text-[#C81E3A] mt-0.5'>{assignableCount}</span>
+        </div>
+      </div>
+
+      <p className='mb-3 text-[11px] text-slate-450 leading-relaxed'>
         Click <strong>Add</strong> to assign a student to this route.
         A stop will be auto-created if needed.
       </p>
 
       <div className='max-h-80 space-y-1.5 overflow-y-auto pr-1'>
-        {eligibleStudents.map(student => {
+        {assignableStudents.map(student => {
           const point = direction === 'OUTBOUND'
             ? student.pickupPointName
             : student.dropoffPointName;
@@ -122,12 +197,24 @@ export function ManualDemandAssignPanel({
               )}
             >
               <div className='flex-1 min-w-0'>
-                <p className='text-sm font-semibold text-slate-800 truncate'>
-                  {student.studentName}
-                </p>
-                <p className='mt-0.5 text-[11px] truncate text-slate-400'>
+                <div className='flex items-center gap-1.5'>
+                  <p className='text-xs font-bold text-slate-800 truncate'>
+                    {student.studentName}
+                  </p>
+                  <span className='px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 text-[8px] font-semibold scale-95 shrink-0'>
+                    {student.tripOption === 'ROUND_TRIP' ? 'Round-trip' : student.tripOption}
+                  </span>
+                </div>
+                <p className='mt-0.5 text-[10px] truncate text-slate-450 flex items-center gap-1'>
                   {hasPoint ? (
-                    <>📍 {point ?? '—'}</>
+                    <>
+                      <span>📍 {point ?? '—'}</span>
+                      {student.windowStart && student.windowEnd && (
+                        <span className='text-[9px] font-medium text-slate-400 bg-slate-100/40 px-1 rounded border border-slate-150'>
+                          {student.windowStart}–{student.windowEnd}
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <span className='text-amber-600'>⚠️ No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'} point</span>
                   )}
@@ -143,11 +230,11 @@ export function ManualDemandAssignPanel({
                   disabled={!hasPoint || loadingStudentId !== null}
                   onClick={() => handleAssign(student)}
                   className={cn(
-                    'ml-2 shrink-0 rounded-lg border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-800',
-                    'hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40',
+                    'ml-2 shrink-0 rounded-lg border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-850',
+                    'hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 shadow-none',
                   )}
                 >
-                  {isThisLoading ? <Loader2 className='h-3 w-3 animate-spin' /> : 'Add'}
+                  {isThisLoading ? <Loader2 className='h-3 w-3 animate-spin text-slate-500' /> : 'Add'}
                 </Button>
               )}
             </div>

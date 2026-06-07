@@ -32,6 +32,12 @@ public class VehicleShipperService {
 
     @Transactional(rollbackFor = Exception.class)
     public void assignVehicleToShipper(VehicleShipperAssignmentForm form, Long shipperId, Long tenantId) {
+        if(vehicleShipperRepository.existsByVehicleIdAndWorkingDateAndStatusAndTenantId(
+                form.getVehicleId(), form.getWorkingDate(), VehicleShipperStatus.ACTIVE.name(), tenantId)) {
+            log.info("Vehicle {} is already assigned for date {} in tenant {}", form.getVehicleId(),
+                    form.getWorkingDate(), tenantId);
+            throw new AppException(AppErrorCode.VEHICLE_ALREADY_ASSIGNED);
+        }
         VehicleShipperEntity vehicleShipper = VehicleShipperEntity.create(
                 form.getVehicleId(),
                 shipperId,

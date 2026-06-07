@@ -263,8 +263,22 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                             direction == RouteDirection.OUTBOUND ? "pickup" : "dropoff"));
         }
 
-        // 5. Duplicate guard: student already assigned anywhere in this session
-        if (routePlanStudentService.existsBySessionAndStudent(session.getId(), student.getId())) {
+        // Determine action
+        RoutePlanStudentAction action = direction == RouteDirection.OUTBOUND
+                ? RoutePlanStudentAction.BOARD
+                : RoutePlanStudentAction.DROPOFF;
+
+        // 5. Duplicate guard
+        boolean assignedInOtherRoute = routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
+                session.getId(), routeId, student.getId(), direction);
+        if (assignedInOtherRoute) {
+            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
+        }
+
+        boolean alreadyAssignedToMiddle = routePlanStudentService.existsByRouteAndStudentAndAction(
+                routeId, student.getId(), action);
+        if (alreadyAssignedToMiddle) {
             throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
                     messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
         }
@@ -307,11 +321,6 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "AUTO_CREATE_STOP",
                     "Auto-created stop at " + relevantPoint.getName());
         }
-
-        // 8. Determine action
-        RoutePlanStudentAction action = direction == RouteDirection.OUTBOUND
-                ? RoutePlanStudentAction.BOARD
-                : RoutePlanStudentAction.DROPOFF;
 
         // 9. Create RoutePlanStudentEntity — main action
         RoutePlanStudentEntity planStudent = new RoutePlanStudentEntity();
@@ -424,16 +433,25 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
 
-        // 6. Duplicate guard: student already assigned anywhere in this session
-        if (routePlanStudentService.existsBySessionAndStudent(session.getId(), student.getId())) {
-            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
-        }
-
         // 7. Determine serviceAction from direction
         RoutePlanStudentAction action = direction == RouteDirection.OUTBOUND
                 ? RoutePlanStudentAction.BOARD
                 : RoutePlanStudentAction.DROPOFF;
+
+        // 6. Duplicate guard
+        boolean assignedInOtherRoute = routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
+                session.getId(), routeId, student.getId(), direction);
+        if (assignedInOtherRoute) {
+            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
+        }
+
+        boolean alreadyAssignedToMiddle = routePlanStudentService.existsByRouteAndStudentAndAction(
+                routeId, student.getId(), action);
+        if (alreadyAssignedToMiddle) {
+            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
+        }
 
         // 8. Create RoutePlanStudentEntity — main action
         RoutePlanStudentEntity planStudent = new RoutePlanStudentEntity();
@@ -477,7 +495,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
         routeStopRepository.save(stop);
 
-        // 10. Update route student count
+        // 10. Update route geometry, timeline and student count
+        recalculateGeometry(route, tenantId);
         updateRouteStudentCount(route, routeId, actorId);
 
         // 11. Refresh session summary counters
@@ -631,8 +650,11 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             routePlanStudentService.save(newEntry);
         }
 
-        // Update counts on both routes
+        // Update counts and recalculate geometry/timeline/issues on both routes
+        recalculateGeometry(sourceRoute, tenantId);
         updateRouteStudentCount(sourceRoute, sourceRouteId, actorId);
+
+        recalculateGeometry(targetRoute, tenantId);
         updateRouteStudentCount(targetRoute, request.getTargetRouteId(), actorId);
 
         auditLogService.log(tenantId, actorId, "RoutePlan", sourceRouteId, "MOVE_STUDENT",
@@ -803,5 +825,11 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     @Override
     public List<RouteStopEntity> saveAllRouteStops(List<RouteStopEntity> entities) {
         return routeStopRepository.saveAll(entities);
+    }
+
+    @Override
+    @Transactional
+    public void deletePhysical(Long id) {
+        routeStopRepository.deleteById(id);
     }
 }
