@@ -1,5 +1,5 @@
 /*
-Author: SERP Project
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -10,6 +10,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.DeliveryOrderStatus;
+import serp.project.first_mile.enums.PaymentStatus;
 
 import java.time.LocalDateTime;
 
@@ -91,6 +92,21 @@ public class DeliveryManifestOrder extends AbstractAudit implements DeliveryStop
     @Column(name = "fee_payer", length = 20)
     private String feePayer;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_payment_status", nullable = false, length = 20)
+    @Builder.Default
+    private PaymentStatus deliveryPaymentStatus = PaymentStatus.UNPAID;
+
+    @Column(name = "delivery_payment_amount", nullable = false)
+    @Builder.Default
+    private Long deliveryPaymentAmount = 0L;
+
+    @Column(name = "delivery_payment_app_trans_id", length = 100)
+    private String deliveryPaymentAppTransId;
+
+    @Column(name = "delivery_payment_confirmed_at")
+    private LocalDateTime deliveryPaymentConfirmedAt;
+
     // Result
     @Column(name = "proof_photo_url")
     private String proofPhotoUrl;
@@ -100,6 +116,15 @@ public class DeliveryManifestOrder extends AbstractAudit implements DeliveryStop
 
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
+
+    @Column(name = "delivery_checkin_lat")
+    private Double deliveryCheckinLat;
+
+    @Column(name = "delivery_checkin_lng")
+    private Double deliveryCheckinLng;
+
+    @Column(name = "delivery_checkin_distance_m")
+    private Double deliveryCheckinDistanceM;
 
     @Column(name = "note")
     private String note;

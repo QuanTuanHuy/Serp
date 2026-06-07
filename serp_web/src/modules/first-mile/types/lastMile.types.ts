@@ -1,5 +1,5 @@
 /**
- * Author: SERP Project
+ * Author: Nguyen The Anh
  * Description: Part of Serp Project - Last-mile delivery types
  */
 
@@ -18,6 +18,8 @@ export type DeliveryOrderStatus =
   | 'FAILED'
   | 'RESCHEDULED'
   | 'RETURNED';
+
+export type PaymentStatus = 'UNPAID' | 'PAID';
 
 // ─── Response types ──────────────────────────────────────────────────────────
 
@@ -53,9 +55,16 @@ export interface DeliveryManifestOrderResponse {
   shippingFee: number;
   shippingFeeCollected: number;
   feePayer?: string;
+  deliveryPaymentStatus?: PaymentStatus;
+  deliveryPaymentAmount?: number;
+  deliveryPaymentAppTransId?: string;
+  deliveryPaymentConfirmedAt?: string;
   proofPhotoUrl?: string;
   failureReason?: string;
   deliveredAt?: string;
+  deliveryCheckinLat?: number;
+  deliveryCheckinLng?: number;
+  deliveryCheckinDistanceM?: number;
   note?: string;
 }
 
@@ -101,11 +110,38 @@ export interface CreateDeliveryManifestRequest {
 }
 
 export interface ConfirmDeliveryRequest {
-  proofPhotoUrl?: string;
   codCollected?: number;
   shippingFeeCollected?: number;
+  latitude: number;
+  longitude: number;
+  photo: File;
   note?: string;
   deliveredAt?: string;
+}
+
+export interface DeliveryPaymentInitResponse {
+  manifestId: number;
+  orderCode: string;
+  amount: number;
+  paymentStatus: PaymentStatus;
+  appTransId?: string;
+  paymentUrl?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface ConfirmDeliveryPaymentRequest {
+  appTransId: string;
+}
+
+export interface DeliveryPaymentConfirmResponse {
+  manifestId: number;
+  orderCode: string;
+  amount: number;
+  paymentStatus: PaymentStatus;
+  appTransId: string;
+  status?: string;
+  message?: string;
 }
 
 export interface ConfirmDeliveryFailureRequest {
@@ -122,7 +158,7 @@ export interface ReturnToSenderRequest {
 // ─── Filter types ──────────────────────────────────────────────────────────
 
 export interface DeliveryManifestListFilters {
-  postOfficeCode: string;
+  postOfficeCode?: string;
   status?: DeliveryManifestStatus;
   date?: string;
 }

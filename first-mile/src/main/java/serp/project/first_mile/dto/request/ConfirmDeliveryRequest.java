@@ -18,14 +18,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConfirmDeliveryRequest {
-    @JsonProperty("proof_photo_url")
-    private String proofPhotoUrl;
-
     @JsonProperty("cod_collected")
     private Long codCollected;
 
     @JsonProperty("shipping_fee_collected")
     private Long shippingFeeCollected;
+
+    @JsonProperty("latitude")
+    private Double latitude;
+
+    @JsonProperty("longitude")
+    private Double longitude;
 
     @JsonProperty("note")
     private String note;

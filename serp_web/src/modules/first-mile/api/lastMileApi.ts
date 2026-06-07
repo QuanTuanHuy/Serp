@@ -6,8 +6,11 @@
 import { api } from '@/lib/store/api';
 import type {
   ConfirmDeliveryFailureRequest,
+  ConfirmDeliveryPaymentRequest,
   ConfirmDeliveryRequest,
   CreateDeliveryManifestRequest,
+  DeliveryPaymentConfirmResponse,
+  DeliveryPaymentInitResponse,
   DeliveryManifestListFilters,
   DeliveryManifestResponse,
   FirstMileApiResponse,
@@ -67,7 +70,7 @@ export const lastMileApi = api.injectEndpoints({
         url: '/delivery-manifests',
         method: 'GET',
         params: {
-          post_office_code: postOfficeCode,
+          ...(postOfficeCode ? { post_office_code: postOfficeCode } : {}),
           ...(status ? { status } : {}),
           ...(date ? { date } : {}),
         },
@@ -126,21 +129,67 @@ export const lastMileApi = api.injectEndpoints({
       ) => unwrapFirstMileResultOrRaw(response),
     }),
 
+    initiateDeliveryPayment: builder.mutation<
+      DeliveryPaymentInitResponse,
+      { manifestId: number; orderCode: string }
+    >({
+      query: ({ manifestId, orderCode }) => ({
+        url: `/delivery-manifests/${manifestId}/orders/${orderCode}/payment/initiate`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryPaymentInitResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    confirmDeliveryPayment: builder.mutation<
+      DeliveryPaymentConfirmResponse,
+      {
+        manifestId: number;
+        orderCode: string;
+        body: ConfirmDeliveryPaymentRequest;
+      }
+    >({
+      query: ({ manifestId, orderCode, body }) => ({
+        url: `/delivery-manifests/${manifestId}/orders/${orderCode}/payment/confirm`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryPaymentConfirmResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
     confirmDelivered: builder.mutation<
       DeliveryManifestResponse,
       { manifestId: number; orderCode: string; body: ConfirmDeliveryRequest }
     >({
-      query: ({ manifestId, orderCode, body }) => ({
-        url: `/delivery-manifests/${manifestId}/orders/${orderCode}/delivered`,
-        method: 'POST',
-        body: {
-          proof_photo_url: body.proofPhotoUrl,
-          cod_collected: body.codCollected,
-          shipping_fee_collected: body.shippingFeeCollected,
-          note: body.note,
-          delivered_at: body.deliveredAt,
-        },
-      }),
+      query: ({ manifestId, orderCode, body }) => {
+        const formData = new FormData();
+        formData.append('latitude', String(body.latitude));
+        formData.append('longitude', String(body.longitude));
+        formData.append('photo', body.photo);
+        if (body.codCollected !== undefined) {
+          formData.append('cod_collected', String(body.codCollected));
+        }
+        if (body.shippingFeeCollected !== undefined) {
+          formData.append(
+            'shipping_fee_collected',
+            String(body.shippingFeeCollected)
+          );
+        }
+        if (body.note) {
+          formData.append('note', body.note);
+        }
+
+        return {
+          url: `/delivery-manifests/${manifestId}/orders/${orderCode}/delivered`,
+          method: 'POST',
+          body: formData,
+        };
+      },
       extraOptions: FIRST_MILE_SERVICE,
       transformResponse: (
         response: FirstMileApiResponse<DeliveryManifestResponse>
@@ -209,6 +258,8 @@ export const {
   useGetDeliveryManifestDetailQuery,
   useCreateDeliveryManifestMutation,
   useStartDeliveryMutation,
+  useInitiateDeliveryPaymentMutation,
+  useConfirmDeliveryPaymentMutation,
   useConfirmDeliveredMutation,
   useConfirmDeliveryFailedMutation,
   useConfirmReturnMutation,

@@ -1,5 +1,5 @@
 /*
-Author: SERP Project
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.first_mile.enums.DeliveryOrderStatus;
+import serp.project.first_mile.enums.PaymentStatus;
 
 import java.time.LocalDateTime;
 
@@ -36,8 +37,15 @@ public class DeliveryManifestOrderResponse {
     private Long shippingFee;
     private Long shippingFeeCollected;
     private String feePayer;
+    private PaymentStatus deliveryPaymentStatus;
+    private Long deliveryPaymentAmount;
+    private String deliveryPaymentAppTransId;
+    private LocalDateTime deliveryPaymentConfirmedAt;
     private String proofPhotoUrl;
     private String failureReason;
     private LocalDateTime deliveredAt;
+    private Double deliveryCheckinLat;
+    private Double deliveryCheckinLng;
+    private Double deliveryCheckinDistanceM;
     private String note;
 }

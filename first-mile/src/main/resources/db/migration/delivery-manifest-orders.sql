@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS delivery_manifest_orders (
     shipping_fee           BIGINT       NOT NULL DEFAULT 0,
     shipping_fee_collected BIGINT       NOT NULL DEFAULT 0,
     fee_payer              VARCHAR(20),
+    delivery_payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+    delivery_payment_amount BIGINT      NOT NULL DEFAULT 0,
+    delivery_payment_app_trans_id VARCHAR(100),
+    delivery_payment_confirmed_at TIMESTAMP,
     proof_photo_url        TEXT,
     failure_reason         VARCHAR(255),
     delivered_at           TIMESTAMP,
@@ -28,6 +32,15 @@ CREATE TABLE IF NOT EXISTS delivery_manifest_orders (
     created_by             VARCHAR(255),
     updated_by             VARCHAR(255)
 );
+
+ALTER TABLE delivery_manifest_orders
+    ADD COLUMN IF NOT EXISTS delivery_checkin_lat DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS delivery_checkin_lng DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS delivery_checkin_distance_m DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS delivery_payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+    ADD COLUMN IF NOT EXISTS delivery_payment_amount BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS delivery_payment_app_trans_id VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS delivery_payment_confirmed_at TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_dmo_manifest_id ON delivery_manifest_orders (manifest_id);
 CREATE INDEX IF NOT EXISTS idx_dmo_order_code   ON delivery_manifest_orders (tenant_id, order_code);

@@ -15,12 +15,13 @@ import {
   XCircle,
   Clock,
   Banknote,
-  Play,
 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
+import { getErrorMessage, useAppSelector } from '@/lib/store';
+import { useNotification } from '@/shared/hooks';
 import { TmsCombobox } from '../../components/TmsCombobox';
 import { useGetPostOfficesQuery } from '../../api/firstMileApi';
 import { useGetDeliveryManifestsQuery } from '../../api/lastMileApi';
@@ -57,7 +58,54 @@ const STATUS_CONFIG: Record<
   },
 };
 
+type DeliveryManifestAccessScope =
+  | 'ADMIN_ALL'
+  | 'MANAGER_SCOPED'
+  | 'COURIER_SELF'
+  | 'NO_ACCESS';
+
+const resolveDeliveryManifestAccessScope = (
+  roles: string[]
+): DeliveryManifestAccessScope => {
+  if (roles.includes('TMS_ADMIN')) return 'ADMIN_ALL';
+  if (roles.includes('TMS_POSTOFFICER_MANAGER')) return 'MANAGER_SCOPED';
+  if (roles.includes('TMS_POSTOFFICER')) return 'COURIER_SELF';
+  return 'NO_ACCESS';
+};
+
+const getScopeLabel = (scope: DeliveryManifestAccessScope): string => {
+  if (scope === 'ADMIN_ALL') return 'TMS admin';
+  if (scope === 'MANAGER_SCOPED') return 'Post office manager';
+  if (scope === 'COURIER_SELF') return 'Courier';
+  return 'No access';
+};
+
+const getScopeDescription = (scope: DeliveryManifestAccessScope): string => {
+  if (scope === 'COURIER_SELF') {
+    return 'View assigned delivery routes and complete customer delivery check-ins.';
+  }
+
+  if (scope === 'ADMIN_ALL' || scope === 'MANAGER_SCOPED') {
+    return 'Create and monitor delivery manifests for last-mile courier routes.';
+  }
+
+  return 'Your account does not have permission to access delivery manifests.';
+};
+
 export const DeliveryManifestListPage: React.FC = () => {
+  const notification = useNotification();
+  const roles = useAppSelector(
+    (state) => state.account.user.profile?.roles ?? []
+  );
+  const accessScope = useMemo(
+    () => resolveDeliveryManifestAccessScope(roles),
+    [roles]
+  );
+  const canAccess = accessScope !== 'NO_ACCESS';
+  const isCourierScope = accessScope === 'COURIER_SELF';
+  const canManageManifests =
+    accessScope === 'ADMIN_ALL' || accessScope === 'MANAGER_SCOPED';
+
   const [postOfficeCode, setPostOfficeCode] = useState('');
   const [statusFilter, setStatusFilter] = useState<DeliveryManifestStatus | ''>(
     ''
@@ -68,7 +116,10 @@ export const DeliveryManifestListPage: React.FC = () => {
     useState<DeliveryManifestResponse | null>(null);
 
   const { data: postOfficesData, isLoading: isLoadingPostOffices } =
-    useGetPostOfficesQuery({ page: 0, size: 200, status: 'ACTIVE' });
+    useGetPostOfficesQuery(
+      { page: 0, size: 200, status: 'ACTIVE' },
+      { skip: !canManageManifests }
+    );
 
   const postOfficeOptions = useMemo(
     () =>
@@ -90,15 +141,24 @@ export const DeliveryManifestListPage: React.FC = () => {
   const {
     data: manifests,
     isLoading,
+    error: manifestsError,
     refetch,
   } = useGetDeliveryManifestsQuery(
     {
-      postOfficeCode,
+      ...(postOfficeCode ? { postOfficeCode } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(dateFilter ? { date: dateFilter } : {}),
     },
-    { skip: !postOfficeCode }
+    { skip: !canAccess || (!isCourierScope && !postOfficeCode) }
   );
+
+  React.useEffect(() => {
+    if (!manifestsError) return;
+
+    notification.error('Failed to load delivery manifests.', {
+      description: getErrorMessage(manifestsError),
+    });
+  }, [manifestsError, notification]);
 
   return (
     <div className='space-y-6'>
@@ -112,126 +172,166 @@ export const DeliveryManifestListPage: React.FC = () => {
             Manage delivery manifests for last-mile courier routes.
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} disabled={!postOfficeCode}>
-          <Plus className='h-4 w-4 mr-2' />
-          New Manifest
-        </Button>
+        {canManageManifests ? (
+          <Button onClick={() => setShowForm(true)} disabled={!postOfficeCode}>
+            <Plus className='h-4 w-4 mr-2' />
+            New Manifest
+          </Button>
+        ) : null}
       </div>
 
-      {/* Filters */}
       <Card className='p-4'>
-        <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-          <div className='space-y-1'>
-            <label className='text-xs font-medium text-muted-foreground'>
-              Post Office
-            </label>
-            <TmsCombobox
-              id='delivery-manifest-post-office'
-              value={postOfficeCode}
-              onValueChange={setPostOfficeCode}
-              options={postOfficeOptions}
-              placeholder='Select post office'
-              emptyText='No post offices found'
-              disabled={isLoadingPostOffices}
-              loading={isLoadingPostOffices}
-            />
+        <div className='flex items-center justify-between gap-3'>
+          <div>
+            <div className='text-sm font-medium'>Access Scope</div>
+            <p className='text-sm text-muted-foreground'>
+              {getScopeDescription(accessScope)}
+            </p>
           </div>
-          <div className='space-y-1'>
-            <label className='text-xs font-medium text-muted-foreground'>
-              Status
-            </label>
-            <select
-              className='w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm'
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as DeliveryManifestStatus | '')
-              }
-            >
-              <option value=''>All Statuses</option>
-              <option value='CREATED'>Created</option>
-              <option value='IN_PROGRESS'>In Progress</option>
-              <option value='COMPLETED'>Completed</option>
-            </select>
-          </div>
-          <div className='space-y-1'>
-            <label className='text-xs font-medium text-muted-foreground'>
-              Planned Date
-            </label>
-            <Input
-              type='date'
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            />
-          </div>
-          <div className='flex items-end'>
-            <Button
-              variant='outline'
-              onClick={() => refetch()}
-              className='w-full'
-              disabled={!postOfficeCode}
-            >
-              Search
-            </Button>
-          </div>
+          <Badge variant={canAccess ? 'default' : 'secondary'}>
+            {getScopeLabel(accessScope)}
+          </Badge>
         </div>
       </Card>
 
-      {/* Results */}
-      {isLoading ? (
-        <div className='text-center py-12 text-muted-foreground'>
-          Loading manifests...
-        </div>
-      ) : !postOfficeCode ? (
+      {!canAccess ? (
         <Card className='p-12 text-center text-muted-foreground'>
           <Truck className='h-12 w-12 mx-auto mb-3 opacity-50' />
-          <p className='font-medium'>Select a post office to begin</p>
+          <p className='font-medium'>Access denied</p>
           <p className='text-sm mt-1'>
-            You will see all delivery manifests created for that office.
-          </p>
-        </Card>
-      ) : !manifests?.length ? (
-        <Card className='p-12 text-center text-muted-foreground'>
-          <Package className='h-12 w-12 mx-auto mb-3 opacity-50' />
-          <p className='font-medium'>No manifests found</p>
-          <p className='text-sm mt-1'>
-            Create a new manifest to assign orders to a courier.
+            Your account does not have permission to access delivery manifests.
           </p>
         </Card>
       ) : (
-        <div className='grid gap-4'>
-          {manifests.map((manifest) => (
-            <ManifestCard
-              key={manifest.id}
-              manifest={manifest}
-              onClick={() => setSelectedManifest(manifest)}
+        <>
+          {/* Filters */}
+          <Card className='p-4'>
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+              {isCourierScope ? (
+                <div className='rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground md:col-span-2'>
+                  You are viewing delivery routes assigned to your courier
+                  profile.
+                </div>
+              ) : (
+                <div className='space-y-1'>
+                  <label className='text-xs font-medium text-muted-foreground'>
+                    Post Office
+                  </label>
+                  <TmsCombobox
+                    id='delivery-manifest-post-office'
+                    value={postOfficeCode}
+                    onValueChange={setPostOfficeCode}
+                    options={postOfficeOptions}
+                    placeholder='Select post office'
+                    emptyText='No post offices found'
+                    disabled={isLoadingPostOffices}
+                    loading={isLoadingPostOffices}
+                  />
+                </div>
+              )}
+              <div className='space-y-1'>
+                <label className='text-xs font-medium text-muted-foreground'>
+                  Status
+                </label>
+                <select
+                  className='w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm'
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value as DeliveryManifestStatus | ''
+                    )
+                  }
+                >
+                  <option value=''>All Statuses</option>
+                  <option value='CREATED'>Created</option>
+                  <option value='IN_PROGRESS'>In Progress</option>
+                  <option value='COMPLETED'>Completed</option>
+                </select>
+              </div>
+              <div className='space-y-1'>
+                <label className='text-xs font-medium text-muted-foreground'>
+                  Planned Date
+                </label>
+                <Input
+                  type='date'
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </div>
+              <div className='flex items-end'>
+                <Button
+                  variant='outline'
+                  onClick={() => refetch()}
+                  className='w-full'
+                  disabled={!isCourierScope && !postOfficeCode}
+                >
+                  Search
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Results */}
+          {isLoading ? (
+            <div className='text-center py-12 text-muted-foreground'>
+              Loading manifests...
+            </div>
+          ) : !isCourierScope && !postOfficeCode ? (
+            <Card className='p-12 text-center text-muted-foreground'>
+              <Truck className='h-12 w-12 mx-auto mb-3 opacity-50' />
+              <p className='font-medium'>Select a post office to begin</p>
+              <p className='text-sm mt-1'>
+                You will see all delivery manifests created for that office.
+              </p>
+            </Card>
+          ) : !manifests?.length ? (
+            <Card className='p-12 text-center text-muted-foreground'>
+              <Package className='h-12 w-12 mx-auto mb-3 opacity-50' />
+              <p className='font-medium'>No manifests found</p>
+              <p className='text-sm mt-1'>
+                {isCourierScope
+                  ? 'No assigned delivery routes match the current filters.'
+                  : 'Create a new manifest to assign orders to a courier.'}
+              </p>
+            </Card>
+          ) : (
+            <div className='grid gap-4'>
+              {manifests.map((manifest) => (
+                <ManifestCard
+                  key={manifest.id}
+                  manifest={manifest}
+                  onClick={() => setSelectedManifest(manifest)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Form Dialog */}
+          {showForm && (
+            <DeliveryManifestFormDialog
+              postOfficeCode={postOfficeCode}
+              postOfficeId={selectedPostOffice?.id}
+              onClose={() => setShowForm(false)}
+              onCreated={() => {
+                setShowForm(false);
+                refetch();
+              }}
             />
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Form Dialog */}
-      {showForm && (
-        <DeliveryManifestFormDialog
-          postOfficeCode={postOfficeCode}
-          postOfficeId={selectedPostOffice?.id}
-          onClose={() => setShowForm(false)}
-          onCreated={() => {
-            setShowForm(false);
-            refetch();
-          }}
-        />
-      )}
-
-      {/* Detail Dialog */}
-      {selectedManifest && (
-        <DeliveryManifestDetailDialog
-          manifest={selectedManifest}
-          onClose={() => setSelectedManifest(null)}
-          onUpdated={() => {
-            setSelectedManifest(null);
-            refetch();
-          }}
-        />
+          {/* Detail Dialog */}
+          {selectedManifest && (
+            <DeliveryManifestDetailDialog
+              manifest={selectedManifest}
+              canOperate={isCourierScope}
+              onClose={() => setSelectedManifest(null)}
+              onUpdated={() => {
+                setSelectedManifest(null);
+                refetch();
+              }}
+            />
+          )}
+        </>
       )}
     </div>
   );

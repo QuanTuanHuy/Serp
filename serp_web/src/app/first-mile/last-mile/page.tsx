@@ -1,5 +1,5 @@
-import { DeliveryManifestListPage } from '@/modules/first-mile';
+import { LastMilePage } from '@/modules/first-mile';
 
 export default function FirstMileLastMilePage() {
-  return <DeliveryManifestListPage />;
+  return <LastMilePage />;
 }

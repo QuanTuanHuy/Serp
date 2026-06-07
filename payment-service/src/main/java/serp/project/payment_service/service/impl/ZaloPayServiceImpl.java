@@ -657,6 +657,14 @@ public class ZaloPayServiceImpl implements ZaloPayService {
             if (transaction == null || transaction.getAppTransId() == null || transaction.getAppTransId().isBlank()) {
                 return;
             }
+            if (!shouldSendOrderPaymentConfirmedWebhook(transaction)) {
+                log.info(
+                        "Skip order payment webhook for non-order payment appTransId={} appUser={}",
+                        transaction.getAppTransId(),
+                        transaction.getAppUser()
+                );
+                return;
+            }
             if (transaction.getAppUser() == null || transaction.getAppUser().isBlank()) {
                 log.warn("Missing appUser(orderCode). Skip order payment webhook for appTransId={}", transaction.getAppTransId());
                 return;
@@ -681,6 +689,19 @@ public class ZaloPayServiceImpl implements ZaloPayService {
         } catch (Exception ex) {
             log.error("Failed to enqueue order payment webhook appTransId={}", transaction.getAppTransId(), ex);
         }
+    }
+
+    private boolean shouldSendOrderPaymentConfirmedWebhook(ZaloPayTransaction transaction) {
+        Map<String, Object> embedData = readEmbedData(transaction.getEmbedData());
+        Map<String, Object> merchantInfo = extractMerchantInfo(embedData);
+        Object sourceService = firstNonNull(merchantInfo.get("sourceService"), embedData.get("sourceService"));
+        Object source = firstNonNull(merchantInfo.get("source"), embedData.get("source"));
+        if (sourceService == null && source == null) {
+            return true;
+        }
+        boolean firstMileDeliveryPayment = "first-mile".equalsIgnoreCase(String.valueOf(sourceService))
+                && "last-mile-delivery".equalsIgnoreCase(String.valueOf(source));
+        return !firstMileDeliveryPayment;
     }
 
     private NotificationContext resolveNotificationContext(ZaloPayTransaction transaction) {

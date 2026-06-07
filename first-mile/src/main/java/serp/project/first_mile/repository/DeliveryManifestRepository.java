@@ -1,5 +1,5 @@
 /*
-Author: SERP Project
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -29,6 +29,14 @@ public interface DeliveryManifestRepository extends JpaRepository<DeliveryManife
 
     List<DeliveryManifest> findByTenantIdAndPostOfficeCodeIgnoreCase(
             Long tenantId, String postOfficeCode);
+
+    List<DeliveryManifest> findByTenantIdAndCourierId(Long tenantId, Long courierId);
+
+    List<DeliveryManifest> findByTenantIdAndCourierIdAndStatus(
+            Long tenantId, Long courierId, DeliveryManifestStatus status);
+
+    List<DeliveryManifest> findByTenantIdAndCourierIdAndPlannedDate(
+            Long tenantId, Long courierId, LocalDate plannedDate);
 
     Optional<DeliveryManifest> findTopByTenantIdAndManifestCodeStartingWithOrderByManifestCodeDesc(
             Long tenantId, String prefix);
