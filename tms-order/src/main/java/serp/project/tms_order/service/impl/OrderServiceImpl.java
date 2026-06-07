@@ -1172,4 +1172,15 @@ public class OrderServiceImpl implements OrderService {
         String trimmedValue = value.trim();
         return trimmedValue.isEmpty() ? null : trimmedValue;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePaymentStatus(String orderCode, Long tenantId, String paymentStatus) {
+        Order order = orderRepository.findByOrderCodeAndTenantId(orderCode, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        PaymentStatus status = PaymentStatus.valueOf(paymentStatus);
+        order.setPaymentStatus(status);
+        orderRepository.save(order);
+        log.info("Updated payment status for order {} to {} (tenant {})", orderCode, paymentStatus, tenantId);
+    }
 }

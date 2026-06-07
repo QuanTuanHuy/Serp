@@ -4,6 +4,7 @@
  */
 
 export * from './billing.types';
+export * from './lastMile.types';
 
 export interface FirstMileApiResponse<T> {
   code: number;
@@ -400,6 +401,7 @@ export interface SecondMileBag {
   destinationHubId?: number;
   destinationPostOfficeCode?: string;
   vehicleId?: number;
+  routeId?: number;
   maxWeight?: number;
   maxVolume?: number;
   maxOrders?: number;
@@ -448,6 +450,7 @@ export interface CreateSecondMileBagRequest {
   destination_hub_id?: number;
   destination_post_office_code?: string;
   vehicle_id?: number;
+  route_id?: number;
   max_weight?: number;
   max_volume?: number;
   max_orders?: number;

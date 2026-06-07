@@ -274,6 +274,7 @@ export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
       'destinationPostOfficeCode'
     ),
     vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    routeId: readOptionalNumber(record, 'route_id', 'routeId'),
     maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
     maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
     maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,

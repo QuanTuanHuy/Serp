@@ -242,12 +242,27 @@ export function BagDistributionListPage() {
   const [driverCheckinEnd, { isLoading: isCheckingInEnd }] =
     useDriverCheckinBagDistributionEndMutation();
 
-  const hubs = hubsData?.items ?? [];
-  const postOffices = postOfficesData?.items ?? [];
-  const routes = routesData?.items ?? [];
-  const vehicles = vehiclesData?.items ?? [];
-  const readyBags = readyBagsData?.items ?? [];
-  const manifests = manifestsData?.items ?? [];
+  const hubs = React.useMemo(() => hubsData?.items ?? [], [hubsData?.items]);
+  const postOffices = React.useMemo(
+    () => postOfficesData?.items ?? [],
+    [postOfficesData?.items]
+  );
+  const routes = React.useMemo(
+    () => routesData?.items ?? [],
+    [routesData?.items]
+  );
+  const vehicles = React.useMemo(
+    () => vehiclesData?.items ?? [],
+    [vehiclesData?.items]
+  );
+  const readyBags = React.useMemo(
+    () => readyBagsData?.items ?? [],
+    [readyBagsData?.items]
+  );
+  const manifests = React.useMemo(
+    () => manifestsData?.items ?? [],
+    [manifestsData?.items]
+  );
   const driverManifests = (driverManifestsData?.items ?? []).filter(
     (manifest) =>
       manifest.status === 'CREATED' || manifest.status === 'OUTBOUND_CONFIRMED'
@@ -302,9 +317,12 @@ export function BagDistributionListPage() {
   );
 
   React.useEffect(() => {
-    setSelectedBagIds((current) =>
-      current.filter((bagId) => readyBags.some((bag) => bag.id === bagId))
-    );
+    const readyBagIds = new Set(readyBags.map((bag) => bag.id));
+
+    setSelectedBagIds((current) => {
+      const next = current.filter((bagId) => readyBagIds.has(bagId));
+      return next.length === current.length ? current : next;
+    });
   }, [readyBags]);
 
   const updatePlanning = <K extends keyof PlanningState>(

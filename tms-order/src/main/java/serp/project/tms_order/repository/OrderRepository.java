@@ -119,4 +119,18 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             where o.orderCode like concat(:prefix, '%')
             """)
     String findMaxOrderCodeByPrefix(@Param("prefix") String prefix);
+
+    @Query("""
+            select o
+            from Order o
+            where o.tenantId = :tenantId
+                and upper(o.destinationPostOfficeCode) = upper(:destinationPostOfficeCode)
+                and o.status in :statuses
+            order by o.id asc
+            """)
+    List<Order> findByDestinationPostOfficeAndStatuses(
+            @Param("tenantId") Long tenantId,
+            @Param("destinationPostOfficeCode") String destinationPostOfficeCode,
+            @Param("statuses") Collection<OrderStatus> statuses
+    );
 }

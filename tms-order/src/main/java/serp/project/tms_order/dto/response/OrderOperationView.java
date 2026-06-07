@@ -39,6 +39,19 @@ public record OrderOperationView(
         OrderPickupMethod pickupMethod,
         String createdBy,
         LocalDateTime createdAt,
-        Long tenantId
+        Long tenantId,
+        // Receiver info
+        String receiverName,
+        String receiverPhone,
+        String receiverWardCode,
+        String receiverProvinceCode,
+        String receiverAddressDetail,
+        Double receiverLatitude,
+        Double receiverLongitude,
+        // COD & fee
+        Long codAmount,
+        Long totalShippingFee,
+        String feePayer,
+        String paymentStatus
 ) {
 }

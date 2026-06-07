@@ -59,6 +59,18 @@ public class OrderQueryServiceImpl implements OrderQueryService {
             }
         }
 
+        // Lookup by destinationPostOfficeCode + statuses (last-mile)
+        String destPostOffice = normalizeText(request.getDestinationPostOfficeCode());
+        List<OrderStatus> statuses = request.getStatuses() == null
+                ? List.of()
+                : request.getStatuses().stream().filter(s -> s != null).distinct().toList();
+        if (destPostOffice != null && !statuses.isEmpty()) {
+            for (Order order : orderRepository.findByDestinationPostOfficeAndStatuses(
+                    tenantId, destPostOffice, statuses)) {
+                orderById.put(order.getId(), order);
+            }
+        }
+
         return orderById.values().stream()
                 .map(OrderOperationMapper::toView)
                 .toList();

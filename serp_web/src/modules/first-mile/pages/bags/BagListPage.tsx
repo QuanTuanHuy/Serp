@@ -47,11 +47,13 @@ import {
   useDeleteSecondMileBagMutation,
   useGetHubPostOfficesQuery,
   useGetHubsQuery,
+  useGetPostOfficesQuery,
   useGetSecondMileBagByIdQuery,
   useGetSecondMileBagCapacitySettingsQuery,
   useGetSecondMileBaggingKpisQuery,
   useGetSecondMileBagsQuery,
   useGetSecondMileOrdersQuery,
+  useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
   useRemoveSecondMileBagOrderMutation,
   useReopenSecondMileBagMutation,
@@ -65,11 +67,13 @@ import type {
   AutoSecondMileBaggingPlanRequest,
   AutoSecondMileBaggingPlan,
   HubPostOfficeMapping,
+  PostOffice,
   SecondMileBag,
   SecondMileBagDestinationType,
   SecondMileBagListFilters,
   SecondMileBagStatus,
   SecondMileBaggingValidation,
+  SecondMileOrder,
   UpdateSecondMileBagRequest,
 } from '../../types';
 import {
@@ -90,7 +94,6 @@ import {
   emptyAutoBaggingFormValues,
   emptyBagFormValues,
   normalizeOrderCode,
-  parseOrderCodes,
   toDefaultedBagFormValues,
   toBagFormValues,
   toLocalDateTimeInputValue,
@@ -149,7 +152,7 @@ export function BagListPage() {
     null
   );
   const [scanBag, setScanBag] = React.useState<SecondMileBag | null>(null);
-  const [scanOrderCodes, setScanOrderCodes] = React.useState('');
+  const [scanOrderCodes, setScanOrderCodes] = React.useState<string[]>([]);
   const [validationResult, setValidationResult] =
     React.useState<SecondMileBaggingValidation | null>(null);
 
@@ -159,8 +162,24 @@ export function BagListPage() {
   );
   const [autoPlan, setAutoPlan] =
     React.useState<AutoSecondMileBaggingPlan | null>(null);
+  const formOriginHubId = Number(formValues.originHubId);
+  const formDestinationHubId = Number(formValues.destinationHubId);
   const autoOriginHubId = Number(autoValues.originHubId);
   const autoDestinationHubId = Number(autoValues.destinationHubId);
+  const scanOriginHubId = scanBag?.originHubId ?? 0;
+  const scanDestinationHubId = scanBag?.destinationHubId ?? 0;
+  const shouldLoadFormDestinationMappings =
+    formOpen &&
+    formValues.destinationType === 'POST_OFFICE' &&
+    Number.isFinite(formOriginHubId) &&
+    formOriginHubId > 0;
+  const shouldLoadFormRoutes =
+    formOpen &&
+    Number.isFinite(formOriginHubId) &&
+    formOriginHubId > 0 &&
+    (formValues.destinationType === 'HUB'
+      ? Number.isFinite(formDestinationHubId) && formDestinationHubId > 0
+      : normalizeCode(formValues.destinationPostOfficeCode).length > 0);
   const shouldLoadAutoOriginMappings =
     autoOpen && Number.isFinite(autoOriginHubId) && autoOriginHubId > 0;
   const shouldLoadAutoDestinationMappings =
@@ -168,6 +187,13 @@ export function BagListPage() {
     autoValues.destinationType === 'HUB' &&
     Number.isFinite(autoDestinationHubId) &&
     autoDestinationHubId > 0;
+  const shouldLoadScanOriginMappings =
+    Boolean(scanBag) && Number.isFinite(scanOriginHubId) && scanOriginHubId > 0;
+  const shouldLoadScanDestinationMappings =
+    Boolean(scanBag) &&
+    scanBag?.destinationType === 'HUB' &&
+    Number.isFinite(scanDestinationHubId) &&
+    scanDestinationHubId > 0;
 
   const [deleteTarget, setDeleteTarget] = React.useState<SecondMileBag | null>(
     null
@@ -184,6 +210,37 @@ export function BagListPage() {
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
+  const { data: postOfficesData, isFetching: isFetchingPostOffices } =
+    useGetPostOfficesQuery(
+      { page: 0, size: 500, status: 'ACTIVE' },
+      { skip: !canView }
+    );
+  const {
+    data: formDestinationPostOfficesData,
+    isFetching: isFetchingFormDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: formOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadFormDestinationMappings }
+  );
+  const { data: formRoutesData, isFetching: isFetchingFormRoutes } =
+    useGetSecondMileRoutesQuery(
+      {
+        page: 0,
+        size: 500,
+        originType: 'HUB',
+        originHubId: formOriginHubId,
+        destinationType: formValues.destinationType,
+        ...(formValues.destinationType === 'HUB'
+          ? { destinationHubId: formDestinationHubId }
+          : {
+              destinationPostOfficeCode: normalizeCode(
+                formValues.destinationPostOfficeCode
+              ),
+            }),
+        status: 'ACTIVE',
+      },
+      { skip: !canView || !shouldLoadFormRoutes }
+    );
   const {
     data: autoOriginPostOfficesData,
     isFetching: isFetchingAutoOriginPostOffices,
@@ -198,6 +255,20 @@ export function BagListPage() {
     { hubId: autoDestinationHubId, page: 0, size: 500 },
     { skip: !canView || !shouldLoadAutoDestinationMappings }
   );
+  const {
+    data: scanOriginPostOfficesData,
+    isFetching: isFetchingScanOriginPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: scanOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadScanOriginMappings }
+  );
+  const {
+    data: scanDestinationPostOfficesData,
+    isFetching: isFetchingScanDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: scanDestinationHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadScanDestinationMappings }
+  );
   const { data: ordersData, isFetching: isFetchingOrders } =
     useGetSecondMileOrdersQuery(
       {
@@ -205,7 +276,7 @@ export function BagListPage() {
         size: 500,
         statuses: ['INBOUND_AT_ORIGIN_HUB', 'BAGGING_IN_PROGRESS'],
       },
-      { skip: !canView || !autoOpen }
+      { skip: !canView || (!autoOpen && !scanBag) }
     );
   const { data: vehiclesData } = useGetSecondMileVehiclesQuery(
     { page: 0, size: 500, status: 'ACTIVE' },
@@ -272,7 +343,33 @@ export function BagListPage() {
     useAutoPlanSecondMileBagsMutation();
 
   const hubs = hubsData?.items ?? [];
+  const postOffices = postOfficesData?.items ?? [];
   const orders = ordersData?.items ?? [];
+  const formRoutes = formRoutesData?.items ?? [];
+  const postOfficeByCode = React.useMemo(
+    () =>
+      postOffices.reduce<Record<string, PostOffice>>((acc, postOffice) => {
+        acc[normalizeCode(postOffice.code)] = postOffice;
+        return acc;
+      }, {}),
+    [postOffices]
+  );
+  const formDestinationPostOfficeOptions = React.useMemo(
+    () =>
+      toPostOfficeComboboxOptions(
+        formDestinationPostOfficesData?.items ?? [],
+        postOfficeByCode
+      ),
+    [formDestinationPostOfficesData?.items, postOfficeByCode]
+  );
+  const autoDestinationPostOfficeOptions = React.useMemo(
+    () =>
+      toPostOfficeComboboxOptions(
+        autoOriginPostOfficesData?.items ?? [],
+        postOfficeByCode
+      ),
+    [autoOriginPostOfficesData?.items, postOfficeByCode]
+  );
   const autoOriginPostOfficeCodes = React.useMemo(
     () => toPostOfficeCodeSet(autoOriginPostOfficesData?.items ?? []),
     [autoOriginPostOfficesData?.items]
@@ -281,36 +378,23 @@ export function BagListPage() {
     () => toPostOfficeCodeSet(autoDestinationPostOfficesData?.items ?? []),
     [autoDestinationPostOfficesData?.items]
   );
+  const scanOriginPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(scanOriginPostOfficesData?.items ?? []),
+    [scanOriginPostOfficesData?.items]
+  );
+  const scanDestinationPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(scanDestinationPostOfficesData?.items ?? []),
+    [scanDestinationPostOfficesData?.items]
+  );
   const autoCandidateOrders = React.useMemo(
     () =>
-      orders.filter((order) => {
-        const originPostOfficeCode = normalizeCode(order.originPostOfficeCode);
-        const destinationPostOfficeCode = normalizeCode(
-          order.destinationPostOfficeCode
-        );
-
-        if (
-          !originPostOfficeCode ||
-          !autoOriginPostOfficeCodes.has(originPostOfficeCode)
-        ) {
-          return false;
-        }
-
-        if (autoValues.destinationType === 'POST_OFFICE') {
-          const selectedDestinationPostOfficeCode = normalizeCode(
-            autoValues.destinationPostOfficeCode
-          );
-          return (
-            Boolean(selectedDestinationPostOfficeCode) &&
-            destinationPostOfficeCode === selectedDestinationPostOfficeCode
-          );
-        }
-
-        return (
-          Boolean(destinationPostOfficeCode) &&
-          autoDestinationPostOfficeCodes.has(destinationPostOfficeCode)
-        );
-      }),
+      filterCandidateOrdersByTarget(
+        orders,
+        autoOriginPostOfficeCodes,
+        autoValues.destinationType,
+        autoDestinationPostOfficeCodes,
+        autoValues.destinationPostOfficeCode
+      ),
     [
       autoDestinationPostOfficeCodes,
       autoOriginPostOfficeCodes,
@@ -319,8 +403,53 @@ export function BagListPage() {
       orders,
     ]
   );
+  const scanCandidateOrders = React.useMemo(
+    () =>
+      filterCandidateOrdersByTarget(
+        orders,
+        scanOriginPostOfficeCodes,
+        scanBag?.destinationType,
+        scanDestinationPostOfficeCodes,
+        scanBag?.destinationPostOfficeCode
+      ),
+    [
+      orders,
+      scanBag?.destinationPostOfficeCode,
+      scanBag?.destinationType,
+      scanDestinationPostOfficeCodes,
+      scanOriginPostOfficeCodes,
+    ]
+  );
   const vehicles = vehiclesData?.items ?? [];
   const isSavingForm = isCreating || isUpdating;
+
+  React.useEffect(() => {
+    if (!shouldLoadFormRoutes || isFetchingFormRoutes || !formValues.routeId) {
+      return;
+    }
+
+    const selectedRoute = formRoutes.find(
+      (route) => String(route.id) === formValues.routeId
+    );
+
+    if (!selectedRoute) {
+      setFormValues((current) => ({ ...current, routeId: '', vehicleId: '' }));
+      return;
+    }
+
+    const nextVehicleId = selectedRoute.vehicleId
+      ? String(selectedRoute.vehicleId)
+      : '';
+    if (formValues.vehicleId !== nextVehicleId) {
+      setFormValues((current) => ({ ...current, vehicleId: nextVehicleId }));
+    }
+  }, [
+    formRoutes,
+    formValues.routeId,
+    formValues.vehicleId,
+    isFetchingFormRoutes,
+    shouldLoadFormRoutes,
+  ]);
 
   React.useEffect(() => {
     if (!autoOpen) {
@@ -347,6 +476,26 @@ export function BagListPage() {
     }
   }, [autoCandidateOrders, autoOpen, autoValues.orderCodes]);
 
+  React.useEffect(() => {
+    if (!scanBag) {
+      return;
+    }
+
+    const candidateOrderCodes = new Set(
+      scanCandidateOrders
+        .map((order) => order.orderCode)
+        .filter((orderCode): orderCode is string => Boolean(orderCode))
+    );
+    const nextOrderCodes = scanOrderCodes.filter((orderCode) =>
+      candidateOrderCodes.has(orderCode)
+    );
+
+    if (nextOrderCodes.length !== scanOrderCodes.length) {
+      setScanOrderCodes(nextOrderCodes);
+      setValidationResult(null);
+    }
+  }, [scanBag, scanCandidateOrders, scanOrderCodes]);
+
   const hubOptions = [
     { value: ALL_VALUE, label: 'All hubs' },
     ...hubs.map((hub) => ({
@@ -359,6 +508,13 @@ export function BagListPage() {
     ...vehicles.map((vehicle) => ({
       value: String(vehicle.id),
       label: vehicle.licensePlate,
+    })),
+  ];
+  const postOfficeFilterOptions = [
+    { value: ALL_VALUE, label: 'All post offices' },
+    ...postOffices.map((postOffice) => ({
+      value: postOffice.code,
+      label: `${postOffice.code} - ${postOffice.name}`,
     })),
   ];
   const destinationTypeOptions = [
@@ -495,9 +651,13 @@ export function BagListPage() {
     if (!scanBag) {
       return;
     }
-    const orderCodes = parseOrderCodes(scanOrderCodes);
+    const orderCodes = Array.from(
+      new Set(
+        scanOrderCodes.map(normalizeOrderCode).filter((code) => code.length > 0)
+      )
+    );
     if (orderCodes.length === 0) {
-      notification.error('Add at least one order code.');
+      notification.error('Select at least one order.');
       return;
     }
 
@@ -536,7 +696,7 @@ export function BagListPage() {
         }).unwrap();
       }
       notification.success('Order added to bag.');
-      setScanOrderCodes('');
+      setScanOrderCodes([]);
       setValidationResult(null);
       setScanBag(null);
       void refetch();
@@ -836,16 +996,19 @@ export function BagListPage() {
                 <Label htmlFor='bag-destination-post-office-filter'>
                   Destination post office
                 </Label>
-                <Input
+                <TmsCombobox
                   id='bag-destination-post-office-filter'
-                  value={filters.destinationPostOfficeCode ?? ''}
-                  onChange={(event) =>
+                  value={filters.destinationPostOfficeCode ?? ALL_VALUE}
+                  onValueChange={(value) =>
                     updateFilter(
                       'destinationPostOfficeCode',
-                      event.target.value || undefined
+                      value === ALL_VALUE ? undefined : value
                     )
                   }
-                  placeholder='PO-DST-001'
+                  options={postOfficeFilterOptions}
+                  placeholder='All post offices'
+                  emptyText='No post offices found'
+                  loading={isFetchingPostOffices}
                 />
               </div>
             )}
@@ -914,7 +1077,7 @@ export function BagListPage() {
         onDelete={setDeleteTarget}
         onScan={(bag) => {
           setScanBag(bag);
-          setScanOrderCodes('');
+          setScanOrderCodes([]);
           setValidationResult(null);
         }}
         onSeal={setSealTarget}
@@ -929,7 +1092,11 @@ export function BagListPage() {
         mode={formMode}
         values={formValues}
         hubs={hubs}
+        routes={formRoutes}
         vehicles={vehicles}
+        destinationPostOfficeOptions={formDestinationPostOfficeOptions}
+        isLoadingDestinationPostOffices={isFetchingFormDestinationPostOffices}
+        isLoadingRoutes={isFetchingFormRoutes}
         isSaving={isSavingForm}
         onOpenChange={setFormOpen}
         onSubmit={handleSubmitForm}
@@ -957,14 +1124,20 @@ export function BagListPage() {
       <BagScanOrdersDialog
         open={Boolean(scanBag)}
         bag={scanBag ?? undefined}
-        orderCodes={scanOrderCodes}
+        orders={scanCandidateOrders}
+        selectedOrderCodes={scanOrderCodes}
         validation={validationResult}
         isValidating={isValidating}
         isAdding={isAddingOrder}
+        isOrdersLoading={
+          isFetchingOrders ||
+          isFetchingScanOriginPostOffices ||
+          isFetchingScanDestinationPostOffices
+        }
         onOpenChange={(open) => {
           if (!open) {
             setScanBag(null);
-            setScanOrderCodes('');
+            setScanOrderCodes([]);
             setValidationResult(null);
           }
         }}
@@ -981,6 +1154,7 @@ export function BagListPage() {
         values={autoValues}
         hubs={hubs}
         orders={autoCandidateOrders}
+        destinationPostOfficeOptions={autoDestinationPostOfficeOptions}
         plan={autoPlan}
         isPlanning={isAutoPlanning}
         isExecuting={isAutoPlanning}
@@ -989,6 +1163,7 @@ export function BagListPage() {
           isFetchingAutoOriginPostOffices ||
           isFetchingAutoDestinationPostOffices
         }
+        isLoadingDestinationPostOffices={isFetchingAutoOriginPostOffices}
         onOpenChange={(open) => {
           setAutoOpen(open);
           if (!open) {
@@ -1167,6 +1342,65 @@ const toPostOfficeCodeSet = (mappings: HubPostOfficeMapping[]) =>
       .map((mapping) => normalizeCode(mapping.postOfficeCode))
       .filter(Boolean)
   );
+
+const toPostOfficeComboboxOptions = (
+  mappings: HubPostOfficeMapping[],
+  postOfficeByCode: Record<string, PostOffice>
+) =>
+  mappings
+    .map((mapping) => normalizeCode(mapping.postOfficeCode))
+    .filter(
+      (code, index, codes) => Boolean(code) && codes.indexOf(code) === index
+    )
+    .map((code) => {
+      const postOffice = postOfficeByCode[code];
+      return {
+        value: code,
+        label: postOffice ? `${postOffice.code} - ${postOffice.name}` : code,
+      };
+    });
+
+const filterCandidateOrdersByTarget = (
+  orders: SecondMileOrder[],
+  originPostOfficeCodes: Set<string>,
+  destinationType?: SecondMileBagDestinationType,
+  destinationHubPostOfficeCodes: Set<string> = new Set<string>(),
+  destinationPostOfficeCode?: string
+) => {
+  const selectedDestinationPostOfficeCode = normalizeCode(
+    destinationPostOfficeCode
+  );
+
+  return orders.filter((order) => {
+    const originPostOfficeCode = normalizeCode(order.originPostOfficeCode);
+    const orderDestinationPostOfficeCode = normalizeCode(
+      order.destinationPostOfficeCode
+    );
+
+    if (
+      !originPostOfficeCode ||
+      !originPostOfficeCodes.has(originPostOfficeCode)
+    ) {
+      return false;
+    }
+
+    if (destinationType === 'POST_OFFICE') {
+      return (
+        Boolean(selectedDestinationPostOfficeCode) &&
+        orderDestinationPostOfficeCode === selectedDestinationPostOfficeCode
+      );
+    }
+
+    if (destinationType === 'HUB') {
+      return (
+        Boolean(orderDestinationPostOfficeCode) &&
+        destinationHubPostOfficeCodes.has(orderDestinationPostOfficeCode)
+      );
+    }
+
+    return false;
+  });
+};
 
 const buildAutoPlanRequest = (
   values: AutoBaggingFormValues,

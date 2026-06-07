@@ -42,6 +42,9 @@ public class CreateBagRequest {
     @JsonProperty("vehicle_id")
     private Long vehicleId;
 
+    @JsonProperty("route_id")
+    private Long routeId;
+
     @JsonProperty("max_weight")
     private Double maxWeight;
 

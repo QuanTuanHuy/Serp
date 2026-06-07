@@ -21,6 +21,11 @@ public enum OrderStatus {
     BAG_IN_TRANSIT,
     INBOUND_AT_DESTINATION_HUB,
     INBOUND_AT_DESTINATION_POST_OFFICE,
+    READY_FOR_DELIVERY,          // Đã kiểm tra tại bưu cục đích, sẵn sàng giao cho courier
+    OUT_FOR_DELIVERY,            // Courier đang trên đường giao
+    DELIVERED,                   // Giao hàng thành công
+    DELIVERY_FAILED,             // Giao hàng thất bại - có thể thử lại
+    RETURNED_TO_SENDER,          // Hoàn trả cho người gửi
     CANCELLED,
     LOST_OR_DAMAGED,
 }

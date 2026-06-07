@@ -20,23 +20,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Textarea,
 } from '@/shared/components';
 
 import type {
   SecondMileBag,
   SecondMileBaggingValidation,
+  SecondMileOrder,
 } from '../../../types';
+import { AutoBaggingOrderMultiSelect } from './AutoBaggingOrderMultiSelect';
 
 interface BagScanOrdersDialogProps {
   open: boolean;
   bag?: SecondMileBag;
-  orderCodes: string;
+  orders: SecondMileOrder[];
+  selectedOrderCodes: string[];
   validation?: SecondMileBaggingValidation | null;
   isValidating: boolean;
   isAdding: boolean;
+  isOrdersLoading: boolean;
   onOpenChange: (open: boolean) => void;
-  onOrderCodesChange: (value: string) => void;
+  onOrderCodesChange: (value: string[]) => void;
   onValidate: () => void;
   onAddAccepted: () => void;
 }
@@ -44,10 +47,12 @@ interface BagScanOrdersDialogProps {
 export function BagScanOrdersDialog({
   open,
   bag,
-  orderCodes,
+  orders,
+  selectedOrderCodes,
   validation,
   isValidating,
   isAdding,
+  isOrdersLoading,
   onOpenChange,
   onOrderCodesChange,
   onValidate,
@@ -62,19 +67,20 @@ export function BagScanOrdersDialog({
           <DialogTitle>Add orders</DialogTitle>
           <DialogDescription>
             {bag?.bagCode
-              ? `Scan or paste order codes for ${bag.bagCode}.`
+              ? `Select eligible orders for ${bag.bagCode}.`
               : 'Select an open bag before adding orders.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
-          <Textarea
-            value={orderCodes}
-            onChange={(event) => onOrderCodesChange(event.target.value)}
-            rows={7}
-            placeholder={'ORD-001\nORD-002'}
-            disabled={isValidating || isAdding}
-            autoFocus
+          <AutoBaggingOrderMultiSelect
+            id='bag-order-codes'
+            orders={orders}
+            selectedOrderCodes={selectedOrderCodes}
+            onSelectionChange={onOrderCodesChange}
+            disabled={!bag || isValidating || isAdding}
+            loading={isOrdersLoading}
+            placeholder='Select eligible orders'
           />
 
           {validation && (
@@ -129,7 +135,13 @@ export function BagScanOrdersDialog({
           <Button
             type='button'
             variant='outline'
-            disabled={!bag || isValidating || isAdding || !orderCodes.trim()}
+            disabled={
+              !bag ||
+              isValidating ||
+              isAdding ||
+              isOrdersLoading ||
+              selectedOrderCodes.length === 0
+            }
             onClick={onValidate}
           >
             {isValidating && <Loader2 className='h-4 w-4 animate-spin' />}

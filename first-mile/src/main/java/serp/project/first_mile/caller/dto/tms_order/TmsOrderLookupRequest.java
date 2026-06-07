@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.first_mile.enums.OrderStatus;
 
 import java.util.List;
 
@@ -19,4 +20,6 @@ import java.util.List;
 public class TmsOrderLookupRequest {
     private List<Long> orderIds;
     private List<String> orderCodes;
+    private String destinationPostOfficeCode;
+    private List<OrderStatus> statuses;
 }

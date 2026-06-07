@@ -19,6 +19,7 @@ import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagOrder;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
+import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.PageResponse;
 import serp.project.second_mile.dto.request.AddBagOrderRequest;
@@ -39,6 +40,9 @@ import serp.project.second_mile.dto.response.BaggingValidationResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagStatus;
 import serp.project.second_mile.enums.OrderStatus;
+import serp.project.second_mile.enums.RouteDestinationType;
+import serp.project.second_mile.enums.RouteEndpointType;
+import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
@@ -48,12 +52,15 @@ import serp.project.second_mile.repository.BagOrderRepository;
 import serp.project.second_mile.repository.BagRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
+import serp.project.second_mile.repository.HubStaffAssignmentRepository;
+import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagSpecification;
 import serp.project.second_mile.service.BagCapacitySettingsService;
 import serp.project.second_mile.service.BagService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -72,12 +79,15 @@ import java.util.stream.Collectors;
 public class BagServiceImpl implements BagService {
     private static final String TRANSITION_SOURCE = "SECOND_MILE";
     private static final DateTimeFormatter AUTO_BAG_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final double GRAMS_PER_KILOGRAM = 1000.0;
 
     private final BagRepository bagRepository;
     private final BagOrderRepository bagOrderRepository;
     private final HubRepository hubRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
+    private final RouteRepository routeRepository;
     private final VehicleRepository vehicleRepository;
+    private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final TmsOrderClient tmsOrderClient;
     private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
@@ -137,13 +147,25 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.BAG_CODE_EXISTED);
         }
 
-        validateRouteAndTransport(tenantId, request.getOriginHubId(), request.getDestinationType(),
-                request.getDestinationHubId(), request.getDestinationPostOfficeCode(), request.getVehicleId());
+        Route route = validateRouteAndTransport(
+                tenantId,
+                request.getOriginHubId(),
+                request.getDestinationType(),
+                request.getDestinationHubId(),
+                request.getDestinationPostOfficeCode(),
+                request.getRouteId(),
+                request.getVehicleId()
+        );
+        if (route == null) {
+            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route is required.");
+        }
 
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         Bag bag = BagMapper.toEntity(request);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
+        bag.setRouteId(route.getId());
+        bag.setVehicleId(route.getVehicleId());
         bag.setStatus(BagStatus.CREATED);
         bag.setSealedAt(null);
         bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
@@ -179,13 +201,25 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.BAG_CODE_EXISTED);
         }
 
-        validateRouteAndTransport(tenantId, request.getOriginHubId(), request.getDestinationType(),
-                request.getDestinationHubId(), request.getDestinationPostOfficeCode(), request.getVehicleId());
+        Route route = validateRouteAndTransport(
+                tenantId,
+                request.getOriginHubId(),
+                request.getDestinationType(),
+                request.getDestinationHubId(),
+                request.getDestinationPostOfficeCode(),
+                request.getRouteId(),
+                request.getVehicleId()
+        );
+        if (route == null) {
+            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route is required.");
+        }
 
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         BagMapper.mapForUpdate(request, bag);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
+        bag.setRouteId(route.getId());
+        bag.setVehicleId(route.getVehicleId());
         bag.setStatus(BagStatus.CREATED);
         bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
         bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), capacitySettings.maxVolume()));
@@ -476,7 +510,7 @@ public class BagServiceImpl implements BagService {
                         extraOrders,
                         capacitySettings
                 );
-                extraWeight += safeDouble(order.getTotalWeight());
+                extraWeight += orderWeightKg(order);
                 extraVolume += safeDouble(order.getTotalVolume());
                 extraOrders += 1;
                 accepted++;
@@ -508,6 +542,7 @@ public class BagServiceImpl implements BagService {
                 request.getDestinationType(),
                 request.getDestinationHubId(),
                 request.getDestinationPostOfficeCode(),
+                null,
                 null
         );
 
@@ -708,12 +743,13 @@ public class BagServiceImpl implements BagService {
         }
     }
 
-    private void validateRouteAndTransport(
+    private Route validateRouteAndTransport(
             Long tenantId,
             Long originHubId,
             BagDestinationType destinationType,
             Long destinationHubId,
             String destinationPostOfficeCode,
+            Long routeId,
             Long vehicleId
     ) {
         if (originHubId == null) {
@@ -724,9 +760,6 @@ public class BagServiceImpl implements BagService {
                 .orElseThrow(() -> new AppException(ErrorCode.BAG_HUB_INVALID));
         if (!tenantId.equals(originHub.getTenantId())) {
             throw new AppException(ErrorCode.BAG_HUB_INVALID);
-        }
-        if (vehicleId != null) {
-            validateVehicle(tenantId, vehicleId);
         }
 
         if (destinationType == BagDestinationType.HUB) {
@@ -744,27 +777,117 @@ public class BagServiceImpl implements BagService {
                         "Same-hub orders must use a destination post office bag."
                 );
             }
-            return;
-        }
-
-        if (destinationType == BagDestinationType.POST_OFFICE) {
+        } else if (destinationType == BagDestinationType.POST_OFFICE) {
             String normalizedPostOfficeCode = normalizeText(destinationPostOfficeCode);
             if (normalizedPostOfficeCode == null) {
                 throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
             }
             hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, normalizedPostOfficeCode)
                     .orElseThrow(() -> new AppException(ErrorCode.BAG_POST_OFFICE_INVALID));
-            return;
+        } else {
+            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
         }
 
-        throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+        if (routeId == null) {
+            return null;
+        }
+        Route route = routeRepository.findById(routeId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_NOT_FOUND));
+        validateRouteMatchesBagTarget(
+                tenantId,
+                route,
+                originHubId,
+                destinationType,
+                destinationHubId,
+                destinationPostOfficeCode,
+                vehicleId
+        );
+        return route;
     }
 
-    private void validateVehicle(Long tenantId, Long vehicleId) {
+    private void validateRouteMatchesBagTarget(
+            Long tenantId,
+            Route route,
+            Long originHubId,
+            BagDestinationType destinationType,
+            Long destinationHubId,
+            String destinationPostOfficeCode,
+            Long requestedVehicleId
+    ) {
+        if (!tenantId.equals(route.getTenantId()) || route.getStatus() != RouteStatus.ACTIVE) {
+            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID);
+        }
+        if (route.getOriginType() != RouteEndpointType.HUB || !Objects.equals(route.getOriginHubId(), originHubId)) {
+            throw new AppException(ErrorCode.ROUTE_HUB_INVALID, "Route origin hub must match bag origin hub.");
+        }
+        RouteDestinationType expectedRouteDestinationType = RouteDestinationType.valueOf(destinationType.name());
+        if (route.getDestinationType() != expectedRouteDestinationType) {
+            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route destination type does not match.");
+        }
+        if (destinationType == BagDestinationType.HUB
+                && !Objects.equals(route.getDestinationHubId(), destinationHubId)) {
+            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
+        }
+        if (destinationType == BagDestinationType.POST_OFFICE
+                && !Objects.equals(
+                        normalizeText(route.getDestinationPostOfficeCode()),
+                        normalizeText(destinationPostOfficeCode)
+                )) {
+            throw new AppException(ErrorCode.ROUTE_POST_OFFICE_INVALID);
+        }
+        if (route.getVehicleId() == null) {
+            throw new AppException(ErrorCode.ROUTE_VEHICLE_INVALID, "Route must have an assigned vehicle.");
+        }
+        if (requestedVehicleId != null && !Objects.equals(route.getVehicleId(), requestedVehicleId)) {
+            throw new AppException(
+                    ErrorCode.ROUTE_VEHICLE_INVALID,
+                    "Selected vehicle must match the vehicle assigned to the route."
+            );
+        }
+        Vehicle vehicle = validateVehicle(tenantId, originHubId, route.getVehicleId());
+        validateVehicleHasAssignedDriver(tenantId, vehicle);
+        validateDriverAssignedToHub(tenantId, vehicle.getAssignedStaffId(), originHubId);
+    }
+
+    private Vehicle validateVehicle(Long tenantId, Long originHubId, Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new AppException(ErrorCode.BAG_VEHICLE_INVALID));
         if (!tenantId.equals(vehicle.getTenantId()) || vehicle.getStatus() != VehicleStatus.ACTIVE) {
             throw new AppException(ErrorCode.BAG_VEHICLE_INVALID);
+        }
+        if (!Objects.equals(vehicle.getHubId(), originHubId)) {
+            throw new AppException(
+                    ErrorCode.BAG_VEHICLE_INVALID,
+                    "Bag route vehicle must belong to the origin hub."
+            );
+        }
+        return vehicle;
+    }
+
+    private void validateVehicleHasAssignedDriver(Long tenantId, Vehicle vehicle) {
+        if (vehicle == null) {
+            throw new AppException(ErrorCode.BAG_VEHICLE_INVALID);
+        }
+        secondMileAccessUtils.ensureActiveDriverStaffOrThrow(tenantId, vehicle.getAssignedStaffId());
+    }
+
+    private void validateDriverAssignedToHub(Long tenantId, Long driverStaffId, Long hubId) {
+        if (driverStaffId == null || hubId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Assigned vehicle driver and hub are required.");
+        }
+        boolean assignedToHub = hubStaffAssignmentRepository
+                .findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
+                        driverStaffId,
+                        hubId,
+                        tenantId,
+                        LocalDate.now()
+                )
+                .isPresent();
+        if (!assignedToHub) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Assigned vehicle driver must be active at the origin hub."
+            );
         }
     }
 
@@ -917,15 +1040,15 @@ public class BagServiceImpl implements BagService {
 
     private void recalculateBagMetrics(Bag bag, Long tenantId) {
         List<BagOrder> bagOrders = bagOrderRepository.findByBag_IdAndTenantId(bag.getId(), tenantId);
-        double totalWeight = 0.0;
+        double totalWeightKg = 0.0;
         double totalVolume = 0.0;
         int totalOrders = 0;
         for (BagOrder bagOrder : bagOrders) {
-            totalWeight += safeDouble(bagOrder.getTotalWeightSnapshot());
+            totalWeightKg += gramsToKilograms(safeDouble(bagOrder.getTotalWeightSnapshot()));
             totalVolume += safeDouble(bagOrder.getTotalVolumeSnapshot());
             totalOrders++;
         }
-        bag.setCurrentWeight(totalWeight);
+        bag.setCurrentWeight(totalWeightKg);
         bag.setCurrentVolume(totalVolume);
         bag.setCurrentOrders(totalOrders);
     }
@@ -938,7 +1061,7 @@ public class BagServiceImpl implements BagService {
             int extraOrders,
             BagCapacitySettingsResponse capacitySettings
     ) {
-        double nextWeight = safeDouble(bag.getCurrentWeight()) + safeDouble(order.getTotalWeight()) + extraWeight;
+        double nextWeight = safeDouble(bag.getCurrentWeight()) + orderWeightKg(order) + extraWeight;
         double nextVolume = safeDouble(bag.getCurrentVolume()) + safeDouble(order.getTotalVolume()) + extraVolume;
         int nextOrders = safeInt(bag.getCurrentOrders()) + 1 + extraOrders;
 
@@ -1055,6 +1178,9 @@ public class BagServiceImpl implements BagService {
         Vehicle vehicle = bag.getVehicleId() == null
                 ? null
                 : vehicleRepository.findById(bag.getVehicleId()).orElse(null);
+        Route route = bag.getRouteId() == null
+                ? null
+                : routeRepository.findById(bag.getRouteId()).orElse(null);
         return TmsOrderStatusTransitionRequest.Context.builder()
                 .eventTime(LocalDateTime.now())
                 .hubId(hub == null ? bag.getOriginHubId() : hub.getId())
@@ -1062,6 +1188,9 @@ public class BagServiceImpl implements BagService {
                 .hubName(hub == null ? null : hub.getName())
                 .bagId(bag.getId())
                 .bagCode(bag.getBagCode())
+                .routeId(route == null ? bag.getRouteId() : route.getId())
+                .routeCode(route == null ? null : route.getRouteCode())
+                .driverId(vehicle == null ? null : vehicle.getAssignedStaffId())
                 .vehicleId(vehicle == null ? bag.getVehicleId() : vehicle.getId())
                 .vehicleLicensePlate(vehicle == null ? null : vehicle.getLicensePlate())
                 .build();
@@ -1097,9 +1226,17 @@ public class BagServiceImpl implements BagService {
     }
 
     private double sizeScore(TmsOrderOperationView order, double maxWeight, double maxVolume) {
-        double weightRatio = safeDouble(order.getTotalWeight()) / maxWeight;
+        double weightRatio = orderWeightKg(order) / maxWeight;
         double volumeRatio = safeDouble(order.getTotalVolume()) / maxVolume;
         return Math.max(weightRatio, volumeRatio);
+    }
+
+    private double orderWeightKg(TmsOrderOperationView order) {
+        return gramsToKilograms(safeDouble(order.getTotalWeight()));
+    }
+
+    private double gramsToKilograms(double grams) {
+        return grams / GRAMS_PER_KILOGRAM;
     }
 
     private BagFilterRequest normalizeFilterRequest(BagFilterRequest filterRequest) {
@@ -1212,14 +1349,14 @@ public class BagServiceImpl implements BagService {
         }
 
         private boolean canFit(TmsOrderOperationView order) {
-            return (totalWeight + safe(order.getTotalWeight()) <= maxWeight)
+            return (totalWeight + weightKg(order) <= maxWeight)
                     && (totalVolume + safe(order.getTotalVolume()) <= maxVolume)
                     && (orders.size() + 1 <= maxOrders);
         }
 
         private void add(TmsOrderOperationView order) {
             orders.add(order);
-            totalWeight += safe(order.getTotalWeight());
+            totalWeight += weightKg(order);
             totalVolume += safe(order.getTotalVolume());
         }
 
@@ -1229,6 +1366,10 @@ public class BagServiceImpl implements BagService {
 
         private static double safe(Double value) {
             return value == null || value < 0 ? 0.0 : value;
+        }
+
+        private static double weightKg(TmsOrderOperationView order) {
+            return safe(order.getTotalWeight()) / GRAMS_PER_KILOGRAM;
         }
     }
 }
