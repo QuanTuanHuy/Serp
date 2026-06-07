@@ -280,6 +280,9 @@ export const api = createApi({
     'pm/UserSkill',
     'pm/WorkItemSkill',
     'pm/OptimizationRun',
+    'pm/ResourceCalendarSettings',
+    'pm/ResourceCalendarProfile',
+    'pm/ResourceCalendarException',
     // TTCRS tags
     'ttcrs/Request',
     'ttcrs/Location',
