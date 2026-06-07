@@ -5,8 +5,12 @@ Description: Part of Serp Project
 
 package serp.project.second_mile.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.enums.BagDestinationType;
@@ -41,5 +45,23 @@ public interface BagRepository extends JpaRepository<Bag, Long>, JpaSpecificatio
             BagStatus status,
             LocalDateTime from,
             LocalDateTime to
+    );
+
+    List<Bag> findByTenantIdAndOriginHubIdAndStatus(
+            Long tenantId,
+            Long originHubId,
+            BagStatus status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select bag
+            from Bag bag
+            where bag.tenantId = :tenantId
+                and bag.id in :bagIds
+            """)
+    List<Bag> findByIdInAndTenantIdForUpdate(
+            @Param("tenantId") Long tenantId,
+            @Param("bagIds") List<Long> bagIds
     );
 }

@@ -650,6 +650,125 @@ export interface HandoverManifestListFilters {
   status?: HandoverManifestStatus;
 }
 
+export type BagDistributionManifestStatus = HandoverManifestStatus;
+
+export interface BagDistributionManifestBag {
+  id: number;
+  bagId?: number;
+  bagCode?: string;
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  totalWeightSnapshot?: number;
+  totalVolumeSnapshot?: number;
+  totalOrdersSnapshot?: number;
+  scanOutTime?: string;
+  scanInTime?: string;
+}
+
+export interface BagDistributionManifest {
+  id: number;
+  manifestCode?: string;
+  originHubId?: number;
+  originHubCode?: string;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationHubCode?: string;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  routeCode?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  assignedDriverId?: number;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
+  actualDepartureAt?: string;
+  actualArrivalAt?: string;
+  driverStartLatitude?: number;
+  driverStartLongitude?: number;
+  driverStartDistanceM?: number;
+  driverStartPhotoUrl?: string;
+  driverEndLatitude?: number;
+  driverEndLongitude?: number;
+  driverEndDistanceM?: number;
+  driverEndPhotoUrl?: string;
+  status?: BagDistributionManifestStatus;
+  note?: string;
+  bags?: BagDistributionManifestBag[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BagDistributionManifestListFilters {
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  vehicleId?: number;
+  assignedDriverId?: number;
+  status?: BagDistributionManifestStatus;
+}
+
+export interface CreateBagDistributionManifestRequest {
+  origin_hub_id: number;
+  destination_type: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  route_id: number;
+  vehicle_id: number;
+  planned_departure_at: string;
+  planned_arrival_at: string;
+  bag_ids: number[];
+  note?: string;
+}
+
+export interface AutoPlanBagDistributionRequest {
+  origin_hub_id: number;
+  destination_type?: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  planned_departure_at: string;
+  planned_arrival_at: string;
+  sealed_sla_hours?: number;
+  execute?: boolean;
+  note?: string;
+}
+
+export interface ConfirmBagDistributionInboundRequest {
+  bag_ids?: number[];
+}
+
+export interface BagDistributionPlanItem {
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  routeCode?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  assignedDriverId?: number;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
+  bagIds: number[];
+  bagCodes: string[];
+  totalWeight?: number;
+  totalVolume?: number;
+  totalOrders?: number;
+  score?: number;
+  hints: string[];
+  createdManifestId?: number;
+  createdManifestCode?: string;
+}
+
+export interface BagDistributionPlan {
+  executed: boolean;
+  manifestCount: number;
+  items: BagDistributionPlanItem[];
+}
+
 export interface CreateHandoverManifestRequest {
   origin_post_office_code: string;
   target_hub_id: number;

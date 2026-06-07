@@ -87,6 +87,18 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
                 OrderStatus.BAG_SEALED,
                 EnumSet.of(OrderStatus.BAGGED)
         );
+        ALLOWED_PREVIOUS_STATUSES.put(
+                OrderStatus.BAG_IN_TRANSIT,
+                EnumSet.of(OrderStatus.BAG_SEALED)
+        );
+        ALLOWED_PREVIOUS_STATUSES.put(
+                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                EnumSet.of(OrderStatus.BAG_IN_TRANSIT)
+        );
+        ALLOWED_PREVIOUS_STATUSES.put(
+                OrderStatus.INBOUND_AT_DESTINATION_POST_OFFICE,
+                EnumSet.of(OrderStatus.BAG_IN_TRANSIT)
+        );
     }
 
     private final ObjectMapper objectMapper;

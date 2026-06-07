@@ -18,6 +18,9 @@ public enum OrderStatus {
     BAGGING_IN_PROGRESS, // Đang xử lý gom đơn vào bag
     BAGGED, // Đơn đã được gán vào bag
     BAG_SEALED, // Bag chứa đơn đã được niêm phong
+    BAG_IN_TRANSIT,
+    INBOUND_AT_DESTINATION_HUB,
+    INBOUND_AT_DESTINATION_POST_OFFICE,
     CANCELLED,
     LOST_OR_DAMAGED,
 }

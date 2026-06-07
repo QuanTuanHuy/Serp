@@ -33,7 +33,14 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
     return pathname === href || pathname.startsWith(href);
   };
 
-  const active = isActive(item.href);
+  const hasActiveChild = item.children?.some((child) => isActive(child.href));
+  const active = isActive(item.href) || hasActiveChild;
+
+  React.useEffect(() => {
+    if (hasActiveChild && !isCollapsed) {
+      setIsExpanded(true);
+    }
+  }, [hasActiveChild, isCollapsed]);
 
   // If item has children, toggle expansion instead of navigation
   const handleClick = (e: React.MouseEvent) => {
