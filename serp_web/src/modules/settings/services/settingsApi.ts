@@ -3,22 +3,19 @@
  * Description: Part of Serp Project - Settings API barrel exports
  */
 
-// // General Settings API
-// export {
-//   generalApi,
-//   useGetOrganizationProfileQuery,
-//   useUpdateOrganizationProfileMutation,
-//   useGetOrganizationBrandingQuery,
-//   useUpdateOrganizationBrandingMutation,
-//   useGetOrganizationPreferencesQuery,
-//   useUpdateOrganizationPreferencesMutation,
-// } from './general/generalApi';
+// General Settings API
+export {
+  settingsGeneralApi,
+  useGetOrganizationSettingsQuery,
+  useUpdateOrganizationSettingsMutation,
+} from './general/generalApi';
 
 // Users API
 export {
   settingsUsersApi,
   useGetOrganizationUsersQuery,
   useLazyGetOrganizationUsersQuery,
+  useGetOrganizationRolesQuery,
   useSettingsCreateUserForOrganizationMutation,
   useUpdateOrganizationUserMutation,
 } from './users/usersApi';

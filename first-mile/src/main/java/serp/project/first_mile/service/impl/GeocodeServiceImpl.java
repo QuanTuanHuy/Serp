@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import serp.project.first_mile.caller.GeocodeCaller;
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.dto.response.GeocodeAddressResponse;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -29,7 +30,7 @@ public class GeocodeServiceImpl implements GeocodeService {
                 .map(String::trim)
                 .orElse("");
 
-        GeocodeCaller.GeoPoint geoPoint = geocodeCaller.searchFirst(sanitizedAddress)
+        GeoPoint geoPoint = geocodeCaller.searchFirst(sanitizedAddress)
                 .orElseThrow(() -> {
                     log.warn("No geocode result for address={}", sanitizedAddress);
                     return new AppException(ErrorCode.GEOCODE_NOT_FOUND);

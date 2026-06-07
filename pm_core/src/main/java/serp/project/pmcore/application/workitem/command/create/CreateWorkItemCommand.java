@@ -22,6 +22,7 @@ public record CreateWorkItemCommand(
         Long priorityId,
         Long assigneeId,
         Long parentId,
+        Long startDate,
         Long dueDate,
         Long timeOriginalEstimate,
         Long securityLevelId,
@@ -48,6 +49,7 @@ public record CreateWorkItemCommand(
                 .priorityId(priorityId)
                 .assigneeId(assigneeId)
                 .parentId(parentId)
+                .startDate(startDate)
                 .dueDate(dueDate)
                 .timeOriginalEstimate(timeOriginalEstimate)
                 .securityLevelId(securityLevelId)

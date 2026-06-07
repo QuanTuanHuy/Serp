@@ -14,13 +14,9 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import type { Province, Ward } from '../../../types';
 import {
   normalizeLocationCode,
@@ -59,6 +55,31 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
   onSubmit,
   updateFormField,
 }) => {
+  const provinceOptions = provinceSelectOptions.flatMap((province) => {
+    const provinceCode = normalizeLocationCode(province.provinceCode);
+
+    return provinceCode
+      ? [
+          {
+            value: provinceCode,
+            label: `${province.name} (${provinceCode})`,
+          },
+        ]
+      : [];
+  });
+  const wardOptions = wardSelectOptions.flatMap((ward) => {
+    const wardCode = normalizeLocationCode(ward.wardCode);
+
+    return wardCode
+      ? [
+          {
+            value: wardCode,
+            label: `${ward.name} (${wardCode})`,
+          },
+        ]
+      : [];
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
@@ -102,79 +123,38 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-province'>Province *</Label>
-              <Select
-                value={selectedProvinceCode || undefined}
+              <TmsCombobox
+                id='post-office-province'
+                value={selectedProvinceCode}
                 onValueChange={(value) => {
                   updateFormField('province_code', value);
                   updateFormField('ward_code', '');
                 }}
+                options={provinceOptions}
+                placeholder='Select province'
+                emptyText='No provinces found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='post-office-province' className='w-full'>
-                  <SelectValue placeholder='Select province' />
-                </SelectTrigger>
-                <SelectContent>
-                  {provinceSelectOptions.map((province) => {
-                    const provinceCode = normalizeLocationCode(
-                      province.provinceCode
-                    );
-
-                    if (!provinceCode) {
-                      return null;
-                    }
-
-                    return (
-                      <SelectItem key={provinceCode} value={provinceCode}>
-                        {province.name} ({provinceCode})
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-ward'>Ward *</Label>
-              <Select
-                value={selectedWardCode || undefined}
+              <TmsCombobox
+                id='post-office-ward'
+                value={selectedWardCode}
                 onValueChange={(value) => updateFormField('ward_code', value)}
+                options={wardOptions}
+                placeholder={
+                  selectedProvinceCode ? 'Select ward' : 'Select province first'
+                }
+                emptyText={
+                  selectedProvinceCode && isFetchingWardsForForm
+                    ? 'Loading wards...'
+                    : 'No wards available.'
+                }
                 disabled={isSaving || !selectedProvinceCode}
-              >
-                <SelectTrigger id='post-office-ward' className='w-full'>
-                  <SelectValue
-                    placeholder={
-                      selectedProvinceCode
-                        ? 'Select ward'
-                        : 'Select province first'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedProvinceCode && isFetchingWardsForForm ? (
-                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      Loading wards...
-                    </p>
-                  ) : wardSelectOptions.length > 0 ? (
-                    wardSelectOptions.map((ward) => {
-                      const wardCode = normalizeLocationCode(ward.wardCode);
-
-                      if (!wardCode) {
-                        return null;
-                      }
-
-                      return (
-                        <SelectItem key={wardCode} value={wardCode}>
-                          {ward.name} ({wardCode})
-                        </SelectItem>
-                      );
-                    })
-                  ) : (
-                    <p className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      No wards available.
-                    </p>
-                  )}
-                </SelectContent>
-              </Select>
+                loading={isFetchingWardsForForm}
+              />
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
@@ -203,7 +183,8 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-status'>Status *</Label>
-              <Select
+              <TmsCombobox
+                id='post-office-status'
                 value={formValues.status}
                 onValueChange={(value) =>
                   updateFormField(
@@ -211,19 +192,11 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
                     value as PostOfficeFormState['status']
                   )
                 }
+                options={POST_OFFICE_STATUS_OPTIONS}
+                placeholder='Select status'
+                emptyText='No statuses found'
                 disabled={isSaving}
-              >
-                <SelectTrigger id='post-office-status' className='w-full'>
-                  <SelectValue placeholder='Select status' />
-                </SelectTrigger>
-                <SelectContent>
-                  {POST_OFFICE_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className='space-y-2'>
@@ -244,7 +217,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-daily-capacity'>
-                Daily capacity *
+                Pickup order capacity *
               </Label>
               <Input
                 id='post-office-daily-capacity'
@@ -259,7 +232,9 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-current-load'>Current load *</Label>
+              <Label htmlFor='post-office-current-load'>
+                Current pickup load *
+              </Label>
               <Input
                 id='post-office-current-load'
                 type='number'
@@ -267,6 +242,38 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
                 value={formValues.current_load}
                 onChange={(event) =>
                   updateFormField('current_load', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='post-office-delivery-capacity'>
+                Delivery capacity *
+              </Label>
+              <Input
+                id='post-office-delivery-capacity'
+                type='number'
+                min={0}
+                value={formValues.delivery_capacity}
+                onChange={(event) =>
+                  updateFormField('delivery_capacity', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='post-office-current-delivery-load'>
+                Current delivery load *
+              </Label>
+              <Input
+                id='post-office-current-delivery-load'
+                type='number'
+                min={0}
+                value={formValues.current_delivery_load}
+                onChange={(event) =>
+                  updateFormField('current_delivery_load', event.target.value)
                 }
                 disabled={isSaving}
               />

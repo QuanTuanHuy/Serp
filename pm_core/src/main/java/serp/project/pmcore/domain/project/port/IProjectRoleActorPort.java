@@ -26,13 +26,24 @@ public interface IProjectRoleActorPort {
                                    String subjectId);
 
     int softDeleteActiveAssignment(Long tenantId,
-                                   Long projectId,
-                                   Long projectRoleId,
-                                   String subjectType,
-                                   String subjectId,
-                                   Long updatedBy);
+                                    Long projectId,
+                                    Long projectRoleId,
+                                    String subjectType,
+                                    String subjectId,
+                                    Long updatedBy);
+
+    void softDeleteActiveUserAssignmentsByProject(Long tenantId,
+                                                  Long projectId,
+                                                  String subjectId,
+                                                  Long updatedBy);
+
+    List<ProjectRoleActorEntity> getProjectRoleActorsByProjectId(Long projectId, Long tenantId);
 
     List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndRoleId(Long projectId,
-                                                                          Long projectRoleId,
-                                                                          Long tenantId);
+                                                                            Long projectRoleId,
+                                                                           Long tenantId);
+
+    List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndSubjectType(Long projectId,
+                                                                                String subjectType,
+                                                                                Long tenantId);
 }

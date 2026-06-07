@@ -14,8 +14,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.workitem.command.transition.internal.ResolvedTransitionExecution;
 import serp.project.pmcore.application.workitem.command.transition.internal.TransitionSubjectContext;
 import serp.project.pmcore.application.workitem.command.transition.support.TransitionConfigurationResolver;
+import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.port.ICustomFieldPort;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldResolver;
+import serp.project.pmcore.domain.notification.dto.WorkItemStatusChangeNotificationContext;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -91,6 +94,10 @@ class TransitionWorkItemCommandHandlerTest {
     private JsonUtils jsonUtils;
     @Mock
     private TransitionWorkItemStatusValidator transitionWorkItemStatusValidator;
+    @Mock
+    private WorkItemHistoryRecorder workItemHistoryRecorder;
+    @Mock
+    private IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     private TransitionWorkItemCommandHandler handler;
 
@@ -109,7 +116,9 @@ class TransitionWorkItemCommandHandlerTest {
                 workItemCustomFieldValuePort,
                 outboxEventService,
                 jsonUtils,
-                transitionWorkItemStatusValidator
+                transitionWorkItemStatusValidator,
+                workItemHistoryRecorder,
+                notificationOutboxPublisher
         );
     }
 
@@ -176,6 +185,11 @@ class TransitionWorkItemCommandHandlerTest {
             workItem.setUpdatedBy(USER_ID);
             return workItem;
         });
+        when(outboxEventService.saveEvent(any())).thenAnswer(invocation -> {
+            OutboxEventEntity event = invocation.getArgument(0);
+            event.setId(7000L);
+            return event;
+        });
         when(jsonUtils.toJson(any())).thenReturn("{}");
 
         TransitionWorkItemStatusResult result = handler.handle(command);
@@ -192,6 +206,22 @@ class TransitionWorkItemCommandHandlerTest {
         assertEquals(EventConstants.WorkItem.EventType.WORK_ITEM_STATUS_CHANGED, outboxEvent.getEventType());
         assertEquals(WORK_ITEM_ID, outboxEvent.getAggregateId());
         assertEquals(String.valueOf(PROJECT_ID), outboxEvent.getPartitionKey());
+        verify(workItemHistoryRecorder).recordChanges(
+                eq(TENANT_ID),
+                eq(WORK_ITEM_ID),
+                eq(USER_ID),
+                any(),
+                any(),
+                eq(List.of("resolution_id", "workflow_step_id", "status_id"))
+        );
+        verify(notificationOutboxPublisher).publishWorkItemStatusChangedNotifications(
+                eq(project),
+                eq(workItem),
+                eq(TENANT_ID),
+                eq(USER_ID),
+                eq(7000L),
+                any(WorkItemStatusChangeNotificationContext.class)
+        );
     }
 
     @Test

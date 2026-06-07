@@ -30,11 +30,16 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import serp.project.first_mile.caller.dto.GeoPoint;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.Province;
 import serp.project.first_mile.domain.Ward;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.FileUploadRequest;
+import serp.project.first_mile.dto.message.HubPostOfficeSyncEvent;
+import serp.project.first_mile.dto.message.HubPostOfficeSyncEventType;
+import serp.project.first_mile.dto.message.HubPostOfficeSyncOrigin;
+import serp.project.first_mile.dto.request.AssignPostOfficeHubRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
@@ -53,13 +58,13 @@ import serp.project.first_mile.repository.WardRepository;
 import serp.project.first_mile.repository.projection.CodeNameProjection;
 import serp.project.first_mile.repository.specification.PostOfficeSpecification;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
+import serp.project.first_mile.kafka.HubPostOfficeSyncEventPublisher;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
 import serp.project.first_mile.service.PostOfficeService;
-
-import java.util.Locale;
 
 @Service
 @Slf4j
@@ -82,6 +87,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     private final GeocodeCaller geocodeCaller;
     private final FileStorageService fileStorageService;
     private final PostOfficeImportExcelService postOfficeImportExcelService;
+    private final HubPostOfficeSyncEventPublisher hubPostOfficeSyncEventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -122,14 +128,23 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 .wardCode(normalizeText(filterRequest.getWardCode()))
                 .status(filterRequest.getStatus())
                 .hasLocation(filterRequest.getHasLocation())
+                .minLatitude(filterRequest.getMinLatitude())
+                .maxLatitude(filterRequest.getMaxLatitude())
+                .minLongitude(filterRequest.getMinLongitude())
+                .maxLongitude(filterRequest.getMaxLongitude())
                 .minServiceRadiusM(filterRequest.getMinServiceRadiusM())
                 .maxServiceRadiusM(filterRequest.getMaxServiceRadiusM())
                 .minDailyCapacity(filterRequest.getMinDailyCapacity())
                 .maxDailyCapacity(filterRequest.getMaxDailyCapacity())
                 .minCurrentLoad(filterRequest.getMinCurrentLoad())
                 .maxCurrentLoad(filterRequest.getMaxCurrentLoad())
+                .minDeliveryCapacity(filterRequest.getMinDeliveryCapacity())
+                .maxDeliveryCapacity(filterRequest.getMaxDeliveryCapacity())
+                .minCurrentDeliveryLoad(filterRequest.getMinCurrentDeliveryLoad())
+                .maxCurrentDeliveryLoad(filterRequest.getMaxCurrentDeliveryLoad())
                 .minPriority(filterRequest.getMinPriority())
                 .maxPriority(filterRequest.getMaxPriority())
+                .hubId(filterRequest.getHubId())
                 .build();
     }
 
@@ -142,10 +157,40 @@ public class PostOfficeServiceImpl implements PostOfficeService {
     }
 
     private void validateFilterRanges(PostOfficeFilterRequest filterRequest) {
+        validateCoordinateBounds(filterRequest);
         validateRange(filterRequest.getMinServiceRadiusM(), filterRequest.getMaxServiceRadiusM());
         validateRange(filterRequest.getMinDailyCapacity(), filterRequest.getMaxDailyCapacity());
         validateRange(filterRequest.getMinCurrentLoad(), filterRequest.getMaxCurrentLoad());
+        validateRange(filterRequest.getMinDeliveryCapacity(), filterRequest.getMaxDeliveryCapacity());
+        validateRange(filterRequest.getMinCurrentDeliveryLoad(), filterRequest.getMaxCurrentDeliveryLoad());
         validateRange(filterRequest.getMinPriority(), filterRequest.getMaxPriority());
+    }
+
+    private void validateCoordinateBounds(PostOfficeFilterRequest filterRequest) {
+        validateLatitude(filterRequest.getMinLatitude());
+        validateLatitude(filterRequest.getMaxLatitude());
+        validateLongitude(filterRequest.getMinLongitude());
+        validateLongitude(filterRequest.getMaxLongitude());
+        validateCoordinateRange(filterRequest.getMinLatitude(), filterRequest.getMaxLatitude());
+        validateCoordinateRange(filterRequest.getMinLongitude(), filterRequest.getMaxLongitude());
+    }
+
+    private void validateLatitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -90.0 || value > 90.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateLongitude(Double value) {
+        if (value != null && (!Double.isFinite(value) || value < -180.0 || value > 180.0)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    private void validateCoordinateRange(Double minValue, Double maxValue) {
+        if (minValue != null && maxValue != null && minValue > maxValue) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
     }
 
     private void validateRange(Integer minValue, Integer maxValue) {
@@ -206,6 +251,58 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         postOffice.setTenantId(firstMileAccessUtils.getCurrentTenantIdOrThrow());
         PostOffice updatedPostOffice = postOfficeRepository.save(postOffice);
         return PostOfficeMapper.toResponse(updatedPostOffice);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PostOfficeResponse assignPostOfficeHub(Long id, AssignPostOfficeHubRequest request) {
+        PostOffice postOffice = getPostOfficeOrThrow(id);
+        validateTenantAccess(postOffice);
+
+        Long hubId = request == null ? null : request.getHubId();
+        if (hubId != null && hubId < 1) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        postOffice.setHubId(hubId);
+        postOffice.setTenantId(firstMileAccessUtils.getCurrentTenantIdOrThrow());
+        PostOffice updated = postOfficeRepository.save(postOffice);
+
+        Long tenantIdForSync = updated.getTenantId();
+        String postOfficeCodeForSync = updated.getCode();
+        Long hubIdForSync = hubId;
+        TransactionAfterCommit.run(() -> publishHubPostOfficeSyncFromFirstMile(
+                tenantIdForSync,
+                postOfficeCodeForSync,
+                hubIdForSync
+        ));
+
+        return PostOfficeMapper.toResponse(updated);
+    }
+
+    private void publishHubPostOfficeSyncFromFirstMile(Long tenantId, String postOfficeCode, Long hubId) {
+        if (tenantId == null || postOfficeCode == null || postOfficeCode.isBlank()) {
+            return;
+        }
+        HubPostOfficeSyncEvent event;
+        if (hubId != null) {
+            event = HubPostOfficeSyncEvent.builder()
+                    .eventType(HubPostOfficeSyncEventType.ASSIGNED)
+                    .origin(HubPostOfficeSyncOrigin.FIRST_MILE)
+                    .tenantId(tenantId)
+                    .hubId(hubId)
+                    .postOfficeCode(postOfficeCode)
+                    .build();
+        } else {
+            event = HubPostOfficeSyncEvent.builder()
+                    .eventType(HubPostOfficeSyncEventType.REMOVED)
+                    .origin(HubPostOfficeSyncOrigin.FIRST_MILE)
+                    .tenantId(tenantId)
+                    .hubId(null)
+                    .postOfficeCode(postOfficeCode)
+                    .build();
+        }
+        hubPostOfficeSyncEventPublisher.publish(event);
     }
 
     @Override
@@ -477,7 +574,7 @@ public class PostOfficeServiceImpl implements PostOfficeService {
                 addressQuery
         );
 
-        GeocodeCaller.GeoPoint geoPoint = geocodeCaller.searchFirst(addressQuery).orElse(null);
+        GeoPoint geoPoint = geocodeCaller.searchFirst(addressQuery).orElse(null);
         if (geoPoint == null) {
             return new GeocodeUpdateResult(false, GeocodeSkipReason.NO_GEOCODE_RESULT, null, null, addressQuery);
         }

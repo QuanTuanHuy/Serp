@@ -33,6 +33,12 @@ public interface IUserPort {
 
     Integer countUsersByOrganizationIdAndStatus(Long organizationId, UserStatus status);
 
+    Long countUsers();
+
+    Long countUsersByStatus(UserStatus status);
+
+    Map<Long, Long> countUsersByOrganizationIds(List<Long> organizationIds);
+
     Integer countUsersByOrganizationIdAndCreatedBetween(Long organizationId, LocalDateTime from, LocalDateTime to);
 
     Integer countAdminUsersByOrganizationId(Long organizationId);

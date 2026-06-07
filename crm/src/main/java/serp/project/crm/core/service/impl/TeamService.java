@@ -14,6 +14,7 @@ import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
 import serp.project.crm.core.domain.entity.TeamEntity;
+import serp.project.crm.core.domain.enums.TeamStatus;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.port.client.IUserProfileClient;
 import serp.project.crm.core.port.store.ITeamPort;
@@ -78,9 +79,9 @@ public class TeamService implements ITeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public Pair<List<TeamEntity>, Long> getTeamsByLeader(Long leaderId, Long tenantId, PageRequest pageRequest) {
+    public Pair<List<TeamEntity>, Long> getTeamsByManager(Long managerUserId, Long tenantId, PageRequest pageRequest) {
         pageRequest.validate();
-        return teamPort.findByLeaderId(leaderId, tenantId, pageRequest);
+        return teamPort.findByManagerUserId(managerUserId, tenantId, pageRequest);
     }
 
     @Override
@@ -89,9 +90,8 @@ public class TeamService implements ITeamService {
         TeamEntity team = teamPort.findById(id, tenantId)
                 .orElseThrow(() -> new AppException(ErrorMessage.TEAM_NOT_FOUND));
 
-        // TODO: Check if team has members before deleting
-
-        teamPort.deleteById(id, tenantId);
+        team.setStatus(TeamStatus.INACTIVE);
+        teamPort.save(team);
 
         publishTeamDeletedEvent(team);
     }

@@ -29,6 +29,8 @@ public interface ISubscriptionPlanRepository extends IBaseRepository<Subscriptio
 
     boolean existsByPlanCode(String planCode);
 
+    Long countByIsActive(Boolean isActive);
+
     @Query("SELECT COUNT(sp) > 0 FROM SubscriptionPlanModel sp " +
            "WHERE sp.planCode = :planCode AND sp.id != :excludeId")
     boolean existsByPlanCodeAndIdNot(@Param("planCode") String planCode, @Param("excludeId") Long excludeId);

@@ -36,6 +36,7 @@ public class WorkItemResponse {
     private Long parentId;
     private Long securityLevelId;
 
+    private Long startDate;
     private Long dueDate;
     private String rank;
 
@@ -65,6 +66,7 @@ public class WorkItemResponse {
                 .reporterId(result.getReporterId())
                 .parentId(result.getParentId())
                 .securityLevelId(result.getSecurityLevelId())
+                .startDate(result.getStartDate())
                 .dueDate(result.getDueDate())
                 .rank(result.getRank())
                 .timeOriginalEstimate(result.getTimeOriginalEstimate())

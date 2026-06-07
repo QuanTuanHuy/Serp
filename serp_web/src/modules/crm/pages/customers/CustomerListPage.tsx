@@ -36,6 +36,7 @@ import {
 import type {
   Account,
   AccountStatus,
+  AccountTier,
   CreateAccountRequest,
   UpdateAccountRequest,
 } from '../../types';
@@ -93,13 +94,10 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   const stats = useMemo(() => {
     return {
       total,
-        active: accounts.filter((c) => c.status === 'ACTIVE').length,
-        companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
-        totalValue: accounts.reduce(
-          (sum, c) => sum + (c.totalValue || 0),
-          0
-        ),
-      };
+      active: accounts.filter((c) => c.status === 'ACTIVE').length,
+      companies: accounts.filter((c) => c.customerType === 'CUSTOMER').length,
+      totalValue: accounts.reduce((sum, c) => sum + (c.totalValue || 0), 0),
+    };
   }, [accounts, total]);
 
   // Handle actions
@@ -121,6 +119,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
     name: string;
     email: string;
     phone?: string;
+    tier?: AccountTier;
     companySize?: string;
     customerType: 'PROSPECT' | 'CUSTOMER';
     status: 'ACTIVE' | 'INACTIVE';
@@ -134,10 +133,11 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
   }) => {
     try {
       await createAccount({
-        isActive: true,
+        isActive: data.status === 'ACTIVE',
         name: data.name,
         email: data.email,
         phone: data.phone,
+        tier: data.tier,
         companySize: data.companySize,
         notes: data.notes,
         address: data.address || '',
@@ -152,7 +152,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         creditLimit: undefined,
         tags: [],
         customFields: {},
-        totalValue: 0,
       } as CreateAccountRequest).unwrap();
       toast.success('Create account successfully');
       setShowQuickAdd(false);
@@ -354,7 +353,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={statusFilter}
                   onChange={(e) => {
-                     setStatusFilter(e.target.value as AccountStatus | '');
+                    setStatusFilter(e.target.value as AccountStatus | '');
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -370,7 +369,9 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
                 <select
                   value={typeFilter}
                   onChange={(e) => {
-                     setTypeFilter(e.target.value as 'PROSPECT' | 'CUSTOMER' | '');
+                    setTypeFilter(
+                      e.target.value as 'PROSPECT' | 'CUSTOMER' | ''
+                    );
                     setCurrentPage(1);
                   }}
                   className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
@@ -471,7 +472,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           )}
         >
           {accounts.map((customer) => (
-             <AccountCard
+            <AccountCard
               key={customer.id}
               customer={customer}
               variant={viewMode === 'list' ? 'compact' : 'default'}

@@ -13,6 +13,8 @@ export const CRM_ROLES: string[] = ['CRM_SALES_PERSON'];
 
 export const PTM_ROLES: string[] = ['PTM_USER', 'PTM_ADMIN'];
 
+export const PM_ROLES: string[] = ['PM_USER', 'PM_ADMIN'];
+
 export const PURCHASE_ROLES: string[] = [
   'PURCHASE_ADMIN',
   'PURCHASE_MANAGER',
@@ -24,4 +26,12 @@ export const FIRST_MILE_ROLES: string[] = [
   'TMS_ADMIN',
   'TMS_POSTOFFICER_MANAGER',
   'TMS_POSTOFFICER',
+];
+
+export const SCHOOL_BUS_ROLES: string[] = [
+  'SCHOOL_BUS_ADMIN',
+  'SCHOOL_BUS_DISPATCHER',
+  'SCHOOL_BUS_DRIVER',
+  'SCHOOL_BUS_ATTENDANT',
+  'SCHOOL_BUS_PARENT',
 ];

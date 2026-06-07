@@ -17,7 +17,9 @@ import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
 import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 import serp.project.pmcore.domain.project.service.IProjectPermissionEvaluationService;
+import serp.project.pmcore.domain.shared.dto.user.UserProfileDto;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
+import serp.project.pmcore.domain.user.service.IUserService;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
@@ -45,6 +47,8 @@ class SearchWorkItemsQueryHandlerTest {
     private IProjectReadPort projectReadPort;
     @Mock
     private IProjectPermissionEvaluationService projectPermissionEvaluationService;
+    @Mock
+    private IUserService userService;
 
     private SearchWorkItemsQueryHandler handler;
 
@@ -53,7 +57,8 @@ class SearchWorkItemsQueryHandlerTest {
         handler = new SearchWorkItemsQueryHandler(
                 workItemReadPort,
                 projectReadPort,
-                projectPermissionEvaluationService
+                projectPermissionEvaluationService,
+                userService
         );
     }
 
@@ -85,6 +90,10 @@ class SearchWorkItemsQueryHandlerTest {
                         .priorityId(30L)
                         .priorityName("High")
                         .issueTypeName("Task")
+                        .statusName("In Progress")
+                        .statusCategoryKey("in_progress")
+                        .assigneeId(501L)
+                        .reporterId(502L)
                         .createdAt(100L)
                         .updatedAt(200L)
                         .build(),
@@ -95,10 +104,23 @@ class SearchWorkItemsQueryHandlerTest {
                         .issueNo(2L)
                         .key("SERP-2")
                         .summary("Another item")
+                        .assigneeId(501L)
                         .createdAt(101L)
                         .updatedAt(201L)
                         .build()
         ), 5L));
+        when(userService.getUserProfilesByIds(List.of(501L, 502L))).thenReturn(List.of(
+                UserProfileDto.builder()
+                        .id(501L)
+                        .firstName("Alex")
+                        .lastName("Nguyen")
+                        .avatarUrl("https://cdn.test/avatar-501.png")
+                        .build(),
+                UserProfileDto.builder()
+                        .id(502L)
+                        .email("reporter@test.local")
+                        .build()
+        ));
 
         PageView<WorkItemSearchView> response = handler.handle(new SearchWorkItemsQuery(
                 TENANT_ID,
@@ -111,6 +133,7 @@ class SearchWorkItemsQueryHandlerTest {
                 ArgumentCaptor.forClass(ProjectPermissionEvaluationContext.class);
         verify(projectPermissionEvaluationService).checkPermission(any(ProjectPermissionSubject.class), contextCaptor.capture(), eq("BROWSE_PROJECTS"));
         verify(workItemReadPort).searchWorkItems(TENANT_ID, criteria);
+        verify(userService).getUserProfilesByIds(List.of(501L, 502L));
 
         ProjectPermissionEvaluationContext context = contextCaptor.getValue();
         assertEquals(USER_ID, context.getUserId());
@@ -124,5 +147,10 @@ class SearchWorkItemsQueryHandlerTest {
         assertEquals("SERP-1", response.items().getFirst().key());
         assertEquals("High", response.items().getFirst().priorityName());
         assertEquals("Task", response.items().getFirst().issueTypeName());
+        assertEquals("In Progress", response.items().getFirst().statusName());
+        assertEquals("in_progress", response.items().getFirst().statusCategoryKey());
+        assertEquals("Alex Nguyen", response.items().getFirst().assigneeName());
+        assertEquals("https://cdn.test/avatar-501.png", response.items().getFirst().assigneeAvatarUrl());
+        assertEquals("reporter@test.local", response.items().getFirst().reporterName());
     }
 }

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.dto.ApiResponse;
 import serp.project.first_mile.dto.PageResponse;
+import serp.project.first_mile.dto.request.AssignPostOfficeHubRequest;
 import serp.project.first_mile.dto.request.CreatePostOfficeRequest;
 import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
 import serp.project.first_mile.dto.request.PostOfficeImportDTO;
@@ -59,14 +60,23 @@ public class PostOfficeController {
             @RequestParam(name = "ward_code", required = false) String wardCode,
             @RequestParam(required = false) PostOfficeStatus status,
             @RequestParam(name = "has_location", required = false) Boolean hasLocation,
+            @RequestParam(name = "min_latitude", required = false) Double minLatitude,
+            @RequestParam(name = "max_latitude", required = false) Double maxLatitude,
+            @RequestParam(name = "min_longitude", required = false) Double minLongitude,
+            @RequestParam(name = "max_longitude", required = false) Double maxLongitude,
             @RequestParam(name = "min_service_radius_m", required = false) Integer minServiceRadiusM,
             @RequestParam(name = "max_service_radius_m", required = false) Integer maxServiceRadiusM,
             @RequestParam(name = "min_daily_capacity", required = false) Integer minDailyCapacity,
             @RequestParam(name = "max_daily_capacity", required = false) Integer maxDailyCapacity,
             @RequestParam(name = "min_current_load", required = false) Integer minCurrentLoad,
             @RequestParam(name = "max_current_load", required = false) Integer maxCurrentLoad,
+            @RequestParam(name = "min_delivery_capacity", required = false) Integer minDeliveryCapacity,
+            @RequestParam(name = "max_delivery_capacity", required = false) Integer maxDeliveryCapacity,
+            @RequestParam(name = "min_current_delivery_load", required = false) Integer minCurrentDeliveryLoad,
+            @RequestParam(name = "max_current_delivery_load", required = false) Integer maxCurrentDeliveryLoad,
             @RequestParam(name = "min_priority", required = false) Integer minPriority,
-            @RequestParam(name = "max_priority", required = false) Integer maxPriority
+            @RequestParam(name = "max_priority", required = false) Integer maxPriority,
+            @RequestParam(name = "hub_id", required = false) Long hubId
     ) {
         PostOfficeFilterRequest filterRequest = PostOfficeFilterRequest.builder()
                 .keyword(keyword)
@@ -76,14 +86,23 @@ public class PostOfficeController {
                 .wardCode(wardCode)
                 .status(status)
                 .hasLocation(hasLocation)
+                .minLatitude(minLatitude)
+                .maxLatitude(maxLatitude)
+                .minLongitude(minLongitude)
+                .maxLongitude(maxLongitude)
                 .minServiceRadiusM(minServiceRadiusM)
                 .maxServiceRadiusM(maxServiceRadiusM)
                 .minDailyCapacity(minDailyCapacity)
                 .maxDailyCapacity(maxDailyCapacity)
                 .minCurrentLoad(minCurrentLoad)
                 .maxCurrentLoad(maxCurrentLoad)
+                .minDeliveryCapacity(minDeliveryCapacity)
+                .maxDeliveryCapacity(maxDeliveryCapacity)
+                .minCurrentDeliveryLoad(minCurrentDeliveryLoad)
+                .maxCurrentDeliveryLoad(maxCurrentDeliveryLoad)
                 .minPriority(minPriority)
                 .maxPriority(maxPriority)
+                .hubId(hubId)
                 .build();
 
         return ApiResponse.<PageResponse<PostOfficeResponse>>builder()
@@ -118,6 +137,18 @@ public class PostOfficeController {
         return ApiResponse.<PostOfficeResponse>builder()
                 .message(messageService.getMessage("success.post_offices.update"))
                 .result(postOfficeService.updatePostOffice(id, request))
+                .build();
+    }
+
+    @PutMapping("/{id}/hub")
+    @PreAuthorize("hasRole('TMS_ADMIN')")
+    public ApiResponse<PostOfficeResponse> assignPostOfficeHub(
+            @PathVariable Long id,
+            @RequestBody(required = false) AssignPostOfficeHubRequest request
+    ) {
+        return ApiResponse.<PostOfficeResponse>builder()
+                .message(messageService.getMessage("success.post_offices.hub.assign"))
+                .result(postOfficeService.assignPostOfficeHub(id, request))
                 .build();
     }
 

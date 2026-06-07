@@ -22,6 +22,9 @@ public interface ILeadService {
 
     LeadEntity updateLead(Long id, LeadEntity updates, Long tenantId);
 
+    LeadEntity updateLeadStatus(Long leadId, LeadStatus fromStatus, LeadStatus toStatus, String notes, Long updatedBy,
+            Long tenantId);
+
     Optional<LeadEntity> getLeadById(Long id, Long tenantId);
 
     Optional<LeadEntity> getLeadByEmail(String email, Long tenantId);

@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
 import serp.project.crm.core.domain.constant.Constants;
 import serp.project.crm.core.domain.constant.ErrorMessage;
 import serp.project.crm.core.domain.dto.PageRequest;
@@ -21,6 +23,7 @@ import serp.project.crm.core.port.store.IContactPort;
 import serp.project.crm.core.port.store.IAccountPort;
 import serp.project.crm.core.service.IContactService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -130,6 +133,15 @@ public class ContactService implements IContactService {
             PageRequest pageRequest) {
         pageRequest.validate();
         return contactPort.findByActiveStatus(status, tenantId, pageRequest);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContactEntity> getContactsByIds(List<Long> ids, Long tenantId) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return Collections.emptyList();
+        }
+        return contactPort.findByIds(ids, tenantId);
     }
 
     @Override

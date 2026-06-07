@@ -4,7 +4,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -14,7 +14,10 @@ import {
   useGetOpportunityQuery,
   useUpdateOpportunityMutation,
 } from '../../api/crmApi';
-import type { CreateOpportunityRequest, UpdateOpportunityRequest } from '../../types';
+import type {
+  CreateOpportunityRequest,
+  UpdateOpportunityRequest,
+} from '../../types';
 
 interface EditOpportunityPageProps {
   opportunityId: string;
@@ -53,7 +56,23 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
     router.push(`/crm/opportunities/${opportunityId}`);
   };
 
-  if (!isLoading && !opportunity) {
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          'flex min-h-[50vh] items-center justify-center p-6',
+          className
+        )}
+      >
+        <Loader2
+          className='h-10 w-10 animate-spin text-muted-foreground'
+          aria-label='Loading opportunity'
+        />
+      </div>
+    );
+  }
+
+  if (!opportunity) {
     return (
       <div className={cn('p-6', className)}>
         <div className='flex h-[60vh] flex-col items-center justify-center'>
@@ -91,7 +110,7 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
               Edit Opportunity
             </h1>
             <p className='text-muted-foreground'>
-              Update {opportunity?.name || 'opportunity'}
+              Update {opportunity.name || 'opportunity'}
             </p>
           </div>
         </div>
@@ -102,7 +121,7 @@ export const EditOpportunityPage: React.FC<EditOpportunityPageProps> = ({
           opportunity={opportunity}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={isLoading || isUpdating}
+          isLoading={isUpdating}
         />
       </div>
     </div>

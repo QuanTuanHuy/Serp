@@ -49,6 +49,18 @@ public class EventConstants {
     }
 
     @UtilityClass
+    public static class ProjectComponent {
+        public static final String TOPIC = "serp.pm.component.events";
+        public static final String AGGREGATE = "PROJECT_COMPONENT";
+
+        public static class EventType {
+            public static final String PROJECT_COMPONENT_CREATED = "COMPONENT_CREATED";
+            public static final String PROJECT_COMPONENT_UPDATED = "PROJECT_COMPONENT_UPDATED";
+            public static final String PROJECT_COMPONENT_DELETED = "PROJECT_COMPONENT_DELETED";
+        }
+    }
+
+    @UtilityClass
     public static class WorkItem {
         public static final String TOPIC = "serp.pm.workitem.events";
         public static final String AGGREGATE = "WORK_ITEM";
@@ -72,6 +84,17 @@ public class EventConstants {
             public static final String WORKLOG_CREATED = "WORKLOG_CREATED";
             public static final String WORKLOG_UPDATED = "WORKLOG_UPDATED";
             public static final String WORKLOG_DELETED = "WORKLOG_DELETED";
+        }
+    }
+
+    @UtilityClass
+    public static class IssueLink {
+        public static final String TOPIC = "serp.pm.issuelink.events";
+        public static final String AGGREGATE = "ISSUE_LINK";
+
+        public static class EventType {
+            public static final String ISSUE_LINK_CREATED = "ISSUE_LINK_CREATED";
+            public static final String ISSUE_LINK_DELETED = "ISSUE_LINK_DELETED";
         }
     }
 

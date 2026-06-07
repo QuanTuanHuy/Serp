@@ -22,30 +22,22 @@ import {
   Send,
   XCircle,
   KeyRound,
-  Download,
   UserX,
   Plus,
-  Filter,
+  SlidersHorizontal,
   X,
-  ChevronDown,
-  ChevronUp,
+  CheckCircle,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/shared/components/ui/tabs';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
+import { Combobox } from '@/shared/components/ui/combobox';
 import {
   Select,
   SelectContent,
@@ -57,7 +49,10 @@ import {
   SettingsStatsCard,
   SettingsActionMenu,
   SettingsStatusBadge,
+  SettingsFilterDialog,
+  SettingsFilterChips,
 } from '@/modules/settings';
+import type { SettingsFilterChip } from '@/modules/settings';
 import { useSettingsUsers } from '@/modules/settings/hooks/useUsers';
 import { EditUserDialog } from '@/modules/settings/components/users/EditUserDialog';
 import { CreateUserDialog } from '@/modules/settings/components/users/CreateUserDialog';
@@ -81,7 +76,6 @@ import {
   useGetOrganizationRolesQuery,
 } from '@/modules/settings/services/users/usersApi';
 import { useGetDepartmentsQuery } from '@/modules/settings/services/departments/departmentsApi';
-import { Badge } from '@/shared/components/ui/badge';
 
 // ==================== Sub-components ====================
 
@@ -155,6 +149,50 @@ const SORT_DIRECTION_LABELS: Record<string, string> = {
   DESC: 'Descending',
 };
 
+const USER_STATUS_OPTIONS: UserStatus[] = [
+  'ACTIVE',
+  'INACTIVE',
+  'INVITED',
+  'SUSPENDED',
+];
+
+const FilterPane = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className='flex min-h-0 flex-1 flex-col p-4'>
+    <div className='mb-3'>
+      <h3 className='text-sm font-semibold'>{title}</h3>
+      <p className='text-sm text-muted-foreground'>Select one value.</p>
+    </div>
+    <div className='space-y-1'>{children}</div>
+  </div>
+);
+
+const FilterOption = ({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) => (
+  <button
+    type='button'
+    onClick={onSelect}
+    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+      selected ? 'bg-muted font-medium' : ''
+    }`}
+  >
+    {label}
+    {selected ? <CheckCircle className='h-4 w-4 text-primary' /> : null}
+  </button>
+);
+
 // ==================== Main Page ====================
 
 export default function SettingsUsersPage() {
@@ -178,6 +216,9 @@ export default function SettingsUsersPage() {
     email: string;
   } | null>(null);
 
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('status');
+
   const {
     organizationId,
     filters,
@@ -185,7 +226,6 @@ export default function SettingsUsersPage() {
     stats,
     pagination,
     isLoading,
-    isLoadingStats,
     isFetching,
     error,
     setSearch,
@@ -236,13 +276,7 @@ export default function SettingsUsersPage() {
     setSearch(debouncedSearch || undefined);
   }, [debouncedSearch, setSearch]);
 
-  // Collapsible advanced filters
-  const [showFilters, setShowFilters] = useState(false);
-  const hasAdvancedFilters =
-    filters.roleId !== undefined || filters.departmentId !== undefined;
   const clearAllFilters = useCallback(() => {
-    setSearchInput('');
-    setSearch(undefined);
     setStatus('all' as any);
     setUserType(undefined);
     setRoleId(undefined);
@@ -250,7 +284,6 @@ export default function SettingsUsersPage() {
     setSortBy(undefined);
     setSortDir(undefined);
   }, [
-    setSearch,
     setStatus,
     setUserType,
     setRoleId,
@@ -259,93 +292,115 @@ export default function SettingsUsersPage() {
     setSortDir,
   ]);
 
-  const clearAdvancedFilters = useCallback(() => {
-    setRoleId(undefined);
-    setDepartmentId(undefined);
-  }, [setRoleId, setDepartmentId]);
+  const filterChips = useMemo<SettingsFilterChip[]>(() => {
+    const chips: SettingsFilterChip[] = [];
 
-  const selectedRoleName = useMemo(() => {
-    if (filters.roleId === undefined) return undefined;
-    return (
-      availableRoles.find((role) => role.id === filters.roleId)?.name ||
-      `Role #${filters.roleId}`
-    );
-  }, [availableRoles, filters.roleId]);
+    if (filters.status && filters.status !== 'all') {
+      const status = String(filters.status);
+      chips.push({
+        id: 'status',
+        label: `Status: ${STATUS_LABELS[status] || status}`,
+        onRemove: () => setStatus('all' as any),
+      });
+    }
 
-  const selectedDepartmentName = useMemo(() => {
-    if (filters.departmentId === undefined) return undefined;
-    return (
-      availableDepartments.find(
+    if (filters.userType) {
+      const userType = String(filters.userType);
+      chips.push({
+        id: 'type',
+        label: `Type: ${USER_TYPE_LABELS[userType] || userType}`,
+        onRemove: () => setUserType(undefined),
+      });
+    }
+
+    if (filters.roleId !== undefined) {
+      const role = availableRoles.find((r) => r.id === filters.roleId);
+      chips.push({
+        id: 'role',
+        label: `Role: ${role?.name || `Role #${filters.roleId}`}`,
+        onRemove: () => setRoleId(undefined),
+      });
+    }
+
+    if (filters.departmentId !== undefined) {
+      const dept = availableDepartments.find(
         (department) => department.id === filters.departmentId
-      )?.name || `Department #${filters.departmentId}`
-    );
-  }, [availableDepartments, filters.departmentId]);
+      );
+      chips.push({
+        id: 'department',
+        label: `Department: ${dept?.name || `Department #${filters.departmentId}`}`,
+        onRemove: () => setDepartmentId(undefined),
+      });
+    }
 
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.search) count += 1;
-    if (filters.status && filters.status !== 'all') count += 1;
-    if (filters.userType) count += 1;
-    if (filters.roleId !== undefined) count += 1;
-    if (filters.departmentId !== undefined) count += 1;
-    if (filters.sortBy || filters.sortDir) count += 1;
-    return count;
+    if (filters.sortBy || filters.sortDir) {
+      const sortBy = filters.sortBy || 'id';
+      const sortDir = filters.sortDir || 'DESC';
+      const sortByLabel =
+        USER_SORT_OPTIONS.find((option) => option.value === sortBy)?.label ||
+        sortBy;
+      const sortDirLabel = SORT_DIRECTION_LABELS[sortDir] || sortDir;
+      chips.push({
+        id: 'sort',
+        label: `Sort: ${sortByLabel} (${sortDirLabel})`,
+        onRemove: () => {
+          setSortBy(undefined);
+          setSortDir(undefined);
+        },
+      });
+    }
+
+    return chips;
   }, [
-    filters.search,
     filters.status,
     filters.userType,
     filters.roleId,
     filters.departmentId,
     filters.sortBy,
     filters.sortDir,
+    availableRoles,
+    availableDepartments,
+    setStatus,
+    setUserType,
+    setRoleId,
+    setDepartmentId,
+    setSortBy,
+    setSortDir,
   ]);
 
-  const activeFilterBadges = useMemo(() => {
-    const badges: string[] = [];
-
-    if (filters.search) {
-      badges.push(`Keyword: \"${filters.search}\"`);
-    }
-
-    if (filters.status && filters.status !== 'all') {
-      const status = String(filters.status);
-      badges.push(`Status: ${STATUS_LABELS[status] || status}`);
-    }
-
-    if (filters.userType) {
-      const userType = String(filters.userType);
-      badges.push(`Type: ${USER_TYPE_LABELS[userType] || userType}`);
-    }
-
-    if (selectedRoleName) {
-      badges.push(`Role: ${selectedRoleName}`);
-    }
-
-    if (selectedDepartmentName) {
-      badges.push(`Department: ${selectedDepartmentName}`);
-    }
-
-    if (filters.sortBy || filters.sortDir) {
-      const currentSortBy = filters.sortBy || 'id';
-      const currentSortDir = filters.sortDir || 'DESC';
-      const sortByLabel =
-        USER_SORT_OPTIONS.find((option) => option.value === currentSortBy)
-          ?.label || currentSortBy;
-      const sortDirLabel =
-        SORT_DIRECTION_LABELS[currentSortDir] || currentSortDir;
-      badges.push(`Sort: ${sortByLabel} (${sortDirLabel})`);
-    }
-
-    return badges;
-  }, [
-    filters.search,
-    filters.status,
-    filters.userType,
-    filters.sortBy,
-    filters.sortDir,
-    selectedRoleName,
-    selectedDepartmentName,
-  ]);
+  const filterCriteria = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        count: filters.status && filters.status !== 'all' ? 1 : 0,
+      },
+      { id: 'type', label: 'Type', count: filters.userType ? 1 : 0 },
+      {
+        id: 'role',
+        label: 'Role',
+        count: filters.roleId !== undefined ? 1 : 0,
+      },
+      {
+        id: 'department',
+        label: 'Department',
+        count: filters.departmentId !== undefined ? 1 : 0,
+      },
+      {
+        id: 'sort',
+        label: 'Sort',
+        count: filters.sortBy || filters.sortDir ? 1 : 0,
+      },
+    ],
+    [
+      filters.status,
+      filters.userType,
+      filters.roleId,
+      filters.departmentId,
+      filters.sortBy,
+      filters.sortDir,
+    ]
+  );
 
   // Status change handlers
   const handleStatusChange = useCallback(
@@ -662,10 +717,10 @@ export default function SettingsUsersPage() {
           </p>
         </div>
         <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm' onClick={handleExport}>
+          {/* <Button variant='outline' size='sm' onClick={handleExport}>
             <Download className='h-4 w-4 mr-2' />
             Export
-          </Button>
+          </Button> */}
           <Button variant='outline' onClick={() => setOpenCreateDialog(true)}>
             <Plus className='h-4 w-4 mr-2' />
             Create User
@@ -731,300 +786,47 @@ export default function SettingsUsersPage() {
 
         {/* ==================== Users Tab ==================== */}
         <TabsContent value='users' className='space-y-4'>
-          {/* Filters */}
-          <Card className='border-border/70 shadow-sm'>
-            <CardContent className='p-4 md:p-5'>
-              <div className='space-y-4'>
-                <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
-                  <div>
-                    <h2 className='text-sm font-semibold'>Search & Filters</h2>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      Find users faster by keyword, status, type, role, and
-                      department.
-                    </p>
-                  </div>
-
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setShowFilters((prev) => !prev)}
-                      className='gap-2'
-                    >
-                      <Filter className='h-4 w-4' />
-                      {showFilters ? 'Hide advanced' : 'Show advanced'}
-                      {hasAdvancedFilters && (
-                        <Badge
-                          variant='secondary'
-                          className='px-1.5 py-0 text-xs'
-                        >
-                          {(filters.roleId !== undefined ? 1 : 0) +
-                            (filters.departmentId !== undefined ? 1 : 0)}
-                        </Badge>
-                      )}
-                      {showFilters ? (
-                        <ChevronUp className='h-4 w-4 text-muted-foreground' />
-                      ) : (
-                        <ChevronDown className='h-4 w-4 text-muted-foreground' />
-                      )}
-                    </Button>
-
-                    {activeFilterCount > 0 && (
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={clearAllFilters}
-                        className='gap-1.5 text-muted-foreground hover:text-foreground'
-                      >
-                        <X className='h-3.5 w-3.5' />
-                        Reset all
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className='grid gap-3 md:grid-cols-12'>
-                  <div className='md:col-span-6 lg:col-span-4'>
-                    <Label
-                      htmlFor='users-search'
-                      className='mb-2 text-xs font-medium text-muted-foreground'
-                    >
-                      Search users
-                    </Label>
-                    <div className='relative'>
-                      <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                      <Input
-                        id='users-search'
-                        placeholder='Name or email...'
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        className='h-10 pl-10 pr-10'
-                      />
-                      {searchInput && (
-                        <Button
-                          type='button'
-                          variant='ghost'
-                          size='icon'
-                          onClick={() => {
-                            setSearchInput('');
-                            setSearch(undefined);
-                          }}
-                          className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
-                          aria-label='Clear search'
-                        >
-                          <X className='h-4 w-4' />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='md:col-span-3 lg:col-span-2'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      Status
-                    </Label>
-                    <Select
-                      value={
-                        filters.status === 'all'
-                          ? 'all'
-                          : (filters.status as string) || 'all'
-                      }
-                      onValueChange={(v) =>
-                        setStatus(v === 'all' ? 'all' : (v as UserStatus))
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='All statuses' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Statuses</SelectItem>
-                        <SelectItem value='ACTIVE'>Active</SelectItem>
-                        <SelectItem value='INACTIVE'>Inactive</SelectItem>
-                        <SelectItem value='INVITED'>Invited</SelectItem>
-                        <SelectItem value='SUSPENDED'>Suspended</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className='md:col-span-3 lg:col-span-2'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      User type
-                    </Label>
-                    <Select
-                      value={filters.userType || 'all'}
-                      onValueChange={(v) =>
-                        setUserType(v === 'all' ? undefined : v)
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='All types' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Types</SelectItem>
-                        <SelectItem value='OWNER'>Owner</SelectItem>
-                        <SelectItem value='ADMIN'>Admin</SelectItem>
-                        <SelectItem value='EMPLOYEE'>Employee</SelectItem>
-                        <SelectItem value='CONTRACTOR'>Contractor</SelectItem>
-                        <SelectItem value='EXTERNAL'>External</SelectItem>
-                        <SelectItem value='GUEST'>Guest</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className='md:col-span-6 lg:col-span-2'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      Sort by
-                    </Label>
-                    <Select
-                      value={filters.sortBy || 'default'}
-                      onValueChange={(v) =>
-                        setSortBy(v === 'default' ? undefined : v)
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='Default sort' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='default'>Default</SelectItem>
-                        {USER_SORT_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className='md:col-span-6 lg:col-span-2'>
-                    <Label className='mb-2 text-xs font-medium text-muted-foreground'>
-                      Direction
-                    </Label>
-                    <Select
-                      value={filters.sortDir || 'default'}
-                      onValueChange={(v) =>
-                        setSortDir(
-                          v === 'default' ? undefined : (v as 'ASC' | 'DESC')
-                        )
-                      }
-                    >
-                      <SelectTrigger className='h-10'>
-                        <SelectValue placeholder='Default direction' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='default'>Default</SelectItem>
-                        <SelectItem value='ASC'>Ascending</SelectItem>
-                        <SelectItem value='DESC'>Descending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {activeFilterBadges.length > 0 && (
-                  <div className='flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/30 p-2.5'>
-                    {activeFilterBadges.map((badge) => (
-                      <Badge
-                        key={badge}
-                        variant='secondary'
-                        className='font-normal'
-                      >
-                        {badge}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                {showFilters && (
-                  <div className='rounded-lg border bg-muted/40 p-3 md:p-4'>
-                    <div className='grid gap-3 md:grid-cols-2'>
-                      <div className='space-y-2'>
-                        <Label
-                          htmlFor='users-role-filter'
-                          className='text-xs font-medium text-muted-foreground'
-                        >
-                          Role
-                        </Label>
-                        <Select
-                          value={
-                            filters.roleId !== undefined
-                              ? String(filters.roleId)
-                              : 'all'
-                          }
-                          onValueChange={(v) =>
-                            setRoleId(v === 'all' ? undefined : Number(v))
-                          }
-                        >
-                          <SelectTrigger
-                            id='users-role-filter'
-                            className='h-10'
-                          >
-                            <SelectValue placeholder='All roles' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='all'>All Roles</SelectItem>
-                            {availableRoles.map((role) => (
-                              <SelectItem key={role.id} value={String(role.id)}>
-                                {role.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className='space-y-2'>
-                        <Label
-                          htmlFor='users-department-filter'
-                          className='text-xs font-medium text-muted-foreground'
-                        >
-                          Department
-                        </Label>
-                        <Select
-                          value={
-                            filters.departmentId !== undefined
-                              ? String(filters.departmentId)
-                              : 'all'
-                          }
-                          onValueChange={(v) =>
-                            setDepartmentId(v === 'all' ? undefined : Number(v))
-                          }
-                        >
-                          <SelectTrigger
-                            id='users-department-filter'
-                            className='h-10'
-                          >
-                            <SelectValue placeholder='All departments' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='all'>All Departments</SelectItem>
-                            {availableDepartments.map((department) => (
-                              <SelectItem
-                                key={department.id}
-                                value={String(department.id)}
-                              >
-                                {department.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {hasAdvancedFilters && (
-                      <div className='mt-3 flex justify-end'>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={clearAdvancedFilters}
-                          className='gap-1 text-muted-foreground hover:text-foreground'
-                        >
-                          <X className='h-3.5 w-3.5' />
-                          Clear advanced
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+          {/* Search + Filters */}
+          <div className='space-y-3'>
+            <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+              <div className='relative w-full md:max-w-md'>
+                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                <Input
+                  placeholder='Search by name or email...'
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  className='pl-10 pr-10'
+                />
+                {searchInput && (
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => {
+                      setSearchInput('');
+                      setSearch(undefined);
+                    }}
+                    className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                    aria-label='Clear search'
+                  >
+                    <X className='h-4 w-4' />
+                  </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setFilterDialogOpen(true)}
+              >
+                <SlidersHorizontal className='h-4 w-4' />
+                Filters
+              </Button>
+            </div>
+            <SettingsFilterChips
+              chips={filterChips}
+              onClearAll={clearAllFilters}
+            />
+          </div>
 
           {/* Users Table */}
           <DataTable
@@ -1047,37 +849,33 @@ export default function SettingsUsersPage() {
         {/* ==================== Invitations Tab ==================== */}
         <TabsContent value='invitations' className='space-y-4'>
           {/* Invitation Filters */}
-          <Card>
-            <CardContent className='pt-6'>
-              <div className='flex items-center gap-4'>
-                <Select
-                  value={invFilterStatus || 'all'}
-                  onValueChange={(v) =>
-                    setInvitationStatus(v === 'all' ? undefined : v)
-                  }
-                >
-                  <SelectTrigger className='w-48'>
-                    <SelectValue placeholder='All Statuses' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All Statuses</SelectItem>
-                    <SelectItem value='PENDING'>Pending</SelectItem>
-                    <SelectItem value='ACCEPTED'>Accepted</SelectItem>
-                    <SelectItem value='EXPIRED'>Expired</SelectItem>
-                    <SelectItem value='CANCELLED'>Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setOpenInviteDialog(true)}
-                >
-                  <UserPlus className='h-4 w-4 mr-2' />
-                  New Invitation
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className='flex items-center gap-4'>
+            <Select
+              value={invFilterStatus || 'all'}
+              onValueChange={(v) =>
+                setInvitationStatus(v === 'all' ? undefined : v)
+              }
+            >
+              <SelectTrigger className='w-48'>
+                <SelectValue placeholder='All Statuses' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Statuses</SelectItem>
+                <SelectItem value='PENDING'>Pending</SelectItem>
+                <SelectItem value='ACCEPTED'>Accepted</SelectItem>
+                <SelectItem value='EXPIRED'>Expired</SelectItem>
+                <SelectItem value='CANCELLED'>Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setOpenInviteDialog(true)}
+            >
+              <UserPlus className='h-4 w-4 mr-2' />
+              New Invitation
+            </Button>
+          </div>
 
           {/* Invitations Table */}
           <DataTable
@@ -1098,6 +896,137 @@ export default function SettingsUsersPage() {
       </Tabs>
 
       {/* ==================== Dialogs ==================== */}
+
+      <SettingsFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearAllFilters}
+      >
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={!filters.status || filters.status === 'all'}
+              onSelect={() => setStatus('all' as any)}
+            />
+            {USER_STATUS_OPTIONS.map((status) => (
+              <FilterOption
+                key={status}
+                label={STATUS_LABELS[status] || status}
+                selected={filters.status === status}
+                onSelect={() => setStatus(status)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'type' ? (
+          <FilterPane title='Type'>
+            <FilterOption
+              label='All types'
+              selected={!filters.userType}
+              onSelect={() => setUserType(undefined)}
+            />
+            {Object.entries(USER_TYPE_LABELS).map(([value, label]) => (
+              <FilterOption
+                key={value}
+                label={label}
+                selected={filters.userType === value}
+                onSelect={() => setUserType(value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'role' ? (
+          <FilterPane title='Role'>
+            <Combobox
+              value={filters.roleId}
+              onChange={(value) =>
+                setRoleId(value !== undefined ? Number(value) : undefined)
+              }
+              items={availableRoles.map((role) => ({
+                value: role.id,
+                label: role.name,
+              }))}
+              placeholder='All roles'
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'department' ? (
+          <FilterPane title='Department'>
+            <Combobox
+              value={filters.departmentId}
+              onChange={(value) =>
+                setDepartmentId(value !== undefined ? Number(value) : undefined)
+              }
+              items={availableDepartments.map((dept) => ({
+                value: dept.id,
+                label: dept.name,
+              }))}
+              placeholder='All departments'
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'sort' ? (
+          <FilterPane title='Sort'>
+            <div className='space-y-3'>
+              <div className='space-y-2'>
+                <Label className='text-xs font-medium text-muted-foreground'>
+                  Sort by
+                </Label>
+                <Select
+                  value={filters.sortBy || 'default'}
+                  onValueChange={(v) =>
+                    setSortBy(v === 'default' ? undefined : v)
+                  }
+                >
+                  <SelectTrigger className='h-10'>
+                    <SelectValue placeholder='Default sort' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='default'>Default</SelectItem>
+                    {USER_SORT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className='space-y-2'>
+                <Label className='text-xs font-medium text-muted-foreground'>
+                  Direction
+                </Label>
+                <Select
+                  value={filters.sortDir || 'default'}
+                  onValueChange={(v) =>
+                    setSortDir(
+                      v === 'default' ? undefined : (v as 'ASC' | 'DESC')
+                    )
+                  }
+                >
+                  <SelectTrigger className='h-10'>
+                    <SelectValue placeholder='Default direction' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='default'>Default</SelectItem>
+                    <SelectItem value='ASC'>Ascending</SelectItem>
+                    <SelectItem value='DESC'>Descending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </FilterPane>
+        ) : null}
+      </SettingsFilterDialog>
 
       {/* Edit User Dialog */}
       <EditUserDialog

@@ -105,10 +105,7 @@ export const generateMockCustomers = (count: number = 50): Customer[] => {
         ? `${randomNumber(100, 999)} Main St, City, State ${randomNumber(10000, 99999)}`
         : undefined,
       customerType: isCompany ? 'CUSTOMER' : 'PROSPECT',
-      status: randomElement([
-        'ACTIVE',
-        'INACTIVE',
-      ] as CustomerStatus[]),
+      status: randomElement(['ACTIVE', 'INACTIVE'] as CustomerStatus[]),
       companyName: isCompany ? company : undefined,
       taxNumber:
         isCompany && randomBool()
@@ -521,16 +518,13 @@ export const generateMockActivities = (
     }
 
     const isCompleted = randomBool();
-    const isOverdue = !isCompleted && randomBool();
 
     const activity: Activity = {
       id: randomId(),
       type: activityType,
-      status: isOverdue
-        ? 'OVERDUE'
-        : isCompleted
-          ? 'COMPLETED'
-          : randomElement(['PLANNED', 'IN_PROGRESS'] as ActivityStatus[]),
+      status: isCompleted
+        ? 'COMPLETED'
+        : randomElement(['PLANNED', 'CANCELLED'] as ActivityStatus[]),
       subject: randomElement(subjects[activityType]),
       description: randomBool()
         ? 'Detailed discussion about requirements and next steps.'

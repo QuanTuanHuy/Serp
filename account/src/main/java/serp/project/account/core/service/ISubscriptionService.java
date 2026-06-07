@@ -16,6 +16,7 @@ import serp.project.account.core.domain.enums.SubscriptionStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.util.Pair;
 
@@ -164,4 +165,14 @@ public interface ISubscriptionService {
         void validateCancellation(Long organizationId);
 
         OrganizationSubscriptionEntity update(OrganizationSubscriptionEntity subscription);
+
+        Long countSubscriptions();
+
+        Long countSubscriptionsByStatus(SubscriptionStatus status);
+
+        Long countSubscriptionsEndingSoon(Long fromTimestamp, Long toTimestamp);
+
+        Long countTrialsEndingSoon(Long fromTimestamp, Long toTimestamp);
+
+        Map<Long, String> getLatestSubscriptionStatusByOrganizationIds(List<Long> organizationIds);
 }

@@ -17,6 +17,7 @@ import {
   Settings,
   Headphones,
   MapPin,
+  Bus,
   Shield,
   LucideIcon,
   MessageSquare,
@@ -31,7 +32,9 @@ export type ModuleCode =
   | 'LOGISTICS2'
   | 'TMS'
   | 'FIRST_MILE'
+  | 'SCHOOLBUS'
   | 'MARKETING'
+  | 'PM'
   | 'PTM'
   | 'PROJECT'
   | 'ACCOUNTING'
@@ -44,7 +47,8 @@ export type ModuleCode =
   | 'FIELD_SERVICE'
   | 'DISCUSSION'
   | 'ADMIN'
-  | 'SETTINGS';
+  | 'SETTINGS'
+  | 'TTCRS';
 
 export interface ModuleIconConfig {
   icon: LucideIcon;
@@ -94,6 +98,11 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     color: 'text-purple-600',
     bgColor: 'bg-purple-50 dark:bg-purple-950',
   },
+  PM: {
+    icon: Briefcase,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950',
+  },
 
   // Productivity
   PTM: {
@@ -132,6 +141,16 @@ export const MODULE_ICONS: Record<ModuleCode, ModuleIconConfig> = {
     icon: MapPin,
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+  },
+  TTCRS: {
+    icon: MapPin,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
+  },
+  SCHOOLBUS: {
+    icon: Bus,
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50 dark:bg-rose-950',
   },
 
   // Finance
@@ -213,7 +232,23 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (canonicalCode === 'TMS') {
     return '/first-mile';
   }
+  if (canonicalCode === 'TTCRS') {
+    return '/ttcrs/dispatcher/locations';
+  }
+  if (canonicalCode === 'SCHOOLBUS') {
+    return '/school-bus';
+  }
 
   const normalizedCode = moduleCode.replace(/-/g, '_').toLowerCase();
   return `/${normalizedCode.replace(/_/g, '-')}`;
+};
+
+export const getModuleRootRoute = (moduleCode: string): string => {
+  const canonicalCode = toCanonicalModuleCode(moduleCode);
+  if (canonicalCode === 'ADMIN') return '/admin';
+  if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'PTM') return '/ptm';
+  if (canonicalCode === 'CRM') return '/crm';
+  if (canonicalCode === 'SCHOOLBUS') return '/school-bus';
+  return `/${moduleCode.toLowerCase()}`;
 };

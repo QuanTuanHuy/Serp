@@ -121,11 +121,24 @@ export const createPaginatedTransform = <T>() => {
 };
 
 /**
- * Extract error message from API response
+ * Extract error message from API response (includes `detail` when present).
  */
 export const getErrorMessage = (error: any): string => {
-  if (error?.data?.message) {
-    return error.data.message;
+  const message =
+    typeof error?.data?.message === 'string' ? error.data.message : undefined;
+  const detail =
+    typeof error?.data?.detail === 'string' ? error.data.detail : undefined;
+
+  if (message && detail && message !== detail && !message.includes(detail)) {
+    return `${message} | ${detail}`;
+  }
+
+  if (detail) {
+    return detail;
+  }
+
+  if (message) {
+    return message;
   }
 
   if (error?.message) {

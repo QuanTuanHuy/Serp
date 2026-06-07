@@ -28,6 +28,16 @@ public class OrganizationEntity extends BaseEntity {
 
     private String address;
 
+    private String city;
+
+    private String state;
+
+    private String country;
+
+    private String zipCode;
+
+    private String taxId;
+
     private Long ownerId;
 
     private OrganizationType organizationType;
@@ -55,6 +65,16 @@ public class OrganizationEntity extends BaseEntity {
     private String logoUrl;
 
     private String primaryColor;
+
+    private String secondaryColor;
+
+    private String faviconUrl;
+
+    private String dateFormat;
+
+    private String timeFormat;
+
+    private String weekStartsOn;
 
     private String website;
 

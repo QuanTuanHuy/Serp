@@ -17,10 +17,12 @@ const MODULE_ROOT_PATHS: Record<string, string> = {
   LOGISTICS: '/logistics',
   LOGISTICS2: '/logistics2',
   PTM: '/ptm',
+  PM: '/pm',
   PURCHASE: '/purchase',
   SALES: '/sales',
   SETTINGS: '/settings',
   TMS: '/first-mile',
+  SCHOOLBUS: '/school-bus',
 };
 
 const KNOWN_APP_ROOT_SEGMENTS = new Set([
@@ -34,12 +36,14 @@ const KNOWN_APP_ROOT_SEGMENTS = new Set([
   'logistics',
   'logistics2',
   'profile',
+  'pm',
   'ptm',
   'purchase',
   'sales',
   'settings',
   'subscription',
   'tms',
+  'school-bus',
 ]);
 
 export const normalizePath = (path: string): string => {

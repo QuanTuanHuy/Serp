@@ -22,8 +22,10 @@ public class WorkItemFieldConstants {
     public static final String PRIORITY_ID = "priority_id";
     public static final String ASSIGNEE_ID = "assignee_id";
     public static final String PARENT_ID = "parent_id";
+    public static final String START_DATE = "start_date";
     public static final String DUE_DATE = "due_date";
     public static final String TIME_ORIGINAL_ESTIMATE = "time_original_estimate";
+    public static final String TIME_REMAINING_ESTIMATE = "time_remaining_estimate";
     public static final String SECURITY_LEVEL_ID = "security_level_id";
     public static final String RESOLUTION_ID = "resolution_id";
 
@@ -39,8 +41,10 @@ public class WorkItemFieldConstants {
             PRIORITY_ID,
             ASSIGNEE_ID,
             PARENT_ID,
+            START_DATE,
             DUE_DATE,
             TIME_ORIGINAL_ESTIMATE,
+            TIME_REMAINING_ESTIMATE,
             SECURITY_LEVEL_ID
     );
 
@@ -49,8 +53,10 @@ public class WorkItemFieldConstants {
             DESCRIPTION,
             PRIORITY_ID,
             ASSIGNEE_ID,
+            START_DATE,
             DUE_DATE,
             TIME_ORIGINAL_ESTIMATE,
+            TIME_REMAINING_ESTIMATE,
             SECURITY_LEVEL_ID
     );
 
@@ -59,8 +65,10 @@ public class WorkItemFieldConstants {
             DESCRIPTION,
             PRIORITY_ID,
             ASSIGNEE_ID,
+            START_DATE,
             DUE_DATE,
             TIME_ORIGINAL_ESTIMATE,
+            TIME_REMAINING_ESTIMATE,
             SECURITY_LEVEL_ID
     );
 }

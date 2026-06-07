@@ -83,6 +83,24 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.CrmService.BaseURL(),
 		},
 		{
+			Name:         "payment",
+			SourcePrefix: "/payment/api/v1",
+			TargetPrefix: "/v1",
+			Target:       props.PaymentService.BaseURL(),
+		},
+		{
+			Name:         "tms-billing-service",
+			SourcePrefix: "/tms-billing-service/api/v1",
+			TargetPrefix: "/api/v1",
+			Target:       props.TmsBillingService.BaseURL(),
+		},
+		{
+			Name:         "tms-order",
+			SourcePrefix: "/tms-order/api/v1",
+			TargetPrefix: "/api/v1",
+			Target:       props.TmsOrderService.BaseURL(),
+		},
+		{
 			Name:         "notification",
 			SourcePrefix: "/ns/api/v1",
 			TargetPrefix: "/notification/api/v1",
@@ -113,16 +131,40 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.Logistics2Service.BaseURL(),
 		},
 		{
+			Name:         "school-bus",
+			SourcePrefix: "/school-bus/api/v1",
+			TargetPrefix: "/school-bus/api/v1",
+			Target:       props.SchoolBusService.BaseURL(),
+		},
+		{
 			Name:         "first-mile",
 			SourcePrefix: "/first-mile/api/v1",
 			TargetPrefix: "/api/v1",
 			Target:       props.FirstMileService.BaseURL(),
 		},
 		{
+			Name:         "second-mile",
+			SourcePrefix: "/second-mile/api/v1",
+			TargetPrefix: "/api/v1",
+			Target:       props.SecondMileService.BaseURL(),
+		},
+		{
 			Name:         "discuss",
 			SourcePrefix: "/discuss/api/v1",
 			TargetPrefix: "/discuss/api/v1",
 			Target:       props.DiscussService.BaseURL(),
+		},
+		{
+			Name:         "pm-core",
+			SourcePrefix: "/pm/api/v1",
+			TargetPrefix: "/pm-core/api/v1",
+			Target:       props.PmCoreService.BaseURL(),
+		},
+		{
+			Name:         "ttcrs",
+			SourcePrefix: "/ttcrs/api/v1",
+			TargetPrefix: "/ttcrs/api/v1",
+			Target:       props.TtcrsService.BaseURL(),
 		},
 	}
 }

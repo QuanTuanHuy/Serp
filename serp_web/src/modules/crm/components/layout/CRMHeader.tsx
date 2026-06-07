@@ -49,6 +49,8 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
         return 'Opportunities';
       case 'activities':
         return 'Activities';
+      case 'calendar':
+        return 'Calendar';
       case 'reports':
         return 'Reports';
       case 'settings':
@@ -174,7 +176,7 @@ export const CRMHeader: React.FC<CRMHeaderProps> = ({
           {/* Notifications */}
           <NotificationButton
             settingsPath='/crm/settings'
-            allNotificationsPath='/crm/activities'
+            allNotificationsPath='/notifications'
           />
 
           {/* Theme Toggle */}

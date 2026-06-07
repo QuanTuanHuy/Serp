@@ -86,7 +86,9 @@ export interface OpportunityPipeline {
 }
 
 export type OpportunityPipelineResponse = APIResponse<OpportunityPipeline>;
-export type OpportunityActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type OpportunityActivitiesResponse = APIResponse<
+  PaginatedResponse<Activity>
+>;
 export type ChangeOpportunityStageResponse = APIResponse<Opportunity>;
 export type CloseOpportunityWonResponse = APIResponse<Opportunity>;
 export type CloseOpportunityLostResponse = APIResponse<Opportunity>;
@@ -95,6 +97,13 @@ export type ReopenOpportunityResponse = APIResponse<Opportunity>;
 
 export type ActivityResponse = APIResponse<Activity>;
 export type ActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type SearchActivitiesResponse = APIResponse<PaginatedResponse<Activity>>;
+export type ActivityStatsResponse = APIResponse<
+  import('./index').ActivityStats
+>;
+export type BulkActivityResponse = APIResponse<
+  import('./index').BulkActivityResult
+>;
 export type CreateActivityResponse = APIResponse<Activity>;
 export type UpdateActivityResponse = APIResponse<Activity>;
 export type DeleteActivityResponse = APIResponse<{ deleted: boolean }>;

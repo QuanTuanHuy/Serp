@@ -32,9 +32,15 @@ public class TeamModel extends BaseModel {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "leader_id")
-    private Long leaderId;
+    @Column(name = "manager_user_id")
+    private Long managerUserId;
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
+
+    @Column(name = "last_assigned_member_user_id")
+    private Long lastAssignedMemberUserId;
 }

@@ -1,10 +1,11 @@
 /*
-Author: QuanTuanHuy
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
 package serp.project.first_mile.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -78,4 +79,7 @@ public class ManualAssignPickupOrdersRequest {
 
     @JsonProperty("enforce_capacity")
     private Boolean enforceCapacity;
+
+    @JsonProperty("force_assign")
+    private Boolean forceAssign;
 }

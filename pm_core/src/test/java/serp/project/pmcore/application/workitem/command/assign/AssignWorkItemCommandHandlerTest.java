@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.project.command.roleactor.RoleActorSubjectValidator;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
+import serp.project.pmcore.domain.notification.service.IWorkItemNotificationOutboxPublisher;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionSubject;
 import serp.project.pmcore.domain.project.dto.ProjectPermissionEvaluationContext;
 import serp.project.pmcore.domain.project.entity.ProjectEntity;
@@ -59,6 +60,8 @@ class AssignWorkItemCommandHandlerTest {
     private IOutboxEventService outboxEventService;
     @Mock
     private JsonUtils jsonUtils;
+    @Mock
+    private IWorkItemNotificationOutboxPublisher notificationOutboxPublisher;
 
     private AssignWorkItemCommandHandler handler;
 
@@ -72,7 +75,8 @@ class AssignWorkItemCommandHandlerTest {
                 issueSecurityService,
                 roleActorSubjectValidator,
                 outboxEventService,
-                jsonUtils
+                jsonUtils,
+                notificationOutboxPublisher
         );
     }
 
@@ -118,6 +122,11 @@ class AssignWorkItemCommandHandlerTest {
             workItem.setUpdatedBy(USER_ID);
             return workItem;
         });
+        when(outboxEventService.saveEvent(any())).thenAnswer(invocation -> {
+            OutboxEventEntity event = invocation.getArgument(0);
+            event.setId(7000L);
+            return event;
+        });
         when(jsonUtils.toJson(any())).thenReturn("{}");
 
         AssignWorkItemResult result = handler.handle(command);
@@ -132,6 +141,13 @@ class AssignWorkItemCommandHandlerTest {
         verify(outboxEventService).saveEvent(outboxCaptor.capture());
         assertEquals(EventConstants.WorkItem.EventType.WORK_ITEM_ASSIGNED, outboxCaptor.getValue().getEventType());
         assertEquals(String.valueOf(PROJECT_ID), outboxCaptor.getValue().getPartitionKey());
+        verify(notificationOutboxPublisher).publishWorkItemAssignedNotifications(
+                project,
+                workItem,
+                TENANT_ID,
+                USER_ID,
+                7000L
+        );
     }
 
     @Test
@@ -228,6 +244,7 @@ class AssignWorkItemCommandHandlerTest {
         assertEquals(1_700_000_000_000L, result.updatedAt());
         verify(workItemService, never()).updateWorkItem(any(), any());
         verify(outboxEventService, never()).saveEvent(any());
+        verify(notificationOutboxPublisher, never()).publishWorkItemAssignedNotifications(any(), any(), any(), any(), any());
     }
 
     @Test

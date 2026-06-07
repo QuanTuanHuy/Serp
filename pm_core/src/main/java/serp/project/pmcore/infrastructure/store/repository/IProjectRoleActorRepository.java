@@ -33,9 +33,15 @@ public interface IProjectRoleActorRepository extends JpaRepository<ProjectRoleAc
             String subjectId
     );
 
+    List<ProjectRoleActorModel> findAllByProjectIdAndTenantId(Long projectId, Long tenantId);
+
     List<ProjectRoleActorModel> findAllByProjectIdAndProjectRoleIdAndTenantId(Long projectId,
-                                                                               Long projectRoleId,
-                                                                               Long tenantId);
+                                                                                 Long projectRoleId,
+                                                                                Long tenantId);
+
+    List<ProjectRoleActorModel> findAllByTenantIdAndProjectIdAndSubjectType(Long tenantId,
+                                                                             Long projectId,
+                                                                             String subjectType);
 
     @Modifying
     @Query("""
@@ -51,9 +57,26 @@ public interface IProjectRoleActorRepository extends JpaRepository<ProjectRoleAc
               AND a.deletedAt IS NULL
             """)
     int softDeleteActiveAssignment(@Param("tenantId") Long tenantId,
-                                   @Param("projectId") Long projectId,
-                                   @Param("projectRoleId") Long projectRoleId,
-                                   @Param("subjectType") String subjectType,
-                                   @Param("subjectId") String subjectId,
-                                   @Param("updatedBy") Long updatedBy);
+                                    @Param("projectId") Long projectId,
+                                    @Param("projectRoleId") Long projectRoleId,
+                                    @Param("subjectType") String subjectType,
+                                    @Param("subjectId") String subjectId,
+                                    @Param("updatedBy") Long updatedBy);
+
+    @Modifying
+    @Query("""
+            UPDATE ProjectRoleActorModel a
+            SET a.deletedAt = CURRENT_TIMESTAMP,
+                a.updatedAt = CURRENT_TIMESTAMP,
+                a.updatedBy = :updatedBy
+            WHERE a.tenantId = :tenantId
+              AND a.projectId = :projectId
+              AND a.subjectType = 'USER'
+              AND a.subjectId = :subjectId
+              AND a.deletedAt IS NULL
+            """)
+    void softDeleteActiveUserAssignmentsByProject(@Param("tenantId") Long tenantId,
+                                                  @Param("projectId") Long projectId,
+                                                  @Param("subjectId") String subjectId,
+                                                  @Param("updatedBy") Long updatedBy);
 }

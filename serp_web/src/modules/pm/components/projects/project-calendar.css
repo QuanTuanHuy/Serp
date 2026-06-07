@@ -1,0 +1,56 @@
+.project-calendar-wrapper .rbc-calendar {
+  background: transparent;
+}
+
+.project-calendar-wrapper .rbc-header {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+
+.project-calendar-wrapper .rbc-month-view,
+.project-calendar-wrapper .rbc-time-view,
+.project-calendar-wrapper .rbc-agenda-view {
+  border-color: hsl(var(--border));
+}
+
+.project-calendar-wrapper .rbc-day-bg + .rbc-day-bg,
+.project-calendar-wrapper .rbc-header + .rbc-header,
+.project-calendar-wrapper .rbc-time-header-content,
+.project-calendar-wrapper .rbc-time-content > * + * > * {
+  border-color: hsl(var(--border));
+}
+
+.project-calendar-wrapper .rbc-off-range-bg {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.project-calendar-wrapper .rbc-today {
+  background: hsl(var(--primary) / 0.06);
+}
+
+.project-calendar-wrapper .rbc-event {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+}
+
+.project-calendar-wrapper .rbc-event.rbc-selected {
+  background: transparent;
+}
+
+.project-calendar-wrapper .rbc-month-row + .rbc-month-row {
+  border-color: hsl(var(--border));
+}
+
+.project-calendar-wrapper .rbc-date-cell {
+  padding: 0.25rem 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.project-calendar-wrapper .rbc-button-link {
+  color: inherit;
+}

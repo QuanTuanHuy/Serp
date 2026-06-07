@@ -11,8 +11,10 @@ import org.springframework.data.util.Pair;
 
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
+import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 
 public interface IOrganizationService {
     OrganizationEntity createOrganization(CreateOrganizationDto request);
@@ -23,9 +25,19 @@ public interface IOrganizationService {
 
     OrganizationEntity getOrganizationById(Long organizationId);
 
+    OrganizationEntity updateOrganizationSettings(Long organizationId, UpdateOrganizationSettingsRequest request);
+
+    OrganizationEntity updateOrganizationStatus(Long organizationId, OrganizationStatus status);
+
     void assignOrganizationToUser(Long organizationId, Long userId, Long roleId, Boolean isDefault);
 
     List<OrganizationEntity> getOrganizationsByIds(List<Long> organizationIds);
 
     Pair<List<OrganizationEntity>, Long> getOrganizations(GetOrganizationParams params);
+
+    Long countOrganizations();
+
+    Long countOrganizationsByStatus(OrganizationStatus status);
+
+    List<OrganizationEntity> getRecentOrganizations(int limit);
 }

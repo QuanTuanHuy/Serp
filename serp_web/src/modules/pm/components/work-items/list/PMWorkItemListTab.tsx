@@ -1,0 +1,535 @@
+/**
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project - PM work item list tab
+ */
+
+'use client';
+
+import {
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/store/api';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+} from '@/shared/components/ui';
+import type { ComboboxItem } from '@/shared/components/ui/combobox';
+import { useGetPmProjectPeopleQuery } from '../../../api/projectApi';
+import {
+  useGetPmWorkItemCreateMetaQuery,
+  useGetPmWorkItemByIdQuery,
+  useLazyGetPmWorkItemTransitionsQuery,
+  useSearchPmWorkItemsQuery,
+  useTransitionPmWorkItemStatusMutation,
+  useUpdatePmWorkItemMutation,
+} from '../../../api/workItemApi';
+import type {
+  PMUpdateWorkItemRequest,
+  PMWorkItemSearchApi,
+} from '../../../types/api';
+import { PMWorkItemDetailDialog } from '../detail';
+import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
+import { PMWorkItemListFilters } from './PMWorkItemListFilters';
+import {
+  PMWorkItemCompactList,
+  PMWorkItemDetailPanel,
+  PMWorkItemListTable,
+} from './PMWorkItemListViews';
+import {
+  getActiveFilterCount,
+  parseIssueId,
+  parseNumberList,
+  parseViewMode,
+  type WorkItemListViewMode,
+} from './pmWorkItemList.utils';
+
+interface PMWorkItemListTabProps {
+  projectId: number;
+}
+
+export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const view = parseViewMode(searchParams.get('view'));
+  const selectedIssueId = parseIssueId(searchParams.get('issueId'));
+  const parentId = parseIssueId(searchParams.get('parentId'));
+  const assigneeIds = parseNumberList(searchParams.get('assigneeIds'));
+  const issueTypeIds = parseNumberList(searchParams.get('issueTypeIds'));
+  const statusIds = parseNumberList(searchParams.get('statusIds'));
+  const priorityIds = parseNumberList(searchParams.get('priorityIds'));
+  const reporterIds = parseNumberList(searchParams.get('reporterIds'));
+  const componentIds = parseNumberList(searchParams.get('componentIds'));
+  const [keyword, setKeyword] = useState(searchParams.get('q') ?? '');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<number[]>([]);
+  const deferredKeyword = useDeferredValue(keyword.trim());
+  const [updateWorkItem, updateState] = useUpdatePmWorkItemMutation();
+  const [transitionWorkItem, transitionState] =
+    useTransitionPmWorkItemStatusMutation();
+  const [loadTransitions] = useLazyGetPmWorkItemTransitionsQuery();
+
+  const searchQuery = useSearchPmWorkItemsQuery({
+    projectId,
+    params: {
+      keyword: deferredKeyword || undefined,
+      parentId,
+      assigneeIds,
+      issueTypeIds,
+      statusIds,
+      priorityIds,
+      reporterIds,
+      componentIds,
+      enriched: true,
+      page: 0,
+      pageSize: 50,
+      sortField: 'rank',
+      sortDirection: 'ASC',
+    },
+  });
+
+  const items = searchQuery.data?.data.items ?? [];
+  const totalItems = searchQuery.data?.data.totalItems ?? 0;
+  const visibleItemIds = useMemo(() => items.map((item) => item.id), [items]);
+  const { data: projectPeople = [], isLoading: isUsersLoading } =
+    useGetPmProjectPeopleQuery(projectId);
+
+  const { data: meta, isFetching: isMetaFetching } =
+    useGetPmWorkItemCreateMetaQuery({ projectId });
+
+  const assigneeOptions = useMemo<ComboboxItem[]>(() => {
+    return projectPeople
+      .map((person) => {
+        const label = person.name || person.email || `User #${person.userId}`;
+        return { value: person.userId, label };
+      })
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [projectPeople]);
+
+  const priorityOptions = useMemo<ComboboxItem[]>(
+    () =>
+      (meta?.priorities || []).map((priority) => ({
+        value: priority.id,
+        label: priority.name,
+      })),
+    [meta?.priorities]
+  );
+
+  const selectedItem = useMemo(
+    () => items.find((item) => item.id === selectedIssueId),
+    [items, selectedIssueId]
+  );
+
+  const updateUrl = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) {
+          nextParams.set(key, value);
+        } else {
+          nextParams.delete(key);
+        }
+      }
+      const queryString = nextParams.toString();
+      startTransition(() => {
+        router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams]
+  );
+
+  useEffect(() => {
+    if (deferredKeyword === (searchParams.get('q') ?? '')) return;
+    updateUrl({ q: deferredKeyword || undefined });
+  }, [deferredKeyword, searchParams, updateUrl]);
+
+  useEffect(() => {
+    if (view !== 'detail' || selectedIssueId || !items[0]) return;
+    updateUrl({ issueId: String(items[0].id) });
+  }, [items, selectedIssueId, updateUrl, view]);
+
+  const selectIssue = (issueId: number) => {
+    updateUrl({
+      view: view === 'detail' ? 'detail' : undefined,
+      issueId: String(issueId),
+    });
+  };
+
+  const setView = (nextView: WorkItemListViewMode) => {
+    updateUrl({
+      view: nextView === 'detail' ? 'detail' : undefined,
+      issueId:
+        nextView === 'detail'
+          ? String(selectedIssueId ?? items[0]?.id ?? '') || undefined
+          : undefined,
+    });
+  };
+
+  const updateFilter = (updates: Record<string, string | undefined>) => {
+    updateUrl({ ...updates, issueId: undefined });
+  };
+
+  const clearFilters = () => {
+    updateFilter({
+      parentId: undefined,
+      assigneeIds: undefined,
+      issueTypeIds: undefined,
+      statusIds: undefined,
+      priorityIds: undefined,
+      reporterIds: undefined,
+      componentIds: undefined,
+    });
+  };
+
+  const activeFilterCount = getActiveFilterCount({
+    parentId,
+    assigneeIds,
+    issueTypeIds,
+    statusIds,
+    priorityIds,
+    reporterIds,
+    componentIds,
+  });
+
+  const activeFilterChips = [
+    parentId ? { key: 'parentId', label: 'Parent' } : null,
+    assigneeIds.length
+      ? { key: 'assigneeIds', label: `Assignee: ${assigneeIds.length}` }
+      : null,
+    issueTypeIds.length
+      ? { key: 'issueTypeIds', label: `Work type: ${issueTypeIds.length}` }
+      : null,
+    statusIds.length
+      ? { key: 'statusIds', label: `Status: ${statusIds.length}` }
+      : null,
+    priorityIds.length
+      ? { key: 'priorityIds', label: `Priority: ${priorityIds.length}` }
+      : null,
+    reporterIds.length
+      ? { key: 'reporterIds', label: `Reporter: ${reporterIds.length}` }
+      : null,
+    componentIds.length
+      ? { key: 'componentIds', label: `Component: ${componentIds.length}` }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string }>;
+
+  const removeFilter = (key: string) => {
+    updateFilter({ [key]: undefined });
+  };
+
+  useEffect(() => {
+    setSelectedWorkItemIds((current) =>
+      current.filter((itemId) => visibleItemIds.includes(itemId))
+    );
+  }, [visibleItemIds]);
+
+  const toggleSelectedWorkItem = (workItemId: number) => {
+    setSelectedWorkItemIds((current) =>
+      current.includes(workItemId)
+        ? current.filter((value) => value !== workItemId)
+        : [...current, workItemId]
+    );
+  };
+
+  const toggleAllVisibleWorkItems = (checked: boolean) => {
+    setSelectedWorkItemIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...visibleItemIds]));
+      }
+
+      return current.filter((itemId) => !visibleItemIds.includes(itemId));
+    });
+  };
+
+  const optimizeSelectedWorkItems = () => {
+    if (!selectedWorkItemIds.length) return;
+    router.push(
+      `/pm/projects/${projectId}/optimization?selected=${selectedWorkItemIds.join(',')}`
+    );
+  };
+
+  const updateListWorkItem = useCallback(
+    async (item: PMWorkItemSearchApi, body: PMUpdateWorkItemRequest) => {
+      try {
+        await updateWorkItem({
+          projectId,
+          workItemId: item.id,
+          body,
+        }).unwrap();
+        toast.success(`${item.key} updated.`);
+      } catch (error) {
+        toast.error('Failed to update work item', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [projectId, updateWorkItem]
+  );
+
+  const updateSummary = useCallback(
+    (item: PMWorkItemSearchApi, summary: string) =>
+      updateListWorkItem(item, { summary }),
+    [updateListWorkItem]
+  );
+
+  const updateAssignee = useCallback(
+    (item: PMWorkItemSearchApi, assigneeId: number | null) =>
+      updateListWorkItem(item, { assigneeId }),
+    [updateListWorkItem]
+  );
+
+  const updatePriority = useCallback(
+    (item: PMWorkItemSearchApi, priorityId: number | null) =>
+      updateListWorkItem(item, { priorityId }),
+    [updateListWorkItem]
+  );
+
+  const updateDueDate = useCallback(
+    (item: PMWorkItemSearchApi, dueDate: number | null) =>
+      updateListWorkItem(item, { dueDate }),
+    [updateListWorkItem]
+  );
+
+  const fetchTransitions = useCallback(
+    async (item: PMWorkItemSearchApi) => {
+      try {
+        return await loadTransitions({
+          projectId,
+          workItemId: item.id,
+        }).unwrap();
+      } catch (error) {
+        toast.error('Failed to load transitions', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [loadTransitions, projectId]
+  );
+
+  const updateStatus = useCallback(
+    async (item: PMWorkItemSearchApi, transitionId: number) => {
+      try {
+        await transitionWorkItem({
+          projectId,
+          workItemId: item.id,
+          body: { transitionId },
+        }).unwrap();
+        toast.success(`${item.key} status updated.`);
+      } catch (error) {
+        toast.error('Failed to update status', {
+          description: getErrorMessage(error),
+        });
+        throw error;
+      }
+    },
+    [projectId, transitionWorkItem]
+  );
+
+  return (
+    <div className='space-y-4'>
+      <PMWorkItemCommandBar
+        keyword={keyword}
+        view={view}
+        activeFilterCount={activeFilterCount}
+        selectedCount={selectedWorkItemIds.length}
+        isRefreshing={searchQuery.isFetching}
+        onKeywordChange={setKeyword}
+        onViewChange={setView}
+        onRefresh={() => searchQuery.refetch()}
+        onFilterClick={() => setFiltersOpen(true)}
+        onOptimizeSelected={optimizeSelectedWorkItems}
+      />
+
+      {activeFilterChips.length > 0 ? (
+        <div className='flex flex-wrap items-center gap-2'>
+          {activeFilterChips.map((chip) => (
+            <Badge
+              key={chip.key}
+              variant='secondary'
+              className='inline-flex items-center gap-2 px-2 py-1'
+            >
+              <span>{chip.label}</span>
+              <button
+                type='button'
+                className='text-xs text-muted-foreground hover:text-foreground'
+                onClick={() => removeFilter(chip.key)}
+              >
+                x
+              </button>
+            </Badge>
+          ))}
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
+        </div>
+      ) : null}
+
+      {searchQuery.error ? (
+        <Alert variant='destructive'>
+          <AlertCircle className='h-4 w-4' />
+          <AlertTitle>Work items unavailable</AlertTitle>
+          <AlertDescription>
+            {getErrorMessage(searchQuery.error)}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <PMWorkItemListFilters
+        projectId={projectId}
+        open={filtersOpen}
+        parentId={parentId}
+        assigneeIds={assigneeIds}
+        issueTypeIds={issueTypeIds}
+        statusIds={statusIds}
+        priorityIds={priorityIds}
+        reporterIds={reporterIds}
+        onOpenChange={setFiltersOpen}
+        onUpdate={updateFilter}
+        onClear={clearFilters}
+      />
+
+      {view === 'detail' ? (
+        <div className='grid gap-4 xl:grid-cols-[440px_minmax(0,1fr)]'>
+          <PMWorkItemCompactList
+            items={items}
+            loading={searchQuery.isLoading}
+            selectedIssueId={selectedIssueId}
+            totalItems={totalItems}
+            onSelect={selectIssue}
+          />
+          <PMWorkItemDetailPanelContainer
+            projectId={projectId}
+            workItemId={selectedIssueId}
+            fallbackItem={selectedItem}
+          />
+        </div>
+      ) : (
+        <>
+          <PMWorkItemListTable
+            items={items}
+            loading={searchQuery.isLoading}
+            selectedIssueId={selectedIssueId}
+            totalItems={totalItems}
+            onSelect={selectIssue}
+            selectedIds={selectedWorkItemIds}
+            onToggleSelect={toggleSelectedWorkItem}
+            onToggleSelectAll={toggleAllVisibleWorkItems}
+            assigneeOptions={assigneeOptions}
+            priorityOptions={priorityOptions}
+            isAssigneeLoading={isUsersLoading}
+            isPriorityLoading={isMetaFetching}
+            isUpdating={updateState.isLoading}
+            isTransitioning={transitionState.isLoading}
+            onUpdateSummary={updateSummary}
+            onUpdateAssignee={updateAssignee}
+            onUpdatePriority={updatePriority}
+            onUpdateDueDate={updateDueDate}
+            onLoadTransitions={fetchTransitions}
+            onUpdateStatus={updateStatus}
+          />
+          <PMWorkItemDetailDialog
+            projectId={projectId}
+            workItemId={selectedIssueId}
+            open={Boolean(selectedIssueId)}
+            fallbackItem={selectedItem}
+            onOpenChange={(open) => {
+              if (!open) updateUrl({ issueId: undefined });
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+interface PMWorkItemDetailPanelContainerProps {
+  projectId: number;
+  workItemId?: number;
+  fallbackItem?: {
+    key?: string;
+    summary?: string;
+    description?: string | null;
+    statusName?: string | null;
+    issueTypeName?: string | null;
+    priorityName?: string | null;
+    assigneeName?: string | null;
+    reporterName?: string | null;
+    createdAt?: number | null;
+    dueDate?: number | null;
+    updatedAt?: number | null;
+  };
+}
+
+function PMWorkItemDetailPanelContainer({
+  projectId,
+  workItemId,
+  fallbackItem,
+}: PMWorkItemDetailPanelContainerProps) {
+  const { data, error, isFetching, isLoading } = useGetPmWorkItemByIdQuery(
+    { projectId, workItemId: workItemId ?? 0 },
+    { skip: !workItemId }
+  );
+
+  if (!workItemId) {
+    return (
+      <Card className='min-h-96 shadow-sm'>
+        <CardContent className='flex h-96 items-center justify-center text-sm text-muted-foreground'>
+          Select work item to view details.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <PMWorkItemDetailPanel
+      loading={isLoading}
+      errorMessage={error ? getErrorMessage(error) : undefined}
+      isFetching={isFetching}
+      title={data?.summary ?? fallbackItem?.summary ?? 'Work item'}
+      keyLabel={data?.key ?? fallbackItem?.key ?? `#${workItemId}`}
+      description={
+        data?.description ||
+        fallbackItem?.description ||
+        'No description provided.'
+      }
+      statusName={data?.status?.name ?? fallbackItem?.statusName ?? undefined}
+      issueTypeName={
+        data?.issueType?.name ?? fallbackItem?.issueTypeName ?? undefined
+      }
+      priorityName={
+        data?.priority?.name ?? fallbackItem?.priorityName ?? undefined
+      }
+      assigneeName={
+        data?.assignee?.displayName ?? fallbackItem?.assigneeName ?? undefined
+      }
+      reporterName={
+        data?.reporter?.displayName ?? fallbackItem?.reporterName ?? undefined
+      }
+      createdAt={data?.createdAt ?? fallbackItem?.createdAt}
+      dueDate={data?.dueDate ?? fallbackItem?.dueDate}
+      updatedAt={data?.updatedAt ?? fallbackItem?.updatedAt}
+    />
+  );
+}

@@ -28,10 +28,14 @@ public class UpdateWorkItemRequest {
     private boolean priorityIdProvided;
     private Long assigneeId;
     private boolean assigneeIdProvided;
+    private Long startDate;
+    private boolean startDateProvided;
     private Long dueDate;
     private boolean dueDateProvided;
     private Long timeOriginalEstimate;
     private boolean timeOriginalEstimateProvided;
+    private Long timeRemainingEstimate;
+    private boolean timeRemainingEstimateProvided;
     private Long securityLevelId;
     private boolean securityLevelIdProvided;
     private Map<String, Object> customFields = Map.of();
@@ -57,6 +61,11 @@ public class UpdateWorkItemRequest {
         this.assigneeIdProvided = true;
     }
 
+    public void setStartDate(Long startDate) {
+        this.startDate = startDate;
+        this.startDateProvided = true;
+    }
+
     public void setDueDate(Long dueDate) {
         this.dueDate = dueDate;
         this.dueDateProvided = true;
@@ -65,6 +74,11 @@ public class UpdateWorkItemRequest {
     public void setTimeOriginalEstimate(Long timeOriginalEstimate) {
         this.timeOriginalEstimate = timeOriginalEstimate;
         this.timeOriginalEstimateProvided = true;
+    }
+
+    public void setTimeRemainingEstimate(Long timeRemainingEstimate) {
+        this.timeRemainingEstimate = timeRemainingEstimate;
+        this.timeRemainingEstimateProvided = true;
     }
 
     public void setSecurityLevelId(Long securityLevelId) {
@@ -92,11 +106,17 @@ public class UpdateWorkItemRequest {
         if (assigneeIdProvided) {
             systemFields.put(WorkItemFieldConstants.ASSIGNEE_ID, assigneeId);
         }
+        if (startDateProvided) {
+            systemFields.put(WorkItemFieldConstants.START_DATE, startDate);
+        }
         if (dueDateProvided) {
             systemFields.put(WorkItemFieldConstants.DUE_DATE, dueDate);
         }
         if (timeOriginalEstimateProvided) {
             systemFields.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, timeOriginalEstimate);
+        }
+        if (timeRemainingEstimateProvided) {
+            systemFields.put(WorkItemFieldConstants.TIME_REMAINING_ESTIMATE, timeRemainingEstimate);
         }
         if (securityLevelIdProvided) {
             systemFields.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, securityLevelId);

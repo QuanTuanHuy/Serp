@@ -8,6 +8,7 @@ import type {
   FirstMileDeliveryRequestTime,
   FirstMileFeePayer,
   FirstMileOrderDetail,
+  FirstMileOrderPickupMethod,
   FirstMileOrderProductCategory,
   FirstMileOrderProductItem,
   FirstMileOrderStatus,
@@ -40,6 +41,7 @@ export const ORDER_STATUS_OPTIONS: FirstMileOrderStatus[] = [
   'PICKING_UP',
   'PICKUP_FAILED',
   'PICKED_UP',
+  'PENDING_ORIGIN_POST_OFFICE_INBOUND',
   'AT_ORIGIN_POST_OFFICE',
   'CANCELLED',
   'LOST_OR_DAMAGED',
@@ -90,6 +92,7 @@ export interface CreateOrderFormState {
   pickupTimeStart: string;
   pickupTimeEnd: string;
   deliveryRequestTime: FirstMileDeliveryRequestTime;
+  pickupMethod: FirstMileOrderPickupMethod;
   orderProductCategory: 'NONE' | FirstMileOrderProductCategory;
   orderType: FirstMileOrderType;
   feePayer: FirstMileFeePayer;
@@ -125,6 +128,7 @@ export const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
   pickupTimeStart: '',
   pickupTimeEnd: '',
   deliveryRequestTime: 'BUSINESS_HOURS',
+  pickupMethod: 'COURIER_PICKUP',
   orderProductCategory: 'NONE',
   orderType: 'STANDARD_ORDER',
   feePayer: 'SENDER',
@@ -154,6 +158,17 @@ export const ORDER_TYPE_OPTIONS: Array<{
 }> = [
   { value: 'STANDARD_ORDER', label: 'Standard' },
   { value: 'EXPRESS_ORDER', label: 'Express' },
+];
+
+export const ORDER_PICKUP_METHOD_OPTIONS: Array<{
+  value: FirstMileOrderPickupMethod;
+  label: string;
+}> = [
+  { value: 'COURIER_PICKUP', label: 'Courier pickup at sender address' },
+  {
+    value: 'DROP_OFF_AT_POST_OFFICE',
+    label: 'Customer drop-off at post office',
+  },
 ];
 
 export const FEE_PAYER_OPTIONS: Array<{
@@ -229,6 +244,16 @@ export const getScopeDescription = (scope: OrderAccessScope): string => {
 export const formatStatusLabel = (status: FirstMileOrderStatus): string =>
   status.replaceAll('_', ' ');
 
+export const formatPickupMethodLabel = (
+  pickupMethod?: FirstMileOrderPickupMethod
+): string => {
+  if (pickupMethod === 'DROP_OFF_AT_POST_OFFICE') {
+    return 'Drop-off at post office';
+  }
+
+  return 'Courier pickup';
+};
+
 export const getStatusBadgeVariant = (
   status: FirstMileOrderStatus
 ): BadgeVariant => {
@@ -238,6 +263,7 @@ export const getStatusBadgeVariant = (
       return 'secondary';
     case 'PICKING_UP':
     case 'PICKED_UP':
+    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
     case 'AT_ORIGIN_POST_OFFICE':
       return 'default';
     case 'PICKUP_FAILED':
@@ -327,6 +353,10 @@ export const isDraftOrder = (order: FirstMileOrderDetail): boolean => {
   return order.status === 'CREATED' && !order.isConfirm;
 };
 
+export const isDropOffOrder = (order: FirstMileOrderDetail): boolean => {
+  return order.pickupMethod === 'DROP_OFF_AT_POST_OFFICE';
+};
+
 export const mapOrderToFormState = (
   order: FirstMileOrderDetail
 ): CreateOrderFormState => {
@@ -361,6 +391,7 @@ export const mapOrderToFormState = (
     pickupTimeStart: toDateTimeLocalValue(order.pickupTimeStart),
     pickupTimeEnd: toDateTimeLocalValue(order.pickupTimeEnd),
     deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
+    pickupMethod: order.pickupMethod || 'COURIER_PICKUP',
     orderProductCategory: order.orderProductCategory || 'NONE',
     orderType: order.orderType || 'STANDARD_ORDER',
     feePayer: order.feePayer || 'SENDER',
@@ -370,9 +401,18 @@ export const mapOrderToFormState = (
       order.codAmount > 0
         ? 'true'
         : 'false',
-    dimensionLengthCm: '',
-    dimensionWidthCm: '',
-    dimensionHeightCm: '',
+    dimensionLengthCm:
+      order.dimensionLengthCm === undefined || order.dimensionLengthCm === null
+        ? ''
+        : String(order.dimensionLengthCm),
+    dimensionWidthCm:
+      order.dimensionWidthCm === undefined || order.dimensionWidthCm === null
+        ? ''
+        : String(order.dimensionWidthCm),
+    dimensionHeightCm:
+      order.dimensionHeightCm === undefined || order.dimensionHeightCm === null
+        ? ''
+        : String(order.dimensionHeightCm),
     totalVolumeM3:
       order.totalVolume === undefined || order.totalVolume === null
         ? ''

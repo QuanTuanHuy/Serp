@@ -37,6 +37,7 @@ public class WorkItemCreateRequiredFieldValidator {
         effectiveSystemValues.put(WorkItemFieldConstants.PRIORITY_ID, priorityId);
         effectiveSystemValues.put(WorkItemFieldConstants.ASSIGNEE_ID, assigneeId);
         effectiveSystemValues.put(WorkItemFieldConstants.PARENT_ID, request.getParentId());
+        effectiveSystemValues.put(WorkItemFieldConstants.START_DATE, request.getStartDate());
         effectiveSystemValues.put(WorkItemFieldConstants.DUE_DATE, request.getDueDate());
         effectiveSystemValues.put(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate());
         effectiveSystemValues.put(WorkItemFieldConstants.SECURITY_LEVEL_ID, securityLevelId);

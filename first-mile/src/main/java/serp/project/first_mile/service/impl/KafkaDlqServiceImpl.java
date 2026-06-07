@@ -20,12 +20,15 @@ import serp.project.first_mile.enums.KafkaDlqMessageStatus;
 import serp.project.first_mile.repository.KafkaDlqMessageRepository;
 import serp.project.first_mile.service.KafkaDlqService;
 import serp.project.first_mile.service.PostOfficeStaffSyncService;
+import serp.project.first_mile.service.handler.DlqMessageHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class KafkaDlqServiceImpl implements KafkaDlqService {
     private static final int DEFAULT_BATCH_SIZE = 50;
@@ -33,8 +36,16 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
     private static final long[] RETRY_DELAYS_SECONDS = {30L, 120L, 300L, 900L, 1800L};
 
     private final KafkaDlqMessageRepository kafkaDlqMessageRepository;
-    private final ObjectMapper objectMapper;
-    private final PostOfficeStaffSyncService postOfficeStaffSyncService;
+    private final Map<String, DlqMessageHandler> handlerRegistry;
+
+    public KafkaDlqServiceImpl(
+            KafkaDlqMessageRepository kafkaDlqMessageRepository,
+            List<DlqMessageHandler> handlers
+    ) {
+        this.kafkaDlqMessageRepository = kafkaDlqMessageRepository;
+        this.handlerRegistry = handlers.stream()
+                .collect(Collectors.toMap(DlqMessageHandler::getSupportedTopic, Function.identity()));
+    }
 
     @Value("${app.kafka.dlq.batch-size:50}")
     private int configuredBatchSize;
@@ -83,9 +94,15 @@ public class KafkaDlqServiceImpl implements KafkaDlqService {
 
     private void retrySingleMessage(KafkaDlqMessage message) {
         try {
-            SyncUserFirstMileEvent event = objectMapper.readValue(message.getPayload(), SyncUserFirstMileEvent.class);
-            postOfficeStaffSyncService.syncUser(event);
+            DlqMessageHandler handler = handlerRegistry.get(message.getTopic());
 
+            if (handler == null) {
+                throw new IllegalStateException("Không tìm thấy DlqMessageHandler nào cho topic: " + message.getTopic());
+            }
+
+            // ỦY QUYỀN XỬ LÝ CHO HANDLER
+            handler.process(message.getPayload());
+            
             message.setStatus(KafkaDlqMessageStatus.PROCESSED);
             message.setErrorMessage(null);
             message.setNextRetryAt(null);

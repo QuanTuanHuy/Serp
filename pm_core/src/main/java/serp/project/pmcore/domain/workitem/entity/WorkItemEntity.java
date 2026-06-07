@@ -36,6 +36,7 @@ public class WorkItemEntity extends BaseEntity {
     private Long parentId;
     private Long securityLevelId;
 
+    private Long startDate;
     private Long dueDate;
     private String rank;
 
@@ -52,4 +53,10 @@ public class WorkItemEntity extends BaseEntity {
     private String priorityIconUrl;
     private String priorityColor;
     private Integer prioritySequence;
+
+    private String statusKey;
+    private String statusName;
+    private String statusIconUrl;
+    private String statusCategoryKey;
+    private String statusCategoryName;
 }

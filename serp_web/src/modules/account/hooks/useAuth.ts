@@ -283,6 +283,8 @@ export const useAuth = () => {
     isAuthenticated,
     user,
     token,
+    organizationId: user?.organizationId ?? null,
+    organizationName: user?.organizationName ?? null,
     isUserLoading: userLoading,
 
     // Actions

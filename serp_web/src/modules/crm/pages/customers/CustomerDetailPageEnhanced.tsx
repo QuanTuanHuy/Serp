@@ -15,6 +15,7 @@ import {
   Button,
   Badge,
   Input,
+  Label,
   Textarea,
   Avatar,
   AvatarFallback,
@@ -28,7 +29,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Progress,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -43,7 +43,6 @@ import {
   Calendar,
   DollarSign,
   TrendingUp,
-  User,
   Building2,
   Clock,
   Phone,
@@ -54,17 +53,13 @@ import {
   FileText,
   Plus,
   ExternalLink,
-  Package,
   Users,
-  History,
   Star,
   AlertCircle,
   CheckCircle2,
   ShoppingCart,
-  Receipt,
   CreditCard,
   Tag,
-  Activity,
   Send,
   Download,
   Upload,
@@ -73,25 +68,27 @@ import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
 import { ContactList } from '../../components/contacts';
 import type { ContactFormData } from '../../components/contacts';
+import { RequestMeetingDialog } from '../../components/meeting-requests';
 import {
+  useActivateAccountMutation,
   useCreateAccountContactMutation,
+  useDeactivateAccountMutation,
   useDeleteAccountMutation,
   useDeleteContactMutation,
   useGetAccountActivitiesQuery,
   useGetAccountContactsQuery,
   useGetAccountQuery,
   useSetPrimaryContactMutation,
+  useUpdateAccountCreditLimitMutation,
   useUpdateContactMutation,
 } from '../../api/crmApi';
+import { MOCK_OPPORTUNITIES } from '../../mocks';
 import {
-  MOCK_OPPORTUNITIES,
-} from '../../mocks';
-import type {
-  Customer,
-  Contact,
-  Opportunity,
-  Activity as ActivityType,
-} from '../../types';
+  ACCOUNT_TIERS,
+  PREFERRED_DAYS,
+  PREFERRED_TIME_SLOTS,
+} from '../../types/constants';
+import type { Customer, Contact, Opportunity } from '../../types';
 
 // Customer status configuration
 const STATUS_CONFIG = {
@@ -294,6 +291,9 @@ export const CustomerDetailPageEnhanced: React.FC<
     description: '',
     scheduledDate: '',
   });
+  const [isCreditLimitDialogOpen, setIsCreditLimitDialogOpen] = useState(false);
+  const [creditLimitInput, setCreditLimitInput] = useState('');
+  const [meetingRequestOpen, setMeetingRequestOpen] = useState(false);
 
   const { data: accountResponse, isLoading: isAccountLoading } =
     useGetAccountQuery(customerId);
@@ -308,6 +308,12 @@ export const CustomerDetailPageEnhanced: React.FC<
   const [deleteContact] = useDeleteContactMutation();
   const [setPrimaryContact] = useSetPrimaryContactMutation();
   const [deleteAccount] = useDeleteAccountMutation();
+  const [activateAccount, { isLoading: isActivating }] =
+    useActivateAccountMutation();
+  const [deactivateAccount, { isLoading: isDeactivating }] =
+    useDeactivateAccountMutation();
+  const [updateCreditLimit, { isLoading: isUpdatingCreditLimit }] =
+    useUpdateAccountCreditLimitMutation();
 
   const customer = accountResponse?.data;
   const accountContacts = contactsResponse?.data || [];
@@ -346,16 +352,16 @@ export const CustomerDetailPageEnhanced: React.FC<
     return null;
   }
 
-  const statusConfig = STATUS_CONFIG[customer.status];
+  const statusConfig =
+    STATUS_CONFIG[customer.status as keyof typeof STATUS_CONFIG] ??
+    STATUS_CONFIG.ACTIVE;
 
-  // Calculate customer health score (mock)
-  const healthScore = 85;
+  const tierLabel = customer.tier
+    ? (ACCOUNT_TIERS.find((t) => t.value === customer.tier)?.label ??
+      customer.tier)
+    : null;
+
   const lifetimeValue = customer.totalValue;
-  const avgOrderValue =
-    MOCK_ORDERS.filter((o) => o.status === 'COMPLETED').reduce(
-      (sum, o) => sum + o.total,
-      0
-    ) / MOCK_ORDERS.filter((o) => o.status === 'COMPLETED').length || 0;
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -391,6 +397,52 @@ export const CustomerDetailPageEnhanced: React.FC<
           description: getErrorMessage(error),
         });
       });
+  };
+
+  const openCreditLimitDialog = () => {
+    setCreditLimitInput(
+      customer.creditLimit != null ? String(customer.creditLimit) : ''
+    );
+    setIsCreditLimitDialogOpen(true);
+  };
+
+  const handleSaveCreditLimit = async () => {
+    const n = Number(creditLimitInput);
+    if (!Number.isFinite(n) || n < 0) {
+      toast.error('Enter a valid credit limit');
+      return;
+    }
+    try {
+      await updateCreditLimit({ id: customerId, creditLimit: n }).unwrap();
+      toast.success('Credit limit updated');
+      setIsCreditLimitDialogOpen(false);
+    } catch (error) {
+      toast.error('Failed to update credit limit', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleActivate = async () => {
+    try {
+      await activateAccount(customerId).unwrap();
+      toast.success('Account activated');
+    } catch (error) {
+      toast.error('Failed to activate account', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleDeactivate = async () => {
+    try {
+      await deactivateAccount(customerId).unwrap();
+      toast.success('Account deactivated');
+    } catch (error) {
+      toast.error('Failed to deactivate account', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleAddContact = async (data: ContactFormData) => {
@@ -559,6 +611,14 @@ export const CustomerDetailPageEnhanced: React.FC<
                 <Badge className={cn(statusConfig.bgColor, statusConfig.color)}>
                   {statusConfig.label}
                 </Badge>
+                {tierLabel && (
+                  <Badge
+                    variant='outline'
+                    className='border-amber-500/50 text-amber-800 dark:text-amber-200'
+                  >
+                    {tierLabel}
+                  </Badge>
+                )}
                 {customer.tags.includes('VIP') && (
                   <Badge className='bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300'>
                     <Star className='w-3 h-3 mr-1 fill-current' />
@@ -603,6 +663,28 @@ export const CustomerDetailPageEnhanced: React.FC<
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
+              {customer.status === 'INACTIVE' ? (
+                <DropdownMenuItem
+                  onClick={handleActivate}
+                  disabled={isActivating}
+                >
+                  <CheckCircle2 className='w-4 h-4 mr-2' />
+                  Activate
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={handleDeactivate}
+                  disabled={isDeactivating}
+                >
+                  <AlertCircle className='w-4 h-4 mr-2' />
+                  Deactivate
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={openCreditLimitDialog}>
+                <CreditCard className='w-4 h-4 mr-2' />
+                Edit credit limit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Send className='w-4 h-4 mr-2' />
                 Send Email
@@ -650,13 +732,15 @@ export const CustomerDetailPageEnhanced: React.FC<
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-muted-foreground'>Total Orders</p>
+                <p className='text-sm text-muted-foreground'>
+                  Total opportunities
+                </p>
                 <p className='text-2xl font-bold text-blue-700 dark:text-blue-300'>
-                  {MOCK_ORDERS.filter((o) => o.status === 'COMPLETED').length}
+                  {customer.totalOpportunities ?? 0}
                 </p>
               </div>
               <div className='p-3 bg-blue-500/20 rounded-full'>
-                <ShoppingCart className='w-6 h-6 text-blue-600 dark:text-blue-400' />
+                <TrendingUp className='w-6 h-6 text-blue-600 dark:text-blue-400' />
               </div>
             </div>
           </CardContent>
@@ -667,14 +751,14 @@ export const CustomerDetailPageEnhanced: React.FC<
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-muted-foreground'>
-                  Avg. Order Value
+                  Won opportunities
                 </p>
                 <p className='text-2xl font-bold text-purple-700 dark:text-purple-300'>
-                  {formatCurrency(avgOrderValue)}
+                  {customer.wonOpportunities ?? 0}
                 </p>
               </div>
               <div className='p-3 bg-purple-500/20 rounded-full'>
-                <Receipt className='w-6 h-6 text-purple-600 dark:text-purple-400' />
+                <CheckCircle2 className='w-6 h-6 text-purple-600 dark:text-purple-400' />
               </div>
             </div>
           </CardContent>
@@ -684,16 +768,17 @@ export const CustomerDetailPageEnhanced: React.FC<
           <CardContent className='py-4'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-muted-foreground'>Health Score</p>
+                <p className='text-sm text-muted-foreground'>Credit limit</p>
                 <p className='text-2xl font-bold text-orange-700 dark:text-orange-300'>
-                  {healthScore}%
+                  {customer.creditLimit != null
+                    ? formatCurrency(Number(customer.creditLimit))
+                    : '—'}
                 </p>
               </div>
               <div className='p-3 bg-orange-500/20 rounded-full'>
-                <Activity className='w-6 h-6 text-orange-600 dark:text-orange-400' />
+                <CreditCard className='w-6 h-6 text-orange-600 dark:text-orange-400' />
               </div>
             </div>
-            <Progress value={healthScore} className='mt-2 h-1.5' />
           </CardContent>
         </Card>
       </div>
@@ -814,6 +899,61 @@ export const CustomerDetailPageEnhanced: React.FC<
                         <p className='font-medium'>{customer.taxNumber}</p>
                       </div>
                     )}
+                    {(customer.industry || customer.tags[0]) && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Industry
+                        </label>
+                        <p className='font-medium'>
+                          {customer.industry || customer.tags[0]}
+                        </p>
+                      </div>
+                    )}
+                    {customer.companySize && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Company size
+                        </label>
+                        <p className='font-medium'>{customer.companySize}</p>
+                      </div>
+                    )}
+                    {tierLabel && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Tier
+                        </label>
+                        <p className='font-medium'>{tierLabel}</p>
+                      </div>
+                    )}
+                    {customer.language && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Language
+                        </label>
+                        <p className='font-medium'>{customer.language}</p>
+                      </div>
+                    )}
+                    {customer.timezone && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Timezone
+                        </label>
+                        <p className='font-medium flex items-center gap-2'>
+                          <Clock className='w-4 h-4 text-muted-foreground' />
+                          {customer.timezone}
+                        </p>
+                      </div>
+                    )}
+                    {customer.creditLimit != null && (
+                      <div>
+                        <label className='text-sm font-medium text-muted-foreground'>
+                          Credit limit
+                        </label>
+                        <p className='font-medium'>
+                          {formatCurrency(Number(customer.creditLimit))}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <label className='text-sm font-medium text-muted-foreground'>
                         Account Since
@@ -920,14 +1060,61 @@ export const CustomerDetailPageEnhanced: React.FC<
                     <Mail className='w-4 h-4 mr-2' />
                     Send Email
                   </Button>
-                  <Button variant='outline' className='w-full justify-start'>
+                  <Button
+                    variant='outline'
+                    className='w-full justify-start'
+                    onClick={() => setMeetingRequestOpen(true)}
+                  >
                     <Calendar className='w-4 h-4 mr-2' />
-                    Schedule Meeting
+                    Request meeting
                   </Button>
                   <Button variant='outline' className='w-full justify-start'>
                     <ShoppingCart className='w-4 h-4 mr-2' />
                     Create Order
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Contact preferences */}
+              <Card>
+                <CardHeader>
+                  <h3 className='font-semibold'>Contact preferences</h3>
+                </CardHeader>
+                <CardContent className='space-y-3'>
+                  <div>
+                    <p className='text-xs font-medium text-muted-foreground mb-1.5'>
+                      Preferred times
+                    </p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {(customer.preferredTimeSlots?.length ?? 0) > 0 ? (
+                        customer.preferredTimeSlots!.map((slot) => (
+                          <Badge key={slot} variant='secondary'>
+                            {PREFERRED_TIME_SLOTS.find((s) => s.value === slot)
+                              ?.label ?? slot}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className='text-sm text-muted-foreground'>—</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className='text-xs font-medium text-muted-foreground mb-1.5'>
+                      Preferred days
+                    </p>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {(customer.preferredDays?.length ?? 0) > 0 ? (
+                        customer.preferredDays!.map((day) => (
+                          <Badge key={day} variant='outline'>
+                            {PREFERRED_DAYS.find((d) => d.value === day)
+                              ?.label ?? day}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className='text-sm text-muted-foreground'>—</p>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1354,6 +1541,47 @@ export const CustomerDetailPageEnhanced: React.FC<
         </DialogContent>
       </Dialog>
 
+      {/* Edit credit limit */}
+      <Dialog
+        open={isCreditLimitDialogOpen}
+        onOpenChange={setIsCreditLimitDialogOpen}
+      >
+        <DialogContent className='sm:max-w-[400px]'>
+          <DialogHeader>
+            <DialogTitle>Edit credit limit</DialogTitle>
+            <DialogDescription>
+              Set the credit limit for {customer.name}. Use 0 if none.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='py-2'>
+            <Label htmlFor='credit-limit-input'>Credit limit (VND)</Label>
+            <Input
+              id='credit-limit-input'
+              type='number'
+              min={0}
+              step={1}
+              className='mt-1.5'
+              value={creditLimitInput}
+              onChange={(e) => setCreditLimitInput(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsCreditLimitDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveCreditLimit}
+              disabled={isUpdatingCreditLimit}
+            >
+              {isUpdatingCreditLimit ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Log Activity Dialog */}
       <Dialog
         open={isActivityDialogOpen}
@@ -1447,6 +1675,13 @@ export const CustomerDetailPageEnhanced: React.FC<
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RequestMeetingDialog
+        open={meetingRequestOpen}
+        onOpenChange={setMeetingRequestOpen}
+        accountId={customerId}
+        accountName={customer.name}
+      />
     </div>
   );
 };

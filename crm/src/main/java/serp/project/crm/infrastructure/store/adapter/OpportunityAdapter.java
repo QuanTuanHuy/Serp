@@ -91,6 +91,14 @@ public class OpportunityAdapter implements IOpportunityPort {
     }
 
     @Override
+    public List<OpportunityEntity> findAllByAssignedTo(Long assignedTo, Long tenantId) {
+        return opportunityRepository.findAllByTenantIdAndAssignedTo(tenantId, assignedTo)
+                .stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Long countByStage(OpportunityStage stage, Long tenantId) {
         return opportunityRepository.countByTenantIdAndStage(tenantId, stage.name());
     }
@@ -159,5 +167,12 @@ public class OpportunityAdapter implements IOpportunityPort {
     @Override
     public boolean existsByAccountIdAndName(Long accountId, String name, Long tenantId) {
         return opportunityRepository.existsByTenantIdAndAccountIdAndName(tenantId, accountId, name);
+    }
+
+    @Override
+    public List<OpportunityEntity> findByIds(List<Long> ids, Long tenantId) {
+        return opportunityRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(opportunityMapper::toEntity)
+                .toList();
     }
 }

@@ -8,6 +8,7 @@ import {
   NotificationListResponse,
   NotificationResponse,
   GetNotificationParams,
+  UnreadCountApiPayload,
 } from '../types/notification.types';
 import { createDataTransform } from '@/lib/store/api/utils';
 
@@ -39,8 +40,12 @@ export const notificationApi = api.injectEndpoints({
                 id,
               })),
               { type: 'Notification' as const, id: 'LIST' },
+              { type: 'Notification' as const, id: 'UNREAD' },
             ]
-          : [{ type: 'Notification' as const, id: 'LIST' }],
+          : [
+              { type: 'Notification' as const, id: 'LIST' },
+              { type: 'Notification' as const, id: 'UNREAD' },
+            ],
       transformResponse: createDataTransform<NotificationListResponse>(),
     }),
 
@@ -56,6 +61,16 @@ export const notificationApi = api.injectEndpoints({
       transformResponse: createDataTransform<NotificationResponse>(),
     }),
 
+    getUnreadCount: builder.query<UnreadCountApiPayload, void>({
+      query: () => ({
+        url: '/notifications/unread-count',
+        method: 'GET',
+      }),
+      extraOptions: { service: 'ns' },
+      providesTags: [{ type: 'Notification', id: 'UNREAD' }],
+      transformResponse: createDataTransform<UnreadCountApiPayload>(),
+    }),
+
     markNotificationAsRead: builder.mutation<NotificationResponse, number>({
       query: (id) => ({
         url: `/notifications/${id}`,
@@ -68,6 +83,7 @@ export const notificationApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'Notification' as const, id },
         { type: 'Notification' as const, id: 'LIST' },
+        { type: 'Notification' as const, id: 'UNREAD' },
       ],
       transformResponse: createDataTransform<NotificationResponse>(),
     }),
@@ -78,7 +94,10 @@ export const notificationApi = api.injectEndpoints({
         method: 'PATCH',
       }),
       extraOptions: { service: 'ns' },
-      invalidatesTags: [{ type: 'Notification' as const, id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Notification' as const, id: 'LIST' },
+        { type: 'Notification' as const, id: 'UNREAD' },
+      ],
     }),
 
     archiveNotification: builder.mutation<NotificationResponse, number>({
@@ -93,6 +112,7 @@ export const notificationApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'Notification' as const, id },
         { type: 'Notification' as const, id: 'LIST' },
+        { type: 'Notification' as const, id: 'UNREAD' },
       ],
       transformResponse: createDataTransform<NotificationResponse>(),
     }),
@@ -106,6 +126,7 @@ export const notificationApi = api.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: 'Notification' as const, id },
         { type: 'Notification' as const, id: 'LIST' },
+        { type: 'Notification' as const, id: 'UNREAD' },
       ],
     }),
   }),
@@ -115,6 +136,7 @@ export const notificationApi = api.injectEndpoints({
 export const {
   useGetNotificationsQuery,
   useGetNotificationByIdQuery,
+  useGetUnreadCountQuery,
   useMarkNotificationAsReadMutation,
   useMarkAllNotificationsAsReadMutation,
   useArchiveNotificationMutation,

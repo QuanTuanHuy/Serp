@@ -30,14 +30,14 @@ public interface IProjectCategoryRepository extends JpaRepository<ProjectCategor
     @Query(value = """
     SELECT *
     FROM project_categories c
-    WHERE c.tenant_id = :tenantId
+    WHERE (c.tenant_id = 0 OR c.tenant_id = :tenantId)
       AND c.deleted_at IS NULL
       AND (:search IS NULL OR c.name ILIKE CONCAT('%', :search, '%'))
     """,
             countQuery = """
     SELECT COUNT(*)
     FROM project_categories c
-    WHERE c.tenant_id = :tenantId
+    WHERE (c.tenant_id = 0 OR c.tenant_id = :tenantId)
       AND c.deleted_at IS NULL
       AND (:search IS NULL OR c.name ILIKE CONCAT('%', :search, '%'))
     """,

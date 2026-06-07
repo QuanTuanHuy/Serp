@@ -29,17 +29,17 @@ import serp.project.pmcore.application.issuetype.query.list.ListIssueTypesQueryH
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.domain.issuetype.dto.IssueTypeUpdateData;
 import serp.project.pmcore.domain.issuetype.entity.IssueTypeEntity;
+import serp.project.pmcore.domain.issuetype.port.IIssueTypeSchemeItemPort;
 import serp.project.pmcore.domain.issuetype.query.IssueTypeListCriteria;
 import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.issuetype.service.IIssueTypeService;
+import serp.project.pmcore.domain.project.port.read.IProjectReadPort;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +54,10 @@ class IssueTypeHandlersTest {
     private IIssueTypeService issueTypeService;
     @Mock
     private IssueTypeOutboxPublisher issueTypeOutboxPublisher;
+    @Mock
+    private IProjectReadPort projectReadPort;
+    @Mock
+    private IIssueTypeSchemeItemPort issueTypeSchemeItemPort;
 
     private CreateIssueTypeCommandHandler createHandler;
     private UpdateIssueTypeCommandHandler updateHandler;
@@ -67,7 +71,7 @@ class IssueTypeHandlersTest {
         updateHandler = new UpdateIssueTypeCommandHandler(issueTypeService, issueTypeOutboxPublisher);
         deleteHandler = new DeleteIssueTypeCommandHandler(issueTypeService, issueTypeOutboxPublisher);
         getHandler = new GetIssueTypeByIdQueryHandler(issueTypeService);
-        listHandler = new ListIssueTypesQueryHandler(issueTypeService);
+        listHandler = new ListIssueTypesQueryHandler(issueTypeService, projectReadPort, issueTypeSchemeItemPort);
     }
 
     @Test
@@ -192,6 +196,7 @@ class IssueTypeHandlersTest {
                 "ta",
                 null,
                 false,
+                null,
                 0,
                 1,
                 "name",

@@ -1,6 +1,7 @@
 package serp.project.account.core.port.store;
 
 import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.enums.ModuleStatus;
 
 import java.util.List;
 
@@ -18,4 +19,8 @@ public interface IModulePort {
     boolean existsByName(String name);
 
     boolean existsByCode(String code);
+
+    Long countModules();
+
+    Long countModulesByStatus(ModuleStatus status);
 }

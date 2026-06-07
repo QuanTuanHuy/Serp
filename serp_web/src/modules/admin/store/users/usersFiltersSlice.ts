@@ -4,8 +4,8 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from '@/lib/store/store';
-import type { UserFilters } from '../../types';
+import type { RootState } from '@/lib/store';
+import type { UserFilters, UserType } from '../../types';
 
 const initialState: UserFilters = {
   page: 0,
@@ -31,6 +31,18 @@ const usersFiltersSlice = createSlice({
     },
     setUsersOrganizationId(state, action: PayloadAction<number | undefined>) {
       state.organizationId = action.payload;
+      state.page = 0;
+    },
+    setUsersUserType(state, action: PayloadAction<UserType | undefined>) {
+      state.userType = action.payload;
+      state.page = 0;
+    },
+    setUsersRoleId(state, action: PayloadAction<number | undefined>) {
+      state.roleId = action.payload;
+      state.page = 0;
+    },
+    setUsersDepartmentId(state, action: PayloadAction<number | undefined>) {
+      state.departmentId = action.payload;
       state.page = 0;
     },
     setUsersPage(state, action: PayloadAction<number>) {
@@ -59,6 +71,9 @@ export const {
   setUsersSearch,
   setUsersStatus,
   setUsersOrganizationId,
+  setUsersUserType,
+  setUsersRoleId,
+  setUsersDepartmentId,
   setUsersPage,
   setUsersPageSize,
   setUsersSort,

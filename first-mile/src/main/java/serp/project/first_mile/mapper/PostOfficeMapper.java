@@ -39,6 +39,12 @@ public final class PostOfficeMapper {
         if (request.getCurrentLoad() != null) {
             postOffice.setCurrentLoad(request.getCurrentLoad());
         }
+        if (request.getDeliveryCapacity() != null) {
+            postOffice.setDeliveryCapacity(request.getDeliveryCapacity());
+        }
+        if (request.getCurrentDeliveryLoad() != null) {
+            postOffice.setCurrentDeliveryLoad(request.getCurrentDeliveryLoad());
+        }
         if (request.getPriority() != null) {
             postOffice.setPriority(request.getPriority());
         }
@@ -61,6 +67,8 @@ public final class PostOfficeMapper {
         postOffice.setServiceRadiusM(request.getServiceRadiusM());
         postOffice.setDailyCapacity(request.getDailyCapacity());
         postOffice.setCurrentLoad(request.getCurrentLoad());
+        postOffice.setDeliveryCapacity(request.getDeliveryCapacity());
+        postOffice.setCurrentDeliveryLoad(request.getCurrentDeliveryLoad());
         postOffice.setPriority(request.getPriority());
         postOffice.setStatus(request.getStatus());
         postOffice.setLocation(toPoint(request.getLatitude(), request.getLongitude()));
@@ -83,6 +91,8 @@ public final class PostOfficeMapper {
                 postOffice.getServiceRadiusM(),
                 postOffice.getDailyCapacity(),
                 postOffice.getCurrentLoad(),
+                postOffice.getDeliveryCapacity(),
+                postOffice.getCurrentDeliveryLoad(),
                 postOffice.getPriority(),
                 toLatitude(postOffice.getLocation()),
                 toLongitude(postOffice.getLocation()),
@@ -92,7 +102,8 @@ public final class PostOfficeMapper {
                 postOffice.getUpdatedAt(),
                 postOffice.getCreatedBy(),
                 postOffice.getUpdatedBy(),
-                postOffice.getTenantId()
+                postOffice.getTenantId(),
+                postOffice.getHubId()
         );
     }
 

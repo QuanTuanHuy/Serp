@@ -7,77 +7,164 @@
 
 import React from 'react';
 import {
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/shared/components/ui';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { useGetImportHistoriesQuery } from '../../api';
-import type { ImportType } from '../../types';
+import {
+  useGetImportHistoriesQuery,
+  useGetOrderImportHistoriesQuery,
+} from '../../api';
+import type { ImportHistoryStatus, ImportType } from '../../types';
 
 const PAGE_SIZE = 20;
 
+type ImportHistorySource = 'FIRST_MILE' | 'ORDER';
+
+const SOURCE_OPTIONS: Array<{
+  value: ImportHistorySource;
+  label: string;
+}> = [
+  { value: 'FIRST_MILE', label: 'First-mile' },
+  { value: 'ORDER', label: 'Orders' },
+];
+
+const FIRST_MILE_TYPE_OPTIONS: Array<{
+  value: ImportType | undefined;
+  label: string;
+}> = [
+  { value: undefined, label: 'All first-mile' },
+  { value: 'POST_OFFICE', label: 'Post offices' },
+  { value: 'VEHICLE', label: 'First-mile vehicles' },
+];
+
+const STATUS_VARIANTS: Record<
+  ImportHistoryStatus,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+  PENDING: 'outline',
+  PROCESSING: 'secondary',
+  COMPLETED: 'default',
+  PARTIAL_SUCCESS: 'secondary',
+  FAILED: 'destructive',
+};
+
+function formatImportType(type?: ImportType): string {
+  if (type === 'POST_OFFICE') return 'Post office';
+  if (type === 'VEHICLE') return 'Vehicle';
+  if (type === 'ORDER') return 'Order';
+  if (type === 'HUB') return 'Hub';
+  return '-';
+}
+
+function formatDateTime(value?: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-US');
+}
+
 export const ImportHistoryListPage: React.FC = () => {
   const [page, setPage] = React.useState(0);
-  const [type, setType] = React.useState<ImportType | undefined>(undefined);
+  const [source, setSource] = React.useState<ImportHistorySource>('FIRST_MILE');
+  const [firstMileType, setFirstMileType] = React.useState<
+    ImportType | undefined
+  >(undefined);
+  const isOrderHistory = source === 'ORDER';
 
-  const { data, isLoading, isFetching, refetch } = useGetImportHistoriesQuery({
-    page,
-    size: PAGE_SIZE,
-    type,
-  });
+  const firstMileHistory = useGetImportHistoriesQuery(
+    {
+      page,
+      size: PAGE_SIZE,
+      type: firstMileType,
+    },
+    { skip: isOrderHistory }
+  );
+  const orderHistory = useGetOrderImportHistoriesQuery(
+    {
+      page,
+      size: PAGE_SIZE,
+    },
+    { skip: !isOrderHistory }
+  );
+
+  const data = isOrderHistory ? orderHistory.data : firstMileHistory.data;
+  const isLoading = isOrderHistory
+    ? orderHistory.isLoading
+    : firstMileHistory.isLoading;
+  const isFetching = isOrderHistory
+    ? orderHistory.isFetching
+    : firstMileHistory.isFetching;
+  const refetch = isOrderHistory
+    ? orderHistory.refetch
+    : firstMileHistory.refetch;
 
   return (
     <div className='space-y-6'>
       <div className='flex flex-col gap-2'>
         <h1 className='text-2xl font-bold tracking-tight'>Import History</h1>
         <p className='text-muted-foreground'>
-          Track asynchronous import jobs for orders and post offices.
+          Track asynchronous import jobs in one place.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter history by import type.</CardDescription>
+          <CardDescription>Choose a source and import type.</CardDescription>
         </CardHeader>
-        <CardContent className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant={type === undefined ? 'default' : 'outline'}
-            onClick={() => {
-              setPage(0);
-              setType(undefined);
-            }}
-          >
-            All
-          </Button>
-          <Button
-            variant={type === 'ORDER' ? 'default' : 'outline'}
-            onClick={() => {
-              setPage(0);
-              setType('ORDER');
-            }}
-          >
-            Order
-          </Button>
-          <Button
-            variant={type === 'POST_OFFICE' ? 'default' : 'outline'}
-            onClick={() => {
-              setPage(0);
-              setType('POST_OFFICE');
-            }}
-          >
-            Post Office
-          </Button>
+        <CardContent className='space-y-3'>
+          <div className='flex flex-wrap items-center gap-2'>
+            {SOURCE_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                variant={source === option.value ? 'default' : 'outline'}
+                onClick={() => {
+                  setPage(0);
+                  setSource(option.value);
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+          {!isOrderHistory && (
+            <div className='flex flex-wrap items-center gap-2'>
+              {FIRST_MILE_TYPE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value ?? 'ALL'}
+                  variant={
+                    firstMileType === option.value ? 'default' : 'outline'
+                  }
+                  onClick={() => {
+                    setPage(0);
+                    setFirstMileType(option.value);
+                  }}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          )}
           <Button
             variant='outline'
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+            }}
             disabled={isFetching}
           >
-            <RefreshCw className='h-4 w-4 mr-2' />
+            <RefreshCw className='mr-2 h-4 w-4' />
             Refresh
           </Button>
         </CardContent>
@@ -94,23 +181,60 @@ export const ImportHistoryListPage: React.FC = () => {
               Loading import history...
             </div>
           ) : data && data.items.length > 0 ? (
-            <div className='space-y-3'>
-              {data.items.map((item) => (
-                <div key={item.id} className='rounded-lg border p-3'>
-                  <p className='font-medium'>{item.file_name}</p>
-                  <p className='text-sm text-muted-foreground'>
-                    Status: {item.status} | Type: {item.type}
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Success/Failed: {item.success_records}/{item.failed_records}
-                  </p>
-                  {item.error_message && (
-                    <p className='text-xs text-destructive mt-1'>
-                      {item.error_message}
-                    </p>
-                  )}
+            <div className='space-y-4'>
+              <div className='overflow-hidden rounded-md border'>
+                <div className='overflow-x-auto'>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>File</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Records</TableHead>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Finished</TableHead>
+                        <TableHead>Error</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className='font-medium'>
+                            {item.file_name || `Import #${item.id}`}
+                          </TableCell>
+                          <TableCell>
+                            {isOrderHistory ? 'Orders' : 'First-mile'}
+                          </TableCell>
+                          <TableCell>{formatImportType(item.type)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                STATUS_VARIANTS[item.status] ?? 'outline'
+                              }
+                            >
+                              {item.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {item.success_records}/{item.failed_records}/
+                            {item.total_records}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {formatDateTime(item.started_at)}
+                          </TableCell>
+                          <TableCell className='text-sm text-muted-foreground'>
+                            {formatDateTime(item.finished_at)}
+                          </TableCell>
+                          <TableCell className='max-w-80 truncate text-sm text-destructive'>
+                            {item.error_message || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              ))}
+              </div>
 
               <div className='flex items-center justify-between pt-2'>
                 <Button

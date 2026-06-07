@@ -111,16 +111,24 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).GET("/:planId/modules", subscriptionPlanController.GetPlanModules)
 	}
 
+	adminDashboardV1 := group.Group("/api/v1/admin/dashboard")
+	{
+		adminDashboardV1.Use(middleware.AuthMiddleware()).GET("", genericProxyController.ProxyHandler("account"))
+	}
+
 	adminOrganizationsV1 := group.Group("/api/v1/admin/organizations")
 	{
 		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("", organizationController.GetOrganizations)
 		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId", organizationController.GetOrganizationById)
+		adminOrganizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/status", genericProxyController.ProxyHandler("account"))
 	}
 
 	organizationsV1 := group.Group("/api/v1/organizations")
 	{
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/roles", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me", organizationController.GetMyOrganization)
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/me/settings", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).PUT("/me/settings", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users", organizationController.CreateUserForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/status", organizationController.UpdateUserStatusInOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/stats", genericProxyController.ProxyHandler("account"))

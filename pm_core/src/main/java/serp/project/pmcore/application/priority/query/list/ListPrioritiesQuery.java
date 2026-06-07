@@ -14,6 +14,7 @@ public record ListPrioritiesQuery(
         Long tenantId,
         String search,
         Boolean isSystem,
+        Long projectId,
         Integer page,
         Integer pageSize,
         String sortBy,
@@ -22,7 +23,7 @@ public record ListPrioritiesQuery(
     public PriorityListCriteria toCriteria() {
         return PriorityListCriteria.builder()
                 .search(search)
-                .isSystem(isSystem)
+                .isSystem(projectId != null ? null : isSystem)
                 .page(page)
                 .pageSize(pageSize)
                 .sortBy(sortBy)

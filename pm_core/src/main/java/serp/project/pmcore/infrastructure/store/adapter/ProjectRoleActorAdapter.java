@@ -62,10 +62,10 @@ public class ProjectRoleActorAdapter implements IProjectRoleActorPort {
 
     @Override
     public int softDeleteActiveAssignment(Long tenantId,
-                                          Long projectId,
-                                          Long projectRoleId,
-                                          String subjectType,
-                                          String subjectId,
+                                           Long projectId,
+                                           Long projectRoleId,
+                                           String subjectType,
+                                           String subjectId,
                                           Long updatedBy) {
         return projectRoleActorRepository.softDeleteActiveAssignment(
                 tenantId,
@@ -78,11 +78,40 @@ public class ProjectRoleActorAdapter implements IProjectRoleActorPort {
     }
 
     @Override
+    public void softDeleteActiveUserAssignmentsByProject(Long tenantId,
+                                                         Long projectId,
+                                                         String subjectId,
+                                                         Long updatedBy) {
+        projectRoleActorRepository.softDeleteActiveUserAssignmentsByProject(
+                tenantId,
+                projectId,
+                subjectId,
+                updatedBy
+        );
+    }
+
+    @Override
+    public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectId(Long projectId, Long tenantId) {
+        return projectRoleActorMapper.toEntities(
+                projectRoleActorRepository.findAllByProjectIdAndTenantId(projectId, tenantId)
+        );
+    }
+
+    @Override
     public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndRoleId(Long projectId,
-                                                                                  Long projectRoleId,
-                                                                                  Long tenantId) {
+                                                                                   Long projectRoleId,
+                                                                                   Long tenantId) {
         return projectRoleActorMapper.toEntities(
                 projectRoleActorRepository.findAllByProjectIdAndProjectRoleIdAndTenantId(projectId, projectRoleId, tenantId)
+        );
+    }
+
+    @Override
+    public List<ProjectRoleActorEntity> getProjectRoleActorsByProjectIdAndSubjectType(Long projectId,
+                                                                                        String subjectType,
+                                                                                        Long tenantId) {
+        return projectRoleActorMapper.toEntities(
+                projectRoleActorRepository.findAllByTenantIdAndProjectIdAndSubjectType(tenantId, projectId, subjectType)
         );
     }
 }

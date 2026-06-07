@@ -12,6 +12,7 @@ import serp.project.crm.core.domain.entity.AccountEntity;
 import serp.project.crm.core.domain.enums.ActiveStatus;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +37,7 @@ public interface IAccountService {
     Long countAccountsByStatus(ActiveStatus status, Long tenantId);
     Pair<List<AccountEntity>, Long> filterAccounts(AccountFilterRequest filter, Long tenantId,
             PageRequest pageRequest);
+    List<AccountEntity> getAccountsByIds(Collection<Long> ids, Long tenantId);
 
     boolean isEmailExists(String email, Long tenantId);
 }

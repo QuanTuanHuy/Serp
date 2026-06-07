@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.pmcore.infrastructure.store.model.WorkflowModel;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,6 +26,8 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
 
     Optional<WorkflowModel> findFirstByTenantIdAndWorkflowKeyOrderByIdAsc(Long tenantId, String workflowKey);
 
+    List<WorkflowModel> findAllByIdInAndTenantId(List<Long> workflowIds, Long tenantId);
+
     @Query(value = """
             SELECT w
             FROM WorkflowModel w
@@ -36,9 +39,9 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
                     OR (:isActive = false AND w.currentPublishedVersionId IS NULL)
               )
               AND (
-                    :search IS NULL
-                    OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(w.workflowKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(w.name) LIKE :searchPattern
+                    OR LOWER(w.workflowKey) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -52,13 +55,13 @@ public interface IWorkflowRepository extends JpaRepository<WorkflowModel, Long> 
                     OR (:isActive = false AND w.currentPublishedVersionId IS NULL)
               )
               AND (
-                    :search IS NULL
-                    OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(w.workflowKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(w.name) LIKE :searchPattern
+                    OR LOWER(w.workflowKey) LIKE :searchPattern
               )
             """)
     Page<WorkflowModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                  @Param("search") String search,
+                                                  @Param("searchPattern") String searchPattern,
                                                   @Param("isActive") Boolean isActive,
                                                   @Param("isSystem") Boolean isSystem,
                                                   Pageable pageable);

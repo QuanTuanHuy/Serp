@@ -73,6 +73,14 @@ public class LeadAdapter implements ILeadPort {
     }
 
     @Override
+    public List<LeadEntity> findAllByAssignedTo(Long assignedTo, Long tenantId) {
+        return leadRepository.findAllByTenantIdAndAssignedTo(tenantId, assignedTo)
+                .stream()
+                .map(leadMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Pair<List<LeadEntity>, Long> findByLeadSource(LeadSource leadSource, Long tenantId,
             PageRequest pageRequest) {
         var pageable = leadMapper.toPageable(pageRequest);
@@ -134,5 +142,12 @@ public class LeadAdapter implements ILeadPort {
         var page = leadRepository.findAll(spec, pageable)
                 .map(leadMapper::toEntity);
         return leadMapper.pageToPair(page);
+    }
+
+    @Override
+    public List<LeadEntity> findByIds(List<Long> ids, Long tenantId) {
+        return leadRepository.findByTenantIdAndIdIn(tenantId, ids).stream()
+                .map(leadMapper::toEntity)
+                .toList();
     }
 }

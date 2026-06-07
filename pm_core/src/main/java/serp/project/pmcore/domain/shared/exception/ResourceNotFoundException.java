@@ -75,9 +75,19 @@ public class ResourceNotFoundException extends DomainException {
                 "Priority not found: id=" + id);
     }
 
+    public static ResourceNotFoundException resolution(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.RESOLUTION_NOT_FOUND,
+                "Resolution not found: id=" + id);
+    }
+
     public static ResourceNotFoundException priorityScheme(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.PRIORITY_SCHEME_NOT_FOUND,
                 "Priority scheme not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException workflowScheme(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,
+                "Workflow scheme not found: id=" + id);
     }
 
     public static ResourceNotFoundException status(Long id) {
@@ -133,5 +143,10 @@ public class ResourceNotFoundException extends DomainException {
     public static ResourceNotFoundException issueLink(Long id) {
         return new ResourceNotFoundException(DomainErrorCode.ISSUE_LINK_NOT_FOUND,
                 "Issue link not found: id=" + id);
+    }
+
+    public static ResourceNotFoundException workItemComment(Long id) {
+        return new ResourceNotFoundException(DomainErrorCode.WORK_ITEM_COMMENT_NOT_FOUND,
+                "Work item comment not found: id=" + id);
     }
 }

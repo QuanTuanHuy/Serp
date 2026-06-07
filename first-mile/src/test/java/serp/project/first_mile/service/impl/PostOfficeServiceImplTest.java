@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import serp.project.first_mile.caller.GeocodeCaller;
+import serp.project.first_mile.kafka.HubPostOfficeSyncEventPublisher;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.dto.PageResponse;
 import serp.project.first_mile.dto.request.PostOfficeFilterRequest;
@@ -24,7 +25,7 @@ import serp.project.first_mile.dto.response.PostOfficeResponse;
 import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
-import serp.project.first_mile.kernel.utils.AuthUtils;
+import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.ProvinceRepository;
 import serp.project.first_mile.repository.WardRepository;
@@ -32,7 +33,6 @@ import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -54,7 +54,7 @@ class PostOfficeServiceImplTest {
     private WardRepository wardRepository;
 
     @Mock
-    private AuthUtils authUtils;
+    private FirstMileAccessUtils firstMileAccessUtils;
 
     @Mock
     private GeocodeCaller geocodeCaller;
@@ -65,12 +65,15 @@ class PostOfficeServiceImplTest {
     @Mock
     private PostOfficeImportExcelService postOfficeImportExcelService;
 
+    @Mock
+    private HubPostOfficeSyncEventPublisher hubPostOfficeSyncEventPublisher;
+
     @InjectMocks
     private PostOfficeServiceImpl postOfficeService;
 
     @Test
     void getPostOfficesShouldThrowWhenFilterRangeIsInvalid() {
-        when(authUtils.getCurrentTenantId()).thenReturn(Optional.of(1L));
+        when(firstMileAccessUtils.getCurrentTenantIdOrThrow()).thenReturn(1L);
 
         PostOfficeFilterRequest filterRequest = PostOfficeFilterRequest.builder()
                 .minDailyCapacity(10)
@@ -88,7 +91,7 @@ class PostOfficeServiceImplTest {
 
     @Test
     void getPostOfficesShouldReturnPagedResultWhenFilterIsValid() {
-        when(authUtils.getCurrentTenantId()).thenReturn(Optional.of(1L));
+        when(firstMileAccessUtils.getCurrentTenantIdOrThrow()).thenReturn(1L);
 
         PostOffice postOffice = new PostOffice();
         postOffice.setId(1L);

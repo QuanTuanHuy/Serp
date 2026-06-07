@@ -24,6 +24,7 @@ public class WorkItemFieldWriteValidator {
         validateSystemFieldWritable(WorkItemFieldConstants.PRIORITY_ID, request.getPriorityId(), fieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.ASSIGNEE_ID, request.getAssigneeId(), fieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.PARENT_ID, request.getParentId(), fieldRules);
+        validateSystemFieldWritable(WorkItemFieldConstants.START_DATE, request.getStartDate(), fieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.DUE_DATE, request.getDueDate(), fieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.TIME_ORIGINAL_ESTIMATE, request.getTimeOriginalEstimate(), fieldRules);
         validateSystemFieldWritable(WorkItemFieldConstants.SECURITY_LEVEL_ID, request.getSecurityLevelId(), fieldRules);

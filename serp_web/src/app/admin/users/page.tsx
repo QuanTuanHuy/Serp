@@ -5,45 +5,77 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  useUsers,
-  UserDialog,
-  AdminStatusBadge,
   AdminActionMenu,
+  AdminFilterChips,
+  AdminFilterDialog,
+  AdminStatusBadge,
+  UserAccessDialog,
+  UserDetailsDrawer,
+  UserDialog,
+  UserStatusDialog,
+  useUsers,
 } from '@/modules/admin';
-import type { UserProfile } from '@/modules/admin';
-import { Combobox } from '@/shared/components/ui/combobox';
+import type {
+  DepartmentOption,
+  Organization,
+  Role,
+  UserProfile,
+  UserStatus,
+  UserType,
+} from '@/modules/admin/types';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
-import type { Organization } from '@/modules/admin/types';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
-import { Input } from '@/shared/components/ui/input';
-import { Button } from '@/shared/components/ui/button';
-import { DataTable } from '@/shared/components';
+import { useGetDepartmentsQuery } from '@/modules/admin/services/departments/departmentsApi';
+import { useGetAllRolesQuery } from '@/modules/admin/services/roles/rolesApi';
+import { formatAdminDate } from '@/modules/admin/utils/date';
+import { Combobox } from '@/shared/components/ui/combobox';
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@/shared/components/ui/avatar';
+  Button,
+  Input,
+} from '@/shared/components/ui';
+import { DataTable } from '@/shared/components';
 import { getInitials } from '@/shared/utils';
 import type { ColumnDef } from '@/shared/types';
 import {
-  Users,
-  Search,
-  Eye,
-  Edit,
   Ban,
   CheckCircle,
+  Eye,
+  Edit,
   Mail,
-  Building2,
+  Search,
+  Shield,
+  SlidersHorizontal,
+  Users,
 } from 'lucide-react';
 
+const statusOptions: Array<{ value: UserStatus; label: string }> = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'INVITED', label: 'Invited' },
+  { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'DELETED', label: 'Deleted' },
+];
+
+const userTypeOptions: Array<{ value: UserType; label: string }> = [
+  { value: 'OWNER', label: 'Owner' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'EMPLOYEE', label: 'Employee' },
+  { value: 'CONTRACTOR', label: 'Contractor' },
+  { value: 'EXTERNAL', label: 'External' },
+  { value: 'GUEST', label: 'Guest' },
+];
+
 export default function UsersPage() {
+  const searchParams = useSearchParams();
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('organization');
+  const [organizationSearch, setOrganizationSearch] = useState('');
+
   const {
     filters,
     users,
@@ -51,37 +83,145 @@ export default function UsersPage() {
     isLoading,
     isFetching,
     error,
+    ui,
     handleSearch,
     handleFilterChange,
     handlePageChange,
     openCreate,
     openEdit,
+    openDetails,
+    closeDetails,
+    openAccess,
+    closeAccess,
+    openStatus,
+    closeStatus,
   } = useUsers();
 
-  const [orgSearch, setOrgSearch] = useState<string>('');
-  const { data: orgsResponse, isFetching: isFetchingOrgs } =
+  useEffect(() => {
+    const organizationIdParam = searchParams.get('organizationId');
+    if (!organizationIdParam) {
+      return;
+    }
+
+    const organizationId = Number(organizationIdParam);
+    if (
+      Number.isFinite(organizationId) &&
+      filters.organizationId !== organizationId
+    ) {
+      handleFilterChange('organizationId', organizationId);
+    }
+  }, [filters.organizationId, handleFilterChange, searchParams]);
+
+  const { data: orgsResponse, isFetching: isFetchingOrganizations } =
     useGetOrganizationsQuery({
       page: 0,
       pageSize: 50,
       sortBy: 'name',
       sortDir: 'ASC',
-      search: orgSearch || undefined,
-    } as any);
-  const organizations: Organization[] = useMemo(
-    () => orgsResponse?.data.items || [],
-    [orgsResponse]
+      search: organizationSearch || undefined,
+    });
+  const { data: roles = [] } = useGetAllRolesQuery();
+  const { data: departmentsResponse, isFetching: isFetchingDepartments } =
+    useGetDepartmentsQuery(
+      { organizationId: filters.organizationId ?? 0 },
+      { skip: !filters.organizationId }
+    );
+
+  const organizations: Organization[] = orgsResponse?.data.items ?? [];
+  const departments: DepartmentOption[] = departmentsResponse?.data.items ?? [];
+  const selectedUser = useMemo(
+    () => users.find((user) => user.id === ui.selectedUserId),
+    [users, ui.selectedUserId]
   );
 
-  const formatDate = (isoDate?: string) => {
-    if (!isoDate) return 'Never';
-    return new Date(isoDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const filterCriteria = [
+    {
+      id: 'organization',
+      label: 'Organization',
+      count: filters.organizationId ? 1 : 0,
+    },
+    { id: 'status', label: 'Status', count: filters.status ? 1 : 0 },
+    { id: 'userType', label: 'User type', count: filters.userType ? 1 : 0 },
+    { id: 'role', label: 'Role', count: filters.roleId ? 1 : 0 },
+    {
+      id: 'department',
+      label: 'Department',
+      count: filters.departmentId ? 1 : 0,
+    },
+  ];
+
+  const organizationLabel =
+    organizations.find(
+      (organization) => organization.id === filters.organizationId
+    )?.name ??
+    (filters.organizationId ? `Organization #${filters.organizationId}` : '');
+  const roleLabel =
+    roles.find((role) => role.id === filters.roleId)?.name ??
+    (filters.roleId ? `Role #${filters.roleId}` : '');
+  const departmentLabel =
+    departments.find((department) => department.id === filters.departmentId)
+      ?.name ??
+    (filters.departmentId ? `Department #${filters.departmentId}` : '');
+
+  const filterChips = [
+    filters.organizationId
+      ? {
+          id: 'organization',
+          label: `Organization: ${organizationLabel}`,
+          onRemove: () => {
+            handleFilterChange('organizationId', undefined);
+            handleFilterChange('departmentId', undefined);
+          },
+        }
+      : null,
+    filters.status
+      ? {
+          id: 'status',
+          label: `Status: ${
+            statusOptions.find((item) => item.value === filters.status)
+              ?.label ?? filters.status
+          }`,
+          onRemove: () => handleFilterChange('status', undefined),
+        }
+      : null,
+    filters.userType
+      ? {
+          id: 'userType',
+          label: `Type: ${
+            userTypeOptions.find((item) => item.value === filters.userType)
+              ?.label ?? filters.userType
+          }`,
+          onRemove: () => handleFilterChange('userType', undefined),
+        }
+      : null,
+    filters.roleId
+      ? {
+          id: 'role',
+          label: `Role: ${roleLabel}`,
+          onRemove: () => handleFilterChange('roleId', undefined),
+        }
+      : null,
+    filters.departmentId
+      ? {
+          id: 'department',
+          label: `Department: ${departmentLabel}`,
+          onRemove: () => handleFilterChange('departmentId', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('organizationId', undefined);
+    handleFilterChange('status', undefined);
+    handleFilterChange('userType', undefined);
+    handleFilterChange('roleId', undefined);
+    handleFilterChange('departmentId', undefined);
   };
 
-  // Define columns for DataTable
   const columns = useMemo<ColumnDef<UserProfile>[]>(
     () => [
       {
@@ -91,30 +231,28 @@ export default function UsersPage() {
         defaultVisible: true,
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <div className='h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center'>
-              <Avatar className='h-10 w-10'>
-                {row.avatarUrl ? (
-                  <AvatarImage
-                    src={row.avatarUrl}
-                    alt={`${row.firstName || ''} ${row.lastName || ''}`}
-                  />
-                ) : null}
-                <AvatarFallback className='bg-primary/10'>
-                  {getInitials({
-                    firstName: row.firstName,
-                    lastName: row.lastName,
-                    email: row.email,
-                  }) || <Users className='h-5 w-5 text-primary' />}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div>
-              <p className='font-medium'>
+            <Avatar className='h-10 w-10'>
+              {row.avatarUrl ? (
+                <AvatarImage
+                  src={row.avatarUrl}
+                  alt={`${row.firstName || ''} ${row.lastName || ''}`}
+                />
+              ) : null}
+              <AvatarFallback className='bg-primary/10'>
+                {getInitials({
+                  firstName: row.firstName,
+                  lastName: row.lastName,
+                  email: row.email,
+                }) || <Users className='h-5 w-5 text-primary' />}
+              </AvatarFallback>
+            </Avatar>
+            <div className='min-w-0'>
+              <p className='truncate font-medium'>
                 {row.firstName} {row.lastName}
               </p>
               <div className='flex items-center gap-1 text-xs text-muted-foreground'>
                 <Mail className='h-3 w-3' />
-                {row.email}
+                <span className='truncate'>{row.email}</span>
               </div>
             </div>
           </div>
@@ -126,10 +264,7 @@ export default function UsersPage() {
         accessor: 'organizationName',
         defaultVisible: true,
         cell: ({ value }) => (
-          <div className='flex items-center gap-2'>
-            <Building2 className='h-4 w-4 text-muted-foreground' />
-            <span className='text-sm'>{value || 'N/A'}</span>
-          </div>
+          <span className='text-sm'>{value ? String(value) : 'N/A'}</span>
         ),
       },
       {
@@ -137,34 +272,23 @@ export default function UsersPage() {
         header: 'Type',
         accessor: 'userType',
         defaultVisible: true,
-        cell: ({ value }) => <span className='text-sm'>{value}</span>,
+        cell: ({ value }) => <span className='text-sm'>{String(value)}</span>,
       },
       {
         id: 'status',
         header: 'Status',
         accessor: 'status',
         defaultVisible: true,
-        cell: ({ value }) => <AdminStatusBadge status={value} />,
+        cell: ({ value }) => <AdminStatusBadge status={String(value)} />,
       },
       {
         id: 'lastLogin',
-        header: 'Last Login',
+        header: 'Last login',
         accessor: 'lastLoginAt',
         defaultVisible: true,
         cell: ({ value }) => (
           <span className='text-sm text-muted-foreground'>
-            {formatDate(value)}
-          </span>
-        ),
-      },
-      {
-        id: 'created',
-        header: 'Created',
-        accessor: 'createdAt',
-        defaultVisible: false,
-        cell: ({ value }) => (
-          <span className='text-sm text-muted-foreground'>
-            {formatDate(value)}
+            {formatAdminDate(value, 'Never')}
           </span>
         ),
       },
@@ -174,126 +298,92 @@ export default function UsersPage() {
         accessor: 'id',
         align: 'right',
         defaultVisible: true,
-        cell: ({ row }) => (
-          <AdminActionMenu
-            items={[
-              {
-                label: 'View Profile',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
-                label: 'Edit',
-                onClick: () => openEdit(row.id),
-                icon: <Edit className='h-4 w-4' />,
-              },
-              {
-                label: row.status === 'ACTIVE' ? 'Suspend' : 'Activate',
-                onClick: () => console.log('Toggle status', row.id),
-                icon:
-                  row.status === 'ACTIVE' ? (
-                    <Ban className='h-4 w-4' />
-                  ) : (
-                    <CheckCircle className='h-4 w-4' />
-                  ),
-                separator: true,
-                variant: row.status === 'ACTIVE' ? 'destructive' : 'default',
-              },
-            ]}
-          />
-        ),
+        cell: ({ row }) => {
+          const targetStatus =
+            row.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
+
+          return (
+            <AdminActionMenu
+              items={[
+                {
+                  label: 'View details',
+                  onClick: () => openDetails(row.id, row.organizationId),
+                  icon: <Eye className='h-4 w-4' />,
+                },
+                {
+                  label: 'Edit profile',
+                  onClick: () => openEdit(row.id),
+                  icon: <Edit className='h-4 w-4' />,
+                },
+                {
+                  label: 'Manage access',
+                  onClick: () => openAccess(row.id, row.organizationId),
+                  icon: <Shield className='h-4 w-4' />,
+                },
+                {
+                  label: targetStatus === 'SUSPENDED' ? 'Suspend' : 'Activate',
+                  onClick: () =>
+                    openStatus(row.id, row.organizationId, row.status),
+                  icon:
+                    targetStatus === 'SUSPENDED' ? (
+                      <Ban className='h-4 w-4' />
+                    ) : (
+                      <CheckCircle className='h-4 w-4' />
+                    ),
+                  separator: true,
+                  variant:
+                    targetStatus === 'SUSPENDED' ? 'destructive' : 'default',
+                },
+              ]}
+            />
+          );
+        },
       },
     ],
-    []
+    [openAccess, openDetails, openEdit, openStatus]
   );
 
   return (
     <div className='space-y-6'>
-      {/* Page Header */}
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Users</h1>
-          <p className='text-muted-foreground mt-2'>
-            System-wide user management and monitoring
+          <p className='mt-2 text-muted-foreground'>
+            Manage users, access, and organization membership.
           </p>
         </div>
-
-        <div className='flex items-center gap-2'>
-          <Button
-            variant='default'
-            size='sm'
-            disabled={!filters.organizationId}
-            onClick={() => openCreate(filters.organizationId)}
-          >
-            Create User
-          </Button>
-          <Button variant='outline' size='sm'>
-            Export
-          </Button>
-        </div>
+        <Button
+          type='button'
+          onClick={() => openCreate(filters.organizationId)}
+        >
+          Create user
+        </Button>
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base font-medium'>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid gap-4 md:grid-cols-4'>
-            {/* Search */}
-            <div className='md:col-span-2'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search by name, email...'
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={filters.status || ''}
-                onChange={(e) =>
-                  handleFilterChange('status', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Statuses</option>
-                <option value='ACTIVE'>Active</option>
-                <option value='INACTIVE'>Inactive</option>
-                <option value='PENDING'>Pending</option>
-                <option value='SUSPENDED'>Suspended</option>
-              </select>
-            </div>
-
-            {/* Organization Filter */}
-            <div>
-              <Combobox
-                value={filters.organizationId}
-                onChange={(val) =>
-                  handleFilterChange(
-                    'organizationId',
-                    val !== undefined ? Number(val) : undefined
-                  )
-                }
-                items={organizations.map((o) => ({
-                  value: o.id,
-                  label: o.name,
-                }))}
-                placeholder='All Organizations'
-                loading={isFetchingOrgs}
-                onSearch={(q) => setOrgSearch(q)}
-              />
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search by name or email...'
+              value={filters.search || ''}
+              onChange={(event) => handleSearch(event.target.value)}
+              className='pl-10'
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
+        </div>
 
-      {/* Table Card */}
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
+
       <DataTable
         columns={columns}
         data={users}
@@ -309,18 +399,218 @@ export default function UsersPage() {
           isFetching,
         }}
         loadingState={
-          <div className='flex items-center justify-center h-64'>
+          <div className='flex h-64 items-center justify-center'>
             <div className='text-muted-foreground'>Loading users...</div>
           </div>
         }
         errorState={
-          <div className='flex items-center justify-center h-64'>
+          <div className='flex h-64 items-center justify-center'>
             <div className='text-destructive'>Failed to load users</div>
           </div>
         }
       />
-      {/* Dialogs */}
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'organization' ? (
+          <FilterPane title='Organization'>
+            <Combobox
+              value={filters.organizationId}
+              onChange={(value) => {
+                handleFilterChange(
+                  'organizationId',
+                  value !== undefined ? Number(value) : undefined
+                );
+                handleFilterChange('departmentId', undefined);
+              }}
+              items={organizations.map((organization) => ({
+                value: organization.id,
+                label: organization.name,
+              }))}
+              placeholder='All organizations'
+              loading={isFetchingOrganizations}
+              onSearch={setOrganizationSearch}
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={!filters.status}
+              onSelect={() => handleFilterChange('status', undefined)}
+            />
+            {statusOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.status === option.value}
+                onSelect={() => handleFilterChange('status', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'userType' ? (
+          <FilterPane title='User type'>
+            <FilterOption
+              label='All user types'
+              selected={!filters.userType}
+              onSelect={() => handleFilterChange('userType', undefined)}
+            />
+            {userTypeOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.userType === option.value}
+                onSelect={() => handleFilterChange('userType', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'role' ? (
+          <FilterPane title='Role'>
+            <Combobox
+              value={filters.roleId}
+              onChange={(value) =>
+                handleFilterChange(
+                  'roleId',
+                  value !== undefined ? Number(value) : undefined
+                )
+              }
+              items={roles.map((role: Role) => ({
+                value: role.id,
+                label: role.name,
+              }))}
+              placeholder='All roles'
+            />
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'department' ? (
+          <FilterPane title='Department'>
+            {!filters.organizationId ? (
+              <p className='text-sm text-muted-foreground'>
+                Select an organization first.
+              </p>
+            ) : (
+              <>
+                <FilterOption
+                  label='All departments'
+                  selected={!filters.departmentId}
+                  onSelect={() => handleFilterChange('departmentId', undefined)}
+                />
+                {isFetchingDepartments ? (
+                  <p className='px-3 py-2 text-sm text-muted-foreground'>
+                    Loading departments...
+                  </p>
+                ) : null}
+                {departments.map((department) => (
+                  <FilterOption
+                    key={department.id}
+                    label={department.name}
+                    selected={filters.departmentId === department.id}
+                    onSelect={() =>
+                      handleFilterChange('departmentId', department.id)
+                    }
+                  />
+                ))}
+              </>
+            )}
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
+
+      <UserDetailsDrawer
+        open={ui.detailDrawerOpen}
+        organizationId={ui.selectedOrganizationId}
+        userId={ui.selectedUserId}
+        onOpenChange={(open) => {
+          if (!open) closeDetails();
+        }}
+        onEdit={(userId) => openEdit(userId)}
+        onAccess={openAccess}
+        onToggleStatus={openStatus}
+      />
+
+      <UserAccessDialog
+        open={ui.accessDialogOpen}
+        organizationId={ui.selectedOrganizationId}
+        userId={ui.selectedUserId}
+        onOpenChange={(open) => {
+          if (!open) closeAccess();
+        }}
+      />
+
+      <UserStatusDialog
+        open={ui.statusDialogOpen}
+        organizationId={ui.selectedOrganizationId}
+        userId={ui.selectedUserId}
+        userName={
+          selectedUser
+            ? `${selectedUser.firstName ?? ''} ${selectedUser.lastName ?? ''}`.trim() ||
+              selectedUser.email
+            : undefined
+        }
+        currentStatus={ui.selectedStatus ?? selectedUser?.status}
+        onOpenChange={(open) => {
+          if (!open) closeStatus();
+        }}
+      />
+
       <UserDialog />
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-2'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }

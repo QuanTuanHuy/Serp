@@ -73,6 +73,11 @@ public class StatusAdapter implements IStatusPort {
     }
 
     @Override
+    public List<StatusEntity> getStatusesByIds(List<Long> statusIds, Long tenantId) {
+        return statusMapper.toEntities(statusRepository.findAllByIdInAndTenantId(statusIds, tenantId));
+    }
+
+    @Override
     public List<StatusEntity> getStatusesByTenantIdIncludingSystem(Long tenantId) {
         return statusMapper.toEntities(
                 statusRepository.findAllByTenantIdOrSystemTenant(tenantId)
@@ -84,7 +89,7 @@ public class StatusAdapter implements IStatusPort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<StatusModel> result = statusRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPatternLower(),
                 criteria.getStatusCategoryId(),
                 criteria.getIsSystem(),
                 pageable

@@ -23,8 +23,8 @@ public class CreateTeamRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
     
-    @NotNull(message = "Leader ID is required")
-    private Long leaderId;
+    @NotNull(message = "Manager user ID is required")
+    private Long managerUserId;
     
     @Size(max = 1000, message = "Notes must not exceed 1000 characters")
     private String notes;

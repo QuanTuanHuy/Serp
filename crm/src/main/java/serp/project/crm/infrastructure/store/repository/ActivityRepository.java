@@ -8,6 +8,7 @@ package serp.project.crm.infrastructure.store.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
+public interface ActivityRepository extends JpaRepository<ActivityModel, Long>, JpaSpecificationExecutor<ActivityModel> {
 
     Optional<ActivityModel> findByIdAndTenantId(Long id, Long tenantId);
 
@@ -25,6 +26,8 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
     Page<ActivityModel> findByTenantIdAndStatus(Long tenantId, String status, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndActivityType(Long tenantId, String activityType, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndAssignedTo(Long tenantId, Long assignedTo, Pageable pageable);
+
+    List<ActivityModel> findAllByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
     Page<ActivityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndAccountId(Long tenantId, Long accountId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndOpportunityId(Long tenantId, Long opportunityId, Pageable pageable);
@@ -44,7 +47,9 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
             Pageable pageable);
 
     @Query("SELECT a FROM ActivityModel a WHERE a.tenantId = :tenantId " +
-            "AND a.status <> 'COMPLETED' AND a.dueDate BETWEEN :startTime AND :endTime")
+            "AND a.status <> 'COMPLETED' " +
+            "AND ((a.activityDate IS NOT NULL AND a.activityDate BETWEEN :startTime AND :endTime) " +
+            "OR (a.dueDate IS NOT NULL AND a.dueDate BETWEEN :startTime AND :endTime))")
     List<ActivityModel> findUpcomingActivities(@Param("tenantId") Long tenantId,
             @Param("startTime") Long startTime,
             @Param("endTime") Long endTime);
@@ -56,4 +61,8 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long> {
     long countByTenantIdAndStatus(Long tenantId, String status);
 
     long countByTenantIdAndAssignedTo(Long tenantId, Long assignedTo);
+
+    long countByTenantIdAndActivityType(Long tenantId, String activityType);
+
+    long countByTenantIdAndPriority(Long tenantId, String priority);
 }

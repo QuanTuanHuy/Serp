@@ -24,6 +24,7 @@ public class InternalUserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserProfileById(@PathVariable Long id) {
+        log.info("Received request to get user profile for id={}", id);
         var response = userUseCase.getUserProfile(id);
         return ResponseEntity.status(response.getCode()).body(response);
     }
@@ -36,19 +37,23 @@ public class InternalUserController {
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "ACTIVE") String status,
+            @RequestParam(required = false) Long roleId,
             @RequestParam(required = false) Long organizationId) {
         GetUserParams params = GetUserParams.builder()
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
                 .search(search)
                 .status(status)
+                .roleId(roleId)
                 .organizationId(organizationId)
                 .build();
+        log.info("Received request to get users with params: {}", params);
         var response = userUseCase.getUsers(params);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @GetMapping("/batch")
     public ResponseEntity<?> getUsersByIds(@RequestParam List<Long> ids) {
+        log.info("Received request to get users by ids={}", ids);
         var response = userUseCase.getUsersByIds(ids);
         return ResponseEntity.status(response.getCode()).body(response);
     }

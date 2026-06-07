@@ -7,6 +7,9 @@ package serp.project.pmcore.domain.project.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import serp.project.pmcore.domain.project.dto.ProjectCategoryUpdateData;
 import serp.project.pmcore.domain.project.entity.ProjectCategoryEntity;
@@ -64,6 +67,11 @@ public class ProjectCategoryService implements IProjectCategoryService {
                     log.warn("Project category not found: id={}, tenantId={}", categoryId, tenantId);
                     return ResourceNotFoundException.category(categoryId);
                 });
+    }
+
+    @Override
+    public List<ProjectCategoryEntity> getCategoriesByIds(List<Long> categoryIds) {
+        return projectCategoryPort.getCategoriesByIds(categoryIds);
     }
 
     @Override

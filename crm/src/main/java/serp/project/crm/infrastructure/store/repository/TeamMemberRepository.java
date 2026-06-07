@@ -23,11 +23,16 @@ public interface TeamMemberRepository extends JpaRepository<TeamMemberModel, Lon
 
     Page<TeamMemberModel> findByTenantId(Long tenantId, Pageable pageable);
 
-    Page<TeamMemberModel> findByTenantIdAndTeamId(Long tenantId, Long teamId, Pageable pageable);
+    Page<TeamMemberModel> findByTenantIdAndTeamId(@Param("tenantId") Long tenantId,
+            @Param("teamId") Long teamId,
+            Pageable pageable);
 
     Optional<TeamMemberModel> findByTenantIdAndUserId(Long tenantId, Long userId);
 
     List<TeamMemberModel> findByTenantIdAndTeamIdAndStatus(Long tenantId, Long teamId, String status);
+
+    List<TeamMemberModel> findByTenantIdAndTeamIdAndStatusAndRoleIn(Long tenantId, Long teamId, String status,
+            List<String> roles);
 
     Page<TeamMemberModel> findByTenantIdAndStatus(Long tenantId, String status, Pageable pageable);
 

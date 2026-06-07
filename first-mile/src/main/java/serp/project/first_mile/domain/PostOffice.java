@@ -1,12 +1,14 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 import org.locationtech.jts.geom.Point;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.PostOfficeStatus;
 import serp.project.first_mile.exception.AppException;
@@ -14,7 +16,6 @@ import serp.project.first_mile.exception.ErrorCode;
 // import org.locationtech.jts.geom.Polygon; 
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Setter
@@ -66,6 +67,12 @@ public class PostOffice extends AbstractAudit {
     @Column(name = "location", columnDefinition = "geography(Point, 4326)")
     private Point location;
 
+    @Formula("ST_Y(CAST(location AS geometry))")
+    private Double locationLatitude;
+
+    @Formula("ST_X(CAST(location AS geometry))")
+    private Double locationLongitude;
+
     @Column(name = "service_radius_m", nullable = false)
     @Builder.Default
     private Integer serviceRadiusM = 5000;
@@ -73,13 +80,23 @@ public class PostOffice extends AbstractAudit {
     // @Column(name = "coverage_polygon", columnDefinition = "geometry(Polygon,4326)")
     // private Polygon coveragePolygon;
 
+    // Total pickup-order load this post office can hold before outbound handover.
     @Column(name = "daily_capacity", nullable = false)
     @Builder.Default
     private Integer dailyCapacity = 0;
 
+    // Current pickup-order load reserved or waiting at this post office.
     @Column(name = "current_load", nullable = false)
     @Builder.Default
     private Integer currentLoad = 0;
+
+    @Column(name = "delivery_capacity", nullable = false)
+    @Builder.Default
+    private Integer deliveryCapacity = 0;
+
+    @Column(name = "current_delivery_load", nullable = false)
+    @Builder.Default
+    private Integer currentDeliveryLoad = 0;
 
     @Column(name = "priority", nullable = false)
     @Builder.Default
@@ -94,6 +111,12 @@ public class PostOffice extends AbstractAudit {
     @Column(name = "version")
     private Long version;
 
+    /**
+     * Hub id in second-mile (same tenant); optional — post office managed under a hub.
+     */
+    @Column(name = "hub_id")
+    private Long hubId;
+
     public boolean isActive() {
         return PostOfficeStatus.ACTIVE.equals(status);
     }
@@ -102,13 +125,46 @@ public class PostOffice extends AbstractAudit {
         if (incomingOrders <= 0) {
             return false;
         }
-        return isActive() && (this.currentLoad + incomingOrders <= this.dailyCapacity);
+        return isActive() && (safeInt(this.currentLoad) + incomingOrders <= safeInt(this.dailyCapacity));
     }
 
     public void addLoad(int incomingOrders) {
         if (!canAccept(incomingOrders)) {
             throw new AppException(ErrorCode.POST_OFFICE_OVERLOADED);
         }
-        this.currentLoad += incomingOrders;
+        this.currentLoad = safeInt(this.currentLoad) + incomingOrders;
+    }
+
+    public void releaseLoad(int outgoingOrders) {
+        if (outgoingOrders <= 0) {
+            return;
+        }
+        this.currentLoad = Math.max(safeInt(this.currentLoad) - outgoingOrders, 0);
+    }
+
+    public boolean canAcceptDelivery(int incomingOrders) {
+        if (incomingOrders <= 0) {
+            return false;
+        }
+        return isActive()
+                && (safeInt(this.currentDeliveryLoad) + incomingOrders <= safeInt(this.deliveryCapacity));
+    }
+
+    public void addDeliveryLoad(int incomingOrders) {
+        if (!canAcceptDelivery(incomingOrders)) {
+            throw new AppException(ErrorCode.POST_OFFICE_OVERLOADED);
+        }
+        this.currentDeliveryLoad = safeInt(this.currentDeliveryLoad) + incomingOrders;
+    }
+
+    public void releaseDeliveryLoad(int outgoingOrders) {
+        if (outgoingOrders <= 0) {
+            return;
+        }
+        this.currentDeliveryLoad = Math.max(safeInt(this.currentDeliveryLoad) - outgoingOrders, 0);
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 }

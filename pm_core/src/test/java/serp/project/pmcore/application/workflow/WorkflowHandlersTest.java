@@ -14,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.pmcore.application.shared.pagination.PageView;
 import serp.project.pmcore.application.workflow.command.create.CreateWorkflowCommand;
 import serp.project.pmcore.application.workflow.command.create.CreateWorkflowCommandHandler;
+import serp.project.pmcore.application.workflow.command.update.UpdateWorkflowCommand;
+import serp.project.pmcore.application.workflow.command.update.UpdateWorkflowCommandHandler;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQuery;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQueryHandler;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQuery;
@@ -46,12 +48,14 @@ class WorkflowHandlersTest {
     private IWorkflowService workflowService;
 
     private CreateWorkflowCommandHandler createHandler;
+    private UpdateWorkflowCommandHandler updateHandler;
     private GetWorkflowByIdQueryHandler getHandler;
     private ListWorkflowsQueryHandler listHandler;
 
     @BeforeEach
     void setUp() {
         createHandler = new CreateWorkflowCommandHandler(workflowService);
+        updateHandler = new UpdateWorkflowCommandHandler(workflowService);
         getHandler = new GetWorkflowByIdQueryHandler(workflowService);
         listHandler = new ListWorkflowsQueryHandler(workflowService);
     }
@@ -85,6 +89,26 @@ class WorkflowHandlersTest {
 
         assertTrue(result.readOnly());
         assertTrue(result.isSystem());
+    }
+
+    @Test
+    void updateHandlerShouldReturnUpdatedWorkflowView() {
+        WorkflowEntity updated = workflow(false);
+        updated.setName("Updated Workflow");
+        when(workflowService.updateWorkflow(WORKFLOW_ID, "Updated Workflow", "Draft", TENANT_ID, USER_ID))
+                .thenReturn(updated);
+
+        WorkflowView result = updateHandler.handle(new UpdateWorkflowCommand(
+                WORKFLOW_ID,
+                "Updated Workflow",
+                "Draft",
+                TENANT_ID,
+                USER_ID
+        ));
+
+        assertEquals(WORKFLOW_ID, result.id());
+        assertEquals("Updated Workflow", result.name());
+        assertFalse(result.readOnly());
     }
 
     @Test

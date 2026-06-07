@@ -179,6 +179,7 @@ class RoleEnumUtilsTest {
     void testGetDefaultModuleRole() {
         assertEquals(RoleEnum.CRM_SALES_PERSON, RoleEnumUtils.getDefaultModuleRole("CRM"));
         assertEquals(RoleEnum.PTM_USER, RoleEnumUtils.getDefaultModuleRole("PTM"));
+        assertEquals(RoleEnum.PM_USER, RoleEnumUtils.getDefaultModuleRole("PM"));
         assertEquals(RoleEnum.TMS_POSTOFFICER, RoleEnumUtils.getDefaultModuleRole("TMS"));
         assertEquals(RoleEnum.ACCOUNTANT, RoleEnumUtils.getDefaultModuleRole("ACCOUNTING"));
         assertEquals(RoleEnum.MODULE_USER, RoleEnumUtils.getDefaultModuleRole("UNKNOWN"));

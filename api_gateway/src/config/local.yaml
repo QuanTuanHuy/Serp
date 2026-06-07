@@ -63,7 +63,7 @@ app:
     maxRequests: 3
     interval: 60s
     timeout: 30s
-    consecutiveFailures: 5
+    consecutiveFailures: 10
     failureRatio: 0.6
     minRequests: 10
     maxRetries: 3
@@ -95,13 +95,34 @@ external:
     logistics2Service:
       host: localhost
       port: "9004"
+    schoolBusService:
+      host: localhost
+      port: "8094"
+      timeout: 15s
+      webSocketPath: /school-bus/api/v1/ws/school-bus
     firstMileService:
       host: localhost
       port: "8093"
       timeout: 15s
+    secondMileService:
+      host: localhost
+      port: "8095"
+      timeout: 15s
     crmService:
       host: localhost
       port: "8086"
+      timeout: 15s
+    paymentService:
+      host: localhost
+      port: "8096"
+      timeout: 15s
+    tmsBillingService:
+      host: localhost
+      port: "8097"
+      timeout: 15s
+    tmsOrderService:
+      host: localhost
+      port: "8099"
       timeout: 15s
     notificationService:
       host: localhost
@@ -117,3 +138,11 @@ external:
       port: "8092"
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    pmCoreService:
+      host: localhost
+      port: "8093"
+      timeout: 15s
+    ttcrsService:
+      host: localhost
+      port: "8094"
+      timeout: 15s

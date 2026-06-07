@@ -39,10 +39,15 @@ import serp.project.pmcore.application.workflow.command.removetransition.RemoveW
 import serp.project.pmcore.application.workflow.command.removestep.DeleteWorkflowStepResult;
 import serp.project.pmcore.application.workflow.command.removestep.RemoveWorkflowStepCommand;
 import serp.project.pmcore.application.workflow.command.removestep.RemoveWorkflowStepCommandHandler;
+import serp.project.pmcore.application.workflow.command.update.UpdateWorkflowCommand;
+import serp.project.pmcore.application.workflow.command.update.UpdateWorkflowCommandHandler;
 import serp.project.pmcore.application.workflow.command.updatetransition.UpdateWorkflowTransitionCommand;
 import serp.project.pmcore.application.workflow.command.updatetransition.UpdateWorkflowTransitionCommandHandler;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQuery;
 import serp.project.pmcore.application.workflow.query.get.GetWorkflowByIdQueryHandler;
+import serp.project.pmcore.application.workflow.query.editor.GetWorkflowEditorQuery;
+import serp.project.pmcore.application.workflow.query.editor.GetWorkflowEditorQueryHandler;
+import serp.project.pmcore.application.workflow.query.editor.WorkflowEditorView;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQuery;
 import serp.project.pmcore.application.workflow.query.list.ListWorkflowsQueryHandler;
 import serp.project.pmcore.application.workflow.query.listtransitions.ListWorkflowTransitionsQuery;
@@ -59,6 +64,7 @@ import serp.project.pmcore.ui.rest.workflow.dto.request.AddWorkflowStepRequest;
 import serp.project.pmcore.ui.rest.workflow.dto.request.AddWorkflowTransitionRequest;
 import serp.project.pmcore.ui.rest.workflow.dto.request.CreateWorkflowRequest;
 import serp.project.pmcore.ui.rest.workflow.dto.request.ReorderWorkflowStepsRequest;
+import serp.project.pmcore.ui.rest.workflow.dto.request.UpdateWorkflowRequest;
 import serp.project.pmcore.ui.rest.workflow.dto.request.UpdateWorkflowTransitionRequest;
 
 import java.util.List;
@@ -71,7 +77,9 @@ public class WorkflowController {
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
     private final CreateWorkflowCommandHandler createWorkflowCommandHandler;
+    private final UpdateWorkflowCommandHandler updateWorkflowCommandHandler;
     private final GetWorkflowByIdQueryHandler getWorkflowByIdQueryHandler;
+    private final GetWorkflowEditorQueryHandler getWorkflowEditorQueryHandler;
     private final ListWorkflowsQueryHandler listWorkflowsQueryHandler;
     private final AddWorkflowStepCommandHandler addWorkflowStepCommandHandler;
     private final RemoveWorkflowStepCommandHandler removeWorkflowStepCommandHandler;
@@ -99,10 +107,35 @@ public class WorkflowController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseUtils.success(response));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<GeneralResponse<WorkflowView>> updateWorkflow(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateWorkflowRequest request) {
+        Long userId = requireCurrentUserId();
+        Long tenantId = requireCurrentTenantId();
+
+        WorkflowView response = updateWorkflowCommandHandler.handle(new UpdateWorkflowCommand(
+                id,
+                request.getName(),
+                request.getDescription(),
+                tenantId,
+                userId
+        ));
+
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<GeneralResponse<WorkflowView>> getWorkflowById(@PathVariable Long id) {
         Long tenantId = requireCurrentTenantId();
         WorkflowView response = getWorkflowByIdQueryHandler.handle(new GetWorkflowByIdQuery(id, tenantId));
+        return ResponseEntity.ok(responseUtils.success(response));
+    }
+
+    @GetMapping("/{id}/editor")
+    public ResponseEntity<GeneralResponse<WorkflowEditorView>> getWorkflowEditor(@PathVariable Long id) {
+        Long tenantId = requireCurrentTenantId();
+        WorkflowEditorView response = getWorkflowEditorQueryHandler.handle(new GetWorkflowEditorQuery(id, tenantId));
         return ResponseEntity.ok(responseUtils.success(response));
     }
 

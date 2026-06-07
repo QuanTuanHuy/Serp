@@ -16,6 +16,7 @@ import serp.project.pmcore.application.workitem.command.update.internal.UpdateWo
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemConfigurationResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldRulesResolver;
 import serp.project.pmcore.application.workitem.command.update.support.UpdateWorkItemFieldWriteValidator;
+import serp.project.pmcore.application.workitem.history.WorkItemHistoryRecorder;
 import serp.project.pmcore.domain.customfield.dto.WorkItemCustomFieldMutationPlan;
 import serp.project.pmcore.domain.customfield.service.IWorkItemCustomFieldMutationService;
 import serp.project.pmcore.domain.issuesecurity.service.IIssueSecurityService;
@@ -42,6 +43,7 @@ import serp.project.pmcore.kernel.utils.JsonUtils;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.HashMap;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,6 +85,8 @@ class UpdateWorkItemCommandHandlerTest {
     private IOutboxEventService outboxEventService;
     @Mock
     private JsonUtils jsonUtils;
+    @Mock
+    private WorkItemHistoryRecorder workItemHistoryRecorder;
 
     private UpdateWorkItemCommandHandler handler;
 
@@ -101,7 +105,8 @@ class UpdateWorkItemCommandHandlerTest {
                 workItemCustomFieldMutationService,
                 issueTypePort,
                 outboxEventService,
-                jsonUtils
+                jsonUtils,
+                workItemHistoryRecorder
         );
     }
 
@@ -160,6 +165,7 @@ class UpdateWorkItemCommandHandlerTest {
         ArgumentCaptor<OutboxEventEntity> outboxCaptor = ArgumentCaptor.forClass(OutboxEventEntity.class);
         verify(outboxEventService).saveEvent(outboxCaptor.capture());
         assertEquals(EventConstants.WorkItem.EventType.WORK_ITEM_UPDATED, outboxCaptor.getValue().getEventType());
+        verify(workItemHistoryRecorder).recordChanges(eq(TENANT_ID), eq(WORK_ITEM_ID), eq(USER_ID), any(), any(), eq(List.of(WorkItemFieldConstants.SUMMARY)));
     }
 
     @Test
@@ -269,6 +275,62 @@ class UpdateWorkItemCommandHandlerTest {
     }
 
     @Test
+    void handleShouldRejectInvalidScheduleRange() {
+        UpdateWorkItemCommand command = new UpdateWorkItemCommand(
+                PROJECT_ID,
+                WORK_ITEM_ID,
+                new UpdateWorkItemData(Map.of(
+                        WorkItemFieldConstants.START_DATE, 2_000L,
+                        WorkItemFieldConstants.DUE_DATE, 1_000L
+                ), Map.of()),
+                TENANT_ID,
+                USER_ID,
+                Set.of()
+        );
+        ProjectEntity project = project(false);
+        WorkItemEntity workItem = workItem(ISSUE_TYPE_ID, "Old summary", 77L);
+        ProjectPermissionEvaluationContext actorContext = ProjectPermissionEvaluationContext.builder()
+                .userId(USER_ID)
+                .groupKeys(Set.of())
+                .reporterUserId(workItem.getReporterId())
+                .assigneeUserId(workItem.getAssigneeId())
+                .build();
+
+        when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
+        when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), workItem.getReporterId(), workItem.getAssigneeId()))
+                .thenReturn(actorContext);
+        when(updateWorkItemFieldRulesResolver.resolveEditFieldRules(project, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(new WorkItemFieldRules(
+                        Map.of(
+                                WorkItemFieldConstants.START_DATE, new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.START_DATE, false, false, true),
+                                WorkItemFieldConstants.DUE_DATE, new WorkItemFieldPolicy("SYSTEM", WorkItemFieldConstants.DUE_DATE, false, false, true)
+                        ),
+                        Map.of()
+                ));
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getPriorityId());
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getSecurityLevelId());
+        when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .typeKey("task")
+                .name("Task")
+                .build()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(WorkItemCustomFieldMutationPlan.empty());
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> handler.handle(command)
+        );
+
+        assertEquals(DomainErrorCode.WORK_ITEM_SCHEDULE_INVALID, exception.getErrorCode());
+        verify(workItemAuthorizationSupportService).checkScheduleIssuesPermission(ProjectPermissionSubject.from(project), actorContext);
+        verify(outboxEventService, never()).saveEvent(any());
+    }
+
+    @Test
     void handleShouldRejectFieldNotWritableOnEditScreen() {
         UpdateWorkItemCommand command = new UpdateWorkItemCommand(
                 PROJECT_ID,
@@ -303,6 +365,59 @@ class UpdateWorkItemCommandHandlerTest {
         verify(outboxEventService, never()).saveEvent(any());
     }
 
+    @Test
+    void handleShouldAllowClearingStartDateWhenFieldMissingOnEditScreen() {
+        Map<String, Object> systemFields = new HashMap<>();
+        systemFields.put(WorkItemFieldConstants.START_DATE, null);
+
+        UpdateWorkItemCommand command = new UpdateWorkItemCommand(
+                PROJECT_ID,
+                WORK_ITEM_ID,
+                new UpdateWorkItemData(systemFields, Map.of()),
+                TENANT_ID,
+                USER_ID,
+                Set.of()
+        );
+        ProjectEntity project = project(false);
+        WorkItemEntity workItem = workItem(ISSUE_TYPE_ID, "Old summary", 77L);
+        ProjectPermissionEvaluationContext actorContext = ProjectPermissionEvaluationContext.builder()
+                .userId(USER_ID)
+                .groupKeys(Set.of())
+                .reporterUserId(workItem.getReporterId())
+                .assigneeUserId(workItem.getAssigneeId())
+                .build();
+
+        when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project);
+        when(workItemService.getWorkItemById(WORK_ITEM_ID, TENANT_ID)).thenReturn(workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of(), workItem.getReporterId(), workItem.getAssigneeId()))
+                .thenReturn(actorContext);
+        when(updateWorkItemFieldRulesResolver.resolveEditFieldRules(project, ISSUE_TYPE_ID, TENANT_ID))
+                .thenReturn(WorkItemFieldRules.empty());
+        when(updateWorkItemConfigurationResolver.resolvePriorityId(PROJECT_ID, project.getPrioritySchemeId(), workItem.getPriorityId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getPriorityId());
+        when(updateWorkItemConfigurationResolver.resolveSecurityLevelId(PROJECT_ID, project.getIssueSecuritySchemeId(), workItem.getSecurityLevelId(), command.data(), TENANT_ID))
+                .thenReturn(workItem.getSecurityLevelId());
+        when(issueTypePort.getIssueTypeById(ISSUE_TYPE_ID, TENANT_ID)).thenReturn(Optional.of(IssueTypeEntity.builder()
+                .id(ISSUE_TYPE_ID)
+                .typeKey("task")
+                .name("Task")
+                .build()));
+        when(workItemCustomFieldMutationService.planUpdate(eq("task"), eq(WORK_ITEM_ID), eq(TENANT_ID), eq(command.data().customFields()), any()))
+                .thenReturn(WorkItemCustomFieldMutationPlan.empty());
+        when(workItemService.updateWorkItem(workItem, USER_ID)).thenAnswer(invocation -> {
+            workItem.setUpdatedAt(1_710_000_000_000L);
+            workItem.setUpdatedBy(USER_ID);
+            return workItem;
+        });
+        when(jsonUtils.toJson(any())).thenReturn("{}");
+
+        UpdateWorkItemResult result = handler.handle(command);
+
+        assertEquals(null, result.startDate());
+        assertEquals(List.of(WorkItemFieldConstants.START_DATE), result.changedFields());
+        verify(workItemAuthorizationSupportService).checkScheduleIssuesPermission(ProjectPermissionSubject.from(project), actorContext);
+    }
+
     private ProjectEntity project(boolean archived) {
         return ProjectEntity.builder()
                 .id(PROJECT_ID)
@@ -328,6 +443,7 @@ class UpdateWorkItemCommandHandlerTest {
                 .reporterId(70L)
                 .parentId(null)
                 .securityLevelId(null)
+                .startDate(1_000L)
                 .dueDate(null)
                 .rank("0|hzzzzz:")
                 .timeOriginalEstimate(3600L)

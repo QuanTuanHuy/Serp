@@ -18,8 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateOrganizationDto;
 import serp.project.account.core.domain.dto.request.GetOrganizationParams;
+import serp.project.account.core.domain.dto.request.UpdateOrganizationSettingsRequest;
 import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
+import serp.project.account.core.domain.enums.OrganizationStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.port.store.IOrganizationPort;
 import serp.project.account.core.port.store.IUserOrganizationPort;
@@ -94,6 +96,24 @@ public class OrganizationService implements IOrganizationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity updateOrganizationSettings(Long organizationId, UpdateOrganizationSettingsRequest request) {
+        var organization = getOrganizationById(organizationId);
+
+        applySettingsUpdate(organization, request);
+        return organizationPort.save(organization);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrganizationEntity updateOrganizationStatus(Long organizationId, OrganizationStatus status) {
+        var organization = getOrganizationById(organizationId);
+        organization.setStatus(status);
+        organization.setUpdatedAt(System.currentTimeMillis());
+        return organizationPort.save(organization);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public OrganizationEntity updateSubscription(Long organizationId,
             OrganizationSubscriptionEntity subscription) {
         var organization = getOrganizationById(organizationId);
@@ -112,6 +132,65 @@ public class OrganizationService implements IOrganizationService {
     @Override
     public Pair<List<OrganizationEntity>, Long> getOrganizations(GetOrganizationParams params) {
         return organizationPort.getOrganizations(params);
+    }
+
+    @Override
+    public Long countOrganizations() {
+        return organizationPort.countOrganizations();
+    }
+
+    @Override
+    public Long countOrganizationsByStatus(OrganizationStatus status) {
+        return organizationPort.countOrganizationsByStatus(status);
+    }
+
+    @Override
+    public List<OrganizationEntity> getRecentOrganizations(int limit) {
+        return organizationPort.getRecentOrganizations(limit);
+    }
+
+    private void applySettingsUpdate(OrganizationEntity organization, UpdateOrganizationSettingsRequest request) {
+        if (request.getName() != null) {
+            organization.setName(normalizeRequired(request.getName()));
+        }
+        organization.setEmail(normalizeOptional(request.getEmail()));
+        organization.setPhoneNumber(normalizeOptional(request.getPhoneNumber()));
+        organization.setWebsite(normalizeOptional(request.getWebsite()));
+        organization.setAddress(normalizeOptional(request.getAddress()));
+        organization.setCity(normalizeOptional(request.getCity()));
+        organization.setState(normalizeOptional(request.getState()));
+        organization.setCountry(normalizeOptional(request.getCountry()));
+        organization.setZipCode(normalizeOptional(request.getZipCode()));
+        organization.setTaxId(normalizeOptional(request.getTaxId()));
+        organization.setIndustry(normalizeOptional(request.getIndustry()));
+        organization.setEmployeeCount(request.getEmployeeCount());
+        organization.setDescription(normalizeOptional(request.getDescription()));
+        organization.setLogoUrl(normalizeOptional(request.getLogoUrl()));
+        organization.setFaviconUrl(normalizeOptional(request.getFaviconUrl()));
+        organization.setPrimaryColor(normalizeOptional(request.getPrimaryColor()));
+        organization.setSecondaryColor(normalizeOptional(request.getSecondaryColor()));
+        organization.setTimezone(normalizeOptional(request.getTimezone()));
+        organization.setDateFormat(normalizeOptional(request.getDateFormat()));
+        organization.setTimeFormat(normalizeOptional(request.getTimeFormat()));
+        organization.setWeekStartsOn(normalizeOptional(request.getWeekStartsOn()));
+        organization.setCurrency(normalizeOptional(request.getCurrency()));
+        organization.setLanguage(normalizeOptional(request.getLanguage()));
+    }
+
+    private String normalizeRequired(String value) {
+        var normalized = normalizeOptional(value);
+        if (normalized == null) {
+            throw new AppException(Constants.ErrorMessage.BAD_REQUEST);
+        }
+        return normalized;
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+        var normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
 }

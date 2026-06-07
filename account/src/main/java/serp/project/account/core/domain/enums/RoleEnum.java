@@ -146,6 +146,17 @@ public enum RoleEnum {
      */
     PTM_USER("PTM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PTM User", true),
 
+    // PM (Project Management) Module
+    /**
+     * PM Admin - Project Management module administrator
+     */
+    PM_ADMIN("PM_ADMIN", RoleScope.MODULE, RoleType.ADMIN, 4, false, "PM Administrator"),
+
+    /**
+     * PM User
+     */
+    PM_USER("PM_USER", RoleScope.MODULE, RoleType.USER, 7, false, "PM User", true),
+
     // TMS (First-mile) Module
     /**
      * TMS Admin - First-mile module administrator
@@ -178,7 +189,34 @@ public enum RoleEnum {
     /**
      * Accounting Viewer - View-only trong accounting
      */
-    ACCOUNTING_VIEWER("ACCOUNTING_VIEWER", RoleScope.MODULE, RoleType.VIEWER, 8, false, "Accounting Viewer");
+    ACCOUNTING_VIEWER("ACCOUNTING_VIEWER", RoleScope.MODULE, RoleType.VIEWER, 8, false, "Accounting Viewer"),
+
+    /**
+     * School Bus Admin
+     */
+    SCHOOL_BUS_ADMIN("SCHOOL_BUS_ADMIN", RoleScope.MODULE, RoleType.ADMIN, 4, false, "School Bus Administrator"),
+
+    /**
+     * School Bus Dispatcher
+     */
+    SCHOOL_BUS_DISPATCHER("SCHOOL_BUS_DISPATCHER", RoleScope.MODULE, RoleType.MANAGER, 6, false,
+            "School Bus Dispatcher"),
+
+    /**
+     * School Bus Driver
+     */
+    SCHOOL_BUS_DRIVER("SCHOOL_BUS_DRIVER", RoleScope.MODULE, RoleType.USER, 7, false, "School Bus Driver"),
+
+    /**
+     * School Bus Attendant
+     */
+    SCHOOL_BUS_ATTENDANT("SCHOOL_BUS_ATTENDANT", RoleScope.MODULE, RoleType.USER, 7, false,
+            "School Bus Attendant"),
+
+    /**
+     * School Bus Parent
+     */
+    SCHOOL_BUS_PARENT("SCHOOL_BUS_PARENT", RoleScope.MODULE, RoleType.USER, 7, false, "School Bus Parent");
 
     /**
      * Role name (unique identifier)

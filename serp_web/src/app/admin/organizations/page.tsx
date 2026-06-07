@@ -5,26 +5,61 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  useOrganizations,
-  AdminStatusBadge,
   AdminActionMenu,
+  AdminFilterChips,
+  AdminFilterDialog,
+  AdminStatusBadge,
+  OrganizationDetailsDrawer,
+  OrganizationStatusDialog,
+  UserDialog,
+  useOrganizations,
 } from '@/modules/admin';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
-import { Input } from '@/shared/components/ui/input';
-import { Button } from '@/shared/components/ui/button';
+import type {
+  Organization,
+  OrganizationStatus,
+  OrganizationType,
+} from '@/modules/admin/types';
+import { openCreateUserDialog } from '@/modules/admin/store';
+import { formatAdminDate } from '@/modules/admin/utils/date';
+import { Button, Input } from '@/shared/components/ui';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
-import { Building2, Search, Eye, Edit, Ban, CheckCircle } from 'lucide-react';
-import { Organization as OrganizationType } from '@/modules/admin/types';
+import { useAppDispatch } from '@/shared/hooks';
+import {
+  Ban,
+  Building2,
+  CheckCircle,
+  Eye,
+  Search,
+  SlidersHorizontal,
+} from 'lucide-react';
+
+const statusOptions: Array<{ value: OrganizationStatus; label: string }> = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'TRIAL', label: 'Trial' },
+  { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'EXPIRED', label: 'Expired' },
+  { value: 'CLOSED', label: 'Closed' },
+];
+
+const typeOptions: Array<{ value: OrganizationType; label: string }> = [
+  { value: 'ENTERPRISE', label: 'Enterprise' },
+  { value: 'SMB', label: 'SMB' },
+  { value: 'STARTUP', label: 'Startup' },
+  { value: 'PERSONAL', label: 'Personal' },
+  { value: 'NON_PROFIT', label: 'Non-profit' },
+  { value: 'GOVERNMENT', label: 'Government' },
+];
 
 export default function OrganizationsPage() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedCriterion, setSelectedCriterion] = useState('status');
+
   const {
     filters,
     organizations,
@@ -32,22 +67,62 @@ export default function OrganizationsPage() {
     isLoading,
     isFetching,
     error,
+    ui,
     handleSearch,
     handleFilterChange,
     handlePageChange,
+    openDetails,
+    closeDetails,
+    openStatus,
+    closeStatus,
   } = useOrganizations();
 
-  const formatDate = (isoDate?: string) => {
-    if (!isoDate) return 'N/A';
-    return new Date(isoDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const selectedOrganization = useMemo(
+    () =>
+      organizations.find(
+        (organization) => organization.id === ui.selectedOrganizationId
+      ),
+    [organizations, ui.selectedOrganizationId]
+  );
+
+  const filterCriteria = [
+    { id: 'status', label: 'Status', count: filters.status ? 1 : 0 },
+    { id: 'type', label: 'Type', count: filters.type ? 1 : 0 },
+  ];
+
+  const filterChips = [
+    filters.status
+      ? {
+          id: 'status',
+          label: `Status: ${
+            statusOptions.find((item) => item.value === filters.status)
+              ?.label ?? filters.status
+          }`,
+          onRemove: () => handleFilterChange('status', undefined),
+        }
+      : null,
+    filters.type
+      ? {
+          id: 'type',
+          label: `Type: ${
+            typeOptions.find((item) => item.value === filters.type)?.label ??
+            filters.type
+          }`,
+          onRemove: () => handleFilterChange('type', undefined),
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    onRemove: () => void;
+  }>;
+
+  const clearFilters = () => {
+    handleFilterChange('status', undefined);
+    handleFilterChange('type', undefined);
   };
 
-  // Define columns for DataTable
-  const columns = useMemo<ColumnDef<OrganizationType>[]>(
+  const columns = useMemo<ColumnDef<Organization>[]>(
     () => [
       {
         id: 'organization',
@@ -56,11 +131,11 @@ export default function OrganizationsPage() {
         defaultVisible: true,
         cell: ({ row }) => (
           <div className='flex items-center gap-3'>
-            <div className='h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center'>
+            <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10'>
               <Building2 className='h-5 w-5 text-primary' />
             </div>
-            <div>
-              <p className='font-medium'>{row.name}</p>
+            <div className='min-w-0'>
+              <p className='truncate font-medium'>{row.name}</p>
               <p className='text-xs text-muted-foreground'>{row.code}</p>
             </div>
           </div>
@@ -71,14 +146,14 @@ export default function OrganizationsPage() {
         header: 'Type',
         accessor: 'organizationType',
         defaultVisible: true,
-        cell: ({ value }) => <span className='text-sm'>{value}</span>,
+        cell: ({ value }) => <span className='text-sm'>{String(value)}</span>,
       },
       {
         id: 'status',
         header: 'Status',
         accessor: 'status',
         defaultVisible: true,
-        cell: ({ value }) => <AdminStatusBadge status={value} />,
+        cell: ({ value }) => <AdminStatusBadge status={String(value)} />,
       },
       {
         id: 'employees',
@@ -88,35 +163,13 @@ export default function OrganizationsPage() {
         cell: ({ value }) => <span className='text-sm'>{value || 'N/A'}</span>,
       },
       {
-        id: 'email',
-        header: 'Email',
-        accessor: 'email',
-        defaultVisible: false,
-        cell: ({ value }) => (
-          <span className='text-sm text-muted-foreground'>
-            {value || 'N/A'}
-          </span>
-        ),
-      },
-      {
-        id: 'phone',
-        header: 'Phone',
-        accessor: 'phoneNumber',
-        defaultVisible: false,
-        cell: ({ value }) => (
-          <span className='text-sm text-muted-foreground'>
-            {value || 'N/A'}
-          </span>
-        ),
-      },
-      {
         id: 'created',
         header: 'Created',
         accessor: 'createdAt',
         defaultVisible: true,
         cell: ({ value }) => (
           <span className='text-sm text-muted-foreground'>
-            {formatDate(value)}
+            {formatAdminDate(value)}
           </span>
         ),
       },
@@ -127,7 +180,7 @@ export default function OrganizationsPage() {
         defaultVisible: true,
         cell: ({ value }) => (
           <span className='text-sm text-muted-foreground'>
-            {value ? `Expires ${formatDate(value)}` : 'No subscription'}
+            {value ? `Expires ${formatAdminDate(value)}` : 'No subscription'}
           </span>
         ),
       },
@@ -137,119 +190,79 @@ export default function OrganizationsPage() {
         accessor: 'id',
         align: 'right',
         defaultVisible: true,
-        cell: ({ row }) => (
-          <AdminActionMenu
-            items={[
-              {
-                label: 'View Details',
-                onClick: () => console.log('View', row.id),
-                icon: <Eye className='h-4 w-4' />,
-              },
-              {
-                label: 'Edit',
-                onClick: () => console.log('Edit', row.id),
-                icon: <Edit className='h-4 w-4' />,
-              },
-              {
-                label: row.status === 'ACTIVE' ? 'Suspend' : 'Activate',
-                onClick: () => console.log('Toggle status', row.id),
-                icon:
-                  row.status === 'ACTIVE' ? (
-                    <Ban className='h-4 w-4' />
-                  ) : (
-                    <CheckCircle className='h-4 w-4' />
-                  ),
-                separator: true,
-                variant: row.status === 'ACTIVE' ? 'destructive' : 'default',
-              },
-            ]}
-          />
-        ),
+        cell: ({ row }) => {
+          const targetStatus =
+            row.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
+
+          return (
+            <AdminActionMenu
+              items={[
+                {
+                  label: 'View details',
+                  onClick: () => openDetails(row.id),
+                  icon: <Eye className='h-4 w-4' />,
+                },
+                {
+                  label: targetStatus === 'SUSPENDED' ? 'Suspend' : 'Activate',
+                  onClick: () => openStatus(row.id, row.status),
+                  icon:
+                    targetStatus === 'SUSPENDED' ? (
+                      <Ban className='h-4 w-4' />
+                    ) : (
+                      <CheckCircle className='h-4 w-4' />
+                    ),
+                  separator: true,
+                  variant:
+                    targetStatus === 'SUSPENDED' ? 'destructive' : 'default',
+                },
+              ]}
+            />
+          );
+        },
       },
     ],
-    []
+    [openDetails, openStatus]
   );
 
   return (
     <div className='space-y-6'>
-      {/* Page Header */}
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Organizations</h1>
-          <p className='text-muted-foreground mt-2'>
-            Manage and monitor all organizations in the system
+          <p className='mt-2 text-muted-foreground'>
+            Manage organization lifecycle and linked users.
           </p>
-        </div>
-
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' size='sm'>
-            Export
-          </Button>
         </div>
       </div>
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base font-medium'>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid gap-4 md:grid-cols-4'>
-            {/* Search */}
-            <div className='md:col-span-2'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search by name, code, email...'
-                  value={filters.search || ''}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={filters.status || ''}
-                onChange={(e) =>
-                  handleFilterChange('status', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Statuses</option>
-                <option value='ACTIVE'>Active</option>
-                <option value='TRIAL'>Trial</option>
-                <option value='SUSPENDED'>Suspended</option>
-                <option value='INACTIVE'>Inactive</option>
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div>
-              <select
-                value={filters.type || ''}
-                onChange={(e) =>
-                  handleFilterChange('type', e.target.value || undefined)
-                }
-                className='w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
-              >
-                <option value=''>All Types</option>
-                <option value='ENTERPRISE'>Enterprise</option>
-                <option value='SMB'>SMB</option>
-                <option value='STARTUP'>Startup</option>
-                <option value='INDIVIDUAL'>Individual</option>
-              </select>
-            </div>
+      <div className='space-y-3'>
+        <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+          <div className='relative w-full md:max-w-md'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+            <Input
+              placeholder='Search by name, code, email...'
+              value={filters.search || ''}
+              onChange={(event) => handleSearch(event.target.value)}
+              className='pl-10'
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            <SlidersHorizontal className='h-4 w-4' />
+            Filters
+          </Button>
+        </div>
 
-      {/* Table Card */}
+        <AdminFilterChips chips={filterChips} onClearAll={clearFilters} />
+      </div>
+
       <DataTable
         columns={columns}
         data={organizations}
-        keyExtractor={(org) => String(org.id)}
+        keyExtractor={(organization) => String(organization.id)}
         isLoading={isLoading}
         error={error}
         storageKey='admin-organizations-columns'
@@ -261,18 +274,134 @@ export default function OrganizationsPage() {
           isFetching,
         }}
         loadingState={
-          <div className='flex items-center justify-center h-64'>
+          <div className='flex h-64 items-center justify-center'>
             <div className='text-muted-foreground'>
               Loading organizations...
             </div>
           </div>
         }
         errorState={
-          <div className='flex items-center justify-center h-64'>
+          <div className='flex h-64 items-center justify-center'>
             <div className='text-destructive'>Failed to load organizations</div>
           </div>
         }
       />
+
+      <AdminFilterDialog
+        open={filterDialogOpen}
+        title='Filters'
+        description='Pick a filter group, then select a value.'
+        criteria={filterCriteria}
+        selectedCriterion={selectedCriterion}
+        onSelectCriterion={setSelectedCriterion}
+        onOpenChange={setFilterDialogOpen}
+        onClear={clearFilters}
+      >
+        {selectedCriterion === 'status' ? (
+          <FilterPane title='Status'>
+            <FilterOption
+              label='All statuses'
+              selected={!filters.status}
+              onSelect={() => handleFilterChange('status', undefined)}
+            />
+            {statusOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.status === option.value}
+                onSelect={() => handleFilterChange('status', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+
+        {selectedCriterion === 'type' ? (
+          <FilterPane title='Type'>
+            <FilterOption
+              label='All types'
+              selected={!filters.type}
+              onSelect={() => handleFilterChange('type', undefined)}
+            />
+            {typeOptions.map((option) => (
+              <FilterOption
+                key={option.value}
+                label={option.label}
+                selected={filters.type === option.value}
+                onSelect={() => handleFilterChange('type', option.value)}
+              />
+            ))}
+          </FilterPane>
+        ) : null}
+      </AdminFilterDialog>
+
+      <OrganizationDetailsDrawer
+        open={ui.detailDrawerOpen}
+        organizationId={ui.selectedOrganizationId}
+        onOpenChange={(open) => {
+          if (!open) closeDetails();
+        }}
+        onCreateUser={(organizationId) =>
+          dispatch(openCreateUserDialog({ organizationId }))
+        }
+        onViewAllUsers={(organizationId) =>
+          router.push(`/admin/users?organizationId=${organizationId}`)
+        }
+        onToggleStatus={openStatus}
+      />
+
+      <OrganizationStatusDialog
+        open={ui.statusDialogOpen}
+        organizationId={ui.selectedOrganizationId}
+        organizationName={selectedOrganization?.name}
+        currentStatus={ui.statusDialogStatus}
+        onOpenChange={(open) => {
+          if (!open) closeStatus();
+        }}
+      />
+
+      <UserDialog />
     </div>
+  );
+}
+
+function FilterPane({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className='space-y-1'>{children}</div>
+    </div>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
+        selected ? 'bg-muted font-medium' : ''
+      }`}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+    </button>
   );
 }

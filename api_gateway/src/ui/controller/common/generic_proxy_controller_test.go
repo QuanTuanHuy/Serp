@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/serp/api-gateway/src/kernel/properties"
@@ -87,7 +88,7 @@ func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 	}
 }
 
-func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *testing.T) {
+func TestGenericProxyController_CRM_CircuitBreakerCountsLogicalRequestsAfterRetries(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	var upstreamHits int32
@@ -106,11 +107,15 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	host := u.Hostname()
 	port := u.Port()
 
+	resProps := defaultResilienceProps()
+	resProps.InitialDelay = time.Millisecond
+	resProps.MaxDelay = time.Millisecond
+
 	controller := NewGenericProxyController(
 		&properties.ExternalServiceProperties{
 			CrmService: properties.ServiceProperty{Host: host, Port: port},
 		},
-		defaultResilienceProps(),
+		resProps,
 	)
 
 	r := gin.New()
@@ -118,50 +123,41 @@ func TestGenericProxyController_CRM_CircuitBreakerOpensAfter5xxWithRetries(t *te
 	gateway := httptest.NewServer(r)
 	defer gateway.Close()
 
-	// First request: upstream returns 500; due to retries, CB likely accumulates failures quickly.
-	resp1, err := http.Get(gateway.URL + "/crm/api/v1/leads")
+	expectedHitsPerRequest := int32(resProps.MaxRetries + 1)
+
+	for i := 1; i <= int(resProps.ConsecutiveFailures); i++ {
+		resp, err := http.Get(gateway.URL + "/crm/api/v1/leads")
+		if err != nil {
+			t.Fatalf("request %d: %v", i, err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("expected request %d status %d, got %d. body=%s",
+				i, http.StatusInternalServerError, resp.StatusCode, string(body))
+		}
+
+		expectedHits := int32(i) * expectedHitsPerRequest
+		if hits := atomic.LoadInt32(&upstreamHits); hits != expectedHits {
+			t.Fatalf("expected %d upstream hits after request %d, got %d", expectedHits, i, hits)
+		}
+	}
+
+	hitsBeforeOpenRequest := atomic.LoadInt32(&upstreamHits)
+
+	resp, err := http.Get(gateway.URL + "/crm/api/v1/leads")
 	if err != nil {
-		t.Fatalf("first request: %v", err)
+		t.Fatalf("open circuit request: %v", err)
 	}
-	_, _ = io.ReadAll(resp1.Body)
-	resp1.Body.Close()
-	if resp1.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("expected first status %d, got %d", http.StatusInternalServerError, resp1.StatusCode)
-	}
-	firstHits := atomic.LoadInt32(&upstreamHits)
-	if firstHits <= 0 {
-		t.Fatalf("expected upstream to be called at least once")
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected open circuit status %d, got %d. body=%s",
+			http.StatusServiceUnavailable, resp.StatusCode, string(body))
 	}
 
-	// Circuit opens after 5 consecutive failures. With maxRetries=3, the first request
-	// typically causes 4 upstream hits (1 + 3 retries). The second request may still
-	// hit upstream once (the 5th failure) before the circuit opens.
-	resp2, err := http.Get(gateway.URL + "/crm/api/v1/leads")
-	if err != nil {
-		t.Fatalf("second request: %v", err)
-	}
-	_, _ = io.ReadAll(resp2.Body)
-	resp2.Body.Close()
-
-	secondHits := atomic.LoadInt32(&upstreamHits)
-	if secondHits < firstHits || secondHits > firstHits+1 {
-		t.Fatalf("expected upstream hits to stay same or increase by 1 on second request, got %d -> %d", firstHits, secondHits)
-	}
-
-	// Third request must be blocked by open circuit breaker and return 503 from ErrorHandler.
-	resp3, err := http.Get(gateway.URL + "/crm/api/v1/leads")
-	if err != nil {
-		t.Fatalf("third request: %v", err)
-	}
-	body3, _ := io.ReadAll(resp3.Body)
-	resp3.Body.Close()
-	if resp3.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("expected third status %d, got %d. body=%s", http.StatusServiceUnavailable, resp3.StatusCode, string(body3))
-	}
-
-	thirdHits := atomic.LoadInt32(&upstreamHits)
-	if thirdHits != secondHits {
-		t.Fatalf("expected no upstream hit after CB open on third request, got %d -> %d", secondHits, thirdHits)
+	if hits := atomic.LoadInt32(&upstreamHits); hits != hitsBeforeOpenRequest {
+		t.Fatalf("expected no upstream hit after CB open, got %d -> %d", hitsBeforeOpenRequest, hits)
 	}
 }
 

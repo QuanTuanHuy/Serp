@@ -34,12 +34,12 @@ const organizationsSlice = createSlice({
       state.filters.search = action.payload;
       state.filters.page = 0;
     },
-    setStatus(state, action: PayloadAction<string | undefined>) {
-      state.filters.status = action.payload as any;
+    setStatus(state, action: PayloadAction<OrganizationFilters['status']>) {
+      state.filters.status = action.payload;
       state.filters.page = 0;
     },
-    setType(state, action: PayloadAction<string | undefined>) {
-      state.filters.type = action.payload as any;
+    setType(state, action: PayloadAction<OrganizationFilters['type']>) {
+      state.filters.type = action.payload;
       state.filters.page = 0;
     },
     setPage(state, action: PayloadAction<number>) {

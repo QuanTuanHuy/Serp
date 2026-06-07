@@ -30,4 +30,14 @@ public class WorkflowVersionEntity extends BaseEntity {
     public boolean isActive() {
         return WorkflowVersionState.PUBLISHED.equals(versionState);
     }
+
+    public void archive() {
+        this.versionState = WorkflowVersionState.ARCHIVED;
+    }
+
+    public void publish(Long publishedBy, Long publishedAt) {
+        this.versionState = WorkflowVersionState.PUBLISHED;
+        this.publishedBy = publishedBy;
+        this.publishedAt = publishedAt;
+    }
 }

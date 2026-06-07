@@ -131,7 +131,7 @@ public class WorkItemCreateConfigurationResolver {
         }
     }
 
-    private WorkflowStepEntity resolveInitialWorkflowStep(ProjectEntity project, Long issueTypeId, Long tenantId) {
+    public WorkflowStepEntity resolveInitialWorkflowStep(ProjectEntity project, Long issueTypeId, Long tenantId) {
         if (project.getWorkflowSchemeId() == null) {
             throw new ResourceNotFoundException(
                     DomainErrorCode.WORKFLOW_SCHEME_NOT_FOUND,

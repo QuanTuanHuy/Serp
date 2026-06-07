@@ -8,11 +8,16 @@ import type {
   Organization,
   OrganizationFilters,
   OrganizationsResponse,
+  OrganizationStatus,
+  OrganizationStatusUpdateResponse,
+  UserStats,
 } from '../../types';
 import {
   createDataTransform,
   createPaginatedTransform,
+  createRtkTransformResponse,
 } from '@/lib/store/api/utils';
+import type { ApiResponse } from '@/lib/store/api/types';
 
 export const organizationsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -60,6 +65,35 @@ export const organizationsApi = api.injectEndpoints({
         { type: 'admin/Organization', id },
       ],
     }),
+
+    getOrganizationUserStats: builder.query<ApiResponse<UserStats>, number>({
+      query: (organizationId) => ({
+        url: `/admin/organizations/${organizationId}/users/stats`,
+        method: 'GET',
+      }),
+      transformResponse: createRtkTransformResponse(),
+      providesTags: (_result, _error, organizationId) => [
+        { type: 'admin/Organization', id: `${organizationId}-user-stats` },
+      ],
+    }),
+
+    updateOrganizationStatus: builder.mutation<
+      ApiResponse<OrganizationStatusUpdateResponse>,
+      { organizationId: number; status: OrganizationStatus }
+    >({
+      query: ({ organizationId, status }) => ({
+        url: `/admin/organizations/${organizationId}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      transformResponse: createRtkTransformResponse(),
+      invalidatesTags: (_result, _error, { organizationId }) => [
+        { type: 'admin/Organization', id: organizationId },
+        { type: 'admin/Organization', id: 'LIST' },
+        { type: 'admin/Organization', id: `${organizationId}-user-stats` },
+        { type: 'admin/User', id: 'LIST' },
+      ],
+    }),
   }),
   overrideExisting: true,
 });
@@ -67,6 +101,9 @@ export const organizationsApi = api.injectEndpoints({
 export const {
   useGetOrganizationsQuery,
   useGetOrganizationByIdQuery,
+  useGetOrganizationUserStatsQuery,
   useLazyGetOrganizationsQuery,
   useLazyGetOrganizationByIdQuery,
+  useLazyGetOrganizationUserStatsQuery,
+  useUpdateOrganizationStatusMutation,
 } = organizationsApi;

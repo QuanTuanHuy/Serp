@@ -39,6 +39,12 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     List<Long> findActiveProjectIdsByIssueTypeSchemeId(@Param("issueTypeSchemeId") Long issueTypeSchemeId,
                                                        @Param("tenantId") Long tenantId);
 
+    @Query("SELECT p FROM ProjectModel p WHERE p.issueTypeSchemeId IN :issueTypeSchemeIds " +
+            "AND p.tenantId = :tenantId AND p.deletedAt IS NULL AND p.archived = false " +
+            "ORDER BY p.name ASC, p.id ASC")
+    List<ProjectModel> findActiveProjectsByIssueTypeSchemeIds(@Param("issueTypeSchemeIds") List<Long> issueTypeSchemeIds,
+                                                              @Param("tenantId") Long tenantId);
+
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
             "WHERE p.prioritySchemeId = :prioritySchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
     boolean existsActiveProjectByPrioritySchemeId(@Param("prioritySchemeId") Long prioritySchemeId,
@@ -47,6 +53,27 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     @Query("SELECT p.id FROM ProjectModel p WHERE p.prioritySchemeId = :prioritySchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
     List<Long> findActiveProjectIdsByPrioritySchemeId(@Param("prioritySchemeId") Long prioritySchemeId,
                                                       @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM ProjectModel p WHERE p.prioritySchemeId IN :prioritySchemeIds " +
+            "AND p.tenantId = :tenantId AND p.deletedAt IS NULL AND p.archived = false " +
+            "ORDER BY p.name ASC, p.id ASC")
+    List<ProjectModel> findActiveProjectsByPrioritySchemeIds(@Param("prioritySchemeIds") List<Long> prioritySchemeIds,
+                                                             @Param("tenantId") Long tenantId);
+
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM ProjectModel p " +
+            "WHERE p.workflowSchemeId = :workflowSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    boolean existsActiveProjectByWorkflowSchemeId(@Param("workflowSchemeId") Long workflowSchemeId,
+                                                  @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p.id FROM ProjectModel p WHERE p.workflowSchemeId = :workflowSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    List<Long> findActiveProjectIdsByWorkflowSchemeId(@Param("workflowSchemeId") Long workflowSchemeId,
+                                                      @Param("tenantId") Long tenantId);
+
+    @Query("SELECT p FROM ProjectModel p WHERE p.workflowSchemeId IN :workflowSchemeIds " +
+            "AND p.tenantId = :tenantId AND p.deletedAt IS NULL AND p.archived = false " +
+            "ORDER BY p.name ASC, p.id ASC")
+    List<ProjectModel> findActiveProjectsByWorkflowSchemeIds(@Param("workflowSchemeIds") List<Long> workflowSchemeIds,
+                                                             @Param("tenantId") Long tenantId);
 
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
@@ -63,6 +90,52 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
       AND (:categoryId IS NULL OR p.project_category_id = :categoryId)
       AND (:projectTypeKey IS NULL OR p.project_type_key = :projectTypeKey)
       AND (:archived IS NULL OR p.archived = :archived)
+      AND EXISTS (
+            SELECT 1
+            FROM permission_scheme_entries pse
+            WHERE pse.scheme_id = p.permission_scheme_id
+              AND pse.tenant_id = p.tenant_id
+              AND pse.deleted_at IS NULL
+              AND UPPER(TRIM(pse.permission_key)) = 'BROWSE_PROJECTS'
+              AND (
+                    (UPPER(TRIM(pse.grantee_type)) = 'USER' AND CAST(:userId AS TEXT) = pse.grantee_ref)
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'PROJECT_LEAD'
+                        AND p.lead_user_id = :userId
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'GROUP'
+                        AND :groupKeysCsv <> ''
+                        AND POSITION(CONCAT(',', LOWER(TRIM(pse.grantee_ref)), ',') IN :groupKeysCsv) > 0
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) IN ('ANY_LOGGED_IN_USER', 'LOGGED_IN_USER', 'AUTHENTICATED')
+                        AND :userId IS NOT NULL
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'PROJECT_ROLE'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM project_roles pr
+                            JOIN project_role_actors pra ON pra.project_role_id = pr.id
+                            WHERE pra.project_id = p.id
+                              AND pra.tenant_id = p.tenant_id
+                              AND pra.deleted_at IS NULL
+                              AND pr.deleted_at IS NULL
+                              AND (pr.tenant_id = p.tenant_id OR pr.tenant_id = 0)
+                              AND pr.name = pse.grantee_ref
+                              AND (
+                                    (UPPER(TRIM(pra.subject_type)) = 'USER' AND CAST(:userId AS TEXT) = pra.subject_id)
+                                    OR (
+                                        UPPER(TRIM(pra.subject_type)) = 'GROUP'
+                                        AND :groupKeysCsv <> ''
+                                        AND POSITION(CONCAT(',', LOWER(TRIM(pra.subject_id)), ',') IN :groupKeysCsv) > 0
+                                    )
+                              )
+                        )
+                    )
+              )
+      )
     """,
             countQuery = """
     SELECT COUNT(*)
@@ -77,10 +150,58 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
       AND (:categoryId IS NULL OR p.project_category_id = :categoryId)
       AND (:projectTypeKey IS NULL OR p.project_type_key = :projectTypeKey)
       AND (:archived IS NULL OR p.archived = :archived)
+      AND EXISTS (
+            SELECT 1
+            FROM permission_scheme_entries pse
+            WHERE pse.scheme_id = p.permission_scheme_id
+              AND pse.tenant_id = p.tenant_id
+              AND pse.deleted_at IS NULL
+              AND UPPER(TRIM(pse.permission_key)) = 'BROWSE_PROJECTS'
+              AND (
+                    (UPPER(TRIM(pse.grantee_type)) = 'USER' AND CAST(:userId AS TEXT) = pse.grantee_ref)
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'PROJECT_LEAD'
+                        AND p.lead_user_id = :userId
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'GROUP'
+                        AND :groupKeysCsv <> ''
+                        AND POSITION(CONCAT(',', LOWER(TRIM(pse.grantee_ref)), ',') IN :groupKeysCsv) > 0
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) IN ('ANY_LOGGED_IN_USER', 'LOGGED_IN_USER', 'AUTHENTICATED')
+                        AND :userId IS NOT NULL
+                    )
+                    OR (
+                        UPPER(TRIM(pse.grantee_type)) = 'PROJECT_ROLE'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM project_roles pr
+                            JOIN project_role_actors pra ON pra.project_role_id = pr.id
+                            WHERE pra.project_id = p.id
+                              AND pra.tenant_id = p.tenant_id
+                              AND pra.deleted_at IS NULL
+                              AND pr.deleted_at IS NULL
+                              AND (pr.tenant_id = p.tenant_id OR pr.tenant_id = 0)
+                              AND pr.name = pse.grantee_ref
+                              AND (
+                                    (UPPER(TRIM(pra.subject_type)) = 'USER' AND CAST(:userId AS TEXT) = pra.subject_id)
+                                    OR (
+                                        UPPER(TRIM(pra.subject_type)) = 'GROUP'
+                                        AND :groupKeysCsv <> ''
+                                        AND POSITION(CONCAT(',', LOWER(TRIM(pra.subject_id)), ',') IN :groupKeysCsv) > 0
+                                    )
+                              )
+                        )
+                    )
+              )
+      )
     """,
             nativeQuery = true)
-    Page<ProjectModel> findAllWithFilters(
+    Page<ProjectModel> findVisibleProjectsWithFilters(
             @Param("tenantId") Long tenantId,
+            @Param("userId") Long userId,
+            @Param("groupKeysCsv") String groupKeysCsv,
             @Param("search") String search,
             @Param("categoryId") Long categoryId,
             @Param("projectTypeKey") String projectTypeKey,

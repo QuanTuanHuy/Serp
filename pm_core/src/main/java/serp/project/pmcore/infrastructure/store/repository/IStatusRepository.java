@@ -32,6 +32,8 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
 
     List<StatusModel> findAllByTenantId(Long tenantId);
 
+    List<StatusModel> findAllByIdInAndTenantId(List<Long> statusIds, Long tenantId);
+
     @Query("SELECT s FROM StatusModel s WHERE s.tenantId = :tenantId OR s.tenantId = 0")
     List<StatusModel> findAllByTenantIdOrSystemTenant(@Param("tenantId") Long tenantId);
 
@@ -42,9 +44,9 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
               AND (:statusCategoryId IS NULL OR s.categoryId = :statusCategoryId)
               AND (:isSystem IS NULL OR s.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(s.statusKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(s.name) LIKE :searchPattern
+                    OR LOWER(s.statusKey) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -54,13 +56,13 @@ public interface IStatusRepository extends JpaRepository<StatusModel, Long> {
               AND (:statusCategoryId IS NULL OR s.categoryId = :statusCategoryId)
               AND (:isSystem IS NULL OR s.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(s.statusKey) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(s.name) LIKE :searchPattern
+                    OR LOWER(s.statusKey) LIKE :searchPattern
               )
             """)
     Page<StatusModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                @Param("search") String search,
+                                                @Param("searchPattern") String searchPattern,
                                                 @Param("statusCategoryId") Long statusCategoryId,
                                                 @Param("isSystem") Boolean isSystem,
                                                 Pageable pageable);

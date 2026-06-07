@@ -64,6 +64,9 @@ public class UpdateLeadRequest {
     @Size(max = 100, message = "Country must not exceed 100 characters")
     private String country;
 
+    @Size(max = 50, message = "Territory code must not exceed 50 characters")
+    private String territoryCode;
+
     // Lead details
     private LeadSource leadSource;
     private LeadStatus leadStatus;

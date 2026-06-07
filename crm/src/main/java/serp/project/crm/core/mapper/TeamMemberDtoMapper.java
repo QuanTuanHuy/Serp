@@ -6,11 +6,17 @@
 package serp.project.crm.core.mapper;
 
 import org.springframework.stereotype.Component;
+import serp.project.crm.core.domain.constant.TeamMemberRole;
 import serp.project.crm.core.domain.dto.request.CreateTeamMemberRequest;
 import serp.project.crm.core.domain.dto.request.UpdateTeamMemberRequest;
+import serp.project.crm.core.domain.dto.request.WorkingHoursRequest;
 import serp.project.crm.core.domain.dto.response.TeamMemberResponse;
+import serp.project.crm.core.domain.dto.response.WorkingHoursResponse;
 import serp.project.crm.core.domain.dto.response.user.UserProfileResponse;
 import serp.project.crm.core.domain.entity.TeamMemberEntity;
+import serp.project.crm.core.domain.entity.WorkingHoursEntity;
+
+import java.util.List;
 
 @Component
 public class TeamMemberDtoMapper {
@@ -26,7 +32,13 @@ public class TeamMemberDtoMapper {
                 .phone(user.getPhoneNumber())
                 .teamId(request.getTeamId())
                 .userId(request.getUserId())
-                .role(user.getRolesInCrm())
+                .role(request.getRole())
+                .skills(request.getSkills())
+                .languages(request.getLanguages())
+                .experienceLevel(request.getExperienceLevel())
+                .capacity(request.getCapacity())
+                .maxMeetings(request.getMaxMeetings())
+                .workingHours(toWorkingHoursEntities(request.getWorkingHours()))
                 .build();
     }
 
@@ -41,6 +53,12 @@ public class TeamMemberDtoMapper {
                 .phone(request.getPhone())
                 .role(request.getRole())
                 .status(request.getStatus())
+                .skills(request.getSkills())
+                .languages(request.getLanguages())
+                .experienceLevel(request.getExperienceLevel())
+                .capacity(request.getCapacity())
+                .maxMeetings(request.getMaxMeetings())
+                .workingHours(toWorkingHoursEntities(request.getWorkingHours()))
                 .build();
     }
 
@@ -58,6 +76,12 @@ public class TeamMemberDtoMapper {
                 .userId(entity.getUserId())
                 .role(entity.getRole())
                 .status(entity.getStatus())
+                .skills(entity.getSkills())
+                .languages(entity.getLanguages())
+                .experienceLevel(entity.getExperienceLevel())
+                .capacity(entity.getCapacity())
+                .maxMeetings(entity.getMaxMeetings())
+                .workingHours(toWorkingHoursResponses(entity.getWorkingHours()))
                 .tenantId(entity.getTenantId())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
@@ -73,7 +97,43 @@ public class TeamMemberDtoMapper {
                 .name(userProfile.getFullName())
                 .email(userProfile.getEmail())
                 .phone(userProfile.getPhoneNumber())
-                .role(userProfile.getRolesInCrm())
+                .role(TeamMemberRole.MANAGER)
                 .build();
+    }
+
+    private List<WorkingHoursEntity> toWorkingHoursEntities(List<WorkingHoursRequest> requests) {
+        if (requests == null) {
+            return null;
+        }
+
+        return requests.stream()
+                .map(request -> {
+                    WorkingHoursEntity entity = WorkingHoursEntity.builder()
+                            .dayOfWeek(request.getDayOfWeek())
+                            .workingDay(request.getWorkingDay())
+                            .startMinute(request.getStartMinute())
+                            .endMinute(request.getEndMinute())
+                            .build();
+                    return entity;
+                })
+                .toList();
+    }
+
+    private List<WorkingHoursResponse> toWorkingHoursResponses(List<WorkingHoursEntity> entities) {
+        if (entities == null) {
+            return null;
+        }
+
+        return entities.stream()
+                .map(entity -> {
+                    WorkingHoursResponse response = WorkingHoursResponse.builder()
+                            .dayOfWeek(entity.getDayOfWeek())
+                            .workingDay(entity.getWorkingDay())
+                            .startMinute(entity.getStartMinute())
+                            .endMinute(entity.getEndMinute())
+                            .build();
+                    return response;
+                })
+                .toList();
     }
 }

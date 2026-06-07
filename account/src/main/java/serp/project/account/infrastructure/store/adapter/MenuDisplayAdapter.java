@@ -142,4 +142,14 @@ public class MenuDisplayAdapter implements IMenuDisplayPort {
 
         return Pair.of(result, total);
     }
+
+    @Override
+    public Long countMenuDisplays() {
+        return menuDisplayRepository.count();
+    }
+
+    @Override
+    public Long countVisibleMenuDisplays() {
+        return menuDisplayRepository.countByIsVisible(true);
+    }
 }
