@@ -37,4 +37,54 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
         @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
     );
 
+    @Query("""
+        SELECT r FROM RoutePlanEntity r
+        WHERE r.tenantId = :tenantId AND r.isDeleted = false
+          AND r.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT rps FROM RoutePlanStudentEntity rps
+              WHERE rps.route.id = r.id
+                AND rps.student.parentProfile.id = :parentProfileId
+                AND rps.isDeleted = false
+          )
+    """)
+    List<RoutePlanEntity> findRoutePlansByParentAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("parentProfileId") Long parentProfileId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT r FROM RoutePlanEntity r
+        WHERE r.tenantId = :tenantId AND r.isDeleted = false
+          AND r.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT t FROM TripExecutionEntity t
+              WHERE t.route.id = r.id
+                AND t.driver.id = :driverId
+                AND t.isDeleted = false
+          )
+    """)
+    List<RoutePlanEntity> findRoutePlansByDriverAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("driverId") Long driverId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT r FROM RoutePlanEntity r
+        WHERE r.tenantId = :tenantId AND r.isDeleted = false
+          AND r.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT t FROM TripExecutionEntity t
+              WHERE t.route.id = r.id
+                AND t.attendant.id = :attendantId
+                AND t.isDeleted = false
+          )
+    """)
+    List<RoutePlanEntity> findRoutePlansByAttendantAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("attendantId") Long attendantId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
 }
