@@ -11,6 +11,7 @@ import type {
   PMReplaceResourceCalendarAssignmentsRequest,
   PMReplaceResourceCalendarBlocksRequest,
   PMResourceCalendarAssignmentApi,
+  PMResourceCalendarBlockApi,
   PMResourceCalendarDeleteResultApi,
   PMResourceCalendarExceptionApi,
   PMResourceCalendarProfileApi,
@@ -21,19 +22,21 @@ import type {
 
 export const pmResourceCalendarApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getPmResourceCalendarSettingsOverview:
-      builder.query<PMResourceCalendarSettingsOverviewApi, void>({
-        query: () => ({
-          url: '/resource-calendar-settings/overview',
-          method: 'GET',
-        }),
-        extraOptions: { service: 'pm' },
-        transformResponse:
-          createDataTransform<PMResourceCalendarSettingsOverviewApi>(),
-        providesTags: [
-          { type: 'pm/ResourceCalendarSettings' as const, id: 'OVERVIEW' },
-        ],
+    getPmResourceCalendarSettingsOverview: builder.query<
+      PMResourceCalendarSettingsOverviewApi,
+      void
+    >({
+      query: () => ({
+        url: '/resource-calendar-settings/overview',
+        method: 'GET',
       }),
+      extraOptions: { service: 'pm' },
+      transformResponse:
+        createDataTransform<PMResourceCalendarSettingsOverviewApi>(),
+      providesTags: [
+        { type: 'pm/ResourceCalendarSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
 
     createPmResourceCalendarProfile: builder.mutation<
       PMResourceCalendarProfileApi,
@@ -88,7 +91,7 @@ export const pmResourceCalendarApi = api.injectEndpoints({
     }),
 
     replacePmResourceCalendarBlocks: builder.mutation<
-      PMResourceCalendarProfileApi,
+      PMResourceCalendarBlockApi[],
       { id: number; body: PMReplaceResourceCalendarBlocksRequest }
     >({
       query: ({ id, body }) => ({
@@ -97,7 +100,7 @@ export const pmResourceCalendarApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { service: 'pm' },
-      transformResponse: createDataTransform<PMResourceCalendarProfileApi>(),
+      transformResponse: createDataTransform<PMResourceCalendarBlockApi[]>(),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'pm/ResourceCalendarProfile' as const, id },
         { type: 'pm/ResourceCalendarSettings' as const, id: 'OVERVIEW' },

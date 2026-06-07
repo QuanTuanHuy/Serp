@@ -16,6 +16,7 @@ export type PMSettingsSection =
   | 'work-types'
   | 'work-type-schemes'
   | 'skills'
+  | 'resource-calendars'
   | 'workflows'
   | 'workflow-schemes'
   | 'priorities'
@@ -74,6 +75,12 @@ export const SETTINGS_ITEMS: Array<{
     key: 'skills',
     title: 'Skills',
     description: 'Manage skill catalog data for optimization.',
+    group: 'Optimization',
+  },
+  {
+    key: 'resource-calendars',
+    title: 'Resource calendars',
+    description: 'Configure working calendars and capacity.',
     group: 'Optimization',
   },
   {

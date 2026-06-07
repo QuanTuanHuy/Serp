@@ -38,6 +38,7 @@ import {
   useDeletePmWorkflowSchemeMutation,
   useGetPmIssueTypeSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
+  useGetPmResourceCalendarSettingsOverviewQuery,
   useGetPmWorkflowSettingsOverviewQuery,
   useManagePmIssueTypeSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
@@ -67,6 +68,7 @@ import {
   WorkTypesTable,
 } from '../components/settings/settings-tables';
 import { PMSkillCatalogSection } from '../components/skills';
+import { PMResourceCalendarSettingsSection } from '../components/settings/resource-calendar';
 import {
   SETTINGS_GROUPS,
   SETTINGS_ITEMS,
@@ -107,6 +109,8 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
     'Choose which work types are available to each project space.',
   skills:
     'Maintain the skill catalog used by people profiles, work item requirements, and optimization ranking.',
+  'resource-calendars':
+    'Configure workspace-level working calendars and capacity for optimization.',
   workflows:
     'A workflow is a set of statuses and transitions that a work item moves through during its lifecycle.',
   'workflow-schemes':
@@ -121,6 +125,7 @@ const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
   'work-types': 'Add work type',
   'work-type-schemes': 'Add work type scheme',
   skills: 'Add skill',
+  'resource-calendars': 'Add calendar',
   workflows: 'Add workflow',
   'workflow-schemes': 'Add workflow scheme',
   priorities: 'Add priority',
@@ -131,6 +136,7 @@ const SECTION_SEARCH_PLACEHOLDERS: Record<PMSettingsSection, string> = {
   'work-types': 'Filter work types',
   'work-type-schemes': 'Filter work type schemes',
   skills: 'Filter skills',
+  'resource-calendars': 'Filter resource calendars',
   workflows: 'Find workflow',
   'workflow-schemes': 'Filter workflow schemes',
   priorities: 'Filter priorities',
@@ -169,6 +175,8 @@ export function PMSettingsPage() {
   const overviewQuery = useGetPmIssueTypeSettingsOverviewQuery();
   const priorityOverviewQuery = useGetPmPrioritySettingsOverviewQuery();
   const workflowOverviewQuery = useGetPmWorkflowSettingsOverviewQuery();
+  const resourceCalendarOverviewQuery =
+    useGetPmResourceCalendarSettingsOverviewQuery();
   const [createWorkType, createWorkTypeState] = useCreatePmIssueTypeMutation();
   const [updateWorkType, updateWorkTypeState] = useUpdatePmIssueTypeMutation();
   const [deleteWorkType, deleteWorkTypeState] = useDeletePmIssueTypeMutation();
@@ -339,7 +347,7 @@ export function PMSettingsPage() {
       setWorkflowSchemeDialog({ mode: 'create' });
     } else if (section === 'priorities') {
       setPriorityDialog({ mode: 'create' });
-    } else {
+    } else if (section === 'priority-schemes') {
       setPrioritySchemeDialog({ mode: 'create' });
     }
   }, [section]);
@@ -875,6 +883,16 @@ export function PMSettingsPage() {
       <main className='space-y-4'>
         {section === 'skills' ? (
           <PMSkillCatalogSection />
+        ) : section === 'resource-calendars' ? (
+          <PMResourceCalendarSettingsSection
+            overview={resourceCalendarOverviewQuery.data}
+            isLoading={resourceCalendarOverviewQuery.isLoading}
+            errorMessage={
+              resourceCalendarOverviewQuery.error
+                ? getErrorMessage(resourceCalendarOverviewQuery.error)
+                : undefined
+            }
+          />
         ) : (
           <>
             <div className='flex flex-col gap-3 border-b border-border/60 pb-4 md:flex-row md:items-start md:justify-between'>
