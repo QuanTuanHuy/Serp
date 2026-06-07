@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.params.ReportFilterParamsRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.CapacityUtilizationReportResponse;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
+import serp.project.school_bus_service.dto.response.DashboardOperationsResponse;
 import serp.project.school_bus_service.dto.response.DashboardSummaryResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
@@ -38,6 +42,19 @@ public class DashboardController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<DashboardSummaryResponse>> getSummary() {
         return ok("Fetched dashboard summary", dashboardService.getSummary(getCurrentTenantId()));
     }
+
+    @GetMapping("/operations")
+    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<DashboardOperationsResponse>> getOperationsDashboard(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate serviceDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) String direction) {
+        return ok("Fetched operations dashboard metrics",
+                dashboardService.getOperationsDashboard(serviceDate, fromDate, toDate, schoolId, direction, getCurrentTenantId()));
+    }
+
 
     @GetMapping("/reports/operations-summary")
     // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.report.read')")

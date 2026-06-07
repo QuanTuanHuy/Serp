@@ -604,6 +604,11 @@ export interface TripAttendanceStopItem {
   actualDroppedCount: number;
   latitude?: number | null;
   longitude?: number | null;
+  plannedArrivalTime?: string | null;
+  plannedDepartureTime?: string | null;
+  actualArrivalTime?: string | null;
+  actualDepartureTime?: string | null;
+  studentCount?: number | null;
 }
 
 export interface TripAttendanceStudentItem {
@@ -633,8 +638,13 @@ export interface SchoolBusTripAttendanceManifest {
   tripCode?: string | null;
   routeId?: number | null;
   routeCode?: string | null;
+  routeName?: string | null;
   routeDirection?: string | null;
   tripStatus: string;
+  serviceDate?: string | null;
+  routeGeometry?: string | null;
+  distanceKm?: number | null;
+  durationMin?: number | null;
   summary: SchoolBusTripAttendanceSummary;
   stops: TripAttendanceStopItem[];
   students: TripAttendanceStudentItem[];
@@ -1236,5 +1246,25 @@ export interface SchoolBusObjectiveScore {
   balanceCost: number;
   weights: Record<string, number>;
 }
+
+export interface ChartItemDto {
+  name: string;
+  count: number;
+  label?: string;
+}
+
+export interface DashboardOperationsResponse {
+  summary: DashboardSummary;
+  tripStatusChart: ChartItemDto[];
+  attendanceChart: ChartItemDto[];
+  routeReadinessChart: ChartItemDto[];
+  requestStatusChart: ChartItemDto[];
+  tripsByDate: ChartItemDto[];
+  directionSplit: ChartItemDto[];
+  activeRoutes: SchoolBusRoute[];
+  pendingApprovalQueue: SchoolBusTransportRequest[];
+  recentAttendanceActivity: SchoolBusAttendance[];
+}
+
 
 

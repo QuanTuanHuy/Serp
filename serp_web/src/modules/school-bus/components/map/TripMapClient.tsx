@@ -43,6 +43,7 @@ interface TripMapClientProps {
   stops: TripAttendanceStopItem[];
   tripStatus: string;
   isOutbound: boolean;
+  routeGeometry?: string | null;
   className?: string;
 }
 
@@ -50,6 +51,7 @@ export default function TripMapClient({
   stops = [],
   tripStatus,
   isOutbound,
+  routeGeometry,
   className,
 }: TripMapClientProps) {
   const { isExpanded, expandKey } = useMapExpand();
@@ -67,6 +69,29 @@ export default function TripMapClient({
     s.latitude as number,
     s.longitude as number,
   ]);
+
+  // Real road geometry path parsing
+  let actualPathCoords: [number, number][] = [];
+  let isFallback = true;
+
+  if (routeGeometry) {
+    try {
+      const parsed = JSON.parse(routeGeometry);
+      if (parsed && Array.isArray(parsed.coordinates)) {
+        actualPathCoords = parsed.coordinates
+          .filter((c: any) => typeof c.latitude === 'number' && typeof c.longitude === 'number')
+          .map((c: any) => [c.latitude, c.longitude] as [number, number]);
+        
+        if (actualPathCoords.length >= 2) {
+          isFallback = parsed.fallbackUsed === true || parsed.geometrySource === 'STRAIGHT_LINE_ESTIMATE';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse routeGeometry JSON on trip map:', e);
+    }
+  }
+
+  const resolvedLine: [number, number][] = actualPathCoords.length >= 2 ? actualPathCoords : allPositions;
 
   // Determine current and next stop based on rules
   const normalizedStatus = (tripStatus || '').toUpperCase();
@@ -127,12 +152,13 @@ export default function TripMapClient({
         <MapInvalidator trigger={isExpanded ? 1 : expandKey} />
 
         {/* Draw route polyline */}
-        {allPositions.length >= 2 && (
+        {resolvedLine.length >= 2 && (
           <Polyline
-            positions={allPositions}
-            color={lineColor}
-            weight={4}
+            positions={resolvedLine}
+            color={isFallback ? '#f59e0b' : lineColor}
+            weight={isFallback ? 3 : 4}
             opacity={0.85}
+            dashArray={isFallback ? '10 6' : undefined}
           />
         )}
 
@@ -200,6 +226,13 @@ export default function TripMapClient({
           );
         })}
       </LeafletMapShell>
+      {isFallback && (
+        <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
+          <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
+            ⚠ Straight-line estimate — road geometry unavailable
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -398,6 +398,10 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
                     item.setLatitude(rs.getLatitude());
                     item.setLongitude(rs.getLongitude());
+                    item.setPlannedArrivalTime(rs.getPlannedArrivalTime() != null ? rs.getPlannedArrivalTime().toString() : null);
+                    item.setPlannedDepartureTime(rs.getPlannedDepartureTime() != null ? rs.getPlannedDepartureTime().toString() : null);
+                    item.setActualArrivalTime(sl.getActualArrivalTime() != null ? sl.getActualArrivalTime().toString() : null);
+                    item.setActualDepartureTime(sl.getActualDepartureTime() != null ? sl.getActualDepartureTime().toString() : null);
 
                     // Boarding count depends on purpose
                     // OUTBOUND PICKUP: students with pickupStopId == this stop
@@ -427,6 +431,17 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                         item.setPlannedBoardingCount(boarding.size());
                         item.setPlannedDropoffCount(dropping.size());
                     }
+
+                    int studentCount = 0;
+                    if (rs.getStopPurpose() == RouteStopPurpose.END_TERMINAL && rs.getLocationType() == RouteLocationType.SCHOOL && isOutbound) {
+                        studentCount = item.getPlannedDropoffCount();
+                    } else if (rs.getStopPurpose() == RouteStopPurpose.START_TERMINAL && rs.getLocationType() == RouteLocationType.SCHOOL && !isOutbound) {
+                        studentCount = item.getPlannedBoardingCount();
+                    } else {
+                        studentCount = item.getPlannedBoardingCount() + item.getPlannedDropoffCount();
+                    }
+                    item.setStudentCount(studentCount);
+
                     return item;
                 })
                 .toList();
@@ -454,12 +469,18 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         response.setTripCode(trip.getTripCode());
         response.setRouteId(trip.getRoute() != null ? trip.getRoute().getId() : null);
         response.setRouteCode(trip.getRoute() != null ? trip.getRoute().getRouteCode() : null);
+        response.setRouteName(trip.getRoute() != null ? trip.getRoute().getRouteName() : null);
         response.setRouteDirection(trip.getRouteDirection() != null ? trip.getRouteDirection().name() : null);
         response.setTripStatus(trip.getStatus().name());
+        response.setServiceDate(trip.getServiceDate() != null ? trip.getServiceDate().toString() : null);
+        response.setRouteGeometry(trip.getRouteGeometryPath() != null ? trip.getRouteGeometryPath() : (trip.getRoute() != null ? trip.getRoute().getGeometryPath() : null));
+        response.setDistanceKm(trip.getPlannedDistanceKm() != null ? trip.getPlannedDistanceKm() : (trip.getRoute() != null ? trip.getRoute().getPlannedDistanceKm() : null));
+        response.setDurationMin(trip.getPlannedDurationMin() != null ? trip.getPlannedDurationMin() : (trip.getRoute() != null ? trip.getRoute().getPlannedDurationMin() : null));
         response.setSummary(summary);
         response.setStops(stops);
         response.setStudents(students);
         return response;
+
     }
 
     @Override

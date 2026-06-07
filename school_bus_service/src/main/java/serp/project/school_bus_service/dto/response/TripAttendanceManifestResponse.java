@@ -12,8 +12,13 @@ public class TripAttendanceManifestResponse {
     private String tripCode;
     private Long routeId;
     private String routeCode;
+    private String routeName;
     private String routeDirection;
     private String tripStatus;
+    private String serviceDate;
+    private String routeGeometry;
+    private Double distanceKm;
+    private Integer durationMin;
     private TripAttendanceSummaryResponse summary;
     private List<TripAttendanceStopItem> stops;
     private List<TripAttendanceStudentItem> students;
@@ -36,6 +41,11 @@ public class TripAttendanceManifestResponse {
         private Integer plannedDropoffCount;
         private Integer actualBoardedCount;
         private Integer actualDroppedCount;
+        private String plannedArrivalTime;
+        private String plannedDepartureTime;
+        private String actualArrivalTime;
+        private String actualDepartureTime;
+        private Integer studentCount;
     }
 
     @Getter
@@ -52,3 +62,4 @@ public class TripAttendanceManifestResponse {
         private String note;
     }
 }
+

@@ -33,6 +33,7 @@ import {
   useGetTripsQuery,
   useSkipTripStopMutation,
   useStartTripMutation,
+  useStartBoardingTripStopMutation,
 } from '../api/schoolBusApi';
 import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -258,6 +259,36 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     return { total, done, current, next };
   }, [manifest, tripStatus]);
 
+  // ── Derived logic for complete trip and timeline sequence ──────────────────
+  const sortedStops = React.useMemo(() => {
+    if (!manifest?.stops) return [];
+    return [...manifest.stops].sort((a, b) => a.stopOrder - b.stopOrder);
+  }, [manifest?.stops]);
+
+  const firstUnfinishedStop = React.useMemo(() => {
+    return sortedStops.find((s) => s.stopStatus !== 'DEPARTED' && s.stopStatus !== 'SKIPPED') ?? null;
+  }, [sortedStops]);
+
+  const allStopsFinished = React.useMemo(() => {
+    return sortedStops.length > 0 && sortedStops.every(
+      (s) => s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED'
+    );
+  }, [sortedStops]);
+
+  const hasPlannedStudents = React.useMemo(() => {
+    return manifest?.students?.some((st) => st.status === 'PLANNED') ?? false;
+  }, [manifest?.students]);
+
+  const hasBoardedStudents = React.useMemo(() => {
+    return manifest?.students?.some((st) => st.status === 'BOARDED') ?? false;
+  }, [manifest?.students]);
+
+  const canCompleteTrip =
+    tripStatus === 'IN_PROGRESS' &&
+    allStopsFinished &&
+    !hasPlannedStudents &&
+    !hasBoardedStudents;
+
   // ── Mutations ──────────────────────────────────────────────────────────────
   const [startTrip, { isLoading: starting }] = useStartTripMutation();
   const [completeTrip, { isLoading: completing }] = useCompleteTripMutation();
@@ -265,8 +296,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const [arriveStop, { isLoading: arriving }] = useArriveTripStopMutation();
   const [departStop, { isLoading: departing }] = useDepartTripStopMutation();
   const [skipStop, { isLoading: skipping }] = useSkipTripStopMutation();
+  const [startBoardingStop, { isLoading: boarding }] = useStartBoardingTripStopMutation();
 
-  const isActing = starting || completing || cancelling || arriving || departing || skipping;
+  const isActing = starting || completing || cancelling || arriving || departing || skipping || boarding;
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
@@ -281,6 +313,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleStart = () => act('Start trip', () => startTrip(tripId).unwrap());
   const handleComplete = () => act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
+  const handleStartBoarding = (stopId: number) => {
+    act('Start boarding', () => startBoardingStop({ tripId, routeStopId: stopId }).unwrap());
+  };
   const handleCancel = () => {
     if (!cancelReason.trim()) return;
     act('Cancel trip', () =>
@@ -371,7 +406,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                 </div>
               </div>
 
-              <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-4 gap-x-6 text-xs'>
+              <div className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-y-4 gap-x-6 text-xs'>
                 <div className='flex items-start gap-2 min-w-0'>
                   <CalendarDays className='h-4.5 w-4.5 text-slate-400 shrink-0 mt-0.5' />
                   <div className='flex flex-col min-w-0'>
@@ -385,6 +420,26 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                   <div className='flex flex-col min-w-0'>
                     <span className='text-slate-400 text-[10px] font-semibold uppercase tracking-wider'>Direction</span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>{getFriendlyDirection(trip.routeDirection)}</span>
+                  </div>
+                </div>
+
+                <div className='flex items-start gap-2 min-w-0'>
+                  <Route className='h-4.5 w-4.5 text-slate-400 shrink-0 mt-0.5' />
+                  <div className='flex flex-col min-w-0'>
+                    <span className='text-slate-400 text-[10px] font-semibold uppercase tracking-wider'>Route Length</span>
+                    <span className='font-bold text-slate-800 truncate mt-0.5'>
+                      {manifest?.distanceKm != null ? `${manifest.distanceKm} km` : (trip?.plannedDistanceKm != null ? `${trip.plannedDistanceKm} km` : '—')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='flex items-start gap-2 min-w-0'>
+                  <Clock className='h-4.5 w-4.5 text-slate-400 shrink-0 mt-0.5' />
+                  <div className='flex flex-col min-w-0'>
+                    <span className='text-slate-400 text-[10px] font-semibold uppercase tracking-wider'>Est. Duration</span>
+                    <span className='font-bold text-slate-800 truncate mt-0.5'>
+                      {manifest?.durationMin != null ? `${manifest.durationMin} mins` : (trip?.plannedDurationMin != null ? `${trip.plannedDurationMin} mins` : '—')}
+                    </span>
                   </div>
                 </div>
 
@@ -420,10 +475,10 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                 <div className='flex flex-col justify-center sm:col-span-2 lg:col-span-1 gap-2'>
                   {!tripIsCompleted && !tripIsCancelled && (
                     <>
-                      {tripStatus === 'CREATED' || tripStatus === 'PLANNED' ? (
+                      {tripStatus === 'CREATED' || tripStatus === 'PLANNED' || tripStatus === 'ASSIGNED' || tripStatus === 'READY' ? (
                         <Button
                           size='sm'
-                          className='bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold shadow-none h-8 px-4 border-0 text-xs shrink-0 w-full'
+                          className='bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full font-bold shadow-none h-8 px-4 border-0 text-xs shrink-0 w-full'
                           onClick={handleStart}
                           disabled={isActing}
                         >
@@ -433,15 +488,22 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       ) : null}
 
                       {tripStatus === 'IN_PROGRESS' && (
-                        <Button
-                          size='sm'
-                          className='bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold shadow-none h-8 px-4 border-0 text-xs shrink-0 w-full'
-                          onClick={handleComplete}
-                          disabled={isActing}
-                        >
-                          <CheckCircle2 className='mr-1.5 h-4 w-4' />
-                          Complete Trip
-                        </Button>
+                        <div className='w-full' title={!canCompleteTrip ? 'Complete all stops and resolve all student statuses before completing this trip.' : undefined}>
+                          <Button
+                            size='sm'
+                            className='bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full font-bold shadow-none h-8 px-4 border-0 text-xs shrink-0 w-full disabled:opacity-50 disabled:cursor-not-allowed'
+                            onClick={handleComplete}
+                            disabled={isActing || !canCompleteTrip}
+                          >
+                            <CheckCircle2 className='mr-1.5 h-4 w-4' />
+                            Complete Trip
+                          </Button>
+                          {!canCompleteTrip && (
+                            <p className='text-[9px] text-red-500 mt-1 font-semibold text-center leading-tight'>
+                              Complete all stops and resolve all student statuses before completing this trip.
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       {showCancelForm ? (
@@ -475,7 +537,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                         <Button
                           size='sm'
                           variant='outline'
-                          className='h-8 rounded-full border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold px-3 w-full'
+                          className='h-8 rounded-full border-red-250 text-red-650 hover:bg-red-50 text-xs font-semibold px-3 w-full'
                           onClick={() => setShowCancelForm(true)}
                           disabled={isActing}
                         >
@@ -589,6 +651,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                 stops={manifest?.stops || []}
                 tripStatus={tripStatus || ''}
                 isOutbound={isOutbound}
+                routeGeometry={manifest?.routeGeometry}
                 className='h-full w-full'
               />
             </div>
@@ -606,9 +669,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
 
               {manifest?.stops && manifest.stops.length > 0 ? (
                 <div className='relative pl-3 space-y-5 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100/70'>
-                  {[...manifest.stops]
-                    .sort((a, b) => a.stopOrder - b.stopOrder)
-                    .map((stop) => {
+                  {sortedStops.map((stop) => {
                       const isCurrent = opSummary?.current && stop.routeStopId === opSummary.current.routeStopId;
                       const isNext = opSummary?.next && stop.routeStopId === opSummary.next.routeStopId;
 
@@ -617,6 +678,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       const isBoarding = stop.stopStatus === 'BOARDING';
                       const isDeparted = stop.stopStatus === 'DEPARTED';
                       const isSkipped = stop.stopStatus === 'SKIPPED';
+                      const isFinished = isDeparted || isSkipped;
 
                       const stopType = stop.locationType || '';
                       const StopIcon = stopType === 'SCHOOL'
@@ -625,160 +687,196 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                         ? Warehouse
                         : MapPin;
 
-                      // Control eligibility
-                      const canArrive = tripIsActive && isPending;
-                      const canDepart = tripIsActive && (isArrived || isBoarding);
-                      const canSkip = tripIsActive && !isDeparted && !isSkipped;
+                      // Control eligibility (sequential check)
+                      const isNextActionableStop = firstUnfinishedStop && stop.routeStopId === firstUnfinishedStop.routeStopId;
+
+                      const showArrive = isPending;
+                      const canBoard =
+                        (isOutbound && stop.stopPurpose === 'PICKUP') ||
+                        (!isOutbound && stop.stopPurpose === 'START_TERMINAL' && stop.locationType === 'SCHOOL');
+                      const showStartBoarding = isArrived && canBoard;
+                      const showDepart = isArrived || isBoarding;
+                      const canSkip = stop.stopPurpose !== 'START_TERMINAL' && stop.stopPurpose !== 'END_TERMINAL';
+                      const showSkip = (isPending || isArrived) && canSkip;
 
                       return (
                         <div
-                          key={stop.routeStopId}
-                          className={cn(
-                            'relative flex gap-4 text-xs font-semibold group transition-all',
-                            isCurrent && 'text-blue-700',
-                            isDeparted && 'text-slate-400 opacity-70',
-                            isSkipped && 'text-slate-350 opacity-60'
-                          )}
+                           key={stop.routeStopId}
+                           className={cn(
+                             'relative flex gap-4 text-xs font-semibold group transition-all',
+                             isCurrent && 'text-blue-700',
+                             isDeparted && 'text-slate-400 opacity-70',
+                             isSkipped && 'text-slate-350 opacity-60'
+                           )}
                         >
-                          {/* Timeline dot */}
-                          <div className={cn(
-                            'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white border shadow-2xs transition-all',
-                            isCurrent
-                              ? 'border-blue-600 ring-4 ring-blue-500/10'
-                              : isDeparted
-                              ? 'border-emerald-300 bg-emerald-50'
-                              : isSkipped
-                              ? 'border-slate-200 bg-slate-50'
-                              : 'border-slate-250'
-                          )}>
-                            <span className={cn(
-                              'h-2 w-2 rounded-full',
-                              isCurrent
-                                ? 'bg-blue-600 animate-pulse'
-                                : isDeparted
-                                ? 'bg-emerald-500'
-                                : isSkipped
-                                ? 'bg-slate-300'
-                                : 'bg-slate-350'
-                            )} />
-                          </div>
+                           {/* Timeline dot */}
+                           <div className={cn(
+                             'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white border shadow-2xs transition-all',
+                             isCurrent
+                               ? 'border-blue-600 ring-4 ring-blue-500/10'
+                               : isDeparted
+                               ? 'border-emerald-300 bg-emerald-50'
+                               : isSkipped
+                               ? 'border-slate-200 bg-slate-50'
+                               : 'border-slate-250'
+                           )}>
+                             <span className={cn(
+                               'h-2 w-2 rounded-full',
+                               isCurrent
+                                 ? 'bg-blue-600 animate-pulse'
+                                 : isDeparted
+                                 ? 'bg-emerald-500'
+                                 : isSkipped
+                                 ? 'bg-slate-300'
+                                 : 'bg-slate-350'
+                             )} />
+                           </div>
 
-                          {/* Stop Details */}
-                          <div className='flex-1 min-w-0 space-y-2'>
-                            <div className='flex items-start justify-between gap-1.5'>
-                              <div className='min-w-0 flex-1'>
-                                <div className='flex items-center gap-1.5 min-w-0'>
-                                  <div className={cn(
-                                    'flex h-4.5 w-4.5 items-center justify-center rounded shrink-0 border border-slate-100',
-                                    stopType === 'SCHOOL' ? 'bg-red-50 text-red-500' : stopType === 'DEPOT' ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-500'
-                                  )}>
-                                    <StopIcon className='h-3 w-3' />
-                                  </div>
-                                  <p className='truncate text-[11px] font-bold text-slate-800'>
-                                    {stop.stopOrder}. {stop.displayName || `Stop #${stop.routeStopId}`}
-                                  </p>
-                                </div>
-                                <p className='text-[9px] text-slate-400 font-semibold mt-0.5 pl-6'>
-                                  {stopTypeLabel(stop)}
-                                </p>
-                              </div>
-                              <div className='flex flex-col items-end gap-1 shrink-0'>
-                                {renderFriendlyBadge(stop.stopStatus)}
-                                {(stop.plannedBoardingCount > 0 || stop.plannedDropoffCount > 0) && (
-                                  <span className='text-[8px] font-extrabold uppercase bg-blue-50 border border-blue-100 text-blue-600 px-1 py-0.2 rounded'>
-                                    {stop.plannedBoardingCount > 0 ? `Board: ${stop.plannedBoardingCount}` : `Drop: ${stop.plannedDropoffCount}`}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                           {/* Stop Details */}
+                           <div className='flex-1 min-w-0 space-y-2'>
+                             <div className='flex items-start justify-between gap-1.5'>
+                               <div className='min-w-0 flex-1'>
+                                 <div className='flex items-center gap-1.5 min-w-0'>
+                                   <div className={cn(
+                                     'flex h-4.5 w-4.5 items-center justify-center rounded shrink-0 border border-slate-100',
+                                     stopType === 'SCHOOL' ? 'bg-red-50 text-red-500' : stopType === 'DEPOT' ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-500'
+                                   )}>
+                                     <StopIcon className='h-3 w-3' />
+                                   </div>
+                                   <p className='truncate text-[11px] font-bold text-slate-800'>
+                                     {stop.stopOrder}. {stop.displayName || `Stop #${stop.routeStopId}`}
+                                   </p>
+                                 </div>
+                                 <p className='text-[9px] text-slate-400 font-semibold mt-0.5 pl-6'>
+                                   {stopTypeLabel(stop)}
+                                 </p>
+                               </div>
+                               <div className='flex flex-col items-end gap-1 shrink-0'>
+                                 {renderFriendlyBadge(stop.stopStatus)}
+                                 {stop.studentCount !== undefined && stop.studentCount !== null && stop.studentCount > 0 && (
+                                   <span className='text-[8px] font-extrabold uppercase bg-slate-100 border border-slate-200 text-slate-650 px-1 py-0.2 rounded'>
+                                     Students: {stop.studentCount}
+                                   </span>
+                                 )}
+                               </div>
+                             </div>
 
-                            {/* Actual visits info */}
-                            {(stop.actualBoardedCount > 0 || stop.actualDroppedCount > 0) && (
-                              <p className='text-[10px] text-slate-500 pl-6'>
-                                Actual boarded: <span className='font-bold text-slate-700'>{stop.actualBoardedCount}</span> • Actual dropped: <span className='font-bold text-slate-700'>{stop.actualDroppedCount}</span>
-                              </p>
-                            )}
+                             {/* Detailed timing info */}
+                             <div className='text-[10px] text-slate-500 pl-6 space-y-0.5 font-medium'>
+                               <div className='flex items-center gap-1.5'>
+                                 <span className='text-slate-400'>Planned:</span>
+                                 <span className='text-slate-700 font-semibold'>
+                                   {stop.plannedArrivalTime || '—'}
+                                   {stop.plannedDepartureTime ? ` - ${stop.plannedDepartureTime}` : ''}
+                                 </span>
+                               </div>
+                               {(stop.actualArrivalTime || stop.actualDepartureTime) && (
+                                 <div className='flex items-center gap-1.5 text-blue-600'>
+                                   <span>Actual:</span>
+                                   <span className='font-semibold'>
+                                     {stop.actualArrivalTime ? stop.actualArrivalTime.split('T')[1]?.substring(0, 5) || stop.actualArrivalTime : '—'}
+                                     {stop.actualDepartureTime ? ` - ${stop.actualDepartureTime.split('T')[1]?.substring(0, 5) || stop.actualDepartureTime}` : ''}
+                                   </span>
+                                 </div>
+                               )}
+                             </div>
 
-                            {/* Action Buttons */}
-                            {tripIsActive && (canArrive || canDepart || canSkip) && (
-                              <div className='flex flex-wrap items-center gap-1.5 pl-6 pt-1'>
-                                {canArrive && (
-                                  <Button
-                                    size='sm'
-                                    className='h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none'
-                                    onClick={() => handleArrive(stop.routeStopId)}
-                                    disabled={isActing}
-                                  >
-                                    Arrive Stop
-                                  </Button>
-                                )}
-                                {isArrived && (
-                                  <Button
-                                    size='sm'
-                                    className='h-7 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none'
-                                    onClick={() => act('Start boarding', () => arriveStop({ tripId, routeStopId: stop.routeStopId }).unwrap())} // boarding is reuse of arrive in state machine
-                                    disabled={isActing}
-                                  >
-                                    Start Boarding
-                                  </Button>
-                                )}
-                                {canDepart && !isArrived && (
-                                  <Button
-                                    size='sm'
-                                    className='h-7 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none'
-                                    onClick={() => handleDepart(stop.routeStopId)}
-                                    disabled={isActing}
-                                  >
-                                    Depart Stop
-                                  </Button>
-                                )}
-                                {canSkip && (
-                                  <>
-                                    {showSkipForm && selectedStopId === stop.routeStopId ? (
-                                      <div className='flex items-center gap-1'>
-                                        <Input
-                                          value={skipReason}
-                                          onChange={(e) => setSkipReason(e.target.value)}
-                                          placeholder='Skip reason…'
-                                          className='h-6 text-[10px] rounded-lg px-1.5 w-24 bg-slate-50'
-                                        />
-                                        <Button
-                                          size='sm'
-                                          className='h-6 text-[9px] rounded-lg bg-red-650 hover:bg-red-700 text-white font-bold px-1.5'
-                                          onClick={() => handleSkip(stop.routeStopId)}
-                                          disabled={!skipReason.trim() || isActing}
-                                        >
-                                          OK
-                                        </Button>
-                                        <Button
-                                          size='sm'
-                                          variant='ghost'
-                                          className='h-6 text-[9px] px-1 rounded-lg'
-                                          onClick={() => setShowSkipForm(false)}
-                                        >
-                                          Back
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <Button
-                                        size='sm'
-                                        variant='outline'
-                                        className='h-7 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 text-[10px] font-semibold px-2.5'
-                                        onClick={() => {
-                                          setSelectedStopId(stop.routeStopId);
-                                          setShowSkipForm(true);
-                                        }}
-                                        disabled={isActing}
-                                      >
-                                        <SkipForward size={11} className='mr-1 shrink-0' />
-                                        Skip Stop
-                                      </Button>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                             {/* Actual visits info */}
+                             {(stop.actualBoardedCount > 0 || stop.actualDroppedCount > 0) && (
+                               <p className='text-[10px] text-slate-500 pl-6 font-medium'>
+                                 Actual boarded: <span className='font-bold text-slate-700'>{stop.actualBoardedCount}</span> • Actual dropped: <span className='font-bold text-slate-700'>{stop.actualDroppedCount}</span>
+                               </p>
+                             )}
+
+                             {/* Action Buttons */}
+                             {tripIsActive && !isFinished && (
+                               <div 
+                                 className='flex flex-wrap items-center gap-1.5 pl-6 pt-1'
+                                 title={!isNextActionableStop ? 'Process previous stops first.' : undefined}
+                               >
+                                 {showArrive && (
+                                   <Button
+                                     size='sm'
+                                     className='h-7 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none disabled:opacity-50 disabled:cursor-not-allowed border-0'
+                                     onClick={() => handleArrive(stop.routeStopId)}
+                                     disabled={isActing || !isNextActionableStop}
+                                   >
+                                     Arrive Stop
+                                   </Button>
+                                 )}
+                                 {showStartBoarding && (
+                                   <Button
+                                     size='sm'
+                                     className='h-7 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none disabled:opacity-50 disabled:cursor-not-allowed border-0'
+                                     onClick={() => handleStartBoarding(stop.routeStopId)}
+                                     disabled={isActing || !isNextActionableStop}
+                                   >
+                                     Start Boarding
+                                   </Button>
+                                 )}
+                                 {showDepart && (
+                                   <Button
+                                     size='sm'
+                                     variant={showStartBoarding ? 'outline' : 'default'}
+                                     className={cn(
+                                       'h-7 rounded-lg text-[10px] font-bold shadow-none disabled:opacity-50 disabled:cursor-not-allowed',
+                                       showStartBoarding
+                                         ? 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                         : 'bg-[#C81E3A] hover:bg-[#B31B34] text-white border-0'
+                                     )}
+                                     onClick={() => handleDepart(stop.routeStopId)}
+                                     disabled={isActing || !isNextActionableStop}
+                                   >
+                                     Depart Stop
+                                   </Button>
+                                 )}
+                                 {showSkip && (
+                                   <>
+                                     {showSkipForm && selectedStopId === stop.routeStopId ? (
+                                       <div className='flex items-center gap-1'>
+                                         <Input
+                                           value={skipReason}
+                                           onChange={(e) => setSkipReason(e.target.value)}
+                                           placeholder='Skip reason…'
+                                           className='h-6 text-[10px] rounded-lg px-1.5 w-24 bg-slate-50'
+                                         />
+                                         <Button
+                                           size='sm'
+                                           className='h-6 text-[9px] rounded-lg bg-red-650 hover:bg-red-700 text-white font-bold px-1.5'
+                                           onClick={() => handleSkip(stop.routeStopId)}
+                                           disabled={!skipReason.trim() || isActing}
+                                         >
+                                           OK
+                                         </Button>
+                                         <Button
+                                           size='sm'
+                                           variant='ghost'
+                                           className='h-6 text-[9px] px-1 rounded-lg'
+                                           onClick={() => setShowSkipForm(false)}
+                                         >
+                                           Back
+                                         </Button>
+                                       </div>
+                                     ) : (
+                                       <Button
+                                         size='sm'
+                                         variant='outline'
+                                         className='h-7 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 text-[10px] font-semibold px-2.5 disabled:opacity-50 disabled:cursor-not-allowed'
+                                         onClick={() => {
+                                           setSelectedStopId(stop.routeStopId);
+                                           setShowSkipForm(true);
+                                         }}
+                                         disabled={isActing || !isNextActionableStop}
+                                       >
+                                         <SkipForward size={11} className='mr-1 shrink-0' />
+                                         Skip Stop
+                                       </Button>
+                                     )}
+                                   </>
+                                 )}
+                               </div>
+                             )}
+                           </div>
                         </div>
                       );
                     })}

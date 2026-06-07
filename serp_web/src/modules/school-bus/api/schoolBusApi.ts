@@ -3,7 +3,10 @@ import { createApiResponseTransform } from '@/lib/store/api/utils';
 import type {
   ApiResponse,
   DashboardSummary,
+  DashboardOperationsResponse,
+  ChartItemDto,
   OperationalReport,
+
   PagedResponse,
   SchoolBusCapacityUtilization,
   SchoolBusDemoEvent,
@@ -102,6 +105,26 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<DashboardSummary>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'SUMMARY' }],
     }),
+    getOperationsDashboard: builder.query<
+      ApiResponse<DashboardOperationsResponse>,
+      {
+        serviceDate?: string;
+        fromDate?: string;
+        toDate?: string;
+        schoolId?: number;
+        direction?: string;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/dashboard/operations',
+        method: 'GET',
+        params: params || undefined,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<DashboardOperationsResponse>(),
+      providesTags: [{ type: 'schoolBus/Dashboard', id: 'OPERATIONS' }],
+    }),
+
     getSchoolBusReport: builder.query<
       ApiResponse<OperationalReport>,
       SchoolBusListParams | void
@@ -1267,6 +1290,20 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
       ],
     }),
+    startBoardingTripStop: builder.mutation<
+      ApiResponse<SchoolBusTripExecution>,
+      { tripId: number; routeStopId: number }
+    >({
+      query: ({ tripId, routeStopId }) => ({
+        url: `/trips/${tripId}/start-boarding/${routeStopId}`,
+        method: 'POST',
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusTripExecution>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
     departTripStop: builder.mutation<
       ApiResponse<SchoolBusTripExecution>,
       { tripId: number; routeStopId: number }
@@ -1417,6 +1454,22 @@ export const schoolBusApi = api.injectEndpoints({
     >({
       query: ({ tripId, body }) => ({
         url: `/trips/${tripId}/attendance/no-show`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusAttendance>(),
+      invalidatesTags: (_result, _error, { tripId }) => [
+        { type: 'schoolBus/Attendance', id: `TRIP-${tripId}` },
+        { type: 'schoolBus/TripHistory', id: `TRIP-${tripId}` },
+      ],
+    }),
+    notServedTripStudent: builder.mutation<
+      ApiResponse<SchoolBusAttendance>,
+      { tripId: number; body: SchoolBusTripAttendanceActionRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/trips/${tripId}/attendance/not-served`,
         method: 'POST',
         body,
       }),
@@ -2003,8 +2056,11 @@ const {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
   useGetSchoolBusSummaryQuery: useGetSchoolBusSummaryQueryOrig,
+  useGetOperationsDashboardQuery: useGetOperationsDashboardQueryOrig,
+  useLazyGetOperationsDashboardQuery,
   useGetSchoolBusReportQuery: useGetSchoolBusReportQueryOrig,
   useGetSchoolBusReportTripsQuery: useGetSchoolBusReportTripsQueryOrig,
+
   useGetSchoolBusReportAttendanceQuery: useGetSchoolBusReportAttendanceQueryOrig,
   useGetSchoolBusReportCapacityQuery: useGetSchoolBusReportCapacityQueryOrig,
   useGetBusTypesQuery: useGetBusTypesQueryOrig,
@@ -2100,6 +2156,8 @@ const {
   useDropoffTripStudentMutation,
   useAbsentTripStudentMutation,
   useNoShowTripStudentMutation,
+  useNotServedTripStudentMutation,
+  useStartBoardingTripStopMutation,
   useCreateDemoSessionMutation,
   useGetDemoSessionQuery: useGetDemoSessionQueryOrig,
   useGetDemoSessionByTripQuery: useGetDemoSessionByTripQueryOrig,
@@ -2158,7 +2216,9 @@ function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
 }
 
 export const useGetSchoolBusSummaryQuery = wrapQueryHook(useGetSchoolBusSummaryQueryOrig);
+export const useGetOperationsDashboardQuery = wrapQueryHook(useGetOperationsDashboardQueryOrig);
 export const useGetSchoolBusReportQuery = wrapQueryHook(useGetSchoolBusReportQueryOrig);
+
 export const useGetSchoolBusReportTripsQuery = wrapQueryHook(useGetSchoolBusReportTripsQueryOrig);
 export const useGetSchoolBusReportAttendanceQuery = wrapQueryHook(useGetSchoolBusReportAttendanceQueryOrig);
 export const useGetSchoolBusReportCapacityQuery = wrapQueryHook(useGetSchoolBusReportCapacityQueryOrig);
@@ -2223,7 +2283,9 @@ export const useGetSessionObjectiveScoreQuery = wrapQueryHook(useGetSessionObjec
 export {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
+  useLazyGetOperationsDashboardQuery,
   useCreateSchoolMutation,
+
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
   useCreateParentMutation,
@@ -2278,6 +2340,8 @@ export {
   useDropoffTripStudentMutation,
   useAbsentTripStudentMutation,
   useNoShowTripStudentMutation,
+  useNotServedTripStudentMutation,
+  useStartBoardingTripStopMutation,
   useCreateDemoSessionMutation,
   useStartDemoSessionMutation,
   usePauseDemoSessionMutation,

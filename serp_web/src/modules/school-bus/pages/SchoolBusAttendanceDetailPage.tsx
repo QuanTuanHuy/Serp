@@ -28,6 +28,7 @@ import {
   useGetTripAttendanceSummaryQuery,
   useGetTripsQuery,
   useNoShowTripStudentMutation,
+  useNotServedTripStudentMutation,
 } from '../api/schoolBusApi';
 import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -59,7 +60,7 @@ const tripStatusMap: Record<string, { label: string; className: string }> = {
   PLANNED: { label: 'Planned', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
   IN_PROGRESS: { label: 'In progress', className: 'border-blue-200 bg-blue-55 text-blue-700 hover:bg-blue-55' },
   COMPLETED: { label: 'Completed', className: 'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
-  CANCELLED: { label: 'Cancelled', className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50' },
+  CANCELLED: { label: 'Cancelled', className: 'border-red-200 bg-red-55 text-red-700 hover:bg-red-55' },
   PAUSED: { label: 'Paused', className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50' },
   // Stop statuses:
   PENDING: { label: 'Pending', className: 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-50' },
@@ -109,7 +110,6 @@ const renderStudentBadge = (status: string) => {
     </Badge>
   );
 };
-
 
 const getFriendlyDirection = (dir?: string | null) => {
   if (dir === 'RETURN') return 'Return';
@@ -190,7 +190,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   }, [tripId, refetchManifest, refetchSummary, refetchEvents]);
 
   // ── Merge & Sort Events ───────────────────────────────────────────────────
-  const mergedEvents = React.useMemo(() => {
+  const mergedEvents = React.useMemo<any[]>(() => {
     if (wsEvents.length === 0) return restEvents;
     const wsConverted = wsEvents.map((e, idx) => ({
       id: -idx - 1,
@@ -208,7 +208,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     return [...newWs, ...restEvents];
   }, [wsEvents, restEvents]);
 
-  const sortedEvents = React.useMemo(() => {
+  const sortedEvents = React.useMemo<any[]>(() => {
     return [...mergedEvents].sort(
       (a: any, b: any) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
     );
@@ -236,6 +236,13 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   const stopStatus = selectedStop?.stopStatus ?? null;
   const isStopActionable = tripIsActive && (stopStatus === 'ARRIVED' || stopStatus === 'BOARDING' || stopStatus === 'PENDING');
   const isDepotStop = selectedStop?.locationType === 'DEPOT';
+
+  // Action flags based on stop direction and purpose
+  const isPickupActionStop = selectedStop?.stopPurpose === 'PICKUP' || 
+    (selectedStop?.stopPurpose === 'START_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && !isOutbound);
+    
+  const isDropoffActionStop = selectedStop?.stopPurpose === 'DROPOFF' || 
+    (selectedStop?.stopPurpose === 'END_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && isOutbound);
 
   // ── Students List filtered by Stop & Search ────────────────────────────────
   const studentsAtStop = React.useMemo<TripAttendanceStudentItem[]>(() => {
@@ -274,8 +281,9 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   const [dropoffStudent, { isLoading: droppingOff }] = useDropoffTripStudentMutation();
   const [absentStudent, { isLoading: markingAbsent }] = useAbsentTripStudentMutation();
   const [noShowStudent, { isLoading: markingNoShow }] = useNoShowTripStudentMutation();
+  const [notServedStudent, { isLoading: markingNotServed }] = useNotServedTripStudentMutation();
 
-  const isActing = boarding || droppingOff || markingAbsent || markingNoShow;
+  const isActing = boarding || droppingOff || markingAbsent || markingNoShow || markingNotServed;
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
@@ -310,6 +318,12 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     if (!selectedStopId) return;
     act(`No-show ${s.studentName ?? ''}`, () =>
       noShowStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleNotServed = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Mark not served for ${s.studentName ?? ''}`, () =>
+      notServedStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
     );
   };
 
@@ -363,7 +377,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
               <Button
                 variant='outline'
                 size='sm'
-                className='h-7 rounded-lg text-[10px] font-bold border-blue-200 text-blue-650 hover:bg-blue-50'
+                className='h-7 rounded-lg text-[10px] font-bold border-[#C81E3A]/30 text-[#C81E3A] hover:bg-rose-50 hover:text-[#B31B34]'
                 asChild
               >
                 <Link href={`/school-bus/trips/${tripId}`}>
@@ -412,55 +426,100 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
         <div className='grid gap-4 md:grid-cols-3'>
           {/* Stats Summary Panel */}
           {summary && (
-            <div className='bg-white border border-slate-200 rounded-2xl p-4 shadow-sm md:col-span-2'>
-              <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-3'>Students Attendance Stats</p>
-              <div className='grid grid-cols-6 gap-2 text-center divide-x divide-slate-100'>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-slate-850'>{summary.totalStudents}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Total Students</span>
-                </div>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-amber-600'>{summary.planned}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Planned</span>
-                </div>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-blue-600'>{summary.boarded}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Boarded</span>
-                </div>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-emerald-600'>{summary.droppedOff}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Dropped Off</span>
-                </div>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-red-500'>{summary.absent + summary.noShow}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Absent / No-show</span>
-                </div>
-                <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-xl font-extrabold text-slate-405'>{summary.notServed}</span>
-                  <span className='text-[10px] text-slate-400 font-semibold truncate'>Not Served</span>
+            <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm md:col-span-2 flex flex-col justify-between'>
+              <div>
+                <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-4'>Students Attendance Stats</p>
+                <div className='grid grid-cols-3 sm:grid-cols-6 gap-4 text-center divide-x divide-slate-100'>
+                  <div className='flex flex-col gap-1.5 min-w-0'>
+                    <span className='text-2xl font-extrabold text-slate-800'>{summary.totalStudents}</span>
+                    <span className='text-[10px] text-slate-400 font-bold truncate uppercase tracking-wide'>Total Students</span>
+                  </div>
+                  <div className='flex flex-col gap-1.5 min-w-0 pl-2'>
+                    <span className='text-2xl font-extrabold text-amber-600'>{summary.planned}</span>
+                    <span className='text-[10px] text-amber-600 font-bold truncate uppercase tracking-wide'>Planned</span>
+                  </div>
+                  <div className='flex flex-col gap-1.5 min-w-0 pl-2'>
+                    <span className='text-2xl font-extrabold text-[#C81E3A]'>{summary.boarded}</span>
+                    <span className='text-[10px] text-[#C81E3A] font-bold truncate uppercase tracking-wide'>Boarded</span>
+                  </div>
+                  <div className='flex flex-col gap-1.5 min-w-0 pl-2'>
+                    <span className='text-2xl font-extrabold text-emerald-600'>{summary.droppedOff}</span>
+                    <span className='text-[10px] text-emerald-600 font-bold truncate uppercase tracking-wide'>Dropped Off</span>
+                  </div>
+                  <div className='flex flex-col gap-1.5 min-w-0 pl-2'>
+                    <span className='text-2xl font-extrabold text-rose-600'>{summary.absent + summary.noShow}</span>
+                    <span className='text-[10px] text-rose-600 font-bold truncate uppercase tracking-wide'>Absent / NoShow</span>
+                  </div>
+                  <div className='flex flex-col gap-1.5 min-w-0 pl-2'>
+                    <span className='text-2xl font-extrabold text-slate-500'>{summary.notServed}</span>
+                    <span className='text-[10px] text-slate-500 font-bold truncate uppercase tracking-wide'>Not Served</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Stop Selector Panel */}
-          <div className='bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-center'>
-            <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5'>Active Stop Select</p>
-            {manifest?.stops && manifest.stops.length > 0 ? (
-              <SchoolBusSelect
-                value={selectedStopId ?? ''}
-                onChange={(val) => setSelectedStopId(val ? Number(val) : null)}
-                placeholder='Select stop...'
-                options={manifest.stops
-                  .filter((s) => s.locationType !== 'DEPOT')
-                  .map((stop) => ({
-                    label: `${stop.stopOrder}. ${stop.displayName} (${stop.stopStatus})`,
-                    value: stop.routeStopId,
-                  }))}
-              />
-            ) : (
-              <span className='text-xs text-slate-400'>No stops available</span>
-            )}
+          {/* Active Stop Panel */}
+          <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4'>
+            <div>
+              <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5'>Active Stop Workspace</p>
+              {manifest?.stops && manifest.stops.length > 0 ? (
+                <div className='space-y-3.5'>
+                  <SchoolBusSelect
+                    value={selectedStopId ?? ''}
+                    onChange={(val) => setSelectedStopId(val ? Number(val) : null)}
+                    placeholder='Select stop...'
+                    options={manifest.stops.map((stop) => {
+                      const stopType = stop.locationType || '';
+                      const purpose = stop.stopPurpose || '';
+                      let roleText = '';
+                      if (stopType === 'DEPOT') {
+                        roleText = 'Depot - no attendance';
+                      } else if (purpose === 'PICKUP') {
+                        roleText = 'Pickup - boarding attendance';
+                      } else if (stopType === 'SCHOOL') {
+                        roleText = isOutbound ? 'School - drop-off attendance' : 'School - boarding attendance';
+                      } else if (purpose === 'DROPOFF') {
+                        roleText = 'Drop-off - drop-off attendance';
+                      } else {
+                        roleText = 'Stop';
+                      }
+                      return {
+                        label: `[${roleText}] ${stop.stopOrder}. ${stop.displayName} (${stop.stopStatus})`,
+                        value: stop.routeStopId,
+                      };
+                    })}
+                  />
+                  
+                  {selectedStop && (
+                    <div className='border border-slate-100 rounded-xl p-3 bg-slate-50/50 space-y-2 text-xs'>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-slate-400 font-semibold'>Stop type</span>
+                        <span className='font-bold text-slate-700'>{stopTypeLabel(selectedStop)}</span>
+                      </div>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-slate-400 font-semibold'>Status</span>
+                        {renderTripBadge(selectedStop.stopStatus)}
+                      </div>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-slate-400 font-semibold'>Planned time</span>
+                        <span className='font-bold text-slate-700'>
+                          {selectedStop.plannedArrivalTime ? formatDateTime(selectedStop.plannedArrivalTime).split(' ')[1] : '—'}
+                        </span>
+                      </div>
+                      {selectedStop.actualArrivalTime && (
+                        <div className='flex items-center justify-between text-emerald-700'>
+                          <span className='font-semibold'>Actual arrival</span>
+                          <span className='font-bold'>{formatDateTime(selectedStop.actualArrivalTime).split(' ')[1]}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className='text-xs text-slate-400'>No stops available</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -493,6 +552,33 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                   </div>
                 </div>
 
+                {/* Status Warning Messages */}
+                {tripStatus !== 'IN_PROGRESS' && tripStatus !== 'COMPLETED' && tripStatus !== 'CANCELLED' ? (
+                  <div className='bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    Start the trip before logging attendance.
+                  </div>
+                ) : tripStatus === 'COMPLETED' || tripStatus === 'CANCELLED' ? (
+                  <div className='bg-slate-50 border border-slate-200 text-slate-650 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    This trip is completed or cancelled. Attendance records are locked.
+                  </div>
+                ) : selectedStop.stopStatus === 'PENDING' ? (
+                  <div className='bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    Arrive at this stop before logging attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'DEPARTED' || selectedStop.stopStatus === 'SKIPPED' ? (
+                  <div className='bg-slate-50 border border-slate-200 text-slate-650 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    This stop has been departed or skipped. Attendance records are locked.
+                  </div>
+                ) : isStopActionable && isPickupActionStop ? (
+                  <div className='bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    This stop is in boarding mode. Mark students as boarded, absent, or no-show.
+                  </div>
+                ) : isStopActionable && isDropoffActionStop ? (
+                  <div className='bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    This stop is in drop-off mode. Mark students as dropped-off or not served.
+                  </div>
+                ) : null}
+
                 {isDepotStop ? (
                   <div className='py-12 text-center text-slate-450 text-xs font-semibold'>
                     Depot stop — student attendance logging is not supported here.
@@ -502,7 +588,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                     No students mapped to this stop direction.
                   </div>
                 ) : (
-                  <div className='divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1'>
+                  <div className='space-y-3 max-h-[500px] overflow-y-auto pr-1'>
                     {studentsAtStop.map((student) => {
                       const stStatus = student.status || 'PLANNED';
                       const stNormalized = stStatus.toUpperCase();
@@ -510,82 +596,122 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                       // Checks
                       const isPlanned = stNormalized === 'PLANNED';
                       const isBoarded = stNormalized === 'BOARDED';
-                      const isDone = STUDENT_STATUS_DONE.has(stNormalized);
 
-                      // Action flags based on stop purpose
-                      const isPickupStop = selectedStop.stopPurpose === 'PICKUP' || selectedStop.stopPurpose === 'START_TERMINAL';
-                      const isDropoffStop = selectedStop.stopPurpose === 'DROPOFF' || selectedStop.stopPurpose === 'END_TERMINAL';
+                      // Action flags based on stop direction and purpose
+                      const canBoard = isPickupActionStop && isPlanned;
+                      const canDrop = isDropoffActionStop && isBoarded;
+                      const canAbsent = isPickupActionStop && isPlanned;
+                      const canNotServed = isDropoffActionStop && isBoarded;
 
-                      const canBoard = isStopActionable && isPickupStop && isPlanned;
-                      const canDrop = isStopActionable && isDropoffStop && isBoarded;
-                      const canAbsent = isStopActionable && isPickupStop && isPlanned;
+                      const lastEvent = mergedEvents.find(
+                        (e: any) =>
+                          (e.studentCode && e.studentCode === student.studentCode) ||
+                          e.studentName === student.studentName
+                      );
+
+                      const lastEventText = (item: any) => {
+                        const type = (item.eventType || item.attendanceType || '').toUpperCase();
+                        const time = item.recordedAt ? formatDateTime(item.recordedAt).split(' ')[1] : '';
+                        const action = type.includes('BOARD')
+                          ? 'BOARDED'
+                          : type.includes('DROP')
+                          ? 'DROPPED OFF'
+                          : type.includes('ABSENT')
+                          ? 'ABSENT'
+                          : type.includes('NO_SHOW')
+                          ? 'NO SHOW'
+                          : type.includes('NOT_SERVED')
+                          ? 'NOT SERVED'
+                          : type;
+                        return `${action} at ${time}`;
+                      };
 
                       return (
                         <div
                           key={student.tripStudentId}
-                          className='flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0'
+                          className='bg-white border border-slate-150 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4'
                         >
-                          <div className='min-w-0'>
-                            <p className='font-bold text-slate-800 text-xs truncate'>{student.studentName}</p>
-                            <p className='text-[10px] text-slate-400 mt-0.5 truncate font-semibold'>Code: {student.studentCode || 'N/A'}</p>
+                          <div className='space-y-1.5 min-w-0'>
+                            <div className='flex items-center gap-2 flex-wrap'>
+                              <p className='font-bold text-slate-800 text-sm truncate'>{student.studentName}</p>
+                              {renderStudentBadge(stStatus)}
+                            </div>
+                            <div className='flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 font-semibold'>
+                              <span>Code: {student.studentCode || 'N/A'}</span>
+                              <span>•</span>
+                              <span>Assigned Stop: {selectedStop.displayName}</span>
+                            </div>
+                            {lastEvent && (
+                              <p className='text-[10px] text-slate-500 italic mt-1 flex items-center gap-1 bg-slate-50 w-fit px-2 py-0.5 rounded border border-slate-100'>
+                                <Clock className='h-3 w-3 text-slate-400 shrink-0' />
+                                Last event: {lastEventText(lastEvent)}
+                              </p>
+                            )}
                             {student.note && (
-                              <p className='text-[9px] text-red-500 bg-red-50/50 border border-red-100/50 rounded px-1.5 py-0.2 mt-1 w-fit'>
+                              <p className='text-[10px] text-red-500 bg-red-50/50 border border-red-100/50 rounded px-2 py-0.5 mt-1.5 w-fit font-medium'>
                                 Note: {student.note}
                               </p>
                             )}
                           </div>
 
-                          <div className='flex items-center gap-2 shrink-0'>
-                            {renderStudentBadge(stStatus)}
-
-                            {/* Attendance Action buttons */}
-                            {tripIsActive && (canBoard || canDrop || canAbsent) && (
-                              <div className='flex items-center gap-1.5'>
-                                {canBoard && (
-                                  <Button
-                                    size='sm'
-                                    className='h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 text-[10px] font-bold shadow-none'
-                                    onClick={() => handleBoard(student)}
-                                    disabled={isActing}
-                                  >
-                                    Board
-                                  </Button>
-                                )}
-                                {canDrop && (
-                                  <Button
-                                    size='sm'
-                                    className='h-7 bg-emerald-605 hover:bg-emerald-700 text-white rounded-full px-3 text-[10px] font-bold shadow-none'
-                                    onClick={() => handleDropoff(student)}
-                                    disabled={isActing}
-                                  >
-                                    Drop-off
-                                  </Button>
-                                )}
-                                {canAbsent && (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    className='h-7 rounded-full border-slate-200 px-3 text-[10px] text-slate-600 hover:bg-slate-50 font-bold shadow-none'
-                                    onClick={() => handleAbsent(student)}
-                                    disabled={isActing}
-                                  >
-                                    Absent
-                                  </Button>
-                                )}
-                                {canBoard && (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    className='h-7 rounded-full border-red-250 px-3 text-[10px] text-red-650 hover:bg-red-50 font-bold shadow-none'
-                                    onClick={() => handleNoShow(student)}
-                                    disabled={isActing}
-                                  >
-                                    No-show
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          {/* Attendance Action buttons */}
+                          {tripIsActive && isStopActionable && (
+                            <div className='flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center'>
+                              {canBoard && (
+                                <Button
+                                  size='sm'
+                                  className='h-8 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-4 text-xs font-semibold shadow-none border-0'
+                                  onClick={() => handleBoard(student)}
+                                  disabled={isActing}
+                                >
+                                  Board
+                                </Button>
+                              )}
+                              {canDrop && (
+                                <Button
+                                  size='sm'
+                                  className='h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-4 text-xs font-semibold shadow-none border-0'
+                                  onClick={() => handleDropoff(student)}
+                                  disabled={isActing}
+                                >
+                                  Drop-off
+                                </Button>
+                              )}
+                              {canAbsent && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  className='h-8 rounded-full border-amber-250 px-4 text-xs text-amber-700 hover:bg-amber-50 font-semibold shadow-none'
+                                  onClick={() => handleAbsent(student)}
+                                  disabled={isActing}
+                                >
+                                  Absent
+                                </Button>
+                              )}
+                              {canBoard && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  className='h-8 rounded-full border-red-250 px-4 text-xs text-red-650 hover:bg-red-50 font-semibold shadow-none'
+                                  onClick={() => handleNoShow(student)}
+                                  disabled={isActing}
+                                >
+                                  No-show
+                                </Button>
+                              )}
+                              {canNotServed && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  className='h-8 rounded-full border-slate-300 px-4 text-xs text-slate-600 hover:bg-slate-50 font-semibold shadow-none'
+                                  onClick={() => handleNotServed(student)}
+                                  disabled={isActing}
+                                >
+                                  Not Served
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -603,50 +729,67 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
 
           {/* Activity Log Feed */}
           <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 max-h-[500px] overflow-y-auto'>
-            <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider'>Activity Log Feed</p>
-            {sortedEvents.length === 0 ? (
-              <SchoolBusEmptyState
-                title='No events yet'
-                description='Attendance events will appear here as they are logged.'
-                icon={Bell}
-              />
-            ) : (
-              <div className='space-y-2.5'>
-                {sortedEvents.map((item) => {
-                  const isBoard = ['BOARDED', 'BOARD'].includes((item.eventType || item.attendanceType || '').toUpperCase());
-                  const isDrop = ['DROPPED_OFF', 'DROPOFF'].includes((item.eventType || item.attendanceType || '').toUpperCase());
-                  const isAbsent = ['ABSENT', 'NO_SHOW'].includes((item.eventType || item.attendanceType || '').toUpperCase());
+            <div className='flex items-center justify-between pb-2 border-b border-slate-100'>
+              <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider'>Activity Log Feed</p>
+              {wsState === 'Live' && (
+                <span className='flex h-2 w-2 relative'>
+                  <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
+                  <span className='relative inline-flex rounded-full h-2 w-2 bg-emerald-500'></span>
+                </span>
+              )}
+            </div>
 
-                  const cardBorder = isBoard
-                    ? 'border-blue-100 bg-blue-50/10'
+            {sortedEvents.length === 0 ? (
+              <div className='py-8 text-center text-slate-450 text-xs font-semibold'>
+                No attendance logs found for this trip.
+              </div>
+            ) : (
+              <div className='relative pl-3.5 space-y-4 before:absolute before:left-[4px] before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100'>
+                {sortedEvents.map((item: any) => {
+                  const type = (item.eventType || item.attendanceType || '').toUpperCase();
+                  const isBoard = type.includes('BOARD');
+                  const isDrop = type.includes('DROP');
+                  const isAbsent = type.includes('ABSENT') || type.includes('NO_SHOW');
+                  const isNotServed = type.includes('NOT_SERVED');
+
+                  const dotColor = isBoard
+                    ? 'bg-blue-500'
                     : isDrop
-                    ? 'border-emerald-100 bg-emerald-50/10'
+                    ? 'bg-emerald-500'
                     : isAbsent
-                    ? 'border-red-100 bg-red-50/10'
-                    : 'border-slate-150 bg-white';
+                    ? 'bg-red-500'
+                    : isNotServed
+                    ? 'bg-slate-400'
+                    : 'bg-slate-300';
+
+                  const actionLabel = isBoard
+                    ? 'BOARDED'
+                    : isDrop
+                    ? 'DROPPED OFF'
+                    : type.includes('ABSENT')
+                    ? 'ABSENT'
+                    : type.includes('NO_SHOW')
+                    ? 'NO SHOW'
+                    : 'NOT SERVED';
+
+                  const timestamp = item.recordedAt ? formatDateTime(item.recordedAt).split(' ')[1] : '';
 
                   return (
-                    <div
-                      key={item.id}
-                      className={cn('rounded-xl border p-3 shadow-2xs space-y-1.5 transition-all hover:shadow-xs', cardBorder)}
-                    >
-                      <div className='flex items-start justify-between gap-2.5 min-w-0'>
-                        <div className='min-w-0 flex-1'>
-                          <p className='truncate text-xs font-bold text-slate-900'>
-                            {item.studentName}
+                    <div key={item.id} className='relative text-xs'>
+                      {/* Event dot */}
+                      <span className={cn('absolute -left-[17px] top-1.5 h-2 w-2 rounded-full border border-white ring-2 ring-slate-50', dotColor)} />
+                      
+                      <div className='space-y-0.5 leading-relaxed'>
+                        <span className='font-bold text-slate-500 mr-1.5'>{timestamp}</span>
+                        <span className='text-slate-700 font-semibold'>
+                          Student <span className='font-bold text-slate-900'>{item.studentName}</span> marked as <span className={cn('font-bold', isBoard ? 'text-blue-600' : isDrop ? 'text-emerald-600' : isAbsent ? 'text-red-600' : 'text-slate-500')}>{actionLabel}</span>.
+                        </span>
+                        {item.notes && (
+                          <p className='text-[10px] text-slate-400 italic bg-slate-50 rounded px-1.5 py-0.2 mt-0.5 w-fit border border-slate-100/50'>
+                            Note: {item.notes}
                           </p>
-                          <p className='text-[10px] text-slate-450 mt-1 font-semibold flex items-center gap-1'>
-                            <Clock className='h-3 w-3 text-slate-350' />
-                            {formatDateTime(item.recordedAt)}
-                          </p>
-                        </div>
-                        {renderStudentBadge(item.eventType ?? item.attendanceType)}
+                        )}
                       </div>
-                      {item.notes && (
-                        <p className='text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 truncate' title={item.notes}>
-                          Note: {item.notes}
-                        </p>
-                      )}
                     </div>
                   );
                 })}

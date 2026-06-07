@@ -436,7 +436,7 @@ export function SchoolBusRouteDetailPage({
             </TooltipProvider>
             {route.status === 'ASSIGNED' ? (
               <Button
-                className='rounded-full bg-indigo-600 hover:bg-indigo-750 text-white font-semibold'
+                className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-semibold border-0'
                 onClick={handleCreateTrip}
                 disabled={creatingTrip}
               >
