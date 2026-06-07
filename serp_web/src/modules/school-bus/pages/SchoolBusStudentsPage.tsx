@@ -38,6 +38,7 @@ import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type { SchoolBusStudent } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 // ── Readiness helpers ─────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ function UnassignedBadge() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function SchoolBusStudentsPage() {
+  const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
   const { data, isLoading } = useGetStudentsQuery(pagination.params);
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
@@ -253,22 +255,26 @@ export function SchoolBusStudentsPage() {
       headerClassName: 'pr-6 text-right',
       render: (student) => (
         <div className='flex justify-end gap-2'>
-          <Button
-            size='icon'
-            variant='outline'
-            className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingStudent(student); setDialogOpen(true); }}
-          >
-            <Pencil className='h-4 w-4' />
-          </Button>
-          <Button
-            size='icon'
-            variant='outline'
-            className='h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border-slate-200'
-            onClick={() => setDeletingStudent(student)}
-          >
-            <Trash2 className='h-4 w-4' />
-          </Button>
+          {access.canWriteStudentData && (
+            <>
+              <Button
+                size='icon'
+                variant='outline'
+                className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
+                onClick={() => { setEditingStudent(student); setDialogOpen(true); }}
+              >
+                <Pencil className='h-4 w-4' />
+              </Button>
+              <Button
+                size='icon'
+                variant='outline'
+                className='h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border-slate-200'
+                onClick={() => setDeletingStudent(student)}
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
@@ -364,18 +370,24 @@ export function SchoolBusStudentsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Student roster'
-        description='Operational student directory powering route planning, requests, and attendance.'
+        title={access.isParent ? 'My children' : 'Student roster'}
+        description={
+          access.isParent
+            ? 'View your children\'s transport profiles and status.'
+            : 'Operational student directory powering route planning, requests, and attendance.'
+        }
         breadcrumb={
           <SchoolBusBreadcrumb items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Students', current: true },
+            { label: access.isParent ? 'My Children' : 'Students', current: true },
           ]} />
         }
         actions={
-          <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingStudent(null); setDialogOpen(true); }}>
-            <Plus className='h-4 w-4' /> Add student
-          </Button>
+          access.canWriteStudentData ? (
+            <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingStudent(null); setDialogOpen(true); }}>
+              <Plus className='h-4 w-4' /> Add student
+            </Button>
+          ) : undefined
         }
       >
         <div className='flex flex-col gap-6'>

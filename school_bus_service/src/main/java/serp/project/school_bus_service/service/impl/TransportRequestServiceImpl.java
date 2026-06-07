@@ -17,6 +17,7 @@ import serp.project.school_bus_service.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
 import serp.project.school_bus_service.service.ISchoolPickupPointWindowService;
 import serp.project.school_bus_service.service.ISchoolScheduleService;
@@ -72,21 +73,23 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public TransportRequestServiceImpl(
-    TransportRequestRepository transportRequestRepository,
-                                 RequestStudentRepository requestStudentRepository,
-                                 TransportRequestHistoryRepository transportRequestHistoryRepository,
-                                 IMasterDataService masterDataService,
-                                 IStudentSubscriptionService subscriptionService,
-                                 ISchoolScheduleService schoolScheduleService,
-                                 ISchoolPickupPointService schoolPickupPointService,
-                                 ISchoolPickupPointWindowService windowService,
-                                 ICodeGeneratorService codeGeneratorService,
-                                 IAuditLogService auditLogService,
-                                 SchoolBusMapper mapper,
-                                 MessageCommon messageCommon) {
+            TransportRequestRepository transportRequestRepository,
+            RequestStudentRepository requestStudentRepository,
+            TransportRequestHistoryRepository transportRequestHistoryRepository,
+            IMasterDataService masterDataService,
+            IStudentSubscriptionService subscriptionService,
+            ISchoolScheduleService schoolScheduleService,
+            ISchoolPickupPointService schoolPickupPointService,
+            ISchoolPickupPointWindowService windowService,
+            ICodeGeneratorService codeGeneratorService,
+            IAuditLogService auditLogService,
+            SchoolBusMapper mapper,
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.transportRequestRepository = transportRequestRepository;
         this.requestStudentRepository = requestStudentRepository;
         this.transportRequestHistoryRepository = transportRequestHistoryRepository;
@@ -99,6 +102,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         this.auditLogService = auditLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -119,6 +123,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity request = findById(transportRequestRepository, id, tenantId);
         return mapper.toTransportRequestDetailResponse(request,
                 requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(id, tenantId));
@@ -126,6 +131,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public List<RequestStudentResponse> getRequestStudents(Long requestId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(requestId);
         findById(transportRequestRepository, requestId, tenantId);
         return requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(requestId, tenantId).stream()
                 .map(mapper::toRequestStudentResponse)
@@ -134,6 +140,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public List<TransportRequestHistoryResponse> getTransportRequestHistory(Long requestId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(requestId);
         findById(transportRequestRepository, requestId, tenantId);
         return transportRequestHistoryRepository
                 .findByRequestIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(requestId, tenantId)
@@ -167,6 +174,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Transactional
     public TransportRequestResponse updateTransportRequest(Long id, TransportRequestUpsertRequest request, Long tenantId,
             Long actorId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() == RequestStatus.APPROVED || entity.getStatus() == RequestStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Request.CANNOT_EDIT, messageCommon.getMessage(AppErrorCode.Request.CANNOT_EDIT, entity.getStatus()));
@@ -190,6 +198,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     @Transactional
     public TransportRequestResponse approveTransportRequest(Long id, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() != RequestStatus.SUBMITTED) {
             throw new AppException(AppErrorCode.Request.ONLY_SUBMITTED_APPROVED, messageCommon.getMessage(AppErrorCode.Request.ONLY_SUBMITTED_APPROVED));
@@ -293,6 +302,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     @Transactional
     public TransportRequestResponse rejectTransportRequest(Long id, RejectRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() != RequestStatus.SUBMITTED) {
             throw new AppException(AppErrorCode.Request.ONLY_SUBMITTED_REJECTED, messageCommon.getMessage(AppErrorCode.Request.ONLY_SUBMITTED_REJECTED));
@@ -313,6 +323,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     @Transactional
     public TransportRequestResponse cancelTransportRequest(Long id, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() != RequestStatus.SUBMITTED && entity.getStatus() != RequestStatus.DRAFT) {
             throw new AppException(AppErrorCode.Request.INVALID_STATE,

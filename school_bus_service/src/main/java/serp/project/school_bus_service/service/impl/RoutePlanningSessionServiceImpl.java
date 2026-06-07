@@ -15,6 +15,9 @@ import serp.project.school_bus_service.dto.response.PlanningPreviewResponse;
 import serp.project.school_bus_service.dto.response.PlanningSessionResponse;
 import serp.project.school_bus_service.dto.response.RouteQualityResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
+import serp.project.school_bus_service.dto.response.RouteBlockingIssueSummaryResponse;
+import serp.project.school_bus_service.dto.response.RouteIssueDetailResponse;
+import serp.project.school_bus_service.dto.response.PublishValidationResponse;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.DepotEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
@@ -64,6 +67,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,9 +135,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     @Override
     @Transactional(readOnly = true)
     public PlanningPreviewResponse preview(PlanningSessionPreviewRequest req, Long tenantId) {
-        return eligibilityService.buildPreview(
-                req.getSchoolId(), req.getSchoolScheduleId(),
-                req.getRouteDirection(), req.getServiceDate(), tenantId);
+        return eligibilityService.buildPreview(req, tenantId);
     }
 
     // ── Create session ───────────────────────────────────────────────────────
@@ -378,7 +380,8 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
 
             route.setIssueCount(totalIssues);
             route.setBlockingIssueCount(blockingCount);
-            route.setQualityScore(blockingCount == 0 ? (totalIssues == 0 ? 100.0 : 75.0) : 30.0);
+            // TODO Phase 6: qualityScore/objectiveScore will be calculated by the formal
+            // weighted objective function. Phase 3 only calculates timing and feasibility issues.
             routeService.saveRouteEntity(route);
 
             totalPlanned += batch.getTotalStudents();
@@ -467,11 +470,61 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                     messageCommon.getMessage(AppErrorCode.Session.UNASSIGNED_STUDENTS, session.getTotalUnassignedStudents()));
         }
 
-        for (RoutePlanEntity route : routes) {
-            if (route.getBlockingIssueCount() != null && route.getBlockingIssueCount() > 0) {
-                throw new AppException(AppErrorCode.Session.BLOCKING_ISSUES,
-                        messageCommon.getMessage(AppErrorCode.Session.BLOCKING_ISSUES, route.getRouteName(), route.getBlockingIssueCount()));
+        List<RoutePlanningIssueEntity> allIssues = issueService.findByPlanningSession(sessionId);
+        List<RoutePlanningIssueEntity> blockingIssues = allIssues.stream()
+                .filter(i -> i.getSeverity() == PlanningIssueSeverity.BLOCKING
+                        && !Boolean.TRUE.equals(i.getIsResolved())
+                        && i.getRoute() != null)
+                .toList();
+
+        if (!blockingIssues.isEmpty()) {
+            java.util.Map<RoutePlanEntity, List<RoutePlanningIssueEntity>> routeIssuesMap = new java.util.HashMap<>();
+            for (RoutePlanningIssueEntity issue : blockingIssues) {
+                routeIssuesMap.computeIfAbsent(issue.getRoute(), k -> new java.util.ArrayList<>()).add(issue);
             }
+
+            List<RouteBlockingIssueSummaryResponse> routeSummaries = new java.util.ArrayList<>();
+            for (java.util.Map.Entry<RoutePlanEntity, List<RoutePlanningIssueEntity>> entry : routeIssuesMap.entrySet()) {
+                RoutePlanEntity r = entry.getKey();
+                List<RoutePlanningIssueEntity> rIssues = entry.getValue();
+
+                List<RouteIssueDetailResponse> issueDetails = rIssues.stream()
+                        .map(i -> new RouteIssueDetailResponse(
+                                i.getIssueType(),
+                                i.getSeverity().name(),
+                                i.getMessage(),
+                                i.getRouteStop() != null ? i.getRouteStop().getId() : null,
+                                i.getRouteStop() != null ? i.getRouteStop().getDisplayName() : null,
+                                i.getStudent() != null ? i.getStudent().getId() : null,
+                                i.getStudent() != null ? i.getStudent().getFullName() : null,
+                                RouteIssueDetailResponse.getSuggestedFix(i.getIssueType())
+                        ))
+                        .toList();
+
+                routeSummaries.add(new RouteBlockingIssueSummaryResponse(
+                        r.getId(),
+                        r.getRouteCode(),
+                        r.getRouteName(),
+                        rIssues.size(),
+                        issueDetails
+                ));
+            }
+
+            int blockingRouteCount = routeSummaries.size();
+            int totalBlockingIssues = blockingIssues.size();
+
+            PublishValidationResponse errorData = new PublishValidationResponse(
+                    sessionId,
+                    blockingRouteCount,
+                    totalBlockingIssues,
+                    routeSummaries
+            );
+
+            throw new AppException(
+                    AppErrorCode.Session.BLOCKING_ISSUES,
+                    "Cannot publish session because " + blockingRouteCount + " route(s) have blocking validation issues.",
+                    errorData
+            );
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -502,7 +555,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     }
 
     @Override
-    @Transactional
     public RoutePlanResponse createRouteInSession(Long sessionId, RoutePlanUpsertRequest request,
                                                    Long tenantId, Long actorId) {
         RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
@@ -512,6 +564,10 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         }
         requireSessionEditable(session);
         RoutePlanResponse response = routeService.createRouteInSession(request, sessionId, tenantId, actorId);
+        
+        // Trigger initial path calculation and trace generation in a separate transaction
+        response = routeService.computeInitialRoutePath(response.getId(), tenantId, actorId);
+        
         refreshSessionSummary(sessionId, tenantId);
         return response;
     }
@@ -527,12 +583,33 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                         session.getRouteDirection().name(),
                         session.getServiceDate(),
                         tenantId);
+
+        List<RoutePlanEntity> routes = routeService.findRoutesBySession(sessionId, tenantId);
+        Map<Long, Long> studentRouteMap = new HashMap<>();
+        for (RoutePlanEntity route : routes) {
+            if (Boolean.TRUE.equals(route.getIsDeleted()) || Boolean.FALSE.equals(route.getIsActive())) {
+                continue;
+            }
+            List<RoutePlanStudentEntity> rpsList = routePlanStudentService.findByRoute(route.getId());
+            for (RoutePlanStudentEntity rps : rpsList) {
+                if (rps.getStudent() != null && !Boolean.TRUE.equals(rps.getIsDeleted())) {
+                    studentRouteMap.put(rps.getStudent().getId(), route.getId());
+                }
+            }
+        }
+
         return eligible.stream()
-                .map(sub -> eligibilityService.toEligibleStudentResponse(
-                        sub,
-                        session.getSchoolSchedule().getId(),
-                        session.getRouteDirection().name(),
-                        tenantId))
+                .map(sub -> {
+                    EligibleStudentResponse resp = eligibilityService.toEligibleStudentResponse(
+                            sub,
+                            session.getSchoolSchedule().getId(),
+                            session.getRouteDirection().name(),
+                            tenantId);
+                    Long routeId = studentRouteMap.get(resp.getStudentId());
+                    resp.setAssigned(routeId != null);
+                    resp.setAssignedRouteId(routeId);
+                    return resp;
+                })
                 .toList();
     }
 

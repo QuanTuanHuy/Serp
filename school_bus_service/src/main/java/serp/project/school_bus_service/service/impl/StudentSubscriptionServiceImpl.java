@@ -14,6 +14,7 @@ import serp.project.school_bus_service.dto.response.SubscriptionPausePeriodRespo
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolScheduleService;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.enums.PausePeriodStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -63,17 +64,19 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     private final ISchoolScheduleService schoolScheduleService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public StudentSubscriptionServiceImpl(
-    StudentSubscriptionRepository subscriptionRepository,
-                                 StudentSubscriptionHistoryRepository historyRepository,
-                                 SubscriptionPausePeriodRepository pausePeriodRepository,
-                                 IMasterDataService masterDataService,
-                                 ICodeGeneratorService codeGeneratorService,
-                                 ISchoolScheduleService schoolScheduleService,
-                                 SchoolBusMapper mapper,
-                                 MessageCommon messageCommon) {
+            StudentSubscriptionRepository subscriptionRepository,
+            StudentSubscriptionHistoryRepository historyRepository,
+            SubscriptionPausePeriodRepository pausePeriodRepository,
+            IMasterDataService masterDataService,
+            ICodeGeneratorService codeGeneratorService,
+            ISchoolScheduleService schoolScheduleService,
+            SchoolBusMapper mapper,
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.subscriptionRepository = subscriptionRepository;
         this.historyRepository = historyRepository;
         this.pausePeriodRepository = pausePeriodRepository;
@@ -82,6 +85,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         this.schoolScheduleService = schoolScheduleService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -112,16 +116,24 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     @Override
     public StudentSubscriptionResponse getSubscription(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessSubscription(id);
         return mapper.toStudentSubscriptionResponse(findById(id, tenantId));
     }
 
     @Override
+    public List<StudentSubscriptionEntity> findAllBySchoolIdAndTenantId(Long schoolId, Long tenantId) {
+        return subscriptionRepository.findAllBySchoolIdAndTenantId(schoolId, tenantId);
+    }
+
+    @Override
     public StudentSubscriptionEntity getSubscriptionEntity(Long id, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessSubscription(id);
         return findById(id, tenantId);
     }
 
     @Override
     public List<StudentSubscriptionHistoryResponse> getSubscriptionHistory(Long subscriptionId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessSubscription(subscriptionId);
         findById(subscriptionId, tenantId);
         return historyRepository.findBySubscriptionIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(subscriptionId, tenantId)
                 .stream().map(mapper::toStudentSubscriptionHistoryResponse).toList();
@@ -129,6 +141,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     @Override
     public List<SubscriptionPausePeriodResponse> getSubscriptionPausePeriods(Long subscriptionId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessSubscription(subscriptionId);
         findById(subscriptionId, tenantId);
         return pausePeriodRepository.findBySubscriptionIdAndTenantIdAndIsDeletedFalseOrderByPauseFromDesc(subscriptionId, tenantId)
                 .stream().map(mapper::toSubscriptionPausePeriodResponse).toList();
@@ -149,6 +162,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     @Override
     @Transactional
     public StudentSubscriptionResponse updateSubscription(Long id, StudentSubscriptionUpsertRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanAccessSubscription(id);
         StudentSubscriptionEntity entity = findById(id, tenantId);
         entity.markUpdated(actor(actorId));
         apply(entity, request, tenantId);
@@ -415,6 +429,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     }
 
     private StudentSubscriptionResponse transition(Long id, Long tenantId, Long actorId, SubscriptionStatus newStatus) {
+        schoolBusDataScopeService.assertCanAccessSubscription(id);
         StudentSubscriptionEntity entity = findById(id, tenantId);
         SubscriptionStatus oldStatus = entity.getStatus();
         if (oldStatus == newStatus) {

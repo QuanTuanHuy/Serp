@@ -42,4 +42,6 @@ public interface ISchoolPickupPointWindowService extends IBaseService<SchoolPick
     List<Long> findPointIdsWithWindow(Long schoolId, List<Long> pointIds, Long scheduleId, String direction, Long tenantId);
 
     List<SchoolPickupPointWindowEntity> getWindowsForLinks(List<Long> linkIds, Long tenantId);
+
+    java.util.Optional<SchoolPickupPointWindowEntity> findWindow(Long schoolId, Long pointId, Long scheduleId, String direction, Long tenantId);
 }

@@ -120,7 +120,7 @@ export function PlanningSessionPanel({
                 className={cn(
                   'w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
                   activeSession?.id === s.id
-                    ? 'border-slate-350 bg-slate-50'
+                    ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
                     : 'border-slate-150 hover:border-slate-250 hover:bg-slate-50',
                 )}>
                 <div className='flex items-center justify-between'>

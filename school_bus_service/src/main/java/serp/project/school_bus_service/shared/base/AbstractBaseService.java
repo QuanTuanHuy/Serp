@@ -81,4 +81,9 @@ public abstract class AbstractBaseService<T extends BaseModel, ID> implements IB
             throw new AppException(AppErrorCode.NOT_FOUND);
         }
     }
+
+    @Override
+    public void flush() {
+        getRepository().flush();
+    }
 }

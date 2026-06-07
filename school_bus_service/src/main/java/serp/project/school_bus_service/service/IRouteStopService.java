@@ -58,5 +58,8 @@ public interface IRouteStopService extends IBaseService<RouteStopEntity, Long> {
 
     /** Internal: persists a list of route stop entities in a single batch. */
     List<RouteStopEntity> saveAllRouteStops(List<RouteStopEntity> entities);
+
+    /** Internal: physically deletes a stop entity (used by greedy simulation). */
+    void deletePhysical(Long id);
 }
 

@@ -20,4 +20,6 @@ public interface RoutePlanningIssueRepository extends BaseRepository<RoutePlanni
             Long routeId, PlanningIssueSeverity severity);
 
     long countByRouteIdAndIsDeletedFalseAndIsResolvedFalse(Long routeId);
+
+    List<RoutePlanningIssueEntity> findByRouteId(Long routeId);
 }

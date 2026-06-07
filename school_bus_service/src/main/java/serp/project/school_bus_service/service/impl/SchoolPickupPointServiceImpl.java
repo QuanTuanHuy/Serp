@@ -48,7 +48,7 @@ public class SchoolPickupPointServiceImpl extends AbstractBaseService<SchoolPick
 
     public SchoolPickupPointServiceImpl(
             SchoolPickupPointRepository repository,
-            SchoolBusMapper mapper,
+            @Lazy SchoolBusMapper mapper,
             IAuditLogService auditLogService,
             ISchoolService schoolService,
             IPickupPointService pickupPointService,

@@ -21,12 +21,14 @@ import {
 
 import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
-import { Button, Badge } from '@/shared/components/ui';
+import { Button, Badge, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui';
 import {
   useComputeRoutePathMutation,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
+  useGetRouteObjectiveScoreQuery,
+  useRecalculateRouteObjectiveScoreMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -58,6 +60,104 @@ function RouteStatusBadge({ status }: { status: string }) {
     <Badge className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-none', cfg.className)}>
       {cfg.label}
     </Badge>
+  );
+}
+
+function RouteObjectiveScoreWidget({ routeId }: { routeId: number }) {
+  const { data: scoreData, refetch, isLoading } = useGetRouteObjectiveScoreQuery(routeId);
+  const [recalculate, { isLoading: isRecalculating }] = useRecalculateRouteObjectiveScoreMutation();
+
+  const handleRecalculate = async () => {
+    try {
+      await recalculate(routeId).unwrap();
+      toast.success('Recalculated route objective score');
+      refetch();
+    } catch (err: any) {
+      toast.error(err?.data?.message || 'Failed to recalculate score');
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-xs text-slate-400 animate-pulse py-2">Loading score...</div>;
+  }
+
+  const score = scoreData?.data;
+  if (!score) {
+    return (
+      <div className="text-xs text-slate-400 py-2">
+        No score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-semibold text-indigo-600">Calculate now</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objective Quality Score</h4>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleRecalculate} 
+          disabled={isRecalculating} 
+          className="h-6 text-[10px] font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/50 p-1 px-2 rounded-full"
+        >
+          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
+        </Button>
+      </div>
+
+      <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-medium text-slate-400 leading-none">Normalized Score</p>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className={cn(
+              "text-lg font-extrabold",
+              score.feasible ? "text-emerald-600" : "text-rose-600"
+            )}>
+              {score.displayScore?.toFixed(2)}
+            </span>
+            <span className="text-slate-400 text-[10px]">/ 100</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-medium text-slate-400 leading-none">Objective Value</p>
+          <p className="text-sm font-bold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
+        </div>
+      </div>
+
+      {/* Breakdown Details */}
+      <div className="space-y-1.5 text-xs">
+        <div className="flex justify-between items-center text-slate-600">
+          <span>Distance cost:</span>
+          <span className="font-semibold text-slate-800">{score.distanceCost?.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center text-slate-600">
+          <span>Duration cost:</span>
+          <span className="font-semibold text-slate-800">{score.durationCost?.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center text-slate-600">
+          <span>Wait time cost:</span>
+          <span className="font-semibold text-slate-800">{score.waitTimeCost?.toFixed(2)}</span>
+        </div>
+        {score.capacityExcessCost > 0 && (
+          <div className="flex justify-between items-center text-rose-600 font-medium">
+            <span>Capacity excess cost:</span>
+            <span>+{score.capacityExcessCost?.toFixed(2)}</span>
+          </div>
+        )}
+        {score.blockingIssueCost > 0 && (
+          <div className="flex justify-between items-center text-rose-600 font-medium">
+            <span>Blocking penalty:</span>
+            <span>+{score.blockingIssueCost?.toFixed(2)}</span>
+          </div>
+        )}
+        {score.warningIssueCost > 0 && (
+          <div className="flex justify-between items-center text-amber-600 font-medium">
+            <span>Warning penalty:</span>
+            <span>+{score.warningIssueCost?.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -182,9 +282,9 @@ export function SchoolBusDispatchPage() {
         </div>
 
         {/* Dispatch Workspace */}
-        <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr]'>
+        <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-start'>
           {/* Left Column: Execution Board */}
-          <div className={cn(schoolBusUi.section, 'flex flex-col gap-4 bg-white p-5')}>
+          <div className={cn(schoolBusUi.section, 'flex flex-col gap-4 bg-white p-5 xl:h-[calc(100vh-140px)] xl:overflow-y-auto')}>
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Route className='h-5 w-5 text-indigo-600' />
@@ -384,7 +484,10 @@ export function SchoolBusDispatchPage() {
           </div>
 
           {/* Right Column: Route Preview Map */}
-          <div className={cn(schoolBusUi.section, 'flex flex-col gap-4 bg-white p-5')}>
+          <div className={cn(
+            schoolBusUi.section,
+            'flex flex-col gap-4 bg-white p-5 xl:sticky xl:top-[88px] xl:h-[calc(100vh-140px)] xl:min-h-[560px] xl:max-h-[850px]'
+          )}>
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Map className='h-5 w-5 text-emerald-600' />
@@ -396,9 +499,10 @@ export function SchoolBusDispatchPage() {
             </div>
 
             {selectedRouteDetail?.data ? (
-              <div className='rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col flex-1'>
+              <div className='rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col flex-1 min-h-0'>
                 <SchoolBusMapWorkspace
                   flat={true}
+                  mapHeightClassName='h-[400px] xl:h-full'
                   map={
                     <RouteMap
                       route={selectedRouteDetail.data.route}
@@ -484,6 +588,11 @@ export function SchoolBusDispatchPage() {
 
                       <hr className='border-slate-100' />
 
+                      {/* Objective Score Breakdown */}
+                      <RouteObjectiveScoreWidget routeId={selectedRouteId as number} />
+
+                      <hr className='border-slate-100' />
+
                       {/* Missing coordinates warning */}
                       {selectedRouteMissingCoordinates > 0 && (
                         <div className='rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-700 leading-normal'>
@@ -494,22 +603,33 @@ export function SchoolBusDispatchPage() {
 
                       {/* Actions */}
                       <div className='pt-2'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='w-full rounded-full border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-700 text-xs font-semibold'
-                          disabled={!selectedRouteId || computingPath}
-                          onClick={handleComputePath}
-                        >
-                          {computingPath ? 'Computing path...' : 'Compute real path'}
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                className='w-full rounded-full border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-700 text-xs font-semibold'
+                                disabled={!selectedRouteId || computingPath}
+                                onClick={handleComputePath}
+                              >
+                                {computingPath ? 'Computing path...' : 'Recompute path'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className='text-xs max-w-[250px]'>
+                                Recalculate route geometry, timeline and calculation trace after stop changes.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   }
                 />
               </div>
             ) : (
-              <div className='flex flex-col items-center justify-center p-12 text-center h-[520px] bg-slate-50/50 rounded-2xl border border-dashed border-slate-200'>
+              <div className='flex flex-col items-center justify-center p-12 text-center flex-1 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 min-h-[400px]'>
                 <Map className='h-12 w-12 text-slate-300 stroke-[1.5] mb-3' />
                 <h3 className='text-sm font-semibold text-slate-800'>Select a route</h3>
                 <p className='text-xs text-slate-500 max-w-[240px] mt-1'>

@@ -11,6 +11,7 @@ import { cn } from '@/shared/utils';
 import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
 import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
 import { SchoolBusTopbar } from './SchoolBusTopbar';
+import { SchoolBusPathGuard } from './SchoolBusPathGuard';
 
 interface SchoolBusLayoutProps {
   children: React.ReactNode;
@@ -62,7 +63,9 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
         <SchoolBusTopbar scrollContainerRef={containerRef} />
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
-            <RouteGuard moduleCode='SCHOOLBUS'>{children}</RouteGuard>
+          <RouteGuard moduleCode='SCHOOLBUS'>
+            <SchoolBusPathGuard>{children}</SchoolBusPathGuard>
+          </RouteGuard>
           </div>
         </main>
       </div>

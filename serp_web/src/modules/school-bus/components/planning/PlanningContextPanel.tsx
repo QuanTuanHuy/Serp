@@ -33,13 +33,14 @@ interface PlanningContextPanelProps {
   creating: boolean;
   sessionActive: boolean;
   depots: SchoolBusDepot[];
+  hasBlockingIssues?: boolean;
 }
 
 const fieldLabel = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 mt-3.5 first:mt-0';
 const fieldInput = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400 transition-all';
 
 export function PlanningContextPanel({
-  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive, depots,
+  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive, depots, hasBlockingIssues,
 }: PlanningContextPanelProps) {
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const schools = getPageItems(schoolsData?.data);
@@ -141,10 +142,15 @@ export function PlanningContextPanel({
           {previewing ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Eye className='mr-1.5 h-3.5 w-3.5' />}
           Preview
         </Button>
-        <Button onClick={onCreateSession} disabled={creating || sessionActive} className={cn('flex-1 justify-center', schoolBusUi.primaryButton)}>
+        <Button onClick={onCreateSession} disabled={creating || sessionActive || hasBlockingIssues} className={cn('flex-1 justify-center', schoolBusUi.primaryButton)}>
           {creating ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Plus className='mr-1.5 h-3.5 w-3.5' />}
           Create
         </Button>
+        {hasBlockingIssues && (
+          <p className='mt-2.5 w-full text-[10px] text-red-500 font-bold text-center bg-red-50/50 py-1.5 rounded-xl border border-red-100'>
+            ⚠️ Disabled due to blocking issues in preview.
+          </p>
+        )}
       </div>
     </div>
   );

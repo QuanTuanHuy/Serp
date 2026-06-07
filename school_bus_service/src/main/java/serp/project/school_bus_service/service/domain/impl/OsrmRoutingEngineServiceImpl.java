@@ -43,7 +43,7 @@ public class OsrmRoutingEngineServiceImpl implements IRoutingEngineService {
     }
 
     @Override
-    public RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints) {
+    public RoutePathResponse requestRoute(Long routeId, List<RoutePathCoordinateResponse> waypoints, Long tenantId) {
         String coordinatePath = waypoints.stream()
                 .map(p -> String.format(Locale.US, "%.6f,%.6f", p.getLongitude(), p.getLatitude()))
                 .reduce((l, r) -> l + ";" + r)

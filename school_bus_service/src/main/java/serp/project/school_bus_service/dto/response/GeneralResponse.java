@@ -40,4 +40,8 @@ public class GeneralResponse<T> {
     public static <T> GeneralResponse<T> error(HttpStatus httpStatus, String status, String message) {
         return new GeneralResponse<>(httpStatus, status, message);
     }
+
+    public static <T> GeneralResponse<T> error(HttpStatus httpStatus, String status, String message, T data) {
+        return new GeneralResponse<>(httpStatus, status, message, data);
+    }
 }

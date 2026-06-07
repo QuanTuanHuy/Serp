@@ -4,7 +4,10 @@ import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BusAttendantProfileRepository extends BaseRepository<BusAttendantProfileEntity, Long> {
     List<BusAttendantProfileEntity> findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(Long tenantId);
+
+    Optional<BusAttendantProfileEntity> findByTenantIdAndUserIdAndIsDeletedFalse(Long tenantId, Long userId);
 }

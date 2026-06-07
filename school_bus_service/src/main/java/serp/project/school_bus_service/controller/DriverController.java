@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import serp.project.school_bus_service.dto.params.DriverProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.DriverProfileUpsertRequest;
@@ -24,12 +25,14 @@ public class DriverController extends AbstractBaseController {
     }
 
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<PageResponse<DriverProfileResponse>>> getDrivers(
             @ModelAttribute DriverProfileParamsRequest params) {
         return ok("Fetched drivers", driverService.getDrivers(params, getCurrentTenantId()));
     }
 
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<DriverProfileResponse>> createDriver(
             @Valid @RequestBody DriverProfileUpsertRequest request) {
         return created("Created driver",
@@ -37,11 +40,13 @@ public class DriverController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
     public ResponseEntity<GeneralResponse<DriverProfileResponse>> getDriver(@PathVariable Long id) {
         return ok("Fetched driver", driverService.getDriverResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<DriverProfileResponse>> updateDriver(@PathVariable Long id,
             @Valid @RequestBody DriverProfileUpsertRequest request) {
         return ok("Updated driver",
@@ -49,6 +54,7 @@ public class DriverController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
     public ResponseEntity<GeneralResponse<Void>> deleteDriver(@PathVariable Long id) {
         driverService.deleteDriver(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted driver");

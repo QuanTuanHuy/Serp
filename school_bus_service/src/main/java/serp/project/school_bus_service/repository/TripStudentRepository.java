@@ -1,10 +1,15 @@
 package serp.project.school_bus_service.repository;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+
 
 public interface TripStudentRepository extends BaseRepository<TripStudentEntity, Long> {
 
@@ -15,5 +20,24 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
             Long tripId,
             Long studentId,
             Long tenantId);
+
+    boolean existsByTripIdAndStudentParentProfileIdAndIsDeletedFalse(Long tripId, Long parentProfileId);
+
+    @Query("""
+        SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
+        JOIN ts.trip t
+        WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
+          AND (:direction IS NULL OR t.routeDirection = :direction)
+        GROUP BY ts.status
+    """)
+    List<Object[]> countAttendanceByStatusFiltered(
+        @Param("tenantId") Long tenantId,
+        @Param("serviceDate") LocalDate serviceDate,
+        @Param("schoolId") Long schoolId,
+        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+    );
+
 }
 

@@ -11,6 +11,7 @@ import serp.project.school_bus_service.dto.response.TripAttendanceManifestRespon
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IRouteStopService;
@@ -56,6 +57,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     private final ITripStopLogService tripStopLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
 
     public AttendanceServiceImpl(
@@ -66,7 +68,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             ITripStudentService tripStudentService,
             ITripStopLogService tripStopLogService,
             SchoolBusMapper mapper,
-            MessageCommon messageCommon) {
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.attendanceRepository = attendanceRepository;
         this.tripExecutionService = tripExecutionService;
         this.auditLogService = auditLogService;
@@ -75,6 +78,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         this.tripStopLogService = tripStopLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
 
@@ -95,6 +99,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     @Override
     public List<AttendanceResponse> getTripAttendance(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
         return attendanceRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(tripId, tenantId)
                 .stream()
@@ -132,6 +137,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     private AttendanceResponse recordTripAttendance(Long tripId, TripAttendanceActionRequest request, Long tenantId,
             Long actorId, AttendanceEventType eventType) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
 
         // Trip must be IN_PROGRESS to record attendance
@@ -332,6 +338,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     @Transactional(readOnly = true)
     public TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
         List<serp.project.school_bus_service.entity.TripStudentEntity> students =
                 tripStudentService.findByTrip(tripId, tenantId);
@@ -349,6 +356,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     @Transactional(readOnly = true)
     public TripAttendanceManifestResponse getTripAttendanceManifest(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         List<serp.project.school_bus_service.entity.TripStudentEntity> tripStudents =
                 tripStudentService.findByTrip(tripId, tenantId);
@@ -396,6 +404,12 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setStopStatus(sl.getStatus().name());
                     item.setActualBoardedCount(sl.getActualBoardedCount() != null ? sl.getActualBoardedCount() : 0);
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
+                    item.setLatitude(rs.getLatitude());
+                    item.setLongitude(rs.getLongitude());
+                    item.setPlannedArrivalTime(rs.getPlannedArrivalTime() != null ? rs.getPlannedArrivalTime().toString() : null);
+                    item.setPlannedDepartureTime(rs.getPlannedDepartureTime() != null ? rs.getPlannedDepartureTime().toString() : null);
+                    item.setActualArrivalTime(sl.getActualArrivalTime() != null ? sl.getActualArrivalTime().toString() : null);
+                    item.setActualDepartureTime(sl.getActualDepartureTime() != null ? sl.getActualDepartureTime().toString() : null);
 
                     // Boarding count depends on purpose
                     // OUTBOUND PICKUP: students with pickupStopId == this stop
@@ -425,6 +439,17 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                         item.setPlannedBoardingCount(boarding.size());
                         item.setPlannedDropoffCount(dropping.size());
                     }
+
+                    int studentCount = 0;
+                    if (rs.getStopPurpose() == RouteStopPurpose.END_TERMINAL && rs.getLocationType() == RouteLocationType.SCHOOL && isOutbound) {
+                        studentCount = item.getPlannedDropoffCount();
+                    } else if (rs.getStopPurpose() == RouteStopPurpose.START_TERMINAL && rs.getLocationType() == RouteLocationType.SCHOOL && !isOutbound) {
+                        studentCount = item.getPlannedBoardingCount();
+                    } else {
+                        studentCount = item.getPlannedBoardingCount() + item.getPlannedDropoffCount();
+                    }
+                    item.setStudentCount(studentCount);
+
                     return item;
                 })
                 .toList();
@@ -452,12 +477,18 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         response.setTripCode(trip.getTripCode());
         response.setRouteId(trip.getRoute() != null ? trip.getRoute().getId() : null);
         response.setRouteCode(trip.getRoute() != null ? trip.getRoute().getRouteCode() : null);
+        response.setRouteName(trip.getRoute() != null ? trip.getRoute().getRouteName() : null);
         response.setRouteDirection(trip.getRouteDirection() != null ? trip.getRouteDirection().name() : null);
         response.setTripStatus(trip.getStatus().name());
+        response.setServiceDate(trip.getServiceDate() != null ? trip.getServiceDate().toString() : null);
+        response.setRouteGeometry(trip.getRouteGeometryPath() != null ? trip.getRouteGeometryPath() : (trip.getRoute() != null ? trip.getRoute().getGeometryPath() : null));
+        response.setDistanceKm(trip.getPlannedDistanceKm() != null ? trip.getPlannedDistanceKm() : (trip.getRoute() != null ? trip.getRoute().getPlannedDistanceKm() : null));
+        response.setDurationMin(trip.getPlannedDurationMin() != null ? trip.getPlannedDurationMin() : (trip.getRoute() != null ? trip.getRoute().getPlannedDurationMin() : null));
         response.setSummary(summary);
         response.setStops(stops);
         response.setStudents(students);
         return response;
+
     }
 
     @Override

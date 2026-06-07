@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,20 +34,20 @@ public class SubscriptionController extends AbstractBaseController {
     }
 
     @GetMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
     public ResponseEntity<GeneralResponse<PageResponse<StudentSubscriptionResponse>>> getSubscriptions(
             @ModelAttribute StudentSubscriptionParamsRequest params) {
         return ok("Fetched subscriptions", subscriptionService.getSubscriptions(params, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> getSubscription(@PathVariable Long id) {
         return ok("Fetched subscription", subscriptionService.getSubscription(id, getCurrentTenantId()));
     }
 
     @PostMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> createSubscription(
             @Valid @RequestBody StudentSubscriptionUpsertRequest request) {
         return created("Created subscription",
@@ -54,7 +55,7 @@ public class SubscriptionController extends AbstractBaseController {
     }
 
     @PatchMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> updateSubscription(
             @PathVariable Long id,
             @Valid @RequestBody StudentSubscriptionUpsertRequest request) {
@@ -63,28 +64,28 @@ public class SubscriptionController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/activate")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> activateSubscription(@PathVariable Long id) {
         return ok("Activated subscription",
                 subscriptionService.activateSubscription(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/pause")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> pauseSubscription(@PathVariable Long id) {
         return ok("Paused subscription",
                 subscriptionService.pauseSubscription(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/stop")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.write')")
     public ResponseEntity<GeneralResponse<StudentSubscriptionResponse>> stopSubscription(@PathVariable Long id) {
         return ok("Stopped subscription",
                 subscriptionService.stopSubscription(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}/history")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
     public ResponseEntity<GeneralResponse<java.util.List<StudentSubscriptionHistoryResponse>>> getSubscriptionHistory(
             @PathVariable Long id) {
         return ok("Fetched subscription history",
@@ -92,7 +93,7 @@ public class SubscriptionController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}/pause-periods")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
     public ResponseEntity<GeneralResponse<java.util.List<SubscriptionPausePeriodResponse>>> getSubscriptionPausePeriods(
             @PathVariable Long id) {
         return ok("Fetched subscription pause periods",

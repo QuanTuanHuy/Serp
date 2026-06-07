@@ -50,5 +50,24 @@ public interface SchoolPickupPointWindowRepository extends BaseRepository<School
             @Param("scheduleId") Long scheduleId,
             @Param("direction") String direction,
             @Param("tenantId") Long tenantId);
+
+    @Query("""
+            SELECT w
+              FROM SchoolPickupPointWindowEntity w
+              JOIN w.schoolPickupPoint spp
+             WHERE spp.school.id = :schoolId
+               AND spp.pickupPoint.id = :pointId
+               AND w.schoolSchedule.id = :scheduleId
+               AND w.direction = :direction
+               AND w.tenantId = :tenantId
+               AND w.isDeleted = false
+               AND spp.isDeleted = false
+            """)
+    Optional<SchoolPickupPointWindowEntity> findWindow(
+            @Param("schoolId") Long schoolId,
+            @Param("pointId") Long pointId,
+            @Param("scheduleId") Long scheduleId,
+            @Param("direction") String direction,
+            @Param("tenantId") Long tenantId);
 }
 

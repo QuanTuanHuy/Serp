@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,7 +37,7 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @GetMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.read')")
     public ResponseEntity<GeneralResponse<PageResponse<TransportRequestResponse>>> getTransportRequests(
             @ModelAttribute TransportRequestParamsRequest params) {
         return ok("Fetched transport requests",
@@ -44,20 +45,20 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @PostMapping
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.write')")
     public ResponseEntity<GeneralResponse<TransportRequestResponse>> createTransportRequest(@Valid @RequestBody TransportRequestUpsertRequest request) {
         return created("Created transport request",
                 transportRequestService.createTransportRequest(request, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @GetMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.read')")
     public ResponseEntity<GeneralResponse<TransportRequestDetailResponse>> getTransportRequest(@PathVariable Long id) {
         return ok("Fetched transport request", transportRequestService.getTransportRequest(id, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}/history")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.read')")
     public ResponseEntity<GeneralResponse<List<TransportRequestHistoryResponse>>> getTransportRequestHistory(
             @PathVariable Long id) {
         return ok("Fetched transport request history",
@@ -65,7 +66,7 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @PatchMapping("/{id}")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.write')")
     public ResponseEntity<GeneralResponse<TransportRequestResponse>> updateTransportRequest(@PathVariable Long id,
             @Valid @RequestBody TransportRequestUpsertRequest request) {
         return ok("Updated transport request",
@@ -73,14 +74,14 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/approve")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.approve')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.approve')")
     public ResponseEntity<GeneralResponse<TransportRequestResponse>> approveTransportRequest(@PathVariable Long id) {
         return ok("Approved transport request",
                 transportRequestService.approveTransportRequest(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/reject")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.reject')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.approve')")
     public ResponseEntity<GeneralResponse<TransportRequestResponse>> rejectTransportRequest(@PathVariable Long id,
             @Valid @RequestBody RejectRequest request) {
         return ok("Rejected transport request",
@@ -88,7 +89,7 @@ public class TransportRequestController extends AbstractBaseController {
     }
 
     @PostMapping("/{id}/cancel")
-    // @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.transport-request.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.write')")
     public ResponseEntity<GeneralResponse<TransportRequestResponse>> cancelTransportRequest(@PathVariable Long id) {
         return ok("Cancelled transport request",
                 transportRequestService.cancelTransportRequest(id, getCurrentTenantId(), getCurrentUserId()));

@@ -27,6 +27,7 @@ import serp.project.school_bus_service.service.IDriverService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
+import serp.project.school_bus_service.service.IRouteManualValidationService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -57,6 +58,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
     private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final IRouteManualValidationService validationService;
 
 
     public RouteDispatchServiceImpl(
@@ -69,6 +71,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                                  // @Lazy: breaks circular dep — RouteDispatchServiceImpl ↔ RouteStopServiceImpl
                                  @Lazy IRouteStopService routeStopService,
                                  IAuditLogService auditLogService,
+                                 @Lazy IRouteManualValidationService validationService,
                                  SchoolBusMapper mapper,
                                  MessageCommon messageCommon) {
         this.routeAssignmentRepository = routeAssignmentRepository;
@@ -79,6 +82,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         this.attendantService = attendantService;
         this.routeStopService = routeStopService;
         this.auditLogService = auditLogService;
+        this.validationService = validationService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
@@ -102,6 +106,9 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
             throw new AppException(AppErrorCode.Dispatch.ROUTE_STATUS_INVALID,
                     messageCommon.getMessage(AppErrorCode.Dispatch.ROUTE_STATUS_INVALID, route.getStatus()));
         }
+
+        // Validate that there are no blocking issues before assigning resources
+        validationService.validateBeforeAssignResources(routeId, tenantId);
 
         // Load resources first — validates they exist and belong to tenant
         BusEntity bus             = busService.getBus(request.getBusId(), tenantId);

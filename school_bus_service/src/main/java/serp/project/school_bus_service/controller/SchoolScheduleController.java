@@ -2,6 +2,7 @@ package serp.project.school_bus_service.controller;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import serp.project.school_bus_service.dto.request.SchoolScheduleUpsertRequest;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
@@ -25,6 +26,7 @@ public class SchoolScheduleController extends AbstractBaseController {
     }
 
     @GetMapping("/by-school")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<PageResponse<SchoolScheduleResponse>>> getBySchool(
             @RequestParam Long schoolId,
             @RequestParam(defaultValue = "0") int page,
@@ -34,6 +36,7 @@ public class SchoolScheduleController extends AbstractBaseController {
     }
 
     @GetMapping("/by-school/active")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<List<SchoolScheduleResponse>>> getActiveBySchool(
             @RequestParam Long schoolId) {
         return ok("Fetched active school schedules",
@@ -41,6 +44,7 @@ public class SchoolScheduleController extends AbstractBaseController {
     }
 
     @PostMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<SchoolScheduleResponse>> create(
             @RequestParam Long schoolId,
             @Valid @RequestBody SchoolScheduleUpsertRequest request) {
@@ -49,12 +53,14 @@ public class SchoolScheduleController extends AbstractBaseController {
     }
 
     @GetMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<SchoolScheduleResponse>> getById(@RequestParam Long id) {
         return ok("Fetched school schedule",
                 scheduleService.getScheduleResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<SchoolScheduleResponse>> update(
             @RequestParam Long id,
             @Valid @RequestBody SchoolScheduleUpsertRequest request) {
@@ -63,6 +69,7 @@ public class SchoolScheduleController extends AbstractBaseController {
     }
 
     @DeleteMapping
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.write')")
     public ResponseEntity<GeneralResponse<Void>> delete(@RequestParam Long id) {
         scheduleService.deleteSchedule(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted school schedule");

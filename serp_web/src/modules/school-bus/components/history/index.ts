@@ -5,6 +5,5 @@ export {
   mapSubscriptionHistoryToTimeline,
   mapPausePeriodsToTimeline,
   mapTripHistoryToTimeline,
-  mapDemoEventsToTimeline,
 } from './mappers';
 export { SubscriptionHistoryDialog } from './SubscriptionHistoryDialog';

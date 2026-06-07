@@ -23,6 +23,8 @@ public interface IStudentSubscriptionService extends IBaseService<StudentSubscri
 
     StudentSubscriptionResponse getSubscription(Long id, Long tenantId);
 
+    List<StudentSubscriptionEntity> findAllBySchoolIdAndTenantId(Long schoolId, Long tenantId);
+
     StudentSubscriptionEntity getSubscriptionEntity(Long id, Long tenantId);
 
     StudentSubscriptionResponse createSubscription(StudentSubscriptionUpsertRequest request, Long tenantId,
