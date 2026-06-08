@@ -67,7 +67,7 @@ public class ResolutionAdapter implements IResolutionPort {
         Pageable pageable = PageableUtils.of(criteria, resolveSort(criteria));
         Page<ResolutionModel> result = resolutionRepository.findAllVisibleWithFilters(
                 tenantId,
-                criteria.getSearch(),
+                criteria.getSearchPatternLower(),
                 criteria.getIsSystem(),
                 pageable
         );

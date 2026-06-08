@@ -36,11 +36,17 @@ import {
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemMutation,
 } from '../../../api/workItemApi';
+import { useGetPmResolutionsQuery } from '../../../api/settingsApi';
 import type {
   PMUpdateWorkItemRequest,
   PMWorkItemSearchApi,
+  PMWorkItemTransitionApi,
 } from '../../../types/api';
 import { PMWorkItemDetailDialog } from '../detail';
+import {
+  transitionNeedsResolution,
+  WorkItemResolutionTransitionDialog,
+} from '../resolution-transition';
 import { PMWorkItemCommandBar } from './PMWorkItemCommandBar';
 import { PMWorkItemListFilters } from './PMWorkItemListFilters';
 import {
@@ -81,6 +87,11 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
   const [loadTransitions] = useLazyGetPmWorkItemTransitionsQuery();
+  const [pendingResolutionTransition, setPendingResolutionTransition] =
+    useState<{
+      item: PMWorkItemSearchApi;
+      transition: PMWorkItemTransitionApi;
+    } | null>(null);
 
   const searchQuery = useSearchPmWorkItemsQuery({
     projectId,
@@ -109,6 +120,21 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
 
   const { data: meta, isFetching: isMetaFetching } =
     useGetPmWorkItemCreateMetaQuery({ projectId });
+  const { data: resolutionResponse, isFetching: isResolutionsFetching } =
+    useGetPmResolutionsQuery({
+      page: 0,
+      pageSize: 100,
+      sortBy: 'sequence',
+      sortDirection: 'asc',
+    });
+  const resolutions = resolutionResponse?.data.items ?? [];
+  const resolutionLabels = useMemo(
+    () =>
+      new Map(
+        resolutions.map((resolution) => [resolution.id, resolution.name])
+      ),
+    [resolutions]
+  );
 
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
     return projectPeople
@@ -324,13 +350,27 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
   );
 
   const updateStatus = useCallback(
-    async (item: PMWorkItemSearchApi, transitionId: number) => {
+    async (
+      item: PMWorkItemSearchApi,
+      transition: PMWorkItemTransitionApi,
+      resolutionId?: number
+    ) => {
+      if (
+        transitionNeedsResolution(transition) &&
+        !item.resolutionId &&
+        !resolutionId
+      ) {
+        setPendingResolutionTransition({ item, transition });
+        return;
+      }
+
       try {
         await transitionWorkItem({
           projectId,
           workItemId: item.id,
-          body: { transitionId },
+          body: { transitionId: transition.id, resolutionId },
         }).unwrap();
+        setPendingResolutionTransition(null);
         toast.success(`${item.key} status updated.`);
       } catch (error) {
         toast.error('Failed to update status', {
@@ -438,6 +478,7 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
             onToggleSelectAll={toggleAllVisibleWorkItems}
             assigneeOptions={assigneeOptions}
             priorityOptions={priorityOptions}
+            resolutionLabels={resolutionLabels}
             isAssigneeLoading={isUsersLoading}
             isPriorityLoading={isMetaFetching}
             isUpdating={updateState.isLoading}
@@ -460,6 +501,30 @@ export function PMWorkItemListTab({ projectId }: PMWorkItemListTabProps) {
           />
         </>
       )}
+      <WorkItemResolutionTransitionDialog
+        open={pendingResolutionTransition !== null}
+        transitionLabel={
+          pendingResolutionTransition?.transition.targetStatus?.name
+        }
+        resolutions={resolutions}
+        isLoading={isResolutionsFetching}
+        isSubmitting={transitionState.isLoading}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingResolutionTransition(null);
+          }
+        }}
+        onConfirm={async (resolutionId) => {
+          if (!pendingResolutionTransition) {
+            return;
+          }
+          await updateStatus(
+            pendingResolutionTransition.item,
+            pendingResolutionTransition.transition,
+            resolutionId
+          );
+        }}
+      />
     </div>
   );
 }

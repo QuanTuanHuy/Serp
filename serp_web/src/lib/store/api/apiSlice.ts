@@ -265,6 +265,8 @@ export const api = createApi({
     'pm/Priority',
     'pm/PriorityScheme',
     'pm/PrioritySettings',
+    'pm/Resolution',
+    'pm/ResolutionSettings',
     'pm/Workflow',
     'pm/WorkflowEditor',
     'pm/WorkflowScheme',

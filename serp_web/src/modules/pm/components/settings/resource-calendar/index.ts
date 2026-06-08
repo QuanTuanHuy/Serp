@@ -4,3 +4,4 @@
  */
 
 export { PMResourceCalendarSettingsSection } from './PMResourceCalendarSettingsSection';
+export { PMResourceCalendarUserCombobox } from './PMResourceCalendarUserCombobox';
