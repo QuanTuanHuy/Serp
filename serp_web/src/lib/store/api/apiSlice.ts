@@ -257,7 +257,7 @@ export const api = createApi({
     'Facility',
     'InventoryItem',
     'Product',
-    'Order',
+    'SalesOrder',
     // Notification tags
     'Notification',
     'NotificationPreference',

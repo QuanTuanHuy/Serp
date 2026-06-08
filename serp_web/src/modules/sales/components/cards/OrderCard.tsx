@@ -25,9 +25,9 @@ import {
   TriangleAlert,
   AlertCircle,
 } from 'lucide-react';
-import { cn, formatCurrency } from '@/shared/utils';
+import { cn } from '@/shared/utils';
 import type { Customer, Order } from '../../types';
-import { formatDateVN } from '@/shared/utils/format';
+import { formatCurrency, formatDateVN } from '@/shared/utils/format';
 
 const statusStyles = {
   CREATED: {

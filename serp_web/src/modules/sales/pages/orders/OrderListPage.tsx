@@ -1,10 +1,3 @@
-/**
- * Order List Page - Enhanced
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Order management with modern UI
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -295,7 +288,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   };
 
   const handleViewOrder = (orderId: string) => {
-    router.push(`/logistics/sale-orders/${orderId}`);
+    router.push(`/sales/orders/${orderId}`);
   };
 
   const clearFilters = () => {
@@ -374,6 +367,10 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
             Quản lý đơn bán hàng đến các đại lý
           </p>
         </div>
+        <Button onClick={() => router.push('/sales/orders/new')}>
+          <Plus className='h-4 w-4 mr-2' />
+          Tạo đơn hàng mới
+        </Button>
       </div>
 
       {/* Quick Stats */}

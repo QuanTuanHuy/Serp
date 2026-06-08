@@ -239,7 +239,7 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
   };
 
   const handleViewItem = (itemId: string) => {
-    router.push(`/sales/inventory/${itemId}`);
+    router.push(`/logistics/inventory/${itemId}`);
   };
 
   const clearFilters = () => {
@@ -315,7 +315,7 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
         </div>
         <div className='flex items-center gap-2'>
           <Button
-            onClick={() => router.push('/sales/inventory/new')}
+            onClick={() => router.push('/logistics/inventory/new')}
             className='gap-2'
           >
             <Plus className='h-4 w-4' />
@@ -609,7 +609,7 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
                 Xóa bộ lọc
               </Button>
             ) : (
-              <Button onClick={() => router.push('/sales/inventory/new')}>
+              <Button onClick={() => router.push('/logistics/inventory/new')}>
                 <Plus className='h-4 w-4 mr-2' />
                 Nhập kho
               </Button>
