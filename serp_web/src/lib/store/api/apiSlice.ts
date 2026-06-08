@@ -268,6 +268,7 @@ export const api = createApi({
     'Presence',
     // PM tags
     'pm/Project',
+    'pm/ProjectPermission',
     'pm/ProjectPeople',
     'pm/ProjectRole',
     'pm/ProjectComponent',
@@ -279,6 +280,8 @@ export const api = createApi({
     'pm/Priority',
     'pm/PriorityScheme',
     'pm/PrioritySettings',
+    'pm/Resolution',
+    'pm/ResolutionSettings',
     'pm/Workflow',
     'pm/WorkflowEditor',
     'pm/WorkflowScheme',
@@ -294,6 +297,9 @@ export const api = createApi({
     'pm/UserSkill',
     'pm/WorkItemSkill',
     'pm/OptimizationRun',
+    'pm/ResourceCalendarSettings',
+    'pm/ResourceCalendarProfile',
+    'pm/ResourceCalendarException',
     // TTCRS tags
     'ttcrs/Request',
     'ttcrs/Location',

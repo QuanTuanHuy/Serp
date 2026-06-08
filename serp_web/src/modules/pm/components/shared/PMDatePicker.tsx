@@ -6,7 +6,7 @@
 'use client';
 
 import { forwardRef, useState, type ComponentPropsWithoutRef } from 'react';
-import { CalendarDays, X } from 'lucide-react';
+import { CalendarDays, Clock, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/shared/components/ui/button';
 import { Calendar } from '@/shared/components/ui/calendar';
@@ -46,6 +46,24 @@ interface PMDateRangePickerProps {
   toPlaceholder?: string;
   disabled?: boolean;
   className?: string;
+}
+
+interface PMDateTimePickerProps
+  extends Omit<
+    ComponentPropsWithoutRef<typeof Button>,
+    'className' | 'children' | 'onChange' | 'type' | 'disabled' | 'value'
+  > {
+  value?: number | string | Date | null;
+  onChange: (value?: Date) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  showClear?: boolean;
+  align?: 'start' | 'center' | 'end';
+  className?: string;
+  buttonClassName?: string;
+  contentClassName?: string;
+  clearLabel?: string;
+  defaultTime?: string;
 }
 
 export const PMDatePicker = forwardRef<HTMLButtonElement, PMDatePickerProps>(
@@ -166,5 +184,135 @@ export function PMDateRangePicker({
         />
       </label>
     </div>
+  );
+}
+
+export const PMDateTimePicker = forwardRef<
+  HTMLButtonElement,
+  PMDateTimePickerProps
+>(function PMDateTimePicker(
+  {
+    value,
+    onChange,
+    placeholder = 'Pick date and time',
+    disabled,
+    showClear = true,
+    align = 'start',
+    className,
+    buttonClassName,
+    contentClassName,
+    clearLabel = 'Clear date and time',
+    defaultTime = '09:00',
+    ...buttonProps
+  },
+  ref
+) {
+  const [open, setOpen] = useState(false);
+  const selectedDate = parseLocalDateValue(value);
+  const hasValue = Boolean(selectedDate);
+  const timeValue = selectedDate
+    ? toTimeInputValue(selectedDate)
+    : normalizeTimeValue(defaultTime);
+
+  const handleDateSelect = (date?: Date) => {
+    if (!date) {
+      onChange(undefined);
+      return;
+    }
+
+    onChange(mergeDateAndTime(date, timeValue));
+  };
+
+  const handleTimeChange = (time: string) => {
+    const normalizedTime = normalizeTimeValue(time);
+    const baseDate = selectedDate ?? new Date();
+    onChange(mergeDateAndTime(baseDate, normalizedTime));
+  };
+
+  return (
+    <div className={cn('flex min-w-0 items-center gap-2', className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={ref}
+            type='button'
+            variant='outline'
+            disabled={disabled}
+            {...buttonProps}
+            className={cn(
+              'min-w-0 flex-1 justify-start gap-2 text-left font-normal',
+              !hasValue && 'text-muted-foreground',
+              buttonClassName
+            )}
+          >
+            <CalendarDays className='h-4 w-4 shrink-0' />
+            <span className='min-w-0 flex-1 truncate'>
+              {hasValue ? format(selectedDate!, 'PP p') : placeholder}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align={align}
+          className={cn('w-auto p-0', contentClassName)}
+        >
+          <Calendar
+            mode='single'
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            initialFocus
+          />
+          <div className='flex items-center gap-2 border-t p-3'>
+            <Clock className='h-4 w-4 text-muted-foreground' />
+            <input
+              type='time'
+              value={timeValue}
+              onChange={(event) => handleTimeChange(event.target.value)}
+              disabled={disabled}
+              className='h-9 rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {showClear && hasValue ? (
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='h-10 w-10 shrink-0'
+          aria-label={clearLabel}
+          onClick={() => onChange(undefined)}
+          disabled={disabled}
+        >
+          <X className='h-4 w-4' />
+        </Button>
+      ) : null}
+    </div>
+  );
+});
+
+function toTimeInputValue(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes()
+  ).padStart(2, '0')}`;
+}
+
+function normalizeTimeValue(value: string): string {
+  return /^\d{2}:\d{2}$/.test(value) ? value : '09:00';
+}
+
+function mergeDateAndTime(date: Date, time: string): Date {
+  const [hours, minutes] = normalizeTimeValue(time)
+    .split(':')
+    .map((part) => Number(part));
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes,
+    0,
+    0
   );
 }

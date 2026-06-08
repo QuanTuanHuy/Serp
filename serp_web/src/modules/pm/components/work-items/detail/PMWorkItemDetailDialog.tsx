@@ -63,12 +63,14 @@ import {
   useTransitionPmWorkItemStatusMutation,
   useUpdatePmWorkItemMutation,
 } from '../../../api/workItemApi';
+import { useGetPmResolutionsQuery } from '../../../api/settingsApi';
 import type {
   PMUpdateWorkItemRequest,
   PMWorkItemActivityApi,
   PMWorkItemChildApi,
   PMWorkItemCommentApi,
   PMWorkItemLinkApi,
+  PMWorkItemTransitionApi,
 } from '../../../types/api';
 import {
   ActivitiesList,
@@ -83,6 +85,10 @@ import {
 } from './PMWorkItemDetailPrimitives';
 import { PMWorkItemDetailSkeleton } from './PMWorkItemDetailStates';
 import { PMWorkItemScheduleSection } from './PMWorkItemScheduleSection';
+import {
+  transitionNeedsResolution,
+  WorkItemResolutionTransitionDialog,
+} from '../resolution-transition';
 import {
   InlineComboboxField,
   InlineDateField,
@@ -533,6 +539,8 @@ function PMWorkItemDetailSidebar({
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
   const [detailPanelOpen, setDetailPanelOpen] = useState(true);
+  const [pendingResolutionTransition, setPendingResolutionTransition] =
+    useState<PMWorkItemTransitionApi | null>(null);
 
   const { data: projectPeople = [], isLoading: isUserLoading } =
     useGetPmProjectPeopleQuery(projectId, { skip: !workItemId });
@@ -551,6 +559,14 @@ function PMWorkItemDetailSidebar({
       { projectId, workItemId: workItemId ?? 0 },
       { skip: !workItemId }
     );
+  const { data: resolutionResponse, isFetching: isResolutionsFetching } =
+    useGetPmResolutionsQuery({
+      page: 0,
+      pageSize: 100,
+      sortBy: 'sequence',
+      sortDirection: 'asc',
+    });
+  const resolutions = resolutionResponse?.data.items ?? [];
 
   const assigneeOptions = useMemo<ComboboxItem[]>(() => {
     const options = projectPeople
@@ -604,21 +620,33 @@ function PMWorkItemDetailSidebar({
     }
   };
 
-  const handleTransition = async (transitionId: number) => {
+  const applyTransition = async (
+    transitionId: number,
+    resolutionId?: number
+  ) => {
     if (!workItemId) return;
 
     try {
       await transitionWorkItem({
         projectId,
         workItemId,
-        body: { transitionId },
+        body: { transitionId, resolutionId },
       }).unwrap();
       toast.success('Work item status updated.');
+      setPendingResolutionTransition(null);
     } catch (error) {
       toast.error('Failed to update status', {
         description: getErrorMessage(error),
       });
     }
+  };
+
+  const handleTransition = async (transition: PMWorkItemTransitionApi) => {
+    if (transitionNeedsResolution(transition) && !item.resolutionId) {
+      setPendingResolutionTransition(transition);
+      return;
+    }
+    await applyTransition(transition.id);
   };
 
   const isStatusUpdating =
@@ -650,7 +678,9 @@ function PMWorkItemDetailSidebar({
                 <DropdownMenuItem
                   key={transition.id}
                   className='flex items-center justify-between gap-3'
-                  onSelect={() => handleTransition(transition.id)}
+                  onSelect={() => {
+                    void handleTransition(transition);
+                  }}
                 >
                   <span className='min-w-0 truncate'>
                     {transition.targetStatus?.name ?? transition.name}
@@ -667,6 +697,24 @@ function PMWorkItemDetailSidebar({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <WorkItemResolutionTransitionDialog
+          open={pendingResolutionTransition !== null}
+          transitionLabel={pendingResolutionTransition?.targetStatus?.name}
+          resolutions={resolutions}
+          isLoading={isResolutionsFetching}
+          isSubmitting={transitionState.isLoading}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPendingResolutionTransition(null);
+            }
+          }}
+          onConfirm={async (resolutionId) => {
+            if (!pendingResolutionTransition) {
+              return;
+            }
+            await applyTransition(pendingResolutionTransition.id, resolutionId);
+          }}
+        />
         <Button variant='outline' size='icon' className='h-8 w-8' disabled>
           <Zap className='h-4 w-4' />
         </Button>

@@ -41,6 +41,7 @@ import {
 import type {
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsApi,
+  PMResolutionSettingsApi,
   PMWorkflowSchemeSettingsApi,
   PMWorkflowSettingsApi,
   PMWorkTypeSchemeSettingsApi,
@@ -332,6 +333,70 @@ export const PrioritySchemesTable = memo(function PrioritySchemesTable({
                   readOnly={scheme.readOnly}
                   onEdit={() => onEdit(scheme)}
                   onDelete={() => onDelete(scheme)}
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+});
+
+export const ResolutionsTable = memo(function ResolutionsTable({
+  resolutions,
+  onMove,
+  onEdit,
+  onDelete,
+}: {
+  resolutions: PMResolutionSettingsApi[];
+  onMove: (item: PMResolutionSettingsApi, direction: 'up' | 'down') => void;
+  onEdit: (item: PMResolutionSettingsApi) => void;
+  onDelete: (item: PMResolutionSettingsApi) => void;
+}) {
+  if (resolutions.length === 0) {
+    return <EmptyState message='No resolutions match the current filter.' />;
+  }
+
+  return (
+    <div className='overflow-x-auto'>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className='w-24'>Order</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Source</TableHead>
+            <TableHead>Last updated</TableHead>
+            <TableHead className='text-right'>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {resolutions.map((resolution, index) => (
+            <TableRow key={resolution.id}>
+              <TableCell>{resolution.sequence ?? index + 1}</TableCell>
+              <TableCell className='min-w-[220px]'>
+                <span className='font-medium'>{resolution.name}</span>
+              </TableCell>
+              <TableCell className='max-w-sm text-muted-foreground'>
+                {resolution.description || '-'}
+              </TableCell>
+              <TableCell>
+                <Badge variant={resolution.isSystem ? 'secondary' : 'outline'}>
+                  {resolution.isSystem ? 'System' : 'Custom'}
+                </Badge>
+              </TableCell>
+              <TableCell>{formatDate(resolution.updatedAt)}</TableCell>
+              <TableCell className='text-right'>
+                <PriorityRowActionMenu
+                  label={resolution.name}
+                  readOnly={resolution.readOnly}
+                  isFirst={index === 0}
+                  isLast={index === resolutions.length - 1}
+                  onMoveUp={() => onMove(resolution, 'up')}
+                  onMoveDown={() => onMove(resolution, 'down')}
+                  onEdit={() => onEdit(resolution)}
+                  onDelete={() => onDelete(resolution)}
                 />
               </TableCell>
             </TableRow>

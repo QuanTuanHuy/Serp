@@ -80,6 +80,56 @@ export interface PMReplaceProjectPersonRolesRequest {
   roleIds: number[];
 }
 
+export type PMProjectPermissionGranteeType =
+  | 'PROJECT_ROLE'
+  | 'GROUP'
+  | 'USER'
+  | 'PROJECT_LEAD'
+  | 'REPORTER'
+  | 'ASSIGNEE'
+  | 'ANY_LOGGED_IN_USER'
+  | 'AUTHENTICATED'
+  | 'APPLICATION_ACCESS'
+  | 'ANYONE_ON_WEB'
+  | 'USER_CUSTOM_FIELD_VALUE'
+  | 'GROUP_CUSTOM_FIELD_VALUE'
+  | string;
+
+export interface PMProjectPermissionDefinitionApi {
+  permissionKey: string;
+  name: string;
+  description?: string | null;
+  category: string;
+}
+
+export interface PMProjectPermissionGrantApi {
+  id?: number | null;
+  permissionKey: string;
+  granteeType: PMProjectPermissionGranteeType;
+  granteeRef?: string | null;
+  customFieldId?: number | null;
+}
+
+export interface PMProjectPermissionSettingsApi {
+  scheme: {
+    id: number;
+    name: string;
+    description?: string | null;
+    tenantOwned: boolean;
+  };
+  permissions: PMProjectPermissionDefinitionApi[];
+  grants: PMProjectPermissionGrantApi[];
+}
+
+export interface PMReplaceProjectPermissionGrantsRequest {
+  grants: Array<{
+    permissionKey: string;
+    granteeType: PMProjectPermissionGranteeType;
+    granteeRef?: string | null;
+    customFieldId?: number | null;
+  }>;
+}
+
 export interface PMListProjectComponentsParams {
   search?: string;
   page?: number;
