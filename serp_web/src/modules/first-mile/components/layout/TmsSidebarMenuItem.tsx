@@ -1,6 +1,6 @@
 /**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project - Sidebar Menu Item component with submenu support
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - TMS sidebar menu item component with submenu support
  */
 
 'use client';
@@ -8,17 +8,17 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronRight, ChevronDown } from 'lucide-react';
-import { cn, getIconComponent } from '@/shared/utils';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { SidebarMenuItem } from '@/shared/hooks';
+import { cn, getIconComponent } from '@/shared/utils';
 
-interface SidebarMenuItemProps {
+interface TmsSidebarMenuItemProps {
   item: SidebarMenuItem;
   isCollapsed: boolean;
   level?: number;
 }
 
-export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
+export const TmsSidebarMenuItem: React.FC<TmsSidebarMenuItemProps> = ({
   item,
   isCollapsed,
   level = 0,
@@ -33,9 +33,15 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
     return pathname === href || pathname.startsWith(href);
   };
 
-  const active = isActive(item.href);
+  const hasActiveChild = item.children?.some((child) => isActive(child.href));
+  const active = isActive(item.href) || hasActiveChild;
 
-  // If item has children, toggle expansion instead of navigation
+  React.useEffect(() => {
+    if (hasActiveChild && !isCollapsed) {
+      setIsExpanded(true);
+    }
+  }, [hasActiveChild, isCollapsed]);
+
   const handleClick = (e: React.MouseEvent) => {
     if (hasChildren && !isCollapsed) {
       e.preventDefault();
@@ -45,7 +51,6 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
 
   return (
     <div>
-      {/* Main Menu Item */}
       <Link
         href={item.href}
         onClick={handleClick}
@@ -55,14 +60,14 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
             ? 'bg-accent text-accent-foreground shadow-sm'
             : 'text-muted-foreground',
           isCollapsed && 'justify-center',
-          level > 0 && 'pl-8' // Indent submenu items
+          level > 0 && 'pl-8'
         )}
         title={isCollapsed ? item.name : undefined}
       >
         <div className='flex items-center space-x-3'>
           <Icon
             className={cn(
-              'h-5 w-5 transition-colors flex-shrink-0',
+              'h-5 w-5 flex-shrink-0 transition-colors',
               active
                 ? 'text-primary'
                 : 'text-muted-foreground group-hover:text-accent-foreground'
@@ -86,11 +91,10 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
         )}
       </Link>
 
-      {/* Submenu Items */}
       {hasChildren && isExpanded && !isCollapsed && (
         <div className='mt-1 space-y-1 pl-4'>
           {item.children!.map((child) => (
-            <SidebarMenuItemComponent
+            <TmsSidebarMenuItem
               key={child.id}
               item={child}
               isCollapsed={isCollapsed}
