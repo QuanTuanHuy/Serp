@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
-import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import {
   Select,
@@ -24,15 +23,18 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 
+import { PMDatePicker } from '../../shared';
+import { toLocalDateInputValue } from '../../../utils/date';
 import type {
   PMReplaceResourceCalendarAssignmentsRequest,
   PMResourceCalendarAssignmentApi,
   PMResourceCalendarProfileApi,
 } from '../../../types/api';
+import { PMResourceCalendarUserCombobox } from './PMResourceCalendarUserCombobox';
 
 type AssignmentDraft = {
   key: string;
-  userId: string;
+  userId: number | null;
   effectiveFrom: string;
   effectiveTo: string;
 };
@@ -80,7 +82,7 @@ export function PMResourceCalendarAssignmentPanel({
         .filter((assignment) => assignment.profileId === selectedProfile.id)
         .map((assignment) => ({
           key: String(assignment.id),
-          userId: String(assignment.userId),
+          userId: assignment.userId,
           effectiveFrom: assignment.effectiveFrom,
           effectiveTo: assignment.effectiveTo ?? '',
         }))
@@ -89,7 +91,7 @@ export function PMResourceCalendarAssignmentPanel({
 
   const updateRow = (
     key: string,
-    field: keyof Omit<AssignmentDraft, 'key'>,
+    field: 'effectiveFrom' | 'effectiveTo',
     value: string
   ) => {
     setRows((current) =>
@@ -102,8 +104,8 @@ export function PMResourceCalendarAssignmentPanel({
       ...current,
       {
         key: crypto.randomUUID(),
-        userId: '',
-        effectiveFrom: new Date().toISOString().slice(0, 10),
+        userId: null,
+        effectiveFrom: toLocalDateInputValue(new Date()),
         effectiveTo: '',
       },
     ]);
@@ -119,22 +121,25 @@ export function PMResourceCalendarAssignmentPanel({
       return;
     }
 
-    const parsedRows = rows.map((row) => ({
-      userId: Number(row.userId),
-      effectiveFrom: row.effectiveFrom,
-      effectiveTo: row.effectiveTo.trim() || null,
-    }));
-    const invalidRow = parsedRows.some(
+    const invalidRow = rows.some(
       (row) =>
+        row.userId === null ||
         !Number.isInteger(row.userId) ||
         row.userId <= 0 ||
         !row.effectiveFrom ||
-        (row.effectiveTo !== null && row.effectiveFrom > row.effectiveTo)
+        (row.effectiveTo.trim().length > 0 &&
+          row.effectiveFrom > row.effectiveTo)
     );
     if (invalidRow) {
-      toast.error('Assignments need valid user IDs and date ranges.');
+      toast.error('Assignments need valid users and date ranges.');
       return;
     }
+
+    const parsedRows = rows.map((row) => ({
+      userId: row.userId as number,
+      effectiveFrom: row.effectiveFrom,
+      effectiveTo: row.effectiveTo.trim() || null,
+    }));
 
     await onSubmit(selectedProfile.id, { assignments: parsedRows });
   };
@@ -174,37 +179,50 @@ export function PMResourceCalendarAssignmentPanel({
               {rows.map((row) => (
                 <div
                   key={row.key}
-                  className='grid gap-2 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_40px] md:items-end'
+                  className='grid gap-2 rounded-md border p-3 md:grid-cols-[minmax(220px,1.4fr)_1fr_1fr_40px] md:items-end'
                 >
                   <div className='space-y-2'>
-                    <Label>User ID</Label>
-                    <Input
-                      type='number'
-                      min={1}
+                    <Label>User</Label>
+                    <PMResourceCalendarUserCombobox
                       value={row.userId}
-                      onChange={(event) =>
-                        updateRow(row.key, 'userId', event.target.value)
+                      onChange={(value) =>
+                        setRows((current) =>
+                          current.map((item) =>
+                            item.key === row.key
+                              ? { ...item, userId: value }
+                              : item
+                          )
+                        )
                       }
+                      placeholder='Search users by name or email...'
                     />
                   </div>
                   <div className='space-y-2'>
                     <Label>Effective from</Label>
-                    <Input
-                      type='date'
+                    <PMDatePicker
                       value={row.effectiveFrom}
-                      onChange={(event) =>
-                        updateRow(row.key, 'effectiveFrom', event.target.value)
+                      onChange={(date) =>
+                        updateRow(
+                          row.key,
+                          'effectiveFrom',
+                          toLocalDateInputValue(date)
+                        )
                       }
+                      placeholder='Start date'
                     />
                   </div>
                   <div className='space-y-2'>
                     <Label>Effective to</Label>
-                    <Input
-                      type='date'
+                    <PMDatePicker
                       value={row.effectiveTo}
-                      onChange={(event) =>
-                        updateRow(row.key, 'effectiveTo', event.target.value)
+                      onChange={(date) =>
+                        updateRow(
+                          row.key,
+                          'effectiveTo',
+                          toLocalDateInputValue(date)
+                        )
                       }
+                      placeholder='End date'
                     />
                   </div>
                   <Button

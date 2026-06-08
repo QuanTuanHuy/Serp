@@ -42,12 +42,14 @@ import {
 } from '@/shared/components/ui/table';
 import { Textarea } from '@/shared/components/ui/textarea';
 
+import { PMDateTimePicker } from '../../shared';
 import type {
   PMCreateResourceCalendarExceptionRequest,
   PMResourceCalendarExceptionApi,
   PMResourceCalendarExceptionType,
 } from '../../../types/api';
 import { normalizeOptionalText } from '../settings-page.types';
+import { PMResourceCalendarUserCombobox } from './PMResourceCalendarUserCombobox';
 
 type ExceptionDialogState =
   | { mode: 'create'; item?: undefined }
@@ -181,11 +183,11 @@ function ExceptionDialog({
     body: PMCreateResourceCalendarExceptionRequest
   ) => Promise<void>;
 }) {
-  const [userId, setUserId] = useState('');
+  const [userId, setUserId] = useState<number | null>(null);
   const [exceptionType, setExceptionType] =
     useState<PMResourceCalendarExceptionType>('UNAVAILABLE');
-  const [startAt, setStartAt] = useState('');
-  const [endAt, setEndAt] = useState('');
+  const [startAt, setStartAt] = useState<number | null>(null);
+  const [endAt, setEndAt] = useState<number | null>(null);
   const [capacityFactor, setCapacityFactor] = useState('');
   const [reason, setReason] = useState('');
 
@@ -194,10 +196,10 @@ function ExceptionDialog({
       return;
     }
 
-    setUserId(state.item ? String(state.item.userId) : '');
+    setUserId(state.item?.userId ?? null);
     setExceptionType(state.item?.exceptionType ?? 'UNAVAILABLE');
-    setStartAt(state.item ? toDateTimeInput(state.item.startAt) : '');
-    setEndAt(state.item ? toDateTimeInput(state.item.endAt) : '');
+    setStartAt(state.item?.startAt ?? null);
+    setEndAt(state.item?.endAt ?? null);
     setCapacityFactor(
       state.item?.capacityFactor === null ||
         state.item?.capacityFactor === undefined
@@ -213,15 +215,18 @@ function ExceptionDialog({
       return;
     }
 
-    const parsedUserId = Number(userId);
-    const parsedStart = new Date(startAt).getTime();
-    const parsedEnd = new Date(endAt).getTime();
+    const parsedUserId = userId;
+    const parsedStart = startAt;
+    const parsedEnd = endAt;
     const parsedFactor =
       capacityFactor.trim().length > 0 ? Number(capacityFactor) : null;
 
     if (
+      parsedUserId === null ||
       !Number.isInteger(parsedUserId) ||
       parsedUserId <= 0 ||
+      parsedStart === null ||
+      parsedEnd === null ||
       !Number.isFinite(parsedStart) ||
       !Number.isFinite(parsedEnd) ||
       parsedStart >= parsedEnd
@@ -267,13 +272,11 @@ function ExceptionDialog({
           <div className='grid gap-4'>
             <div className='grid gap-4 sm:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='resource-exception-user'>User ID</Label>
-                <Input
-                  id='resource-exception-user'
-                  type='number'
-                  min={1}
+                <Label>User</Label>
+                <PMResourceCalendarUserCombobox
                   value={userId}
-                  onChange={(event) => setUserId(event.target.value)}
+                  onChange={setUserId}
+                  placeholder='Search users by name or email...'
                 />
               </div>
               <div className='space-y-2'>
@@ -298,21 +301,21 @@ function ExceptionDialog({
             </div>
             <div className='grid gap-4 sm:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='resource-exception-start'>Start</Label>
-                <Input
-                  id='resource-exception-start'
-                  type='datetime-local'
+                <Label>Start</Label>
+                <PMDateTimePicker
                   value={startAt}
-                  onChange={(event) => setStartAt(event.target.value)}
+                  onChange={(date) => setStartAt(date?.getTime() ?? null)}
+                  placeholder='Start date and time'
+                  defaultTime='09:00'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='resource-exception-end'>End</Label>
-                <Input
-                  id='resource-exception-end'
-                  type='datetime-local'
+                <Label>End</Label>
+                <PMDateTimePicker
                   value={endAt}
-                  onChange={(event) => setEndAt(event.target.value)}
+                  onChange={(date) => setEndAt(date?.getTime() ?? null)}
+                  placeholder='End date and time'
+                  defaultTime='17:00'
                 />
               </div>
             </div>
@@ -366,10 +369,4 @@ function formatDateTime(value: number) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
-}
-
-function toDateTimeInput(value: number) {
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
 }
