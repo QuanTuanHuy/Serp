@@ -71,7 +71,6 @@ const pickupPointSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-  zoneCode: z.string().optional(),
   usageType: z.string().min(1, 'Usage type is required'),
   pickupInstruction: z.string().optional(),
   isActive: z.boolean().default(true),
@@ -110,8 +109,6 @@ const studentSchema = z.object({
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   homeAddress: z.string().optional(),
-  emergencyContactName: z.string().optional(),
-  emergencyContactPhone: z.string().optional(),
   specialNote: z.string().optional(),
   isActive: z.boolean().default(true),
 });
@@ -294,7 +291,6 @@ export function PickupPointFormDialog({
         initialData?.longitude === null || initialData?.longitude === undefined
           ? ''
           : String(initialData.longitude),
-      zoneCode: initialData?.zoneCode || '',
       usageType: initialData?.usageType || '',
       pickupInstruction: initialData?.pickupInstruction || '',
       isActive: initialData?.isActive ?? true,
@@ -313,7 +309,6 @@ export function PickupPointFormDialog({
         initialData?.longitude === null || initialData?.longitude === undefined
           ? ''
           : String(initialData.longitude),
-      zoneCode: initialData?.zoneCode || '',
       usageType: initialData?.usageType || '',
       pickupInstruction: initialData?.pickupInstruction || '',
       isActive: initialData?.isActive ?? true,
@@ -338,7 +333,6 @@ export function PickupPointFormDialog({
             address: values.address,
             latitude: values.latitude ? Number(values.latitude) : null,
             longitude: values.longitude ? Number(values.longitude) : null,
-            zoneCode: values.zoneCode || null,
             usageType: values.usageType || null,
             pickupInstruction: values.pickupInstruction || null,
             isActive: values.isActive,
@@ -356,7 +350,6 @@ export function PickupPointFormDialog({
           label='Pickup point name *'
           className={initialData?.code ? 'md:col-span-1' : 'md:col-span-2'}
         />
-        <TextField form={form} name='zoneCode' label='Zone code' className='md:col-span-1' />
 
         <FormSectionHeader title='2. Usage details' />
         <SelectField
@@ -707,8 +700,6 @@ export function StudentFormDialog({
       dateOfBirth: initialData?.dateOfBirth || '',
       gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
-      emergencyContactName: initialData?.emergencyContactName || '',
-      emergencyContactPhone: initialData?.emergencyContactPhone || '',
       specialNote: initialData?.specialNote || '',
       isActive: initialData?.isActive ?? true,
     },
@@ -732,8 +723,6 @@ export function StudentFormDialog({
       dateOfBirth: initialData?.dateOfBirth || '',
       gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
-      emergencyContactName: initialData?.emergencyContactName || '',
-      emergencyContactPhone: initialData?.emergencyContactPhone || '',
       specialNote: initialData?.specialNote || '',
       isActive: initialData?.isActive ?? true,
     });
@@ -817,8 +806,6 @@ export function StudentFormDialog({
             dateOfBirth: values.dateOfBirth || null,
             gender: values.gender || null,
             homeAddress: values.homeAddress || undefined,
-            emergencyContactName: values.emergencyContactName || undefined,
-            emergencyContactPhone: values.emergencyContactPhone || undefined,
             specialNote: values.specialNote || undefined,
             isActive: values.isActive,
           })
@@ -872,10 +859,6 @@ export function StudentFormDialog({
             label: parent.fullName,
           }))}
         />
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <TextField form={form} name='emergencyContactName' label='Emergency contact name' />
-          <TextField form={form} name='emergencyContactPhone' label='Emergency contact phone' />
-        </div>
 
         {/* ── Section: Transport defaults ── */}
         <FormSectionHeader title='Transport defaults' />

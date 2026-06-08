@@ -37,14 +37,8 @@ public class RoutePlanResponse extends BaseResponse {
     private Integer plannedDurationMin;
     private String planningNotes;
     private String geometryPath;
-    /** Geometry source: ROAD_NETWORK | STRAIGHT_LINE_ESTIMATE | NONE */
-    private String geometrySource;
-    /** True when OSRM was unavailable and straight-line geometry was used. */
-    private Boolean fallbackUsed;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
-    private Integer issueCount;
-    private Integer blockingIssueCount;
     private Integer requiredCapacity;
     private Long planningSessionId;
     private String planningMethod;

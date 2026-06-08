@@ -96,8 +96,8 @@ export function SchoolBusDashboardPage() {
   if (access.isParent) {
     return (
       <SchoolBusPageShell
-        title="My Children Transit Dashboard"
-        description="View real-time status, upcoming trips, and attendance history of your children."
+        title="Student Transit Dashboard"
+        description="View real-time status, upcoming trips, and attendance history of your students."
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
@@ -119,7 +119,7 @@ export function SchoolBusDashboardPage() {
         {dashboardLoading || !dashboard || !summary ? (
           <SchoolBusEmptyState
             title="Dashboard is loading"
-            description="Fetching your children's transit information..."
+            description="Fetching your students' transit information..."
             icon={Route}
           />
         ) : (
@@ -127,9 +127,9 @@ export function SchoolBusDashboardPage() {
             {/* Metric Cards for Parent */}
             <div className="grid gap-4 md:grid-cols-3">
               <SchoolBusMetricCard
-                label="My children"
+                label="Student"
                 value={summary.studentCount}
-                hint="Registered children profiles"
+                hint="Registered student profiles"
                 icon={User}
                 tone="student"
               />
@@ -153,14 +153,14 @@ export function SchoolBusDashboardPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
                 <DashboardDonutChart
-                  title="My Children's Attendance Status"
+                  title="Student Attendance Status"
                   data={dashboard.attendanceChart}
                   colorMap={ATTENDANCE_COLORS}
                 />
               </div>
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
                 <DashboardDonutChart
-                  title="My Children's Trip Status"
+                  title="Student Trip Status"
                   data={dashboard.tripStatusChart}
                   colorMap={TRIP_STATUS_COLORS}
                 />
@@ -170,13 +170,13 @@ export function SchoolBusDashboardPage() {
             {/* Trips & Attendance List */}
             <div className="grid gap-6 xl:grid-cols-2">
               <SchoolBusSection
-                title="Upcoming Trips of My Children"
-                description="Status of routes assigned to your children today."
+                title="Upcoming Trips of Students"
+                description="Status of routes assigned to your students today."
               >
                 {activeRoutes.length === 0 ? (
                   <SchoolBusEmptyState
                     title="No upcoming trips today"
-                    description="No trips are scheduled for your children today."
+                    description="No trips are scheduled for your students today."
                     icon={Route}
                     className="min-h-[180px]"
                   />
@@ -241,13 +241,13 @@ export function SchoolBusDashboardPage() {
             </div>
 
             <SchoolBusSection
-              title="Latest Attendance of My Children"
-              description="History of check-in and check-out events of your children."
+              title="Latest Attendance of Students"
+              description="History of check-in and check-out events of your students."
             >
               {recentAttendance.length === 0 ? (
                 <SchoolBusEmptyState
                   title="No attendance events recorded"
-                  description="No attendance details found for your children yet."
+                  description="No attendance details found for your students yet."
                   icon={FileText}
                   className="min-h-[180px]"
                 />
@@ -697,7 +697,7 @@ export function SchoolBusDashboardPage() {
                   // Parent quick action
                   ...(access.isParent ? [{
                     href: '/school-bus/students',
-                    title: 'My children',
+                    title: 'Students',
                     description: 'View student profiles and status.',
                   }] : []),
                 ].map((link) => (

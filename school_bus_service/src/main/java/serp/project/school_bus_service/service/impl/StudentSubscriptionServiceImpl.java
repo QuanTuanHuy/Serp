@@ -10,13 +10,13 @@ import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequ
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionHistoryResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
-import serp.project.school_bus_service.dto.response.SubscriptionPausePeriodResponse;
+
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
-import serp.project.school_bus_service.enums.PausePeriodStatus;
+
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.SubscriptionChangeType;
 import serp.project.school_bus_service.enums.SubscriptionStatus;
@@ -27,11 +27,11 @@ import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionHistoryEntity;
-import serp.project.school_bus_service.entity.SubscriptionPausePeriodEntity;
+
 import serp.project.school_bus_service.entity.TransportRequestEntity;
 import serp.project.school_bus_service.repository.StudentSubscriptionHistoryRepository;
 import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
-import serp.project.school_bus_service.repository.SubscriptionPausePeriodRepository;
+
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -58,7 +58,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     private final StudentSubscriptionRepository subscriptionRepository;
     private final StudentSubscriptionHistoryRepository historyRepository;
-    private final SubscriptionPausePeriodRepository pausePeriodRepository;
     private final IMasterDataService masterDataService;
     private final ICodeGeneratorService codeGeneratorService;
     private final ISchoolScheduleService schoolScheduleService;
@@ -70,7 +69,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public StudentSubscriptionServiceImpl(
             StudentSubscriptionRepository subscriptionRepository,
             StudentSubscriptionHistoryRepository historyRepository,
-            SubscriptionPausePeriodRepository pausePeriodRepository,
             IMasterDataService masterDataService,
             ICodeGeneratorService codeGeneratorService,
             ISchoolScheduleService schoolScheduleService,
@@ -79,7 +77,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.subscriptionRepository = subscriptionRepository;
         this.historyRepository = historyRepository;
-        this.pausePeriodRepository = pausePeriodRepository;
         this.masterDataService = masterDataService;
         this.codeGeneratorService = codeGeneratorService;
         this.schoolScheduleService = schoolScheduleService;
@@ -137,14 +134,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         findById(subscriptionId, tenantId);
         return historyRepository.findBySubscriptionIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(subscriptionId, tenantId)
                 .stream().map(mapper::toStudentSubscriptionHistoryResponse).toList();
-    }
-
-    @Override
-    public List<SubscriptionPausePeriodResponse> getSubscriptionPausePeriods(Long subscriptionId, Long tenantId) {
-        schoolBusDataScopeService.assertCanAccessSubscription(subscriptionId);
-        findById(subscriptionId, tenantId);
-        return pausePeriodRepository.findBySubscriptionIdAndTenantIdAndIsDeletedFalseOrderByPauseFromDesc(subscriptionId, tenantId)
-                .stream().map(mapper::toSubscriptionPausePeriodResponse).toList();
     }
 
     // ── MANUAL CRUD ─────────────────────────────────────────────────────────
@@ -315,26 +304,13 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
         String oldStatus = target.getStatus().name();
 
-        SubscriptionPausePeriodEntity pause = new SubscriptionPausePeriodEntity();
-        pause.markCreated(tenantId, actor(actorId));
-        pause.setSubscription(target);
-        pause.setSourceRequest(request);
-        pause.setRequestStudent(rs);
-        pause.setPauseFrom(request.getEffectiveFrom());
-        pause.setPauseTo(request.getEffectiveTo());
-        pause.setReason(request.getNotes());
-        boolean startsNow = !request.getEffectiveFrom().isAfter(LocalDate.now());
-        pause.setStatus(startsNow ? PausePeriodStatus.ACTIVE : PausePeriodStatus.SCHEDULED);
-        pausePeriodRepository.save(pause);
+        target.setStatus(SubscriptionStatus.PAUSED);
+        target.markUpdated(actor(actorId));
+        subscriptionRepository.save(target);
 
-        if (startsNow) {
-            target.setStatus(SubscriptionStatus.PAUSED);
-            target.markUpdated(actor(actorId));
-            subscriptionRepository.save(target);
-        }
         recordHistory(target, rs, request, SubscriptionChangeType.PAUSED, oldStatus,
-                startsNow ? SubscriptionStatus.PAUSED.name() : oldStatus, actorId, null,
-                "Paused by PAUSE_SERVICE request" + (startsNow ? "" : " (scheduled)"));
+                SubscriptionStatus.PAUSED.name(), actorId, null,
+                "Paused by PAUSE_SERVICE request");
     }
 
     @Override
@@ -343,14 +319,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             Long tenantId, Long actorId) {
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
         String oldStatus = target.getStatus().name();
-
-        // Cancel or complete active/scheduled pause periods
-        for (SubscriptionPausePeriodEntity pp : pausePeriodRepository.findBySubscriptionIdAndStatusIn(
-                target.getId(), tenantId, List.of(PausePeriodStatus.ACTIVE, PausePeriodStatus.SCHEDULED))) {
-            pp.setStatus(PausePeriodStatus.CANCELLED);
-            pp.markUpdated(actor(actorId));
-            pausePeriodRepository.save(pp);
-        }
 
         target.setStatus(SubscriptionStatus.ACTIVE);
         target.markUpdated(actor(actorId));
@@ -539,35 +507,21 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     @Override
     public List<Long> findPausedSubscriptionIds(List<Long> subscriptionIds, Long tenantId, LocalDate serviceDate) {
-        if (subscriptionIds == null || subscriptionIds.isEmpty()) {
-            return List.of();
-        }
-        return pausePeriodRepository.findPausedSubscriptionIds(subscriptionIds, tenantId, serviceDate);
+        // Pause period table removed in V31. Always return empty.
+        return List.of();
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean hasOverlappingPausePeriod(Long subscriptionId, LocalDate pauseFrom, LocalDate pauseTo, Long tenantId) {
-        List<SubscriptionPausePeriodEntity> activePauses = pausePeriodRepository.findBySubscriptionIdAndStatusIn(
-                subscriptionId, tenantId, List.of(PausePeriodStatus.ACTIVE, PausePeriodStatus.SCHEDULED));
-        for (SubscriptionPausePeriodEntity p : activePauses) {
-            LocalDate from = p.getPauseFrom();
-            LocalDate to = p.getPauseTo();
-
-            // Check overlap
-            boolean overlap = (pauseTo == null || !from.isAfter(pauseTo)) && (to == null || !pauseFrom.isAfter(to));
-            if (overlap) {
-                return true;
-            }
-        }
+        // Pause period table removed in V31.
         return false;
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean hasActiveOrScheduledPause(Long subscriptionId, Long tenantId) {
-        List<SubscriptionPausePeriodEntity> activePauses = pausePeriodRepository.findBySubscriptionIdAndStatusIn(
-                subscriptionId, tenantId, List.of(PausePeriodStatus.ACTIVE, PausePeriodStatus.SCHEDULED));
-        return !activePauses.isEmpty();
+        // Pause period table removed in V31.
+        return false;
     }
 }

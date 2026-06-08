@@ -406,8 +406,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
                     item.setLatitude(rs.getLatitude());
                     item.setLongitude(rs.getLongitude());
-                    item.setPlannedArrivalTime(rs.getPlannedArrivalTime() != null ? rs.getPlannedArrivalTime().toString() : null);
-                    item.setPlannedDepartureTime(rs.getPlannedDepartureTime() != null ? rs.getPlannedDepartureTime().toString() : null);
                     item.setActualArrivalTime(sl.getActualArrivalTime() != null ? sl.getActualArrivalTime().toString() : null);
                     item.setActualDepartureTime(sl.getActualDepartureTime() != null ? sl.getActualDepartureTime().toString() : null);
 

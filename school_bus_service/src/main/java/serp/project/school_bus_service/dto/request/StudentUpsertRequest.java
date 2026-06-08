@@ -37,9 +37,5 @@ public class StudentUpsertRequest extends BaseCommandRequest {
 
     private String gender;
 
-    private String emergencyContactName;
-
-    private String emergencyContactPhone;
-
     private String specialNote;
 }

@@ -166,16 +166,4 @@ public class TransportMapper extends BaseMapper {
         r.setNotes(entity.getNotes());
         return r;
     }
-
-    public SubscriptionPausePeriodResponse toSubscriptionPausePeriodResponse(SubscriptionPausePeriodEntity entity) {
-        SubscriptionPausePeriodResponse r = enrich(new SubscriptionPausePeriodResponse(), entity);
-        r.setSubscriptionId(entity.getSubscription().getId());
-        r.setSourceRequestId(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getId());
-        r.setRequestStudentId(entity.getRequestStudent() == null ? null : entity.getRequestStudent().getId());
-        r.setPauseFrom(entity.getPauseFrom());
-        r.setPauseTo(entity.getPauseTo());
-        r.setStatus(entity.getStatus().name());
-        r.setReason(entity.getReason());
-        return r;
-    }
 }

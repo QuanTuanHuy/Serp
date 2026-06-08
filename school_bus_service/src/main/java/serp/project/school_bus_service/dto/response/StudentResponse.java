@@ -25,7 +25,5 @@ public class StudentResponse extends BaseResponse {
     private String homeAddress;
     private LocalDate dateOfBirth;
     private String gender;
-    private String emergencyContactName;
-    private String emergencyContactPhone;
     private String specialNote;
 }

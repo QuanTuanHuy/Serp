@@ -2,9 +2,10 @@ package serp.project.school_bus_service.service;
 
 import serp.project.school_bus_service.shared.base.IBaseService;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
+import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentEntity, Long> {
@@ -41,9 +42,11 @@ public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentE
 
     boolean existsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, Long studentId, RouteDirection direction);
 
-    boolean existsByRouteAndStudentAndAction(Long routeId, Long studentId, RoutePlanStudentAction action);
+    boolean existsByRouteAndStudent(Long routeId, Long studentId);
 
     List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, RouteDirection direction);
+
+    List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, Long scheduleId, String direction, LocalDate serviceDate, Long tenantId);
 
     /** Internal: physically deletes a route plan student entry (used by greedy simulation). */
     void deletePhysical(Long id);

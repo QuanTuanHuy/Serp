@@ -146,20 +146,15 @@ export default function PlanningMapClient({
     (s) => [s.pickupPointLatitude as number, s.pickupPointLongitude as number]
   );
 
-  // Use actual road geometry when available, fallback to straight-line stop connections
+  // Use actual road geometry when available; skip polyline if no real geometry
   const actualPathCoordinates: [number, number][] =
     selectedRoutePath?.coordinates
       ?.filter(
         (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number'
       )
       .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
-  const resolvedLinePositions =
-    actualPathCoordinates.length >= 2 ? actualPathCoordinates : routeLinePositions;
-
-  const isFallback =
-    selectedRoutePath?.fallbackUsed === true ||
-    selectedRoutePath?.geometrySource === 'STRAIGHT_LINE_ESTIMATE' ||
-    (selectedRoutePath != null && actualPathCoordinates.length < 2);
+  const hasRealGeometry = actualPathCoordinates.length >= 2;
+  const resolvedLinePositions = hasRealGeometry ? actualPathCoordinates : routeLinePositions;
 
   // Positions passed to FitBounds depend on fitTarget
   const fitPositions: [number, number][] =
@@ -248,22 +243,18 @@ export default function PlanningMapClient({
               <p className='text-xs text-slate-500'>
                 {stop.estimatedStudentCount ?? 0} student(s)
               </p>
-              {stop.plannedArrivalTime && (
-                <p className='text-xs text-slate-400'>ETA: {stop.plannedArrivalTime}</p>
-              )}
             </div>
           </Popup>
         </Marker>
       ))}
 
-      {/* Route polyline — real road geometry if available, else straight-line fallback */}
-      {resolvedLinePositions.length >= 2 && (
+      {/* Route polyline — only drawn when real road geometry is available */}
+      {hasRealGeometry && (
         <Polyline
-          positions={resolvedLinePositions}
-          color={isFallback ? '#f59e0b' : '#0369a1'}
-          weight={isFallback ? 3 : 4}
+          positions={actualPathCoordinates}
+          color='#0369a1'
+          weight={4}
           opacity={0.85}
-          dashArray={isFallback ? '10 6' : undefined}
         />
       )}
     </>
@@ -287,10 +278,10 @@ export default function PlanningMapClient({
         >
           {shellContent}
         </LeafletMapShell>
-        {isFallback && (
+        {!hasRealGeometry && sortedStops.length > 0 && (
           <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
-            <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
-              ⚠ Straight-line estimate — road geometry unavailable
+            <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
+              Chưa tính được đường đi thực tế.
             </span>
           </div>
         )}
@@ -303,10 +294,10 @@ export default function PlanningMapClient({
       <LeafletMapShell center={initialCenter} zoom={initialZoom} className={className}>
         {shellContent}
       </LeafletMapShell>
-      {isFallback && (
+      {!hasRealGeometry && sortedStops.length > 0 && (
         <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
-          <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
-            ⚠ Straight-line estimate — road geometry unavailable
+          <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
+            Chưa tính được đường đi thực tế.
           </span>
         </div>
       )}

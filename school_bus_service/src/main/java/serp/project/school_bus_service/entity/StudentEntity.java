@@ -53,12 +53,6 @@ public class StudentEntity extends BaseModel {
     @Column(name = "gender")
     private String gender;
 
-    @Column(name = "emergency_contact_name")
-    private String emergencyContactName;
-
-    @Column(name = "emergency_contact_phone")
-    private String emergencyContactPhone;
-
     @Column(name = "special_note", columnDefinition = "TEXT")
     private String specialNote;
 

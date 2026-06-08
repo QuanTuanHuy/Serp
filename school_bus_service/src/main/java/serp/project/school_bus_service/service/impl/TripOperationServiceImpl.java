@@ -143,15 +143,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         LocalDateTime now = LocalDateTime.now();
         stopLog.setStatus(TripStopStatus.ARRIVED);
         stopLog.setActualArrivalTime(now);
-
-        LocalTime plannedArrivalTime = stopLog.getRouteStop().getPlannedArrivalTime();
-        if (plannedArrivalTime != null) {
-            LocalDateTime planned = LocalDateTime.of(
-                    trip.getServiceDate() != null ? trip.getServiceDate() : LocalDate.now(),
-                    plannedArrivalTime);
-            long delayMin = Duration.between(planned, now).toMinutes();
-            stopLog.setDelayMinutes((int) delayMin);
-        }
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 

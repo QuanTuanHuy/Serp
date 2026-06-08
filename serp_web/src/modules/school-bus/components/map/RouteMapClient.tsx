@@ -229,11 +229,6 @@ export default function RouteMapClient({
               <p className='text-xs text-slate-500'>
                 {stop.estimatedStudentCount ?? 0} student(s)
               </p>
-              {stop.plannedArrivalTime && (
-                <p className='text-xs text-slate-400'>
-                  ETA: {stop.plannedArrivalTime}
-                </p>
-              )}
             </div>
           </Popup>
         </Marker>

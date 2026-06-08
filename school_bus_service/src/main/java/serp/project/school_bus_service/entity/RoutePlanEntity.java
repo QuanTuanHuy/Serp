@@ -15,7 +15,6 @@ import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.ShiftType;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -92,8 +91,7 @@ public class RoutePlanEntity extends BaseModel {
     @Column(name = "route_generation_method", nullable = false)
     private RouteGenerationMethod routeGenerationMethod = RouteGenerationMethod.MANUAL;
 
-    @Column(name = "estimated_cost")
-    private BigDecimal estimatedCost;
+
 
     @Column(name = "version_no", nullable = false)
     private Integer versionNo = 1;
@@ -141,18 +139,6 @@ public class RoutePlanEntity extends BaseModel {
     /** Minimum bus capacity required to carry all planned students. */
     @Column(name = "required_capacity")
     private Integer requiredCapacity;
-
-    /** Aggregated quality score (0–100) computed after generation/recalculation. */
-    @Column(name = "quality_score")
-    private Double qualityScore;
-
-    /** Total number of issues (INFO + WARNING + BLOCKING) for this route. */
-    @Column(name = "issue_count", nullable = false)
-    private Integer issueCount = 0;
-
-    /** Number of BLOCKING issues that prevent this route from being published. */
-    @Column(name = "blocking_issue_count", nullable = false)
-    private Integer blockingIssueCount = 0;
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;

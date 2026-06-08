@@ -10,7 +10,7 @@ import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.SchoolScheduleResponse;
 import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
-import serp.project.school_bus_service.service.ISchoolPickupPointWindowService;
+
 import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -43,7 +43,6 @@ public class SchoolScheduleServiceImpl extends AbstractBaseService<SchoolSchedul
     private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final ISchoolService schoolService;
-    private final ISchoolPickupPointWindowService windowService;
     private final MessageCommon messageCommon;
 
     public SchoolScheduleServiceImpl(
@@ -52,14 +51,12 @@ public class SchoolScheduleServiceImpl extends AbstractBaseService<SchoolSchedul
             IAuditLogService auditLogService,
             ICodeGeneratorService codeGeneratorService,
             ISchoolService schoolService,
-            @Lazy ISchoolPickupPointWindowService windowService,
             MessageCommon messageCommon) {
         this.scheduleRepository = scheduleRepository;
         this.mapper = mapper;
         this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.schoolService = schoolService;
-        this.windowService = windowService;
         this.messageCommon = messageCommon;
     }
 
@@ -149,8 +146,6 @@ public class SchoolScheduleServiceImpl extends AbstractBaseService<SchoolSchedul
             }
         }
         scheduleRepository.save(entity);
-        // Cascade soft-delete all active windows referencing this schedule
-        windowService.softDeleteWindowsByScheduleId(id, tenantId, actorId);
         // Soft-delete parent schedule
         softDeleteById(scheduleRepository, id, tenantId, actorId);
         auditLogService.log(tenantId, actorId, "SchoolSchedule", id, "SOFT_DELETE", "Soft deleted school schedule");

@@ -2,13 +2,16 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
+import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.RoutePlanStudentAction;
+import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.repository.RoutePlanStudentRepository;
+import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -16,9 +19,12 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
         implements IRoutePlanStudentService {
 
     private final RoutePlanStudentRepository routePlanStudentRepository;
+    private final StudentSubscriptionRepository subscriptionRepository;
 
-    public RoutePlanStudentServiceImpl(RoutePlanStudentRepository routePlanStudentRepository) {
+    public RoutePlanStudentServiceImpl(RoutePlanStudentRepository routePlanStudentRepository,
+                                       StudentSubscriptionRepository subscriptionRepository) {
         this.routePlanStudentRepository = routePlanStudentRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -33,7 +39,17 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
 
     @Override
     public List<RoutePlanStudentEntity> findByRouteStop(Long routeStopId) {
-        return routePlanStudentRepository.findByRouteStopIdAndIsDeletedFalse(routeStopId);
+        return routePlanStudentRepository.findByRouteIdAndIsDeletedFalse(routeStopId);
+    }
+
+    @Override
+    public List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, Long scheduleId, String direction, LocalDate serviceDate, Long tenantId) {
+        boolean isOutbound = "OUTBOUND".equalsIgnoreCase(direction);
+        int dayIndex = serviceDate.getDayOfWeek().getValue(); // 1=MON..7=SUN
+        List<TripOption> allowedTrips = isOutbound
+                ? List.of(TripOption.MORNING, TripOption.ROUND_TRIP)
+                : List.of(TripOption.AFTERNOON, TripOption.ROUND_TRIP);
+        return subscriptionRepository.findEligibleForPlanning(schoolId, tenantId, serviceDate, dayIndex, allowedTrips, isOutbound);
     }
 
     @Override
@@ -92,8 +108,8 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     }
 
     @Override
-    public boolean existsByRouteAndStudentAndAction(Long routeId, Long studentId, RoutePlanStudentAction action) {
-        return routePlanStudentRepository.existsByRouteAndStudentAndAction(routeId, studentId, action);
+    public boolean existsByRouteAndStudent(Long routeId, Long studentId) {
+        return routePlanStudentRepository.existsByRouteAndStudent(routeId, studentId);
     }
 
     @Override

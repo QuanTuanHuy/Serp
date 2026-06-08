@@ -31,7 +31,7 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
 
     RouteDetailResponse getRoute(Long id, Long tenantId);
 
-    RoutePathResponse getRoutePath(Long routeId, Long tenantId);
+    RoutePathResponse getRoutePath(Long id, Long tenantId);
 
     List<RouteStopResponse> getRouteStops(Long routeId, Long tenantId);
 
@@ -45,8 +45,6 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
 
     RouteAssignmentResponse manualDispatchRoute(Long routeId, ManualDispatchRequest request, Long tenantId,
             Long actorId);
-
-    RoutePathResponse computePath(Long routeId, Long tenantId, Long actorId);
 
     List<AssignmentHistoryResponse> getAssignmentHistory(Long routeId, Long tenantId);
 
@@ -80,9 +78,6 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
 
     // Create a route linked to a planning session (MANUAL mode)
     RoutePlanResponse createRouteInSession(RoutePlanUpsertRequest request, Long sessionId, Long tenantId, Long actorId);
-
-    // Compute route path, timeline, and calculation trace after creation transaction is committed
-    RoutePlanResponse computeInitialRoutePath(Long routeId, Long tenantId, Long actorId);
 
     long countByTenantAndStatus(Long tenantId, RouteStatus status);
 }

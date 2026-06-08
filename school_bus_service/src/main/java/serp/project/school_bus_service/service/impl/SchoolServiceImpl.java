@@ -24,10 +24,8 @@ import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import org.springframework.context.annotation.Lazy;
 import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
-import serp.project.school_bus_service.service.ISchoolPickupPointWindowService;
 import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
-import serp.project.school_bus_service.entity.SchoolPickupPointWindowEntity;
 import serp.project.school_bus_service.entity.SchoolScheduleDayEntity;
 import serp.project.school_bus_service.dto.response.SchoolScheduleSummaryResponse;
 import serp.project.school_bus_service.dto.response.LinkedPickupPointSummaryResponse;
@@ -49,7 +47,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
     private final MessageCommon messageCommon;
     private final ISchoolScheduleService scheduleService;
     private final ISchoolPickupPointService pickupPointService;
-    private final ISchoolPickupPointWindowService windowService;
 
     public SchoolServiceImpl(SchoolRepository schoolRepository,
                              SchoolBusMapper mapper,
@@ -57,8 +54,7 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
                              ICodeGeneratorService codeGeneratorService,
                              MessageCommon messageCommon,
                              @Lazy ISchoolScheduleService scheduleService,
-                             @Lazy ISchoolPickupPointService pickupPointService,
-                             @Lazy ISchoolPickupPointWindowService windowService) {
+                             @Lazy ISchoolPickupPointService pickupPointService) {
         this.schoolRepository = schoolRepository;
         this.mapper = mapper;
         this.auditLogService = auditLogService;
@@ -66,7 +62,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
         this.messageCommon = messageCommon;
         this.scheduleService = scheduleService;
         this.pickupPointService = pickupPointService;
-        this.windowService = windowService;
     }
 
     @Override
@@ -113,15 +108,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
         Map<Long, List<SchoolPickupPointEntity>> linksBySchool = allLinks.stream()
                 .collect(Collectors.groupingBy(l -> l.getSchool().getId()));
 
-        // 3. Fetch windows for all active/inactive links in batch to avoid N+1 query
-        List<Long> linkIds = allLinks.stream().map(SchoolPickupPointEntity::getId).toList();
-        Map<Long, List<SchoolPickupPointWindowEntity>> windowsByLinkId = new HashMap<>();
-        if (!linkIds.isEmpty()) {
-            List<SchoolPickupPointWindowEntity> allWindows = windowService.getWindowsForLinks(linkIds, tenantId);
-            windowsByLinkId = allWindows.stream()
-                    .collect(Collectors.groupingBy(w -> w.getSchoolPickupPoint().getId()));
-        }
-
         for (SchoolResponse resp : responses) {
             Long schoolId = resp.getId();
 
@@ -161,7 +147,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
             resp.setPickupPointCount(schoolLinks.size());
 
             boolean anyMissingCoordinates = false;
-            long windowCount = 0;
             List<LinkedPickupPointSummaryResponse> pickupPointsSummary = new ArrayList<>();
             for (SchoolPickupPointEntity link : schoolLinks) {
                 LinkedPickupPointSummaryResponse summary = new LinkedPickupPointSummaryResponse();
@@ -187,14 +172,9 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
                 }
 
                 pickupPointsSummary.add(summary);
-
-                // Count windows for this link
-                List<SchoolPickupPointWindowEntity> linkWindows = windowsByLinkId.getOrDefault(link.getId(), List.of());
-                windowCount += linkWindows.size();
             }
             resp.setPickupPoints(pickupPointsSummary);
             resp.setAnyLinkedPointMissingCoordinates(anyMissingCoordinates);
-            resp.setPickupWindowCount(windowCount);
         }
     }
 

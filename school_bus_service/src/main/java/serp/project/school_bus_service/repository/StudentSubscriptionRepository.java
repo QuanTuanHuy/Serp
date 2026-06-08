@@ -50,7 +50,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
      */
     @Query("""
             SELECT s FROM StudentSubscriptionEntity s
-             JOIN FETCH s.student
+             JOIN FETCH s.student st
              LEFT JOIN FETCH s.pickupPoint
              LEFT JOIN FETCH s.dropoffPoint
              WHERE s.school.id = :schoolId
@@ -59,6 +59,8 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
                AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE
                AND s.effectiveFrom <= :serviceDate
                AND (s.effectiveTo IS NULL OR s.effectiveTo >= :serviceDate)
+               AND st.isDeleted = false
+               AND st.isActive = true
                AND (:dayIndex = 1 AND s.monday = true
                  OR :dayIndex = 2 AND s.tuesday = true
                  OR :dayIndex = 3 AND s.wednesday = true

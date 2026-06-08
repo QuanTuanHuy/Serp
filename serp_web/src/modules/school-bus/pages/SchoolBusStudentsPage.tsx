@@ -370,16 +370,12 @@ export function SchoolBusStudentsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title={access.isParent ? 'My children' : 'Student roster'}
-        description={
-          access.isParent
-            ? 'View your children\'s transport profiles and status.'
-            : 'Operational student directory powering route planning, requests, and attendance.'
-        }
+        title='Students'
+        description='Operational student directory powering route planning, requests, and attendance.'
         breadcrumb={
           <SchoolBusBreadcrumb items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: access.isParent ? 'My Children' : 'Students', current: true },
+            { label: 'Students', current: true },
           ]} />
         }
         actions={

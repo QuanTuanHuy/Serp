@@ -13,7 +13,4 @@ public class RouteDetailResponse {
     private List<RouteStopResponse> stops;
     private List<RoutePlanStudentResponse> students;
     private RouteAssignmentResponse assignment;
-    private List<RouteIssueDetailResponse> issues;
-    private List<RouteIssueDetailResponse> blockingIssues;
-    private List<RouteIssueDetailResponse> warningIssues;
 }

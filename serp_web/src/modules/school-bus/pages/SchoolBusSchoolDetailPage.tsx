@@ -35,12 +35,8 @@ import {
   useDeleteSchoolScheduleMutation,
   useLinkSchoolPickupPointMutation,
   useUnlinkSchoolPickupPointMutation,
-  useCreateSchoolPickupPointWindowMutation,
-  useUpdateSchoolPickupPointWindowMutation,
-  useDeleteSchoolPickupPointWindowMutation,
   useGetSchoolSchedulesQuery,
   useGetSchoolPickupPointsQuery,
-  useGetSchoolPickupPointWindowsQuery,
   useGetPickupPointsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -51,7 +47,6 @@ import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import { SchoolFormDialog } from '../components/SchoolBusMasterDataForms';
 import { ScheduleFormDialog } from '../components/forms/ScheduleFormDialog';
 import { LinkPickupPointDialog } from '../components/forms/LinkPickupPointDialog';
-import { WindowFormDialog } from '../components/forms/WindowFormDialog';
 import { OperationsMap } from '../components/map/OperationsMap';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
@@ -61,7 +56,6 @@ import type {
   SchoolBusSchool,
   SchoolBusSchedule,
   SchoolBusSchoolPickupPoint,
-  SchoolBusSchoolPickupPointWindow,
   SchoolBusPickupPoint,
   SchoolScheduleSummary,
 } from '../types';
@@ -179,20 +173,14 @@ export function SchoolBusSchoolDetailPage({
   const [deleteSchedule, { isLoading: deletingSchedule }] = useDeleteSchoolScheduleMutation();
   const [linkPickupPoint, { isLoading: linkingPickup }] = useLinkSchoolPickupPointMutation();
   const [unlinkPickupPoint, { isLoading: unlinkingPickup }] = useUnlinkSchoolPickupPointMutation();
-  const [createWindow, { isLoading: creatingWindow }] = useCreateSchoolPickupPointWindowMutation();
-  const [updateWindow, { isLoading: updatingWindow }] = useUpdateSchoolPickupPointWindowMutation();
-  const [deleteWindow, { isLoading: deletingWindow }] = useDeleteSchoolPickupPointWindowMutation();
 
   // --- Dialog states ---
   const [schoolDialogOpen, setSchoolDialogOpen] = React.useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
-  const [windowDialogOpen, setWindowDialogOpen] = React.useState(false);
   const [editingSchedule, setEditingSchedule] = React.useState<SchoolBusSchedule | null>(null);
-  const [editingWindow, setEditingWindow] = React.useState<SchoolBusSchoolPickupPointWindow | null>(null);
-  const [expandedSppId, setExpandedSppId] = React.useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{
-    type: 'schedule' | 'link' | 'window';
+    type: 'schedule' | 'link';
     id: number;
     title: string;
     description: string;
@@ -261,22 +249,6 @@ export function SchoolBusSchoolDetailPage({
     }
   };
 
-  const handleSaveWindow = async (values: any) => {
-    if (!expandedSppId) return;
-    const body = { ...values, schoolPickupPointId: expandedSppId };
-    try {
-      const response = editingWindow
-        ? await updateWindow({ windowId: editingWindow.id, body }).unwrap()
-        : await createWindow(body).unwrap();
-      toast.success(response.message || 'Window saved successfully');
-      setWindowDialogOpen(false);
-      setEditingWindow(null);
-      refetchAll();
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save window');
-    }
-  };
-
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -286,9 +258,6 @@ export function SchoolBusSchoolDetailPage({
       } else if (deleteTarget.type === 'link') {
         const response = await unlinkPickupPoint({ schoolId: cleanSchoolId, pickupPointId: deleteTarget.id }).unwrap();
         toast.success(response.message || 'Pickup point unlinked');
-      } else if (deleteTarget.type === 'window') {
-        const response = await deleteWindow(deleteTarget.id).unwrap();
-        toast.success(response.message || 'Window deleted');
       }
       setDeleteTarget(null);
       refetchAll();
@@ -356,12 +325,6 @@ export function SchoolBusSchoolDetailPage({
       return matchSearch && matchUsage && matchCoords;
     });
   }, [linkedPickupPoints, pickupSearch, pickupUsageFilter, pickupCoordsFilter]);
-
-  // Window details state helper
-  const { data: windowsData } = useGetSchoolPickupPointWindowsQuery(expandedSppId!, {
-    skip: !expandedSppId,
-  });
-  const expandedWindows = windowsData?.data ?? [];
 
   if (loadingSchool) {
     return (
@@ -1249,7 +1212,6 @@ export function SchoolBusSchoolDetailPage({
           ) : (
             <div className="space-y-3">
               {filteredPickups.map((lp) => {
-                const isExpanded = expandedSppId === lp.id;
                 const hasCoords = typeof lp.pickupPointLatitude === 'number' && typeof lp.pickupPointLongitude === 'number';
 
                 return (
@@ -1296,20 +1258,6 @@ export function SchoolBusSchoolDetailPage({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-lg text-slate-600 hover:bg-slate-50 text-xs font-semibold"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedSppId(null);
-                              } else {
-                                setExpandedSppId(lp.id);
-                              }
-                            }}
-                          >
-                            Windows ({isExpanded ? 'Collapse' : 'Manage'})
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
                             className="h-8 rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:text-[#C81E3A] text-xs font-semibold"
                             onClick={() =>
                               setDeleteTarget({
@@ -1325,91 +1273,6 @@ export function SchoolBusSchoolDetailPage({
                         </div>
                       </div>
                     </div>
-
-                    {/* Expanded Window preview & list */}
-                    {isExpanded && (
-                      <div className="bg-slate-50/50 border-t border-slate-100 p-4 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-slate-700">Time Windows ({expandedWindows.length})</span>
-                          <Button
-                            onClick={() => {
-                              setEditingWindow(null);
-                              setWindowDialogOpen(true);
-                            }}
-                            size="sm"
-                            className="h-7 rounded-lg text-[10px] font-bold bg-[#C81E3A] hover:bg-[#A6172D] text-white"
-                          >
-                            <Plus className="mr-1 h-3 w-3" /> Add window
-                          </Button>
-                        </div>
-
-                        {expandedWindows.length === 0 ? (
-                          <div className="text-center py-6 text-xs text-slate-400 bg-white border border-slate-150 rounded-xl">
-                            No windows configured for this link. Add one to enable routing scheduling.
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white">
-                            <table className="w-full text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                  <th className="py-2.5 px-4 pl-5">Schedule</th>
-                                  <th className="py-2.5 px-4">Direction</th>
-                                  <th className="py-2.5 px-4">Time window</th>
-                                  <th className="py-2.5 px-4">Est. distance</th>
-                                  <th className="py-2.5 px-4">Est. duration</th>
-                                  <th className="py-2.5 px-4 pr-5 text-right">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 text-xs">
-                                {expandedWindows.map((w) => (
-                                  <tr key={w.id} className="hover:bg-slate-50/30">
-                                    <td className="py-2.5 px-4 pl-5 font-bold text-slate-800">{w.scheduleName}</td>
-                                    <td className="py-2.5 px-4 font-semibold text-slate-600">
-                                      {w.direction === 'PICKUP_TO_SCHOOL' ? '🏫 Pickup → School' : '🏠 School → Drop-off'}
-                                    </td>
-                                    <td className="py-2.5 px-4 font-bold text-slate-700">
-                                      {w.windowStart} – {w.windowEnd}
-                                    </td>
-                                    <td className="py-2.5 px-4 text-slate-500 font-medium">
-                                      {w.estimatedDistanceToSchoolKm != null ? `${w.estimatedDistanceToSchoolKm} km` : '—'}
-                                    </td>
-                                    <td className="py-2.5 px-4 text-slate-500 font-medium">
-                                      {w.estimatedDurationToSchoolMin != null ? `${w.estimatedDurationToSchoolMin} min` : '—'}
-                                    </td>
-                                    <td className="py-2.5 px-4 pr-5 text-right">
-                                      <div className="flex justify-end gap-1">
-                                        <button
-                                          onClick={() => {
-                                            setEditingWindow(w);
-                                            setWindowDialogOpen(true);
-                                          }}
-                                          className="text-slate-400 hover:text-slate-700 p-1"
-                                        >
-                                          <Edit2 className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            setDeleteTarget({
-                                              type: 'window',
-                                              id: w.id,
-                                              title: 'Delete Time Window',
-                                              description: 'Are you sure you want to delete this window config?',
-                                            })
-                                          }
-                                          className="text-slate-400 hover:text-[#C81E3A] p-1"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1456,23 +1319,6 @@ export function SchoolBusSchoolDetailPage({
           onSubmit={handleLinkPickupPoint}
         />
 
-        {/* Window Form Dialog */}
-        <WindowFormDialog
-          open={windowDialogOpen}
-          onOpenChange={(open) => {
-            setWindowDialogOpen(open);
-            if (!open) setEditingWindow(null);
-          }}
-          schedules={schedules}
-          existingWindow={editingWindow}
-          usageType={
-            linkedPickupPoints.find((lp) => lp.id === expandedSppId)
-              ?.pickupPointUsageType
-          }
-          isLoading={creatingWindow || updatingWindow}
-          onSubmit={handleSaveWindow}
-        />
-
         {/* Delete Confirmation Dialog */}
         <SchoolBusDeleteDialog
           open={Boolean(deleteTarget)}
@@ -1481,7 +1327,7 @@ export function SchoolBusSchoolDetailPage({
           }}
           title={deleteTarget?.title || 'Delete confirmation'}
           description={deleteTarget?.description || 'This operation is permanent.'}
-          isLoading={deletingSchedule || unlinkingPickup || deletingWindow}
+          isLoading={deletingSchedule || unlinkingPickup}
           onConfirm={handleConfirmDelete}
         />
 

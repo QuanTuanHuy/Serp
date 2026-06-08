@@ -23,10 +23,9 @@ import {
   usePauseSubscriptionMutation,
   useStopSubscriptionMutation,
   useGetSubscriptionHistoryQuery,
-  useGetSubscriptionPausePeriodsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusTimeline } from '../components/history/SchoolBusTimeline';
-import { mapSubscriptionHistoryToTimeline, mapPausePeriodsToTimeline } from '../components/history/mappers';
+import { mapSubscriptionHistoryToTimeline } from '../components/history/mappers';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -65,8 +64,6 @@ export function SchoolBusSubscriptionDetailPage({
 
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
     useGetSubscriptionHistoryQuery(subscriptionId);
-  const { data: pauseData, isLoading: pauseLoading } =
-    useGetSubscriptionPausePeriodsQuery(subscriptionId);
 
   const sub = data?.data;
 
@@ -86,11 +83,10 @@ export function SchoolBusSubscriptionDetailPage({
 
   const timelineEvents = React.useMemo<TimelineEvent[]>(() => {
     const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);
-    const pauseEvents = mapPausePeriodsToTimeline(pauseData?.data ?? []);
-    return [...historyEvents, ...pauseEvents].sort(
+    return historyEvents.sort(
       (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
-  }, [historyData, pauseData]);
+  }, [historyData]);
 
   if (isLoading) {
     return (
@@ -583,28 +579,6 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             )}
 
-            {/* Pause Periods List */}
-            {pauseData?.data && pauseData.data.length > 0 && (
-              <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                  Pause Periods
-                </h3>
-                <div className='space-y-3'>
-                  {pauseData.data.map((p) => (
-                    <div key={p.id} className='rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs'>
-                      <div className='flex items-center justify-between gap-2 mb-1'>
-                        <span className='font-bold text-slate-800'>
-                          {p.pauseFrom} {p.pauseTo ? `→ ${p.pauseTo}` : ' (Indefinite)'}
-                        </span>
-                        <SchoolBusStatusBadge status={p.status} />
-                      </div>
-                      {p.reason && <p className='text-slate-500 font-medium'>Reason: {p.reason}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* History Event Log */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
@@ -614,7 +588,7 @@ export function SchoolBusSubscriptionDetailPage({
                 events={timelineEvents}
                 mode='compact'
                 groupByDate={false}
-                isLoading={historyLoading || pauseLoading}
+                isLoading={historyLoading}
                 isError={historyError}
                 maxHeight='320px'
               />

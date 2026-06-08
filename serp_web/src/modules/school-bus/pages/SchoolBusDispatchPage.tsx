@@ -19,16 +19,12 @@ import {
   UserCog,
 } from 'lucide-react';
 
-import { toast } from 'sonner';
 import { cn } from '@/shared/utils';
-import { Button, Badge, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui';
+import { Button, Badge } from '@/shared/components/ui';
 import {
-  useComputeRoutePathMutation,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
   useGetRoutesQuery,
-  useGetRouteObjectiveScoreQuery,
-  useRecalculateRouteObjectiveScoreMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -63,104 +59,6 @@ function RouteStatusBadge({ status }: { status: string }) {
   );
 }
 
-function RouteObjectiveScoreWidget({ routeId }: { routeId: number }) {
-  const { data: scoreData, refetch, isLoading } = useGetRouteObjectiveScoreQuery(routeId);
-  const [recalculate, { isLoading: isRecalculating }] = useRecalculateRouteObjectiveScoreMutation();
-
-  const handleRecalculate = async () => {
-    try {
-      await recalculate(routeId).unwrap();
-      toast.success('Recalculated route objective score');
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to recalculate score');
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-xs text-slate-400 animate-pulse py-2">Loading score...</div>;
-  }
-
-  const score = scoreData?.data;
-  if (!score) {
-    return (
-      <div className="text-xs text-slate-400 py-2">
-        No score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-semibold text-indigo-600">Calculate now</Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objective Quality Score</h4>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRecalculate} 
-          disabled={isRecalculating} 
-          className="h-6 text-[10px] font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/50 p-1 px-2 rounded-full"
-        >
-          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
-        </Button>
-      </div>
-
-      <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Normalized Score</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={cn(
-              "text-lg font-extrabold",
-              score.feasible ? "text-emerald-600" : "text-rose-600"
-            )}>
-              {score.displayScore?.toFixed(2)}
-            </span>
-            <span className="text-slate-400 text-[10px]">/ 100</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Objective Value</p>
-          <p className="text-sm font-bold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Breakdown Details */}
-      <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between items-center text-slate-600">
-          <span>Distance cost:</span>
-          <span className="font-semibold text-slate-800">{score.distanceCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-600">
-          <span>Duration cost:</span>
-          <span className="font-semibold text-slate-800">{score.durationCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-600">
-          <span>Wait time cost:</span>
-          <span className="font-semibold text-slate-800">{score.waitTimeCost?.toFixed(2)}</span>
-        </div>
-        {score.capacityExcessCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Capacity excess cost:</span>
-            <span>+{score.capacityExcessCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.blockingIssueCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Blocking penalty:</span>
-            <span>+{score.blockingIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.warningIssueCost > 0 && (
-          <div className="flex justify-between items-center text-amber-600 font-medium">
-            <span>Warning penalty:</span>
-            <span>+{score.warningIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function SchoolBusDispatchPage() {
   const pagination = useSchoolBusPagination({
     page: 0,
@@ -169,8 +67,6 @@ export function SchoolBusDispatchPage() {
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetRoutesQuery(pagination.params);
-  const [computeRoutePath, { isLoading: computingPath }] =
-    useComputeRoutePathMutation();
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
@@ -217,22 +113,6 @@ export function SchoolBusDispatchPage() {
       setSelectedRouteId(prioritizedRoutes[0].id);
     }
   }, [prioritizedRoutes, selectedRouteId]);
-
-  const handleComputePath = async () => {
-    if (!selectedRouteId) {
-      return;
-    }
-    try {
-      const response = await computeRoutePath(selectedRouteId).unwrap();
-      if (response.data?.estimated) {
-        toast.warning(response.data.warning || 'Routing fallback path applied');
-      } else {
-        toast.success('Computed real route path');
-      }
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to compute route path');
-    }
-  };
 
   return (
     <SchoolBusPageShell
@@ -463,7 +343,7 @@ export function SchoolBusDispatchPage() {
                           className='rounded-full border-red-200 text-[#C81E3A] hover:bg-[#FDECEF]/50 h-8 text-xs gap-1 font-semibold'
                           asChild
                         >
-                          <Link href='/school-bus/dispatch/planning'>
+                          <Link href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId}&routeId=${route.id}`}>
                             <Sparkles className='h-3.5 w-3.5' />
                             Open planning
                           </Link>
@@ -588,10 +468,7 @@ export function SchoolBusDispatchPage() {
 
                       <hr className='border-slate-100' />
 
-                      {/* Objective Score Breakdown */}
-                      <RouteObjectiveScoreWidget routeId={selectedRouteId as number} />
 
-                      <hr className='border-slate-100' />
 
                       {/* Missing coordinates warning */}
                       {selectedRouteMissingCoordinates > 0 && (
@@ -601,29 +478,7 @@ export function SchoolBusDispatchPage() {
                         </div>
                       )}
 
-                      {/* Actions */}
-                      <div className='pt-2'>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size='sm'
-                                variant='outline'
-                                className='w-full rounded-full border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-700 text-xs font-semibold'
-                                disabled={!selectedRouteId || computingPath}
-                                onClick={handleComputePath}
-                              >
-                                {computingPath ? 'Computing path...' : 'Recompute path'}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className='text-xs max-w-[250px]'>
-                                Recalculate route geometry, timeline and calculation trace after stop changes.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+
                     </div>
                   }
                 />

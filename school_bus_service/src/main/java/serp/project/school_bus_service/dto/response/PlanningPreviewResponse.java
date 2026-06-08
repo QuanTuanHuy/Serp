@@ -40,9 +40,7 @@ public class PlanningPreviewResponse {
     private PlanningReadinessSummary summary;
 
     private List<PlanningDemandResponse> eligibleDemands;
-    private List<PlanningDemandResponse> blockedDemands;
     private List<PlanningPointResponse> points;
-    private List<PlanningReadinessIssueResponse> issues;
 
     // --- Legacy / Backward compatibility fields ---
     private String schoolScheduleName;

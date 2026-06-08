@@ -30,16 +30,13 @@ import {
   useCreatePickupPointMutation,
   useCreateSchoolMutation,
   useCreateSchoolScheduleMutation,
-  useCreateSchoolPickupPointWindowMutation,
   useDeletePickupPointMutation,
   useDeleteSchoolMutation,
   useDeleteSchoolScheduleMutation,
-  useDeleteSchoolPickupPointWindowMutation,
   useGetAllActiveSchoolPickupLinksQuery,
   useGetDepotsQuery,
   useGetPickupPointsQuery,
   useGetSchoolPickupPointsQuery,
-  useGetSchoolPickupPointWindowsQuery,
   useGetSchoolSchedulesQuery,
   useGetSchoolsQuery,
   useLinkSchoolPickupPointMutation,
@@ -47,7 +44,6 @@ import {
   useUpdatePickupPointMutation,
   useUpdateSchoolMutation,
   useUpdateSchoolScheduleMutation,
-  useUpdateSchoolPickupPointWindowMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import {
@@ -70,9 +66,8 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { ScheduleFormDialog } from '../components/forms/ScheduleFormDialog';
 import { LinkPickupPointDialog } from '../components/forms/LinkPickupPointDialog';
-import { WindowFormDialog } from '../components/forms/WindowFormDialog';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusDepot, SchoolBusPickupPoint, SchoolBusSchedule, SchoolBusSchool, SchoolBusSchoolPickupPointWindow } from '../types';
+import type { SchoolBusDepot, SchoolBusPickupPoint, SchoolBusSchedule, SchoolBusSchool } from '../types';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import {
   Table,
@@ -314,7 +309,6 @@ function NetworkDetailPanel({
             <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Identity</p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField label='Usage type' value={formatUsageType(selectedPickup.usageType)} />
-              <DetailField label='Zone code' value={selectedPickup.zoneCode ?? '—'} />
             </div>
           </div>
 
@@ -583,9 +577,7 @@ function SchoolBusSchoolsPageContent() {
   const [deleteSchedule] = useDeleteSchoolScheduleMutation();
   const [linkPickupPoint, { isLoading: linkingPickup }] = useLinkSchoolPickupPointMutation();
   const [unlinkPickupPoint] = useUnlinkSchoolPickupPointMutation();
-  const [createWindow, { isLoading: creatingWindow }] = useCreateSchoolPickupPointWindowMutation();
-  const [updateWindow, { isLoading: updatingWindow }] = useUpdateSchoolPickupPointWindowMutation();
-  const [deleteWindow] = useDeleteSchoolPickupPointWindowMutation();
+
 
   const schools = getPageItems(data?.data);
   const allSchools = getPageItems(allSchoolsData?.data);
@@ -602,13 +594,10 @@ function SchoolBusSchoolsPageContent() {
   const [pickupDialogOpen, setPickupDialogOpen] = React.useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
-  const [windowDialogOpen, setWindowDialogOpen] = React.useState(false);
   const [editingSchool, setEditingSchool] = React.useState<SchoolBusSchool | null>(null);
   const [editingPickup, setEditingPickup] = React.useState<SchoolBusPickupPoint | null>(null);
   const [editingSchedule, setEditingSchedule] = React.useState<SchoolBusSchedule | null>(null);
-  const [editingWindow, setEditingWindow] = React.useState<SchoolBusSchoolPickupPointWindow | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget>(null);
-  const [expandedSppId, setExpandedSppId] = React.useState<number | null>(null);
   const isMountedRef = React.useRef(false);
   React.useEffect(() => {
     if (!isMountedRef.current) {
@@ -698,9 +687,6 @@ function SchoolBusSchoolsPageContent() {
     );
   }, [linkedPickupPoints, linkedSearch]);
 
-  const { data: windowsData } = useGetSchoolPickupPointWindowsQuery(expandedSppId!, { skip: !expandedSppId });
-  const windows = windowsData?.data ?? [];
-
   // ─── Derived stats ───────────────────────────────────────────────
   const missingCoordsCount =
     schools.filter((s) => typeof s.latitude !== 'number').length +
@@ -786,24 +772,6 @@ function SchoolBusSchoolsPageContent() {
       const r = await unlinkPickupPoint({ schoolId: selectedSchoolId, pickupPointId }).unwrap();
       toast.success(r.message || 'Pickup point unlinked');
     } catch (error: any) { toast.error(error?.data?.message || 'Failed to unlink pickup point'); }
-  };
-
-  const handleSaveWindow = async (values: any) => {
-    if (!expandedSppId) return;
-    const body = { ...values, schoolPickupPointId: expandedSppId };
-    try {
-      const r = editingWindow
-        ? await updateWindow({ windowId: editingWindow.id, body }).unwrap()
-        : await createWindow(body).unwrap();
-      toast.success(r.message || 'Window saved');
-      setWindowDialogOpen(false);
-      setEditingWindow(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save window'); }
-  };
-
-  const handleDeleteWindow = async (windowId: number) => {
-    try { const r = await deleteWindow(windowId).unwrap(); toast.success(r.message || 'Window deleted'); }
-    catch (error: any) { toast.error(error?.data?.message || 'Failed to delete window'); }
   };
 
 
@@ -1282,23 +1250,33 @@ function SchoolBusSchoolsPageContent() {
                         {pt.code}
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent className='p-3.5 max-w-[260px] bg-white text-slate-900 rounded-[16px] shadow-xl border border-slate-200 space-y-2 text-xs'>
+                    <TooltipContent className='p-3.5 max-w-[280px] bg-white text-slate-900 rounded-[16px] shadow-xl border border-slate-200 space-y-2 text-xs'>
                       <div className='flex items-center justify-between gap-3 border-b border-slate-100 pb-2 mb-2'>
-                        <p className='font-bold text-slate-900 truncate'>{pt.name}</p>
-                        {pt.isDefault && (
-                          <span className='bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 text-[8px] font-bold font-sans shrink-0'>
-                            Default Link
+                        <div className='min-w-0'>
+                          <p className='font-bold text-slate-900 truncate'>{pt.name}</p>
+                          {pt.code && <p className='text-[10px] text-slate-500 font-mono font-semibold mt-0.5'>{pt.code}</p>}
+                        </div>
+                        <div className='flex items-center gap-1.5 shrink-0'>
+                          {pt.isDefault && (
+                            <span className='bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 text-[8px] font-bold font-sans'>
+                              Default
+                            </span>
+                          )}
+                          <span className={cn(
+                            'px-1.5 py-0.5 rounded border text-[8px] font-bold font-sans',
+                            isPickup ? 'bg-blue-50 text-blue-700 border-blue-100'
+                              : isDropoff ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                          )}>
+                            {isPickup ? 'Pickup' : isDropoff ? 'Drop-off' : 'Both'}
                           </span>
-                        )}
+                        </div>
                       </div>
-                      <div className='space-y-1 text-slate-600 font-medium'>
-                        <p>Usage: <span className='text-slate-800 font-semibold'>{pt.usageType}</span></p>
-                        <p className='truncate'>Address: <span className='text-slate-800 font-semibold' title={pt.address || ''}>{pt.address || 'No address'}</span></p>
-                        <p>Coordinates: {hasCoords ? (
-                          <span className='text-emerald-650 font-semibold'>Configured</span>
-                        ) : (
-                          <span className='text-amber-600 font-semibold inline-flex items-center gap-0.5'><AlertTriangle className='h-3 w-3 shrink-0 text-amber-500' /> Missing</span>
-                        )}</p>
+                      <div className='space-y-1.5 text-slate-600 font-medium'>
+                        <p className='truncate' title={pt.address || ''}>
+                          <span className='text-slate-400'>Addr:</span>{' '}
+                          <span className='text-slate-800 font-semibold'>{pt.address || 'N/A'}</span>
+                        </p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -1409,7 +1387,7 @@ function SchoolBusSchoolsPageContent() {
                 className='text-left outline-none'
                 onClick={() => {
                   setSelectedPickupPointId(pp.id);
-                  setSelectedSchoolId(pp.schoolId ?? null);
+                  setSelectedSchoolId(pp.schools?.[0]?.id ?? null);
                 }}
               >
                 <p className='font-bold text-slate-900 hover:text-[#C81E3A] text-sm transition-colors'>{pp.name}</p>
@@ -1443,27 +1421,35 @@ function SchoolBusSchoolsPageContent() {
       )
     },
     {
-      key: 'zone',
-      header: 'Zone',
-      render: (pp) => (
-        pp.zoneCode ? (
-          <span className='inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
-            {pp.zoneCode}
-          </span>
-        ) : (
-          <span className='text-slate-400 font-medium'>—</span>
-        )
-      )
-    },
-    {
       key: 'school',
-      header: 'Linked School',
+      header: 'Schools',
       render: (pp) => {
-        const schoolName = allSchools.find((s) => s.id === pp.schoolId)?.name;
-        return schoolName ? (
-          <span className='text-xs font-semibold text-slate-700'>{schoolName}</span>
-        ) : (
-          <span className='text-xs text-slate-400 italic font-medium'>Unlinked</span>
+        const schools = pp.schools || [];
+        if (schools.length === 0) return <span className='text-xs text-slate-400 italic font-medium'>Unlinked</span>;
+
+        const limit = 2;
+        const visible = schools.slice(0, limit);
+        const extra = schools.length - limit;
+
+        return (
+          <TooltipProvider>
+            <div className='flex flex-col gap-1 items-start py-1'>
+              {visible.map((s) => (
+                <Tooltip key={s.id}>
+                  <TooltipTrigger asChild>
+                    <span className='inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help bg-violet-50 text-violet-700 border-violet-200'>
+                      {s.code}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className='p-2.5 max-w-[220px] bg-white text-slate-900 rounded-xl shadow-lg border border-slate-200 text-xs'>
+                    <p className='font-bold text-slate-900 truncate'>{s.name}</p>
+                    <p className='text-slate-500 font-medium mt-0.5'>Code: <span className='text-slate-700 font-semibold'>{s.code}</span></p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+              {extra > 0 && <span className='text-[10px] font-semibold text-slate-400 pl-1'>+{extra} more</span>}
+            </div>
+          </TooltipProvider>
         );
       }
     },
@@ -1814,18 +1800,15 @@ function SchoolBusSchoolsPageContent() {
       ) : (
         <div className='px-6 py-5 space-y-3 bg-slate-50/20 border-b border-slate-100 rounded-b-2xl'>
           {filteredLinkedPickupsTable.map((link) => {
-            const isExpanded = expandedSppId === link.id;
-            const linkWindows = isExpanded ? windows : [];
             return (
               <div key={link.id} className='rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-sm hover:shadow-md/5 transition-all duration-200'>
                 {/* Header */}
                 <div
                   className='flex items-center justify-between px-5 py-4 cursor-pointer select-none transition hover:bg-slate-50/50'
-                  onClick={() => setExpandedSppId(isExpanded ? null : link.id)}
                 >
                   <div className='flex items-center gap-3 min-w-0'>
                     <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/40 text-slate-500'>
-                      {isExpanded ? <ChevronDown className='h-4 w-4' /> : <ChevronRight className='h-4 w-4' />}
+                      <MapPin className='h-4 w-4' />
                     </div>
                     <div className='min-w-0'>
                       <p className='text-sm font-bold text-slate-800'>{link.pickupPointName}</p>
@@ -1855,79 +1838,6 @@ function SchoolBusSchoolsPageContent() {
                     </Button>
                   </div>
                 </div>
-
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className='border-t border-slate-100 bg-slate-50/20 p-5'>
-                    <div className='flex items-center justify-between mb-4'>
-                      <h5 className='text-xs font-bold text-slate-600 uppercase tracking-wider'>Operational Windows</h5>
-                      <Button
-                        size='sm'
-                        className='h-7 rounded-lg bg-[#C81E3A] text-white hover:bg-[#B31B34] text-xs font-semibold px-3 gap-1'
-                        onClick={() => { setEditingWindow(null); setWindowDialogOpen(true); }}
-                      >
-                        <Plus className='h-3.5 w-3.5' /> Add window
-                      </Button>
-                    </div>
-
-                    {linkWindows.length === 0 ? (
-                      <div className='rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center'>
-                        <Clock className='mx-auto h-6 w-6 text-slate-300 mb-2' />
-                        <p className='text-xs font-semibold text-slate-600'>No timing windows configured</p>
-                        <p className='text-[10px] text-slate-400 mt-1 max-w-[280px] mx-auto'>
-                          Define time boundaries for school runs to restrict trip dispatching.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className='overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'>
-                        <Table>
-                          <TableHeader className='bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100'>
-                            <TableRow className='h-8 border-b border-slate-100'>
-                              <TableHead className='pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Schedule</TableHead>
-                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Direction</TableHead>
-                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Time window</TableHead>
-                              <TableHead className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Transit Estimate</TableHead>
-                              <TableHead className='pr-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right'>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {linkWindows.map((w) => (
-                              <TableRow key={w.id} className='text-xs hover:bg-slate-50/30 border-b border-slate-100 last:border-b-0'>
-                                <TableCell className='pl-4 py-2.5 font-medium text-slate-900'>{w.scheduleName}</TableCell>
-                                <TableCell className='py-2.5'>{DIRECTION_LABELS[w.direction] || w.direction}</TableCell>
-                                <TableCell className='py-2.5 font-semibold text-slate-700'>{w.windowStart} – {w.windowEnd}</TableCell>
-                                <TableCell className='py-2.5 text-slate-500'>
-                                  {w.estimatedDistanceToSchoolKm != null ? `${w.estimatedDistanceToSchoolKm} km` : '-'}
-                                  {w.estimatedDurationToSchoolMin != null ? ` / ${w.estimatedDurationToSchoolMin} min` : ''}
-                                </TableCell>
-                                <TableCell className='pr-4 py-2.5 text-right'>
-                                  <div className='flex items-center justify-end gap-1'>
-                                    <Button
-                                      size='icon'
-                                      variant='ghost'
-                                      className='h-7 w-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                                      onClick={() => { setEditingWindow(w); setWindowDialogOpen(true); }}
-                                    >
-                                      <Pencil className='h-3 w-3' />
-                                    </Button>
-                                    <Button
-                                      size='icon'
-                                      variant='ghost'
-                                      className='h-7 w-7 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50'
-                                      onClick={() => handleDeleteWindow(w.id)}
-                                    >
-                                      <Trash2 className='h-3 w-3' />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })}
@@ -2085,15 +1995,6 @@ function SchoolBusSchoolsPageContent() {
           pickupPoints={allPickupPointsForLink}
           isLoading={linkingPickup}
           onSubmit={handleLinkPickupPoint}
-        />
-        <WindowFormDialog
-          open={windowDialogOpen}
-          onOpenChange={(open) => { setWindowDialogOpen(open); if (!open) setEditingWindow(null); }}
-          schedules={schedules}
-          existingWindow={editingWindow}
-          usageType={linkedPickupPoints.find((lp) => lp.id === expandedSppId)?.pickupPointUsageType}
-          isLoading={creatingWindow || updatingWindow}
-          onSubmit={handleSaveWindow}
         />
       </>
     );

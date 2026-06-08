@@ -43,7 +43,6 @@ public class SchoolBusMapper extends BaseMapper {
     public DepotResponse toDepotResponse(DepotEntity e) { return masterDataMapper.toDepotResponse(e); }
     public SchoolScheduleResponse toSchoolScheduleResponse(SchoolScheduleEntity e) { return masterDataMapper.toSchoolScheduleResponse(e); }
     public SchoolPickupPointResponse toSchoolPickupPointResponse(SchoolPickupPointEntity e) { return masterDataMapper.toSchoolPickupPointResponse(e); }
-    public SchoolPickupPointWindowResponse toSchoolPickupPointWindowResponse(SchoolPickupPointWindowEntity e) { return masterDataMapper.toSchoolPickupPointWindowResponse(e); }
 
     // --- Route ---
     public RoutePlanResponse toRoutePlanResponse(RoutePlanEntity e) { return routeMapper.toRoutePlanResponse(e); }
@@ -66,7 +65,6 @@ public class SchoolBusMapper extends BaseMapper {
     public StudentSubscriptionResponse toStudentSubscriptionResponse(StudentSubscriptionEntity e) { return transportMapper.toStudentSubscriptionResponse(e); }
     public TransportRequestHistoryResponse toTransportRequestHistoryResponse(TransportRequestHistoryEntity e) { return transportMapper.toTransportRequestHistoryResponse(e); }
     public StudentSubscriptionHistoryResponse toStudentSubscriptionHistoryResponse(StudentSubscriptionHistoryEntity e) { return transportMapper.toStudentSubscriptionHistoryResponse(e); }
-    public SubscriptionPausePeriodResponse toSubscriptionPausePeriodResponse(SubscriptionPausePeriodEntity e) { return transportMapper.toSubscriptionPausePeriodResponse(e); }
 
     // --- Operations ---
     public AttendanceResponse toAttendanceResponse(AttendanceEntity e) { return operationsMapper.toAttendanceResponse(e); }

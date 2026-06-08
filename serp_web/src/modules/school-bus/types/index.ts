@@ -76,7 +76,6 @@ export interface SchoolBusSchool extends SchoolBusBaseRecord {
   scheduleCount?: number;
   pickupPointCount?: number;
   activeScheduleCount?: number;
-  pickupWindowCount?: number;
   hasCoordinates?: boolean;
   anyLinkedPointMissingCoordinates?: boolean;
 }
@@ -120,8 +119,6 @@ export interface SchoolBusStudent extends SchoolBusBaseRecord {
   homeAddress?: string | null;
   dateOfBirth?: string | null;
   gender?: string | null;
-  emergencyContactName?: string | null;
-  emergencyContactPhone?: string | null;
   specialNote?: string | null;
 }
 
@@ -163,13 +160,15 @@ export interface SchoolBusPickupPoint extends SchoolBusBaseRecord {
   latitude?: number | null;
   longitude?: number | null;
   code?: string | null;
-  zoneCode?: string | null;
   usageType?: string | null;
   pickupInstruction?: string | null;
-  /** @deprecated Legacy field, always null */
-  schoolId?: number | null;
-  /** @deprecated Legacy field, always null */
-  schoolName?: string | null;
+  schools?: PickupPointLinkedSchool[];
+}
+
+export interface PickupPointLinkedSchool {
+  id: number;
+  code: string;
+  name: string;
 }
 
 export interface SchoolBusDepot extends SchoolBusBaseRecord {
@@ -318,7 +317,6 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   plannedStudentCount?: number | null;
   assignedBusCapacity?: number | null;
   routeGenerationMethod?: string | null;
-  estimatedCost?: number | null;
   versionNo?: number | null;
   planningNotes?: string | null;
   geometryPath?: string | null;
@@ -326,8 +324,6 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   fallbackUsed?: boolean | null;
   startedAt?: string | null;
   completedAt?: string | null;
-  issueCount?: number | null;
-  blockingIssueCount?: number | null;
   planningSessionId?: number | null;
   planningMethod?: 'MANUAL' | 'GREEDY' | null;
 }
@@ -366,8 +362,6 @@ export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   stopType?: 'PICKUP' | 'DROPOFF'; // legacy compat
   stopOrder: number;
   estimatedStudentCount?: number | null;
-  plannedArrivalTime?: string | null;
-  plannedDepartureTime?: string | null;
   distanceFromPreviousKm?: number | null;
   estimatedTravelTimeFromPrevious?: number | null;
 }
@@ -409,24 +403,13 @@ export interface SchoolBusRouteAssignment extends SchoolBusBaseRecord {
 export interface SchoolBusRoutePlanStudent {
   id: number;
   routeId: number;
-  routeStopId?: number | null;
   studentId: number;
   studentName: string;
-  subscriptionId: number;
-  serviceAction: 'BOARD' | 'DROPOFF';
-  stopName?: string | null;
-  plannedTime?: string | null;
-}
-
-export interface SchoolBusRouteIssueDetail {
-  issueType: string;
-  severity: 'INFO' | 'WARNING' | 'BLOCKING';
-  message: string;
-  routeStopId?: number | null;
-  stopName?: string | null;
-  studentId?: number | null;
-  studentName?: string | null;
-  suggestedFix?: string | null;
+  subscriptionId?: number | null;
+  pickupStopId?: number | null;
+  pickupPointName?: string | null;
+  dropoffStopId?: number | null;
+  dropoffPointName?: string | null;
 }
 
 export interface SchoolBusRouteDetail {
@@ -434,9 +417,6 @@ export interface SchoolBusRouteDetail {
   stops: SchoolBusRouteStop[];
   students: SchoolBusRoutePlanStudent[];
   assignment: SchoolBusRouteAssignment | null;
-  issues?: SchoolBusRouteIssueDetail[];
-  blockingIssues?: SchoolBusRouteIssueDetail[];
-  warningIssues?: SchoolBusRouteIssueDetail[];
 }
 
 export interface SchoolBusAttendance extends SchoolBusBaseRecord {
@@ -687,8 +667,6 @@ export interface SchoolBusStudentUpsertRequest {
   homeAddress?: string;
   dateOfBirth?: string | null;
   gender?: string | null;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
   specialNote?: string;
   isActive?: boolean;
 }
@@ -727,7 +705,6 @@ export interface SchoolBusPickupPointUpsertRequest {
   latitude?: number | null;
   longitude?: number | null;
   code?: string | null;
-  zoneCode?: string | null;
   usageType?: string | null;
   pickupInstruction?: string | null;
   isActive?: boolean;
@@ -890,7 +867,6 @@ export interface SchoolBusSchoolPickupPoint extends SchoolBusBaseRecord {
   pickupPointLongitude?: number | null;
   pickupPointUsageType?: string | null;
   isDefault?: boolean;
-  windows?: SchoolBusSchoolPickupPointWindow[];
 }
 
 export interface SchoolBusSchoolPickupPointUpsertRequest {
@@ -899,35 +875,10 @@ export interface SchoolBusSchoolPickupPointUpsertRequest {
   isActive?: boolean;
 }
 
-// ===== School Pickup Point Windows =====
-export type PickupPointWindowDirection = 'PICKUP_TO_SCHOOL' | 'DROPOFF_FROM_SCHOOL';
-
-export interface SchoolBusSchoolPickupPointWindow extends SchoolBusBaseRecord {
-  schoolPickupPointId: number;
-  schoolScheduleId: number;
-  scheduleName: string;
-  direction: PickupPointWindowDirection;
-  windowStart: string;
-  windowEnd: string;
-  estimatedDistanceToSchoolKm?: number | null;
-  estimatedDurationToSchoolMin?: number | null;
-}
-
-export interface SchoolPickupPointWindowUpsertRequest {
-  schoolPickupPointId: number;
-  schoolScheduleId: number;
-  direction: PickupPointWindowDirection;
-  windowStart: string;
-  windowEnd: string;
-  estimatedDistanceToSchoolKm?: number | null;
-  estimatedDurationToSchoolMin?: number | null;
-}
-
 // ── Planning Session ──────────────────────────────────────────────────────
 
 export type PlanningSessionStatus = 'DRAFT' | 'GENERATED' | 'REVIEWING' | 'PUBLISHED' | 'CANCELLED';
 export type PlanningMethod = 'MANUAL' | 'GREEDY';
-export type PlanningIssueSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
 
 export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   schoolId: number;
@@ -950,20 +901,6 @@ export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   planningNotes?: string | null;
 }
 
-export interface SchoolBusPlanningIssue {
-  id?: number;
-  planningSessionId?: number;
-  routeId?: number;
-  routeStopId?: number;
-  studentId?: number;
-  studentName?: string;
-  subscriptionId?: number;
-  issueType: string;
-  severity: PlanningIssueSeverity;
-  message: string;
-  isResolved?: boolean;
-}
-
 export interface SchoolBusEligibleStudent {
   studentId: number;
   studentName: string;
@@ -983,8 +920,6 @@ export interface SchoolBusEligibleStudent {
   relevantPointName?: string;
   relevantPointLatitude?: number;
   relevantPointLongitude?: number;
-  windowStart?: string;
-  windowEnd?: string;
   specialNote?: string;
   assigned?: boolean;
   assignedRouteId?: number;
@@ -996,23 +931,14 @@ export interface SchoolBusPlanningPickupPoint {
   latitude?: number;
   longitude?: number;
   studentCount: number;
-  hasWindow?: boolean;
 }
 
 export interface PlanningReadinessSummary {
   totalSubscriptions: number;
   eligibleStudents: number;
-  blockedStudents: number;
-  warningStudents: number;
   pointCount: number;
   pickupPointCount: number;
   dropoffPointCount: number;
-  missingCoordinateCount: number;
-  missingWindowCount: number;
-  pausedCount: number;
-  inactiveCount: number;
-  outOfEffectiveRangeCount: number;
-  dayMismatchCount: number;
 }
 
 export interface PlanningDemandResponse {
@@ -1033,13 +959,6 @@ export interface PlanningDemandResponse {
   pointName?: string;
   latitude?: number;
   longitude?: number;
-  windowStart?: string;
-  windowEnd?: string;
-  readinessStatus: 'READY' | 'BLOCKED';
-  reasonCode?: string;
-  reasonLabel?: string;
-  issueCodes?: string[];
-  issueLabels?: string[];
 }
 
 export interface PlanningPointResponse {
@@ -1049,20 +968,7 @@ export interface PlanningPointResponse {
   latitude?: number;
   longitude?: number;
   pointRole: 'PICKUP' | 'DROPOFF';
-  windowStart?: string;
-  windowEnd?: string;
   studentCount: number;
-  issueLabels?: string[];
-  readinessStatus: 'READY' | 'BLOCKED';
-}
-
-export interface PlanningReadinessIssueResponse {
-  severity: 'BLOCKING' | 'WARNING' | 'INFO';
-  code: string;
-  label: string;
-  subscriptionId?: number;
-  studentId?: number;
-  pointId?: number;
 }
 
 export interface SchoolBusPlanningPreview {
@@ -1076,7 +982,6 @@ export interface SchoolBusPlanningPreview {
   totalEligiblePickupPoints: number;
   eligibleStudents: SchoolBusEligibleStudent[];
   eligiblePickupPoints: SchoolBusPlanningPickupPoint[];
-  issues: SchoolBusPlanningIssue[];
   
   // New fields from Phase 2
   schoolCode?: string;
@@ -1098,37 +1003,7 @@ export interface SchoolBusPlanningPreview {
   defaultBusCapacity?: number;
   summary?: PlanningReadinessSummary;
   eligibleDemands?: PlanningDemandResponse[];
-  blockedDemands?: PlanningDemandResponse[];
   points?: PlanningPointResponse[];
-}
-
-export interface SchoolBusRouteQuality {
-  routeId: number;
-  routeCode: string;
-  routeName: string;
-  status: string;
-  studentCount: number;
-  stopCount: number;
-  totalDistanceKm?: number;
-  totalDurationMin?: number;
-  requiredCapacity?: number;
-  capacityUtilizationPercent?: number;
-  qualityScore?: number;
-  blockingIssueCount: number;
-  warningIssueCount: number;
-  infoIssueCount: number;
-  arrivalDeadlineStatus?: string;
-  departureTimeStatus?: string;
-  issues: SchoolBusPlanningIssue[];
-}
-
-export interface SchoolBusGreedyGenerateResult {
-  session: SchoolBusPlanningSession;
-  routes: SchoolBusRouteQuality[];
-  totalUnassignedStudents: number;
-  unassignedStudents: SchoolBusEligibleStudent[];
-  sessionIssues: SchoolBusPlanningIssue[];
-  eligiblePickupPoints?: SchoolBusPlanningPickupPoint[];
 }
 
 // ── Requests ─────────────────────────────────────────────────────────────
@@ -1152,11 +1027,6 @@ export interface PlanningSessionPreviewRequest {
   defaultBusCapacity?: number;
 }
 
-export interface GreedyGenerateRequest {
-  defaultBusCapacity?: number;
-  depotId?: number;
-}
-
 export interface CreateRouteInSessionRequest {
   schoolId: number;
   routeDirection: 'OUTBOUND' | 'RETURN';
@@ -1175,40 +1045,6 @@ export interface CreateRouteInSessionRequest {
 export interface AddStudentToStopRequest {
   studentId: number;
   subscriptionId: number;
-}
-
-export interface SchoolBusRouteCalculationTrace {
-  id: number;
-  routePlanId: number;
-  planningSessionId?: number | null;
-  calculationType: string;
-  calculationStatus: string;
-  sourceSummary?: string | null;
-  issueCount?: number;
-  blockingIssueCount?: number;
-  inputJson?: string | null;
-  matrixJson?: string | null;
-  timelineJson?: string | null;
-  issuesJson?: string | null;
-  configSnapshotJson?: string | null;
-  createdAt?: string;
-  createdBy?: string;
-}
-
-export interface SchoolBusObjectiveScore {
-  objectiveValue: number;
-  displayScore: number;
-  feasible: boolean;
-  distanceCost: number;
-  durationCost: number;
-  routeCountCost: number;
-  unassignedCost: number;
-  waitTimeCost: number;
-  blockingIssueCost: number;
-  warningIssueCost: number;
-  capacityExcessCost: number;
-  balanceCost: number;
-  weights: Record<string, number>;
 }
 
 export interface ChartItemDto {

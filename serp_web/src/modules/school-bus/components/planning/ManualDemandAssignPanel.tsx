@@ -207,14 +207,7 @@ export function ManualDemandAssignPanel({
                 </div>
                 <p className='mt-0.5 text-[10px] truncate text-slate-450 flex items-center gap-1'>
                   {hasPoint ? (
-                    <>
-                      <span>📍 {point ?? '—'}</span>
-                      {student.windowStart && student.windowEnd && (
-                        <span className='text-[9px] font-medium text-slate-400 bg-slate-100/40 px-1 rounded border border-slate-150'>
-                          {student.windowStart}–{student.windowEnd}
-                        </span>
-                      )}
-                    </>
+                    <span>📍 {point ?? '—'}</span>
                   ) : (
                     <span className='text-amber-600'>⚠️ No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'} point</span>
                   )}

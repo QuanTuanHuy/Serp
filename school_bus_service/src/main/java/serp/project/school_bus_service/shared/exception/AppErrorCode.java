@@ -205,6 +205,7 @@ public class AppErrorCode {
         public static final ErrorInfo ALREADY_CANCELLED       = new ErrorInfo("session.alreadyCancelled",        "Session is already cancelled.",            HttpStatus.BAD_REQUEST);
         public static final ErrorInfo FROZEN                  = new ErrorInfo("session.frozen",                  "Session is closed for editing.",          HttpStatus.BAD_REQUEST);
         public static final ErrorInfo NOT_MANUAL              = new ErrorInfo("session.notManual",               "Only manual sessions allow this action.",  HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ROUTE_NO_STUDENTS       = new ErrorInfo("session.routeNoStudents",         "Route has no assigned students.",          HttpStatus.BAD_REQUEST);
         private Session() {}
     }
 

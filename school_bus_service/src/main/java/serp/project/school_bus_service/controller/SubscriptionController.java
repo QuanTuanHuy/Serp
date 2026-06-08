@@ -17,7 +17,6 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionHistoryResponse;
-import serp.project.school_bus_service.dto.response.SubscriptionPausePeriodResponse;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -90,13 +89,5 @@ public class SubscriptionController extends AbstractBaseController {
             @PathVariable Long id) {
         return ok("Fetched subscription history",
                 subscriptionService.getSubscriptionHistory(id, getCurrentTenantId()));
-    }
-
-    @GetMapping("/{id}/pause-periods")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
-    public ResponseEntity<GeneralResponse<java.util.List<SubscriptionPausePeriodResponse>>> getSubscriptionPausePeriods(
-            @PathVariable Long id) {
-        return ok("Fetched subscription pause periods",
-                subscriptionService.getSubscriptionPausePeriods(id, getCurrentTenantId()));
     }
 }

@@ -88,11 +88,6 @@ public class RoutePlanningSessionEntity extends BaseModel {
     @Column(name = "published_by")
     private Long publishedBy;
 
-    // ── Config ───────────────────────────────────────────────────────
-
-    @Column(name = "constraint_json", columnDefinition = "TEXT")
-    private String constraintJson;
-
     @Column(name = "planning_notes", columnDefinition = "TEXT")
     private String planningNotes;
 }

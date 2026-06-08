@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, CheckCircle2, XCircle, AlertCircle, Loader2, Navigation } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, AlertCircle, Loader2, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -19,17 +19,9 @@ import {
   useGetDepotsQuery,
   useGetSchoolByIdQuery,
   useGetSchoolScheduleByIdQuery,
-  useGetLatestRouteCalculationTraceQuery,
-  useGetRouteObjectiveScoreQuery,
-  useRecalculateRouteObjectiveScoreMutation,
-  useGetSessionObjectiveScoreQuery,
-  useRecalculateSessionObjectiveScoreMutation,
 } from '../../api/schoolBusApi';
 import type {
   SchoolBusPlanningPreview,
-  SchoolBusGreedyGenerateResult,
-  SchoolBusPlanningIssue,
-  SchoolBusRouteQuality,
   SchoolBusPlanningSession,
   SchoolBusRoute,
   SchoolBusEligibleStudent,
@@ -313,20 +305,7 @@ function SessionRouteCard({
           </span>
         </div>
       </div>
-      {((route.blockingIssueCount ?? 0) > 0 || ((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0) && (
-        <div className='flex flex-wrap gap-1.5 text-[10px]'>
-          {(route.blockingIssueCount ?? 0) > 0 && (
-            <span className='inline-flex items-center gap-1 rounded bg-red-50 text-red-700 px-1.5 py-0.5 border border-red-100 font-bold shadow-none'>
-              🚫 {route.blockingIssueCount} blocking
-            </span>
-          )}
-          {((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0 && (
-            <span className='inline-flex items-center gap-1 rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-100 font-bold shadow-none'>
-              ⚠️ {route.issueCount! - route.blockingIssueCount!} warning(s)
-            </span>
-          )}
-        </div>
-      )}
+
       <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
         <span>{route.serviceDate}</span>
         {isSelected && <span className='font-extrabold text-[#C81E3A] flex items-center gap-1'>▶ Selected</span>}
@@ -368,30 +347,11 @@ function SessionRouteCard({
   );
 }
 
-/* ── Issue badge ────────────────────────────────────────────────── */
 
-const severityStyle: Record<string, string> = {
-  BLOCKING: 'border-red-205 bg-red-50 text-red-700',
-  WARNING: 'border-amber-205 bg-amber-50 text-amber-700',
-  INFO: 'border-sky-205 bg-sky-50 text-sky-700',
-};
-const SeverityIcon = ({ s }: { s: string }) => s === 'BLOCKING' ? <Ban className='h-3 w-3' /> : s === 'WARNING' ? <AlertTriangle className='h-3 w-3' /> : <Info className='h-3 w-3' />;
-
-function IssueBadge({ issue }: { issue: SchoolBusPlanningIssue }) {
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', severityStyle[issue.severity] || severityStyle.INFO)}>
-      <SeverityIcon s={issue.severity} /> {issue.message}
-    </span>
-  );
-}
 
 /* ── Route Card ─────────────────────────────────────────────────── */
 
-function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuality; onSelect: (id: number) => void; isSelected: boolean }) {
-  const [showIssues, setShowIssues] = useState(false);
-  const score = route.qualityScore ?? 0;
-  const scoreColor = score >= 80 ? 'text-emerald-600 border-emerald-350 bg-emerald-50/50' : score >= 50 ? 'text-amber-600 border-amber-350 bg-amber-50/50' : 'text-red-600 border-red-350 bg-red-50/50';
-
+function RouteCard({ route, onSelect, isSelected }: { route: any; onSelect: (id: number) => void; isSelected: boolean }) {
   const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
 
   return (
@@ -420,9 +380,6 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
               {isAssigned ? 'Ready for trip' : 'Needs assignment'}
             </span>
           </div>
-          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm', scoreColor)}>
-            {score.toFixed(0)}
-          </div>
         </div>
       </div>
       
@@ -448,23 +405,6 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
           <span className='font-bold text-slate-700'>{route.totalDurationMin != null ? route.totalDurationMin + ' min' : '—'}</span>
         </div>
       </div>
-
-      {(route.blockingIssueCount > 0 || route.warningIssueCount > 0) && (
-        <div className='flex flex-wrap gap-1.5 text-[10px]'>
-          {route.blockingIssueCount > 0 && <span className='inline-flex items-center gap-1 rounded bg-red-50 text-red-700 px-1.5 py-0.5 border border-red-100 font-bold'>🚫 {route.blockingIssueCount} blocking</span>}
-          {route.warningIssueCount > 0 && <span className='inline-flex items-center gap-1 rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-100 font-bold'>⚠️ {route.warningIssueCount} warning(s)</span>}
-        </div>
-      )}
-
-      {route.issues.length > 0 && (
-        <div className='pt-1 border-t border-slate-100/50'>
-          <button onClick={e => { e.stopPropagation(); setShowIssues(v => !v); }}
-            className='text-[10px] font-bold text-slate-400 hover:text-slate-900 flex items-center gap-1'>
-            {showIssues ? '▲ Hide issues' : '▼ Show issues'} ({route.issues.length})
-          </button>
-          {showIssues && <div className='mt-2 flex flex-col gap-1.5'>{route.issues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>}
-        </div>
-      )}
       
       {isSelected && (
         <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
@@ -502,218 +442,14 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
   );
 }
 
-function SessionObjectiveScoreWidget({ sessionId }: { sessionId: number }) {
-  const { data: scoreData, refetch, isLoading } = useGetSessionObjectiveScoreQuery(sessionId);
-  const [recalculate, { isLoading: isRecalculating }] = useRecalculateSessionObjectiveScoreMutation();
-
-  const handleRecalculate = async () => {
-    try {
-      await recalculate(sessionId).unwrap();
-      toast.success('Recalculated session objective score');
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to recalculate session score');
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading solution score...</div>;
-  }
-
-  const score = scoreData?.data;
-  if (!score) {
-    return (
-      <div className="text-xs text-slate-450 py-2">
-        No solution score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-semibold text-[#C81E3A]">Calculate now</Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 rounded-2xl border border-indigo-100 bg-indigo-50/20 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Solution Quality Score</h4>
-          <p className="text-[10px] text-indigo-600 mt-0.5">Overall session cost (includes unassigned student penalties)</p>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRecalculate} 
-          disabled={isRecalculating} 
-          className="h-6 text-[10px] font-bold text-indigo-700 hover:bg-indigo-105/50 p-1 px-2 rounded-full"
-        >
-          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-medium text-slate-500 leading-none">Normalized Score</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={cn(
-              "text-lg font-black",
-              score.feasible ? "text-emerald-700" : "text-rose-700"
-            )}>
-              {score.displayScore?.toFixed(2)}
-            </span>
-            <span className="text-slate-450 text-[10px]">/ 100</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium text-slate-500 leading-none">Total Objective Value</p>
-          <p className="text-sm font-extrabold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Mini breakdown of session cost */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-slate-650 border-t border-indigo-100/40 pt-2.5">
-        <div className="flex justify-between">
-          <span>Distance cost:</span>
-          <span className="font-bold text-slate-750">{score.distanceCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Duration:</span>
-          <span className="font-bold text-slate-750">{score.durationCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Wait time:</span>
-          <span className="font-bold text-slate-750">{score.waitTimeCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Routes:</span>
-          <span className="font-bold text-slate-750">{score.routeCountCost?.toFixed(0)}</span>
-        </div>
-        {score.unassignedCost > 0 && (
-          <div className="flex justify-between text-rose-600 font-medium col-span-2">
-            <span>Unassigned penalty:</span>
-            <span>+{score.unassignedCost?.toFixed(0)}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RouteObjectiveScoreWidget({ routeId }: { routeId: number }) {
-  const { data: scoreData, refetch, isLoading } = useGetRouteObjectiveScoreQuery(routeId);
-  const [recalculate, { isLoading: isRecalculating }] = useRecalculateRouteObjectiveScoreMutation();
-
-  const handleRecalculate = async () => {
-    try {
-      await recalculate(routeId).unwrap();
-      toast.success('Recalculated route objective score');
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to recalculate score');
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading score...</div>;
-  }
-
-  const score = scoreData?.data;
-  if (!score) {
-    return (
-      <div className="text-xs text-slate-450 py-2">
-        No score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-bold text-indigo-650">Calculate now</Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objective Quality Score</h4>
-          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Normalized from travel duration & distance</p>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRecalculate} 
-          disabled={isRecalculating} 
-          className="h-6 text-[10px] font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/50 p-1 px-2 rounded-full"
-        >
-          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
-        </Button>
-      </div>
-
-      <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Normalized Score</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={cn(
-              "text-lg font-extrabold",
-              score.feasible ? "text-emerald-600" : "text-rose-600"
-            )}>
-              {score.displayScore?.toFixed(2)}
-            </span>
-            <span className="text-slate-400 text-[10px]">/ 100</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Objective Value</p>
-          <p className="text-sm font-bold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Breakdown Details */}
-      <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Distance cost:</span>
-          <span className="font-semibold text-slate-800">{score.distanceCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Duration cost:</span>
-          <span className="font-semibold text-slate-800">{score.durationCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Wait time cost:</span>
-          <span className="font-semibold text-slate-800">{score.waitTimeCost?.toFixed(2)}</span>
-        </div>
-        {score.capacityExcessCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Capacity excess cost:</span>
-            <span>+{score.capacityExcessCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.blockingIssueCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Blocking penalty:</span>
-            <span>+{score.blockingIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.warningIssueCost > 0 && (
-          <div className="flex justify-between items-center text-amber-600 font-medium">
-            <span>Warning penalty:</span>
-            <span>+{score.warningIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ── Route Detail Panel ─────────────────────────────────────────── */
 
 function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: number }) {
   const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId);
-  const { data: traceData } = useGetLatestRouteCalculationTraceQuery(routeId, { skip: !routeId });
   const [reorderStops] = useReorderRouteStopsMutation();
   const [removeStop, { isLoading: removingStop }] = useRemoveRouteStopMutation();
   const [removeStudent, { isLoading: removingStudent }] = useRemoveRouteStudentMutation();
   const detail = routeDetail?.data;
-
-  const issues = React.useMemo(() => {
-    if (!traceData?.data?.issuesJson) return [];
-    try {
-      return JSON.parse(traceData.data.issuesJson);
-    } catch {
-      return [];
-    }
-  }, [traceData]);
 
   // ── Confirm dialogs ──────────────────────────────────────────────────────
   const stopConfirm = useSchoolBusConfirm({
@@ -792,75 +528,6 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
           </h3>
         </div>
 
-        {/* Validation Issues */}
-        {detail.issues && detail.issues.length > 0 && (
-          <div className='rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm'>
-            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none border-b border-slate-100 pb-2'>Feasibility Validation ({detail.issues.length})</p>
-            
-            <div className='space-y-3 max-h-[280px] overflow-y-auto pr-1'>
-              {/* Blocking Issues */}
-              {detail.blockingIssues && detail.blockingIssues.length > 0 && (
-                <div className='space-y-2'>
-                  <h4 className='text-[10px] font-bold text-rose-800 flex items-center gap-1.5'>
-                    <span className='h-1 w-1 rounded-full bg-rose-600' />
-                    Blocking ({detail.blockingIssues.length})
-                  </h4>
-                  <div className='grid gap-1.5'>
-                    {detail.blockingIssues.map((issue, idx) => (
-                      <div key={idx} className='bg-rose-50/40 border border-rose-100 rounded-xl p-2.5 space-y-1 text-xs'>
-                        <div className='flex justify-between items-start gap-2'>
-                          <div className='font-bold text-slate-800 leading-tight'>
-                            {issue.message}
-                          </div>
-                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-rose-100 text-rose-800 border border-rose-200/40 tracking-wider'>
-                            {issue.issueType}
-                          </span>
-                        </div>
-                        {issue.suggestedFix && (
-                          <div className='mt-1.5 pt-1.5 border-t border-rose-200/40 text-[10px] text-rose-900/90 leading-tight font-semibold flex items-start gap-1'>
-                            <span className='font-extrabold text-rose-955 shrink-0'>Fix:</span>
-                            <span>{issue.suggestedFix}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Warning Issues */}
-              {detail.warningIssues && detail.warningIssues.length > 0 && (
-                <div className='space-y-2'>
-                  <h4 className='text-[10px] font-bold text-amber-800 flex items-center gap-1.5'>
-                    <span className='h-1 w-1 rounded-full bg-amber-600' />
-                    Warnings ({detail.warningIssues.length})
-                  </h4>
-                  <div className='grid gap-1.5'>
-                    {detail.warningIssues.map((issue, idx) => (
-                      <div key={idx} className='bg-amber-50/40 border border-amber-100 rounded-xl p-2.5 space-y-1 text-xs'>
-                        <div className='flex justify-between items-start gap-2'>
-                          <div className='font-bold text-slate-850 leading-tight'>
-                            {issue.message}
-                          </div>
-                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200/40 tracking-wider'>
-                            {issue.issueType}
-                          </span>
-                        </div>
-                        {issue.suggestedFix && (
-                          <div className='mt-1.5 pt-1.5 border-t border-amber-200/40 text-[10px] text-amber-900/90 leading-tight font-semibold flex items-start gap-1'>
-                            <span className='font-extrabold text-amber-955 shrink-0'>Fix:</span>
-                            <span>{issue.suggestedFix}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
         <div>
           {/* Terminal route banner */}
           {(() => {
@@ -923,65 +590,41 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
 
         <div>
           {(() => {
-            const uniqueStudentCount = new Set(students.map(ps => ps.studentId)).size;
-            interface GroupedStudent {
-              studentId: number;
-              studentName: string;
-              subscriptionId: number;
-              actions: {
-                serviceAction: string;
-                stopName: string;
-              }[];
-            }
-
-            const groupedStudents: GroupedStudent[] = [];
-            students.forEach(ps => {
-              let existing = groupedStudents.find(g => g.studentId === ps.studentId);
-              if (!existing) {
-                existing = {
-                  studentId: ps.studentId,
-                  studentName: ps.studentName,
-                  subscriptionId: ps.subscriptionId,
-                  actions: []
-                };
-                groupedStudents.push(existing);
-              }
-              existing.actions.push({
-                serviceAction: ps.serviceAction === 'BOARD' ? 'BOARD' : ps.serviceAction === 'DROPOFF' ? 'DROPOFF' : ps.serviceAction,
-                stopName: ps.stopName ?? '—'
-              });
-            });
-
             return (
               <>
-                <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({uniqueStudentCount})</p>
-                {groupedStudents.length === 0 ? (
+                <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({students.length})</p>
+                {students.length === 0 ? (
                   <p className='text-xs text-slate-300'>No students assigned to stops</p>
                 ) : (
                   <div className='space-y-1.5'>
-                    {groupedStudents.map(g => (
-                      <div key={g.studentId} className='flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm hover:shadow transition-shadow'>
+                    {students.map(ps => (
+                      <div key={`${ps.studentId}-${ps.subscriptionId}`} className='flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm hover:shadow transition-shadow'>
                         <div className='flex items-center gap-2'>
                           <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-650'>
                             <Users className='h-3 w-3' />
                           </span>
-                          <span className='flex-1 font-bold text-slate-800 truncate'>{g.studentName || `Student #${g.studentId}`}</span>
+                          <span className='flex-1 font-bold text-slate-800 truncate'>{ps.studentName || `Student #${ps.studentId}`}</span>
                           {editable && (
-                            <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(g.studentId, g.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
+                            <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId ?? 0)}><Trash2 className='h-3 w-3' /></Button>
                           )}
                         </div>
                         <div className='pl-7 text-[10px] text-slate-450 space-y-1.5 border-t border-slate-100/60 pt-2 mt-1'>
-                          {g.actions.map((act, aIdx) => (
-                            <div key={aIdx} className='flex items-center gap-1.5'>
-                              <span className={cn(
-                                'px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider',
-                                act.serviceAction.includes('BOARD') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
-                              )}>
-                                {act.serviceAction}
+                          {ps.pickupPointName && (
+                            <div className='flex items-center gap-1.5'>
+                              <span className='px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100'>
+                                PICKUP
                               </span>
-                              <span className='text-slate-600 font-semibold truncate'>{act.stopName}</span>
+                              <span className='text-slate-600 font-semibold truncate'>{ps.pickupPointName}</span>
                             </div>
-                          ))}
+                          )}
+                          {ps.dropoffPointName && (
+                            <div className='flex items-center gap-1.5'>
+                              <span className='px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100'>
+                                DROPOFF
+                              </span>
+                              <span className='text-slate-600 font-semibold truncate'>{ps.dropoffPointName}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -993,11 +636,6 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
         </div>
 
         <hr className='border-slate-150 mt-4' />
-
-        {/* Route Objective Score */}
-        <div className="pt-2">
-          <RouteObjectiveScoreWidget routeId={routeId} />
-        </div>
       </div>
 
       {/* Confirm dialogs */}
@@ -1011,7 +649,6 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
 
 interface PlanningResultsPanelProps {
   preview: SchoolBusPlanningPreview | null;
-  greedyResult: SchoolBusGreedyGenerateResult | null;
   /** Routes loaded from backend (survives refresh, works for both GREEDY + MANUAL) */
   sessionRoutes: SchoolBusRoute[];
   activeSession: SchoolBusPlanningSession | null;
@@ -1030,7 +667,6 @@ interface PlanningResultsPanelProps {
 
 export function PlanningResultsPanel({
   preview,
-  greedyResult,
   sessionRoutes,
   activeSession,
   eligibleStudents,
@@ -1048,8 +684,7 @@ export function PlanningResultsPanel({
 
   const isManual = activeSession?.planningMethod === 'MANUAL';
 
-  const [previewTab, setPreviewTab] = useState<'summary' | 'demands' | 'points' | 'context'>('summary');
-  const [demandFilter, setDemandFilter] = useState<'all' | 'eligible' | 'blocked'>('all');
+  const [previewTab, setPreviewTab] = useState<'demands' | 'points' | 'context'>('demands');
 
   const schoolId = Number(preview?.schoolId ?? form?.schoolId) || 0;
   const { data: schoolData } = useGetSchoolByIdQuery(schoolId, { skip: !schoolId });
@@ -1089,7 +724,7 @@ export function PlanningResultsPanel({
           <span className='text-xs font-bold'>Demand Preview</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {preview && !isPreviewStale
-              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} · Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} · Blocked ${preview.summary?.blockedStudents ?? 0}`
+              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} · Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} · Points ${preview.summary?.pointCount ?? preview.totalEligiblePickupPoints}`
               : isPreviewStale
                 ? 'Out of date'
                 : 'No preview'}
@@ -1107,7 +742,7 @@ export function PlanningResultsPanel({
           <span className='text-xs font-bold'>Route Builder</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {activeSession
-              ? `${activeSession.planningMethod === 'MANUAL' ? 'Manual' : 'Greedy'} (${sessionRoutes.length || (greedyResult?.routes.length ?? 0)})`
+              ? `${activeSession.planningMethod === 'MANUAL' ? 'Manual' : 'Greedy'} (${sessionRoutes.length})`
               : 'No session'}
           </span>
         </button>
@@ -1171,23 +806,12 @@ export function PlanningResultsPanel({
             {preview && !isPreviewStale && (() => {
         const summary = preview?.summary;
         const eligibleDemands = preview?.eligibleDemands ?? [];
-        const blockedDemands = preview?.blockedDemands ?? [];
-        const allDemands = [...eligibleDemands, ...blockedDemands];
         const points = preview?.points ?? [];
-        const issues = preview?.issues ?? [];
 
         // Derived variables for display
-        const totalSubs = preview ? (summary?.totalSubscriptions ?? preview.totalEligibleStudents) : '—';
-        const eligibleCount = preview ? (summary?.eligibleStudents ?? preview.totalEligibleStudents) : '—';
-        const blockedCount = preview ? (summary?.blockedStudents ?? 0) : '—';
-        const pointsCount = preview ? (summary?.pointCount ?? preview.totalEligiblePickupPoints) : '—';
-
-        // Filter demands based on filter selection
-        const filteredDemands = allDemands.filter(d => {
-          if (demandFilter === 'eligible') return d.readinessStatus === 'READY';
-          if (demandFilter === 'blocked') return d.readinessStatus === 'BLOCKED';
-          return true;
-        });
+        const totalSubs = summary?.totalSubscriptions ?? preview.totalEligibleStudents;
+        const eligibleCount = summary?.eligibleStudents ?? preview.totalEligibleStudents;
+        const pointsCount = summary?.pointCount ?? preview.totalEligiblePickupPoints;
 
         const currentDirection = preview?.routeDirection ?? form?.routeDirection;
 
@@ -1204,7 +828,7 @@ export function PlanningResultsPanel({
             </div>
 
             {/* KPI Summary Cards */}
-            <div className='grid grid-cols-4 gap-2 text-xs'>
+            <div className='grid grid-cols-3 gap-2 text-xs'>
               <div className='p-2.5 rounded-2xl bg-slate-50 border border-slate-150 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider leading-none'>Total</span>
                 <span className='text-sm font-black text-slate-850 mt-1.5'>{totalSubs}</span>
@@ -1212,10 +836,6 @@ export function PlanningResultsPanel({
               <div className='p-2.5 rounded-2xl bg-emerald-50/50 border border-emerald-100 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-emerald-650 uppercase tracking-wider leading-none'>Eligible</span>
                 <span className='text-sm font-black text-emerald-700 mt-1.5'>{eligibleCount}</span>
-              </div>
-              <div className='p-2.5 rounded-2xl bg-red-50/50 border border-red-100 shadow-sm flex flex-col justify-between'>
-                <span className='text-[9px] font-extrabold text-red-650 uppercase tracking-wider leading-none'>Blocked</span>
-                <span className='text-sm font-black text-red-700 mt-1.5'>{blockedCount}</span>
               </div>
               <div className='p-2.5 rounded-2xl bg-blue-50/50 border border-blue-100 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-blue-650 uppercase tracking-wider leading-none'>Points</span>
@@ -1226,22 +846,13 @@ export function PlanningResultsPanel({
             {/* Tab Navigation */}
             <div className='flex border-b border-slate-150 text-xs font-bold'>
               <button
-                onClick={() => setPreviewTab('summary')}
-                className={cn(
-                  'px-3 py-2 border-b-2 transition-all -mb-px',
-                  previewTab === 'summary' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
-                )}
-              >
-                Overview
-              </button>
-              <button
                 onClick={() => setPreviewTab('demands')}
                 className={cn(
                   'px-3 py-2 border-b-2 transition-all -mb-px',
                   previewTab === 'demands' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
                 )}
               >
-                Students ({preview ? allDemands.length : 0})
+                Students ({preview ? eligibleDemands.length : 0})
               </button>
               <button
                 onClick={() => setPreviewTab('points')}
@@ -1263,100 +874,7 @@ export function PlanningResultsPanel({
               </button>
             </div>
 
-            {/* Tab 1: Overview & Diagnostics */}
-            {previewTab === 'summary' && (() => {
-              if (!preview) {
-                return (
-                  <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
-                    <Users className='h-8 w-8 text-slate-350 mb-2' />
-                    <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
-                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
-                      Fill context on the left and click "Preview Demand" to load diagnostics.
-                    </p>
-                  </div>
-                );
-              }
-              return (
-                <div className='space-y-4 pt-1'>
-                  {summary && (
-                    <div className='rounded-2xl border border-slate-150 bg-slate-50/35 p-4 space-y-3 shadow-sm'>
-                      <h4 className='text-[10px] font-extrabold text-slate-450 uppercase tracking-wider'>Readiness Diagnostics</h4>
-                      <div className='grid grid-cols-2 gap-2 text-xs'>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.pausedCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>⏸️</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.pausedCount} paused</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.inactiveCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>🚫</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.inactiveCount} inactive</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.dayMismatchCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>📅</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.dayMismatchCount} day mismatch</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.outOfEffectiveRangeCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>⏳</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.outOfEffectiveRangeCount} expired/range</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.missingCoordinateCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>📍</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.missingCoordinateCount} missing coords</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.missingWindowCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>🕒</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.missingWindowCount} missing window</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {issues.length > 0 ? (
-                    <div className='space-y-2'>
-                      <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Blocking Issues</p>
-                      <div className='flex flex-wrap gap-1.5'>
-                        {issues.map((issue, i) => (
-                          <IssueBadge key={i} issue={issue} />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className='p-4 bg-emerald-50/35 border border-emerald-100 rounded-2xl text-xs flex gap-2.5 shadow-sm'>
-                      <CheckCircle2 className='h-4 w-4 text-emerald-600 shrink-0 mt-0.5' />
-                      <div>
-                        <p className='font-bold text-emerald-800'>All Clear</p>
-                        <p className='text-[10px] text-emerald-600/80 mt-0.5'>No blocking issues found for eligible subscriptions.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Tab 2: Students List */}
+            {/* Tab: Students List */}
             {previewTab === 'demands' && (() => {
               if (!preview) {
                 return (
@@ -1371,73 +889,28 @@ export function PlanningResultsPanel({
               }
               return (
                 <div className='space-y-3 pt-1'>
-                  <div className='flex gap-1.5 p-1 bg-slate-100 rounded-xl text-[10px] font-bold text-slate-500'>
-                    {(['all', 'eligible', 'blocked'] as const).map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setDemandFilter(tab)}
-                        className={cn(
-                          'flex-1 py-1 rounded-lg capitalize transition-all',
-                          demandFilter === tab ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-850'
-                        )}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-
-                  {filteredDemands.length === 0 ? (
+                  {eligibleDemands.length === 0 ? (
                     <div className='text-center py-8 text-slate-400 text-xs'>No students found.</div>
                   ) : (
                     <div className='space-y-2 max-h-[380px] overflow-y-auto pr-1'>
-                      {filteredDemands.map(d => (
+                      {eligibleDemands.map(d => (
                         <div
                           key={d.subscriptionId}
-                          className={cn(
-                            'rounded-xl border p-3 flex flex-col gap-1.5 shadow-sm bg-white',
-                            d.readinessStatus === 'BLOCKED' ? 'border-red-150 border-l-4 border-l-red-500' : 'border-slate-150'
-                          )}
+                          className='rounded-xl border border-slate-150 p-3 flex flex-col gap-1.5 shadow-sm bg-white'
                         >
-                          <div className='flex items-start justify-between gap-2'>
-                            <div className='min-w-0'>
-                              <p className='text-xs font-bold text-slate-800 truncate'>{d.studentName}</p>
-                              <p className='text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5'>
-                                <span className='font-bold'>{d.studentCode}</span>
-                                <span>•</span>
-                                <span>{d.tripOption}</span>
-                              </p>
-                            </div>
-                            <span className={cn(
-                              'rounded-full px-2 py-0.5 text-[9px] font-bold border shrink-0',
-                              d.readinessStatus === 'READY'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-red-50 text-red-700 border-red-100'
-                            )}>
-                              {d.readinessStatus === 'READY' ? 'Eligible' : 'Blocked'}
-                            </span>
+                          <div className='min-w-0'>
+                            <p className='text-xs font-bold text-slate-800 truncate'>{d.studentName}</p>
+                            <p className='text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5'>
+                              <span className='font-bold'>{d.studentCode}</span>
+                              <span>•</span>
+                              <span>{d.tripOption === 'ONE_WAY' ? 'Một chiều' : d.tripOption === 'ROUND_TRIP' ? 'Hai chiều' : d.tripOption}</span>
+                            </p>
                           </div>
 
                           {d.pointName && (
                             <div className='flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 mt-0.5'>
                               <MapPin className='h-3 w-3 text-slate-400 shrink-0' />
                               <span className='font-bold truncate'>{d.pointName}</span>
-                              {d.windowStart && (
-                                <>
-                                  <span>•</span>
-                                  <Clock className='h-3 w-3 text-slate-400 shrink-0' />
-                                  <span className='font-medium'>{d.windowStart.slice(0, 5)} - {d.windowEnd?.slice(0, 5)}</span>
-                                </>
-                              )}
-                            </div>
-                          )}
-
-                          {d.readinessStatus === 'BLOCKED' && d.issueLabels && d.issueLabels.length > 0 && (
-                            <div className='flex flex-wrap gap-1 mt-1'>
-                              {d.issueLabels.map((label, i) => (
-                                <span key={i} className='inline-flex items-center gap-0.5 bg-red-50 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-red-100'>
-                                  <XCircle className='h-2.5 w-2.5 shrink-0' /> {label}
-                                </span>
-                              ))}
                             </div>
                           )}
                         </div>
@@ -1448,7 +921,7 @@ export function PlanningResultsPanel({
               );
             })()}
 
-            {/* Tab 3: Points List */}
+            {/* Tab: Points List */}
             {previewTab === 'points' && (() => {
               if (!preview) {
                 return (
@@ -1470,14 +943,11 @@ export function PlanningResultsPanel({
                       {points.map(pp => (
                         <div
                           key={pp.pointId}
-                          className={cn(
-                            'rounded-xl border p-3 flex flex-col justify-between gap-1 shadow-sm bg-white transition-all',
-                            pp.readinessStatus === 'BLOCKED' ? 'border-red-200 bg-red-50/10' : 'border-slate-150'
-                          )}
+                          className='rounded-xl border border-slate-150 p-3 flex flex-col justify-between gap-1 shadow-sm bg-white transition-all'
                         >
                           <div className='min-w-0'>
                             <p className='text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate'>
-                              <MapPin className={cn('h-3.5 w-3.5 shrink-0', pp.readinessStatus === 'BLOCKED' ? 'text-red-500' : 'text-[#C81E3A]')} />
+                              <MapPin className='h-3.5 w-3.5 shrink-0 text-[#C81E3A]' />
                               {pp.pointName}
                             </p>
                             {pp.pointCode && (
@@ -1485,32 +955,12 @@ export function PlanningResultsPanel({
                             )}
                           </div>
 
-                          {pp.windowStart && (
-                            <div className='flex items-center gap-1 text-[9px] text-slate-500 mt-1'>
-                              <Clock className='h-3 w-3 text-slate-400 shrink-0' />
-                              <span>{pp.windowStart.slice(0, 5)} - {pp.windowEnd?.slice(0, 5)}</span>
-                            </div>
-                          )}
-
                           <div className='flex items-center justify-between mt-2 pt-2 border-t border-slate-100/50 text-[10px] text-slate-500'>
                             <span className='font-bold'>{pp.studentCount} student(s)</span>
-                            <span className={cn(
-                              'inline-flex items-center rounded px-1.5 py-0.5 font-bold border',
-                              pp.readinessStatus === 'READY'
-                                ? 'bg-emerald-55/10 text-emerald-700 border-emerald-100'
-                                : 'bg-red-55/10 text-red-700 border-red-100'
-                            )}>
-                              {pp.readinessStatus === 'READY' ? '✅ Ready' : '⚠️ Blocked'}
-                            </span>
+                            {(!pp.latitude || !pp.longitude) && (
+                              <span className='text-[9px] font-bold text-amber-600'>Chưa có tọa độ</span>
+                            )}
                           </div>
-
-                          {pp.readinessStatus === 'BLOCKED' && pp.issueLabels && pp.issueLabels.length > 0 && (
-                            <div className='flex flex-wrap gap-1 mt-1.5'>
-                              {pp.issueLabels.map((lbl, idx) => (
-                                <span key={idx} className='text-[8px] font-bold bg-red-55/10 text-red-700 px-1 py-0.5 rounded border border-red-100 truncate max-w-full'>{lbl}</span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1567,8 +1017,7 @@ export function PlanningResultsPanel({
               const serviceDateFormatted = sDate ? formatDate(sDate) : '—';
               const dirVal = preview?.direction ?? form?.routeDirection;
               const dirLabel = dirVal === 'OUTBOUND' ? 'Home → School' : dirVal === 'RETURN' ? 'School → Home' : dirVal ?? '—';
-              const methodVal = preview?.planningMethod ?? form?.planningMethod;
-              const methodLabel = methodVal === 'MANUAL' ? 'Manual' : methodVal === 'GREEDY' ? 'Greedy auto-generate' : methodVal ?? '—';
+              const methodLabel = 'Lập tuyến thủ công';
               const depName = preview?.depotName ?? selectedDepot?.name ?? '—';
               const capVal = preview?.defaultBusCapacity ?? form?.defaultBusCapacity ?? '—';
 
@@ -1712,9 +1161,6 @@ export function PlanningResultsPanel({
             {/* Case B: Active Session exists */}
             {activeSession && (
               <>
-                <div className="px-5 pt-4">
-                  <SessionObjectiveScoreWidget sessionId={activeSession.id} />
-                </div>
                 {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
                 {isManual && activeSession && (
         <div className='p-5 space-y-4'>
@@ -1769,66 +1215,19 @@ export function PlanningResultsPanel({
         />
       )}
 
-      {/* GREEDY mode: waiting for user to generate */}
-      {!isManual && activeSession && !greedyResult && sessionRoutes.length === 0 && (
+      {/* Show session routes */}
+      {!isManual && activeSession && sessionRoutes.length === 0 && (
         <div className='p-5'>
           <div className='rounded-2xl border border-sky-100 bg-sky-50/40 p-5 text-center shadow-sm'>
             <p className='text-xs font-bold text-sky-700 flex items-center justify-center gap-1.5'>
               <Info className='h-4 w-4' />
-              Ready to generate routes
-            </p>
-            <p className='mt-2 text-xs text-slate-550 leading-5'>
-              Click <span className='font-semibold text-slate-800'>"Generate"</span> in the session panel on the left to auto-generate routes using the greedy algorithm.
+              Chức năng tự động lập tuyến đang được đơn giản hóa và sẽ được cập nhật sau.
             </p>
           </div>
         </div>
       )}
 
-      {/* GREEDY mode: show quality cards from greedyResult, or reload from sessionRoutes */}
-      {!isManual && greedyResult && (
-        <>
-          <div className='p-5 space-y-4'>
-            <div className='border-b border-slate-100 pb-2.5'>
-              <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
-                <Route className='h-4 w-4 text-emerald-600 shrink-0' />
-                Generated Routes ({greedyResult.routes.length})
-              </h3>
-            </div>
-            {greedyResult.sessionIssues.filter(i => i.severity !== 'INFO').length > 0 && (
-              <div className='mb-3 flex flex-wrap gap-1.5'>{greedyResult.sessionIssues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>
-            )}
-            <div className='space-y-3'>
-              {greedyResult.routes.map(r => (
-                <RouteCard key={r.routeId} route={r}
-                  onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
-                  isSelected={selectedRouteId === r.routeId} />
-              ))}
-            </div>
-          </div>
-
-          {greedyResult.totalUnassignedStudents > 0 && (
-            <div className='p-5 space-y-4'>
-              <div className='border-b border-slate-100 pb-2.5'>
-                <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
-                  <AlertTriangle className='h-4 w-4 text-amber-600 shrink-0' />
-                  Unassigned Students ({greedyResult.totalUnassignedStudents})
-                </h3>
-              </div>
-              <div className='space-y-1.5'>
-                {greedyResult.unassignedStudents.map(s => (
-                  <div key={s.studentId} className='flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-700 shadow-sm'>
-                    <span className='font-semibold text-slate-800'>{s.studentName}</span>
-                    <span className='text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border font-semibold'>{s.specialNote ?? 'No nearby stop'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* GREEDY mode: show session routes if no in-memory greedyResult (page refresh) */}
-      {!isManual && !greedyResult && sessionRoutes.length > 0 && (
+      {!isManual && sessionRoutes.length > 0 && (
         <div className='p-5 space-y-4'>
           <div className='border-b border-slate-100 pb-2.5'>
             <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>

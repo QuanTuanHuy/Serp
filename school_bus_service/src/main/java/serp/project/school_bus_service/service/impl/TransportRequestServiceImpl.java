@@ -19,7 +19,7 @@ import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
-import serp.project.school_bus_service.service.ISchoolPickupPointWindowService;
+
 import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.service.ITransportRequestService;
@@ -68,7 +68,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final IStudentSubscriptionService subscriptionService;
     private final ISchoolScheduleService schoolScheduleService;
     private final ISchoolPickupPointService schoolPickupPointService;
-    private final ISchoolPickupPointWindowService windowService;
     private final ICodeGeneratorService codeGeneratorService;
     private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
@@ -84,7 +83,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             IStudentSubscriptionService subscriptionService,
             ISchoolScheduleService schoolScheduleService,
             ISchoolPickupPointService schoolPickupPointService,
-            ISchoolPickupPointWindowService windowService,
             ICodeGeneratorService codeGeneratorService,
             IAuditLogService auditLogService,
             SchoolBusMapper mapper,
@@ -97,7 +95,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         this.subscriptionService = subscriptionService;
         this.schoolScheduleService = schoolScheduleService;
         this.schoolPickupPointService = schoolPickupPointService;
-        this.windowService = windowService;
         this.codeGeneratorService = codeGeneratorService;
         this.auditLogService = auditLogService;
         this.mapper = mapper;
@@ -244,15 +241,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Pickup point '" + pickup.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the pickup point before approving.");
                     }
-                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
                                     "Pickup point '" + pickup.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
-                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "PICKUP_TO_SCHOOL", tenantId)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                                "Pickup window is not configured for pickup point '" + pickup.getName()
-                                        + "' and schedule '" + schedule.getScheduleName()
-                                        + "'. Configure a PICKUP_TO_SCHOOL window before approving.");
-                    }
                 }
 
                 if (needsDropoff) {
@@ -267,15 +258,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Drop-off point '" + dropoff.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the drop-off point before approving.");
                     }
-                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
                                     "Drop-off point '" + dropoff.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
-                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "DROPOFF_FROM_SCHOOL", tenantId)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                                "Drop-off window is not configured for drop-off point '" + dropoff.getName()
-                                        + "' and schedule '" + schedule.getScheduleName()
-                                        + "'. Configure a DROPOFF_FROM_SCHOOL window before approving.");
-                    }
                 }
             }
         }
@@ -546,20 +531,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                         });
 
                 rs.setPickupPoint(masterDataService.getPickupPoint(studentRequest.getPickupPointId(), tenantId));
-
-                // Rule 5: warn if no PICKUP_TO_SCHOOL window configured (non-blocking)
-                final SchoolScheduleEntity pickupSchedule = schedule;
-                if (pickupSchedule != null) {
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(schoolId, studentRequest.getPickupPointId(), tenantId)
-                            .ifPresent(spp -> {
-                                if (!windowService.hasWindow(spp.getId(), pickupSchedule.getId(), "PICKUP_TO_SCHOOL", tenantId)) {
-                                    // Non-blocking: log warning only – window may be configured later
-                                    auditLogService.log(tenantId, actorId, "TransportRequest", entity.getId(),
-                                            "WARN", "No PICKUP_TO_SCHOOL window configured for pickup point #"
-                                                    + studentRequest.getPickupPointId() + " + schedule #" + pickupSchedule.getId());
-                                }
-                            });
-                }
             } else {
                 rs.setPickupPoint(null);
             }
@@ -583,19 +554,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                         });
 
                 rs.setDropoffPoint(masterDataService.getPickupPoint(studentRequest.getDropoffPointId(), tenantId));
-
-                // Rule 5: warn if no DROPOFF_FROM_SCHOOL window configured (non-blocking)
-                final SchoolScheduleEntity dropoffSchedule = schedule;
-                if (dropoffSchedule != null) {
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(schoolId, studentRequest.getDropoffPointId(), tenantId)
-                            .ifPresent(spp -> {
-                                if (!windowService.hasWindow(spp.getId(), dropoffSchedule.getId(), "DROPOFF_FROM_SCHOOL", tenantId)) {
-                                    auditLogService.log(tenantId, actorId, "TransportRequest", entity.getId(),
-                                            "WARN", "No DROPOFF_FROM_SCHOOL window configured for drop-off point #"
-                                                    + studentRequest.getDropoffPointId() + " + schedule #" + dropoffSchedule.getId());
-                                }
-                            });
-                }
             } else {
                 rs.setDropoffPoint(null);
             }
