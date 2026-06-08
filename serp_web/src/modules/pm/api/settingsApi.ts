@@ -4,7 +4,11 @@
  */
 
 import { api } from '@/lib/store/api';
-import { createDataTransform } from '@/lib/store/api/utils';
+import {
+  createDataTransform,
+  createPaginatedTransform,
+} from '@/lib/store/api/utils';
+import type { PaginatedResponse } from '@/lib/store/api/types';
 import type { PMIssueTypeApi } from '../types/api';
 import type {
   PMAddWorkflowStepRequest,
@@ -13,12 +17,14 @@ import type {
   PMCreateIssueTypeSchemeRequest,
   PMCreatePriorityRequest,
   PMCreatePrioritySchemeRequest,
+  PMCreateResolutionRequest,
   PMCreateWorkflowRequest,
   PMCreateWorkflowSchemeRequest,
   PMDeleteIssueTypeResponse,
   PMDeleteIssueTypeSchemeResponse,
   PMDeletePriorityResponse,
   PMDeletePrioritySchemeResponse,
+  PMDeleteResolutionResponse,
   PMDeleteWorkflowStepResponse,
   PMDeleteWorkflowTransitionResponse,
   PMDeleteWorkflowSchemeResponse,
@@ -28,11 +34,13 @@ import type {
   PMManageWorkflowSchemeItemsRequest,
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsOverviewApi,
+  PMResolutionSettingsApi,
   PMReorderWorkflowStepsRequest,
   PMUpdateIssueTypeRequest,
   PMUpdateIssueTypeSchemeRequest,
   PMUpdatePriorityRequest,
   PMUpdatePrioritySchemeRequest,
+  PMUpdateResolutionRequest,
   PMUpdateWorkflowRequest,
   PMUpdateWorkflowSchemeRequest,
   PMUpdateWorkflowTransitionRequest,
@@ -233,6 +241,92 @@ export const pmSettingsApi = api.injectEndpoints({
       invalidatesTags: [
         { type: 'pm/Priority' as const, id: 'LIST' },
         { type: 'pm/PrioritySettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    getPmResolutions: builder.query<
+      PaginatedResponse<PMResolutionSettingsApi>,
+      {
+        search?: string;
+        isSystem?: boolean;
+        page?: number;
+        pageSize?: number;
+        sortBy?: 'sequence' | 'name' | 'created_at';
+        sortDirection?: 'asc' | 'desc';
+      } | void
+    >({
+      query: (params) => {
+        return {
+          url: '/resolutions',
+          method: 'GET',
+          params: {
+            search: params ? params.search : undefined,
+            isSystem: params ? params.isSystem : undefined,
+            page: params ? (params.page ?? 0) : 0,
+            pageSize: params ? (params.pageSize ?? 100) : 100,
+            sortBy: params ? (params.sortBy ?? 'sequence') : 'sequence',
+            sortDirection: params ? (params.sortDirection ?? 'asc') : 'asc',
+          },
+        };
+      },
+      extraOptions: { service: 'pm' },
+      transformResponse: createPaginatedTransform<PMResolutionSettingsApi>(),
+      providesTags: (result) =>
+        result?.data.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: 'pm/Resolution' as const,
+                id,
+              })),
+              { type: 'pm/ResolutionSettings' as const, id: 'OVERVIEW' },
+            ]
+          : [{ type: 'pm/ResolutionSettings' as const, id: 'OVERVIEW' }],
+    }),
+
+    createPmResolution: builder.mutation<
+      PMResolutionSettingsApi,
+      PMCreateResolutionRequest
+    >({
+      query: (body) => ({
+        url: '/resolutions',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMResolutionSettingsApi>(),
+      invalidatesTags: [
+        { type: 'pm/Resolution' as const, id: 'LIST' },
+        { type: 'pm/ResolutionSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    updatePmResolution: builder.mutation<
+      PMResolutionSettingsApi,
+      { id: number; body: PMUpdateResolutionRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/resolutions/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMResolutionSettingsApi>(),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'pm/Resolution' as const, id },
+        { type: 'pm/ResolutionSettings' as const, id: 'OVERVIEW' },
+      ],
+    }),
+
+    deletePmResolution: builder.mutation<PMDeleteResolutionResponse, number>({
+      query: (id) => ({
+        url: `/resolutions/${id}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMDeleteResolutionResponse>(),
+      invalidatesTags: [
+        { type: 'pm/Resolution' as const, id: 'LIST' },
+        { type: 'pm/ResolutionSettings' as const, id: 'OVERVIEW' },
       ],
     }),
 
@@ -566,16 +660,19 @@ export const {
   useCreatePmWorkflowSchemeMutation,
   useCreatePmPriorityMutation,
   useCreatePmPrioritySchemeMutation,
+  useCreatePmResolutionMutation,
   useCreatePmIssueTypeMutation,
   useCreatePmIssueTypeSchemeMutation,
   useDeletePmWorkflowSchemeMutation,
   useDeletePmPriorityMutation,
   useDeletePmPrioritySchemeMutation,
+  useDeletePmResolutionMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
   useGetPmWorkflowEditorQuery,
   useGetPmWorkflowSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
+  useGetPmResolutionsQuery,
   useGetPmIssueTypeSettingsOverviewQuery,
   useManagePmWorkflowSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
@@ -589,6 +686,7 @@ export const {
   useUpdatePmWorkflowTransitionMutation,
   useUpdatePmPriorityMutation,
   useUpdatePmPrioritySchemeMutation,
+  useUpdatePmResolutionMutation,
   useUpdatePmIssueTypeMutation,
   useUpdatePmIssueTypeSchemeMutation,
   useValidatePmWorkflowMutation,

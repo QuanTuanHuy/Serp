@@ -57,6 +57,7 @@ export function toDetailModel(
       data?.priority?.color ??
       searchItem?.priorityColor ??
       boardItem?.priority?.color,
+    resolutionId: data?.resolutionId ?? searchItem?.resolutionId,
     assigneeId:
       data?.assignee?.id ?? data?.assigneeId ?? fallbackItem?.assigneeId,
     assigneeName:

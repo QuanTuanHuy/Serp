@@ -6,6 +6,7 @@
 import type {
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsApi,
+  PMResolutionSettingsApi,
   PMWorkflowSchemeSettingsApi,
   PMWorkflowSettingsApi,
   PMWorkTypeSchemeSettingsApi,
@@ -16,8 +17,10 @@ export type PMSettingsSection =
   | 'work-types'
   | 'work-type-schemes'
   | 'skills'
+  | 'resource-calendars'
   | 'workflows'
   | 'workflow-schemes'
+  | 'resolutions'
   | 'priorities'
   | 'priority-schemes';
 
@@ -37,6 +40,10 @@ export type PrioritySchemeDialogState =
   | { mode: 'create'; item?: undefined }
   | { mode: 'edit'; item: PMPrioritySchemeSettingsApi };
 
+export type ResolutionDialogState =
+  | { mode: 'create'; item?: undefined }
+  | { mode: 'edit'; item: PMResolutionSettingsApi };
+
 export type WorkflowDialogState =
   | { mode: 'create'; item?: undefined }
   | { mode: 'edit'; item: PMWorkflowSettingsApi };
@@ -50,6 +57,7 @@ export type DeleteTarget =
   | { kind: 'scheme'; item: PMWorkTypeSchemeSettingsApi }
   | { kind: 'priority'; item: PMPrioritySettingsApi }
   | { kind: 'priority-scheme'; item: PMPrioritySchemeSettingsApi }
+  | { kind: 'resolution'; item: PMResolutionSettingsApi }
   | { kind: 'workflow-scheme'; item: PMWorkflowSchemeSettingsApi };
 
 export const SETTINGS_ITEMS: Array<{
@@ -77,6 +85,12 @@ export const SETTINGS_ITEMS: Array<{
     group: 'Optimization',
   },
   {
+    key: 'resource-calendars',
+    title: 'Resource calendars',
+    description: 'Configure working calendars and capacity.',
+    group: 'Optimization',
+  },
+  {
     key: 'workflows',
     title: 'Workflows',
     description: 'Manage status paths and workflow lifecycle.',
@@ -92,6 +106,12 @@ export const SETTINGS_ITEMS: Array<{
     key: 'priorities',
     title: 'Priorities',
     description: 'Manage priority order, colors, and labels.',
+    group: 'Priorities',
+  },
+  {
+    key: 'resolutions',
+    title: 'Resolutions',
+    description: 'Manage the outcomes used when work is closed.',
     group: 'Priorities',
   },
   {
@@ -146,6 +166,16 @@ export function orderedSelectedPriorityIds(
   return priorities
     .filter((priority) => selected.has(priority.id))
     .map((priority) => priority.id);
+}
+
+export function sortBySequence<
+  T extends { id: number; sequence?: number | null },
+>(items: T[]) {
+  return [...items].sort(
+    (left, right) =>
+      (left.sequence ?? Number.MAX_SAFE_INTEGER) -
+        (right.sequence ?? Number.MAX_SAFE_INTEGER) || left.id - right.id
+  );
 }
 
 export function orderedWorkflowSchemeItems(

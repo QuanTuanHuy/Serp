@@ -14,6 +14,7 @@ public class PathConstants {
     public static final String USER_SKILLS_BATCH = USERS + "/skills";
     public static final String PROJECT_COMPONENTS = PROJECTS + "/{projectId}/components";
     public static final String PROJECT_PEOPLE = PROJECTS + "/{projectId}/people";
+    public static final String PROJECT_PERMISSIONS = PROJECTS + "/{projectId}/permissions";
     public static final String PROJECT_CALENDAR = PROJECTS + "/{projectId}/calendar";
     public static final String PROJECT_CATEGORIES = API_BASE_PATH + "/project-categories";
     public static final String PROJECT_BLUEPRINTS = API_BASE_PATH + "/project-blueprints";
@@ -37,6 +38,9 @@ public class PathConstants {
     public static final String WORKFLOWS = API_BASE_PATH + "/workflows";
     public static final String WORKFLOW_SCHEMES = API_BASE_PATH + "/workflow-schemes";
     public static final String WORKFLOW_SETTINGS = API_BASE_PATH + "/workflow-settings";
+    public static final String RESOURCE_CALENDAR_SETTINGS = API_BASE_PATH + "/resource-calendar-settings";
+    public static final String RESOURCE_CALENDAR_PROFILES = API_BASE_PATH + "/resource-calendar-profiles";
+    public static final String RESOURCE_CALENDAR_EXCEPTIONS = API_BASE_PATH + "/resource-calendar-exceptions";
 
     public static final String ROLES = API_BASE_PATH + "/roles";
 }

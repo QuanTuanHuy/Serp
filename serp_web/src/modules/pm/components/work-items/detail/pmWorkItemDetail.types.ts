@@ -28,6 +28,7 @@ export type WorkItemDetailModel = {
   priorityId?: number | null;
   priorityName?: string | null;
   priorityColor?: string | null;
+  resolutionId?: number | null;
   assigneeId?: number | null;
   assigneeName?: string | null;
   assigneeAvatarUrl?: string | null;

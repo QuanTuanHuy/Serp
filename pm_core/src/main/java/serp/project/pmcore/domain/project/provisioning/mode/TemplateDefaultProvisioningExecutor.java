@@ -23,11 +23,11 @@ public class TemplateDefaultProvisioningExecutor implements IProvisioningModeExe
             SchemeType.ISSUE_TYPE,
             SchemeType.SCREEN,
             SchemeType.WORKFLOW,
-            SchemeType.FIELD_CONFIG
+            SchemeType.FIELD_CONFIG,
+            SchemeType.PERMISSION
     );
 
     private static final List<SchemeType> SHARED_SCHEME_TYPES = List.of(
-            SchemeType.PERMISSION,
             SchemeType.ISSUE_SECURITY,
             SchemeType.NOTIFICATION,
             SchemeType.PRIORITY

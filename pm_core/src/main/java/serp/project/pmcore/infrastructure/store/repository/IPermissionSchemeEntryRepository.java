@@ -6,6 +6,7 @@
 package serp.project.pmcore.infrastructure.store.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -20,6 +21,19 @@ public interface IPermissionSchemeEntryRepository extends JpaRepository<Permissi
                                                                                  @Param("tenantId") Long tenantId);
 
     List<PermissionSchemeEntryModel> findAllBySchemeIdAndTenantId(Long schemeId, Long tenantId);
+
+    @Modifying
+    @Query("""
+            UPDATE PermissionSchemeEntryModel e
+            SET e.deletedAt = CURRENT_TIMESTAMP,
+                e.updatedBy = :userId
+            WHERE e.schemeId = :schemeId
+              AND e.tenantId = :tenantId
+              AND e.deletedAt IS NULL
+            """)
+    void softDeleteBySchemeIdAndTenantId(@Param("schemeId") Long schemeId,
+                                         @Param("tenantId") Long tenantId,
+                                         @Param("userId") Long userId);
 
     boolean existsByTenantIdAndGranteeTypeAndGranteeRef(Long tenantId, String granteeType, String granteeRef);
 }

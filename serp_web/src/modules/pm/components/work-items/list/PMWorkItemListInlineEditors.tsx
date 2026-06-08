@@ -342,7 +342,10 @@ export function WorkItemListStatusEditor({
   loading?: boolean;
   disabled?: boolean;
   onLoadTransitions: WorkItemListTransitionLoader;
-  onSave: (item: PMWorkItemSearchApi, transitionId: number) => Promise<void>;
+  onSave: (
+    item: PMWorkItemSearchApi,
+    transition: PMWorkItemTransitionApi
+  ) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [isLoadingTransitions, setIsLoadingTransitions] = useState(false);
@@ -404,7 +407,7 @@ export function WorkItemListStatusEditor({
                 key={transition.id}
                 className='flex items-center justify-between gap-3'
                 onSelect={() => {
-                  void onSave(item, transition.id).catch(() => undefined);
+                  void onSave(item, transition).catch(() => undefined);
                 }}
               >
                 <span className='min-w-0 truncate'>

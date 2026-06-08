@@ -39,8 +39,16 @@ import {
   useLazyGetPmWorkItemTransitionsQuery,
   useTransitionPmWorkItemStatusMutation,
 } from '../../../api/workItemApi';
-import type { PMWorkItemBoardCardApi } from '../../../types/api';
+import { useGetPmResolutionsQuery } from '../../../api/settingsApi';
+import type {
+  PMWorkItemBoardCardApi,
+  PMWorkItemTransitionApi,
+} from '../../../types/api';
 import { PMWorkItemDetailDialog } from '../detail';
+import {
+  transitionNeedsResolution,
+  WorkItemResolutionTransitionDialog,
+} from '../resolution-transition';
 import { PMWorkItemBoardCard } from './PMWorkItemBoardCard';
 import { PMWorkItemBoardColumn } from './PMWorkItemBoardColumn';
 import { PMWorkItemBoardEmpty } from './PMWorkItemBoardEmpty';
@@ -90,6 +98,12 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeDragItemId, setActiveDragItemId] = useState<number>();
   const [movingWorkItemId, setMovingWorkItemId] = useState<number>();
+  const [pendingResolutionTransition, setPendingResolutionTransition] =
+    useState<{
+      workItemId: number;
+      workItemKey: string;
+      transition: PMWorkItemTransitionApi;
+    } | null>(null);
   const deferredKeyword = useDeferredValue(keyword.trim());
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -101,6 +115,14 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
   const [loadTransitions] = useLazyGetPmWorkItemTransitionsQuery();
   const [transitionWorkItem, transitionState] =
     useTransitionPmWorkItemStatusMutation();
+  const { data: resolutionResponse, isFetching: isResolutionsFetching } =
+    useGetPmResolutionsQuery({
+      page: 0,
+      pageSize: 100,
+      sortBy: 'sequence',
+      sortDirection: 'asc',
+    });
+  const resolutions = resolutionResponse?.data.items ?? [];
 
   const updateUrl = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -253,6 +275,16 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
           return;
         }
 
+        const activeEntry = cardLookup.get(activeData.workItemId);
+        if (transitionNeedsResolution(transition)) {
+          setPendingResolutionTransition({
+            workItemId: activeData.workItemId,
+            workItemKey: activeEntry?.item.key ?? `#${activeData.workItemId}`,
+            transition,
+          });
+          return;
+        }
+
         await transitionWorkItem({
           projectId,
           workItemId: activeData.workItemId,
@@ -267,7 +299,7 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
         setMovingWorkItemId(undefined);
       }
     },
-    [loadTransitions, projectId, transitionWorkItem]
+    [cardLookup, loadTransitions, projectId, transitionWorkItem]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -428,6 +460,44 @@ export function PMWorkItemBoard({ projectId }: PMWorkItemBoardProps) {
         fallbackItem={selectedItem}
         onOpenChange={(open) => {
           if (!open) closeWorkItem();
+        }}
+      />
+      <WorkItemResolutionTransitionDialog
+        open={pendingResolutionTransition !== null}
+        transitionLabel={
+          pendingResolutionTransition?.transition.targetStatus?.name
+        }
+        resolutions={resolutions}
+        isLoading={isResolutionsFetching}
+        isSubmitting={transitionState.isLoading}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingResolutionTransition(null);
+          }
+        }}
+        onConfirm={async (resolutionId) => {
+          if (!pendingResolutionTransition) {
+            return;
+          }
+          setMovingWorkItemId(pendingResolutionTransition.workItemId);
+          try {
+            await transitionWorkItem({
+              projectId,
+              workItemId: pendingResolutionTransition.workItemId,
+              body: {
+                transitionId: pendingResolutionTransition.transition.id,
+                resolutionId,
+              },
+            }).unwrap();
+            toast.success(`${pendingResolutionTransition.workItemKey} moved.`);
+            setPendingResolutionTransition(null);
+          } catch (error) {
+            toast.error('Failed to move work item', {
+              description: getErrorMessage(error),
+            });
+          } finally {
+            setMovingWorkItemId(undefined);
+          }
         }}
       />
     </div>

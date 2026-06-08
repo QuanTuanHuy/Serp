@@ -31,9 +31,11 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import type {
   PMCreateIssueTypeRequest,
   PMCreatePriorityRequest,
+  PMCreateResolutionRequest,
   PMCreateWorkflowRequest,
   PMWorkflowSettingsApi,
   PMPrioritySettingsApi,
+  PMResolutionSettingsApi,
   PMWorkTypeSettingsApi,
 } from '../../types/api';
 import { PriorityGlyph, WorkTypeGlyph } from './settings-glyphs';
@@ -42,6 +44,7 @@ import {
   normalizeOptionalText,
   type PriorityDialogState,
   type PrioritySchemeDialogState,
+  type ResolutionDialogState,
   type SchemeDialogState,
   type WorkflowDialogState,
   type WorkflowSchemeDialogState,
@@ -523,6 +526,126 @@ export function PriorityDialog({
                   className='h-10 px-2'
                 />
               </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type='submit' disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ResolutionDialog({
+  state,
+  resolutions,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  state: ResolutionDialogState | null;
+  resolutions: PMResolutionSettingsApi[];
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (
+    mode: ResolutionDialogState['mode'],
+    id: number | undefined,
+    values: PMCreateResolutionRequest
+  ) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [sequence, setSequence] = useState('1');
+
+  useEffect(() => {
+    if (!state) {
+      return;
+    }
+    const nextSequence =
+      resolutions.reduce(
+        (max, resolution) => Math.max(max, resolution.sequence ?? 0),
+        0
+      ) + 1;
+    setName(state.item?.name ?? '');
+    setDescription(state.item?.description ?? '');
+    setSequence(String(state.item?.sequence ?? nextSequence));
+  }, [resolutions, state]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!state) {
+      return;
+    }
+
+    const cleanName = name.trim();
+    const parsedSequence = Number(sequence);
+    if (!cleanName || !Number.isInteger(parsedSequence) || parsedSequence < 0) {
+      toast.error('Name and a non-negative order are required.');
+      return;
+    }
+
+    await onSubmit(state.mode, state.item?.id, {
+      name: cleanName,
+      description: normalizeOptionalText(description),
+      sequence: parsedSequence,
+    });
+  };
+
+  return (
+    <Dialog open={state !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <DialogHeader>
+            <DialogTitle>
+              {state?.mode === 'edit' ? 'Edit resolution' : 'Add resolution'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure the outcome label used when work items are closed.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-4'>
+            <div className='grid gap-4 sm:grid-cols-[1fr_120px]'>
+              <div className='space-y-2'>
+                <Label htmlFor='resolution-name'>Name</Label>
+                <Input
+                  id='resolution-name'
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder='Done'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='resolution-sequence'>Order</Label>
+                <Input
+                  id='resolution-sequence'
+                  type='number'
+                  min={0}
+                  value={sequence}
+                  onChange={(event) => setSequence(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className='space-y-2'>
+              <Label htmlFor='resolution-description'>Description</Label>
+              <Textarea
+                id='resolution-description'
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+              />
             </div>
           </div>
 

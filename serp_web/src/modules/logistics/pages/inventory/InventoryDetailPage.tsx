@@ -173,7 +173,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
     try {
       await deleteInventoryItem(item.id).unwrap();
       toast.success('Xóa thành công');
-      router.push('/sales/inventory');
+      router.push('/logistics/inventory');
     } catch (error: any) {
       const errorMessage =
         error?.data?.message || 'Không thể xóa. Vui lòng thử lại.';
@@ -204,7 +204,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <p className='text-muted-foreground mb-4'>
               Mục tồn kho không tồn tại hoặc đã bị xóa.
             </p>
-            <Button onClick={() => router.push('/sales/inventory')}>
+            <Button onClick={() => router.push('/logistics/inventory')}>
               <ArrowLeft className='h-4 w-4 mr-2' />
               Quay lại danh sách
             </Button>

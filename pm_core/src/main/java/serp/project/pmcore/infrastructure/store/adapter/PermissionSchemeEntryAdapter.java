@@ -49,6 +49,11 @@ public class PermissionSchemeEntryAdapter implements IPermissionSchemeEntryPort 
     }
 
     @Override
+    public void deletePermissionSchemeEntriesBySchemeId(Long schemeId, Long tenantId, Long userId) {
+        permissionSchemeEntryRepository.softDeleteBySchemeIdAndTenantId(schemeId, tenantId, userId);
+    }
+
+    @Override
     public boolean existsByProjectRoleId(Long tenantId, Long roleId) {
         return permissionSchemeEntryRepository.existsByTenantIdAndGranteeTypeAndGranteeRef(
                 tenantId,

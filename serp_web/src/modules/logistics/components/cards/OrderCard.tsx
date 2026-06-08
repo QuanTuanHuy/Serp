@@ -1,5 +1,5 @@
-import { Supplier } from '@/modules/purchase';
-import { Order } from '@/modules/sales';
+import { Supplier } from '@/modules/logistics';
+import { Order } from '@/modules/logistics';
 import {
   Badge,
   Button,

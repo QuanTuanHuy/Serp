@@ -121,6 +121,11 @@ public class ProjectAdapter implements IProjectReadPort, IProjectWritePort {
     }
 
     @Override
+    public long countActiveProjectsByPermissionSchemeId(Long permissionSchemeId, Long tenantId) {
+        return projectRepository.countActiveProjectsByPermissionSchemeId(permissionSchemeId, tenantId);
+    }
+
+    @Override
     public PageResult<ProjectEntity> getProjects(Long tenantId, Long userId, Set<String> groupKeys, String search,
                                                  Long categoryId, String projectTypeKey,
                                                  Boolean archived, int page, int size,
