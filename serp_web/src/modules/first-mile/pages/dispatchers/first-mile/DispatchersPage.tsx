@@ -18,7 +18,6 @@ import {
   PlanPreviewCard,
   type BusinessDispatchSettings,
   type DispatchCourierOption,
-  type DispatchOptimizationEffortOption,
   type DispatchOptimizationGoalOption,
   type DispatchSetupBusinessHandlers,
   type DispatchSetupBusinessValues,
@@ -253,8 +252,6 @@ export const DispatchersPage: React.FC = () => {
     React.useState<RoutingVehicleOption>('DEFAULT');
   const [optimizationGoal, setOptimizationGoal] =
     React.useState<DispatchOptimizationGoalOption>('BALANCED');
-  const [optimizationEffort, setOptimizationEffort] =
-    React.useState<DispatchOptimizationEffortOption>('STANDARD');
 
   const [selectedOrderIds, setSelectedOrderIds] = React.useState<number[]>([]);
   const [optimizationResult, setOptimizationResult] =
@@ -400,9 +397,12 @@ export const DispatchersPage: React.FC = () => {
   const manualSelectedPostOfficeCode = manualSelectedPostOffice?.code;
 
   const { data: setupCouriersData, isLoading: isLoadingSetupCouriers } =
-    useGetActiveCouriersByPostOfficeQuery(setupSelectedPostOfficeNumericId ?? 0, {
-      skip: !canDispatch || !setupSelectedPostOfficeNumericId,
-    });
+    useGetActiveCouriersByPostOfficeQuery(
+      setupSelectedPostOfficeNumericId ?? 0,
+      {
+        skip: !canDispatch || !setupSelectedPostOfficeNumericId,
+      }
+    );
 
   const { data: manualCouriersData, isLoading: isLoadingManualCouriers } =
     useGetActiveCouriersByPostOfficeQuery(
@@ -675,7 +675,6 @@ export const DispatchersPage: React.FC = () => {
   const buildBusinessDispatchSettings = React.useCallback(() => {
     const settings: BusinessDispatchSettings = {
       optimization_goal: optimizationGoal,
-      optimization_effort: optimizationEffort,
     };
 
     if (vehicleOption !== 'DEFAULT') {
@@ -683,7 +682,7 @@ export const DispatchersPage: React.FC = () => {
     }
 
     return settings;
-  }, [optimizationEffort, optimizationGoal, vehicleOption]);
+  }, [optimizationGoal, vehicleOption]);
 
   const handleClearSelectedOrders = () => {
     setSelectedOrderIds([]);
@@ -907,7 +906,6 @@ export const DispatchersPage: React.FC = () => {
         ? { vehicle: businessSettings.vehicle }
         : {}),
       optimization_goal: businessSettings.optimization_goal,
-      optimization_effort: businessSettings.optimization_effort,
     };
 
     const risks = evaluateManualAssignRisks({
@@ -961,13 +959,11 @@ export const DispatchersPage: React.FC = () => {
   const businessValues: DispatchSetupBusinessValues = {
     vehicleOption,
     optimizationGoal,
-    optimizationEffort,
   };
 
   const businessHandlers: DispatchSetupBusinessHandlers = {
     onVehicleOptionChange: setVehicleOption,
     onOptimizationGoalChange: setOptimizationGoal,
-    onOptimizationEffortChange: setOptimizationEffort,
   };
 
   return (

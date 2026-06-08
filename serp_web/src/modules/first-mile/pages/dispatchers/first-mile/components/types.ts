@@ -32,14 +32,11 @@ export type DispatchOptimizationGoalOption =
   | 'COST_EFFICIENCY'
   | 'MAX_ASSIGNMENT';
 
-export type DispatchOptimizationEffortOption = 'FAST' | 'STANDARD' | 'THOROUGH';
-
 export type DispatchActionType = 'preview' | 'auto' | 'manual' | null;
 
 export interface BusinessDispatchSettings {
   vehicle?: string;
   optimization_goal: DispatchOptimizationGoalOption;
-  optimization_effort: DispatchOptimizationEffortOption;
 }
 
 export interface SuggestedCourier {
@@ -56,13 +53,11 @@ export interface DispatchCourierOption {
 export interface DispatchSetupBusinessValues {
   vehicleOption: RoutingVehicleOption;
   optimizationGoal: DispatchOptimizationGoalOption;
-  optimizationEffort: DispatchOptimizationEffortOption;
 }
 
 export interface DispatchSetupBusinessHandlers {
   onVehicleOptionChange: (value: RoutingVehicleOption) => void;
   onOptimizationGoalChange: (value: DispatchOptimizationGoalOption) => void;
-  onOptimizationEffortChange: (value: DispatchOptimizationEffortOption) => void;
 }
 
 export interface DispatchSetupCardProps {
