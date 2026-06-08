@@ -173,12 +173,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                config.planningDate(),
-                config.planningStartTime().toLocalTime(),
-                config.planningEndTime().toLocalTime()
+                config.planningDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and planning window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and planning date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -246,12 +244,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                shiftPlanningWindow.tripDate(),
-                shiftPlanningWindow.planningStartTime().toLocalTime(),
-                shiftPlanningWindow.planningEndTime().toLocalTime()
+                shiftPlanningWindow.tripDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and shift window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and trip date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -378,9 +374,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             courier,
             postOffice.getId(),
             tenantId,
-            shiftPlanningWindow.tripDate(),
-            shiftPlanningWindow.planningStartTime().toLocalTime(),
-            shiftPlanningWindow.planningEndTime().toLocalTime()
+            shiftPlanningWindow.tripDate()
         );
 
         AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
@@ -1291,9 +1285,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             PostOfficeStaff courier,
             Long postOfficeId,
             Long tenantId,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         if (!PostOfficeStaffRole.COURIER.equals(courier.getRole())
                 || !PostOfficeStaffStatus.ACTIVE.equals(courier.getStatus())) {
@@ -1307,9 +1299,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 tenantId,
                 planningDate
             );
-        boolean assigned = assignments.stream()
-                .anyMatch(assignment -> isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime));
-        if (!assigned) {
+        if (assignments.isEmpty()) {
             throw new AppException(ErrorCode.COURIER_NOT_ASSIGNED_TO_POST_OFFICE);
         }
     }
@@ -1598,27 +1588,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return !value.isBefore(startInclusive) && !value.isAfter(endInclusive);
     }
 
-    private boolean isAssignmentUsableForWindow(
-            PostOfficeStaffAssignment assignment,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
-    ) {
-        if (assignment == null) {
-            return false;
-        }
-
-        LocalTime shiftStartTime = assignment.getShiftStartTime();
-        LocalTime shiftEndTime = assignment.getShiftEndTime();
-        if (shiftStartTime == null && shiftEndTime == null) {
-            return true;
-        }
-        if (shiftStartTime == null || shiftEndTime == null || !shiftEndTime.isAfter(shiftStartTime)) {
-            return false;
-        }
-
-        return !planningStartTime.isBefore(shiftStartTime) && !planningEndTime.isAfter(shiftEndTime);
-    }
-
     private PickupOrderNode toOrderNodeIfValid(TmsOrderOperationView order) {
         if (order == null) {
             return null;
@@ -1873,9 +1842,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Long postOfficeId,
             Long tenantId,
             List<Long> requestCourierIds,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         List<PostOfficeStaffAssignment> assignments = postOfficeStaffAssignmentRepository
                 .findActiveAssignmentsByPostOfficeIdAndTenantIdAndStaffRoleAndStaffStatus(
@@ -1895,10 +1862,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         for (PostOfficeStaffAssignment assignment : assignments) {
             PostOfficeStaff staff = assignment.getStaff();
             if (staff == null || staff.getId() == null) {
-                continue;
-            }
-
-            if (!isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime)) {
                 continue;
             }
 

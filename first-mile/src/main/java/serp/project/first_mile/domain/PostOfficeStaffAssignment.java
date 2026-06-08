@@ -20,7 +20,6 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Setter
 @Getter
@@ -48,12 +47,6 @@ public class PostOfficeStaffAssignment extends AbstractAudit {
 
     @Column(name = "assigned_to")
     private LocalDate assignedTo;
-
-    @Column(name = "shift_start_time")
-    private LocalTime shiftStartTime;
-
-    @Column(name = "shift_end_time")
-    private LocalTime shiftEndTime;
 
     @Column(name = "is_primary", nullable = false)
     @Builder.Default
