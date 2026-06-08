@@ -32,6 +32,7 @@ public class TmsOrderOperationView {
     private OrderStatus status;
     private Boolean isConfirm;
     private String originPostOfficeCode;
+    private String destinationPostOfficeCode;
     private String senderName;
     private String senderPhone;
     private String senderProvinceCode;
@@ -47,6 +48,19 @@ public class TmsOrderOperationView {
     private String createdBy;
     private LocalDateTime createdAt;
     private Long tenantId;
+    // Receiver info
+    private String receiverName;
+    private String receiverPhone;
+    private String receiverWardCode;
+    private String receiverProvinceCode;
+    private String receiverAddressDetail;
+    private Double receiverLatitude;
+    private Double receiverLongitude;
+    // COD & fee
+    private Long codAmount;
+    private Long totalShippingFee;
+    private String feePayer;
+    private String paymentStatus;
 
     @JsonIgnore
     public Point getSenderLocation() {

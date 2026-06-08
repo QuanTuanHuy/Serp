@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCcw,
   ShieldAlert,
+  SlidersHorizontal,
   WandSparkles,
 } from 'lucide-react';
 
@@ -44,15 +45,20 @@ import {
   useAutoPlanSecondMileBagsMutation,
   useCreateSecondMileBagMutation,
   useDeleteSecondMileBagMutation,
+  useGetHubPostOfficesQuery,
   useGetHubsQuery,
+  useGetPostOfficesQuery,
   useGetSecondMileBagByIdQuery,
+  useGetSecondMileBagCapacitySettingsQuery,
   useGetSecondMileBaggingKpisQuery,
   useGetSecondMileBagsQuery,
   useGetSecondMileOrdersQuery,
+  useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
   useRemoveSecondMileBagOrderMutation,
   useReopenSecondMileBagMutation,
   useSealSecondMileBagMutation,
+  useUpdateSecondMileBagCapacitySettingsMutation,
   useUpdateSecondMileBagMutation,
   useValidateSecondMileBaggingMutation,
 } from '../../api/firstMileApi';
@@ -60,11 +66,14 @@ import { TmsCombobox } from '../../components/TmsCombobox';
 import type {
   AutoSecondMileBaggingPlanRequest,
   AutoSecondMileBaggingPlan,
+  HubPostOfficeMapping,
+  PostOffice,
   SecondMileBag,
   SecondMileBagDestinationType,
   SecondMileBagListFilters,
   SecondMileBagStatus,
   SecondMileBaggingValidation,
+  SecondMileOrder,
   UpdateSecondMileBagRequest,
 } from '../../types';
 import {
@@ -85,7 +94,7 @@ import {
   emptyAutoBaggingFormValues,
   emptyBagFormValues,
   normalizeOrderCode,
-  parseOrderCodes,
+  toDefaultedBagFormValues,
   toBagFormValues,
   toLocalDateTimeInputValue,
   type AutoBaggingFormValues,
@@ -96,6 +105,12 @@ import {
 
 const PAGE_SIZE = 20;
 const ALL_VALUE = '__ALL__';
+
+type BagCapacitySettingsFormValues = {
+  maxWeight: string;
+  maxVolume: string;
+  maxOrders: string;
+};
 
 export function BagListPage() {
   const notification = useNotification();
@@ -125,12 +140,19 @@ export function BagListPage() {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] =
     React.useState<BagFormValues>(emptyBagFormValues);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [settingsValues, setSettingsValues] =
+    React.useState<BagCapacitySettingsFormValues>({
+      maxWeight: '',
+      maxVolume: '',
+      maxOrders: '',
+    });
 
   const [selectedDetailId, setSelectedDetailId] = React.useState<number | null>(
     null
   );
   const [scanBag, setScanBag] = React.useState<SecondMileBag | null>(null);
-  const [scanOrderCodes, setScanOrderCodes] = React.useState('');
+  const [scanOrderCodes, setScanOrderCodes] = React.useState<string[]>([]);
   const [validationResult, setValidationResult] =
     React.useState<SecondMileBaggingValidation | null>(null);
 
@@ -140,6 +162,38 @@ export function BagListPage() {
   );
   const [autoPlan, setAutoPlan] =
     React.useState<AutoSecondMileBaggingPlan | null>(null);
+  const formOriginHubId = Number(formValues.originHubId);
+  const formDestinationHubId = Number(formValues.destinationHubId);
+  const autoOriginHubId = Number(autoValues.originHubId);
+  const autoDestinationHubId = Number(autoValues.destinationHubId);
+  const scanOriginHubId = scanBag?.originHubId ?? 0;
+  const scanDestinationHubId = scanBag?.destinationHubId ?? 0;
+  const shouldLoadFormDestinationMappings =
+    formOpen &&
+    formValues.destinationType === 'POST_OFFICE' &&
+    Number.isFinite(formOriginHubId) &&
+    formOriginHubId > 0;
+  const shouldLoadFormRoutes =
+    formOpen &&
+    Number.isFinite(formOriginHubId) &&
+    formOriginHubId > 0 &&
+    (formValues.destinationType === 'HUB'
+      ? Number.isFinite(formDestinationHubId) && formDestinationHubId > 0
+      : normalizeCode(formValues.destinationPostOfficeCode).length > 0);
+  const shouldLoadAutoOriginMappings =
+    autoOpen && Number.isFinite(autoOriginHubId) && autoOriginHubId > 0;
+  const shouldLoadAutoDestinationMappings =
+    autoOpen &&
+    autoValues.destinationType === 'HUB' &&
+    Number.isFinite(autoDestinationHubId) &&
+    autoDestinationHubId > 0;
+  const shouldLoadScanOriginMappings =
+    Boolean(scanBag) && Number.isFinite(scanOriginHubId) && scanOriginHubId > 0;
+  const shouldLoadScanDestinationMappings =
+    Boolean(scanBag) &&
+    scanBag?.destinationType === 'HUB' &&
+    Number.isFinite(scanDestinationHubId) &&
+    scanDestinationHubId > 0;
 
   const [deleteTarget, setDeleteTarget] = React.useState<SecondMileBag | null>(
     null
@@ -156,15 +210,85 @@ export function BagListPage() {
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
+  const { data: postOfficesData, isFetching: isFetchingPostOffices } =
+    useGetPostOfficesQuery(
+      { page: 0, size: 500, status: 'ACTIVE' },
+      { skip: !canView }
+    );
+  const {
+    data: formDestinationPostOfficesData,
+    isFetching: isFetchingFormDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: formOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadFormDestinationMappings }
+  );
+  const { data: formRoutesData, isFetching: isFetchingFormRoutes } =
+    useGetSecondMileRoutesQuery(
+      {
+        page: 0,
+        size: 500,
+        originType: 'HUB',
+        originHubId: formOriginHubId,
+        destinationType: formValues.destinationType,
+        ...(formValues.destinationType === 'HUB'
+          ? { destinationHubId: formDestinationHubId }
+          : {
+              destinationPostOfficeCode: normalizeCode(
+                formValues.destinationPostOfficeCode
+              ),
+            }),
+        status: 'ACTIVE',
+      },
+      { skip: !canView || !shouldLoadFormRoutes }
+    );
+  const {
+    data: autoOriginPostOfficesData,
+    isFetching: isFetchingAutoOriginPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: autoOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadAutoOriginMappings }
+  );
+  const {
+    data: autoDestinationPostOfficesData,
+    isFetching: isFetchingAutoDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: autoDestinationHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadAutoDestinationMappings }
+  );
+  const {
+    data: scanOriginPostOfficesData,
+    isFetching: isFetchingScanOriginPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: scanOriginHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadScanOriginMappings }
+  );
+  const {
+    data: scanDestinationPostOfficesData,
+    isFetching: isFetchingScanDestinationPostOffices,
+  } = useGetHubPostOfficesQuery(
+    { hubId: scanDestinationHubId, page: 0, size: 500 },
+    { skip: !canView || !shouldLoadScanDestinationMappings }
+  );
   const { data: ordersData, isFetching: isFetchingOrders } =
     useGetSecondMileOrdersQuery(
-      { page: 0, size: 500, status: 'INBOUND_AT_ORIGIN_HUB' },
-      { skip: !canView || !autoOpen }
+      {
+        page: 0,
+        size: 500,
+        statuses: ['INBOUND_AT_ORIGIN_HUB', 'BAGGING_IN_PROGRESS'],
+      },
+      { skip: !canView || (!autoOpen && !scanBag) }
     );
   const { data: vehiclesData } = useGetSecondMileVehiclesQuery(
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
+  const {
+    data: bagCapacitySettings,
+    isFetching: isFetchingBagCapacitySettings,
+    refetch: refetchBagCapacitySettings,
+  } = useGetSecondMileBagCapacitySettingsQuery(undefined, {
+    skip: !canView,
+  });
   const {
     data: bagsData,
     isFetching: isFetchingBags,
@@ -209,15 +333,168 @@ export function BagListPage() {
   const [sealBag, { isLoading: isSealing }] = useSealSecondMileBagMutation();
   const [reopenBag, { isLoading: isReopening }] =
     useReopenSecondMileBagMutation();
+  const [
+    updateBagCapacitySettings,
+    { isLoading: isUpdatingBagCapacitySettings },
+  ] = useUpdateSecondMileBagCapacitySettingsMutation();
   const [validateBagging, { isLoading: isValidating }] =
     useValidateSecondMileBaggingMutation();
   const [autoPlanBags, { isLoading: isAutoPlanning }] =
     useAutoPlanSecondMileBagsMutation();
 
   const hubs = hubsData?.items ?? [];
+  const postOffices = postOfficesData?.items ?? [];
   const orders = ordersData?.items ?? [];
+  const formRoutes = formRoutesData?.items ?? [];
+  const postOfficeByCode = React.useMemo(
+    () =>
+      postOffices.reduce<Record<string, PostOffice>>((acc, postOffice) => {
+        acc[normalizeCode(postOffice.code)] = postOffice;
+        return acc;
+      }, {}),
+    [postOffices]
+  );
+  const formDestinationPostOfficeOptions = React.useMemo(
+    () =>
+      toPostOfficeComboboxOptions(
+        formDestinationPostOfficesData?.items ?? [],
+        postOfficeByCode
+      ),
+    [formDestinationPostOfficesData?.items, postOfficeByCode]
+  );
+  const autoDestinationPostOfficeOptions = React.useMemo(
+    () =>
+      toPostOfficeComboboxOptions(
+        autoOriginPostOfficesData?.items ?? [],
+        postOfficeByCode
+      ),
+    [autoOriginPostOfficesData?.items, postOfficeByCode]
+  );
+  const autoOriginPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(autoOriginPostOfficesData?.items ?? []),
+    [autoOriginPostOfficesData?.items]
+  );
+  const autoDestinationPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(autoDestinationPostOfficesData?.items ?? []),
+    [autoDestinationPostOfficesData?.items]
+  );
+  const scanOriginPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(scanOriginPostOfficesData?.items ?? []),
+    [scanOriginPostOfficesData?.items]
+  );
+  const scanDestinationPostOfficeCodes = React.useMemo(
+    () => toPostOfficeCodeSet(scanDestinationPostOfficesData?.items ?? []),
+    [scanDestinationPostOfficesData?.items]
+  );
+  const autoCandidateOrders = React.useMemo(
+    () =>
+      filterCandidateOrdersByTarget(
+        orders,
+        autoOriginPostOfficeCodes,
+        autoValues.destinationType,
+        autoDestinationPostOfficeCodes,
+        autoValues.destinationPostOfficeCode
+      ),
+    [
+      autoDestinationPostOfficeCodes,
+      autoOriginPostOfficeCodes,
+      autoValues.destinationPostOfficeCode,
+      autoValues.destinationType,
+      orders,
+    ]
+  );
+  const scanCandidateOrders = React.useMemo(
+    () =>
+      filterCandidateOrdersByTarget(
+        orders,
+        scanOriginPostOfficeCodes,
+        scanBag?.destinationType,
+        scanDestinationPostOfficeCodes,
+        scanBag?.destinationPostOfficeCode
+      ),
+    [
+      orders,
+      scanBag?.destinationPostOfficeCode,
+      scanBag?.destinationType,
+      scanDestinationPostOfficeCodes,
+      scanOriginPostOfficeCodes,
+    ]
+  );
   const vehicles = vehiclesData?.items ?? [];
   const isSavingForm = isCreating || isUpdating;
+
+  React.useEffect(() => {
+    if (!shouldLoadFormRoutes || isFetchingFormRoutes || !formValues.routeId) {
+      return;
+    }
+
+    const selectedRoute = formRoutes.find(
+      (route) => String(route.id) === formValues.routeId
+    );
+
+    if (!selectedRoute) {
+      setFormValues((current) => ({ ...current, routeId: '', vehicleId: '' }));
+      return;
+    }
+
+    const nextVehicleId = selectedRoute.vehicleId
+      ? String(selectedRoute.vehicleId)
+      : '';
+    if (formValues.vehicleId !== nextVehicleId) {
+      setFormValues((current) => ({ ...current, vehicleId: nextVehicleId }));
+    }
+  }, [
+    formRoutes,
+    formValues.routeId,
+    formValues.vehicleId,
+    isFetchingFormRoutes,
+    shouldLoadFormRoutes,
+  ]);
+
+  React.useEffect(() => {
+    if (!autoOpen) {
+      return;
+    }
+
+    const candidateOrderCodes = new Set(
+      autoCandidateOrders
+        .map((order) => order.orderCode)
+        .filter((orderCode): orderCode is string => Boolean(orderCode))
+    );
+    const nextOrderCodes = autoValues.orderCodes.filter((orderCode) =>
+      candidateOrderCodes.has(orderCode)
+    );
+
+    if (nextOrderCodes.length !== autoValues.orderCodes.length) {
+      setAutoValues((current) => ({
+        ...current,
+        orderCodes: current.orderCodes.filter((orderCode) =>
+          candidateOrderCodes.has(orderCode)
+        ),
+      }));
+      setAutoPlan(null);
+    }
+  }, [autoCandidateOrders, autoOpen, autoValues.orderCodes]);
+
+  React.useEffect(() => {
+    if (!scanBag) {
+      return;
+    }
+
+    const candidateOrderCodes = new Set(
+      scanCandidateOrders
+        .map((order) => order.orderCode)
+        .filter((orderCode): orderCode is string => Boolean(orderCode))
+    );
+    const nextOrderCodes = scanOrderCodes.filter((orderCode) =>
+      candidateOrderCodes.has(orderCode)
+    );
+
+    if (nextOrderCodes.length !== scanOrderCodes.length) {
+      setScanOrderCodes(nextOrderCodes);
+      setValidationResult(null);
+    }
+  }, [scanBag, scanCandidateOrders, scanOrderCodes]);
 
   const hubOptions = [
     { value: ALL_VALUE, label: 'All hubs' },
@@ -231,6 +508,13 @@ export function BagListPage() {
     ...vehicles.map((vehicle) => ({
       value: String(vehicle.id),
       label: vehicle.licensePlate,
+    })),
+  ];
+  const postOfficeFilterOptions = [
+    { value: ALL_VALUE, label: 'All post offices' },
+    ...postOffices.map((postOffice) => ({
+      value: postOffice.code,
+      label: `${postOffice.code} - ${postOffice.name}`,
     })),
   ];
   const destinationTypeOptions = [
@@ -262,8 +546,28 @@ export function BagListPage() {
     }
     setFormMode('create');
     setEditingId(null);
-    setFormValues({ ...emptyBagFormValues });
+    setFormValues(toDefaultedBagFormValues(bagCapacitySettings));
     setFormOpen(true);
+  };
+
+  const openSettingsDialog = () => {
+    if (!canManage) {
+      notification.error('Bag settings require hub manager access.');
+      return;
+    }
+
+    setSettingsValues({
+      maxWeight: bagCapacitySettings?.maxWeight
+        ? String(bagCapacitySettings.maxWeight)
+        : '',
+      maxVolume: bagCapacitySettings?.maxVolume
+        ? String(bagCapacitySettings.maxVolume)
+        : '',
+      maxOrders: bagCapacitySettings?.maxOrders
+        ? String(bagCapacitySettings.maxOrders)
+        : '',
+    });
+    setSettingsOpen(true);
   };
 
   const handleEdit = (bag: SecondMileBag) => {
@@ -307,13 +611,53 @@ export function BagListPage() {
     }
   };
 
+  const handleSubmitSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const maxWeight = Number(settingsValues.maxWeight);
+    const maxVolume = Number(settingsValues.maxVolume);
+    const maxOrders = Number(settingsValues.maxOrders);
+
+    if (!Number.isFinite(maxWeight) || maxWeight <= 0) {
+      notification.error('Max weight must be greater than 0.');
+      return;
+    }
+    if (!Number.isFinite(maxVolume) || maxVolume <= 0) {
+      notification.error('Max volume must be greater than 0.');
+      return;
+    }
+    if (!Number.isInteger(maxOrders) || maxOrders <= 0) {
+      notification.error('Max orders must be a positive whole number.');
+      return;
+    }
+
+    try {
+      await updateBagCapacitySettings({
+        max_weight: maxWeight,
+        max_volume: maxVolume,
+        max_orders: maxOrders,
+      }).unwrap();
+      notification.success('Bag defaults updated successfully.');
+      setSettingsOpen(false);
+      void refetchBagCapacitySettings();
+      void refetch();
+    } catch (err) {
+      notification.error('Failed to update bag defaults.', {
+        description: getErrorMessage(err),
+      });
+    }
+  };
+
   const handleValidateScans = async () => {
     if (!scanBag) {
       return;
     }
-    const orderCodes = parseOrderCodes(scanOrderCodes);
+    const orderCodes = Array.from(
+      new Set(
+        scanOrderCodes.map(normalizeOrderCode).filter((code) => code.length > 0)
+      )
+    );
     if (orderCodes.length === 0) {
-      notification.error('Add at least one order code.');
+      notification.error('Select at least one order.');
       return;
     }
 
@@ -352,7 +696,7 @@ export function BagListPage() {
         }).unwrap();
       }
       notification.success('Order added to bag.');
-      setScanOrderCodes('');
+      setScanOrderCodes([]);
       setValidationResult(null);
       setScanBag(null);
       void refetch();
@@ -511,6 +855,16 @@ export function BagListPage() {
               Auto plan
             </Button>
           )}
+          {canManage && (
+            <Button
+              variant='outline'
+              disabled={isFetchingBagCapacitySettings}
+              onClick={openSettingsDialog}
+            >
+              <SlidersHorizontal className='h-4 w-4' />
+              Bag defaults
+            </Button>
+          )}
           <Button variant='outline' onClick={() => void refetch()}>
             <RefreshCcw className='h-4 w-4' />
             Refresh
@@ -642,16 +996,19 @@ export function BagListPage() {
                 <Label htmlFor='bag-destination-post-office-filter'>
                   Destination post office
                 </Label>
-                <Input
+                <TmsCombobox
                   id='bag-destination-post-office-filter'
-                  value={filters.destinationPostOfficeCode ?? ''}
-                  onChange={(event) =>
+                  value={filters.destinationPostOfficeCode ?? ALL_VALUE}
+                  onValueChange={(value) =>
                     updateFilter(
                       'destinationPostOfficeCode',
-                      event.target.value || undefined
+                      value === ALL_VALUE ? undefined : value
                     )
                   }
-                  placeholder='PO-DST-001'
+                  options={postOfficeFilterOptions}
+                  placeholder='All post offices'
+                  emptyText='No post offices found'
+                  loading={isFetchingPostOffices}
                 />
               </div>
             )}
@@ -720,7 +1077,7 @@ export function BagListPage() {
         onDelete={setDeleteTarget}
         onScan={(bag) => {
           setScanBag(bag);
-          setScanOrderCodes('');
+          setScanOrderCodes([]);
           setValidationResult(null);
         }}
         onSeal={setSealTarget}
@@ -735,7 +1092,11 @@ export function BagListPage() {
         mode={formMode}
         values={formValues}
         hubs={hubs}
+        routes={formRoutes}
         vehicles={vehicles}
+        destinationPostOfficeOptions={formDestinationPostOfficeOptions}
+        isLoadingDestinationPostOffices={isFetchingFormDestinationPostOffices}
+        isLoadingRoutes={isFetchingFormRoutes}
         isSaving={isSavingForm}
         onOpenChange={setFormOpen}
         onSubmit={handleSubmitForm}
@@ -763,14 +1124,20 @@ export function BagListPage() {
       <BagScanOrdersDialog
         open={Boolean(scanBag)}
         bag={scanBag ?? undefined}
-        orderCodes={scanOrderCodes}
+        orders={scanCandidateOrders}
+        selectedOrderCodes={scanOrderCodes}
         validation={validationResult}
         isValidating={isValidating}
         isAdding={isAddingOrder}
+        isOrdersLoading={
+          isFetchingOrders ||
+          isFetchingScanOriginPostOffices ||
+          isFetchingScanDestinationPostOffices
+        }
         onOpenChange={(open) => {
           if (!open) {
             setScanBag(null);
-            setScanOrderCodes('');
+            setScanOrderCodes([]);
             setValidationResult(null);
           }
         }}
@@ -786,11 +1153,17 @@ export function BagListPage() {
         open={autoOpen}
         values={autoValues}
         hubs={hubs}
-        orders={orders}
+        orders={autoCandidateOrders}
+        destinationPostOfficeOptions={autoDestinationPostOfficeOptions}
         plan={autoPlan}
         isPlanning={isAutoPlanning}
         isExecuting={isAutoPlanning}
-        isOrdersLoading={isFetchingOrders}
+        isOrdersLoading={
+          isFetchingOrders ||
+          isFetchingAutoOriginPostOffices ||
+          isFetchingAutoDestinationPostOffices
+        }
+        isLoadingDestinationPostOffices={isFetchingAutoOriginPostOffices}
         onOpenChange={(open) => {
           setAutoOpen(open);
           if (!open) {
@@ -804,6 +1177,85 @@ export function BagListPage() {
           setAutoPlan(null);
         }}
       />
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className='sm:max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>Bag defaults</DialogTitle>
+            <DialogDescription>
+              Set the default capacity used for new bags and auto planning.
+            </DialogDescription>
+          </DialogHeader>
+          <form className='space-y-4' onSubmit={handleSubmitSettings}>
+            <div className='grid gap-3 sm:grid-cols-3'>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-weight'>Max weight (kg)</Label>
+                <Input
+                  id='bag-default-max-weight'
+                  type='number'
+                  min='0'
+                  step='0.01'
+                  value={settingsValues.maxWeight}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxWeight: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-volume'>Max volume (m3)</Label>
+                <Input
+                  id='bag-default-max-volume'
+                  type='number'
+                  min='0'
+                  step='0.001'
+                  value={settingsValues.maxVolume}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxVolume: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='bag-default-max-orders'>Max orders</Label>
+                <Input
+                  id='bag-default-max-orders'
+                  type='number'
+                  min='1'
+                  step='1'
+                  value={settingsValues.maxOrders}
+                  onChange={(event) =>
+                    setSettingsValues((current) => ({
+                      ...current,
+                      maxOrders: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={isUpdatingBagCapacitySettings}
+                onClick={() => setSettingsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type='submit' disabled={isUpdatingBagCapacitySettings}>
+                {isUpdatingBagCapacitySettings && (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                )}
+                Save defaults
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
@@ -881,6 +1333,74 @@ export function BagListPage() {
     </div>
   );
 }
+
+const normalizeCode = (value?: string) => value?.trim().toUpperCase() ?? '';
+
+const toPostOfficeCodeSet = (mappings: HubPostOfficeMapping[]) =>
+  new Set(
+    mappings
+      .map((mapping) => normalizeCode(mapping.postOfficeCode))
+      .filter(Boolean)
+  );
+
+const toPostOfficeComboboxOptions = (
+  mappings: HubPostOfficeMapping[],
+  postOfficeByCode: Record<string, PostOffice>
+) =>
+  mappings
+    .map((mapping) => normalizeCode(mapping.postOfficeCode))
+    .filter(
+      (code, index, codes) => Boolean(code) && codes.indexOf(code) === index
+    )
+    .map((code) => {
+      const postOffice = postOfficeByCode[code];
+      return {
+        value: code,
+        label: postOffice ? `${postOffice.code} - ${postOffice.name}` : code,
+      };
+    });
+
+const filterCandidateOrdersByTarget = (
+  orders: SecondMileOrder[],
+  originPostOfficeCodes: Set<string>,
+  destinationType?: SecondMileBagDestinationType,
+  destinationHubPostOfficeCodes: Set<string> = new Set<string>(),
+  destinationPostOfficeCode?: string
+) => {
+  const selectedDestinationPostOfficeCode = normalizeCode(
+    destinationPostOfficeCode
+  );
+
+  return orders.filter((order) => {
+    const originPostOfficeCode = normalizeCode(order.originPostOfficeCode);
+    const orderDestinationPostOfficeCode = normalizeCode(
+      order.destinationPostOfficeCode
+    );
+
+    if (
+      !originPostOfficeCode ||
+      !originPostOfficeCodes.has(originPostOfficeCode)
+    ) {
+      return false;
+    }
+
+    if (destinationType === 'POST_OFFICE') {
+      return (
+        Boolean(selectedDestinationPostOfficeCode) &&
+        orderDestinationPostOfficeCode === selectedDestinationPostOfficeCode
+      );
+    }
+
+    if (destinationType === 'HUB') {
+      return (
+        Boolean(orderDestinationPostOfficeCode) &&
+        destinationHubPostOfficeCodes.has(orderDestinationPostOfficeCode)
+      );
+    }
+
+    return false;
+  });
+};
 
 const buildAutoPlanRequest = (
   values: AutoBaggingFormValues,

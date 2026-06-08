@@ -49,6 +49,9 @@ public class Bag extends AbstractAudit {
     @Column(name = "vehicle_id")
     private Long vehicleId;
 
+    @Column(name = "route_id")
+    private Long routeId;
+
     @Column(name = "max_weight")
     private Double maxWeight;
 

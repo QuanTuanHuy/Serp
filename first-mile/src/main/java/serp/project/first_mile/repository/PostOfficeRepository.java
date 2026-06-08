@@ -74,7 +74,9 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long>, J
     Optional<PostOffice> findByCodeIgnoreCaseAndTenantId(String code, Long tenantId);
 
     @Query(value = """
-            select po.*
+            select po.*,
+                   ST_Y(CAST(po.location AS geometry)) as "locationLatitude",
+                   ST_X(CAST(po.location AS geometry)) as "locationLongitude"
             from post_offices po
             where po.tenant_id = :tenantId
                 and po.status = 'ACTIVE'
@@ -98,7 +100,9 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long>, J
     );
 
     @Query(value = """
-            select po.*
+            select po.*,
+                   ST_Y(CAST(po.location AS geometry)) as "locationLatitude",
+                   ST_X(CAST(po.location AS geometry)) as "locationLongitude"
             from post_offices po
             where po.tenant_id = :tenantId
                 and po.status = 'ACTIVE'

@@ -21,7 +21,7 @@ import {
 } from '@/shared/components';
 
 import { TmsCombobox } from '../../../components/TmsCombobox';
-import type { Hub, SecondMileVehicle } from '../../../types';
+import type { Hub, SecondMileRoute, SecondMileVehicle } from '../../../types';
 import {
   BAG_DESTINATION_TYPE_OPTIONS,
   type BagFormValues,
@@ -34,7 +34,11 @@ interface BagFormDialogProps {
   mode: 'create' | 'edit';
   values: BagFormValues;
   hubs: Hub[];
+  routes: SecondMileRoute[];
   vehicles: SecondMileVehicle[];
+  destinationPostOfficeOptions: Array<{ value: string; label: string }>;
+  isLoadingDestinationPostOffices: boolean;
+  isLoadingRoutes: boolean;
   isSaving: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
@@ -49,7 +53,11 @@ export function BagFormDialog({
   mode,
   values,
   hubs,
+  routes,
   vehicles,
+  destinationPostOfficeOptions,
+  isLoadingDestinationPostOffices,
+  isLoadingRoutes,
   isSaving,
   onOpenChange,
   onSubmit,
@@ -59,18 +67,37 @@ export function BagFormDialog({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
   }));
-  const vehicleOptions = [
-    { value: NONE_VALUE, label: 'No vehicle' },
-    ...vehicles
-      .filter(
-        (vehicle) =>
-          !values.originHubId || String(vehicle.hubId) === values.originHubId
-      )
-      .map((vehicle) => ({
-        value: String(vehicle.id),
-        label: vehicle.licensePlate,
-      })),
-  ];
+  const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+  const selectedRoute = routes.find(
+    (route) => String(route.id) === values.routeId
+  );
+  const selectedVehicle = selectedRoute?.vehicleId
+    ? vehicleById.get(selectedRoute.vehicleId)
+    : undefined;
+  const routeOptions = routes.map((route) => {
+    const vehicle = route.vehicleId ? vehicleById.get(route.vehicleId) : null;
+    const driver = vehicle?.assignedStaffFullName
+      ? ` | ${vehicle.assignedStaffFullName}`
+      : '';
+    const vehicleLabel = vehicle?.licensePlate
+      ? ` | ${vehicle.licensePlate}${driver}`
+      : '';
+
+    return {
+      value: String(route.id),
+      label: `${route.routeCode} - ${route.routeName}${vehicleLabel}`,
+    };
+  });
+  const vehicleOptions = selectedVehicle
+    ? [
+        {
+          value: String(selectedVehicle.id),
+          label: selectedVehicle.assignedStaffFullName
+            ? `${selectedVehicle.licensePlate} - ${selectedVehicle.assignedStaffFullName}`
+            : selectedVehicle.licensePlate,
+        },
+      ]
+    : [{ value: NONE_VALUE, label: 'Select a route first' }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,6 +136,8 @@ export function BagFormDialog({
                   if (values.destinationHubId === value) {
                     onUpdateField('destinationHubId', '');
                   }
+                  onUpdateField('destinationPostOfficeCode', '');
+                  onUpdateField('routeId', '');
                   onUpdateField('vehicleId', '');
                 }}
                 options={hubOptions}
@@ -123,12 +152,16 @@ export function BagFormDialog({
               <TmsCombobox
                 id='bag-destination-type'
                 value={values.destinationType}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   onUpdateField(
                     'destinationType',
                     value as BagFormValues['destinationType']
-                  )
-                }
+                  );
+                  onUpdateField('destinationHubId', '');
+                  onUpdateField('destinationPostOfficeCode', '');
+                  onUpdateField('routeId', '');
+                  onUpdateField('vehicleId', '');
+                }}
                 options={BAG_DESTINATION_TYPE_OPTIONS}
                 placeholder='Select destination type'
                 emptyText='No destination types found'
@@ -142,9 +175,11 @@ export function BagFormDialog({
                 <TmsCombobox
                   id='bag-destination-hub'
                   value={values.destinationHubId}
-                  onValueChange={(value) =>
-                    onUpdateField('destinationHubId', value)
-                  }
+                  onValueChange={(value) => {
+                    onUpdateField('destinationHubId', value);
+                    onUpdateField('routeId', '');
+                    onUpdateField('vehicleId', '');
+                  }}
                   options={hubOptions.filter(
                     (hub) => hub.value !== values.originHubId
                   )}
@@ -156,35 +191,73 @@ export function BagFormDialog({
             ) : (
               <div className='space-y-2'>
                 <Label htmlFor='bag-destination-post-office'>
-                  Destination post office code *
+                  Destination post office *
                 </Label>
-                <Input
+                <TmsCombobox
                   id='bag-destination-post-office'
                   value={values.destinationPostOfficeCode}
-                  onChange={(event) =>
-                    onUpdateField(
-                      'destinationPostOfficeCode',
-                      event.target.value
-                    )
+                  onValueChange={(value) => {
+                    onUpdateField('destinationPostOfficeCode', value);
+                    onUpdateField('routeId', '');
+                    onUpdateField('vehicleId', '');
+                  }}
+                  options={destinationPostOfficeOptions}
+                  disabled={isSaving || isLoadingDestinationPostOffices}
+                  loading={isLoadingDestinationPostOffices}
+                  placeholder={
+                    values.originHubId
+                      ? 'Select destination post office'
+                      : 'Select origin hub first'
                   }
-                  disabled={isSaving}
-                  placeholder='PO-DST-001'
+                  emptyText='No mapped post offices found'
                 />
               </div>
             )}
 
             <div className='space-y-2'>
-              <Label htmlFor='bag-vehicle'>Vehicle</Label>
+              <Label htmlFor='bag-route'>Route *</Label>
+              <TmsCombobox
+                id='bag-route'
+                value={values.routeId}
+                onValueChange={(value) => {
+                  const route = routes.find(
+                    (item) => String(item.id) === value
+                  );
+                  onUpdateField('routeId', value);
+                  onUpdateField(
+                    'vehicleId',
+                    route?.vehicleId ? String(route.vehicleId) : ''
+                  );
+                }}
+                options={routeOptions}
+                placeholder={
+                  values.originHubId
+                    ? 'Select route'
+                    : 'Select origin and destination first'
+                }
+                emptyText='No matching routes found'
+                disabled={
+                  isSaving ||
+                  isLoadingRoutes ||
+                  !values.originHubId ||
+                  (values.destinationType === 'HUB'
+                    ? !values.destinationHubId
+                    : !values.destinationPostOfficeCode)
+                }
+                loading={isLoadingRoutes}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='bag-vehicle'>Vehicle and driver</Label>
               <TmsCombobox
                 id='bag-vehicle'
                 value={values.vehicleId.trim() || NONE_VALUE}
-                onValueChange={(value) =>
-                  onUpdateField('vehicleId', value === NONE_VALUE ? '' : value)
-                }
+                onValueChange={() => undefined}
                 options={vehicleOptions}
-                placeholder='Select vehicle'
-                emptyText='No vehicles found'
-                disabled={isSaving}
+                placeholder='Derived from route'
+                emptyText='Select a route first'
+                disabled
               />
             </div>
 

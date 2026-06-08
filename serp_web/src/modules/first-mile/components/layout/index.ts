@@ -5,3 +5,5 @@
 
 export * from './FirstMileHeader';
 export * from './FirstMileLayout';
+export * from './TmsDynamicSidebar';
+export * from './TmsSidebarMenuItem';

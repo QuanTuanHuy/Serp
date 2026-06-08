@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
   Label,
   Table,
   TableBody,
@@ -43,10 +42,12 @@ interface AutoBaggingDialogProps {
   values: AutoBaggingFormValues;
   hubs: Hub[];
   orders: SecondMileOrder[];
+  destinationPostOfficeOptions: Array<{ value: string; label: string }>;
   plan?: AutoSecondMileBaggingPlan | null;
   isPlanning: boolean;
   isExecuting: boolean;
   isOrdersLoading: boolean;
+  isLoadingDestinationPostOffices: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmitPreview: (event: React.FormEvent) => void;
   onExecute: () => void;
@@ -61,10 +62,12 @@ export function AutoBaggingDialog({
   values,
   hubs,
   orders,
+  destinationPostOfficeOptions,
   plan,
   isPlanning,
   isExecuting,
   isOrdersLoading,
+  isLoadingDestinationPostOffices,
   onOpenChange,
   onSubmitPreview,
   onExecute,
@@ -97,6 +100,7 @@ export function AutoBaggingDialog({
                   if (values.destinationHubId === value) {
                     onUpdateField('destinationHubId', '');
                   }
+                  onUpdateField('destinationPostOfficeCode', '');
                 }}
                 options={hubOptions}
                 placeholder='Select origin hub'
@@ -110,12 +114,14 @@ export function AutoBaggingDialog({
               <TmsCombobox
                 id='auto-destination-type'
                 value={values.destinationType}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   onUpdateField(
                     'destinationType',
                     value as AutoBaggingFormValues['destinationType']
-                  )
-                }
+                  );
+                  onUpdateField('destinationHubId', '');
+                  onUpdateField('destinationPostOfficeCode', '');
+                }}
                 options={BAG_DESTINATION_TYPE_OPTIONS}
                 placeholder='Select destination type'
                 emptyText='No destination types found'
@@ -143,19 +149,25 @@ export function AutoBaggingDialog({
             ) : (
               <div className='space-y-2'>
                 <Label htmlFor='auto-destination-post-office'>
-                  Destination post office code *
+                  Destination post office *
                 </Label>
-                <Input
+                <TmsCombobox
                   id='auto-destination-post-office'
                   value={values.destinationPostOfficeCode}
-                  onChange={(event) =>
-                    onUpdateField(
-                      'destinationPostOfficeCode',
-                      event.target.value
-                    )
+                  onValueChange={(value) =>
+                    onUpdateField('destinationPostOfficeCode', value)
                   }
-                  disabled={isPlanning || isExecuting}
-                  placeholder='PO-DST-001'
+                  options={destinationPostOfficeOptions}
+                  disabled={
+                    isPlanning || isExecuting || isLoadingDestinationPostOffices
+                  }
+                  loading={isLoadingDestinationPostOffices}
+                  placeholder={
+                    values.originHubId
+                      ? 'Select destination post office'
+                      : 'Select origin hub first'
+                  }
+                  emptyText='No mapped post offices found'
                 />
               </div>
             )}

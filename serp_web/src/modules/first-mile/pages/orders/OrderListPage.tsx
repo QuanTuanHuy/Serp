@@ -295,7 +295,7 @@ export const OrderListPage: React.FC = () => {
       size: 200,
     },
     {
-      skip: !canConfirmDropOffAtPostOffice,
+      skip: !canViewOrders,
     }
   );
 
@@ -1783,6 +1783,8 @@ export const OrderListPage: React.FC = () => {
         filterFormValues={filterFormValues}
         advancedFieldCount={advancedFieldCount}
         statusOptions={ORDER_STATUS_OPTIONS}
+        postOffices={managerPostOfficeOptions}
+        isLoadingPostOffices={isFetchingManagerPostOffices}
         isFetching={isFetching}
         onFilterModeChange={setFilterMode}
         onFilterFieldChange={updateFilterField}

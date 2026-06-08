@@ -1,0 +1,108 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
+package serp.project.second_mile.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.SuperBuilder;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.second_mile.enums.BagDestinationType;
+import serp.project.second_mile.enums.BagDistributionManifestStatus;
+
+import java.time.LocalDateTime;
+
+@Setter
+@Getter
+@SuperBuilder
+@Entity
+@Table(name = "bag_distribution_manifests")
+@EntityListeners(AuditingEntityListener.class)
+@NoArgsConstructor
+@AllArgsConstructor
+public class BagDistributionManifest extends AbstractAudit {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "manifest_code", nullable = false, length = 100)
+    private String manifestCode;
+
+    @Column(name = "origin_hub_id", nullable = false)
+    private Long originHubId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "destination_type", nullable = false, length = 30)
+    private BagDestinationType destinationType;
+
+    @Column(name = "destination_hub_id")
+    private Long destinationHubId;
+
+    @Column(name = "destination_post_office_code", length = 255)
+    private String destinationPostOfficeCode;
+
+    @Column(name = "route_id")
+    private Long routeId;
+
+    @Column(name = "vehicle_id")
+    private Long vehicleId;
+
+    @Column(name = "assigned_driver_id")
+    private Long assignedDriverId;
+
+    @Column(name = "planned_departure_at")
+    private LocalDateTime plannedDepartureAt;
+
+    @Column(name = "planned_arrival_at")
+    private LocalDateTime plannedArrivalAt;
+
+    @Column(name = "actual_departure_at")
+    private LocalDateTime actualDepartureAt;
+
+    @Column(name = "actual_arrival_at")
+    private LocalDateTime actualArrivalAt;
+
+    @Column(name = "driver_start_latitude")
+    private Double driverStartLatitude;
+
+    @Column(name = "driver_start_longitude")
+    private Double driverStartLongitude;
+
+    @Column(name = "driver_start_distance_m")
+    private Double driverStartDistanceM;
+
+    @Column(name = "driver_start_photo_url")
+    private String driverStartPhotoUrl;
+
+    @Column(name = "driver_end_latitude")
+    private Double driverEndLatitude;
+
+    @Column(name = "driver_end_longitude")
+    private Double driverEndLongitude;
+
+    @Column(name = "driver_end_distance_m")
+    private Double driverEndDistanceM;
+
+    @Column(name = "driver_end_photo_url")
+    private String driverEndPhotoUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 40)
+    private BagDistributionManifestStatus status;
+
+    @Column(name = "note")
+    private String note;
+}
