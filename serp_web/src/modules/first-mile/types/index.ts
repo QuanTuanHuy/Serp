@@ -240,8 +240,6 @@ export interface PostOfficeStaffAssignment {
   staffRole?: PostOfficeStaffRole;
   assignedFrom?: string;
   assignedTo?: string;
-  shiftStartTime?: string;
-  shiftEndTime?: string;
   isPrimary?: boolean;
   notes?: string;
   createdAt?: string;
@@ -254,8 +252,6 @@ export interface PostOfficeStaffAssignment {
 export interface UpdatePostOfficeStaffAssignmentRequest {
   assigned_from?: string;
   assigned_to?: string;
-  shift_start_time?: string;
-  shift_end_time?: string;
   is_primary?: boolean;
   notes?: string;
 }
