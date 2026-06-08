@@ -22,6 +22,10 @@ import {
   DialogTitle,
   Input,
   Label,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
@@ -43,11 +47,14 @@ import type { TmsFilterMode } from '../../components/list';
 import {
   TmsCombobox,
   TmsEntityLocationMap,
+  TmsEntityOrdersTab,
+  type TmsLocationMapPoint,
   type TmsMapBounds,
 } from '../../components';
 import {
   useGetHubsQuery,
   useGetHubPostOfficesQuery,
+  useGetOrdersQuery,
   useAssignPostOfficeToHubMutation,
   useRemovePostOfficeFromHubMutation,
   useGetPostOfficesQuery,
@@ -67,6 +74,7 @@ import {
   useImportHubsMutation,
 } from '../../api';
 import type {
+  FirstMileOrderStatus,
   Hub,
   HubPostOfficeMapping,
   HubStatus,
@@ -97,6 +105,13 @@ import {
 
 const PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 500;
+const HUB_ORDER_PAGE_SIZE = 10;
+const HUB_STOCK_ORDER_STATUSES: FirstMileOrderStatus[] = [
+  'INBOUND_AT_ORIGIN_HUB',
+  'BAGGING_IN_PROGRESS',
+  'BAGGED',
+  'BAG_SEALED',
+];
 
 function areMapBoundsEqual(
   current: TmsMapBounds | null,
@@ -323,6 +338,10 @@ export function HubListPage() {
     React.useState<HubFormState>(DEFAULT_HUB_FORM);
 
   const [detailHub, setDetailHub] = React.useState<Hub | null>(null);
+  const [detailTab, setDetailTab] = React.useState<'details' | 'orders'>(
+    'details'
+  );
+  const [detailOrdersPage, setDetailOrdersPage] = React.useState(0);
   const [deleteTarget, setDeleteTarget] = React.useState<Hub | null>(null);
 
   const [selectedImportFile, setSelectedImportFile] =
@@ -337,6 +356,35 @@ export function HubListPage() {
   const [imageUploadHubId, setImageUploadHubId] = React.useState<number | null>(
     null
   );
+
+  const {
+    data: detailHubPostOfficeData,
+    isFetching: isFetchingDetailHubPostOffices,
+  } = useGetHubPostOfficesQuery(
+    {
+      hubId: detailHub?.id || 0,
+      page: 0,
+      size: 500,
+    },
+    { skip: !detailHub }
+  );
+  const detailHubPostOfficeCodes = React.useMemo(
+    () =>
+      (detailHubPostOfficeData?.items ?? [])
+        .map((mapping) => mapping.postOfficeCode)
+        .filter((code): code is string => Boolean(code)),
+    [detailHubPostOfficeData?.items]
+  );
+  const { data: detailOrdersData, isFetching: isFetchingDetailOrders } =
+    useGetOrdersQuery(
+      {
+        page: detailOrdersPage,
+        size: HUB_ORDER_PAGE_SIZE,
+        originPostOfficeCodes: detailHubPostOfficeCodes,
+        statuses: HUB_STOCK_ORDER_STATUSES,
+      },
+      { skip: !detailHub || detailHubPostOfficeCodes.length === 0 }
+    );
 
   const { data: provincesData } = useGetProvincesQuery({
     page: 0,
@@ -693,6 +741,25 @@ export function HubListPage() {
     setStaffDialogOpen(true);
   };
 
+  const openHubDetail = React.useCallback((hub: Hub) => {
+    setDetailHub(hub);
+    setDetailTab('details');
+    setDetailOrdersPage(0);
+  }, []);
+
+  const handleMapHubClick = React.useCallback(
+    (point: TmsLocationMapPoint) => {
+      const hub =
+        (mapHubsData?.items ?? []).find((item) => item.id === point.id) ??
+        (hubsData?.items ?? []).find((item) => item.id === point.id);
+
+      if (hub) {
+        openHubDetail(hub);
+      }
+    },
+    [hubsData?.items, mapHubsData?.items, openHubDetail]
+  );
+
   const handleAssignPostOffice = async () => {
     if (!isTmsAdmin) {
       notification.error('Only TMS_ADMIN can assign post offices to hubs.');
@@ -941,6 +1008,7 @@ export function HubListPage() {
           totalItems={mapHubsData?.totalItems}
           emptyText='No geocoded hubs in this map area.'
           onBoundsChange={handleMapBoundsChange}
+          onPointClick={handleMapHubClick}
         />
 
         <Card>
@@ -1015,7 +1083,7 @@ export function HubListPage() {
                         <Button
                           variant='outline'
                           size='sm'
-                          onClick={() => setDetailHub(hub)}
+                          onClick={() => openHubDetail(hub)}
                         >
                           <Eye className='h-4 w-4 mr-1' />
                           Details
@@ -1117,8 +1185,17 @@ export function HubListPage() {
         updateFormField={updateFormField}
       />
 
-      <Dialog open={Boolean(detailHub)} onOpenChange={() => setDetailHub(null)}>
-        <DialogContent className='max-w-lg max-h-[90vh] overflow-y-auto'>
+      <Dialog
+        open={Boolean(detailHub)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailHub(null);
+            setDetailTab('details');
+            setDetailOrdersPage(0);
+          }
+        }}
+      >
+        <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>{detailHub?.name}</DialogTitle>
             <DialogDescription className='font-mono'>
@@ -1126,72 +1203,101 @@ export function HubListPage() {
             </DialogDescription>
           </DialogHeader>
           {detailHub && (
-            <div className='space-y-3 text-sm'>
-              {detailHub.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={detailHub.imageUrl}
-                  alt=''
-                  className='w-full rounded-md border max-h-48 object-cover'
-                />
-              )}
-              <p>
-                <span className='font-medium'>Type:</span>{' '}
-                {getHubTypeLabel(detailHub.hubType)}
-              </p>
-              <p>
-                <span className='font-medium'>Status:</span> {detailHub.status}
-              </p>
-              <p>
-                <span className='font-medium'>Province / Ward:</span>{' '}
-                {getProvinceLabel(detailHub.provinceCode)} /{' '}
-                {detailHub.wardCode}
-              </p>
-              <p>
-                <span className='font-medium'>Address:</span>{' '}
-                {detailHub.addressDetail}
-              </p>
-              {detailHub.phoneNumber && (
-                <p>
-                  <span className='font-medium'>Phone:</span>{' '}
-                  {detailHub.phoneNumber}
-                </p>
-              )}
-              <p>
-                <span className='font-medium'>Hub load:</span>{' '}
-                {detailHub.currentLoad ?? 0}/{detailHub.dailyCapacity ?? 0}
-              </p>
-              {(detailHub.latitude != null || detailHub.longitude != null) && (
-                <p>
-                  <span className='font-medium'>Coordinates:</span>{' '}
-                  {detailHub.latitude}, {detailHub.longitude}
-                </p>
-              )}
-              {isTmsAdmin && (
-                <div className='flex flex-wrap gap-2 pt-2'>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => triggerHubImagePicker(detailHub.id)}
-                    disabled={isUploadingImage}
-                  >
-                    <ImageUp className='h-4 w-4 mr-1' />
-                    Change image
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => {
-                      setDetailHub(null);
-                      openEditDialog(detailHub);
-                    }}
-                  >
-                    <Pencil className='h-4 w-4 mr-1' />
-                    Edit
-                  </Button>
+            <Tabs
+              value={detailTab}
+              onValueChange={(value) => setDetailTab(value as typeof detailTab)}
+            >
+              <TabsList>
+                <TabsTrigger value='details'>Details</TabsTrigger>
+                <TabsTrigger value='orders'>Orders</TabsTrigger>
+              </TabsList>
+              <TabsContent value='details' className='mt-4'>
+                <div className='space-y-3 text-sm'>
+                  {detailHub.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={detailHub.imageUrl}
+                      alt=''
+                      className='w-full rounded-md border max-h-48 object-cover'
+                    />
+                  )}
+                  <p>
+                    <span className='font-medium'>Type:</span>{' '}
+                    {getHubTypeLabel(detailHub.hubType)}
+                  </p>
+                  <p>
+                    <span className='font-medium'>Status:</span>{' '}
+                    {detailHub.status}
+                  </p>
+                  <p>
+                    <span className='font-medium'>Province / Ward:</span>{' '}
+                    {getProvinceLabel(detailHub.provinceCode)} /{' '}
+                    {detailHub.wardCode}
+                  </p>
+                  <p>
+                    <span className='font-medium'>Address:</span>{' '}
+                    {detailHub.addressDetail}
+                  </p>
+                  {detailHub.phoneNumber && (
+                    <p>
+                      <span className='font-medium'>Phone:</span>{' '}
+                      {detailHub.phoneNumber}
+                    </p>
+                  )}
+                  <p>
+                    <span className='font-medium'>Hub load:</span>{' '}
+                    {detailHub.currentLoad ?? 0}/{detailHub.dailyCapacity ?? 0}
+                  </p>
+                  {(detailHub.latitude != null ||
+                    detailHub.longitude != null) && (
+                    <p>
+                      <span className='font-medium'>Coordinates:</span>{' '}
+                      {detailHub.latitude}, {detailHub.longitude}
+                    </p>
+                  )}
+                  {isTmsAdmin && (
+                    <div className='flex flex-wrap gap-2 pt-2'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => triggerHubImagePicker(detailHub.id)}
+                        disabled={isUploadingImage}
+                      >
+                        <ImageUp className='h-4 w-4 mr-1' />
+                        Change image
+                      </Button>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => {
+                          setDetailHub(null);
+                          setDetailTab('details');
+                          setDetailOrdersPage(0);
+                          openEditDialog(detailHub);
+                        }}
+                      >
+                        <Pencil className='h-4 w-4 mr-1' />
+                        Edit
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </TabsContent>
+              <TabsContent value='orders' className='mt-4'>
+                <TmsEntityOrdersTab
+                  data={detailOrdersData}
+                  isFetching={
+                    isFetchingDetailHubPostOffices || isFetchingDetailOrders
+                  }
+                  page={detailOrdersPage}
+                  emptyText='No orders are currently at this hub.'
+                  onPreviousPage={() =>
+                    setDetailOrdersPage((prev) => Math.max(prev - 1, 0))
+                  }
+                  onNextPage={() => setDetailOrdersPage((prev) => prev + 1)}
+                />
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>

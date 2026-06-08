@@ -7,6 +7,7 @@ import type {
   CreateSecondMileBagRequest,
   Hub,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagDestinationType,
   SecondMileBagStatus,
   SecondMileVehicle,
@@ -18,6 +19,7 @@ export interface BagFormValues {
   destinationType: SecondMileBagDestinationType;
   destinationHubId: string;
   destinationPostOfficeCode: string;
+  routeId: string;
   vehicleId: string;
   maxWeight: string;
   maxVolume: string;
@@ -66,10 +68,11 @@ export const emptyBagFormValues: BagFormValues = {
   destinationType: 'HUB',
   destinationHubId: '',
   destinationPostOfficeCode: '',
+  routeId: '',
   vehicleId: '',
-  maxWeight: '50',
-  maxVolume: '0.5',
-  maxOrders: '30',
+  maxWeight: '',
+  maxVolume: '',
+  maxOrders: '',
   note: '',
 };
 
@@ -119,6 +122,7 @@ export const toBagFormValues = (bag?: SecondMileBag): BagFormValues => {
     destinationType: bag.destinationType ?? 'HUB',
     destinationHubId: bag.destinationHubId ? String(bag.destinationHubId) : '',
     destinationPostOfficeCode: bag.destinationPostOfficeCode ?? '',
+    routeId: bag.routeId ? String(bag.routeId) : '',
     vehicleId: bag.vehicleId ? String(bag.vehicleId) : '',
     maxWeight: bag.maxWeight ? String(bag.maxWeight) : '',
     maxVolume: bag.maxVolume ? String(bag.maxVolume) : '',
@@ -126,6 +130,15 @@ export const toBagFormValues = (bag?: SecondMileBag): BagFormValues => {
     note: bag.note ?? '',
   };
 };
+
+export const toDefaultedBagFormValues = (
+  settings?: SecondMileBagCapacitySettings
+): BagFormValues => ({
+  ...emptyBagFormValues,
+  maxWeight: settings?.maxWeight ? String(settings.maxWeight) : '',
+  maxVolume: settings?.maxVolume ? String(settings.maxVolume) : '',
+  maxOrders: settings?.maxOrders ? String(settings.maxOrders) : '',
+});
 
 export const validateBagForm = (values: BagFormValues): string | null => {
   if (!values.bagCode.trim()) {
@@ -146,7 +159,10 @@ export const validateBagForm = (values: BagFormValues): string | null => {
     values.destinationType === 'POST_OFFICE' &&
     !values.destinationPostOfficeCode.trim()
   ) {
-    return 'Destination post office code is required.';
+    return 'Destination post office is required.';
+  }
+  if (!values.routeId) {
+    return 'Route is required.';
   }
 
   if (!isPositiveOptionalNumber(values.maxWeight)) {
@@ -180,7 +196,7 @@ export const validateAutoBaggingForm = (
     values.destinationType === 'POST_OFFICE' &&
     !values.destinationPostOfficeCode.trim()
   ) {
-    return 'Destination post office code is required.';
+    return 'Destination post office is required.';
   }
   if (values.orderCodes.filter((code) => code.trim()).length === 0) {
     return 'Select at least one order.';
@@ -195,6 +211,7 @@ export const buildBagRequest = (
     bag_code: values.bagCode.trim().toUpperCase(),
     origin_hub_id: Number(values.originHubId),
     destination_type: values.destinationType,
+    route_id: Number(values.routeId),
     status: 'CREATED',
   };
 

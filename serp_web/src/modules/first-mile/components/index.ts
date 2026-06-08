@@ -7,5 +7,6 @@ export * from './layout';
 export * from './FirstMileAuthGuard';
 export * from './CoordinatePickerMap';
 export * from './TmsEntityLocationMap';
+export * from './TmsEntityOrdersTab';
 export * from './TmsCombobox';
 export * from './list';

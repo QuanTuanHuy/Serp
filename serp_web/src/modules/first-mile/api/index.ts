@@ -5,4 +5,5 @@
 
 export * from './firstMileApi';
 export * from './billingApi';
+export * from './lastMileApi';
 export * from './transforms';

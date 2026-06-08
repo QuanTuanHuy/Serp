@@ -11,12 +11,14 @@ import {
   TmsListFilterPanel,
   type TmsFilterMode,
 } from '../../../components/list';
-import type { FirstMileOrderStatus } from '../../../types';
+import type { FirstMileOrderStatus, PostOffice } from '../../../types';
 import type {
   OrderFilterFormState,
   TriStateFilter,
 } from '../orderFilterModels';
 import type { OrderStatusFilter } from '../orderPageModels';
+
+const ALL_POST_OFFICES_VALUE = '__ALL_POST_OFFICES__';
 
 interface OrderFiltersCardProps {
   canViewOrders: boolean;
@@ -24,6 +26,8 @@ interface OrderFiltersCardProps {
   filterFormValues: OrderFilterFormState;
   advancedFieldCount: number;
   statusOptions: FirstMileOrderStatus[];
+  postOffices: PostOffice[];
+  isLoadingPostOffices: boolean;
   isFetching: boolean;
   onFilterModeChange: (mode: TmsFilterMode) => void;
   onFilterFieldChange: <K extends keyof OrderFilterFormState>(
@@ -42,6 +46,8 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
   filterFormValues,
   advancedFieldCount,
   statusOptions,
+  postOffices,
+  isLoadingPostOffices,
   isFetching,
   onFilterModeChange,
   onFilterFieldChange,
@@ -61,6 +67,13 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
     { value: 'ALL', label: 'All' },
     { value: 'YES', label: 'Confirmed' },
     { value: 'NO', label: 'Not confirmed' },
+  ];
+  const postOfficeFilterOptions = [
+    { value: ALL_POST_OFFICES_VALUE, label: 'All post offices' },
+    ...postOffices.map((postOffice) => ({
+      value: postOffice.code,
+      label: `${postOffice.code} - ${postOffice.name}`,
+    })),
   ];
 
   return (
@@ -165,14 +178,22 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='order-filter-origin-po'>Origin post office</Label>
-            <Input
+            <TmsCombobox
               id='order-filter-origin-po'
-              value={filterFormValues.originPostOfficeCode}
-              onChange={(event) =>
-                onFilterFieldChange('originPostOfficeCode', event.target.value)
+              value={
+                filterFormValues.originPostOfficeCode || ALL_POST_OFFICES_VALUE
               }
-              placeholder='Post office code'
-              disabled={!canViewOrders}
+              onValueChange={(value) =>
+                onFilterFieldChange(
+                  'originPostOfficeCode',
+                  value === ALL_POST_OFFICES_VALUE ? '' : value
+                )
+              }
+              options={postOfficeFilterOptions}
+              placeholder='All post offices'
+              emptyText='No post offices found'
+              disabled={!canViewOrders || isLoadingPostOffices}
+              loading={isLoadingPostOffices}
             />
           </div>
 
@@ -180,17 +201,23 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
             <Label htmlFor='order-filter-destination-po'>
               Destination post office
             </Label>
-            <Input
+            <TmsCombobox
               id='order-filter-destination-po'
-              value={filterFormValues.destinationPostOfficeCode}
-              onChange={(event) =>
+              value={
+                filterFormValues.destinationPostOfficeCode ||
+                ALL_POST_OFFICES_VALUE
+              }
+              onValueChange={(value) =>
                 onFilterFieldChange(
                   'destinationPostOfficeCode',
-                  event.target.value
+                  value === ALL_POST_OFFICES_VALUE ? '' : value
                 )
               }
-              placeholder='Post office code'
-              disabled={!canViewOrders}
+              options={postOfficeFilterOptions}
+              placeholder='All post offices'
+              emptyText='No post offices found'
+              disabled={!canViewOrders || isLoadingPostOffices}
+              loading={isLoadingPostOffices}
             />
           </div>
 

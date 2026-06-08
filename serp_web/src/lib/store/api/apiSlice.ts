@@ -300,6 +300,7 @@ export const api = createApi({
     'ttcrs/Resource',
     // TMS tags
     'HandoverManifest',
+    'BagDistributionManifest',
     'SecondMileBag',
     // TMS billing tags
     'billing/Tariff',
