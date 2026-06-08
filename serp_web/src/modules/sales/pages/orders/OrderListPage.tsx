@@ -295,7 +295,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   };
 
   const handleViewOrder = (orderId: string) => {
-    router.push(`/logistics/sale-orders/${orderId}`);
+    router.push(`/sales/sale-orders/${orderId}`);
   };
 
   const clearFilters = () => {

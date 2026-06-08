@@ -133,7 +133,7 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
   }, [productsResponse]);
 
   const handleEdit = () => {
-    router.push(`/sales/facility/${facilityId}/edit`);
+    router.push(`/logistics/facility/${facilityId}/edit`);
   };
 
   const handleDelete = async () => {
@@ -142,7 +142,7 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
 
     try {
       await deleteFacility(facilityId).unwrap();
-      router.push('/sales/facility');
+      router.push('/logistics/facility');
     } catch (error) {
       console.error('Lỗi khi xóa kho hàng:', error);
       toast.error('Đã xảy ra lỗi khi xóa kho hàng. Vui lòng thử lại.');
@@ -415,7 +415,7 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
                   <Button
                     onClick={() =>
                       router.push(
-                        `/sales/inventory/new?facilityId=${facilityId}`
+                        `/logistics/inventory/new?facilityId=${facilityId}`
                       )
                     }
                   >
@@ -431,7 +431,9 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
                       item={item}
                       product={productMap.get(item.productId)}
                       facility={facility}
-                      onClick={() => router.push(`/sales/inventory/${item.id}`)}
+                      onClick={() =>
+                        router.push(`/logistics/inventory/${item.id}`)
+                      }
                     />
                   ))}
                 </div>
@@ -518,7 +520,7 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
                   <Button
                     onClick={() =>
                       router.push(
-                        `/sales/inventory/new?facilityId=${facilityId}`
+                        `/logistics/inventory/new?facilityId=${facilityId}`
                       )
                     }
                   >
