@@ -19,7 +19,6 @@ import { CheckCircle2, Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
 import type { PickupShift } from '../../../../types';
 import type {
-  DispatchOptimizationEffortOption,
   DispatchOptimizationGoalOption,
   DispatchSetupCardProps,
   RoutingVehicleOption,
@@ -51,15 +50,6 @@ const OPTIMIZATION_GOAL_OPTIONS: Array<{
   { value: 'ON_TIME_PRIORITY', label: 'Prioritize on-time pickup' },
   { value: 'COST_EFFICIENCY', label: 'Reduce travel cost' },
   { value: 'MAX_ASSIGNMENT', label: 'Maximize assigned orders' },
-];
-
-const OPTIMIZATION_EFFORT_OPTIONS: Array<{
-  value: DispatchOptimizationEffortOption;
-  label: string;
-}> = [
-  { value: 'FAST', label: 'Fast response' },
-  { value: 'STANDARD', label: 'Standard' },
-  { value: 'THOROUGH', label: 'Highest quality' },
 ];
 
 export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
@@ -212,7 +202,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
               </p>
             </div>
 
-            <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
+            <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='dispatch-vehicle-profile'>
                   Vehicle profile
@@ -252,28 +242,6 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                 />
                 <p className='text-xs text-muted-foreground'>
                   Define business priority: on-time, cost, or assignment rate.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-optimization-effort'>
-                  Optimization effort
-                </Label>
-                <TmsCombobox
-                  id='dispatch-optimization-effort'
-                  value={businessValues.optimizationEffort}
-                  onValueChange={(value) =>
-                    businessHandlers.onOptimizationEffortChange(
-                      value as DispatchOptimizationEffortOption
-                    )
-                  }
-                  options={OPTIMIZATION_EFFORT_OPTIONS}
-                  placeholder='Select optimization effort'
-                  emptyText='No optimization efforts found'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Fast is suitable for high traffic time, thorough is suitable
-                  when route quality is more important.
                 </p>
               </div>
             </div>

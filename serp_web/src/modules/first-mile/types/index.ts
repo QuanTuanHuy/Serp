@@ -1110,8 +1110,6 @@ export type PickupOptimizationGoal =
   | 'COST_EFFICIENCY'
   | 'MAX_ASSIGNMENT';
 
-export type PickupOptimizationEffort = 'FAST' | 'STANDARD' | 'THOROUGH';
-
 export interface OptimizePickupPlanRequest {
   post_office_id: number;
   planning_start_time?: string;
@@ -1121,14 +1119,8 @@ export interface OptimizePickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1149,14 +1141,8 @@ export interface AutoAssignPickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1176,7 +1162,6 @@ export interface ManualAssignPickupOrdersRequest {
   planning_end_time?: string;
   vehicle?: string;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   allow_lateness?: boolean;
