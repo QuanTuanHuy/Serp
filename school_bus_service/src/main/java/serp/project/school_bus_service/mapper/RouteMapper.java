@@ -38,6 +38,23 @@ public class RouteMapper extends BaseMapper {
         response.setStatus(entity.getStatus().name());
         response.setPlannedDistanceKm(entity.getPlannedDistanceKm());
         response.setPlannedDurationMin(entity.getPlannedDurationMin());
+        response.setPlannedStudentCount(entity.getPlannedStudentCount());
+        response.setAssignedBusCapacity(entity.getAssignedBusCapacity());
+        if (entity.getSelectedBus() != null) {
+            response.setBusId(entity.getSelectedBus().getId());
+            response.setBusPlateNumber(entity.getSelectedBus().getPlateNumber());
+            response.setBusName(entity.getSelectedBus().getPlateNumber());
+            response.setBusCapacity(entity.getSelectedBus().getCapacity());
+            response.setBusStatus(entity.getSelectedBus().getStatus());
+            if (response.getAssignedBusCapacity() == null) {
+                response.setAssignedBusCapacity(entity.getSelectedBus().getCapacity());
+            }
+        }
+        if (entity.getStartDepot() != null) {
+            response.setStartDepotName(entity.getStartDepot().getName());
+        } else if (entity.getEndDepot() != null) {
+            response.setStartDepotName(entity.getEndDepot().getName());
+        }
         response.setPlanningNotes(entity.getPlanningNotes());
         response.setGeometryPath(entity.getGeometryPath());
         response.setStartedAt(entity.getStartedAt());
@@ -58,6 +75,8 @@ public class RouteMapper extends BaseMapper {
         response.setLocationType(entity.getLocationType() != null ? entity.getLocationType().name() : null);
         response.setStopPurpose(entity.getStopPurpose() != null ? entity.getStopPurpose().name() : null);
         response.setDisplayName(entity.getDisplayName());
+        response.setLatitude(entity.getLatitude());
+        response.setLongitude(entity.getLongitude());
         if (entity.getPickupPoint() != null) {
             response.setPickupPointId(entity.getPickupPoint().getId());
             response.setPickupPointName(entity.getPickupPoint().getName());

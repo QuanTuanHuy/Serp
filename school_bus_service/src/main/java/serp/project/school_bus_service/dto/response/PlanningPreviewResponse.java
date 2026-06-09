@@ -32,11 +32,6 @@ public class PlanningPreviewResponse {
     private String direction;
     private String planningMethod;
 
-    private Long depotId;
-    private String depotCode;
-    private String depotName;
-    private Integer defaultBusCapacity;
-
     private PlanningReadinessSummary summary;
 
     private List<PlanningDemandResponse> eligibleDemands;

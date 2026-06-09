@@ -34,6 +34,8 @@ public interface IRoutePlanningSessionService extends IBaseService<RoutePlanning
 
     PlanningSessionResponse cancelSession(Long sessionId, Long tenantId, Long actorId);
 
+    void deleteRouteInSession(Long sessionId, Long routeId, Long tenantId, Long actorId);
+
     void refreshSessionSummary(Long sessionId, Long tenantId);
 
     RoutePlanningSessionEntity requireSession(Long sessionId, Long tenantId);

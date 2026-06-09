@@ -105,7 +105,15 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         }
 
         // Load resources first — validates they exist and belong to tenant
-        BusEntity bus             = busService.getBus(request.getBusId(), tenantId);
+        BusEntity bus = route.getSelectedBus();
+        if (bus == null) {
+            throw new AppException(AppErrorCode.Dispatch.BUS_REQUIRED,
+                    messageCommon.getMessage(AppErrorCode.Dispatch.BUS_REQUIRED));
+        }
+        if (request.getBusId() != null && !request.getBusId().equals(bus.getId())) {
+            throw new AppException(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS,
+                    messageCommon.getMessage(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS));
+        }
         DriverProfileEntity driver = driverService.getDriver(request.getDriverId(), tenantId);
         BusAttendantProfileEntity attendant = request.getAttendantId() == null ? null
                 : attendantService.getAttendant(request.getAttendantId(), tenantId);

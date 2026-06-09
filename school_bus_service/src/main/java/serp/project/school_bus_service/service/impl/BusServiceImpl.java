@@ -2,6 +2,7 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 import serp.project.school_bus_service.dto.params.BusParamsRequest;
 import serp.project.school_bus_service.dto.request.BusUpsertRequest;
 import serp.project.school_bus_service.dto.response.BusResponse;
@@ -56,10 +57,16 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
 
     @Override
     public PageResponse<BusResponse> getBuses(BusParamsRequest params, Long tenantId) {
+        Specification<BusEntity> spec = BaseSpecification.tenantActiveWithKeyword(tenantId,
+                params == null ? null : params.getKeyword(),
+                "plateNumber", "busType", "status");
+        Long depotId = params == null ? null
+                : (params.getDepotId() != null ? params.getDepotId() : params.getHomeDepotId());
+        if (depotId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("homeDepot").get("id"), depotId));
+        }
         return PageResponse.from(busRepository.findAll(
-                BaseSpecification.tenantActiveWithKeyword(tenantId,
-                        params == null ? null : params.getKeyword(),
-                        "plateNumber", "busType", "status"),
+                spec,
                 PageableUtils.from(params,
                         Set.of("id", "plateNumber", "busType", "capacity", "status", "createdAt", "updatedAt"),
                         "plateNumber")),

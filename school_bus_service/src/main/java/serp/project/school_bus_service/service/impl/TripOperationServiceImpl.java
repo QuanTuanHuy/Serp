@@ -175,7 +175,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
 
         if (stopLog.getStatus() != TripStopStatus.ARRIVED) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Stop must be ARRIVED to start boarding");
+            throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING,
+                    messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING));
         }
 
         stopLog.setStatus(TripStopStatus.BOARDING);

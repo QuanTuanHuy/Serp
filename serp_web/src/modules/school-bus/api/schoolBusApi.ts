@@ -1039,6 +1039,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `PATH-${id}` },
         { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
         { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
       ],
     }),
     addRouteStop: builder.mutation<
@@ -1075,6 +1076,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
         { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
         { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
       ],
     }),
@@ -1092,8 +1094,10 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { routeId, body }) => [
         { type: 'schoolBus/Route', id: routeId },
         { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
+        { type: 'schoolBus/Route', id: `PATH-${routeId}` },
         { type: 'schoolBus/Route', id: body.targetRouteId },
         { type: 'schoolBus/Route', id: `DETAIL-${body.targetRouteId}` },
+        { type: 'schoolBus/Route', id: `PATH-${body.targetRouteId}` },
       ],
     }),
     removeRouteStudent: builder.mutation<
@@ -1113,6 +1117,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
         { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
         { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
       ],
     }),
@@ -1699,6 +1704,23 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'LIST' },
       ],
     }),
+    deleteRouteInSession: builder.mutation<
+      import('../types').ApiResponse<void>,
+      { sessionId: number; routeId: number }
+    >({
+      query: ({ sessionId, routeId }) => ({
+        url: `/route-planning-sessions/${sessionId}/routes/${routeId}`,
+        method: 'DELETE',
+      }),
+      extraOptions: { service: 'school-bus' },
+      invalidatesTags: (_r, _e, { sessionId }) => [
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
+        { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id: 'SESSION_LIST' },
+        { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
+        { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
+      ],
+    }),
     getSessionEligibleStudents: builder.query<
       import('../types').ApiResponse<import('../types').SchoolBusEligibleStudent[]>,
       number
@@ -1725,6 +1747,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: 'SESSION_LIST' },
         { type: 'schoolBus/Route', id: `SESSION-${sessionId}` },
         { type: 'schoolBus/Route', id: `SESSION-ELIGIBLE-${sessionId}` },
+        { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
         { type: 'schoolBus/Route', id: 'ACTIVE_SESSION' },
       ],
     }),
@@ -1853,6 +1876,7 @@ const {
   useCancelPlanningSessionMutation,
   useGetSessionRoutesQuery: useGetSessionRoutesQueryOrig,
   useCreateRouteInSessionMutation,
+  useDeleteRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery: useGetSessionEligibleStudentsQueryOrig,
   useAssignStudentToRouteMutation,
 } = schoolBusApi;
@@ -1988,5 +2012,6 @@ export {
   usePublishPlanningSessionMutation,
   useCancelPlanningSessionMutation,
   useCreateRouteInSessionMutation,
+  useDeleteRouteInSessionMutation,
   useAssignStudentToRouteMutation,
 };

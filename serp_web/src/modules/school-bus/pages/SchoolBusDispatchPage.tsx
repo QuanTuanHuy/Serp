@@ -63,7 +63,7 @@ export function SchoolBusDispatchPage() {
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 10,
-    sortBy: 'serviceDate',
+    sortBy: 'lastModifiedDate',
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetRoutesQuery(pagination.params);
@@ -80,15 +80,7 @@ export function SchoolBusDispatchPage() {
     (route) => route.status === 'TRIP_CREATED'
   ).length;
 
-  const prioritizedRoutes = useMemo(
-    () =>
-      [...routes].sort((left, right) =>
-        `${left.serviceDate}${left.routeCode}`.localeCompare(
-          `${right.serviceDate}${right.routeCode}`
-        )
-      ),
-    [routes]
-  );
+  const prioritizedRoutes = routes;
   const { data: selectedRouteDetail } = useGetRouteByIdQuery(
     selectedRouteId as number,
     { skip: !selectedRouteId }
@@ -239,7 +231,7 @@ export function SchoolBusDispatchPage() {
                             ? 'bg-orange-50 text-orange-700 border-orange-100'
                             : 'bg-blue-50 text-blue-700 border-blue-100'
                         )}>
-                          {route.routeDirection === 'RETURN' ? 'Return (Chiều về)' : 'Outbound (Chiều đi)'}
+                          {route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}
                         </span>
                       </div>
                     </div>

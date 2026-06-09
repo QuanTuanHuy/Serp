@@ -15,6 +15,8 @@ public class RouteStopResponse extends BaseResponse {
     private String stopPurpose;
     /** Derived display name from pickupPoint / school / depot. */
     private String displayName;
+    private Double latitude;
+    private Double longitude;
 
     // Pickup-point specific fields (null for terminal stops)
     private Long pickupPointId;

@@ -13,7 +13,7 @@ import {
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
-import type { SchoolBusRoutePath, SchoolBusRouteStop } from '../../types';
+import type { SchoolBusRoute, SchoolBusRoutePath, SchoolBusRouteStop } from '../../types';
 import { useMapMarkerVisibility } from './MapMarkerVisibilityContext';
 
 // ── Auto-fit bounds when markers / fitKey change ──────────────────────────────
@@ -95,6 +95,7 @@ export interface PlanningMapClientProps {
    * clicking "Fit All" or "Fit Route" in the toolbar).
    */
   fitKey?: number;
+  selectedRoute?: SchoolBusRoute | null;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -109,6 +110,7 @@ export default function PlanningMapClient({
   isMapExpanded,
   fitTarget,
   fitKey,
+  selectedRoute,
 }: PlanningMapClientProps) {
   const { isVisible } = useMapMarkerVisibility();
 
@@ -129,30 +131,50 @@ export default function PlanningMapClient({
     }
   }
 
+  const parseGeometryPath = (geometryPathStr?: string | null): [number, number][] => {
+    if (!geometryPathStr) return [];
+    try {
+      const parsed = JSON.parse(geometryPathStr);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((coord) => Array.isArray(coord) && coord.length >= 2)
+          .map((coord) => [coord[1], coord[0]] as [number, number]);
+      }
+    } catch (e) {
+      console.error('Failed to parse geometryPath:', e);
+    }
+    return [];
+  };
+
   // Route stop positions (in order) — used for polyline + "fit route"
   const sortedStops = [...selectedRouteStops]
     .filter((s) => {
-      const lat = typeof s.pickupPointLatitude === 'number'
-        ? s.pickupPointLatitude
-        : null;
-      const lon = typeof s.pickupPointLongitude === 'number'
-        ? s.pickupPointLongitude
-        : null;
-      return lat !== null && lon !== null;
+      const lat = typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+      const lon = typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
+      return typeof lat === 'number' && typeof lon === 'number';
     })
     .sort((a, b) => a.stopOrder - b.stopOrder);
 
-  const routeLinePositions: [number, number][] = sortedStops.map(
-    (s) => [s.pickupPointLatitude as number, s.pickupPointLongitude as number]
-  );
+  const routeLinePositions: [number, number][] = sortedStops.map((s) => {
+    const lat = typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+    const lon = typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
+    return [lat as number, lon as number];
+  });
 
   // Use actual road geometry when available; skip polyline if no real geometry
   const actualPathCoordinates: [number, number][] =
-    selectedRoutePath?.coordinates
+    (selectedRoutePath?.coordinates
       ?.filter(
         (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number'
       )
-      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
+      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [])
+      .length >= 2
+        ? (selectedRoutePath?.coordinates
+            ?.filter(
+              (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number'
+            )
+            .map((p) => [p.latitude, p.longitude] as [number, number]) as [number, number][])
+        : parseGeometryPath(selectedRoute?.geometryPath);
   const hasRealGeometry = actualPathCoordinates.length >= 2;
   const resolvedLinePositions = hasRealGeometry ? actualPathCoordinates : routeLinePositions;
 
@@ -229,30 +251,36 @@ export default function PlanningMapClient({
       })}
 
       {/* Selected route: numbered stop markers (indigo, size 26) */}
-      {isVisible('pickup') && sortedStops.map((stop, idx) => (
-        <Marker
-          key={`stop-${stop.id}`}
-          position={[stop.pickupPointLatitude as number, stop.pickupPointLongitude as number]}
-          icon={createStopNumberIcon(idx + 1, 26)}
-          zIndexOffset={500}
-        >
-          <Popup>
-            <div>
-              <p className='text-xs font-semibold text-indigo-700'>Stop {idx + 1}</p>
-              <p className='font-medium'>{stop.pickupPointName ?? `Stop #${stop.id}`}</p>
-              <p className='text-xs text-slate-500'>
-                {stop.estimatedStudentCount ?? 0} student(s)
-              </p>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      {isVisible('pickup') && sortedStops
+        .filter((s) => s.stopPurpose !== 'START_TERMINAL' && s.stopPurpose !== 'END_TERMINAL')
+        .map((stop, idx) => {
+          const lat = typeof stop.latitude === 'number' ? stop.latitude : stop.pickupPointLatitude;
+          const lon = typeof stop.longitude === 'number' ? stop.longitude : stop.pickupPointLongitude;
+          return (
+            <Marker
+              key={`stop-${stop.id}`}
+              position={[lat as number, lon as number]}
+              icon={createStopNumberIcon(idx + 1, 26)}
+              zIndexOffset={500}
+            >
+              <Popup>
+                <div>
+                  <p className='text-xs font-semibold text-indigo-700'>Stop {idx + 1}</p>
+                  <p className='font-medium'>{stop.pickupPointName ?? stop.displayName ?? `Stop #${stop.id}`}</p>
+                  <p className='text-xs text-slate-500'>
+                    {stop.estimatedStudentCount ?? 0} student(s)
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
-      {/* Route polyline — only drawn when real road geometry is available */}
-      {hasRealGeometry && (
+      {/* Route polyline — real road geometry if available, else straight-line fallback */}
+      {resolvedLinePositions.length >= 2 && (
         <Polyline
-          positions={actualPathCoordinates}
-          color='#0369a1'
+          positions={resolvedLinePositions}
+          color={selectedRoute?.routeDirection === 'RETURN' ? '#059669' : '#0284c7'}
           weight={4}
           opacity={0.85}
         />
@@ -281,7 +309,7 @@ export default function PlanningMapClient({
         {!hasRealGeometry && sortedStops.length > 0 && (
           <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
             <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
-              Chưa tính được đường đi thực tế.
+              Actual road geometry not yet computed.
             </span>
           </div>
         )}
@@ -297,7 +325,7 @@ export default function PlanningMapClient({
       {!hasRealGeometry && sortedStops.length > 0 && (
         <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
           <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
-            Chưa tính được đường đi thực tế.
+            Actual road geometry not yet computed.
           </span>
         </div>
       )}

@@ -19,6 +19,7 @@ import serp.project.school_bus_service.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
+import serp.project.school_bus_service.service.IBusService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteService;
@@ -29,7 +30,9 @@ import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
+import serp.project.school_bus_service.entity.BusEntity;
 import serp.project.school_bus_service.entity.DepotEntity;
+import serp.project.school_bus_service.entity.RouteAssignmentEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
@@ -62,6 +65,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final ISchoolService schoolService;
     private final ISchoolScheduleService schoolScheduleService;
     private final IDepotService depotService;
+    private final IBusService busService;
     private final ICodeGeneratorService codeGeneratorService;
     private final IRouteStopService routeStopService;
     private final IRouteDispatchService routeDispatchService;
@@ -74,6 +78,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             ISchoolService schoolService,
                             ISchoolScheduleService schoolScheduleService,
                             IDepotService depotService,
+                            IBusService busService,
                             ICodeGeneratorService codeGeneratorService,
                             IRouteStopService routeStopService,
                             IRouteDispatchService routeDispatchService,
@@ -85,6 +90,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.schoolService = schoolService;
         this.schoolScheduleService = schoolScheduleService;
         this.depotService = depotService;
+        this.busService = busService;
         this.codeGeneratorService = codeGeneratorService;
         this.routeStopService = routeStopService;
         this.routeDispatchService = routeDispatchService;
@@ -103,8 +109,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                 spec(tenantId, params == null ? null : params.getKeyword(), "routeCode", "routeName", "status",
                         "shiftType", "routeDirection", "school.name"),
                 pageable(params, Set.of("id", "routeCode", "routeName", "serviceDate", "status", "createdAt",
-                        "updatedAt", "routeDirection"), "serviceDate")),
-                mapper::toRoutePlanResponse);
+                        "updatedAt", "routeDirection", "lastModifiedDate"), "lastModifiedDate")),
+                route -> toRoutePlanResponse(route, tenantId));
     }
 
     @Override
@@ -115,10 +121,12 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public RouteDetailResponse getRoute(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
-        return mapper.toRouteDetailResponse(route,
+        RouteDetailResponse response = mapper.toRouteDetailResponse(route,
                 routeStopService.findByRoute(id, tenantId),
                 routePlanStudentService.findByRoute(id),
                 routeDispatchService.findAssignmentEntityByRoute(id, tenantId).orElse(null));
+        response.setRoute(toRoutePlanResponse(route, tenantId));
+        return response;
     }
 
     @Override
@@ -192,9 +200,17 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             throw new AppException(AppErrorCode.Route.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Route.INVALID_STATE));
         }
         route.markUpdated(actor(actorId));
+        Long currentBusId = route.getSelectedBus() == null ? null : route.getSelectedBus().getId();
         applyRoute(route, request, tenantId);
+        if (request.getBusId() != null && !request.getBusId().equals(currentBusId)) {
+            validateBusCanBeChanged(route, tenantId);
+            applySelectedBus(route, request.getBusId(), tenantId, false,
+                    route.getPlanningSession() == null ? null : route.getPlanningSession().getId(),
+                    route.getId());
+        }
         RoutePlanEntity saved = routePlanRepository.save(route);
-        return mapper.toRoutePlanResponse(saved);
+        routeStopService.updateTerminalStops(saved, tenantId, actorId);
+        return toRoutePlanResponse(saved, tenantId);
     }
 
     // ---- Delegated to sub-services ----
@@ -364,7 +380,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     public List<RoutePlanResponse> listRoutesBySession(Long sessionId, Long tenantId) {
         return findRoutesBySession(sessionId, tenantId)
                 .stream()
-                .map(mapper::toRoutePlanResponse)
+                .map(route -> toRoutePlanResponse(route, tenantId))
                 .toList();
     }
 
@@ -394,14 +410,126 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         RoutePlanEntity route = new RoutePlanEntity();
         route.markCreated(tenantId, actor(actorId));
         applyRoute(route, request, tenantId);
+        applySelectedBus(route, request.getBusId(), tenantId, true, sessionId, null);
         route.setRouteCode(codeGeneratorService.generate(
                 SchoolBusCode.ROUTE.sequenceKey(), SchoolBusCode.ROUTE.prefix(), tenantId, actorId));
         route.setStatus(RouteStatus.DRAFT);
         route.setPlanningSession(planningSession);
         RoutePlanEntity saved = routePlanRepository.save(route);
+        routeStopService.updateTerminalStops(saved, tenantId, actorId);
 
         log.info("Created route in session: sessionId={}, routeId={}", sessionId, saved.getId());
-        return mapper.toRoutePlanResponse(saved);
+        return toRoutePlanResponse(saved, tenantId);
+    }
+
+    private void applySelectedBus(RoutePlanEntity route, Long busId, Long tenantId, boolean required,
+                                  Long sessionId, Long excludeRouteId) {
+        if (busId == null) {
+            if (!required) {
+                return;
+            }
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Please select a bus before creating a route.");
+        }
+        BusEntity bus = busService.getBus(busId, tenantId);
+        if (Boolean.TRUE.equals(bus.getIsDeleted()) || Boolean.FALSE.equals(bus.getIsActive())) {
+            throw new AppException(AppErrorCode.Bus.INACTIVE,
+                    messageCommon.getMessage(AppErrorCode.Bus.INACTIVE));
+        }
+        DepotEntity routeDepot = route.getStartDepot() != null ? route.getStartDepot() : route.getEndDepot();
+        if (routeDepot == null) {
+            throw new AppException(AppErrorCode.Route.DEPOT_REQUIRED,
+                    "Please select a depot before creating a route.");
+        }
+        if (bus.getHomeDepot() == null || !routeDepot.getId().equals(bus.getHomeDepot().getId())) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "The selected bus does not belong to the selected depot.");
+        }
+        if (sessionId != null && routePlanRepository.existsActiveRouteUsingSelectedBusInSession(
+                tenantId, sessionId, busId, excludeRouteId)) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "This bus is already assigned to another route in the current planning session.");
+        }
+        route.setSelectedBus(bus);
+        route.setAssignedBusCapacity(bus.getCapacity());
+        route.setRequiredCapacity(0);
+    }
+
+    private void validateBusCanBeChanged(RoutePlanEntity route, Long tenantId) {
+        if (route.getPlannedStudentCount() != null && route.getPlannedStudentCount() > 0) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Cannot change bus when the route already has students.");
+        }
+        if (routeDispatchService.findAssignmentEntityByRoute(route.getId(), tenantId).isPresent()) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Cannot change bus when staff has already been assigned.");
+        }
+    }
+
+    private RoutePlanResponse toRoutePlanResponse(RoutePlanEntity route, Long tenantId) {
+        RoutePlanResponse response = mapper.toRoutePlanResponse(route);
+        response.setStopsCount(routeStopService.findByRoute(route.getId(), tenantId).size());
+        RouteAssignmentEntity assignment = routeDispatchService
+                .findAssignmentEntityByRoute(route.getId(), tenantId)
+                .orElse(null);
+        if (assignment != null) {
+            if (assignment.getDriver() != null) {
+                response.setDriverId(assignment.getDriver().getId());
+                response.setDriverName(assignment.getDriver().getFullName());
+            }
+            if (assignment.getAttendant() != null) {
+                response.setAttendantId(assignment.getAttendant().getId());
+                response.setAttendantName(assignment.getAttendant().getFullName());
+            }
+        }
+        return response;
+    }
+    @Override
+    @Transactional
+    public void deleteRoute(Long sessionId, Long routeId, Long tenantId, Long actorId) {
+        RoutePlanEntity route = getRouteEntity(routeId, tenantId);
+
+        if (route.getPlanningSession() == null || !route.getPlanningSession().getId().equals(sessionId)) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Route does not belong to this planning session.");
+        }
+
+        if (route.getStatus() == RouteStatus.PUBLISHED
+                || route.getStatus() == RouteStatus.TRIP_CREATED
+                || route.getStatus() == RouteStatus.CANCELLED) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "This route cannot be deleted because it already has students or assigned staff. Please remove students and assignments before deleting the route.");
+        }
+
+        if (route.getStatus() == RouteStatus.ASSIGNED
+                || routeDispatchService.findAssignmentEntityByRoute(routeId, tenantId).isPresent()) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "This route cannot be deleted because it already has students or assigned staff. Please remove students and assignments before deleting the route.");
+        }
+
+        if ((route.getPlannedStudentCount() != null && route.getPlannedStudentCount() > 0)
+                || !routePlanStudentService.findByRoute(routeId).isEmpty()) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "This route cannot be deleted because it already has students or assigned staff. Please remove students and assignments before deleting the route.");
+        }
+
+        List<RouteStopEntity> stops = routeStopService.findByRoute(routeId, tenantId);
+        for (RouteStopEntity stop : stops) {
+            if ((stop.getPlannedBoardingCount() != null && stop.getPlannedBoardingCount() > 0)
+                    || (stop.getPlannedDropoffCount() != null && stop.getPlannedDropoffCount() > 0)
+                    || (stop.getEstimatedStudentCount() != null && stop.getEstimatedStudentCount() > 0)) {
+                throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                        "This route cannot be deleted because it already has students or assigned staff. Please remove students and assignments before deleting the route.");
+            }
+        }
+
+        // Soft delete stops associated with this route
+        if (!stops.isEmpty()) {
+            List<Long> stopIds = stops.stream().map(RouteStopEntity::getId).toList();
+            routeStopService.softDeleteByIds(stopIds, tenantId, actorId);
+        }
+
+        // Soft delete the route itself
+        softDeleteById(routeId, tenantId, actorId);
     }
 
     @Override

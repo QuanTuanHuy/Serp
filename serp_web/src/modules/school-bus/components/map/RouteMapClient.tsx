@@ -108,23 +108,45 @@ export default function RouteMapClient({
     ...(endCoord ? [endCoord] : []),
   ];
 
+  const parseGeometryPath = (geometryPathStr?: string | null): [number, number][] => {
+    if (!geometryPathStr) return [];
+    try {
+      const parsed = JSON.parse(geometryPathStr);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((coord) => Array.isArray(coord) && coord.length >= 2)
+          .map((coord) => [coord[1], coord[0]] as [number, number]);
+      }
+    } catch (e) {
+      console.error('Failed to parse geometryPath:', e);
+    }
+    return [];
+  };
+
   // Real road geometry when available
   const actualPathCoords: [number, number][] =
-    routePath?.coordinates
+    (routePath?.coordinates
       ?.filter(
         (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
       )
-      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [];
+      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [])
+      .length >= 2
+        ? (routePath?.coordinates
+            ?.filter(
+              (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
+            )
+            .map((p) => [p.latitude, p.longitude] as [number, number]) as [number, number][])
+        : parseGeometryPath(route.geometryPath);
 
   // Fallback: straight lines depot/school → middle stops → school/depot
   const fallbackPositions: [number, number][] = [
     ...(startCoord ? [startCoord] : []),
     ...sortedMiddleStops.map(
-      (s) =>
-        [s.pickupPointLatitude as number, s.pickupPointLongitude as number] as [
-          number,
-          number,
-        ],
+      (s) => {
+        const lat = typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+        const lon = typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
+        return [lat as number, lon as number] as [number, number];
+      }
     ),
     ...(endCoord ? [endCoord] : []),
   ];
@@ -132,10 +154,7 @@ export default function RouteMapClient({
   const resolvedLine: [number, number][] =
     actualPathCoords.length >= 2 ? actualPathCoords : fallbackPositions;
 
-  const isFallback =
-    routePath?.fallbackUsed === true ||
-    routePath?.geometrySource === 'STRAIGHT_LINE_ESTIMATE' ||
-    (routePath != null && actualPathCoords.length < 2);
+  const isFallback = actualPathCoords.length < 2;
 
   // Direction colour: sky/blue for OUTBOUND, emerald for RETURN
   const lineColor = isOutbound ? '#0284c7' : '#059669';
@@ -208,16 +227,16 @@ export default function RouteMapClient({
       )}
 
       {/* Numbered middle-stop markers (indigo, size 26 — consistent with planning map) */}
-      {sortedMiddleStops.map((stop, idx) => (
-        <Marker
-          key={`stop-${stop.id}`}
-          position={[
-            stop.pickupPointLatitude as number,
-            stop.pickupPointLongitude as number,
-          ]}
-          icon={createStopNumberIcon(idx + 1, 26)}
-          zIndexOffset={500}
-        >
+      {sortedMiddleStops.map((stop, idx) => {
+        const lat = typeof stop.latitude === 'number' ? stop.latitude : stop.pickupPointLatitude;
+        const lon = typeof stop.longitude === 'number' ? stop.longitude : stop.pickupPointLongitude;
+        return (
+          <Marker
+            key={`stop-${stop.id}`}
+            position={[lat as number, lon as number]}
+            icon={createStopNumberIcon(idx + 1, 26)}
+            zIndexOffset={500}
+          >
           <Popup>
             <div className='space-y-1'>
               <p className='text-xs font-semibold text-indigo-700'>
@@ -232,16 +251,15 @@ export default function RouteMapClient({
             </div>
           </Popup>
         </Marker>
-      ))}
+      );})}
 
       {/* Route polyline — real road geometry if available, else straight-line fallback */}
       {resolvedLine.length >= 2 && (
         <Polyline
           positions={resolvedLine}
-          color={isFallback ? '#f59e0b' : lineColor}
-          weight={isFallback ? 3 : 4}
+          color={route.routeDirection === 'RETURN' ? '#059669' : '#0284c7'}
+          weight={4}
           opacity={0.85}
-          dashArray={isFallback ? '10 6' : undefined}
         />
       )}
     </>
@@ -255,10 +273,10 @@ export default function RouteMapClient({
     </>
   );
 
-  const fallbackBadge = isFallback && (
+  const fallbackBadge = isFallback && sortedMiddleStops.length > 0 && (
     <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
-      <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
-        ⚠ Straight-line estimate — road geometry unavailable
+      <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
+        Actual road geometry not yet computed.
       </span>
     </div>
   );

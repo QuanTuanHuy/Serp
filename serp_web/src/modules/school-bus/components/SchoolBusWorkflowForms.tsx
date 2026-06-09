@@ -39,7 +39,6 @@ import { SchoolBusCheckbox } from './ui/SchoolBusCheckbox';
 import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
 import type {
   SchoolBusAttendant,
-  SchoolBusBus,
   SchoolBusDepot,
   SchoolBusDriver,
   SchoolBusParent,
@@ -303,7 +302,6 @@ const rejectSchema = z.object({
 });
 
 const assignmentSchema = z.object({
-  busId: z.coerce.number().min(1, 'Bus is required'),
   driverId: z.coerce.number().min(1, 'Driver is required'),
   attendantId: z.string().optional(),
   assignmentNote: z.string().optional(),
@@ -1865,11 +1863,9 @@ interface RouteAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
-    busId?: number | null;
     driverId?: number | null;
     attendantId?: number | null;
   } | null;
-  buses: SchoolBusBus[];
   drivers: SchoolBusDriver[];
   attendants: SchoolBusAttendant[];
   onSubmit: (values: SchoolBusRouteAssignmentRequest) => Promise<void>;
@@ -1880,7 +1876,6 @@ export function RouteAssignmentDialog({
   open,
   onOpenChange,
   initialData,
-  buses,
   drivers,
   attendants,
   onSubmit,
@@ -1889,7 +1884,6 @@ export function RouteAssignmentDialog({
   const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema) as any,
     defaultValues: {
-      busId: initialData?.busId ?? buses[0]?.id ?? 0,
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
       attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
       assignmentNote: '',
@@ -1900,44 +1894,35 @@ export function RouteAssignmentDialog({
 
   React.useEffect(() => {
     form.reset({
-      busId: initialData?.busId ?? buses[0]?.id ?? 0,
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
       attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
       assignmentNote: '',
       reason: '',
       isActive: true,
     });
-  }, [form, initialData, buses, drivers]);
+  }, [form, initialData, drivers]);
 
   return (
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
       title='Assign route resources'
-      description='Attach a bus, driver, and optional attendant to this route.'
+      description='Assign a driver and optional attendant to this route.'
     >
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(async (values) =>
             onSubmit({
-              busId: values.busId,
               driverId: values.driverId,
               attendantId: values.attendantId ? Number(values.attendantId) : null,
+              assignmentNote: values.assignmentNote || null,
+              reason: values.reason || null,
               isActive: values.isActive,
             })
           )}
           className='space-y-4'
         >
           <div className='grid gap-4 md:grid-cols-2'>
-            <SelectField
-              form={form}
-              name='busId'
-              label='Bus'
-              options={buses.map((bus) => ({
-                value: String(bus.id),
-                label: `${bus.plateNumber} (${bus.status})`,
-              }))}
-            />
             <SelectField
               form={form}
               name='driverId'

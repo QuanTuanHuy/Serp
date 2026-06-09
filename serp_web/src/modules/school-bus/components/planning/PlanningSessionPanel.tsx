@@ -43,6 +43,14 @@ export function PlanningSessionPanel({
   onGenerate, onPublish, onCancel, onSelectSession,
   hidePastSessions = false,
 }: PlanningSessionPanelProps) {
+  const [isCollapsed, setIsCollapsed] = React.useState(!!activeSession);
+
+  React.useEffect(() => {
+    if (activeSession) {
+      setIsCollapsed(true);
+    }
+  }, [activeSession]);
+
   if (!activeSession && sessions.length === 0) return null;
 
   return (
@@ -107,32 +115,40 @@ export function PlanningSessionPanel({
 
       {sessions.length > 0 && !hidePastSessions && (
         <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3'>
-          <div className='border-b border-slate-100 pb-2.5'>
+          <div
+            className='border-b border-slate-100 pb-2.5 flex items-center justify-between cursor-pointer select-none'
+            onClick={() => setIsCollapsed(c => !c)}
+          >
             <h3 className='text-sm font-bold text-slate-900 flex items-center gap-2'>
               <History className='h-4 w-4 text-slate-500' />
               Past Sessions ({sessions.length})
             </h3>
+            <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-650 transition-colors'>
+              {isCollapsed ? 'Show' : 'Hide'}
+            </span>
           </div>
 
-          <div className='max-h-56 space-y-1.5 overflow-y-auto pr-1'>
-            {sessions.map(s => (
-              <button key={s.id} onClick={() => onSelectSession(s)}
-                className={cn(
-                  'w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
-                  activeSession?.id === s.id
-                    ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
-                    : 'border-slate-150 hover:border-slate-250 hover:bg-slate-50',
-                )}>
-                <div className='flex items-center justify-between'>
-                  <span className='text-xs font-bold text-slate-800'>#{s.id} · {s.serviceDate}</span>
-                  <SchoolBusStatusBadge status={s.status} />
-                </div>
-                <p className='mt-1 text-[10px] font-semibold text-slate-500'>
-                  {s.schoolName} · {s.routeDirection} · {methodLabel[s.planningMethod]}
-                </p>
-              </button>
-            ))}
-          </div>
+          {!isCollapsed && (
+            <div className='max-h-56 space-y-1.5 overflow-y-auto pr-1'>
+              {sessions.map(s => (
+                <button key={s.id} onClick={() => onSelectSession(s)}
+                  className={cn(
+                    'w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
+                    activeSession?.id === s.id
+                      ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                      : 'border-slate-150 hover:border-slate-250 hover:bg-slate-50',
+                  )}>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-xs font-bold text-slate-800'>#{s.id} · {s.serviceDate}</span>
+                    <SchoolBusStatusBadge status={s.status} />
+                  </div>
+                  <p className='mt-1 text-[10px] font-semibold text-slate-500'>
+                    {s.schoolName} · {s.routeDirection} · {methodLabel[s.planningMethod]}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

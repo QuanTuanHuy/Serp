@@ -30,7 +30,4 @@ public class PlanningSessionPreviewRequest {
     @NotBlank
     private String planningMethod;
 
-    private Long depotId;
-
-    private Integer defaultBusCapacity;
 }

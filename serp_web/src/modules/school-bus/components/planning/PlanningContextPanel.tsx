@@ -10,7 +10,6 @@ import {
   useGetActiveSchoolSchedulesQuery,
 } from '../../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../../utils';
-import type { SchoolBusDepot } from '../../types';
 import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import { SchoolBusDatePicker } from '../ui/SchoolBusDatePicker';
 
@@ -20,8 +19,6 @@ export interface ContextFormState {
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod: 'GREEDY' | 'MANUAL';
-  defaultBusCapacity: string;
-  depotId: string;
 }
 
 interface PlanningContextPanelProps {
@@ -32,14 +29,12 @@ interface PlanningContextPanelProps {
   previewing: boolean;
   creating: boolean;
   sessionActive: boolean;
-  depots: SchoolBusDepot[];
 }
 
 const fieldLabel = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 mt-3.5 first:mt-0';
-const fieldInput = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400 transition-all';
 
 export function PlanningContextPanel({
-  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive, depots,
+  form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive,
 }: PlanningContextPanelProps) {
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const schools = getPageItems(schoolsData?.data);
@@ -99,23 +94,6 @@ export function PlanningContextPanel({
           ]}
         />
 
-        <label className={fieldLabel}>Default Bus Capacity</label>
-        <input type='number' className={fieldInput} value={form.defaultBusCapacity}
-          onChange={e => onFormChange(f => ({ ...f, defaultBusCapacity: e.target.value }))}
-          min={1} max={100} placeholder='30' />
-
-        <label className={fieldLabel}>Depot (Bus Garage)</label>
-        <SchoolBusSelect
-          fullWidth
-          value={form.depotId}
-          onChange={val => onFormChange(f => ({ ...f, depotId: val || '' }))}
-          placeholder='— Select depot —'
-          options={depots.map(d => ({
-            label: d.name + (d.address ? ` (${d.address})` : ''),
-            value: String(d.id)
-          }))}
-          searchable
-        />
       </div>
 
       <div className='mt-5 flex flex-wrap gap-2 pt-2 border-t border-slate-100'>

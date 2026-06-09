@@ -58,6 +58,10 @@ public class RoutePlanEntity extends BaseModel {
     @JoinColumn(name = "end_depot_id")
     private DepotEntity endDepot;
 
+    @ManyToOne
+    @JoinColumn(name = "selected_bus_id")
+    private BusEntity selectedBus;
+
     @Column(name = "route_code", nullable = false)
     private String routeCode;
 
@@ -145,4 +149,7 @@ public class RoutePlanEntity extends BaseModel {
 
     @Column(name = "published_by")
     private Long publishedBy;
+
+    @org.hibernate.annotations.Formula("COALESCE(updated_at, created_at)")
+    private LocalDateTime lastModifiedDate;
 }

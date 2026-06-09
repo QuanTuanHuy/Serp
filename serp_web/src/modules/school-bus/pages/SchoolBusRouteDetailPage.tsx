@@ -25,7 +25,6 @@ import {
   useAssignRouteMutation,
   useCreateTripFromRouteMutation,
   useGetAttendantsQuery,
-  useGetBusesQuery,
   useGetDriversQuery,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
@@ -51,10 +50,6 @@ export function SchoolBusRouteDetailPage({
   routeId,
 }: SchoolBusRouteDetailPageProps) {
   const { data, isLoading, refetch: refetchRoute } = useGetRouteByIdQuery(routeId);
-  const { data: busesData } = useGetBusesQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'plateNumber',
-  });
   const { data: driversData } = useGetDriversQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'fullName',
@@ -113,6 +108,17 @@ export function SchoolBusRouteDetailPage({
 
   const route = detail.route;
   const isAssigned = !!detail.assignment;
+  const selectedBusPlate = detail.assignment?.busPlateNumber ?? route.busPlateNumber;
+  const selectedBusCapacity = detail.assignment?.busCapacity ?? route.busCapacity ?? route.assignedBusCapacity;
+  const plannedStudentCount = route.plannedStudentCount ?? detail.students.length ?? 0;
+  const stopsCount = route.stopsCount ?? detail.stops.length;
+  const driverName = detail.assignment?.driverName ?? route.driverName;
+  const attendantName = detail.assignment?.attendantName ?? route.attendantName;
+  const missingResourceCount = [
+    !selectedBusPlate,
+    !driverName,
+    !attendantName,
+  ].filter(Boolean).length;
   // Middle stops that lack coordinates (terminals use route-level coords instead)
   const missingStopCoordinates = detail.stops.filter(
     (stop) =>
@@ -225,7 +231,7 @@ export function SchoolBusRouteDetailPage({
                 <SummaryItem label="School" value={route.schoolName} icon={GraduationCap} />
                 <SummaryItem
                   label="Direction"
-                  value={route.routeDirection === 'RETURN' ? 'Return (Chiều về)' : 'Outbound (Chiều đi)'}
+                  value={route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}
                   icon={MapPinned}
                   isBadge
                   badgeColor={route.routeDirection === 'RETURN' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}
@@ -234,8 +240,15 @@ export function SchoolBusRouteDetailPage({
                 <SummaryItem label="Schedule" value={route.schoolScheduleName} icon={Clock3} />
                 <SummaryItem label="Start Terminal" value={`${route.startLocationName} (${route.startLocationType})`} icon={MapPin} />
                 <SummaryItem label="End Terminal" value={`${route.endLocationName} (${route.endLocationType})`} icon={MapPin} />
+                <SummaryItem label="Depot" value={route.startDepotName ?? (route.startLocationType === 'DEPOT' ? route.startLocationName : route.endLocationName)} icon={MapPin} />
                 <SummaryItem label="Planned Distance" value={route.plannedDistanceKm != null ? `${route.plannedDistanceKm} km` : 'N/A'} icon={Route} />
                 <SummaryItem label="Planned Duration" value={route.plannedDurationMin != null ? `${route.plannedDurationMin} mins` : 'N/A'} icon={Clock3} />
+                <SummaryItem label="Bus" value={selectedBusPlate || 'No bus selected'} icon={BusFront} />
+                <SummaryItem label="Capacity" value={selectedBusCapacity != null ? `${selectedBusCapacity} seats` : 'N/A'} icon={Users} />
+                <SummaryItem label="Students" value={selectedBusCapacity != null ? `${plannedStudentCount}/${selectedBusCapacity}` : String(plannedStudentCount)} icon={Users} />
+                <SummaryItem label="Stops" value={String(stopsCount)} icon={Route} />
+                <SummaryItem label="Driver" value={driverName || 'No driver'} icon={UserCog} />
+                <SummaryItem label="Attendant" value={attendantName || 'No attendant'} icon={UserCog} />
                 <SummaryItem label="Started At" value={formatDateTime(route.startedAt) || 'N/A'} icon={PlayCircle} />
                 <SummaryItem label="Completed At" value={formatDateTime(route.completedAt) || 'N/A'} icon={ClipboardCheck} />
               </div>
@@ -254,24 +267,24 @@ export function SchoolBusRouteDetailPage({
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
                     : 'bg-amber-50 text-amber-700 border-amber-250'
                 )}>
-                  {isAssigned ? 'Ready for execution' : `Missing ${[!detail.assignment?.busId, !detail.assignment?.driverId, !detail.assignment?.attendantId].filter(Boolean).length} resource(s)`}
+                  {isAssigned ? 'Ready for execution' : `Missing ${missingResourceCount} resource(s)`}
                 </span>
               </div>
 
               <div className='grid gap-3'>
                 <AssignmentRow
                   label="Bus Vehicle"
-                  value={detail.assignment?.busPlateNumber}
+                  value={selectedBusPlate}
                   type="bus"
                 />
                 <AssignmentRow
                   label="Driver"
-                  value={detail.assignment?.driverName}
+                  value={driverName}
                   type="driver"
                 />
                 <AssignmentRow
                   label="Attendant"
-                  value={detail.assignment?.attendantName}
+                  value={attendantName}
                   type="attendant"
                 />
               </div>
@@ -311,7 +324,7 @@ export function SchoolBusRouteDetailPage({
                 <WorkflowStep
                   stepNumber={2}
                   title="Assign Resources"
-                  description="Assign vehicle, driver, and crew to execute this route."
+                  description="Assign driver and attendant to execute this route."
                   status={isAssigned ? 'completed' : 'current'}
                   action={!isAssigned ? (
                     <Button size='sm' variant='outline' className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none' onClick={() => setAssignmentOpen(true)}>
@@ -491,7 +504,6 @@ export function SchoolBusRouteDetailPage({
         open={assignmentOpen}
         onOpenChange={setAssignmentOpen}
         initialData={detail.assignment}
-        buses={getPageItems(busesData?.data)}
         drivers={getPageItems(driversData?.data)}
         attendants={getPageItems(attendantsData?.data)}
         onSubmit={handleAssign}

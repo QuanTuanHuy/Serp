@@ -35,6 +35,8 @@ public class RoutePlanUpsertRequest extends BaseCommandRequest {
 
     private Long endDepotId;
 
+    private Long busId;
+
     @NotBlank
     private String routeName;
 

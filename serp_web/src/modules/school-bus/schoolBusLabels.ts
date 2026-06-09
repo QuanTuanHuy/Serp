@@ -1,59 +1,66 @@
 /**
- * Vietnamese label mappings for school-bus module enums.
+ * English label mappings for school-bus module enums.
  * Centralises all display labels so pages don't duplicate strings.
  */
 
 /* ── Route status ──────────────────────────────────────────────── */
 export const routeStatusLabel: Record<string, string> = {
-  PLANNED: 'Đã lên kế hoạch',
-  ASSIGNED: 'Đã phân công',
-  PUBLISHED: 'Đã công bố',
-  TRIP_CREATED: 'Đã tạo chuyến',
-  IN_PROGRESS: 'Đang thực hiện',
-  COMPLETED: 'Hoàn thành',
-  CANCELLED: 'Đã hủy',
+  DRAFT: 'Draft',
+  GENERATED: 'Generated',
+  REVIEWING: 'Reviewing',
+  PLANNED: 'Planned',
+  ASSIGNED: 'Assigned',
+  PUBLISHED: 'Published',
+  TRIP_CREATED: 'Trip Created',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 };
 
 /* ── Transport request status ──────────────────────────────────── */
 export const requestStatusLabel: Record<string, string> = {
-  DRAFT: 'Nháp',
-  SUBMITTED: 'Chờ duyệt',
-  APPROVED: 'Đã duyệt',
-  REJECTED: 'Từ chối',
-  CANCELLED: 'Đã hủy',
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  CANCELLED: 'Cancelled',
 };
 
 /* ── Subscription status ───────────────────────────────────────── */
 export const subscriptionStatusLabel: Record<string, string> = {
-  ACTIVE: 'Đang hoạt động',
-  INACTIVE: 'Ngưng hoạt động',
-  EXPIRED: 'Hết hạn',
-  CANCELLED: 'Đã hủy',
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
+  EXPIRED: 'Expired',
+  CANCELLED: 'Cancelled',
 };
 
 /* ── Planning session status ───────────────────────────────────── */
 export const sessionStatusLabel: Record<string, string> = {
-  DRAFT: 'Nháp',
-  IN_PROGRESS: 'Đang thực hiện',
-  COMPLETED: 'Hoàn thành',
-  CANCELLED: 'Đã hủy',
+  DRAFT: 'Draft',
+  IN_PROGRESS: 'In Progress',
+  PUBLISHED: 'Published',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 };
 
 /* ── Route direction ───────────────────────────────────────────── */
 export const directionLabel: Record<string, string> = {
-  TO_SCHOOL: 'Đến trường',
-  FROM_SCHOOL: 'Về nhà',
+  TO_SCHOOL: 'Outbound',
+  FROM_SCHOOL: 'Return',
+  OUTBOUND: 'Outbound',
+  RETURN: 'Return',
 };
 
 /* ── Student usage type ────────────────────────────────────────── */
 export const usageTypeLabel: Record<string, string> = {
-  ONE_WAY_TO: 'Một chiều – Đến',
-  ONE_WAY_FROM: 'Một chiều – Về',
-  ROUND_TRIP: 'Hai chiều',
+  ONE_WAY_TO: 'One Way - To School',
+  ONE_WAY_FROM: 'One Way - From School',
+  ROUND_TRIP: 'Round Trip',
+  ONE_WAY: 'One Way',
 };
 
 /* ── Generic helper ────────────────────────────────────────────── */
 export function getLabel(map: Record<string, string>, key?: string | null): string {
-  if (!key) return '—';
+  if (!key) return '-';
   return map[key.toUpperCase()] ?? key;
 }

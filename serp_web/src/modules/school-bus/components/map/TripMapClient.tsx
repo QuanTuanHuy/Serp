@@ -44,6 +44,7 @@ interface TripMapClientProps {
   tripStatus: string;
   isOutbound: boolean;
   routeGeometry?: string | null;
+  routePath?: any;
   className?: string;
 }
 
@@ -52,6 +53,7 @@ export default function TripMapClient({
   tripStatus,
   isOutbound,
   routeGeometry,
+  routePath,
   className,
 }: TripMapClientProps) {
   const { isExpanded, expandKey } = useMapExpand();
@@ -74,7 +76,17 @@ export default function TripMapClient({
   let actualPathCoords: [number, number][] = [];
   let isFallback = true;
 
-  if (routeGeometry) {
+  if (routePath?.coordinates && Array.isArray(routePath.coordinates)) {
+    actualPathCoords = routePath.coordinates
+      .filter((c: any) => typeof c.latitude === 'number' && typeof c.longitude === 'number')
+      .map((c: any) => [c.latitude, c.longitude] as [number, number]);
+    
+    if (actualPathCoords.length >= 2) {
+      isFallback = false;
+    }
+  }
+
+  if (actualPathCoords.length < 2 && routeGeometry) {
     try {
       const parsed = JSON.parse(routeGeometry);
       if (parsed && Array.isArray(parsed.coordinates)) {
@@ -155,10 +167,9 @@ export default function TripMapClient({
         {resolvedLine.length >= 2 && (
           <Polyline
             positions={resolvedLine}
-            color={isFallback ? '#f59e0b' : lineColor}
-            weight={isFallback ? 3 : 4}
+            color={lineColor}
+            weight={4}
             opacity={0.85}
-            dashArray={isFallback ? '10 6' : undefined}
           />
         )}
 
@@ -228,8 +239,8 @@ export default function TripMapClient({
       </LeafletMapShell>
       {isFallback && (
         <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
-          <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm'>
-            ⚠ Straight-line estimate — road geometry unavailable
+          <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
+            Actual road geometry not yet computed.
           </span>
         </div>
       )}

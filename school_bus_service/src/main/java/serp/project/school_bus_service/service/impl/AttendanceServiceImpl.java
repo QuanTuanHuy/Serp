@@ -3,6 +3,7 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
@@ -62,7 +63,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     public AttendanceServiceImpl(
             AttendanceRepository attendanceRepository,
-            ITripExecutionService tripExecutionService,
+            @Lazy ITripExecutionService tripExecutionService,
             IAuditLogService auditLogService,
             IRouteStopService routeStopService,
             ITripStudentService tripStudentService,

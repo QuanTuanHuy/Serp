@@ -165,7 +165,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         response.setDirection(req.getRouteDirection());
         response.setRouteDirection(req.getRouteDirection());
         response.setPlanningMethod(req.getPlanningMethod());
-        response.setDefaultBusCapacity(req.getDefaultBusCapacity());
         response.setSummary(summary);
         response.setEligibleDemands(eligibleDemands);
         response.setPoints(new ArrayList<>(pointMap.values()));
@@ -388,6 +387,15 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         session.setStatus(PlanningSessionStatus.CANCELLED);
         session.markUpdated(actor(actorId));
         return toResponse(sessionRepository.save(session));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRouteInSession(Long sessionId, Long routeId, Long tenantId, Long actorId) {
+        RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
+        requireSessionEditable(session);
+        routeService.deleteRoute(sessionId, routeId, tenantId, actorId);
+        refreshSessionSummary(sessionId, tenantId);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

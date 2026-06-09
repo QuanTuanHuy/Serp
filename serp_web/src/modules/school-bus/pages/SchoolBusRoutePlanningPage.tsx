@@ -107,8 +107,7 @@ export default function SchoolBusRoutePlanningPage() {
   const [form, setForm] = useState<ContextFormState>({
     schoolId: '', schoolScheduleId: '',
     serviceDate: new Date().toISOString().slice(0, 10),
-    routeDirection: 'OUTBOUND', planningMethod: 'MANUAL', defaultBusCapacity: '30',
-    depotId: '',
+    routeDirection: 'OUTBOUND', planningMethod: 'MANUAL',
   });
 
   const searchParams = useSearchParams();
@@ -183,6 +182,7 @@ export default function SchoolBusRoutePlanningPage() {
     { skip: !selectedRouteId }
   );
   const selectedRouteStops = selectedRouteDetailData?.data?.stops ?? [];
+  const selectedRoute = selectedRouteDetailData?.data?.route ?? null;
 
   // ── Route path (actual road geometry) ─────────────────────────────────────
   const { data: selectedRoutePathData } = useGetRoutePathQuery(
@@ -193,7 +193,6 @@ export default function SchoolBusRoutePlanningPage() {
 
   // Check session context alignment when planning context changes
   React.useEffect(() => {
-    setSelectedRouteId(null);
     if (activeSession && activeSession.id === activeSessionId) {
       const isContextMatch =
         Number(form.schoolId) === activeSession.schoolId &&
@@ -204,9 +203,15 @@ export default function SchoolBusRoutePlanningPage() {
 
       if (!isContextMatch) {
         setActiveSessionId(null);
+        setSelectedRouteId(null);
       }
     }
-  }, [form.schoolId, form.schoolScheduleId, form.serviceDate, form.routeDirection, form.planningMethod, form.depotId, form.defaultBusCapacity, activeSession, activeSessionId]);
+  }, [form.schoolId, form.schoolScheduleId, form.serviceDate, form.routeDirection, form.planningMethod, activeSession, activeSessionId]);
+
+  // Reset selected route when active session changes
+  React.useEffect(() => {
+    setSelectedRouteId(null);
+  }, [activeSessionId]);
 
   // Auto-hydrate session from query params
   React.useEffect(() => {
@@ -275,8 +280,6 @@ export default function SchoolBusRoutePlanningPage() {
         serviceDate: form.serviceDate,
         routeDirection: form.routeDirection,
         planningMethod: form.planningMethod,
-        depotId: form.depotId ? Number(form.depotId) : undefined,
-        defaultBusCapacity: form.defaultBusCapacity ? Number(form.defaultBusCapacity) : undefined,
       }).unwrap();
       setPreview(res.data);
       setRightPanelTab('demand-preview');
@@ -518,7 +521,6 @@ export default function SchoolBusRoutePlanningPage() {
                 onPreview={handlePreview} onCreateSession={handleCreateSession}
                 previewing={previewing} creating={creating}
                 sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
-                depots={depots}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
@@ -554,6 +556,7 @@ export default function SchoolBusRoutePlanningPage() {
                   pickupPoints={mapPickupPoints}
                   selectedRouteStops={selectedRouteStops}
                   selectedRoutePath={selectedRoutePath}
+                  selectedRoute={selectedRoute}
                   depots={depots}
                   fitTarget={fitTarget}
                   fitKey={fitKey}
@@ -628,7 +631,6 @@ export default function SchoolBusRoutePlanningPage() {
                 onPreview={handlePreview} onCreateSession={handleCreateSession}
                 previewing={previewing} creating={creating}
                 sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
-                depots={depots}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
@@ -667,6 +669,7 @@ export default function SchoolBusRoutePlanningPage() {
                     pickupPoints={mapPickupPoints}
                     selectedRouteStops={selectedRouteStops}
                     selectedRoutePath={selectedRoutePath}
+                    selectedRoute={selectedRoute}
                     depots={depots}
                     fitTarget={fitTarget}
                     fitKey={fitKey}

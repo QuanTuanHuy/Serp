@@ -23,6 +23,8 @@ export interface SchoolBusListParams {
   sortBy?: string;
   sortDirection?: 'ASC' | 'DESC';
   keyword?: string;
+  depotId?: number;
+  homeDepotId?: number;
 }
 
 export interface SchoolBusBaseRecord {
@@ -316,6 +318,17 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   plannedDurationMin?: number | null;
   plannedStudentCount?: number | null;
   assignedBusCapacity?: number | null;
+  busId?: number | null;
+  busPlateNumber?: string | null;
+  busName?: string | null;
+  busCapacity?: number | null;
+  busStatus?: string | null;
+  stopsCount?: number | null;
+  driverId?: number | null;
+  driverName?: string | null;
+  attendantId?: number | null;
+  attendantName?: string | null;
+  startDepotName?: string | null;
   routeGenerationMethod?: string | null;
   versionNo?: number | null;
   planningNotes?: string | null;
@@ -350,6 +363,8 @@ export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   locationType?: string | null;   // DEPOT | SCHOOL | PICKUP_POINT
   stopPurpose?: string | null;    // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
   displayName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   pickupPointId?: number | null;
   pickupPointName?: string | null;
   pickupPointAddress?: string | null;
@@ -792,7 +807,7 @@ export interface SchoolBusRouteUpsertRequest {
 }
 
 export interface SchoolBusRouteAssignmentRequest {
-  busId: number;
+  busId?: number | null;
   driverId: number;
   attendantId?: number | null;
   assignmentNote?: string | null;
@@ -997,10 +1012,6 @@ export interface SchoolBusPlanningPreview {
   serviceDayOfWeek?: string;
   direction?: string;
   planningMethod?: string;
-  depotId?: number;
-  depotCode?: string;
-  depotName?: string;
-  defaultBusCapacity?: number;
   summary?: PlanningReadinessSummary;
   eligibleDemands?: PlanningDemandResponse[];
   points?: PlanningPointResponse[];
@@ -1023,8 +1034,6 @@ export interface PlanningSessionPreviewRequest {
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod?: PlanningMethod;
-  depotId?: number;
-  defaultBusCapacity?: number;
 }
 
 export interface CreateRouteInSessionRequest {
@@ -1036,6 +1045,7 @@ export interface CreateRouteInSessionRequest {
   endLocationType: 'SCHOOL' | 'DEPOT';
   endSchoolId?: number;
   endDepotId?: number;
+  busId: number;
   routeName: string;
   serviceDate: string;
   schoolScheduleId: number;

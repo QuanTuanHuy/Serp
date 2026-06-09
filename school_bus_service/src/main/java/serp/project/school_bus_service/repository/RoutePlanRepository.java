@@ -21,6 +21,22 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
                                                               @Param("tenantId") Long tenantId);
 
     @Query("""
+        SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM RoutePlanEntity r
+        WHERE r.tenantId = :tenantId
+          AND r.isDeleted = false
+          AND r.isActive = true
+          AND r.planningSession.id = :sessionId
+          AND r.selectedBus.id = :busId
+          AND (:excludeRouteId IS NULL OR r.id <> :excludeRouteId)
+    """)
+    boolean existsActiveRouteUsingSelectedBusInSession(
+        @Param("tenantId") Long tenantId,
+        @Param("sessionId") Long sessionId,
+        @Param("busId") Long busId,
+        @Param("excludeRouteId") Long excludeRouteId
+    );
+
+    @Query("""
         SELECT r FROM RoutePlanEntity r
         WHERE r.tenantId = :tenantId AND r.isDeleted = false
           AND r.serviceDate = :serviceDate

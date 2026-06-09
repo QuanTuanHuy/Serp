@@ -61,5 +61,8 @@ public interface IRouteStopService extends IBaseService<RouteStopEntity, Long> {
 
     /** Internal: physically deletes a stop entity (used by greedy simulation). */
     void deletePhysical(Long id);
+
+    /** Create or update terminal stops for a route plan and recalculate OSRM geometry. */
+    void updateTerminalStops(serp.project.school_bus_service.entity.RoutePlanEntity route, Long tenantId, Long actorId);
 }
 
