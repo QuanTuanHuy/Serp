@@ -92,22 +92,21 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     private static final int COLUMN_RECEIVER_PROVINCE = 9;
     private static final int COLUMN_RECEIVER_WARD = 10;
     private static final int COLUMN_RECEIVER_ADDRESS = 11;
-    private static final int COLUMN_ORDER_CATEGORY = 12;
-    private static final int COLUMN_ORDER_TYPE = 13;
-    private static final int COLUMN_NOTE = 14;
-    private static final int COLUMN_PICKUP_DATE = 15;
-    private static final int COLUMN_PICKUP_TIME = 16;
-    private static final int COLUMN_DELIVERY_TIME = 17;
-    private static final int COLUMN_COD_FLAG = 18;
-    private static final int COLUMN_DIMENSIONS = 19;
-    private static final int COLUMN_VOLUME = 20;
-    private static final int COLUMN_FEE_PAYER = 21;
-    private static final int COLUMN_PRODUCT_NAME = 22;
-    private static final int COLUMN_PRODUCT_VALUE = 23;
-    private static final int COLUMN_PRODUCT_QUANTITY = 24;
-    private static final int COLUMN_PRODUCT_WEIGHT = 25;
-    private static final int COLUMN_PRODUCT_TYPE = 26;
-    private static final int LAST_COLUMN_INDEX = 26;
+    private static final int COLUMN_ORDER_TYPE = 12;
+    private static final int COLUMN_NOTE = 13;
+    private static final int COLUMN_PICKUP_DATE = 14;
+    private static final int COLUMN_PICKUP_TIME = 15;
+    private static final int COLUMN_DELIVERY_TIME = 16;
+    private static final int COLUMN_COD_FLAG = 17;
+    private static final int COLUMN_DIMENSIONS = 18;
+    private static final int COLUMN_VOLUME = 19;
+    private static final int COLUMN_FEE_PAYER = 20;
+    private static final int COLUMN_PRODUCT_NAME = 21;
+    private static final int COLUMN_PRODUCT_VALUE = 22;
+    private static final int COLUMN_PRODUCT_QUANTITY = 23;
+    private static final int COLUMN_PRODUCT_WEIGHT = 24;
+    private static final int COLUMN_PRODUCT_TYPE = 25;
+    private static final int LAST_COLUMN_INDEX = 25;
 
     private static final DateTimeFormatter IMPORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("d/M/uuuu");
     private static final DateTimeFormatter ORDER_CODE_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
@@ -133,7 +132,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             "Tỉnh/thành phố (*)",
             "Phường/xã (*)",
             "Địa chỉ chi tiết (*)",
-            "Phân loại đơn hàng (*)",
             "Loại vận chuyển (*)",
             "Ghi chú",
             "Ngày hẹn lấy (dd/mm/yyyy)",
@@ -163,7 +161,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             "receiver_province_code",
             "receiver_ward_code",
             "receiver_address_detail",
-            "order_product_category",
             "order_type",
             "note",
             "pickup_date",
@@ -178,15 +175,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
             "product_quantity",
             "product_weight_gram",
             "product_type"
-    );
-
-    private static final Map<String, OrderProductCategory> ORDER_CATEGORY_MAP = Map.of(
-            "dễ vỡ", OrderProductCategory.FRAGILE,
-            "giá trị cao", OrderProductCategory.HIGH_VALUE,
-            "nguyên khối", OrderProductCategory.SOLID,
-            "quá khổ", OrderProductCategory.OVERSIZED,
-            "chất lỏng", OrderProductCategory.LIQUID,
-            "từ tính/pin", OrderProductCategory.MAGNETIC_BATTERY
     );
 
     private static final Map<String, OrderType> ORDER_TYPE_MAP = Map.of(
@@ -490,7 +478,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 .dimensions(dimensions)
                 .totalVolume(orderImport.getTotalVolumeM3())
                 .pickupAttempts(0)
-                .orderProductCategory(orderImport.getOrderProductCategory())
                 .orderType(orderImport.getOrderType())
                 .baseShippingFee(0L)
                 .codFee(0L)
@@ -869,17 +856,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 masterData,
                 errors
         );
-
-        order.setOrderProductCategory(mapRequiredValue(
-                row,
-                COLUMN_ORDER_CATEGORY,
-                excelRowNumber,
-                formatter,
-                evaluator,
-                ORDER_CATEGORY_MAP,
-                message("order.import.allowed.order_category"),
-                errors
-        ));
 
         order.setOrderType(mapRequiredValue(
                 row,

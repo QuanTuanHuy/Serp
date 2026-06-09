@@ -11,7 +11,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.tms_order.domain.Dimension;
-import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.OrderSyncEventSource;
 import serp.project.tms_order.enums.OrderType;
@@ -46,9 +45,6 @@ public class OrderSyncEvent {
 
     @JsonProperty("total_volume")
     private Double totalVolume;
-
-    @JsonProperty("order_product_category")
-    private OrderProductCategory orderProductCategory;
 
     @JsonProperty("order_type")
     private OrderType orderType;

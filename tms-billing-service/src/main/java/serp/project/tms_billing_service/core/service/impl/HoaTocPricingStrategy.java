@@ -14,7 +14,6 @@ import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
-import serp.project.tms_billing_service.dto.request.SpecialCargoRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.dto.response.FeeLineItemResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
@@ -122,47 +121,6 @@ public class HoaTocPricingStrategy implements IDeliveryPricingStrategy {
                     .name(remoteRule.getName())
                     .category("SURCHARGE")
                     .amount(remoteAreaFee)
-                    .build());
-        }
-
-        SpecialCargoRequest specialCargo = request.getSpecialCargo();
-        if (specialCargo == null) {
-            return totalSurcharge;
-        }
-
-        if (specialCargo.isImportantDocument()) {
-            SurchargeRule documentRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.CHUNG_TU_QUAN_TRONG);
-            long documentFee = requiredLong(documentRule.getFixedAmount(), "surcharge.fixedAmount");
-            totalSurcharge += documentFee;
-            feeItems.add(FeeLineItemResponse.builder()
-                    .code(documentRule.getCode().name())
-                    .name(documentRule.getName())
-                    .category("SURCHARGE")
-                    .amount(documentFee)
-                    .build());
-        }
-
-        if (specialCargo.isFragile()) {
-            SurchargeRule fragileRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.DE_VO);
-            long fragileFee = calculatePerKgSurcharge(chargeableWeight, fragileRule);
-            totalSurcharge += fragileFee;
-            feeItems.add(FeeLineItemResponse.builder()
-                    .code(fragileRule.getCode().name())
-                    .name(fragileRule.getName())
-                    .category("SURCHARGE")
-                    .amount(fragileFee)
-                    .build());
-        }
-
-        if (specialCargo.isLiquid()) {
-            SurchargeRule liquidRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.CHAT_LONG);
-            long liquidFee = calculatePerKgSurcharge(chargeableWeight, liquidRule);
-            totalSurcharge += liquidFee;
-            feeItems.add(FeeLineItemResponse.builder()
-                    .code(liquidRule.getCode().name())
-                    .name(liquidRule.getName())
-                    .category("SURCHARGE")
-                    .amount(liquidFee)
                     .build());
         }
 

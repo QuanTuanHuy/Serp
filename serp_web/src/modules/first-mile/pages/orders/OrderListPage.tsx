@@ -994,9 +994,6 @@ export const OrderListPage: React.FC = () => {
         : {}),
       delivery_request_time: createForm.deliveryRequestTime,
       pickup_method: createForm.pickupMethod,
-      ...(createForm.orderProductCategory !== 'NONE'
-        ? { order_product_category: createForm.orderProductCategory }
-        : {}),
       order_type: createForm.orderType,
       fee_payer: createForm.feePayer,
       is_cod: createForm.isCod === 'true',
