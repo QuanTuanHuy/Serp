@@ -4,6 +4,7 @@
  */
 
 export * from './billing.types';
+export * from './dashboard';
 export * from './lastMile.types';
 
 export interface FirstMileApiResponse<T> {
@@ -876,14 +877,6 @@ export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
 
 export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
 
-export type FirstMileOrderProductCategory =
-  | 'HIGH_VALUE'
-  | 'FRAGILE'
-  | 'SOLID'
-  | 'OVERSIZED'
-  | 'LIQUID'
-  | 'MAGNETIC_BATTERY';
-
 export interface FirstMileOrderProductItem {
   id?: number;
   name?: string;
@@ -919,7 +912,6 @@ export interface FirstMileOrderDetail {
   pickupTimeStart?: string;
   pickupTimeEnd?: string;
   deliveryRequestTime?: FirstMileDeliveryRequestTime;
-  orderProductCategory?: FirstMileOrderProductCategory;
   orderType?: FirstMileOrderType;
   feePayer?: FirstMileFeePayer;
   paymentStatus?: FirstMilePaymentStatus;
@@ -1015,7 +1007,6 @@ export interface CreateOrderRequest {
   pickup_time_end?: string;
   delivery_request_time: FirstMileDeliveryRequestTime;
   pickup_method?: FirstMileOrderPickupMethod;
-  order_product_category?: FirstMileOrderProductCategory;
   order_type: FirstMileOrderType;
   fee_payer: FirstMileFeePayer;
   is_cod?: boolean;
@@ -1586,7 +1577,6 @@ export interface OrderImportItem {
   receiver_province_code?: string;
   receiver_ward_code?: string;
   receiver_address_detail?: string;
-  order_product_category?: string;
   order_type?: string;
   note?: string;
   pickup_date?: string;

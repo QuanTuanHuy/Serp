@@ -62,7 +62,6 @@ public class OrderSyncEventPublisher {
                 .destinationPostOfficeCode(order.getDestinationPostOfficeCode())
                 .status(order.getStatus())
                 .note(order.getNote())
-                .orderProductCategory(order.getOrderProductCategory())
                 .orderType(order.getOrderType())
                 .totalWeight(order.getTotalWeight())
                 .totalVolume(order.getTotalVolume())

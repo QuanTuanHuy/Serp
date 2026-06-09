@@ -15,6 +15,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.enums.OrderStatus;
+import serp.project.tms_order.enums.OrderType;
+import serp.project.tms_order.repository.projection.OrderDashboardSliceProjection;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -132,5 +134,64 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("tenantId") Long tenantId,
             @Param("destinationPostOfficeCode") String destinationPostOfficeCode,
             @Param("statuses") Collection<OrderStatus> statuses
+    );
+
+    @Query("""
+            select
+                o.id as id,
+                o.orderCode as orderCode,
+                o.customerOrderCode as customerOrderCode,
+                o.status as status,
+                o.originPostOfficeCode as originPostOfficeCode,
+                o.destinationPostOfficeCode as destinationPostOfficeCode,
+                o.createdAt as createdAt,
+                o.updatedAt as updatedAt,
+                o.pickupTimeEnd as pickupTimeEnd,
+                o.totalShippingFee as totalShippingFee,
+                o.baseShippingFee as baseShippingFee,
+                o.codFee as codFee,
+                o.extraFee as extraFee,
+                o.codAmount as codAmount,
+                o.paymentStatus as paymentStatus
+            from Order o
+            where o.tenantId = :tenantId
+                and o.createdAt >= :fromDateTime
+                and o.createdAt < :toDateTime
+                and (:serviceType is null or o.orderType = :serviceType)
+                and (
+                    :postOfficeCodesEmpty = true
+                    or upper(o.originPostOfficeCode) in :postOfficeCodes
+                    or upper(o.destinationPostOfficeCode) in :postOfficeCodes
+                )
+            """)
+    List<OrderDashboardSliceProjection> findDashboardSlices(
+            @Param("tenantId") Long tenantId,
+            @Param("fromDateTime") LocalDateTime fromDateTime,
+            @Param("toDateTime") LocalDateTime toDateTime,
+            @Param("postOfficeCodes") Collection<String> postOfficeCodes,
+            @Param("postOfficeCodesEmpty") boolean postOfficeCodesEmpty,
+            @Param("serviceType") OrderType serviceType
+    );
+
+    @Query("""
+            select count(o)
+            from Order o
+            where o.tenantId = :tenantId
+                and o.createdAt >= :fromDateTime
+                and o.createdAt < :toDateTime
+                and (:serviceType is null or o.orderType = :serviceType)
+                and (
+                    :postOfficeCodesEmpty = true
+                    or upper(o.originPostOfficeCode) in :postOfficeCodes
+                    or upper(o.destinationPostOfficeCode) in :postOfficeCodes
+                )
+            """)
+    long countDashboardOrders(
+            @Param("tenantId") Long tenantId,
+            @Param("fromDateTime") LocalDateTime fromDateTime,
+            @Param("toDateTime") LocalDateTime toDateTime,
+            @Param("postOfficeCodes") Collection<String> postOfficeCodes,
+            @Param("postOfficeCodesEmpty") boolean postOfficeCodesEmpty,
+            @Param("serviceType") OrderType serviceType
     );
 }

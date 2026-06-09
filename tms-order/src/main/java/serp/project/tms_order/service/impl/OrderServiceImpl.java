@@ -110,7 +110,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int START_ROW_INDEX = 1;
     private static final int WARD_COLUMN_INDEX = 0;
     private static final int PROVINCE_COLUMN_INDEX = 1;
-    private static final int PRODUCT_TYPE_COLUMN_INDEX = 5;
+    private static final int PRODUCT_TYPE_COLUMN_INDEX = 4;
     private static final int DEFAULT_DROP_OFF_SUGGESTION_LIMIT = 5;
     private static final int MAX_DROP_OFF_SUGGESTION_LIMIT = 20;
 
@@ -671,7 +671,6 @@ public class OrderServiceImpl implements OrderService {
         order.setPickupMethod(request.getPickupMethod() == null
                 ? OrderPickupMethod.COURIER_PICKUP
                 : request.getPickupMethod());
-        order.setOrderProductCategory(request.getOrderProductCategory());
         order.setOrderType(request.getOrderType());
         order.setFeePayer(request.getFeePayer());
         order.setNote(normalizeText(request.getNote()));

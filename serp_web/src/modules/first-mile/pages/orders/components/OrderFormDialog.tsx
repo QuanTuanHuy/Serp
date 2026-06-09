@@ -28,7 +28,6 @@ import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
   ORDER_PICKUP_METHOD_OPTIONS,
-  ORDER_PRODUCT_CATEGORY_OPTIONS,
   ORDER_TYPE_OPTIONS,
   type CreateOrderFormState,
   type LocationTarget,
@@ -137,10 +136,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
   const codOptions = [
     { value: 'false', label: 'No COD' },
     { value: 'true', label: 'COD' },
-  ];
-  const productCategoryOptions = [
-    { value: 'NONE', label: 'No category' },
-    ...ORDER_PRODUCT_CATEGORY_OPTIONS,
   ];
   const productTypeComboboxOptions = productTypeOptions.map((productType) => ({
     value: String(productType.id),
@@ -541,23 +536,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={codOptions}
                   placeholder='Select COD option'
                   emptyText='No COD options found'
-                />
-              </div>
-
-              <div className='space-y-2 md:col-span-2'>
-                <Label htmlFor='orderProductCategory'>Product category</Label>
-                <TmsCombobox
-                  id='orderProductCategory'
-                  value={createForm.orderProductCategory}
-                  onValueChange={(value) =>
-                    onFormChange(
-                      'orderProductCategory',
-                      value as CreateOrderFormState['orderProductCategory']
-                    )
-                  }
-                  options={productCategoryOptions}
-                  placeholder='Select category (optional)'
-                  emptyText='No categories found'
                 />
               </div>
             </div>

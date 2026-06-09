@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.tms_order.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -7,7 +12,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.tms_order.enums.DeliveryRequestTime;
 import serp.project.tms_order.enums.FeePayer;
-import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderType;
 
 import java.time.LocalDate;
@@ -52,9 +56,6 @@ public class OrderImportDTO {
 
 	@JsonProperty("receiver_address_detail")
 	private String receiverAddressDetail;
-
-	@JsonProperty("order_product_category")
-	private OrderProductCategory orderProductCategory;
 
 	@JsonProperty("order_type")
 	private OrderType orderType;

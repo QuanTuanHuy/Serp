@@ -12,7 +12,6 @@ import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
-import serp.project.tms_billing_service.dto.request.SpecialCargoRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
 import serp.project.tms_billing_service.enums.DeliveryService;
@@ -48,11 +47,6 @@ class HoaTocPricingStrategyTest {
         request.setCodAmount(100_000L);
         request.setDeclaredValue(4_000_000L);
 
-        SpecialCargoRequest specialCargo = new SpecialCargoRequest();
-        specialCargo.setImportantDocument(true);
-        specialCargo.setFragile(true);
-        request.setSpecialCargo(specialCargo);
-
         Tariff tariff = Tariff.builder()
                 .baseWeight(2000d)
                 .basePrice(20000d)
@@ -67,18 +61,6 @@ class HoaTocPricingStrategyTest {
                 .basePrice(7000d)
                 .stepWeight(500d)
                 .stepPrice(500d)
-                .build();
-        SurchargeRule documentRule = SurchargeRule.builder()
-                .code(SurchargeRuleEnum.CHUNG_TU_QUAN_TRONG)
-                .name("Phụ phí chứng từ quan trọng")
-                .calculationType(CalculationType.FIXED_PER_ORDER)
-                .fixedAmount(5000d)
-                .build();
-        SurchargeRule fragileRule = SurchargeRule.builder()
-                .code(SurchargeRuleEnum.DE_VO)
-                .name("Phụ phí hàng dễ vỡ")
-                .calculationType(CalculationType.FIXED_PER_KG)
-                .fixedAmount(1000d)
                 .build();
         SurchargeRule oversizeRule = SurchargeRule.builder()
                 .code(SurchargeRuleEnum.QUA_KHO)
@@ -99,17 +81,15 @@ class HoaTocPricingStrategyTest {
         when(chargeableWeightService.calculate(2200L, 130, 20, 20)).thenReturn(2500L);
         when(pricingRuleService.getTariff(DeliveryService.HOA_TOC, RouteType.NOI_MIEN)).thenReturn(tariff);
         when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA)).thenReturn(remoteRule);
-        when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.CHUNG_TU_QUAN_TRONG)).thenReturn(documentRule);
-        when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.DE_VO)).thenReturn(fragileRule);
         when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.QUA_KHO)).thenReturn(oversizeRule);
         when(pricingRuleService.getRequiredVasRule(VasRuleCode.BAO_HIEM)).thenReturn(insuranceRule);
 
         CalculateShippingFeeResponse result = hoaTocPricingStrategy.calculate(request);
 
         assertEquals(24_000L, result.getBaseFee());
-        assertEquals(19_500L, result.getSurchargeFee());
+        assertEquals(12_000L, result.getSurchargeFee());
         assertEquals(20_000L, result.getVasFee());
-        assertEquals(63_500L, result.getTotalFee());
-        assertEquals(7, result.getFeeItems().size());
+        assertEquals(56_000L, result.getTotalFee());
+        assertEquals(5, result.getFeeItems().size());
     }
 }

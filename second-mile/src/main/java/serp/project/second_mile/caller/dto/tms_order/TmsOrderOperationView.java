@@ -11,7 +11,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.domain.Dimension;
-import serp.project.second_mile.enums.OrderProductCategory;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.OrderType;
 
@@ -33,7 +32,6 @@ public class TmsOrderOperationView {
     private Double totalWeight;
     private Double totalVolume;
     private Dimension dimensions;
-    private OrderProductCategory orderProductCategory;
     private OrderType orderType;
     private String note;
     private String createdBy;

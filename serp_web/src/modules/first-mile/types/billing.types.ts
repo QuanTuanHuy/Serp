@@ -28,12 +28,6 @@ export type BillingSurchargeRuleCode =
 
 export type BillingVasRuleCode = 'COD' | 'BAO_HIEM';
 
-export interface BillingSpecialCargoRequest {
-  importantDocument: boolean;
-  fragile: boolean;
-  liquid: boolean;
-}
-
 export interface CalculateShippingFeeRequest {
   serviceCode: BillingDeliveryService;
   senderWardCode: string;
@@ -44,7 +38,6 @@ export interface CalculateShippingFeeRequest {
   heightCm: number;
   codAmount?: number;
   declaredValue?: number;
-  specialCargo?: BillingSpecialCargoRequest;
 }
 
 export interface FeeLineItemResponse {
