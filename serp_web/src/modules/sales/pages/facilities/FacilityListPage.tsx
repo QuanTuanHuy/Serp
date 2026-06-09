@@ -38,6 +38,7 @@ import {
 } from '../../store/selectors';
 import type { Facility, FacilityStatus } from '../../types';
 import { formatPhoneNumber } from '@/shared/utils/format';
+import { useUser } from '@/modules/account';
 
 interface FacilityListPageProps {
   className?: string;
@@ -123,11 +124,13 @@ const StatsCard = ({
 
 const FacilityCard = ({
   facility,
+  canEdit = false,
   onClick,
   onEdit,
   onDelete,
 }: {
   facility: Facility;
+  canEdit?: boolean;
   onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -198,32 +201,34 @@ const FacilityCard = ({
             </div>
           </div>
 
-          <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.();
-              }}
-              title='Chỉnh sửa'
-            >
-              <Edit className='h-4 w-4' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-              }}
-              title='Xóa'
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          </div>
+          {canEdit && (
+            <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
+                title='Chỉnh sửa'
+              >
+                <Edit className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                }}
+                title='Xóa'
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Info */}
@@ -291,6 +296,9 @@ export const FacilityListPage: React.FC<FacilityListPageProps> = ({
   const router = useRouter();
   const dispatch = useAppDispatch();
 
+  const { user } = useUser();
+  const isSalesAdmin = user?.roles.includes('SALES_ADMIN');
+
   const pagination = useAppSelector(selectFacilityPagination);
   const filters = useAppSelector(selectFacilityFilters);
 
@@ -355,13 +363,15 @@ export const FacilityListPage: React.FC<FacilityListPageProps> = ({
           <h1 className='text-2xl font-bold tracking-tight'>Kho hàng</h1>
           <p className='text-muted-foreground'>Quản lý kho hàng của bạn</p>
         </div>
-        <Button
-          onClick={() => router.push('/sales/facility/new')}
-          className='gap-2'
-        >
-          <Plus className='h-4 w-4' />
-          Thêm kho hàng mới
-        </Button>
+        {isSalesAdmin && (
+          <Button
+            onClick={() => router.push('/sales/facility/new')}
+            className='gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            Thêm kho hàng mới
+          </Button>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -505,6 +515,7 @@ export const FacilityListPage: React.FC<FacilityListPageProps> = ({
           {facilities.map((facility: Facility) => (
             <FacilityCard
               key={facility.id}
+              canEdit={isSalesAdmin}
               facility={facility}
               onClick={() => router.push(`/sales/facility/${facility.id}`)}
               onEdit={() => router.push(`/sales/facility/${facility.id}/edit`)}
