@@ -322,15 +322,6 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
             Theo dõi và quản lý tất cả các mặt hàng trong kho
           </p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button
-            onClick={() => router.push('/sales/inventory/new')}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Nhập kho
-          </Button>
-        </div>
       </div>
 
       {/* Quick Stats */}
@@ -613,14 +604,9 @@ export const InventoryListPage: React.FC<InventoryListPageProps> = ({
                 ? 'Thử điều chỉnh bộ lọc để xem thêm kết quả.'
                 : 'Bắt đầu bằng cách nhập hàng vào kho.'}
             </p>
-            {hasActiveFilters ? (
+            {hasActiveFilters && (
               <Button variant='outline' onClick={clearFilters}>
                 Xóa bộ lọc
-              </Button>
-            ) : (
-              <Button onClick={() => router.push('/sales/inventory/new')}>
-                <Plus className='h-4 w-4 mr-2' />
-                Nhập kho
               </Button>
             )}
           </CardContent>
