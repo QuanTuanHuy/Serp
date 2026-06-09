@@ -35,6 +35,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/store';
 import { setSupplierFilters } from '../../store';
 import { selectSupplierFilters } from '../../store/selectors';
 import type { Supplier, SupplierStatus } from '../../types';
+import { useUser } from '@/modules/account';
 
 interface SupplierListPageProps {
   className?: string;
@@ -122,11 +123,13 @@ const StatsCard = ({
 
 const SupplierCard = ({
   supplier,
+  canEdit = false,
   onClick,
   onEdit,
   onDelete,
 }: {
   supplier: Supplier;
+  canEdit?: boolean;
   onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -197,32 +200,34 @@ const SupplierCard = ({
             </div>
           </div>
 
-          <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.();
-              }}
-              title='Chỉnh sửa'
-            >
-              <Edit className='h-4 w-4' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-              }}
-              title='Xóa'
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          </div>
+          {canEdit && (
+            <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
+                title='Chỉnh sửa'
+              >
+                <Edit className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                }}
+                title='Xóa'
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Contact Info */}
@@ -294,6 +299,11 @@ export const SupplierListPage: React.FC<SupplierListPageProps> = ({
 }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+
+  const { user } = useUser();
+  const hasEditPermission =
+    user?.roles?.includes('PURCHASE_MANAGER') ||
+    user?.roles?.includes('PURCHASE_ADMIN');
 
   const filters = useAppSelector(selectSupplierFilters);
 
@@ -368,15 +378,17 @@ export const SupplierListPage: React.FC<SupplierListPageProps> = ({
           <h1 className='text-2xl font-bold tracking-tight'>Nhà cung cấp</h1>
           <p className='text-muted-foreground'>Quản lý nhà cung cấp của bạn</p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button
-            onClick={() => router.push('/purchase/suppliers/new')}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Thêm nhà cung cấp mới
-          </Button>
-        </div>
+        {hasEditPermission && (
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={() => router.push('/purchase/suppliers/new')}
+              className='gap-2'
+            >
+              <Plus className='h-4 w-4' />
+              Thêm nhà cung cấp mới
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -523,6 +535,7 @@ export const SupplierListPage: React.FC<SupplierListPageProps> = ({
             <SupplierCard
               key={supplier.id}
               supplier={supplier}
+              canEdit={hasEditPermission}
               onClick={() => handleViewSupplier(supplier.id)}
               onEdit={() => handleEditSupplier(supplier.id)}
               onDelete={() => handleDeleteSupplier(supplier.id)}

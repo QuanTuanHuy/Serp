@@ -488,7 +488,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               <span className='font-medium'>
                 {item.receivedDate
                   ? formatDateStringVN(item.receivedDate)
-                  : 'Chưa nhập'}
+                  : 'Không xác định'}
               </span>
             </div>
             <div className='flex justify-between items-center'>
@@ -509,7 +509,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 <span className='font-medium'>
                   {item.manufacturingDate
                     ? formatDateStringVN(item.manufacturingDate)
-                    : 'Không có'}
+                    : 'Không xác định'}
                 </span>
               )}
             </div>
@@ -531,7 +531,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 <span className='font-medium'>
                   {item.expirationDate
                     ? formatDateStringVN(item.expirationDate)
-                    : 'Không có'}
+                    : 'Không xác định'}
                 </span>
               )}
             </div>

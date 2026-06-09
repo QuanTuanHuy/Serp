@@ -29,10 +29,14 @@ import {
 } from '@/shared/components/ui/table';
 import { Badge } from '@/shared/components/ui/badge';
 import { formatStringCurrencyVN } from '@/shared/utils/format';
+import { useUser } from '@/modules/account';
 
 export const ProductListPage: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+
+  const { user } = useUser();
+
   const filters = useAppSelector(selectProductFilters);
 
   const [pagination, setPagination] = React.useState({ page: 0, size: 10 });
@@ -47,6 +51,8 @@ export const ProductListPage: React.FC = () => {
     null
   );
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+
+  const isPurchaseAdmin = user?.roles?.includes('PURCHASE_ADMIN');
 
   const handleSearch = () => {
     dispatch(setProductFilters({ ...filters, query: searchTerm }));
@@ -63,10 +69,12 @@ export const ProductListPage: React.FC = () => {
           <h1 className='text-3xl font-bold tracking-tight'>Sản phẩm</h1>
           <p className='text-muted-foreground'>Quản lý danh mục sản phẩm</p>
         </div>
-        <Button onClick={() => router.push('/purchase/products/new')}>
-          <Plus className='mr-2 h-4 w-4' />
-          Thêm Sản Phẩm
-        </Button>
+        {isPurchaseAdmin && (
+          <Button onClick={() => router.push('/purchase/products/new')}>
+            <Plus className='mr-2 h-4 w-4' />
+            Thêm Sản Phẩm
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -114,7 +122,9 @@ export const ProductListPage: React.FC = () => {
                       key={product.id}
                       onClick={() => {
                         setSelectedProduct(product);
-                        setEditDialogOpen(true);
+                        if (isPurchaseAdmin) {
+                          setEditDialogOpen(true);
+                        }
                       }}
                       className='cursor-pointer hover:bg-muted/50'
                     >
