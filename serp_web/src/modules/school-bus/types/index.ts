@@ -25,6 +25,8 @@ export interface SchoolBusListParams {
   keyword?: string;
   depotId?: number;
   homeDepotId?: number;
+  schoolId?: number;
+  parentProfileId?: number;
 }
 
 export interface SchoolBusBaseRecord {

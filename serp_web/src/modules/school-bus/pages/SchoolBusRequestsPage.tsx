@@ -366,7 +366,7 @@ export function SchoolBusRequestsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title={access.isParent ? 'My transport requests' : 'Transport request queue'}
+        title='Transport Requests'
         description={
           access.isParent
             ? 'Track the status of your transport requests and create new ones.'
@@ -376,7 +376,7 @@ export function SchoolBusRequestsPage() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: access.isParent ? 'My Requests' : 'Requests', current: true },
+              { label: 'Transport Requests', current: true },
             ]}
           />
         }

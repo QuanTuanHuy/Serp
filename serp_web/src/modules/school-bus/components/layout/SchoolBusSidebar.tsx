@@ -15,6 +15,48 @@ import { useSidebarContext } from '@/shared/components';
 import { SidebarMenuItemComponent } from '@/shared/components/DynamicSidebar/SidebarMenuItem';
 import { useSchoolBusAccess, canAccessSchoolBusRoute } from '../../security/schoolBusAccess';
 
+const sanitizeMenuName = (name: string): string => {
+  if (!name) return name;
+  const mappings: Record<string, string> = {
+    'My transport requests': 'Transport Requests',
+    'my transport requests': 'Transport Requests',
+    'My Requests': 'Transport Requests',
+    'my requests': 'Transport Requests',
+    'My subscriptions': 'Subscriptions',
+    'my subscriptions': 'Subscriptions',
+    'My Subscriptions': 'Subscriptions',
+    'My trips': 'Trips',
+    'my trips': 'Trips',
+    'My Trips': 'Trips',
+    'My attendance': 'Attendance',
+    'my attendance': 'Attendance',
+    'My Attendance': 'Attendance',
+    'My children': 'Student Profiles',
+    'my children': 'Student Profiles',
+    'My Children': 'Student Profiles',
+    'My route': 'Assigned Route',
+    'my route': 'Assigned Route',
+    'My Route': 'Assigned Route',
+    'My schedule': 'Schedule',
+    'my schedule': 'Schedule',
+    'My Schedule': 'Schedule',
+  };
+  if (mappings[name]) return mappings[name];
+  if (/^my\s+/i.test(name)) {
+    const stripped = name.substring(3).trim();
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  }
+  return name;
+};
+
+const sanitizeMenuItem = (item: any): any => {
+  return {
+    ...item,
+    name: sanitizeMenuName(item.name),
+    children: item.children ? item.children.map(sanitizeMenuItem) : undefined,
+  };
+};
+
 interface SchoolBusSidebarProps {
   className?: string;
 }
@@ -164,6 +206,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
           <>
             {menuItems
               .filter((item) => canAccessSchoolBusRoute(roles, item.href))
+              .map(sanitizeMenuItem)
               .map((item) => (
                 <SidebarMenuItemComponent
                   key={item.id}

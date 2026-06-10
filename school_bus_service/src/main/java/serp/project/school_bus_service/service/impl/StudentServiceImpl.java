@@ -2,6 +2,7 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 import serp.project.school_bus_service.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
@@ -72,11 +73,21 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
 
     @Override
     public PageResponse<StudentResponse> getStudents(StudentParamsRequest params, Long tenantId) {
-        return PageResponse.from(studentRepository.findAll(
-                BaseSpecification.tenantActiveWithKeyword(tenantId,
-                        params == null ? null : params.getKeyword(),
-                        "fullName", "studentCode", "grade", "className", "homeAddress",
-                        "school.name", "parentProfile.fullName", "pickupPoint.name"),
+        Specification<StudentEntity> spec = BaseSpecification.tenantActiveWithKeyword(tenantId,
+                params == null ? null : params.getKeyword(),
+                "fullName", "studentCode", "grade", "className", "homeAddress",
+                "school.name", "parentProfile.fullName", "pickupPoint.name");
+
+        if (params != null) {
+            if (params.getSchoolId() != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("school").get("id"), params.getSchoolId()));
+            }
+            if (params.getParentProfileId() != null) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), params.getParentProfileId()));
+            }
+        }
+
+        return PageResponse.from(studentRepository.findAll(spec,
                 PageableUtils.from(params,
                         Set.of("id", "fullName", "studentCode", "grade", "className", "createdAt", "updatedAt"), "fullName")),
                 mapper::toStudentResponse);

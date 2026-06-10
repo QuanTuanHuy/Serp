@@ -54,6 +54,7 @@ import type {
 import {
   useGetActiveSchoolPickupPointsQuery,
   useGetSchoolBusSubscriptionsQuery,
+  useGetStudentsQuery,
 } from '../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import type { StudentMapMarker } from './map/OperationsMapClient';
@@ -370,7 +371,7 @@ export function TransportRequestForm({
   initialData,
   parents,
   schools,
-  students,
+  students: initialStudents,
   onSubmit,
   isLoading = false,
   onCancel,
@@ -454,6 +455,27 @@ export function TransportRequestForm({
     requestType === 'CHANGE_SERVICE' ||
     requestType === 'RENEW_SERVICE';
 
+  // Dynamically load students based on selected school and parent (to support pagination limits)
+  const { data: dynamicStudentsData, isFetching: isFetchingStudents } = useGetStudentsQuery(
+    {
+      ...SCHOOL_BUS_OPTION_QUERY,
+      schoolId: Number(schoolId) || undefined,
+      parentProfileId: Number(parentProfileId) || undefined,
+      sortBy: 'fullName',
+    },
+    {
+      // Skip query if school or parent isn't selected yet
+      skip: !schoolId || Number(schoolId) === 0 || !parentProfileId || Number(parentProfileId) === 0,
+    }
+  );
+
+  const students = React.useMemo(() => {
+    if (!schoolId || Number(schoolId) === 0 || !parentProfileId || Number(parentProfileId) === 0) {
+      return isParentRole ? initialStudents : [];
+    }
+    return getPageItems(dynamicStudentsData?.data);
+  }, [dynamicStudentsData, schoolId, parentProfileId, isParentRole, initialStudents]);
+
   const filteredStudents = React.useMemo(() => {
     return students.filter(
       (student) =>
@@ -461,6 +483,13 @@ export function TransportRequestForm({
         student.parentProfileId === Number(parentProfileId)
     );
   }, [students, schoolId, parentProfileId]);
+
+  // Reactively set parentProfileId for Parent role once currentParentId resolves
+  React.useEffect(() => {
+    if (isParentRole && currentParentId && !form.getValues('parentProfileId')) {
+      form.setValue('parentProfileId', currentParentId);
+    }
+  }, [currentParentId, isParentRole, form]);
 
   // When schoolId or parentProfileId changes, reset the students field array to avoid invalid/mismatched rows
   const prevSchoolParentRef = React.useRef({ schoolId, parentProfileId });
@@ -561,7 +590,20 @@ export function TransportRequestForm({
       prevStudentIdRef.current[idx] = currentKey;
 
       // Look up student in the full students list (not filteredStudents which may be empty)
-      const st = students.find((s) => s.id === Number(rawId));
+      const st =
+        students.find((s) => s.id === Number(rawId)) ||
+        (() => {
+          const found = initialData?.students?.find((s) => s.studentId === Number(rawId));
+          if (!found) return undefined;
+          return {
+            id: found.studentId,
+            fullName: found.studentName,
+            schoolId: initialData?.request?.schoolId ?? 0,
+            parentProfileId: initialData?.request?.parentProfileId ?? 0,
+            pickupPointId: found.pickupPointId ?? undefined,
+            defaultDropoffPointId: found.dropoffPointId ?? undefined,
+          } as SchoolBusStudent;
+        })();
       if (!st) return;
 
       // Auto-fill pickup from student default (entity field: pickup_point_id)
@@ -888,6 +930,15 @@ export function TransportRequestForm({
                         form={form}
                         name={`students.${index}.studentId`}
                         label='Student *'
+                        emptyText={
+                          isFetchingStudents
+                            ? 'Loading students...'
+                            : !schoolId || Number(schoolId) === 0
+                            ? 'Please select a school first'
+                            : !parentProfileId || Number(parentProfileId) === 0
+                            ? 'Please select a parent first'
+                            : 'No students found matching this school and parent'
+                        }
                         options={filteredStudents.map((student) => ({
                           value: String(student.id),
                           label: student.fullName,
@@ -1709,6 +1760,7 @@ function SelectField({
   onChange,
   className,
   searchable,
+  emptyText,
 }: {
   form: any;
   name: string;
@@ -1724,6 +1776,7 @@ function SelectField({
   onChange?: (value: string) => void;
   className?: string;
   searchable?: boolean;
+  emptyText?: string;
 }) {
   const selectOptions = React.useMemo(() => {
     // Pass through description so SchoolBusSelect renders it as a second line in the dropdown
@@ -1761,6 +1814,7 @@ function SelectField({
               placeholder={placeholder || `Select ${label.toLowerCase()}`}
               options={selectOptions}
               searchable={isSearchable}
+              emptyText={emptyText}
             />
           </FormControl>
           {description ? (
