@@ -867,7 +867,7 @@ export type FirstMileDeliveryRequestTime =
   | 'HOLIDAY'
   | 'BUSINESS_HOURS';
 
-export type FirstMileOrderType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
+export type FirstMileOrderType = 'STANDARD_ORDER';
 
 export type FirstMileOrderPickupMethod =
   | 'COURIER_PICKUP'

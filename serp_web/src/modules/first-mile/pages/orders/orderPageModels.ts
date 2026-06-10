@@ -149,14 +149,6 @@ export const DELIVERY_REQUEST_TIME_OPTIONS: Array<{
   { value: 'HOLIDAY', label: 'Holiday' },
 ];
 
-export const ORDER_TYPE_OPTIONS: Array<{
-  value: FirstMileOrderType;
-  label: string;
-}> = [
-  { value: 'STANDARD_ORDER', label: 'Standard' },
-  { value: 'EXPRESS_ORDER', label: 'Express' },
-];
-
 export const ORDER_PICKUP_METHOD_OPTIONS: Array<{
   value: FirstMileOrderPickupMethod;
   label: string;

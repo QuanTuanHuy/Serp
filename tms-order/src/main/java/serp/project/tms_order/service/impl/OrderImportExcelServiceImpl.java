@@ -178,7 +178,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
     );
 
     private static final Map<String, OrderType> ORDER_TYPE_MAP = Map.of(
-            "hỏa tốc", OrderType.EXPRESS_ORDER,
             "tiêu chuẩn", OrderType.STANDARD_ORDER
     );
 

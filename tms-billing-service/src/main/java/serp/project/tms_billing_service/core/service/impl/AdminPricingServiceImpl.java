@@ -19,6 +19,8 @@ import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminRes
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
+import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
+import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
@@ -27,10 +29,14 @@ import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AdminPricingServiceImpl implements IAdminPricingService {
+    private static final Set<SurchargeRuleEnum> ACTIVE_SURCHARGE_CODES = Set.of(SurchargeRuleEnum.VUNG_XA);
+    private static final Set<VasRuleCode> ACTIVE_VAS_CODES = Set.of(VasRuleCode.COD);
+
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
     private final VasRuleRepository vasRuleRepository;
@@ -64,6 +70,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     @Override
     @Transactional
     public SurchargeRuleAdminResponse upsertSurchargeRule(UpsertSurchargeRuleRequest request) {
+        validateActiveSurchargeCode(request.getCode());
         validateDateRange(request.getEffectiveDate(), request.getExpirationDate());
 
         SurchargeRule rule = surchargeRuleRepository.findByCode(request.getCode()).orElseGet(SurchargeRule::new);
@@ -87,6 +94,8 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     @Override
     @Transactional
     public VasRuleAdminResponse upsertVasRule(UpsertVasRuleRequest request) {
+        validateActiveVasCode(request.getCode());
+
         VasRule rule = vasRuleRepository.findByCode(request.getCode()).orElseGet(VasRule::new);
         rule.setCode(request.getCode());
         rule.setName(request.getName());
@@ -112,6 +121,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     @Override
     public List<SurchargeRuleAdminResponse> listSurchargeRules() {
         return surchargeRuleRepository.findAll().stream()
+                .filter(rule -> rule.getCode() != null && ACTIVE_SURCHARGE_CODES.contains(rule.getCode()))
                 .map(this::toSurchargeResponse)
                 .toList();
     }
@@ -119,8 +129,27 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     @Override
     public List<VasRuleAdminResponse> listVasRules() {
         return vasRuleRepository.findAll().stream()
+                .filter(rule -> rule.getCode() != null && ACTIVE_VAS_CODES.contains(rule.getCode()))
                 .map(this::toVasResponse)
                 .toList();
+    }
+
+    private void validateActiveSurchargeCode(SurchargeRuleEnum code) {
+        if (code == null || !ACTIVE_SURCHARGE_CODES.contains(code)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Surcharge rule is no longer supported for shipping fee calculation"
+            );
+        }
+    }
+
+    private void validateActiveVasCode(VasRuleCode code) {
+        if (code == null || !ACTIVE_VAS_CODES.contains(code)) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "VAS rule is no longer supported for shipping fee calculation"
+            );
+        }
     }
 
     private void validateDateRange(java.time.LocalDate effectiveDate, java.time.LocalDate expirationDate) {

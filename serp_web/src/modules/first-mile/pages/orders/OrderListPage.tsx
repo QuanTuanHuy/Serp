@@ -1108,8 +1108,7 @@ export const OrderListPage: React.FC = () => {
       const heightCm = Math.max(1, Math.round(order.dimensionHeightCm ?? 0));
 
       return {
-        serviceCode:
-          order.orderType === 'EXPRESS_ORDER' ? 'HOA_TOC' : 'TIEU_CHUAN',
+        serviceCode: 'TIEU_CHUAN',
         senderWardCode: order.senderWardCode,
         receiverWardCode: order.receiverWardCode,
         actualWeightGram,
@@ -1118,9 +1117,6 @@ export const OrderListPage: React.FC = () => {
         heightCm,
         ...(order.codAmount && order.codAmount > 0
           ? { codAmount: Math.round(order.codAmount) }
-          : {}),
-        ...(order.totalValue && order.totalValue > 0
-          ? { declaredValue: Math.round(order.totalValue) }
           : {}),
       };
     },

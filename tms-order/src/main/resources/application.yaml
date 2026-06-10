@@ -36,6 +36,7 @@ spring:
         - classpath:db.migration/ward.sql
         - classpath:db.migration/product-type.sql
         - classpath:db.migration/order.sql
+        - classpath:db.migration/order-remove-express-type.sql
         - classpath:db.migration/product.sql
         - classpath:db.migration/order-history.sql
         - classpath:db.migration/order-transition-log.sql

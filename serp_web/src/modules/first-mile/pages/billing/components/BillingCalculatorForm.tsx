@@ -228,21 +228,6 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                 placeholder='Leave empty if not COD'
               />
             </div>
-            <div className='space-y-2'>
-              <Label htmlFor='declaredValue'>Declared Value (VND)</Label>
-              <Input
-                id='declaredValue'
-                inputMode='numeric'
-                value={formValues.declaredValue}
-                onChange={(event) =>
-                  onFormChange((prev) => ({
-                    ...prev,
-                    declaredValue: event.target.value,
-                  }))
-                }
-                placeholder='Leave empty if not declared'
-              />
-            </div>
           </div>
 
           <div className='flex flex-wrap gap-2'>

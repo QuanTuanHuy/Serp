@@ -34,7 +34,7 @@ public class ChargeableWeightService {
         if (chargeableWeight >= MAX_WEIGHT_GRAM) {
             throw new AppException(
                     ErrorCode.WEIGHT_LIMIT_EXCEEDED,
-                    String.format("Hỏa tốc chỉ hỗ trợ kiện hàng dưới 15000 gram, nhận vào %d gram.", chargeableWeight)
+                    String.format("Dịch vụ vận chuyển chỉ hỗ trợ kiện hàng dưới 15000 gram, nhận vào %d gram.", chargeableWeight)
             );
         }
 

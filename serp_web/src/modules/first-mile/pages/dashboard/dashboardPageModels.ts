@@ -76,7 +76,6 @@ export const GRANULARITY_OPTIONS: DashboardOption[] = [
 
 export const SERVICE_TYPE_OPTIONS: DashboardOption[] = [
   { value: 'ALL', label: 'All services' },
-  { value: 'EXPRESS_ORDER', label: 'Express' },
   { value: 'STANDARD_ORDER', label: 'Standard' },
 ];
 

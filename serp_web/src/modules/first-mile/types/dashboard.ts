@@ -5,7 +5,7 @@
 
 export type TmsDashboardGranularity = 'DAY' | 'WEEK' | 'MONTH';
 
-export type TmsDashboardServiceType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
+export type TmsDashboardServiceType = 'STANDARD_ORDER';
 
 export type TmsDashboardLeg =
   | 'ALL'

@@ -233,7 +233,7 @@ export const BillingPricingAdminTab: React.FC = () => {
         <TabsContent value='surcharge' className='space-y-6'>
           <BillingPricingRulesTable<SurchargeRuleAdminResponse>
             title='Configured surcharge rules'
-            description='Optional fees such as remote area and oversized handling.'
+            description='Optional fees such as remote-area handling.'
             columns={[
               { key: 'code', label: 'Code' },
               { key: 'name', label: 'Name' },
@@ -270,7 +270,7 @@ export const BillingPricingAdminTab: React.FC = () => {
         <TabsContent value='vas' className='space-y-6'>
           <BillingPricingRulesTable<VasRuleAdminResponse>
             title='Configured VAS rules'
-            description='Value-added services such as COD and insurance.'
+            description='Value-added services such as COD.'
             columns={[
               { key: 'code', label: 'Code' },
               { key: 'name', label: 'Name' },

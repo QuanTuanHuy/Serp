@@ -58,7 +58,7 @@ export const SurchargeRuleFormDialog: React.FC<
               : 'Edit Surcharge Rule'}
           </DialogTitle>
           <DialogDescription>
-            Configure additional fee logic for remote areas and oversized items.
+            Configure additional fee logic for remote-area deliveries.
           </DialogDescription>
         </DialogHeader>
 

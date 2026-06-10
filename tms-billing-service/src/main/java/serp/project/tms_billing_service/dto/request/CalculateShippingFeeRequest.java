@@ -42,7 +42,4 @@ public class CalculateShippingFeeRequest {
     @PositiveOrZero(message = "INVALID_REQUEST")
     private Long codAmount;
 
-    @PositiveOrZero(message = "INVALID_REQUEST")
-    private Long declaredValue;
-
 }

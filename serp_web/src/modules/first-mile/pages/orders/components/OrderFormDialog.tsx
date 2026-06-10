@@ -28,7 +28,6 @@ import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
   ORDER_PICKUP_METHOD_OPTIONS,
-  ORDER_TYPE_OPTIONS,
   type CreateOrderFormState,
   type LocationTarget,
   type OrderFormMode,
@@ -488,23 +487,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={DELIVERY_REQUEST_TIME_OPTIONS}
                   placeholder='Select request time'
                   emptyText='No request times found'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='orderType'>Order type *</Label>
-                <TmsCombobox
-                  id='orderType'
-                  value={createForm.orderType}
-                  onValueChange={(value) =>
-                    onFormChange(
-                      'orderType',
-                      value as CreateOrderFormState['orderType']
-                    )
-                  }
-                  options={ORDER_TYPE_OPTIONS}
-                  placeholder='Select order type'
-                  emptyText='No order types found'
                 />
               </div>
 

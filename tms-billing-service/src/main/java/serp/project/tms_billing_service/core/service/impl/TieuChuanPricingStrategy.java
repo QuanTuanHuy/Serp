@@ -12,7 +12,6 @@ import serp.project.tms_billing_service.core.service.support.PricingRuleService;
 import serp.project.tms_billing_service.core.service.support.RouteClassificationService;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.dto.response.FeeLineItemResponse;
@@ -28,8 +27,6 @@ import java.util.List;
 
 @Component
 public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
-    private static final long HIGH_VALUE_THRESHOLD = 3_000_000L;
-
     private final RouteClassificationService routeClassificationService;
     private final ChargeableWeightService chargeableWeightService;
     private final PricingRuleService pricingRuleService;
@@ -136,19 +133,6 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
                     .build());
         }
 
-        long declaredValue = request.getDeclaredValue() == null ? 0L : request.getDeclaredValue();
-        if (declaredValue > HIGH_VALUE_THRESHOLD) {
-            long insuranceFee = calculateInsuranceFee(declaredValue);
-            totalVas += insuranceFee;
-            VasRule insuranceRule = pricingRuleService.getRequiredVasRule(VasRuleCode.BAO_HIEM);
-            feeItems.add(FeeLineItemResponse.builder()
-                    .code(insuranceRule.getCode().name())
-                    .name(insuranceRule.getName())
-                    .category("VAS")
-                    .amount(insuranceFee)
-                    .build());
-        }
-
         return totalVas;
     }
 
@@ -172,15 +156,6 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return basePrice + (extraSteps * stepPrice);
     }
 
-    private long calculateInsuranceFee(long declaredValue) {
-        VasRule insuranceRule = pricingRuleService.getRequiredVasRule(VasRuleCode.BAO_HIEM);
-        double ratePercent = requiredDouble(insuranceRule.getRatePercent(), "vas.ratePercent");
-        long minAmount = requiredLong(insuranceRule.getMinAmount(), "vas.minAmount");
-
-        long calculatedAmount = Math.round(declaredValue * (ratePercent / 100d));
-        return Math.max(calculatedAmount, minAmount);
-    }
-
     private RouteType normalizeRouteType(RouteType routeType) {
         if (routeType == RouteType.LIEN_MIEN_DAC_BIET) {
             return RouteType.LIEN_MIEN;
@@ -196,15 +171,5 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
             );
         }
         return Math.round(value);
-    }
-
-    private double requiredDouble(Double value, String fieldName) {
-        if (value == null) {
-            throw new AppException(
-                    ErrorCode.BILLING_RULE_NOT_FOUND,
-                    "Thiếu cấu hình trường giá: " + fieldName
-            );
-        }
-        return value;
     }
 }
