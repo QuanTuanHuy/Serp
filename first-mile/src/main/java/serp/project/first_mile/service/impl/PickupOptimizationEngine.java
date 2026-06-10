@@ -35,6 +35,7 @@ class PickupOptimizationEngine {
     private static final double EARTH_RADIUS_KM = 6371.0;
     private static final double EPSILON = 1e-9;
     private static final double HUGE_OBJECTIVE = 1e15;
+    private static final double GRAMS_PER_KILOGRAM = 1000.0;
 
     private static final String REASON_UNASSIGNED = "UNASSIGNED";
     private static final String REASON_NO_FEASIBLE_INSERTION = "NO_FEASIBLE_INSERTION";
@@ -77,7 +78,7 @@ class PickupOptimizationEngine {
                     order.getSenderPhone(),
                     latitude,
                     longitude,
-                    safePositive(order.getTotalWeight()),
+                    normalizeOrderWeightKg(order.getTotalWeight()),
                     safePositive(order.getTotalVolume()),
                     order.getPickupTimeStart(),
                     order.getPickupTimeEnd()
@@ -101,7 +102,7 @@ class PickupOptimizationEngine {
                 order.getSenderPhone(),
                 null,
                 null,
-                safePositive(order.getTotalWeight()),
+                normalizeOrderWeightKg(order.getTotalWeight()),
                 safePositive(order.getTotalVolume()),
                 order.getPickupTimeStart(),
                 order.getPickupTimeEnd()
@@ -685,5 +686,9 @@ class PickupOptimizationEngine {
             return 0.0;
         }
         return value;
+    }
+
+    private double normalizeOrderWeightKg(Double weightGram) {
+        return safePositive(weightGram) / GRAMS_PER_KILOGRAM;
     }
 }

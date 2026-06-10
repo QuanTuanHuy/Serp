@@ -137,6 +137,7 @@ export interface ManualDispatchCardProps {
 
 export interface PlanPreviewCardProps {
   optimizationResult: PickupOptimizationResponse;
+  formatDateTime: (value?: string) => string;
   formatNumber: (value?: number) => string;
 }
 
