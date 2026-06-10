@@ -13,9 +13,7 @@ import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteGenerationMethod;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
-import serp.project.school_bus_service.enums.ShiftType;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -59,6 +57,10 @@ public class RoutePlanEntity extends BaseModel {
     @JoinColumn(name = "end_depot_id")
     private DepotEntity endDepot;
 
+    @ManyToOne
+    @JoinColumn(name = "selected_bus_id")
+    private BusEntity selectedBus;
+
     @Column(name = "route_code", nullable = false)
     private String routeCode;
 
@@ -67,10 +69,6 @@ public class RoutePlanEntity extends BaseModel {
 
     @Column(name = "service_date", nullable = false)
     private LocalDate serviceDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "shift_type", nullable = false)
-    private ShiftType shiftType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -92,8 +90,7 @@ public class RoutePlanEntity extends BaseModel {
     @Column(name = "route_generation_method", nullable = false)
     private RouteGenerationMethod routeGenerationMethod = RouteGenerationMethod.MANUAL;
 
-    @Column(name = "estimated_cost")
-    private BigDecimal estimatedCost;
+
 
     @Column(name = "version_no", nullable = false)
     private Integer versionNo = 1;
@@ -133,30 +130,17 @@ public class RoutePlanEntity extends BaseModel {
     @JoinColumn(name = "planning_session_id")
     private RoutePlanningSessionEntity planningSession;
 
-    /** The school schedule this route covers. Required from Phase 1 onwards. */
-    @ManyToOne
-    @JoinColumn(name = "school_schedule_id")
-    private SchoolScheduleEntity schoolSchedule;
 
     /** Minimum bus capacity required to carry all planned students. */
     @Column(name = "required_capacity")
     private Integer requiredCapacity;
-
-    /** Aggregated quality score (0–100) computed after generation/recalculation. */
-    @Column(name = "quality_score")
-    private Double qualityScore;
-
-    /** Total number of issues (INFO + WARNING + BLOCKING) for this route. */
-    @Column(name = "issue_count", nullable = false)
-    private Integer issueCount = 0;
-
-    /** Number of BLOCKING issues that prevent this route from being published. */
-    @Column(name = "blocking_issue_count", nullable = false)
-    private Integer blockingIssueCount = 0;
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
     @Column(name = "published_by")
     private Long publishedBy;
+
+    @org.hibernate.annotations.Formula("COALESCE(updated_at, created_at)")
+    private LocalDateTime lastModifiedDate;
 }

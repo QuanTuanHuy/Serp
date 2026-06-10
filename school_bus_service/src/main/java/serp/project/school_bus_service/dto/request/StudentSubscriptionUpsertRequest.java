@@ -37,6 +37,5 @@ public class StudentSubscriptionUpsertRequest extends BaseCommandRequest {
     private LocalDate effectiveTo;
     private String status;
     private Long sourceRequestId;
-    private Long schoolScheduleId;
 }
 

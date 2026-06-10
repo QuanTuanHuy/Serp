@@ -13,7 +13,6 @@ import serp.project.school_bus_service.repository.RoutePlanningSessionRepository
 import serp.project.school_bus_service.repository.RoutePlanningIssueRepository;
 
 import java.math.BigDecimal;
-import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,11 +49,10 @@ public class RouteObjectiveScoringServiceTest {
 
         // 2. Setup entities
         SchoolEntity school = dataFactory.createSchool("S_O1", "Obj School One", 21.0285, 105.8542, TENANT_ID);
-        SchoolScheduleEntity schedule = dataFactory.createSchoolSchedule(school, "Morning Shift", LocalTime.of(7, 30), LocalTime.of(12, 0), TENANT_ID);
         DepotEntity depot = dataFactory.createDepot("D_O1", "Obj Depot One", 21.0385, 105.8642, TENANT_ID);
         PickupPointEntity pickup = dataFactory.createPickupPoint("P_O1", "Obj Pickup One", "PICKUP_DROPOFF", 21.0185, 105.8442, TENANT_ID);
 
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
         RoutePlanEntity route = dataFactory.createRoutePlan(school, session, RouteDirection.OUTBOUND, TENANT_ID);
         
         route.setPlannedDistanceKm(10.0);
@@ -104,8 +102,7 @@ public class RouteObjectiveScoringServiceTest {
 
         // 2. Setup session with 10 unassigned students
         SchoolEntity school = dataFactory.createSchool("S_O2", "Obj School Two", 21.0285, 105.8542, TENANT_ID);
-        SchoolScheduleEntity schedule = dataFactory.createSchoolSchedule(school, "Morning Shift", LocalTime.of(7, 30), LocalTime.of(12, 0), TENANT_ID);
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
         
         session.setTotalUnassignedStudents(10);
         sessionRepository.save(session);
@@ -126,8 +123,7 @@ public class RouteObjectiveScoringServiceTest {
 
         // 2. Setup route with 1 blocking issue
         SchoolEntity school = dataFactory.createSchool("S_O3", "Obj School Three", 21.0285, 105.8542, TENANT_ID);
-        SchoolScheduleEntity schedule = dataFactory.createSchoolSchedule(school, "Morning Shift", LocalTime.of(7, 30), LocalTime.of(12, 0), TENANT_ID);
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
         RoutePlanEntity route = dataFactory.createRoutePlan(school, session, RouteDirection.OUTBOUND, TENANT_ID);
 
         RoutePlanningIssueEntity issue = new RoutePlanningIssueEntity();

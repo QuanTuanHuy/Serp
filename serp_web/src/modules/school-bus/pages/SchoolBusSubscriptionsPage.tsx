@@ -19,7 +19,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolsQuery,
-  useGetSubscriptionsQuery,
+  useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -39,7 +39,7 @@ export function SchoolBusSubscriptionsPage() {
     sortBy: 'createdAt',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetSubscriptionsQuery(pagination.params);
+  const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(pagination.params);
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const subscriptions = getPageItems(data?.data);
   const schools = getPageItems(schoolsData?.data);
@@ -95,8 +95,8 @@ export function SchoolBusSubscriptionsPage() {
   const tripOptionOptions = [
     { label: 'All trip options', value: '' },
     { label: 'Round trip', value: 'ROUND_TRIP' },
-    { label: 'Morning', value: 'MORNING' },
-    { label: 'Afternoon', value: 'AFTERNOON' },
+    { label: 'To school only', value: 'MORNING' },
+    { label: 'From school only', value: 'AFTERNOON' },
   ];
 
   const subscriptionColumns: SchoolBusTableColumn<any>[] = [
@@ -154,7 +154,6 @@ export function SchoolBusSubscriptionsPage() {
       render: (subscription) => (
         <div className='flex items-center gap-2'>
           <Calendar className='h-4 w-4 text-slate-400 shrink-0' />
-          <span className='text-xs text-slate-600 truncate'>{subscription.schoolScheduleName || 'No schedule'}</span>
         </div>
       ),
     },
@@ -164,8 +163,8 @@ export function SchoolBusSubscriptionsPage() {
       render: (subscription) => {
         const labels: Record<string, string> = {
           ROUND_TRIP: 'Round trip',
-          MORNING: 'Morning',
-          AFTERNOON: 'Afternoon',
+          MORNING: 'To school only',
+          AFTERNOON: 'From school only',
         };
         const colors: Record<string, string> = {
           ROUND_TRIP: 'bg-blue-50/50 text-blue-700 border-blue-100/50',

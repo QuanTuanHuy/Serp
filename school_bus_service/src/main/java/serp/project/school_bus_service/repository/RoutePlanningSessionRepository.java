@@ -22,7 +22,6 @@ public interface RoutePlanningSessionRepository extends BaseRepository<RoutePlan
             SELECT s FROM RoutePlanningSessionEntity s
             WHERE s.tenantId = :tenantId
               AND s.school.id = :schoolId
-              AND s.schoolSchedule.id = :scheduleId
               AND s.serviceDate = :serviceDate
               AND s.routeDirection = :direction
               AND s.isDeleted = false
@@ -32,7 +31,8 @@ public interface RoutePlanningSessionRepository extends BaseRepository<RoutePlan
     List<RoutePlanningSessionEntity> findActiveByContext(
             @Param("tenantId") Long tenantId,
             @Param("schoolId") Long schoolId,
-            @Param("scheduleId") Long scheduleId,
             @Param("serviceDate") LocalDate serviceDate,
             @Param("direction") RouteDirection direction);
+
+    Optional<RoutePlanningSessionEntity> findByIdAndTenantIdAndIsDeletedFalse(Long id, Long tenantId);
 }

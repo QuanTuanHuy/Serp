@@ -74,9 +74,6 @@ public class StudentSubscriptionEntity extends BaseModel {
     @Column(nullable = false)
     private SubscriptionStatus status;
 
-    @ManyToOne
-    @JoinColumn(name = "school_schedule_id")
-    private SchoolScheduleEntity schoolSchedule;
 
     @ManyToOne
     @JoinColumn(name = "source_request_id")

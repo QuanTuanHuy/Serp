@@ -34,6 +34,7 @@ import {
   useSkipTripStopMutation,
   useStartTripMutation,
   useStartBoardingTripStopMutation,
+  useGetRoutePathQuery,
 } from '../api/schoolBusApi';
 import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -132,6 +133,10 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     useGetTripAttendanceManifestQuery(tripId);
   const { data: summaryData, refetch: refetchSummary } = useGetTripAttendanceSummaryQuery(tripId);
   const { data: eventsData, refetch: refetchEvents } = useGetTripAttendanceQuery(tripId);
+  const { data: routePathData } = useGetRoutePathQuery(
+    manifestData?.data?.routeId as number,
+    { skip: !manifestData?.data?.routeId }
+  );
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const allTrips = getPageItems(tripsQuery.data?.data);
@@ -660,6 +665,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                 tripStatus={tripStatus || ''}
                 isOutbound={isOutbound}
                 routeGeometry={manifest?.routeGeometry}
+                routePath={routePathData?.data}
                 className='h-full w-full'
               />
             </div>

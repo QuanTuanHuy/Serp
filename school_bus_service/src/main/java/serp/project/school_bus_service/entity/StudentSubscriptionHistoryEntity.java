@@ -54,11 +54,6 @@ public class StudentSubscriptionHistoryEntity extends BaseModel {
     @Column(name = "new_dropoff_point_id")
     private Long newDropoffPointId;
 
-    @Column(name = "old_school_schedule_id")
-    private Long oldSchoolScheduleId;
-
-    @Column(name = "new_school_schedule_id")
-    private Long newSchoolScheduleId;
 
     @Column(name = "old_trip_option")
     private String oldTripOption;

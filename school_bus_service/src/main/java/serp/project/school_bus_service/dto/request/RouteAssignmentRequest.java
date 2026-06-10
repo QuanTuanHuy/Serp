@@ -10,7 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class RouteAssignmentRequest extends BaseCommandRequest {
 
-    @NotNull
     private Long busId;
 
     @NotNull

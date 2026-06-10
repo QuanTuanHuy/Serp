@@ -13,19 +13,14 @@ export const TRIP_OPTION_OPTIONS = [
   { value: 'ROUND_TRIP', label: 'Round trip' },
 ] as const;
 
-export const SHIFT_TYPE_OPTIONS = [
-  { value: 'MORNING', label: 'Morning' },
-  { value: 'AFTERNOON', label: 'Afternoon' },
-] as const;
-
 export const ROUTE_DIRECTION_OPTIONS = [
-  { value: 'OUTBOUND', label: 'Chieu di' },
-  { value: 'RETURN', label: 'Chieu ve' },
+  { value: 'OUTBOUND', label: 'Outbound (To school)' },
+  { value: 'RETURN', label: 'Return (From school)' },
 ] as const;
 
 export const ROUTE_LOCATION_TYPE_OPTIONS = [
-  { value: 'SCHOOL', label: 'Truong hoc' },
-  { value: 'DEPOT', label: 'Bai xe / depot' },
+  { value: 'SCHOOL', label: 'School' },
+  { value: 'DEPOT', label: 'Depot' },
 ] as const;
 
 export const PROFILE_STATUS_OPTIONS = [

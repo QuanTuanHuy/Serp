@@ -43,4 +43,9 @@ public interface TransportRequestRepository extends BaseRepository<TransportRequ
         @Param("schoolId") Long schoolId
     );
 
+    List<TransportRequestEntity> findByTenantIdAndParentProfileIdAndIsDeletedFalseOrderByCreatedAtDesc(Long tenantId, Long parentProfileId);
+
+    long countByTenantIdAndParentProfileIdAndStatusAndIsDeletedFalse(Long tenantId, Long parentProfileId, RequestStatus status);
+
+    long countByTenantIdAndParentProfileIdAndIsDeletedFalse(Long tenantId, Long parentProfileId);
 }

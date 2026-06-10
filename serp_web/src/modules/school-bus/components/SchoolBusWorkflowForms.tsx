@@ -30,7 +30,6 @@ import {
   REQUEST_TYPE_OPTIONS,
   ROUTE_DIRECTION_OPTIONS,
   ROUTE_LOCATION_TYPE_OPTIONS,
-  SHIFT_TYPE_OPTIONS,
   TRIP_OPTION_OPTIONS,
 } from '../constants';
 import { schoolBusUi } from '../theme';
@@ -39,7 +38,6 @@ import { SchoolBusCheckbox } from './ui/SchoolBusCheckbox';
 import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
 import type {
   SchoolBusAttendant,
-  SchoolBusBus,
   SchoolBusDepot,
   SchoolBusDriver,
   SchoolBusParent,
@@ -55,9 +53,7 @@ import type {
 } from '../types';
 import {
   useGetActiveSchoolPickupPointsQuery,
-  useGetSchoolPickupPointsCompatibilityQuery,
-  useGetActiveSchoolSchedulesQuery,
-  useGetSubscriptionsQuery,
+  useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import type { StudentMapMarker } from './map/OperationsMapClient';
@@ -100,24 +96,16 @@ export function SchoolBusFormSection({
  *  Ready: fully configured, can be approved. */
 type RowReadiness =
   | 'missing-student'
-  | 'missing-schedule'
   | 'missing-tripopt'
   | 'missing-pickup'
   | 'missing-dropoff'
   | 'missing-target'
-  | 'needs-config'
   | 'ready';
-
-interface CompatibilityEntry {
-  pickupReadinessCode: string;
-  dropoffReadinessCode: string;
-}
 
 function getRowReadiness(
   sv: any,
   needsTarget: boolean,
   requiresRouting: boolean,
-  compatibilityMapBySchedule?: Map<string, CompatibilityEntry>
 ): RowReadiness {
   // ── Blocking checks ────────────────────────────────────────────────
   if (!sv.studentId || Number(sv.studentId) === 0) return 'missing-student';
@@ -126,8 +114,6 @@ function getRowReadiness(
     if (needsTarget && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
     return 'ready';
   }
-
-  if (!sv.schoolScheduleId || sv.schoolScheduleId === '__none__') return 'missing-schedule';
 
   const opt = (sv.tripOption || '').toUpperCase();
   if (!opt || opt === '__NONE__') return 'missing-tripopt';
@@ -139,37 +125,16 @@ function getRowReadiness(
   if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__')) return 'missing-dropoff';
   if (needsTarget  && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
 
-  // ── Approval-blocker check (needs-config) ─────────────────────────
-  if (compatibilityMapBySchedule) {
-    const schId = Number(sv.schoolScheduleId);
-    if (schId) {
-      if (needsPickup && sv.pickupPointId) {
-        const comp = compatibilityMapBySchedule.get(`${schId}-${sv.pickupPointId}`);
-        if (comp && comp.pickupReadinessCode !== 'READY' && comp.pickupReadinessCode !== 'NOT_CHECKED') {
-          return 'needs-config';
-        }
-      }
-      if (needsDropoff && sv.dropoffPointId) {
-        const comp = compatibilityMapBySchedule.get(`${schId}-${sv.dropoffPointId}`);
-        if (comp && comp.dropoffReadinessCode !== 'READY' && comp.dropoffReadinessCode !== 'NOT_CHECKED') {
-          return 'needs-config';
-        }
-      }
-    }
-  }
-
   return 'ready';
 }
 
 function ReadinessBadge({ readiness }: { readiness: RowReadiness }) {
   const configs: Record<string, { label: string; className: string }> = {
     'missing-student': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-schedule': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-tripopt': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-pickup': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-dropoff': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-target': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'needs-config': { label: 'Needs configuration', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
     ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   };
   const cfg = configs[readiness] ?? configs.ready;
@@ -195,7 +160,6 @@ const transportRequestSchema = z.object({
         studentId: z.coerce.number().min(1, 'Student is required'),
         pickupPointId: z.string().optional(),
         dropoffPointId: z.string().optional(),
-        schoolScheduleId: z.string().optional(),
         tripOption: z.string().optional(),
         monday: z.boolean().default(true),
         tuesday: z.boolean().default(true),
@@ -236,14 +200,6 @@ const transportRequestSchema = z.object({
     }
 
     if (isNewOrChangeOrRenew) {
-      if (!student.schoolScheduleId || student.schoolScheduleId === '' || student.schoolScheduleId === '__none__') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'School schedule is required',
-          path: ['students', index, 'schoolScheduleId'],
-        });
-      }
-
       if (!student.tripOption || student.tripOption === '' || student.tripOption === '__none__') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -293,7 +249,6 @@ const routeSchema = z.object({
   endDepotId: z.string().optional(),
   routeName: z.string().min(1, 'Route name is required'),
   serviceDate: z.string().min(1, 'Service date is required'),
-  schoolScheduleId: z.string().min(1, 'School schedule is required'),
   planningNotes: z.string().optional(),
   isActive: z.boolean().default(true),
 });
@@ -303,7 +258,6 @@ const rejectSchema = z.object({
 });
 
 const assignmentSchema = z.object({
-  busId: z.coerce.number().min(1, 'Bus is required'),
   driverId: z.coerce.number().min(1, 'Driver is required'),
   attendantId: z.string().optional(),
   assignmentNote: z.string().optional(),
@@ -335,7 +289,6 @@ interface PickupDropoffPointsFieldsProps {
   index: number;
   form: any;
   schoolId: number;
-  schoolScheduleId: number | null;
   pickupCapablePoints: any[];
   dropoffCapablePoints: any[];
   pickupRequired: boolean;
@@ -346,83 +299,25 @@ function PickupDropoffPointsFields({
   index,
   form,
   schoolId,
-  schoolScheduleId,
   pickupCapablePoints,
   dropoffCapablePoints,
   pickupRequired,
   dropoffRequired,
 }: PickupDropoffPointsFieldsProps) {
-  const { data: compData } = useGetSchoolPickupPointsCompatibilityQuery(
-    { schoolId, schoolScheduleId: schoolScheduleId! },
-    { skip: !schoolId || !schoolScheduleId }
-  );
-
-  const compatibilityMap = React.useMemo(() => {
-    const map = new Map<number, {
-      pickupReadinessCode: string;
-      pickupReadinessLabel: string;
-      dropoffReadinessCode: string;
-      dropoffReadinessLabel: string;
-    }>();
-    compData?.data?.forEach((item) => {
-      map.set(item.pickupPointId, item);
-    });
-    return map;
-  }, [compData]);
-
-  // Watch currently selected values to show inline readiness badge
-  const currentPickupId  = form.watch(`students.${index}.pickupPointId`);
-  const currentDropoffId = form.watch(`students.${index}.dropoffPointId`);
-
-  const selectedPickupComp  = (currentPickupId  && currentPickupId  !== '__none__') ? compatibilityMap.get(Number(currentPickupId))  : null;
-  const selectedDropoffComp = (currentDropoffId && currentDropoffId !== '__none__') ? compatibilityMap.get(Number(currentDropoffId)) : null;
-
-  /** Badge config for a readiness code: returns label + tailwind classes. */
-  const readinessBadgeConfig = (code: string | undefined, direction: 'pickup' | 'dropoff'): { label: string; className: string } | null => {
-    if (!schoolScheduleId || !code) return null;
-    if (code === 'READY') return { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
-    if (code === 'NOT_CHECKED') return null;
-    if (code === (direction === 'pickup' ? 'MISSING_PICKUP_WINDOW' : 'MISSING_DROPOFF_WINDOW'))
-      return { label: 'Missing window', className: 'bg-amber-50 text-amber-700 ring-amber-200' };
-    if (code === 'MISSING_COORDINATES')
-      return { label: 'Missing coordinates', className: 'bg-red-50 text-red-600 ring-red-200' };
-    if (code === 'UNSUPPORTED_USAGE_TYPE')
-      return { label: 'Unsupported usage', className: 'bg-red-50 text-red-600 ring-red-200' };
-    return { label: 'Needs config', className: 'bg-amber-50 text-amber-700 ring-amber-200' };
-  };
-
-  const pickupBadge  = readinessBadgeConfig(selectedPickupComp?.pickupReadinessCode,  'pickup');
-  const dropoffBadge = readinessBadgeConfig(selectedDropoffComp?.dropoffReadinessCode, 'dropoff');
-
-  /** Option: name only as label (for truncation in trigger), readiness as description (second line in dropdown). */
   const makePickupOptions = React.useMemo(
     () => pickupCapablePoints.map((pp) => {
       const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
-      const comp = compatibilityMap.get(pp.pickupPointId);
-      let description: string | undefined;
-      if (schoolScheduleId && comp) {
-        if (comp.pickupReadinessCode === 'READY') description = 'Ready';
-        else if (comp.pickupReadinessCode !== 'NOT_CHECKED') description = comp.pickupReadinessLabel;
-      }
-      return { value: String(pp.pickupPointId), label: name, description };
+      return { value: String(pp.pickupPointId), label: name };
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pickupCapablePoints, compatibilityMap, schoolScheduleId]
+    [pickupCapablePoints]
   );
 
   const makeDropoffOptions = React.useMemo(
     () => dropoffCapablePoints.map((pp) => {
       const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
-      const comp = compatibilityMap.get(pp.pickupPointId);
-      let description: string | undefined;
-      if (schoolScheduleId && comp) {
-        if (comp.dropoffReadinessCode === 'READY') description = 'Ready';
-        else if (comp.dropoffReadinessCode !== 'NOT_CHECKED') description = comp.dropoffReadinessLabel;
-      }
-      return { value: String(pp.pickupPointId), label: name, description };
+      return { value: String(pp.pickupPointId), label: name };
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dropoffCapablePoints, compatibilityMap, schoolScheduleId]
+    [dropoffCapablePoints]
   );
 
   return (
@@ -437,14 +332,6 @@ function PickupDropoffPointsFields({
           emptyLabel='No pickup point'
           options={makePickupOptions}
         />
-        {pickupBadge && (
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ml-0.5',
-            pickupBadge.className
-          )}>
-            {pickupBadge.label}
-          </span>
-        )}
       </div>
 
       <div className='min-w-0 space-y-1'>
@@ -457,14 +344,6 @@ function PickupDropoffPointsFields({
           emptyLabel='No drop-off point'
           options={makeDropoffOptions}
         />
-        {dropoffBadge && (
-          <span className={cn(
-            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ml-0.5',
-            dropoffBadge.className
-          )}>
-            {dropoffBadge.label}
-          </span>
-        )}
       </div>
     </>
   );
@@ -475,7 +354,6 @@ const EMPTY_STUDENT = {
   studentId: 0,
   pickupPointId: '',
   dropoffPointId: '',
-  schoolScheduleId: '',
   tripOption: '',
   monday: true,
   tuesday: true,
@@ -505,7 +383,6 @@ export function TransportRequestForm({
       studentId: item.studentId,
       pickupPointId: item.pickupPointId ? String(item.pickupPointId) : '',
       dropoffPointId: item.dropoffPointId ? String(item.dropoffPointId) : '',
-      schoolScheduleId: item.schoolScheduleId ? String(item.schoolScheduleId) : '',
       tripOption: item.tripOption || '',
       monday: item.monday ?? true,
       tuesday: item.tuesday ?? true,
@@ -630,17 +507,10 @@ export function TransportRequestForm({
     [linkedPickupPoints]
   );
 
-  // ── Load schedules and subscriptions reactively ───────────────────
-  const { data: schedulesData } = useGetActiveSchoolSchedulesQuery(
-    Number(schoolId), { skip: !schoolId || Number(schoolId) === 0 }
-  );
-  const { data: subscriptionsData } = useGetSubscriptionsQuery(
+  // ── Load subscriptions reactively ───────────────────
+  const { data: subscriptionsData } = useGetSchoolBusSubscriptionsQuery(
     { ...SCHOOL_BUS_OPTION_QUERY, schoolId: Number(schoolId) } as any,
     { skip: !schoolId || Number(schoolId) === 0 }
-  );
-  const filteredSchedules = React.useMemo(
-    () => schedulesData?.data ?? [],
-    [schedulesData]
   );
   const filteredSubscriptions = React.useMemo(
     () => getPageItems(subscriptionsData?.data),
@@ -656,96 +526,13 @@ export function TransportRequestForm({
         form.setValue(`students.${idx}.studentId`, 0);
         form.setValue(`students.${idx}.pickupPointId`, '');
         form.setValue(`students.${idx}.dropoffPointId`, '');
-        form.setValue(`students.${idx}.schoolScheduleId`, '');
         form.setValue(`students.${idx}.targetSubscriptionId`, '');
       });
     }
     prevSchoolIdRef.current = schoolId;
   }, [schoolId, form]);
 
-  // ── Per-row schedule-driven days helpers ──────────────────────────
-  /** Returns the set of days enabled by the given schedule, uppercased. */
-  const getScheduleDays = React.useCallback(
-    (scheduleId: string): Set<string> => {
-      if (!scheduleId || scheduleId === '__none__') return new Set();
-      const sch = filteredSchedules.find((s) => String(s.id) === scheduleId);
-      if (!sch?.daysOfWeek) return new Set();
-      return new Set(sch.daysOfWeek.map((d) => d.toUpperCase()));
-    },
-    [filteredSchedules]
-  );
-
-  // ── Watch all student rows for the schedule auto-tick effect ──────
   const allStudentValues = form.watch('students');
-  React.useEffect(() => {
-    allStudentValues.forEach((sv, idx) => {
-      const schedDays = getScheduleDays(sv.schoolScheduleId ?? '');
-      if (schedDays.size === 0) return; // no schedule selected – keep as is
-      const dayFields = [
-        { field: 'monday' as const,    key: 'MONDAY'    },
-        { field: 'tuesday' as const,   key: 'TUESDAY'   },
-        { field: 'wednesday' as const, key: 'WEDNESDAY' },
-        { field: 'thursday' as const,  key: 'THURSDAY'  },
-        { field: 'friday' as const,    key: 'FRIDAY'    },
-        { field: 'saturday' as const,  key: 'SATURDAY'  },
-        { field: 'sunday' as const,    key: 'SUNDAY'    },
-      ];
-      dayFields.forEach(({ field, key }) => {
-        const shouldBeEnabled = schedDays.has(key);
-        if (!shouldBeEnabled && sv[field]) {
-          form.setValue(`students.${idx}.${field}`, false, { shouldDirty: true });
-        } else if (shouldBeEnabled && !sv[field]) {
-          // Auto-tick if schedule has the day and user hasn't explicitly unticked
-          // (We only auto-tick, never auto-untick beyond clearing non-schedule days)
-          form.setValue(`students.${idx}.${field}`, true, { shouldDirty: true });
-        }
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(allStudentValues.map((s) => s.schoolScheduleId))]);
-
-
-  // ── Derived state per active student row ──────────────────────────
-  const uniqueScheduleIds = React.useMemo(() => {
-    const ids = new Set<number>();
-    allStudentValues.forEach((s) => {
-      const idNum = Number(s.schoolScheduleId);
-      if (idNum) ids.add(idNum);
-    });
-    return Array.from(ids);
-  }, [allStudentValues]);
-
-  const { data: comp1 } = useGetSchoolPickupPointsCompatibilityQuery(
-    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[0]! },
-    { skip: !schoolId || !uniqueScheduleIds[0] }
-  );
-  const { data: comp2 } = useGetSchoolPickupPointsCompatibilityQuery(
-    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[1]! },
-    { skip: !schoolId || !uniqueScheduleIds[1] }
-  );
-  const { data: comp3 } = useGetSchoolPickupPointsCompatibilityQuery(
-    { schoolId: Number(schoolId), schoolScheduleId: uniqueScheduleIds[2]! },
-    { skip: !schoolId || !uniqueScheduleIds[2] }
-  );
-
-  const compatibilityMapBySchedule = React.useMemo(() => {
-    const map = new Map<string, CompatibilityEntry>();
-
-    const addItems = (scheduleId: number, items: any[]) => {
-      items.forEach((item) => {
-        map.set(`${scheduleId}-${item.pickupPointId}`, {
-          pickupReadinessCode: item.pickupReadinessCode ?? 'NOT_CHECKED',
-          dropoffReadinessCode: item.dropoffReadinessCode ?? 'NOT_CHECKED',
-        });
-      });
-    };
-
-    if (comp1?.data && uniqueScheduleIds[0]) addItems(uniqueScheduleIds[0], comp1.data);
-    if (comp2?.data && uniqueScheduleIds[1]) addItems(uniqueScheduleIds[1], comp2.data);
-    if (comp3?.data && uniqueScheduleIds[2]) addItems(uniqueScheduleIds[2], comp3.data);
-
-    return map;
-  }, [comp1, comp2, comp3, uniqueScheduleIds]);
 
   // \u2500\u2500 Auto-fill default pickup/dropoff when studentId changes \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // Compares against a stable ref to detect which rows changed their student selection.
@@ -894,12 +681,11 @@ export function TransportRequestForm({
   // array reference even after RHF mutates internal state in-place, causing a
   // stale memo hit. Direct computation on each render is always fresh.
   const rowReadinessList: RowReadiness[] = allStudentValues.map((sv) =>
-    getRowReadiness(sv, needsTarget, requiresRouting, compatibilityMapBySchedule)
+    getRowReadiness(sv, needsTarget, requiresRouting)
   );
 
   // Derive validation summary from rowReadinessList (same render cycle, guaranteed consistent)
   let _readyCount = 0;
-  let _needsConfigCount = 0;
   const _blockingMessages: string[] = [];
   const _approvalBlockerMessages: string[] = [];
 
@@ -911,9 +697,6 @@ export function TransportRequestForm({
     switch (state) {
       case 'missing-student':
         _blockingMessages.push(`${studentName}: Student selection is required`);
-        break;
-      case 'missing-schedule':
-        _blockingMessages.push(`${studentName}: School schedule is required`);
         break;
       case 'missing-tripopt':
         _blockingMessages.push(`${studentName}: Trip option is required (Morning / Afternoon / Round trip)`);
@@ -927,36 +710,6 @@ export function TransportRequestForm({
       case 'missing-target':
         _blockingMessages.push(`${studentName}: Target subscription is required`);
         break;
-      case 'needs-config': {
-        _needsConfigCount++;
-        const schId = Number(sv.schoolScheduleId);
-        const opt = (sv.tripOption || '').toUpperCase();
-        const needsPickup  = opt === 'MORNING'   || opt === 'ROUND_TRIP';
-        const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
-        if (needsPickup && sv.pickupPointId) {
-          const comp = compatibilityMapBySchedule.get(`${schId}-${sv.pickupPointId}`);
-          if (comp && comp.pickupReadinessCode !== 'READY' && comp.pickupReadinessCode !== 'NOT_CHECKED') {
-            const label = comp.pickupReadinessCode === 'MISSING_PICKUP_WINDOW'
-              ? 'Pickup window is not configured'
-              : comp.pickupReadinessCode === 'MISSING_COORDINATES'
-              ? 'Pickup point is missing coordinates'
-              : 'Pickup point configuration is incomplete';
-            _approvalBlockerMessages.push(`${studentName}: ${label} — cannot approve until fixed`);
-          }
-        }
-        if (needsDropoff && sv.dropoffPointId) {
-          const comp = compatibilityMapBySchedule.get(`${schId}-${sv.dropoffPointId}`);
-          if (comp && comp.dropoffReadinessCode !== 'READY' && comp.dropoffReadinessCode !== 'NOT_CHECKED') {
-            const label = comp.dropoffReadinessCode === 'MISSING_DROPOFF_WINDOW'
-              ? 'Drop-off window is not configured'
-              : comp.dropoffReadinessCode === 'MISSING_COORDINATES'
-              ? 'Drop-off point is missing coordinates'
-              : 'Drop-off point configuration is incomplete';
-            _approvalBlockerMessages.push(`${studentName}: ${label} — cannot approve until fixed`);
-          }
-        }
-        break;
-      }
       case 'ready':
         _readyCount++;
         break;
@@ -966,9 +719,9 @@ export function TransportRequestForm({
   const validationSummary = {
     blockingMessages: _blockingMessages,
     approvalBlockerMessages: _approvalBlockerMessages,
-    isAllReady: _blockingMessages.length === 0 && _needsConfigCount === 0,
+    isAllReady: _blockingMessages.length === 0,
     readyCount: _readyCount,
-    needsConfigCount: _needsConfigCount,
+    needsConfigCount: 0,
     totalCount: allStudentValues.length,
   };
 
@@ -977,32 +730,6 @@ export function TransportRequestForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (values) => {
-          let hasDayErrors = false;
-          values.students.forEach((item, index) => {
-            if (item.schoolScheduleId) {
-              const schedDays = getScheduleDays(String(item.schoolScheduleId));
-              const daysToCheck = [
-                { name: 'monday' as const, key: 'MONDAY' },
-                { name: 'tuesday' as const, key: 'TUESDAY' },
-                { name: 'wednesday' as const, key: 'WEDNESDAY' },
-                { name: 'thursday' as const, key: 'THURSDAY' },
-                { name: 'friday' as const, key: 'FRIDAY' },
-                { name: 'saturday' as const, key: 'SATURDAY' },
-                { name: 'sunday' as const, key: 'SUNDAY' },
-              ];
-              daysToCheck.forEach(({ name, key }) => {
-                if (item[name] && !schedDays.has(key)) {
-                  form.setError(`students.${index}.${name}`, {
-                    type: 'manual',
-                    message: `${key} is not supported by the selected schedule`,
-                  });
-                  hasDayErrors = true;
-                }
-              });
-            }
-          });
-          if (hasDayErrors) return;
-
           return onSubmit({
             parentProfileId: values.parentProfileId,
             schoolId: values.schoolId,
@@ -1015,7 +742,6 @@ export function TransportRequestForm({
               studentId: item.studentId,
               pickupPointId: item.pickupPointId ? Number(item.pickupPointId) : null,
               dropoffPointId: item.dropoffPointId ? Number(item.dropoffPointId) : null,
-              schoolScheduleId: item.schoolScheduleId ? Number(item.schoolScheduleId) : null,
               tripOption: item.tripOption || null,
               monday: item.monday,
               tuesday: item.tuesday,
@@ -1181,19 +907,17 @@ export function TransportRequestForm({
                       />
                     </div>
 
-                    <div className='grid gap-4 md:grid-cols-2'>
+                    <div className='grid gap-4 md:grid-cols-1'>
                       {(() => {
                         const rowOpt = (form.watch(`students.${index}.tripOption`) || '').toUpperCase();
                         // Only mark required when tripOption is explicitly set to a value needing that direction
                         const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP';
                         const dropoffRequired = rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
-                        const rowScheduleId = form.watch(`students.${index}.schoolScheduleId`);
                         return (
                           <PickupDropoffPointsFields
                             index={index}
                             form={form}
                             schoolId={Number(schoolId)}
-                            schoolScheduleId={rowScheduleId ? Number(rowScheduleId) : null}
                             pickupCapablePoints={pickupCapablePoints}
                             dropoffCapablePoints={dropoffCapablePoints}
                             pickupRequired={pickupRequired}
@@ -1203,20 +927,8 @@ export function TransportRequestForm({
                       })()}
                     </div>
 
-                    <div className='grid gap-4 md:grid-cols-2'>
-                      <SelectField
-                        form={form}
-                        name={`students.${index}.schoolScheduleId`}
-                        label='School schedule *'
-                        allowEmpty
-                        emptyValue='__none__'
-                        emptyLabel='No schedule'
-                        options={filteredSchedules.map((s) => ({
-                          value: String(s.id),
-                          label: s.scheduleName || `Schedule #${s.id}`,
-                        }))}
-                      />
-                      {needsTarget ? (
+                    {needsTarget ? (
+                      <div className='grid gap-4 md:grid-cols-1'>
                         <SelectField
                           form={form}
                           name={`students.${index}.targetSubscriptionId`}
@@ -1229,79 +941,48 @@ export function TransportRequestForm({
                             label: `${s.subscriptionCode} — ${s.studentName}`,
                           }))}
                         />
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : null}
 
                     <div>
-                      {(() => {
-                        const rowScheduleId = form.watch(`students.${index}.schoolScheduleId`) ?? '';
-                        const schedDays = getScheduleDays(rowScheduleId);
-                        const scheduleSelected = schedDays.size > 0;
-
-                        if (!scheduleSelected) {
-                          return (
-                            <div className='flex items-center gap-2 rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-2'>
-                              <span className='text-[11px] text-slate-400'>
-                                📅 Select a school schedule above to configure days of week
-                              </span>
-                            </div>
-                          );
-                        }
-
-                        const DAY_KEYS = [
-                          { field: 'monday'    as const, key: 'MONDAY',    label: 'Mon' },
-                          { field: 'tuesday'   as const, key: 'TUESDAY',   label: 'Tue' },
-                          { field: 'wednesday' as const, key: 'WEDNESDAY', label: 'Wed' },
-                          { field: 'thursday'  as const, key: 'THURSDAY',  label: 'Thu' },
-                          { field: 'friday'    as const, key: 'FRIDAY',    label: 'Fri' },
-                          { field: 'saturday'  as const, key: 'SATURDAY',  label: 'Sat' },
-                          { field: 'sunday'    as const, key: 'SUNDAY',    label: 'Sun' },
-                        ];
-
-                        return (
-                          <div className='space-y-1.5'>
-                            <FormLabel className='block text-[11px] font-semibold text-slate-700 uppercase tracking-wider'>
-                              Days of week (from schedule)
-                            </FormLabel>
-                            <div className='flex flex-wrap gap-1.5'>
-                              {DAY_KEYS.map(({ field, key, label }) => {
-                                const isAllowed = schedDays.has(key);
-                                return (
-                                  <FormField
-                                    key={field}
-                                    control={form.control}
-                                    name={`students.${index}.${field}`}
-                                    render={({ field: dayField }) => (
-                                      <label
-                                        title={!isAllowed ? 'Not part of this schedule' : undefined}
-                                        className={cn(
-                                          'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium transition-colors',
-                                          isAllowed
-                                            ? 'cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                                            : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400',
-                                          isAllowed && dayField.value && 'border-[#C81E3A] bg-[#FDECEF]/60 text-[#C81E3A] font-semibold'
-                                        )}
-                                      >
-                                        <SchoolBusCheckbox
-                                          checked={Boolean(dayField.value)}
-                                          disabled={!isAllowed}
-                                          onCheckedChange={(checked) => {
-                                            if (isAllowed) {
-                                              dayField.onChange(checked);
-                                            }
-                                          }}
-                                          className='h-3.5 w-3.5'
-                                        />
-                                        {label}
-                                      </label>
-                                    )}
+                      <div className='space-y-1.5'>
+                        <FormLabel className='block text-[11px] font-semibold text-slate-700 uppercase tracking-wider'>
+                          Days of week
+                        </FormLabel>
+                        <div className='flex flex-wrap gap-1.5'>
+                          {[
+                            { field: 'monday'    as const, label: 'Mon' },
+                            { field: 'tuesday'   as const, label: 'Tue' },
+                            { field: 'wednesday' as const, label: 'Wed' },
+                            { field: 'thursday'  as const, label: 'Thu' },
+                            { field: 'friday'    as const, label: 'Fri' },
+                            { field: 'saturday'  as const, label: 'Sat' },
+                            { field: 'sunday'    as const, label: 'Sun' },
+                          ].map(({ field, label }) => (
+                            <FormField
+                              key={field}
+                              control={form.control}
+                              name={`students.${index}.${field}`}
+                              render={({ field: dayField }) => (
+                                <label
+                                  className={cn(
+                                    'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium cursor-pointer transition-colors',
+                                    'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+                                    dayField.value && 'border-[#C81E3A] bg-[#FDECEF]/60 text-[#C81E3A] font-semibold'
+                                  )}
+                                >
+                                  <SchoolBusCheckbox
+                                    checked={Boolean(dayField.value)}
+                                    onCheckedChange={dayField.onChange}
+                                    className='h-3.5 w-3.5'
                                   />
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })()}
+                                  {label}
+                                </label>
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <FormField
@@ -1553,7 +1234,6 @@ export function RoutePlanForm({
           : '',
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
-      schoolScheduleId: initialData?.schoolScheduleId ? String(initialData.schoolScheduleId) : '',
       planningNotes: initialData?.planningNotes || '',
       isActive: initialData?.isActive ?? true,
     },
@@ -1575,7 +1255,6 @@ export function RoutePlanForm({
           : '',
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
-      schoolScheduleId: initialData?.schoolScheduleId ? String(initialData.schoolScheduleId) : '',
       planningNotes: initialData?.planningNotes || '',
       isActive: initialData?.isActive ?? true,
     });
@@ -1585,11 +1264,6 @@ export function RoutePlanForm({
   const routeDirection = form.watch('routeDirection');
   const startLocationType = form.watch('startLocationType');
   const endLocationType = form.watch('endLocationType');
-
-  const { data: schedulesData } = useGetActiveSchoolSchedulesQuery(schoolId, {
-    skip: !schoolId,
-  });
-  const schedules = schedulesData?.data ?? [];
 
   React.useEffect(() => {
     if (routeDirection === 'OUTBOUND') {
@@ -1625,7 +1299,6 @@ export function RoutePlanForm({
                 : null,
             routeName: values.routeName,
             serviceDate: values.serviceDate,
-            schoolScheduleId: Number(values.schoolScheduleId),
             planningNotes: values.planningNotes || undefined,
             isActive: values.isActive,
           })
@@ -1659,15 +1332,6 @@ export function RoutePlanForm({
             options={ROUTE_DIRECTION_OPTIONS.map((option) => ({
               value: option.value,
               label: option.label,
-            }))}
-          />
-          <SelectField
-            form={form}
-            name='schoolScheduleId'
-            label='School schedule'
-            options={schedules.map((schedule) => ({
-              value: String(schedule.id),
-              label: `${schedule.scheduleName} (${schedule.shiftType}${schedule.daysOfWeek ? ` · ${schedule.daysOfWeek.join(',')}` : ''})`,
             }))}
           />
         </div>
@@ -1865,11 +1529,9 @@ interface RouteAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
-    busId?: number | null;
     driverId?: number | null;
     attendantId?: number | null;
   } | null;
-  buses: SchoolBusBus[];
   drivers: SchoolBusDriver[];
   attendants: SchoolBusAttendant[];
   onSubmit: (values: SchoolBusRouteAssignmentRequest) => Promise<void>;
@@ -1880,7 +1542,6 @@ export function RouteAssignmentDialog({
   open,
   onOpenChange,
   initialData,
-  buses,
   drivers,
   attendants,
   onSubmit,
@@ -1889,7 +1550,6 @@ export function RouteAssignmentDialog({
   const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema) as any,
     defaultValues: {
-      busId: initialData?.busId ?? buses[0]?.id ?? 0,
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
       attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
       assignmentNote: '',
@@ -1900,44 +1560,35 @@ export function RouteAssignmentDialog({
 
   React.useEffect(() => {
     form.reset({
-      busId: initialData?.busId ?? buses[0]?.id ?? 0,
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
       attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
       assignmentNote: '',
       reason: '',
       isActive: true,
     });
-  }, [form, initialData, buses, drivers]);
+  }, [form, initialData, drivers]);
 
   return (
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
       title='Assign route resources'
-      description='Attach a bus, driver, and optional attendant to this route.'
+      description='Assign a driver and optional attendant to this route.'
     >
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(async (values) =>
             onSubmit({
-              busId: values.busId,
               driverId: values.driverId,
               attendantId: values.attendantId ? Number(values.attendantId) : null,
+              assignmentNote: values.assignmentNote || null,
+              reason: values.reason || null,
               isActive: values.isActive,
             })
           )}
           className='space-y-4'
         >
           <div className='grid gap-4 md:grid-cols-2'>
-            <SelectField
-              form={form}
-              name='busId'
-              label='Bus'
-              options={buses.map((bus) => ({
-                value: String(bus.id),
-                label: `${bus.plateNumber} (${bus.status})`,
-              }))}
-            />
             <SelectField
               form={form}
               name='driverId'

@@ -143,15 +143,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         LocalDateTime now = LocalDateTime.now();
         stopLog.setStatus(TripStopStatus.ARRIVED);
         stopLog.setActualArrivalTime(now);
-
-        LocalTime plannedArrivalTime = stopLog.getRouteStop().getPlannedArrivalTime();
-        if (plannedArrivalTime != null) {
-            LocalDateTime planned = LocalDateTime.of(
-                    trip.getServiceDate() != null ? trip.getServiceDate() : LocalDate.now(),
-                    plannedArrivalTime);
-            long delayMin = Duration.between(planned, now).toMinutes();
-            stopLog.setDelayMinutes((int) delayMin);
-        }
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
@@ -184,7 +175,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
 
         if (stopLog.getStatus() != TripStopStatus.ARRIVED) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Stop must be ARRIVED to start boarding");
+            throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING,
+                    messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING));
         }
 
         stopLog.setStatus(TripStopStatus.BOARDING);

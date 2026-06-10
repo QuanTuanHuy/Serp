@@ -74,10 +74,41 @@ export function ManualDemandAssignPanel({
     );
   }
 
+  const routeCapacity = selectedRoute.busCapacity ?? selectedRoute.assignedBusCapacity ?? null;
+  const routeStudentCount = selectedRoute.plannedStudentCount ?? 0;
+
+  if (!selectedRoute.busId || routeCapacity == null) {
+    return (
+      <SchoolBusSection title='Add Students'>
+        <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
+          <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
+          <p className='text-sm font-bold text-amber-800'>Choose a bus before adding students.</p>
+          <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
+            Bus capacity is required before students can be assigned to this route.
+          </p>
+        </div>
+      </SchoolBusSection>
+    );
+  }
+
+  if (routeStudentCount >= routeCapacity) {
+    return (
+      <SchoolBusSection title='Add Students'>
+        <div className='rounded-2xl border border-red-100 bg-red-50/10 px-4 py-6 text-center'>
+          <AlertCircle className='mx-auto mb-2 h-8 w-8 text-red-500' />
+          <p className='text-sm font-bold text-red-800'>Route has reached bus capacity.</p>
+          <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
+            Students: {routeStudentCount}/{routeCapacity}. Choose a larger bus or create another route.
+          </p>
+        </div>
+      </SchoolBusSection>
+    );
+  }
+
   // Case C: Loading state
   if (loadingEligible) {
     return (
-      <SchoolBusSection title='Assign Demand'>
+      <SchoolBusSection title='Add Students'>
         <div className='flex items-center gap-2 py-8 justify-center text-slate-500'>
           <Loader2 className='h-4 w-4 animate-spin text-blue-600' />
           <p className='text-xs font-semibold'>Loading assignable demand...</p>
@@ -102,7 +133,7 @@ export function ManualDemandAssignPanel({
 
   if (eligibleCount === 0) {
     return (
-      <SchoolBusSection title='Assign Demand'>
+      <SchoolBusSection title='Add Students'>
         <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
           <p className='text-xs text-slate-400'>No eligible students for this session.</p>
         </div>
@@ -113,7 +144,7 @@ export function ManualDemandAssignPanel({
   // Case A: No unassigned students left
   if (unassignedCount === 0) {
     return (
-      <SchoolBusSection title='Assign Demand'>
+      <SchoolBusSection title='Add Students'>
         <div className='rounded-2xl border border-emerald-100 bg-emerald-50/10 px-4 py-6 text-center'>
           <CheckCircle2 className='mx-auto mb-2 h-8 w-8 text-emerald-500' />
           <p className='text-sm font-semibold text-emerald-800'>All eligible students have been assigned.</p>
@@ -126,7 +157,7 @@ export function ManualDemandAssignPanel({
   // Case B: Unassigned exist but none can be assigned to this route
   if (assignableCount === 0) {
     return (
-      <SchoolBusSection title='Assign Demand'>
+      <SchoolBusSection title='Add Students'>
         <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
           <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
           <p className='text-sm font-bold text-amber-800'>No assignable students for this route.</p>
@@ -140,7 +171,7 @@ export function ManualDemandAssignPanel({
 
   return (
     <SchoolBusSection
-      title={`Assign to "${selectedRoute.routeName}"`}
+      title={`Add Students to "${selectedRoute.routeName}"`}
       action={
         <span className='rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700'>
           {direction}
@@ -170,9 +201,8 @@ export function ManualDemandAssignPanel({
         </div>
       </div>
 
-      <p className='mb-3 text-[11px] text-slate-450 leading-relaxed'>
-        Click <strong>Add</strong> to assign a student to this route.
-        A stop will be auto-created if needed.
+      <p className='mb-3 text-[11px] text-slate-455 leading-relaxed'>
+        Add eligible students to the selected route. Stops will be created automatically from pickup/drop-off points.
       </p>
 
       <div className='max-h-80 space-y-1.5 overflow-y-auto pr-1'>
@@ -207,14 +237,7 @@ export function ManualDemandAssignPanel({
                 </div>
                 <p className='mt-0.5 text-[10px] truncate text-slate-450 flex items-center gap-1'>
                   {hasPoint ? (
-                    <>
-                      <span>📍 {point ?? '—'}</span>
-                      {student.windowStart && student.windowEnd && (
-                        <span className='text-[9px] font-medium text-slate-400 bg-slate-100/40 px-1 rounded border border-slate-150'>
-                          {student.windowStart}–{student.windowEnd}
-                        </span>
-                      )}
-                    </>
+                    <span>📍 {point ?? '—'}</span>
                   ) : (
                     <span className='text-amber-600'>⚠️ No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'} point</span>
                   )}

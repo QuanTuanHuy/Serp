@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -19,9 +18,6 @@ public class PlanningDemandResponse {
     private Long schoolId;
     private String schoolName;
 
-    private Long schoolScheduleId;
-    private String scheduleCode;
-    private String scheduleName;
 
     private String tripOption;
     private String tripOptionLabel;
@@ -34,10 +30,4 @@ public class PlanningDemandResponse {
 
     private LocalTime windowStart;
     private LocalTime windowEnd;
-
-    private String readinessStatus; // READY / BLOCKED / WARNING
-    private String reasonCode;
-    private String reasonLabel;
-    private List<String> issueCodes;
-    private List<String> issueLabels;
 }

@@ -39,7 +39,6 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
-    private final SchoolPickupPointValidator pickupPointValidator;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
@@ -52,7 +51,6 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
             SchoolBusMapper mapper,
             IAuditLogService auditLogService,
             ICodeGeneratorService codeGeneratorService,
-            SchoolPickupPointValidator pickupPointValidator,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.studentRepository = studentRepository;
@@ -62,7 +60,6 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         this.mapper = mapper;
         this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
-        this.pickupPointValidator = pickupPointValidator;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
@@ -139,19 +136,15 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         student.setSchool(school);
         student.setParentProfile(parentService.getParent(request.getParentProfileId(), tenantId));
 
-        // Default pickup point validation
+        // Default pickup point
         if (request.getPickupPointId() != null) {
-            pickupPointValidator.validatePickupPointAllowedForSchool(
-                    tenantId, school.getId(), request.getPickupPointId());
             student.setPickupPoint(pickupPointService.getPickupPoint(request.getPickupPointId(), tenantId));
         } else {
             student.setPickupPoint(null);
         }
 
-        // Default dropoff point validation
+        // Default dropoff point
         if (request.getDefaultDropoffPointId() != null) {
-            pickupPointValidator.validateDropoffPointAllowedForSchool(
-                    tenantId, school.getId(), request.getDefaultDropoffPointId());
             student.setDefaultDropoffPoint(
                     pickupPointService.getPickupPoint(request.getDefaultDropoffPointId(), tenantId));
         } else {
@@ -164,8 +157,6 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         student.setHomeAddress(request.getHomeAddress());
         student.setDateOfBirth(request.getDateOfBirth());
         student.setGender(request.getGender());
-        student.setEmergencyContactName(request.getEmergencyContactName());
-        student.setEmergencyContactPhone(request.getEmergencyContactPhone());
         student.setSpecialNote(request.getSpecialNote());
         student.setIsActive(request.resolveIsActive(Boolean.TRUE));
     }

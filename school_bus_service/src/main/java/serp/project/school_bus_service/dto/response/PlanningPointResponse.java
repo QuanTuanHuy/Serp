@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -21,7 +20,4 @@ public class PlanningPointResponse {
 
     private LocalTime windowStart;
     private LocalTime windowEnd;
-
-    private String readinessStatus;
-    private List<String> issueLabels;
 }

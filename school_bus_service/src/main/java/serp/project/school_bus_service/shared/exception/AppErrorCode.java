@@ -32,6 +32,8 @@ public class AppErrorCode {
         public static final ErrorInfo INACTIVE              = new ErrorInfo("bus.inactive",               "Bus is not active.",               HttpStatus.BAD_REQUEST);
         public static final ErrorInfo NOT_AVAILABLE         = new ErrorInfo("bus.notAvailable",           "Bus is not available.",            HttpStatus.BAD_REQUEST);
         public static final ErrorInfo CAPACITY_EXCEEDED     = new ErrorInfo("bus.capacity.exceeded",      "Bus capacity exceeded.",           HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo SELECTED_BUS_REQUIRED = new ErrorInfo("bus.selectedBus.required", "Please select a bus before adding students to the route.", HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo CAPACITY_NOT_CONFIGURED = new ErrorInfo("bus.capacity.notConfigured", "The selected bus does not have capacity configured.", HttpStatus.BAD_REQUEST);
         private Bus() {}
     }
 
@@ -189,6 +191,8 @@ public class AppErrorCode {
         public static final ErrorInfo BUS_TIME_CONFLICT       = new ErrorInfo("dispatch.bus.timeConflict",       "Bus time window conflict.",              HttpStatus.CONFLICT);
         public static final ErrorInfo DRIVER_TIME_CONFLICT    = new ErrorInfo("dispatch.driver.timeConflict",    "Driver time window conflict.",           HttpStatus.CONFLICT);
         public static final ErrorInfo ATTENDANT_TIME_CONFLICT = new ErrorInfo("dispatch.attendant.timeConflict", "Attendant time window conflict.",        HttpStatus.CONFLICT);
+        public static final ErrorInfo BUS_REQUIRED            = new ErrorInfo("dispatch.bus.required",            "Please select a bus in Route Builder first.", HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo CANNOT_CHANGE_BUS       = new ErrorInfo("dispatch.bus.cannotChange",       "Cannot change the selected bus during staff assignment.", HttpStatus.BAD_REQUEST);
         private Dispatch() {}
     }
 
@@ -205,6 +209,7 @@ public class AppErrorCode {
         public static final ErrorInfo ALREADY_CANCELLED       = new ErrorInfo("session.alreadyCancelled",        "Session is already cancelled.",            HttpStatus.BAD_REQUEST);
         public static final ErrorInfo FROZEN                  = new ErrorInfo("session.frozen",                  "Session is closed for editing.",          HttpStatus.BAD_REQUEST);
         public static final ErrorInfo NOT_MANUAL              = new ErrorInfo("session.notManual",               "Only manual sessions allow this action.",  HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo ROUTE_NO_STUDENTS       = new ErrorInfo("session.routeNoStudents",         "Route has no assigned students.",          HttpStatus.BAD_REQUEST);
         private Session() {}
     }
 
@@ -235,6 +240,7 @@ public class AppErrorCode {
         public static final ErrorInfo NO_STOPS                = new ErrorInfo("trip.noStops",               "Trip has no stops configured.",                                               HttpStatus.BAD_REQUEST);
         public static final ErrorInfo STOP_ALREADY_DONE       = new ErrorInfo("trip.stop.alreadyDone",      "Stop is already departed or skipped.",                                        HttpStatus.BAD_REQUEST);
         public static final ErrorInfo STOP_NOT_ARRIVED        = new ErrorInfo("trip.stop.notArrived",       "Stop must be ARRIVED or BOARDING before it can be departed.",                 HttpStatus.BAD_REQUEST);
+        public static final ErrorInfo STOP_NOT_ARRIVED_BOARDING = new ErrorInfo("trip.stop.notArrivedBoarding", "Stop must be ARRIVED to start boarding.",                                    HttpStatus.BAD_REQUEST);
         public static final ErrorInfo SKIP_REASON_REQUIRED    = new ErrorInfo("trip.skip.reasonRequired",   "A reason is required to skip a stop.",                                        HttpStatus.BAD_REQUEST);
         public static final ErrorInfo CANCEL_REASON_REQUIRED  = new ErrorInfo("trip.cancel.reasonRequired", "A reason is required to cancel a trip.",                                      HttpStatus.BAD_REQUEST);
         public static final ErrorInfo ALREADY_CANCELLED       = new ErrorInfo("trip.alreadyCancelled",      "Trip is already cancelled.",                                                  HttpStatus.BAD_REQUEST);

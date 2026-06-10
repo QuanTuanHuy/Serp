@@ -18,7 +18,6 @@ import serp.project.school_bus_service.shared.exception.AppException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -95,8 +94,7 @@ public class SchoolBusDataScopeServiceTest {
         requestTenant1.markCreated(TENANT_1, "TEST");
         requestTenant1 = transportRequestRepository.save(requestTenant1);
 
-        SchoolScheduleEntity schedule1 = dataFactory.createSchoolSchedule(school1, "Morning Shift", LocalTime.of(7, 30), LocalTime.of(12, 0), TENANT_1);
-        RoutePlanningSessionEntity session1 = dataFactory.createRoutePlanningSession(school1, schedule1, RouteDirection.OUTBOUND, TENANT_1);
+        RoutePlanningSessionEntity session1 = dataFactory.createRoutePlanningSession(school1, RouteDirection.OUTBOUND, TENANT_1);
         RoutePlanEntity route1 = dataFactory.createRoutePlan(school1, session1, RouteDirection.OUTBOUND, TENANT_1);
 
         tripTenant1 = new TripExecutionEntity();
@@ -104,7 +102,6 @@ public class SchoolBusDataScopeServiceTest {
         tripTenant1.setRoute(route1);
         tripTenant1.setServiceDate(LocalDate.now());
         tripTenant1.setRouteDirection(RouteDirection.OUTBOUND);
-        tripTenant1.setShiftType(ShiftType.MORNING);
         tripTenant1.setStatus(TripStatus.PLANNED);
         tripTenant1.markCreated(TENANT_1, "TEST");
         tripTenant1 = tripExecutionRepository.save(tripTenant1);

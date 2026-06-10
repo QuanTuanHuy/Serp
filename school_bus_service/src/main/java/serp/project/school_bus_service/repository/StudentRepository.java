@@ -8,5 +8,7 @@ import java.util.List;
 public interface StudentRepository extends BaseRepository<StudentEntity, Long> {
     List<StudentEntity> findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(Long tenantId);
 
+    List<StudentEntity> findByTenantIdAndParentProfileIdAndIsDeletedFalse(Long tenantId, Long parentProfileId);
+
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
 }

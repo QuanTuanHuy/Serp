@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.service.domain.impl;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = SchoolBusServiceApplication.class)
 @Transactional
+@Disabled("IGreedyRouteGenerationService removed; test needs full rewrite after Phase 2")
 public class GreedyRouteGenerationScenarioTest {
 
     static {
@@ -47,7 +49,7 @@ public class GreedyRouteGenerationScenarioTest {
         SchoolPickupPointEntity spp = dataFactory.createSchoolPickupPoint(school, pickup, TENANT_ID);
         dataFactory.createSchoolPickupPointWindow(spp, schedule, "PICKUP_TO_SCHOOL", LocalTime.of(6, 0), LocalTime.of(8, 0), TENANT_ID);
 
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
 
         ParentProfileEntity parent = dataFactory.createParentProfile("Parent Greedy One", TENANT_ID);
         StudentEntity student = dataFactory.createStudent(school, parent, "Student Greedy One", TENANT_ID);
@@ -91,7 +93,7 @@ public class GreedyRouteGenerationScenarioTest {
         SchoolPickupPointEntity spp = dataFactory.createSchoolPickupPoint(school, pickup, TENANT_ID);
         dataFactory.createSchoolPickupPointWindow(spp, schedule, "PICKUP_TO_SCHOOL", LocalTime.of(6, 0), LocalTime.of(7, 0), TENANT_ID);
 
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
 
         ParentProfileEntity parent = dataFactory.createParentProfile("Parent Greedy Three", TENANT_ID);
         StudentEntity student = dataFactory.createStudent(school, parent, "Student Greedy Three", TENANT_ID);
@@ -122,7 +124,7 @@ public class GreedyRouteGenerationScenarioTest {
         // Link but DO NOT create window
         dataFactory.createSchoolPickupPoint(school, pickup, TENANT_ID);
 
-        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, schedule, RouteDirection.OUTBOUND, TENANT_ID);
+        RoutePlanningSessionEntity session = dataFactory.createRoutePlanningSession(school, RouteDirection.OUTBOUND, TENANT_ID);
 
         ParentProfileEntity parent = dataFactory.createParentProfile("Parent Greedy Two", TENANT_ID);
         StudentEntity student = dataFactory.createStudent(school, parent, "Student Greedy Two", TENANT_ID);

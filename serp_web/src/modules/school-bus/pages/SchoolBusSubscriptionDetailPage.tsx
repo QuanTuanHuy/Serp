@@ -18,15 +18,14 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetSubscriptionByIdQuery,
-  useActivateSubscriptionMutation,
-  usePauseSubscriptionMutation,
-  useStopSubscriptionMutation,
-  useGetSubscriptionHistoryQuery,
-  useGetSubscriptionPausePeriodsQuery,
+  useGetSchoolBusSubscriptionByIdQuery,
+  useActivateSchoolBusSubscriptionMutation,
+  usePauseSchoolBusSubscriptionMutation,
+  useStopSchoolBusSubscriptionMutation,
+  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusTimeline } from '../components/history/SchoolBusTimeline';
-import { mapSubscriptionHistoryToTimeline, mapPausePeriodsToTimeline } from '../components/history/mappers';
+import { mapSubscriptionHistoryToTimeline } from '../components/history/mappers';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -58,15 +57,13 @@ interface SchoolBusSubscriptionDetailPageProps {
 export function SchoolBusSubscriptionDetailPage({
   subscriptionId,
 }: SchoolBusSubscriptionDetailPageProps) {
-  const { data, isLoading } = useGetSubscriptionByIdQuery(subscriptionId);
-  const [activateSubscription, { isLoading: activating }] = useActivateSubscriptionMutation();
-  const [pauseSubscription, { isLoading: pausing }] = usePauseSubscriptionMutation();
-  const [stopSubscription, { isLoading: stopping }] = useStopSubscriptionMutation();
+  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
+  const [activateSubscription, { isLoading: activating }] = useActivateSchoolBusSubscriptionMutation();
+  const [pauseSubscription, { isLoading: pausing }] = usePauseSchoolBusSubscriptionMutation();
+  const [stopSubscription, { isLoading: stopping }] = useStopSchoolBusSubscriptionMutation();
 
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSubscriptionHistoryQuery(subscriptionId);
-  const { data: pauseData, isLoading: pauseLoading } =
-    useGetSubscriptionPausePeriodsQuery(subscriptionId);
+    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId);
 
   const sub = data?.data;
 
@@ -86,11 +83,10 @@ export function SchoolBusSubscriptionDetailPage({
 
   const timelineEvents = React.useMemo<TimelineEvent[]>(() => {
     const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);
-    const pauseEvents = mapPausePeriodsToTimeline(pauseData?.data ?? []);
-    return [...historyEvents, ...pauseEvents].sort(
+    return historyEvents.sort(
       (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
-  }, [historyData, pauseData]);
+  }, [historyData]);
 
   if (isLoading) {
     return (
@@ -143,11 +139,9 @@ export function SchoolBusSubscriptionDetailPage({
   const pickupPointConfigured = !requiresPickup || !!sub.pickupPointId;
   const dropoffPointConfigured = !requiresDropoff || !!sub.dropoffPointId;
 
-  const hasSchedule = !!sub.schoolScheduleId;
+  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured;
 
-  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured && hasSchedule;
-
-  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured || !hasSchedule;
+  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured;
 
   const descriptionNode = (
     <div className='space-y-1.5 mt-1'>
@@ -389,34 +383,7 @@ export function SchoolBusSubscriptionDetailPage({
             {/* Schedule & active days */}
             <SchoolBusSection title='Schedule & active days'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
-                {sub.schoolScheduleId ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pb-3 border-b border-slate-105'>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Name</span>
-                      <span className='text-slate-900 font-semibold'>{sub.schoolScheduleName}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Code</span>
-                      <span className='text-slate-900 font-semibold font-mono text-xs'>{sub.scheduleCode || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Shift Type</span>
-                      <span className='text-slate-900 font-semibold'>{sub.shiftType || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Arrival Deadline</span>
-                      <span className='text-slate-900 font-semibold'>{sub.arrivalDeadline || '—'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm md:col-span-2'>
-                      <span className='text-slate-500 font-medium'>Departure Time</span>
-                      <span className='text-slate-900 font-semibold'>{sub.departureTime || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className='pb-3 border-b border-slate-100 text-sm text-amber-600 italic font-medium'>
-                    No schedule linked to this subscription contract.
-                  </div>
-                )}
+                
 
                 <div>
                   <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2'>Active Days</span>
@@ -510,17 +477,6 @@ export function SchoolBusSubscriptionDetailPage({
                       {pickupPointConfigured && dropoffPointConfigured ? 'Configured' : 'Missing points'}
                     </span>
                   </div>
-
-                  {/* 5. Schedule linked */}
-                  <div className='flex items-center gap-2'>
-                    {hasSchedule ? (
-                      <span className='text-emerald-600 font-bold'>✓</span>
-                    ) : (
-                      <span className='text-amber-500 font-bold'>⚠</span>
-                    )}
-                    <span className='text-slate-500 font-medium'>School schedule linked</span>
-                    <span className='ml-auto text-slate-700'>{hasSchedule ? 'Linked' : 'Missing schedule'}</span>
-                  </div>
                 </div>
 
                 <div className='rounded-xl bg-slate-50 p-3 text-slate-500 text-[11px] font-semibold leading-relaxed border border-slate-200/60'>
@@ -583,28 +539,6 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             )}
 
-            {/* Pause Periods List */}
-            {pauseData?.data && pauseData.data.length > 0 && (
-              <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                  Pause Periods
-                </h3>
-                <div className='space-y-3'>
-                  {pauseData.data.map((p) => (
-                    <div key={p.id} className='rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs'>
-                      <div className='flex items-center justify-between gap-2 mb-1'>
-                        <span className='font-bold text-slate-800'>
-                          {p.pauseFrom} {p.pauseTo ? `→ ${p.pauseTo}` : ' (Indefinite)'}
-                        </span>
-                        <SchoolBusStatusBadge status={p.status} />
-                      </div>
-                      {p.reason && <p className='text-slate-500 font-medium'>Reason: {p.reason}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* History Event Log */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
@@ -614,7 +548,7 @@ export function SchoolBusSubscriptionDetailPage({
                 events={timelineEvents}
                 mode='compact'
                 groupByDate={false}
-                isLoading={historyLoading || pauseLoading}
+                isLoading={historyLoading}
                 isError={historyError}
                 maxHeight='320px'
               />

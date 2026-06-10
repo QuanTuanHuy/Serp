@@ -24,9 +24,6 @@ public class PickupPointEntity extends BaseModel {
     private Double latitude;
     private Double longitude;
 
-    @Column(name = "zone_code")
-    private String zoneCode;
-
     @Column(name = "usage_type")
     private String usageType;
 

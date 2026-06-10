@@ -31,7 +31,6 @@ public class SchoolBusAccountUserSyncController {
      * Trigger manual full/incremental sync of users from Account API.
      */
     @PostMapping("/sync")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.sync.run')")
     public GeneralResponse<AccountUserSyncResultResponse> syncAllUsers() {
         AccountUserSyncResultResponse result = accountUserSyncService.syncAllUsers();
         return GeneralResponse.success("Synchronization process completed", result);
@@ -41,7 +40,6 @@ public class SchoolBusAccountUserSyncController {
      * Trigger manual sync of a single user by their Account user ID.
      */
     @PostMapping("/sync/{accountUserId}")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.sync.run')")
     public GeneralResponse<AccountUserSyncResultResponse> syncSingleUser(@PathVariable Long accountUserId) {
         AccountUserSyncResultResponse result = accountUserSyncService.syncSingleUser(accountUserId);
         return GeneralResponse.success("Single user synchronization completed", result);
@@ -51,7 +49,6 @@ public class SchoolBusAccountUserSyncController {
      * Retrieve the current state of the sync checkpoint.
      */
     @GetMapping("/sync/checkpoint")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.sync.read')")
     public GeneralResponse<SchoolBusSyncCheckpointEntity> getSyncCheckpoint() {
         SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository.findBySyncCodeAndIsDeletedFalse("ACCOUNT_USER_SYNC")
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "Sync checkpoint not found"));

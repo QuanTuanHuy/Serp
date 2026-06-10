@@ -1,11 +1,11 @@
 package serp.project.school_bus_service.service;
-import serp.project.school_bus_service.entity.AuditLogEntity;
 
-import serp.project.school_bus_service.shared.base.IBaseService;
-
-public interface IAuditLogService extends IBaseService<AuditLogEntity, Long> {
-
-    void log(Long tenantId, Long performedBy, String aggregateType, Long aggregateId, String actionType, String actionDetail);
+/**
+ * Audit log service interface. Currently a no-op after Phase 2 simplification.
+ * Will be re-implemented in a future phase.
+ */
+public interface IAuditLogService {
+    void log(Long tenantId, Long actorId, String entityType, Long entityId, String action, String message);
 
     long countByTenant(Long tenantId);
 }

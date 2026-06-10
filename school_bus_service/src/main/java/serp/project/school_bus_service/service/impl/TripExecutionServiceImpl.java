@@ -21,7 +21,6 @@ import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
-import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
@@ -185,7 +184,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         trip.setRoute(route);
         trip.setServiceDate(route.getServiceDate());
         trip.setRouteDirection(route.getRouteDirection());
-        trip.setShiftType(route.getShiftType());
         trip.setStatus(TripStatus.ASSIGNED);
         trip.setPlannedDistanceKm(route.getPlannedDistanceKm());
         trip.setPlannedDurationMin(route.getPlannedDurationMin());
@@ -263,15 +261,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         LocalDateTime now = LocalDateTime.now();
         stop.setStatus(TripStopStatus.ARRIVED);
         stop.setActualArrivalTime(now);
-        // Calculate delay: compare actual arrival vs planned arrival time on service date
-        LocalTime plannedArrivalTime = stop.getRouteStop().getPlannedArrivalTime();
-        if (plannedArrivalTime != null) {
-            LocalDateTime planned = LocalDateTime.of(
-                    trip.getServiceDate() != null ? trip.getServiceDate() : LocalDate.now(),
-                    plannedArrivalTime);
-            long delayMin = Duration.between(planned, now).toMinutes();
-            stop.setDelayMinutes((int) delayMin);
-        }
         stop.markUpdated(actor(actorId));
         tripStopLogService.save(stop);
         auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "ARRIVE_STOP",
@@ -572,39 +561,16 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         List<RoutePlanStudentEntity> planStudents = routePlanStudentService
                 .findByRoute(route.getId());
 
-        // Group by (studentId, subscriptionId) → collect BOARD and DROPOFF stops
-        // Key = "studentId:subscriptionId"
-        Map<String, RoutePlanStudentEntity> boardMap = new HashMap<>();
-        Map<String, RoutePlanStudentEntity> dropoffMap = new HashMap<>();
-
+        // New model: each RoutePlanStudentEntity has pickupStop + dropoffStop directly
         for (RoutePlanStudentEntity ps : planStudents) {
-            String key = ps.getStudent().getId() + ":" + ps.getSubscription().getId();
-            if (ps.getServiceAction() == RoutePlanStudentAction.BOARD) {
-                boardMap.put(key, ps);
-            } else if (ps.getServiceAction() == RoutePlanStudentAction.DROPOFF) {
-                dropoffMap.put(key, ps);
-            }
-        }
-
-        // Merge keys from both maps
-        Set<String> allKeys = new HashSet<>(boardMap.keySet());
-        allKeys.addAll(dropoffMap.keySet());
-
-        for (String key : allKeys) {
-            RoutePlanStudentEntity boardEntry = boardMap.get(key);
-            RoutePlanStudentEntity dropoffEntry = dropoffMap.get(key);
-
-            // Use whichever entry exists to get the student and subscription references
-            RoutePlanStudentEntity reference = boardEntry != null ? boardEntry : dropoffEntry;
-
             TripStudentEntity item = new TripStudentEntity();
             item.markCreated(tenantId, actor(actorId));
             item.setTrip(trip);
-            item.setStudent(reference.getStudent());
-            item.setSubscription(reference.getSubscription());
+            item.setStudent(ps.getStudent());
+            item.setSubscription(ps.getSubscription());
             item.setStatus(TripStudentStatus.PLANNED);
-            item.setPickupStop(boardEntry != null ? boardEntry.getRouteStop() : null);
-            item.setDropoffStop(dropoffEntry != null ? dropoffEntry.getRouteStop() : null);
+            item.setPickupStop(ps.getPickupStop() != null ? ps.getPickupStop() : null);
+            item.setDropoffStop(ps.getDropoffStop() != null ? ps.getDropoffStop() : null);
             tripStudentService.save(item);
         }
     }

@@ -6,19 +6,17 @@ import serp.project.school_bus_service.entity.*;
 import serp.project.school_bus_service.enums.*;
 import serp.project.school_bus_service.repository.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
 
+/**
+ * Test data factory for scenario/integration tests.
+ * SchoolSchedule has been removed in Phase 2 refactoring.
+ */
 @Component
 public class SchoolBusScenarioTestDataFactory {
 
     @Autowired
     private SchoolRepository schoolRepository;
-
-    @Autowired
-    private SchoolScheduleRepository schoolScheduleRepository;
 
     @Autowired
     private DepotRepository depotRepository;
@@ -28,9 +26,6 @@ public class SchoolBusScenarioTestDataFactory {
 
     @Autowired
     private SchoolPickupPointRepository schoolPickupPointRepository;
-
-    @Autowired
-    private SchoolPickupPointWindowRepository schoolPickupPointWindowRepository;
 
     @Autowired
     private ParentProfileRepository parentProfileRepository;
@@ -67,33 +62,6 @@ public class SchoolBusScenarioTestDataFactory {
         return schoolRepository.save(school);
     }
 
-    public SchoolScheduleEntity createSchoolSchedule(SchoolEntity school, String name, LocalTime arrival, LocalTime departure, Long tenantId) {
-        SchoolScheduleEntity schedule = new SchoolScheduleEntity();
-        schedule.setSchool(school);
-        schedule.setScheduleCode("SCH-" + System.currentTimeMillis());
-        schedule.setScheduleName(name);
-        schedule.setShiftType("MORNING");
-        schedule.setArrivalDeadline(arrival);
-        schedule.setDepartureTime(departure);
-        schedule.setEffectiveFrom(LocalDate.now().minusDays(10));
-        schedule.setEffectiveTo(LocalDate.now().plusDays(30));
-        schedule.setIsDefaultSchedule(true);
-        schedule.setScheduleDays(new ArrayList<>());
-
-        // Add standard weekdays
-        String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
-        for (String day : days) {
-            SchoolScheduleDayEntity scheduleDay = new SchoolScheduleDayEntity();
-            scheduleDay.setSchedule(schedule);
-            scheduleDay.setDayOfWeek(day);
-            scheduleDay.markCreated(tenantId, "TEST");
-            schedule.getScheduleDays().add(scheduleDay);
-        }
-
-        schedule.markCreated(tenantId, "TEST");
-        return schoolScheduleRepository.save(schedule);
-    }
-
     public DepotEntity createDepot(String code, String name, Double lat, Double lon, Long tenantId) {
         DepotEntity depot = new DepotEntity();
         depot.setCode(code);
@@ -124,20 +92,6 @@ public class SchoolBusScenarioTestDataFactory {
         spp.setIsDefaultPoint(false);
         spp.markCreated(tenantId, "TEST");
         return schoolPickupPointRepository.save(spp);
-    }
-
-    public SchoolPickupPointWindowEntity createSchoolPickupPointWindow(
-            SchoolPickupPointEntity spp, SchoolScheduleEntity schedule, String direction, LocalTime start, LocalTime end, Long tenantId) {
-        SchoolPickupPointWindowEntity window = new SchoolPickupPointWindowEntity();
-        window.setSchoolPickupPoint(spp);
-        window.setSchoolSchedule(schedule);
-        window.setDirection(direction);
-        window.setWindowStart(start);
-        window.setWindowEnd(end);
-        window.setEstimatedDistanceToSchoolKm(5.0);
-        window.setEstimatedDurationToSchoolMin(15);
-        window.markCreated(tenantId, "TEST");
-        return schoolPickupPointWindowRepository.save(window);
     }
 
     public ParentProfileEntity createParentProfile(String fullName, Long tenantId) {
@@ -173,7 +127,7 @@ public class SchoolBusScenarioTestDataFactory {
         sub.setEffectiveFrom(LocalDate.now().minusDays(5));
         sub.setEffectiveTo(LocalDate.now().plusDays(20));
         sub.setStatus(SubscriptionStatus.ACTIVE);
-        
+
         // Active everyday
         sub.setMonday(true);
         sub.setTuesday(true);
@@ -187,10 +141,9 @@ public class SchoolBusScenarioTestDataFactory {
         return studentSubscriptionRepository.save(sub);
     }
 
-    public RoutePlanningSessionEntity createRoutePlanningSession(SchoolEntity school, SchoolScheduleEntity schedule, RouteDirection direction, Long tenantId) {
+    public RoutePlanningSessionEntity createRoutePlanningSession(SchoolEntity school, RouteDirection direction, Long tenantId) {
         RoutePlanningSessionEntity session = new RoutePlanningSessionEntity();
         session.setSchool(school);
-        session.setSchoolSchedule(schedule);
         session.setServiceDate(LocalDate.now());
         session.setRouteDirection(direction);
         session.setPlanningMethod(PlanningMethod.GREEDY);
@@ -212,7 +165,7 @@ public class SchoolBusScenarioTestDataFactory {
         route.setRouteDirection(direction);
         route.setStartLocationType(direction == RouteDirection.OUTBOUND ? RouteLocationType.DEPOT : RouteLocationType.SCHOOL);
         route.setEndLocationType(direction == RouteDirection.OUTBOUND ? RouteLocationType.SCHOOL : RouteLocationType.DEPOT);
-        
+
         if (direction == RouteDirection.OUTBOUND) {
             route.setStartDepot(depot);
             route.setEndSchool(school);
@@ -224,10 +177,8 @@ public class SchoolBusScenarioTestDataFactory {
         route.setRouteCode("ROT-" + System.currentTimeMillis());
         route.setRouteName("Test Route Plan");
         route.setServiceDate(LocalDate.now());
-        route.setShiftType(ShiftType.MORNING);
         route.setStatus(RouteStatus.DRAFT);
         route.setPlanningSession(session);
-        route.setSchoolSchedule(session != null ? session.getSchoolSchedule() : null);
         route.setPlannedStudentCount(0);
         route.setAssignedBusCapacity(30);
         route.markCreated(tenantId, "TEST");

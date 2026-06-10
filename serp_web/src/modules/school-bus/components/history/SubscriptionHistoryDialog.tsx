@@ -11,11 +11,10 @@ import {
   DialogDescription,
 } from '@/shared/components/ui';
 import {
-  useGetSubscriptionHistoryQuery,
-  useGetSubscriptionPausePeriodsQuery,
+  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../../api/schoolBusApi';
 import { SchoolBusTimeline } from './SchoolBusTimeline';
-import { mapSubscriptionHistoryToTimeline, mapPausePeriodsToTimeline } from './mappers';
+import { mapSubscriptionHistoryToTimeline } from './mappers';
 import type { TimelineEvent } from './SchoolBusTimeline';
 
 interface SubscriptionHistoryDialogProps {
@@ -29,17 +28,14 @@ export function SubscriptionHistoryDialog({
 }: SubscriptionHistoryDialogProps) {
   const [open, setOpen] = React.useState(false);
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSubscriptionHistoryQuery(subscriptionId, { skip: !open });
-  const { data: pauseData, isLoading: pauseLoading } =
-    useGetSubscriptionPausePeriodsQuery(subscriptionId, { skip: !open });
+    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId, { skip: !open });
 
   const events = React.useMemo<TimelineEvent[]>(() => {
     const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);
-    const pauseEvents = mapPausePeriodsToTimeline(pauseData?.data ?? []);
-    return [...historyEvents, ...pauseEvents].sort(
+    return historyEvents.sort(
       (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
-  }, [historyData, pauseData]);
+  }, [historyData]);
 
   return (
     <>
@@ -64,7 +60,7 @@ export function SubscriptionHistoryDialog({
             events={events}
             mode='full'
             groupByDate
-            isLoading={historyLoading || pauseLoading}
+            isLoading={historyLoading}
             isError={historyError}
             maxHeight='480px'
           />

@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.service.domain.impl;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,6 +24,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
+@Disabled("TimelineCalculatorServiceImpl / IRoutingConfigResolver removed; test needs full rewrite after Phase 2")
 class TimelineCalculatorServiceImplTest {
 
     private IRoutingConfigResolver routingConfigResolver;

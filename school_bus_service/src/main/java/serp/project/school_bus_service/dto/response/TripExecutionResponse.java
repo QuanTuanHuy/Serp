@@ -16,7 +16,6 @@ public class TripExecutionResponse extends BaseResponse {
     private String routeName;
     private LocalDate serviceDate;
     private String routeDirection;
-    private String shiftType;
     private String status;
     private LocalDateTime plannedStartAt;
     private LocalDateTime plannedEndAt;

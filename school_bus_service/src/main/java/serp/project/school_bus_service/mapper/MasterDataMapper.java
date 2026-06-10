@@ -8,9 +8,7 @@ import serp.project.school_bus_service.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.dto.response.SchoolPickupPointResponse;
-import serp.project.school_bus_service.dto.response.SchoolPickupPointWindowResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
-import serp.project.school_bus_service.dto.response.SchoolScheduleResponse;
 import serp.project.school_bus_service.dto.response.StudentResponse;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.entity.BusEntity;
@@ -20,9 +18,6 @@ import serp.project.school_bus_service.entity.ParentProfileEntity;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
-import serp.project.school_bus_service.entity.SchoolPickupPointWindowEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleDayEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.shared.base.BaseMapper;
 
@@ -70,8 +65,6 @@ public class MasterDataMapper extends BaseMapper {
         response.setHomeAddress(entity.getHomeAddress());
         response.setDateOfBirth(entity.getDateOfBirth());
         response.setGender(entity.getGender());
-        response.setEmergencyContactName(entity.getEmergencyContactName());
-        response.setEmergencyContactPhone(entity.getEmergencyContactPhone());
         response.setSpecialNote(entity.getSpecialNote());
         return response;
     }
@@ -117,12 +110,9 @@ public class MasterDataMapper extends BaseMapper {
         response.setLatitude(entity.getLatitude());
         response.setLongitude(entity.getLongitude());
         response.setCode(entity.getCode());
-        response.setZoneCode(entity.getZoneCode());
         response.setUsageType(entity.getUsageType());
         response.setPickupInstruction(entity.getPickupInstruction());
-        // Legacy fields always null
-        response.setSchoolId(null);
-        response.setSchoolName(null);
+        response.setSchools(java.util.List.of());
         return response;
     }
 
@@ -138,31 +128,6 @@ public class MasterDataMapper extends BaseMapper {
         return response;
     }
 
-    public SchoolScheduleResponse toSchoolScheduleResponse(SchoolScheduleEntity entity) {
-        SchoolScheduleResponse response = enrich(new SchoolScheduleResponse(), entity);
-        response.setSchoolId(entity.getSchool().getId());
-        response.setSchoolName(entity.getSchool().getName());
-        response.setScheduleCode(entity.getScheduleCode());
-        response.setScheduleName(entity.getScheduleName());
-        response.setEducationLevel(entity.getEducationLevel());
-        response.setGrade(entity.getGrade());
-        response.setShiftType(entity.getShiftType());
-        response.setDaysOfWeek(
-                entity.getScheduleDays() == null
-                        ? List.of()
-                        : entity.getScheduleDays().stream()
-                                .filter(d -> !Boolean.TRUE.equals(d.getIsDeleted()))
-                                .map(SchoolScheduleDayEntity::getDayOfWeek)
-                                .sorted()
-                                .toList());
-        response.setArrivalDeadline(entity.getArrivalDeadline());
-        response.setDepartureTime(entity.getDepartureTime());
-        response.setEffectiveFrom(entity.getEffectiveFrom());
-        response.setEffectiveTo(entity.getEffectiveTo());
-        response.setIsDefault(entity.getIsDefaultSchedule());
-        return response;
-    }
-
     public SchoolPickupPointResponse toSchoolPickupPointResponse(SchoolPickupPointEntity entity) {
         SchoolPickupPointResponse response = enrich(new SchoolPickupPointResponse(), entity);
         response.setSchoolId(entity.getSchool().getId());
@@ -174,20 +139,6 @@ public class MasterDataMapper extends BaseMapper {
         response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
         response.setPickupPointUsageType(entity.getPickupPoint().getUsageType());
         response.setIsDefault(entity.getIsDefaultPoint());
-        return response;
-    }
-
-    public SchoolPickupPointWindowResponse toSchoolPickupPointWindowResponse(
-            SchoolPickupPointWindowEntity entity) {
-        SchoolPickupPointWindowResponse response = enrich(new SchoolPickupPointWindowResponse(), entity);
-        response.setSchoolPickupPointId(entity.getSchoolPickupPoint().getId());
-        response.setSchoolScheduleId(entity.getSchoolSchedule().getId());
-        response.setScheduleName(entity.getSchoolSchedule().getScheduleName());
-        response.setDirection(entity.getDirection());
-        response.setWindowStart(entity.getWindowStart());
-        response.setWindowEnd(entity.getWindowEnd());
-        response.setEstimatedDistanceToSchoolKm(entity.getEstimatedDistanceToSchoolKm());
-        response.setEstimatedDurationToSchoolMin(entity.getEstimatedDurationToSchoolMin());
         return response;
     }
 }

@@ -8,6 +8,7 @@ import serp.project.school_bus_service.enums.*;
 import serp.project.school_bus_service.repository.*;
 import serp.project.school_bus_service.service.*;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -38,6 +39,14 @@ public class DashboardServiceImpl implements IDashboardService {
     private final AttendanceRepository attendanceRepository;
     private final SchoolBusMapper schoolBusMapper;
 
+    private final SchoolBusSecurityService schoolBusSecurityService;
+    private final SchoolBusUserRepository schoolBusUserRepository;
+    private final ParentProfileRepository parentProfileRepository;
+    private final StudentRepository studentRepository;
+    private final DriverProfileRepository driverProfileRepository;
+    private final BusAttendantProfileRepository busAttendantProfileRepository;
+    private final StudentSubscriptionRepository studentSubscriptionRepository;
+
     public DashboardServiceImpl(
             ISchoolService schoolService,
             IParentService parentService,
@@ -55,7 +64,14 @@ public class DashboardServiceImpl implements IDashboardService {
             RouteAssignmentRepository routeAssignmentRepository,
             TransportRequestRepository transportRequestRepository,
             AttendanceRepository attendanceRepository,
-            SchoolBusMapper schoolBusMapper) {
+            SchoolBusMapper schoolBusMapper,
+            SchoolBusSecurityService schoolBusSecurityService,
+            SchoolBusUserRepository schoolBusUserRepository,
+            ParentProfileRepository parentProfileRepository,
+            StudentRepository studentRepository,
+            DriverProfileRepository driverProfileRepository,
+            BusAttendantProfileRepository busAttendantProfileRepository,
+            StudentSubscriptionRepository studentSubscriptionRepository) {
         this.schoolService = schoolService;
         this.parentService = parentService;
         this.studentService = studentService;
@@ -73,11 +89,90 @@ public class DashboardServiceImpl implements IDashboardService {
         this.transportRequestRepository = transportRequestRepository;
         this.attendanceRepository = attendanceRepository;
         this.schoolBusMapper = schoolBusMapper;
+        this.schoolBusSecurityService = schoolBusSecurityService;
+        this.schoolBusUserRepository = schoolBusUserRepository;
+        this.parentProfileRepository = parentProfileRepository;
+        this.studentRepository = studentRepository;
+        this.driverProfileRepository = driverProfileRepository;
+        this.busAttendantProfileRepository = busAttendantProfileRepository;
+        this.studentSubscriptionRepository = studentSubscriptionRepository;
     }
 
 
     @Override
     public DashboardSummaryResponse getSummary(Long tenantId) {
+        if (schoolBusSecurityService.isParent()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            ParentProfileEntity parent = parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (parent == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            List<StudentEntity> students = studentRepository.findByTenantIdAndParentProfileIdAndIsDeletedFalse(tenantId, parent.getId());
+            long studentCount = students.size();
+            long schoolCount = students.stream().map(s -> s.getSchool().getId()).distinct().count();
+            long parentCount = 1;
+            long busCount = 0;
+            long pendingRequests = transportRequestRepository.countByTenantIdAndParentProfileIdAndStatusAndIsDeletedFalse(tenantId, parent.getId(), RequestStatus.SUBMITTED);
+            
+            long activeSubscriptions = 0;
+            for (StudentEntity s : students) {
+                activeSubscriptions += studentSubscriptionRepository.findByStudentIdAndTenantIdAndIsDeletedFalse(s.getId(), tenantId).stream()
+                        .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE)
+                        .count();
+            }
+            
+            return new DashboardSummaryResponse(
+                    schoolCount,
+                    parentCount,
+                    studentCount,
+                    busCount,
+                    pendingRequests,
+                    activeSubscriptions,
+                    0,
+                    0
+            );
+        } else if (schoolBusSecurityService.isDriver()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            DriverProfileEntity driver = driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (driver == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            List<TripExecutionEntity> trips = tripExecutionRepository.findTripsByDriverAndDate(tenantId, driver.getId(), LocalDate.now());
+            long inProgressCount = trips.stream().filter(t -> t.getStatus() == TripStatus.IN_PROGRESS).count();
+            long completedCount = trips.stream().filter(t -> t.getStatus() == TripStatus.COMPLETED).count();
+            return new DashboardSummaryResponse(
+                    0, 0, 0, 0, 0, 0,
+                    inProgressCount,
+                    completedCount
+            );
+        } else if (schoolBusSecurityService.isAttendant()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            BusAttendantProfileEntity attendant = busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (attendant == null) {
+                return new DashboardSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+            }
+            List<TripExecutionEntity> trips = tripExecutionRepository.findTripsByAttendantAndDate(tenantId, attendant.getId(), LocalDate.now());
+            long inProgressCount = trips.stream().filter(t -> t.getStatus() == TripStatus.IN_PROGRESS).count();
+            long completedCount = trips.stream().filter(t -> t.getStatus() == TripStatus.COMPLETED).count();
+            return new DashboardSummaryResponse(
+                    0, 0, 0, 0, 0, 0,
+                    inProgressCount,
+                    completedCount
+            );
+        }
+
         return new DashboardSummaryResponse(
                 schoolService.countByTenant(tenantId),
                 parentService.countByTenant(tenantId),
@@ -85,7 +180,6 @@ public class DashboardServiceImpl implements IDashboardService {
                 busService.countByTenant(tenantId),
                 transportRequestService.countByTenantAndStatus(tenantId, RequestStatus.SUBMITTED),
                 routeService.countByTenantAndStatus(tenantId, RouteStatus.ASSIGNED),
-                // Active trips = trips currently IN_PROGRESS (owned by TripExecution, not RoutePlan)
                 tripExecutionService.countByTenantAndStatus(tenantId, TripStatus.IN_PROGRESS),
                 tripHistoryService.countByTenant(tenantId));
     }
@@ -121,60 +215,224 @@ public class DashboardServiceImpl implements IDashboardService {
         // 1. Fallback logic for serviceDate
         LocalDate finalServiceDate = serviceDate;
         if (finalServiceDate == null) {
-            // Fallback: Lấy latest serviceDate có trip của tenant này. Nếu không có, dùng LocalDate.now()
             Optional<LocalDate> latestTripDate = tripExecutionRepository.findLatestServiceDate(tenantId);
-            if (latestTripDate.isPresent()) {
-                finalServiceDate = latestTripDate.get();
-            } else {
-                finalServiceDate = LocalDate.now();
-            }
+            finalServiceDate = latestTripDate.orElseGet(LocalDate::now);
         }
 
-        // 2. Fallback logic for fromDate & toDate (Trips by Date)
+        // 2. Fallback logic for fromDate & toDate
         LocalDate finalFromDate = fromDate != null ? fromDate : finalServiceDate.minusDays(6);
         LocalDate finalToDate = toDate != null ? toDate : finalServiceDate;
 
         // 3. Parse RouteDirection
         RouteDirection routeDir = (direction != null && !direction.isBlank()) ? RouteDirection.parse(direction) : null;
 
+        // 13. Summary counters (Reuse existing summary logic)
+        DashboardSummaryResponse summary = getSummary(tenantId);
+
+        if (schoolBusSecurityService.isParent()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+            ParentProfileEntity parent = parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (parent == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+
+            // 4. Trip Status Distribution Chart for Parent's children
+            List<Object[]> tripStatusRows = tripExecutionRepository.countTripsByStatusForParent(tenantId, parent.getId(), finalServiceDate);
+            List<ChartItemDto> tripStatusChart = getChartItemsForTripStatus(tripStatusRows);
+
+            // 5. Today Attendance Chart for Parent's children
+            List<Object[]> attendanceRows = tripStudentRepository.countAttendanceByStatusForParent(tenantId, finalServiceDate, parent.getId());
+            List<ChartItemDto> attendanceChart = getChartItemsForAttendanceStatus(attendanceRows);
+
+            // 6. Route Readiness Chart (Unused, return empty)
+            List<ChartItemDto> routeReadinessChart = List.of();
+
+            // 7. Request Workload Chart for Parent (Count parent's own requests)
+            List<TransportRequestEntity> parentRequests = transportRequestRepository.findByTenantIdAndParentProfileIdAndIsDeletedFalseOrderByCreatedAtDesc(tenantId, parent.getId());
+            Map<RequestStatus, Long> parentRequestMap = parentRequests.stream()
+                    .collect(Collectors.groupingBy(TransportRequestEntity::getStatus, Collectors.counting()));
+            List<ChartItemDto> requestStatusChart = new ArrayList<>();
+            for (RequestStatus status : RequestStatus.values()) {
+                long count = parentRequestMap.getOrDefault(status, 0L);
+                String label = switch (status) {
+                    case DRAFT -> "Draft";
+                    case SUBMITTED -> "Pending Approval";
+                    case APPROVED -> "Approved";
+                    case REJECTED -> "Rejected";
+                    case CANCELLED -> "Cancelled";
+                };
+                requestStatusChart.add(new ChartItemDto(status.name(), count, label));
+            }
+
+            // 8. Trips by Date (Unused)
+            List<ChartItemDto> tripsByDate = List.of();
+
+            // 9. Direction Split (Unused)
+            List<ChartItemDto> directionSplit = List.of();
+
+            // 10. Active Routes for Parent (Limit to 5)
+            List<RoutePlanEntity> routes = routePlanRepository.findRoutePlansByParentAndDate(tenantId, parent.getId(), finalServiceDate);
+            List<RoutePlanResponse> activeRoutes = routes.stream()
+                    .limit(5)
+                    .map(schoolBusMapper::toRoutePlanResponse)
+                    .toList();
+
+            // 11. Pending Approval Queue (Limit to 5 requests of this parent)
+            List<TransportRequestResponse> pendingApprovalQueue = parentRequests.stream()
+                    .filter(r -> r.getStatus() == RequestStatus.SUBMITTED)
+                    .limit(5)
+                    .map(schoolBusMapper::toTransportRequestResponse)
+                    .toList();
+
+            // 12. Recent Attendance Activity for Parent's children (Limit to 10)
+            List<AttendanceEntity> attendances = attendanceRepository.findRecentAttendanceForParent(tenantId, parent.getId(), PageRequest.of(0, 10));
+            List<AttendanceResponse> recentAttendanceActivity = attendances.stream()
+                    .map(schoolBusMapper::toAttendanceResponse)
+                    .toList();
+
+            return new DashboardOperationsResponse(
+                summary,
+                tripStatusChart,
+                attendanceChart,
+                routeReadinessChart,
+                requestStatusChart,
+                tripsByDate,
+                directionSplit,
+                activeRoutes,
+                pendingApprovalQueue,
+                recentAttendanceActivity
+            );
+        } else if (schoolBusSecurityService.isDriver()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+            DriverProfileEntity driver = driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (driver == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+
+            // 4. Trip Status Distribution Chart for Driver
+            List<Object[]> tripStatusRows = tripExecutionRepository.countTripsByStatusForDriver(tenantId, driver.getId(), finalServiceDate);
+            List<ChartItemDto> tripStatusChart = getChartItemsForTripStatus(tripStatusRows);
+
+            // 5. Today Attendance Chart for Driver's trips
+            List<Object[]> attendanceRows = tripStudentRepository.countAttendanceByStatusForDriver(tenantId, finalServiceDate, driver.getId());
+            List<ChartItemDto> attendanceChart = getChartItemsForAttendanceStatus(attendanceRows);
+
+            // 6. Route Readiness Chart (Unused, return empty)
+            List<ChartItemDto> routeReadinessChart = List.of();
+
+            // 7. Request Workload (Unused)
+            List<ChartItemDto> requestStatusChart = List.of();
+
+            // 8. Trips by Date (Unused)
+            List<ChartItemDto> tripsByDate = List.of();
+
+            // 9. Direction Split (Unused)
+            List<ChartItemDto> directionSplit = List.of();
+
+            // 10. Active Routes for Driver (Limit to 5)
+            List<RoutePlanEntity> routes = routePlanRepository.findRoutePlansByDriverAndDate(tenantId, driver.getId(), finalServiceDate);
+            List<RoutePlanResponse> activeRoutes = routes.stream()
+                    .limit(5)
+                    .map(schoolBusMapper::toRoutePlanResponse)
+                    .toList();
+
+            // 11. Pending Approval Queue (Unused)
+            List<TransportRequestResponse> pendingApprovalQueue = List.of();
+
+            // 12. Recent Attendance Activity for Driver's trips (Limit to 10)
+            List<AttendanceEntity> attendances = attendanceRepository.findRecentAttendanceForDriver(tenantId, driver.getId(), PageRequest.of(0, 10));
+            List<AttendanceResponse> recentAttendanceActivity = attendances.stream()
+                    .map(schoolBusMapper::toAttendanceResponse)
+                    .toList();
+
+            return new DashboardOperationsResponse(
+                summary,
+                tripStatusChart,
+                attendanceChart,
+                routeReadinessChart,
+                requestStatusChart,
+                tripsByDate,
+                directionSplit,
+                activeRoutes,
+                pendingApprovalQueue,
+                recentAttendanceActivity
+            );
+        } else if (schoolBusSecurityService.isAttendant()) {
+            String keycloakId = schoolBusSecurityService.getCurrentKeycloakId();
+            SchoolBusUserEntity user = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+            if (user == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+            BusAttendantProfileEntity attendant = busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId()).orElse(null);
+            if (attendant == null) {
+                return new DashboardOperationsResponse(summary, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+            }
+
+            // 4. Trip Status Distribution Chart for Attendant
+            List<Object[]> tripStatusRows = tripExecutionRepository.countTripsByStatusForAttendant(tenantId, attendant.getId(), finalServiceDate);
+            List<ChartItemDto> tripStatusChart = getChartItemsForTripStatus(tripStatusRows);
+
+            // 5. Today Attendance Chart for Attendant's trips
+            List<Object[]> attendanceRows = tripStudentRepository.countAttendanceByStatusForAttendant(tenantId, finalServiceDate, attendant.getId());
+            List<ChartItemDto> attendanceChart = getChartItemsForAttendanceStatus(attendanceRows);
+
+            // 6. Route Readiness Chart (Unused, return empty)
+            List<ChartItemDto> routeReadinessChart = List.of();
+
+            // 7. Request Workload (Unused)
+            List<ChartItemDto> requestStatusChart = List.of();
+
+            // 8. Trips by Date (Unused)
+            List<ChartItemDto> tripsByDate = List.of();
+
+            // 9. Direction Split (Unused)
+            List<ChartItemDto> directionSplit = List.of();
+
+            // 10. Active Routes for Attendant (Limit to 5)
+            List<RoutePlanEntity> routes = routePlanRepository.findRoutePlansByAttendantAndDate(tenantId, attendant.getId(), finalServiceDate);
+            List<RoutePlanResponse> activeRoutes = routes.stream()
+                    .limit(5)
+                    .map(schoolBusMapper::toRoutePlanResponse)
+                    .toList();
+
+            // 11. Pending Approval Queue (Unused)
+            List<TransportRequestResponse> pendingApprovalQueue = List.of();
+
+            // 12. Recent Attendance Activity for Attendant's trips (Limit to 10)
+            List<AttendanceEntity> attendances = attendanceRepository.findRecentAttendanceForAttendant(tenantId, attendant.getId(), PageRequest.of(0, 10));
+            List<AttendanceResponse> recentAttendanceActivity = attendances.stream()
+                    .map(schoolBusMapper::toAttendanceResponse)
+                    .toList();
+
+            return new DashboardOperationsResponse(
+                summary,
+                tripStatusChart,
+                attendanceChart,
+                routeReadinessChart,
+                requestStatusChart,
+                tripsByDate,
+                directionSplit,
+                activeRoutes,
+                pendingApprovalQueue,
+                recentAttendanceActivity
+            );
+        }
+
         // 4. Trip Status Distribution Chart
         List<Object[]> tripStatusRows = tripExecutionRepository.countTripsByStatusFiltered(tenantId, finalServiceDate, schoolId, routeDir);
-        List<ChartItemDto> tripStatusChart = new ArrayList<>();
-        Map<String, Long> tripStatusMap = tripStatusRows.stream().collect(Collectors.toMap(
-            row -> ((TripStatus) row[0]).name(),
-            row -> (Long) row[1]
-        ));
-        for (TripStatus status : TripStatus.values()) {
-            long count = tripStatusMap.getOrDefault(status.name(), 0L);
-            String label = switch (status) {
-                case PLANNED -> "Planned";
-                case ASSIGNED -> "Assigned";
-                case IN_PROGRESS -> "In Progress";
-                case COMPLETED -> "Completed";
-                case CANCELLED -> "Cancelled";
-            };
-            tripStatusChart.add(new ChartItemDto(status.name(), count, label));
-        }
+        List<ChartItemDto> tripStatusChart = getChartItemsForTripStatus(tripStatusRows);
 
         // 5. Today Attendance Chart
         List<Object[]> attendanceRows = tripStudentRepository.countAttendanceByStatusFiltered(tenantId, finalServiceDate, schoolId, routeDir);
-        List<ChartItemDto> attendanceChart = new ArrayList<>();
-        Map<String, Long> attendanceMap = attendanceRows.stream().collect(Collectors.toMap(
-            row -> ((TripStudentStatus) row[0]).name(),
-            row -> (Long) row[1]
-        ));
-        for (TripStudentStatus status : TripStudentStatus.values()) {
-            long count = attendanceMap.getOrDefault(status.name(), 0L);
-            String label = switch (status) {
-                case PLANNED -> "Planned";
-                case BOARDED -> "Boarded";
-                case DROPPED_OFF -> "Dropped Off";
-                case ABSENT -> "Absent";
-                case NO_SHOW -> "No Show";
-                case NOT_SERVED -> "Not Served";
-            };
-            attendanceChart.add(new ChartItemDto(status.name(), count, label));
-        }
+        List<ChartItemDto> attendanceChart = getChartItemsForAttendanceStatus(attendanceRows);
 
         // 6. Route Readiness Chart (Calculated over operational routes of today)
         List<RoutePlanEntity> routes = routePlanRepository.findOperationalRoutes(tenantId, finalServiceDate, schoolId, routeDir);
@@ -236,7 +494,8 @@ public class DashboardServiceImpl implements IDashboardService {
         List<ChartItemDto> requestStatusChart = new ArrayList<>();
         Map<String, Long> requestMap = requestRows.stream().collect(Collectors.toMap(
             row -> ((RequestStatus) row[0]).name(),
-            row -> (Long) row[1]
+            row -> (Long) row[1],
+            (v1, v2) -> v1
         ));
         for (RequestStatus status : RequestStatus.values()) {
             long count = requestMap.getOrDefault(status.name(), 0L);
@@ -290,9 +549,6 @@ public class DashboardServiceImpl implements IDashboardService {
             .map(schoolBusMapper::toAttendanceResponse)
             .toList();
 
-        // 13. Summary counters (Reuse existing summary logic)
-        DashboardSummaryResponse summary = getSummary(tenantId);
-
         return new DashboardOperationsResponse(
             summary,
             tripStatusChart,
@@ -305,6 +561,49 @@ public class DashboardServiceImpl implements IDashboardService {
             pendingApprovalQueue,
             recentAttendanceActivity
         );
+    }
+
+    private List<ChartItemDto> getChartItemsForTripStatus(List<Object[]> tripStatusRows) {
+        List<ChartItemDto> tripStatusChart = new ArrayList<>();
+        Map<String, Long> tripStatusMap = tripStatusRows.stream().collect(Collectors.toMap(
+            row -> ((TripStatus) row[0]).name(),
+            row -> (Long) row[1],
+            (v1, v2) -> v1
+        ));
+        for (TripStatus status : TripStatus.values()) {
+            long count = tripStatusMap.getOrDefault(status.name(), 0L);
+            String label = switch (status) {
+                case PLANNED -> "Planned";
+                case ASSIGNED -> "Assigned";
+                case IN_PROGRESS -> "In Progress";
+                case COMPLETED -> "Completed";
+                case CANCELLED -> "Cancelled";
+            };
+            tripStatusChart.add(new ChartItemDto(status.name(), count, label));
+        }
+        return tripStatusChart;
+    }
+
+    private List<ChartItemDto> getChartItemsForAttendanceStatus(List<Object[]> attendanceRows) {
+        List<ChartItemDto> attendanceChart = new ArrayList<>();
+        Map<String, Long> attendanceMap = attendanceRows.stream().collect(Collectors.toMap(
+            row -> ((TripStudentStatus) row[0]).name(),
+            row -> (Long) row[1],
+            (v1, v2) -> v1
+        ));
+        for (TripStudentStatus status : TripStudentStatus.values()) {
+            long count = attendanceMap.getOrDefault(status.name(), 0L);
+            String label = switch (status) {
+                case PLANNED -> "Planned";
+                case BOARDED -> "Boarded";
+                case DROPPED_OFF -> "Dropped Off";
+                case ABSENT -> "Absent";
+                case NO_SHOW -> "No Show";
+                case NOT_SERVED -> "Not Served";
+            };
+            attendanceChart.add(new ChartItemDto(status.name(), count, label));
+        }
+        return attendanceChart;
     }
 }
 

@@ -3,6 +3,7 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
@@ -62,7 +63,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     public AttendanceServiceImpl(
             AttendanceRepository attendanceRepository,
-            ITripExecutionService tripExecutionService,
+            @Lazy ITripExecutionService tripExecutionService,
             IAuditLogService auditLogService,
             IRouteStopService routeStopService,
             ITripStudentService tripStudentService,
@@ -406,8 +407,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
                     item.setLatitude(rs.getLatitude());
                     item.setLongitude(rs.getLongitude());
-                    item.setPlannedArrivalTime(rs.getPlannedArrivalTime() != null ? rs.getPlannedArrivalTime().toString() : null);
-                    item.setPlannedDepartureTime(rs.getPlannedDepartureTime() != null ? rs.getPlannedDepartureTime().toString() : null);
                     item.setActualArrivalTime(sl.getActualArrivalTime() != null ? sl.getActualArrivalTime().toString() : null);
                     item.setActualDepartureTime(sl.getActualDepartureTime() != null ? sl.getActualDepartureTime().toString() : null);
 

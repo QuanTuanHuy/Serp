@@ -8,6 +8,8 @@ import java.util.List;
 public interface BusRepository extends BaseRepository<BusEntity, Long> {
     List<BusEntity> findByTenantIdAndIsDeletedFalseOrderByPlateNumberAsc(Long tenantId);
 
+    List<BusEntity> findByTenantIdAndHomeDepotIdAndIsDeletedFalseOrderByPlateNumberAsc(Long tenantId, Long homeDepotId);
+
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
 
     boolean existsByPlateNumberAndTenantIdAndIsDeletedFalseAndIdNot(
