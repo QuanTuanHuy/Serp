@@ -1,6 +1,0 @@
-app:
-  name: PTM Task Service
-  path: /ptm-task
-  port: 8083
-  logging:
-    level: info

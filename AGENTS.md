@@ -17,8 +17,7 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
 - Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
 - Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
 - Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
-- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
-- Shared Java libraries: `serp_java_platform/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `mailservice/`, `pm_core/`, `ptm_optimization/`.
 - Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
 ## Cross-Repo Workflow
@@ -53,7 +52,7 @@ npx prettier --check src/path/to/file.tsx
 - There is currently no `test` script and no checked-in frontend test framework, so there is no supported single-test command today.
 
 ### Spring Boot services
-Applies to `account`, `crm`, `discuss_service`, `first-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
+Applies to `account`, `crm`, `discuss_service`, `mailservice`, `pm_core`, `ptm_optimization`, and `purchase_service`.
 Run from the service directory.
 ```bash
 ./run-dev.sh                    # when present
@@ -68,17 +67,6 @@ Run from the service directory.
 - On Windows CMD or PowerShell, use `mvnw.cmd`.
 - `sales/` and `first-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
 - Most services do not have a dedicated lint plugin, so `clean compile` and `test` are the practical quality gate.
-
-### Shared Java platform (`serp_java_platform`)
-Run from `serp_java_platform/`.
-```bash
-mvn test
-mvn -pl serp-starter-kafka test
-mvn -pl serp-starter-kafka -Dtest=SerpKafkaTopicResolverTest test
-mvn -pl serp-starter-kafka -Dtest=SerpKafkaTopicResolverTest#shouldResolveDeadLetterTopicWithSuffix test
-mvn -pl serp-starter-kafka -am package
-```
-- This directory currently uses plain `mvn`; there is no checked-in Maven wrapper here.
 
 ### Go services
 Applies to `api_gateway`, `notification_service`, `ptm_schedule`, and `ptm_task`.
@@ -96,24 +84,6 @@ go test ./src/ui/controller/common -run '^TestGenericProxyController_CRM_POSTDoe
 ```
 - Prefer package-scoped single tests over `go test ./... -run ...` for faster feedback.
 - Use `-count=1` when rerunning a single test so Go does not reuse cached results.
-
-### Python service (`serp_llm`)
-Run from `serp_llm/`.
-```bash
-poetry install
-./run-dev.sh
-poetry run uvicorn src.main:app --reload
-poetry run pytest
-poetry run pytest tests/test_file.py
-poetry run pytest tests/test_file.py::test_name
-poetry run pytest -k pattern
-poetry run black .
-poetry run ruff check .
-poetry run mypy src
-poetry run alembic upgrade head
-poetry run alembic revision --autogenerate -m "message"
-```
-- `pyproject.toml` configures pytest, but there are currently no checked-in tests under `serp_llm/tests/`.
 
 ## Style Rules
 
