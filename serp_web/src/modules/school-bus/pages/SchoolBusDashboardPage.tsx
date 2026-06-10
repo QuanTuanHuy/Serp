@@ -134,14 +134,14 @@ export function SchoolBusDashboardPage() {
                 tone="student"
               />
               <SchoolBusMetricCard
-                label="My active subscriptions"
+                label="Active Subscriptions"
                 value={summary.assignedRouteCount}
                 hint="Active subscriptions currently routing"
                 icon={Calendar}
                 tone="success"
               />
               <SchoolBusMetricCard
-                label="My open requests"
+                label="Open Requests"
                 value={summary.pendingRequestCount}
                 hint="Requests awaiting dispatcher approval"
                 icon={FileText}
@@ -299,7 +299,7 @@ export function SchoolBusDashboardPage() {
             {access.isDriver && (
               <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
                 <Link href="/school-bus/trips">
-                  My Trips
+                  Trips
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
@@ -307,7 +307,7 @@ export function SchoolBusDashboardPage() {
             {access.isAttendant && (
               <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
                 <Link href="/school-bus/attendance">
-                  My Attendance
+                  Attendance
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
@@ -326,7 +326,7 @@ export function SchoolBusDashboardPage() {
             {/* Metric Cards for Driver/Attendant */}
             <div className="grid gap-4 md:grid-cols-2">
               <SchoolBusMetricCard
-                label="My active routes"
+                label="Active Routes"
                 value={summary.inProgressRouteCount}
                 hint="Routes currently in execution"
                 icon={Route}
@@ -344,7 +344,7 @@ export function SchoolBusDashboardPage() {
             {/* Attendance Chart (scoped to their trips) */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
               <DashboardDonutChart
-                title="Student Attendance Status on My Trips"
+                title="Student Attendance Status on Trips"
                 data={dashboard.attendanceChart}
                 colorMap={ATTENDANCE_COLORS}
               />
@@ -353,7 +353,7 @@ export function SchoolBusDashboardPage() {
             {/* List of active routes and attendance logs */}
             <div className="grid gap-6 xl:grid-cols-2">
               <SchoolBusSection
-                title="My Active Routes"
+                title="Active Routes"
                 description="List of routes assigned to you today."
               >
                 {activeRoutes.length === 0 ? (
@@ -456,7 +456,7 @@ export function SchoolBusDashboardPage() {
           {access.isDriver && (
             <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
               <Link href="/school-bus/trips">
-                My Trips
+                Trips
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
@@ -464,7 +464,7 @@ export function SchoolBusDashboardPage() {
           {access.isAttendant && (
             <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
               <Link href="/school-bus/attendance">
-                My Attendance
+                Attendance
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
@@ -689,7 +689,7 @@ export function SchoolBusDashboardPage() {
                   // Driver quick action
                   ...(access.isDriver ? [{
                     href: '/school-bus/trips',
-                    title: 'My trips today',
+                    title: 'Trips Today',
                     description: 'View and operate trips assigned to you.',
                   }] : []),
                   // Parent quick action

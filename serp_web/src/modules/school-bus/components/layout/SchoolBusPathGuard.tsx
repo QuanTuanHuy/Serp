@@ -51,7 +51,7 @@ export function SchoolBusPathGuard({ children }: SchoolBusPathGuardProps) {
           </p>
         </div>
         <Button asChild className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white'>
-          <Link href={access.landingPath}>Go to my workspace</Link>
+          <Link href={access.landingPath}>Go to Workspace</Link>
         </Button>
       </div>
     );
