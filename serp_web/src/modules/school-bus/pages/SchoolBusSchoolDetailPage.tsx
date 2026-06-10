@@ -282,7 +282,7 @@ export function SchoolBusSchoolDetailPage({
     <>
       <SchoolBusPageShell
         title={school.name}
-        description={school.address || 'Manage school profiles, associated schedules, and pickup points.'}
+        description={school.address || 'Manage school profiles and associated pickup points.'}
         actions={
           <div className="flex items-center gap-2">
             <Button onClick={onClose} variant="outline" className="rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200">

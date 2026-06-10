@@ -543,7 +543,7 @@ export function SchoolBusTripsPage() {
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Trips', current: true },
+            { label: 'Trip Operations', current: true },
           ]}
         />
       }

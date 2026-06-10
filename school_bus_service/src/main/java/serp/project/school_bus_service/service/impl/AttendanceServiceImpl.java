@@ -168,15 +168,13 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
         }
 
-        // Stop must be ARRIVED or BOARDING to record attendance
+        // Stop must have started boarding/dropoff (i.e. status is BOARDING) to record attendance
         TripStopLogEntity stopLog = tripStopLogService
                 .findByTripAndRouteStop(tripId, request.getRouteStopId(), tenantId)
                 .orElse(null);
-        if (stopLog == null
-                || (stopLog.getStatus() != TripStopStatus.ARRIVED
-                        && stopLog.getStatus() != TripStopStatus.BOARDING)) {
+        if (stopLog == null || stopLog.getStatus() != TripStopStatus.BOARDING) {
             throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
-                    messageCommon.getMessage(AppErrorCode.Attendance.STOP_NOT_ACTIVE));
+                    "Start boarding/dropoff at this stop before marking attendance.");
         }
 
         TripStudentStatus currentStatus = tripStudent.getStatus();

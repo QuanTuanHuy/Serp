@@ -874,7 +874,7 @@ export function TransportRequestForm({
 
             <SchoolBusFormSection
               title={`Requested Students (${validationSummary.readyCount} / ${validationSummary.totalCount} ready)`}
-              description='Add students and specify their schedules and locations.'
+              description='Add students and specify their active days and locations.'
               action={
                 <Button
                   type='button'

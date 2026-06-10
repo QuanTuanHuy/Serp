@@ -236,15 +236,12 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   // ── Selected Stop Details ─────────────────────────────────────────────────
   const selectedStop = manifest?.stops?.find((s) => s.routeStopId === selectedStopId) ?? null;
   const stopStatus = selectedStop?.stopStatus ?? null;
-  const isStopActionable = tripIsActive && (stopStatus === 'ARRIVED' || stopStatus === 'BOARDING' || stopStatus === 'PENDING');
+  const isStopActionable = tripIsActive && stopStatus === 'BOARDING';
   const isDepotStop = selectedStop?.locationType === 'DEPOT';
 
   // Action flags based on stop direction and purpose
-  const isPickupActionStop = selectedStop?.stopPurpose === 'PICKUP' || 
-    (selectedStop?.stopPurpose === 'START_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && !isOutbound);
-    
-  const isDropoffActionStop = selectedStop?.stopPurpose === 'DROPOFF' || 
-    (selectedStop?.stopPurpose === 'END_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && isOutbound);
+  const isPickupActionStop = selectedStop?.stopPurpose === 'PICKUP';
+  const isDropoffActionStop = selectedStop?.stopPurpose === 'DROPOFF';
 
   // ── Students List filtered by Stop & Search ────────────────────────────────
   const studentsAtStop = React.useMemo<TripAttendanceStudentItem[]>(() => {
@@ -566,6 +563,10 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                 ) : selectedStop.stopStatus === 'PENDING' ? (
                   <div className='bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-xs font-semibold'>
                     Arrive at this stop before logging attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'ARRIVED' ? (
+                  <div className='bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-xs font-semibold'>
+                    Start boarding/dropoff at this stop before marking attendance.
                   </div>
                 ) : selectedStop.stopStatus === 'DEPARTED' || selectedStop.stopStatus === 'SKIPPED' ? (
                   <div className='bg-slate-50 border border-slate-200 text-slate-650 px-4 py-3 rounded-xl text-xs font-semibold'>

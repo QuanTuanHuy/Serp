@@ -149,15 +149,6 @@ export function SchoolBusSubscriptionsPage() {
       ),
     },
     {
-      key: 'schedule',
-      header: 'Schedule',
-      render: (subscription) => (
-        <div className='flex items-center gap-2'>
-          <Calendar className='h-4 w-4 text-slate-400 shrink-0' />
-        </div>
-      ),
-    },
-    {
       key: 'tripOption',
       header: 'Trip option',
       render: (subscription) => {

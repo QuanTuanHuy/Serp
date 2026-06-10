@@ -138,8 +138,8 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                 />
               </Section>
 
-              {/* Schedule */}
-              <Section title='Schedule' icon={CalendarDays}>
+              {/* Active days */}
+              <Section title='Active Days' icon={CalendarDays}>
                 {/* Active days */}
                 <div className='col-span-2'>
                   <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>Active Days</span>

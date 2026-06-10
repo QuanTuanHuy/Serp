@@ -19,6 +19,7 @@ import {
   Play,
   SkipForward,
   User,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Client } from '@stomp/stompjs';
@@ -35,15 +36,20 @@ import {
   useStartTripMutation,
   useStartBoardingTripStopMutation,
   useGetRoutePathQuery,
+  useAbsentTripStudentMutation,
+  useBoardTripStudentMutation,
+  useDropoffTripStudentMutation,
+  useNoShowTripStudentMutation,
+  useNotServedTripStudentMutation,
 } from '../api/schoolBusApi';
 import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { Button, Input, Badge } from '@/shared/components/ui';
+import { Button, Input, Badge, Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
-import type { TripAttendanceStopItem } from '../types';
+import type { TripAttendanceStopItem, TripAttendanceStudentItem } from '../types';
 import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
@@ -119,6 +125,8 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const access = useSchoolBusAccess();
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(null);
+  const [isAttendanceDrawerOpen, setIsAttendanceDrawerOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [showSkipForm, setShowSkipForm] = React.useState(false);
   const [skipReason, setSkipReason] = React.useState('');
   const [showCancelForm, setShowCancelForm] = React.useState(false);
@@ -277,24 +285,68 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   }, [sortedStops]);
 
   const allStopsFinished = React.useMemo(() => {
-    return sortedStops.length > 0 && sortedStops.every(
-      (s) => s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED'
-    );
+    if (sortedStops.length === 0) return false;
+    return sortedStops.every((s, idx) => {
+      const isEndTerminal = idx === sortedStops.length - 1;
+      if (isEndTerminal) {
+        return s.stopStatus === 'ARRIVED' || s.stopStatus === 'DEPARTED';
+      } else {
+        return s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+      }
+    });
   }, [sortedStops]);
 
   const hasPlannedStudents = React.useMemo(() => {
     return manifest?.students?.some((st) => st.status === 'PLANNED') ?? false;
   }, [manifest?.students]);
 
-  const hasBoardedStudents = React.useMemo(() => {
-    return manifest?.students?.some((st) => st.status === 'BOARDED') ?? false;
-  }, [manifest?.students]);
-
   const canCompleteTrip =
     tripStatus === 'IN_PROGRESS' &&
     allStopsFinished &&
-    !hasPlannedStudents &&
-    !hasBoardedStudents;
+    !hasPlannedStudents;
+
+  // ── Attendance Workspace Derived States ────────────────────────────────────
+  const selectedStop = React.useMemo(() => {
+    if (!manifest?.stops) return null;
+    return manifest.stops.find((s) => s.routeStopId === selectedStopId) ?? null;
+  }, [manifest?.stops, selectedStopId]);
+
+  const stopStatus = selectedStop?.stopStatus ?? null;
+  const isStopActionable = tripIsActive && stopStatus === 'BOARDING';
+  const isDepotStop = selectedStop?.locationType === 'DEPOT';
+  const isPickupActionStop = selectedStop?.stopPurpose === 'PICKUP';
+  const isDropoffActionStop = selectedStop?.stopPurpose === 'DROPOFF';
+
+  const studentsAtStop = React.useMemo<TripAttendanceStudentItem[]>(() => {
+    if (!manifest || !selectedStop) return [];
+    const { stopPurpose, locationType, routeStopId } = selectedStop;
+    if (locationType === 'DEPOT') return [];
+
+    let filtered: TripAttendanceStudentItem[] = [];
+
+    if (stopPurpose === 'PICKUP') {
+      filtered = manifest.students.filter((s) => s.pickupStopId === routeStopId);
+    } else if (stopPurpose === 'DROPOFF') {
+      filtered = manifest.students.filter((s) => s.dropoffStopId === routeStopId);
+    } else if (stopPurpose === 'END_TERMINAL' && locationType === 'SCHOOL' && isOutbound) {
+      filtered = manifest.students.filter(
+        (s) => s.status === 'BOARDED' || s.status === 'DROPPED_OFF'
+      );
+    } else if (stopPurpose === 'START_TERMINAL' && locationType === 'SCHOOL' && !isOutbound) {
+      filtered = manifest.students.filter((s) => s.status === 'PLANNED');
+    }
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          (s.studentName || '').toLowerCase().includes(q) ||
+          (s.studentCode || '').toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [manifest, selectedStop, isOutbound, searchQuery]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const [startTrip, { isLoading: starting }] = useStartTripMutation();
@@ -304,13 +356,33 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const [departStop, { isLoading: departing }] = useDepartTripStopMutation();
   const [skipStop, { isLoading: skipping }] = useSkipTripStopMutation();
   const [startBoardingStop, { isLoading: boarding }] = useStartBoardingTripStopMutation();
+  const [boardStudent, { isLoading: boardingStudent }] = useBoardTripStudentMutation();
+  const [dropoffStudent, { isLoading: droppingOffStudent }] = useDropoffTripStudentMutation();
+  const [absentStudent, { isLoading: markingAbsent }] = useAbsentTripStudentMutation();
+  const [noShowStudent, { isLoading: markingNoShow }] = useNoShowTripStudentMutation();
+  const [notServedStudent, { isLoading: markingNotServed }] = useNotServedTripStudentMutation();
 
-  const isActing = starting || completing || cancelling || arriving || departing || skipping || boarding;
+  const isActing =
+    starting ||
+    completing ||
+    cancelling ||
+    arriving ||
+    departing ||
+    skipping ||
+    boarding ||
+    boardingStudent ||
+    droppingOffStudent ||
+    markingAbsent ||
+    markingNoShow ||
+    markingNotServed;
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
       await fn();
       toast.success(`${label} completed`);
+      refetchManifest();
+      refetchSummary();
+      refetchEvents();
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       toast.error(err?.data?.message ?? `${label} failed`);
@@ -321,7 +393,11 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const handleStart = () => act('Start trip', () => startTrip(tripId).unwrap());
   const handleComplete = () => act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
   const handleStartBoarding = (stopId: number) => {
-    act('Start boarding', () => startBoardingStop({ tripId, routeStopId: stopId }).unwrap());
+    act('Start boarding', async () => {
+      await startBoardingStop({ tripId, routeStopId: stopId }).unwrap();
+      setSelectedStopId(stopId);
+      setIsAttendanceDrawerOpen(true);
+    });
   };
   const handleCancel = () => {
     if (!cancelReason.trim()) return;
@@ -347,6 +423,37 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     setSkipReason('');
   };
 
+  const handleBoard = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Board ${s.studentName ?? ''}`, () =>
+      boardStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleDropoff = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Drop-off ${s.studentName ?? ''}`, () =>
+      dropoffStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleAbsent = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Absent ${s.studentName ?? ''}`, () =>
+      absentStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleNoShow = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`No-show ${s.studentName ?? ''}`, () =>
+      noShowStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleNotServed = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Mark not served for ${s.studentName ?? ''}`, () =>
+      notServedStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+
   return (
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
@@ -356,7 +463,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Trips', href: '/school-bus/trips' },
+              { label: 'Trip Operations', href: '/school-bus/trips' },
               { label: tripCode, current: true },
             ]}
           />
@@ -369,7 +476,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               <Button variant='outline' size='sm' className='rounded-full h-8 px-3 font-semibold' asChild>
                 <Link href='/school-bus/trips'>
                   <ArrowLeft className='h-3.5 w-3.5 mr-1.5' />
-                  Back to Trips list
+                  Back to Trip Operations
                 </Link>
               </Button>
             </div>
@@ -410,6 +517,17 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                     {wsState} feed
                   </span>
                   {renderFriendlyBadge(tripStatus || '')}
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='h-7 rounded-lg text-[10px] font-bold border-slate-250 text-slate-700 hover:bg-slate-50 shadow-none'
+                    onClick={() => {
+                      setSelectedStopId(null);
+                      setIsAttendanceDrawerOpen(true);
+                    }}
+                  >
+                    View Attendance List
+                  </Button>
                 </div>
               </div>
 
@@ -645,11 +763,12 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                   <Button
                     size='sm'
                     className='w-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-bold rounded-xl h-8 text-xs border-0 shadow-none'
-                    asChild
+                    onClick={() => {
+                      setSelectedStopId(null);
+                      setIsAttendanceDrawerOpen(true);
+                    }}
                   >
-                    <Link href={`/school-bus/attendance/${tripId}`}>
-                      Open Student Attendance Board
-                    </Link>
+                    Open Student Attendance Board
                   </Button>
                 </div>
               )}
@@ -704,14 +823,35 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       // Control eligibility (sequential check)
                       const isNextActionableStop = firstUnfinishedStop && stop.routeStopId === firstUnfinishedStop.routeStopId;
 
-                      const showArrive = isPending;
-                      const canBoard =
-                        (isOutbound && stop.stopPurpose === 'PICKUP') ||
-                        (!isOutbound && stop.stopPurpose === 'START_TERMINAL' && stop.locationType === 'SCHOOL');
+                      const isStartTerminal = stop.stopPurpose === 'START_TERMINAL';
+                      const isEndTerminal = stop.stopPurpose === 'END_TERMINAL';
+                      const isServiceStop = !isStartTerminal && !isEndTerminal;
+
+                      // Check if there are planned students for this stop
+                      const stopStudents = (manifest?.students || []).filter((st) => 
+                        isOutbound ? st.pickupStopId === stop.routeStopId : st.dropoffStopId === stop.routeStopId
+                      );
+                      const hasStudentsAtStop = stopStudents.some((st) => st.status === 'PLANNED');
+
+                      const showArrive = isPending && !isStartTerminal;
+                      
+                      // For service stops with students, boarding is needed
+                      const canBoard = isServiceStop && hasStudentsAtStop;
                       const showStartBoarding = isArrived && canBoard;
-                      const showDepart = isArrived || isBoarding;
-                      const canSkip = stop.stopPurpose !== 'START_TERMINAL' && stop.stopPurpose !== 'END_TERMINAL';
+
+                      // Depart conditions:
+                      // - Start terminal: immediately from ARRIVED state
+                      // - Service stop with students: only from BOARDING state
+                      // - Service stop without students: from ARRIVED state
+                      const showDepart = (isArrived && isStartTerminal) || 
+                                         (isBoarding && isServiceStop && hasStudentsAtStop) ||
+                                         (isArrived && isServiceStop && !hasStudentsAtStop);
+
+                      const canSkip = isServiceStop;
                       const showSkip = (isPending || isArrived) && canSkip;
+
+                      // End terminal allows Complete Trip when arrived
+                      const showCompleteTrip = isEndTerminal && isArrived && tripStatus === 'IN_PROGRESS';
 
                       return (
                         <div
@@ -795,6 +935,22 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                )}
                              </div>
 
+                              {stopType !== 'DEPOT' && (
+                                <div className='pl-6 pt-1'>
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    className='h-7 rounded-lg text-[10px] font-bold border-slate-205 text-slate-650 hover:bg-slate-50 shadow-none'
+                                    onClick={() => {
+                                      setSelectedStopId(stop.routeStopId);
+                                      setIsAttendanceDrawerOpen(true);
+                                    }}
+                                  >
+                                    {isBoarding && tripIsActive && access.canOperateTrip ? 'Mark Attendance' : 'View Attendance'}
+                                  </Button>
+                                </div>
+                              )}
+
                              {/* Actual visits info */}
                              {(stop.actualBoardedCount > 0 || stop.actualDroppedCount > 0) && (
                                <p className='text-[10px] text-slate-500 pl-6 font-medium'>
@@ -825,7 +981,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                      onClick={() => handleStartBoarding(stop.routeStopId)}
                                      disabled={isActing || !isNextActionableStop}
                                    >
-                                     Start Boarding
+                                     {stop.stopPurpose === 'DROPOFF' ? 'Start Dropoff' : 'Start Boarding'}
                                    </Button>
                                  )}
                                  {showDepart && (
@@ -841,8 +997,26 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                      onClick={() => handleDepart(stop.routeStopId)}
                                      disabled={isActing || !isNextActionableStop}
                                    >
-                                     Depart Stop
+                                      {isStartTerminal
+                                        ? stop.locationType === 'SCHOOL'
+                                          ? 'Depart School'
+                                          : stop.locationType === 'DEPOT'
+                                          ? 'Depart Depot'
+                                          : 'Depart Stop'
+                                        : 'Depart Stop'}
                                    </Button>
+                                 )}
+                                 {showCompleteTrip && (
+                                   <div title={!canCompleteTrip ? 'Complete all stops and resolve all student statuses before completing this trip.' : undefined}>
+                                     <Button
+                                       size='sm'
+                                       className='h-7 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none disabled:opacity-50 disabled:cursor-not-allowed border-0'
+                                       onClick={handleComplete}
+                                       disabled={isActing || !canCompleteTrip}
+                                     >
+                                       Complete Trip
+                                     </Button>
+                                   </div>
                                  )}
                                  {showSkip && (
                                    <>
@@ -958,6 +1132,285 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
             )}
           </div>
         </div>
+
+        <Sheet open={isAttendanceDrawerOpen} onOpenChange={setIsAttendanceDrawerOpen}>
+          <SheetContent side="right" className="w-[100vw] sm:max-w-[550px] p-6 overflow-y-auto bg-white flex flex-col gap-6 h-full">
+            <SheetHeader className="border-b border-slate-100 pb-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-base font-extrabold text-slate-800">
+                  {selectedStop ? `Attendance at Stop: ${selectedStop.displayName}` : 'Trip Attendance Directory'}
+                </SheetTitle>
+              </div>
+              <SheetDescription className="text-xs text-slate-400 mt-1 font-semibold">
+                {selectedStop
+                  ? `${stopTypeLabel(selectedStop)} • Status: ${selectedStop.stopStatus}`
+                  : `Route: ${routeCode} • Direction: ${getFriendlyDirection(trip?.routeDirection)}`}
+              </SheetDescription>
+            </SheetHeader>
+
+            {/* Stop Context Banner if stop selected */}
+            {selectedStop && (
+              <div className="space-y-3 shrink-0">
+                {tripStatus !== 'IN_PROGRESS' && tripStatus !== 'COMPLETED' && tripStatus !== 'CANCELLED' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Start the trip before logging attendance.
+                  </div>
+                ) : tripStatus === 'COMPLETED' || tripStatus === 'CANCELLED' ? (
+                  <div className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This trip is completed or cancelled. Attendance records are locked.
+                  </div>
+                ) : selectedStop.stopStatus === 'PENDING' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Arrive at this stop before logging attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'ARRIVED' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Start boarding/drop-off at this stop before marking attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'DEPARTED' || selectedStop.stopStatus === 'SKIPPED' ? (
+                  <div className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop has been departed or skipped. Attendance records are locked.
+                  </div>
+                ) : isStopActionable && isPickupActionStop ? (
+                  <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop is in boarding mode. Mark students as boarded, absent, or no-show.
+                  </div>
+                ) : isStopActionable && isDropoffActionStop ? (
+                  <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop is in drop-off mode. Mark students as dropped-off or not served.
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Search Box */}
+            <div className="relative shrink-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search student by name or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-9 text-xs rounded-xl border-slate-200 focus:border-slate-350 focus:ring-1 focus:ring-slate-200/50"
+              />
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+              {selectedStop ? (
+                /* Stop Specific Student List */
+                studentsAtStop.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 text-xs font-semibold">
+                    No students mapped to this stop direction matching your search.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentsAtStop.map((student) => {
+                      const stStatus = student.status || 'PLANNED';
+                      const stNormalized = stStatus.toUpperCase();
+
+                      const isPlanned = stNormalized === 'PLANNED';
+                      const isBoarded = stNormalized === 'BOARDED';
+
+                      const canBoard = isPickupActionStop && isPlanned;
+                      const canDrop = isDropoffActionStop && isBoarded;
+                      const canAbsent = isPickupActionStop && isPlanned;
+                      const canNotServed = isDropoffActionStop && isBoarded;
+
+                      return (
+                        <div
+                          key={student.tripStudentId}
+                          className="bg-white border border-slate-150 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-bold text-slate-800 text-xs truncate">{student.studentName}</p>
+                              {renderFriendlyBadge(stStatus)}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 font-semibold">
+                              <span>Code: {student.studentCode || 'N/A'}</span>
+                            </div>
+                            {student.note && (
+                              <p className="text-[10px] text-red-500 bg-red-50/50 border border-red-100/50 rounded px-2 py-0.5 mt-1 w-fit font-medium">
+                                Note: {student.note}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Attendance Actions */}
+                          {tripIsActive && isStopActionable && access.canMarkAttendance && (
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
+                              {canBoard && (
+                                <Button
+                                  size="sm"
+                                  className="h-7.5 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0"
+                                  onClick={() => handleBoard(student)}
+                                  disabled={isActing}
+                                >
+                                  Board
+                                </Button>
+                              )}
+                              {canDrop && (
+                                <Button
+                                  size="sm"
+                                  className="h-7.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0"
+                                  onClick={() => handleDropoff(student)}
+                                  disabled={isActing}
+                                >
+                                  Drop-off
+                                </Button>
+                              )}
+                              {canAbsent && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-amber-250 px-3 text-[10px] text-amber-700 hover:bg-amber-50 font-bold shadow-none"
+                                  onClick={() => handleAbsent(student)}
+                                  disabled={isActing}
+                                >
+                                  Absent
+                                </Button>
+                              )}
+                              {canBoard && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-red-250 px-3 text-[10px] text-red-650 hover:bg-red-50 font-bold shadow-none"
+                                  onClick={() => handleNoShow(student)}
+                                  disabled={isActing}
+                                >
+                                  No-show
+                                </Button>
+                              )}
+                              {canNotServed && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-slate-300 px-3 text-[10px] text-slate-650 hover:bg-slate-50 font-bold shadow-none"
+                                  onClick={() => handleNotServed(student)}
+                                  disabled={isActing}
+                                >
+                                  Not Served
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                /* Grouped All Students View */
+                (() => {
+                  const students = manifest?.students || [];
+                  const stops = manifest?.stops || [];
+
+                  // Group students by stop (either pickup or dropoff depending on the stop type)
+                  const filteredStudents = searchQuery.trim()
+                    ? students.filter(
+                        (s) =>
+                          (s.studentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (s.studentCode || '').toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                    : students;
+
+                  if (filteredStudents.length === 0) {
+                    return (
+                      <div className="py-12 text-center text-slate-400 text-xs font-semibold">
+                        No student records found.
+                      </div>
+                    );
+                  }
+
+                  // Group by stopId
+                  return (
+                    <div className="space-y-6">
+                      {stops
+                        .filter((stop) => stop.locationType !== 'DEPOT')
+                        .map((stop) => {
+                          const stopSts = filteredStudents.filter((s) =>
+                            isOutbound
+                              ? s.pickupStopId === stop.routeStopId
+                              : s.dropoffStopId === stop.routeStopId
+                          );
+
+                          if (stopSts.length === 0) return null;
+
+                          return (
+                            <div key={stop.routeStopId} className="space-y-2.5">
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                <h4 className="font-bold text-slate-800 text-xs">
+                                  {stop.stopOrder}. {stop.displayName}
+                                </h4>
+                                <span className="text-[9px] font-extrabold uppercase bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                                  {stopTypeLabel(stop)}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {stopSts.map((student) => (
+                                  <div
+                                    key={student.tripStudentId}
+                                    className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-3"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-slate-800 text-xs truncate">
+                                        {student.studentName}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                                        Code: {student.studentCode || 'N/A'}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {renderFriendlyBadge(student.status)}
+                                      {/* Quick Mark Attendance link if stop is boarding and active */}
+                                      {tripIsActive && stop.stopStatus === 'BOARDING' && access.canMarkAttendance && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-[10px] text-blue-650 hover:text-blue-700 font-extrabold px-1 rounded-md"
+                                          onClick={() => {
+                                            setSelectedStopId(stop.routeStopId);
+                                          }}
+                                        >
+                                          Mark
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+
+            {/* Sticky bottom panel */}
+            {selectedStop && (
+              <div className="border-t border-slate-100 pt-4 flex justify-between shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8.5 rounded-xl text-xs font-bold border-slate-200 text-slate-650 hover:bg-slate-50"
+                  onClick={() => setSelectedStopId(null)}
+                >
+                  Show All Students
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-650 border border-slate-200 hover:bg-slate-200"
+                  onClick={() => setIsAttendanceDrawerOpen(false)}
+                >
+                  Close Panel
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </SchoolBusPageShell>
     </MapMarkerVisibilityProvider>
   );

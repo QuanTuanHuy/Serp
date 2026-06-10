@@ -233,7 +233,7 @@ export function SchoolBusSubscriptionDetailPage({
               <div>
                 <h4 className='font-bold text-sm text-emerald-950'>Active subscription</h4>
                 <p className='text-xs text-emerald-850 mt-0.5 leading-relaxed font-medium'>
-                  This student is eligible for route planning when schedule, service date, active days and pickup/drop-off conditions match.
+                  This student is eligible for route planning when service date, active days, and pickup/drop-off conditions match.
                 </p>
               </div>
             </div>
@@ -380,8 +380,8 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Schedule & active days */}
-            <SchoolBusSection title='Schedule & active days'>
+            {/* Active days */}
+            <SchoolBusSection title='Active days'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
                 
 

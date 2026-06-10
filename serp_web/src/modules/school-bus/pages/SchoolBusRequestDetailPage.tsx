@@ -309,7 +309,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
                 </p>
                 {allReady ? (
                   <p className='text-xs text-emerald-700 mt-1 font-medium'>
-                    All required student, schedule, pickup/drop-off, and coordinate checks passed.
+                    All required student, pickup/drop-off, and coordinate checks passed.
                   </p>
                 ) : (
                   <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
@@ -346,7 +346,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
               {/* Requested students */}
               <SchoolBusSection
                 title='Requested students'
-                description='Linked students, school schedule, trip option, stops and schedule detail.'
+                description='Linked students, trip options, stops, and active days.'
               >
                 <div className='grid gap-4 sm:grid-cols-1'>
                   {students.map((s, i) => {
@@ -435,7 +435,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
 
                           {/* Days active */}
                           <div className='md:col-span-2 border-t border-slate-100 pt-3'>
-                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>Active schedule days</span>
+                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>Active days</span>
                             <DayBadges student={s} />
                           </div>
                         </div>
