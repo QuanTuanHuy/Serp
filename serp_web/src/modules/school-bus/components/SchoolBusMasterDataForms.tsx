@@ -47,7 +47,6 @@ import type {
   SchoolBusStudent,
   SchoolBusStudentUpsertRequest,
 } from '../types';
-import { SHIFT_TYPE_OPTIONS } from '../constants';
 import { toCoordinateString } from '../utils';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 import { LocationPickerMap } from './map/LocationPickerMap';

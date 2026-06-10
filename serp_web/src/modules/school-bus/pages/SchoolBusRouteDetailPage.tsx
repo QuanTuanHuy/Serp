@@ -237,7 +237,7 @@ export function SchoolBusRouteDetailPage({
                   badgeColor={route.routeDirection === 'RETURN' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}
                 />
                 <SummaryItem label="Service Date" value={formatDate(route.serviceDate)} icon={Calendar} />
-                <SummaryItem label="Schedule" value={route.schoolScheduleName} icon={Clock3} />
+
                 <SummaryItem label="Start Terminal" value={`${route.startLocationName} (${route.startLocationType})`} icon={MapPin} />
                 <SummaryItem label="End Terminal" value={`${route.endLocationName} (${route.endLocationType})`} icon={MapPin} />
                 <SummaryItem label="Depot" value={route.startDepotName ?? (route.startLocationType === 'DEPOT' ? route.startLocationName : route.endLocationName)} icon={MapPin} />

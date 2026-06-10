@@ -29,21 +29,17 @@ import { cn } from '@/shared/utils';
 import {
   useCreatePickupPointMutation,
   useCreateSchoolMutation,
-  useCreateSchoolScheduleMutation,
   useDeletePickupPointMutation,
   useDeleteSchoolMutation,
-  useDeleteSchoolScheduleMutation,
   useGetAllActiveSchoolPickupLinksQuery,
   useGetDepotsQuery,
   useGetPickupPointsQuery,
   useGetSchoolPickupPointsQuery,
-  useGetSchoolSchedulesQuery,
   useGetSchoolsQuery,
   useLinkSchoolPickupPointMutation,
   useUnlinkSchoolPickupPointMutation,
   useUpdatePickupPointMutation,
   useUpdateSchoolMutation,
-  useUpdateSchoolScheduleMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import {
@@ -64,10 +60,9 @@ import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibili
 import { OperationsMap } from '../components/map/OperationsMap';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
-import { ScheduleFormDialog } from '../components/forms/ScheduleFormDialog';
 import { LinkPickupPointDialog } from '../components/forms/LinkPickupPointDialog';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusDepot, SchoolBusPickupPoint, SchoolBusSchedule, SchoolBusSchool } from '../types';
+import type { SchoolBusDepot, SchoolBusPickupPoint, SchoolBusSchool } from '../types';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import {
   Table,
@@ -132,22 +127,18 @@ interface DetailPanelProps {
   selectedSchool: SchoolBusSchool | null;
   selectedPickup: SchoolBusPickupPoint | null;
   linkedPickupCount: number;
-  scheduleCount: number;
   onEditSchool: (s: SchoolBusSchool) => void;
   onEditPickup: (p: SchoolBusPickupPoint) => void;
   onLinkPickup: () => void;
-  onManageSchedules: () => void;
 }
 
 function NetworkDetailPanel({
   selectedSchool,
   selectedPickup,
   linkedPickupCount,
-  scheduleCount,
   onEditSchool,
   onEditPickup,
   onLinkPickup,
-  onManageSchedules,
 }: DetailPanelProps) {
   if (!selectedSchool && !selectedPickup) {
     return (
@@ -228,7 +219,6 @@ function NetworkDetailPanel({
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField label='Contact' value={selectedSchool.contactPhone ?? '—'} />
               <DetailField label='Linked pickups' value={String(linkedPickupCount)} />
-              <DetailField label='Schedules' value={String(scheduleCount)} />
             </div>
           </div>
         </div>
@@ -250,14 +240,6 @@ function NetworkDetailPanel({
             onClick={onLinkPickup}
           >
             <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link pickup point
-          </Button>
-          <Button
-            size='sm'
-            variant='outline'
-            className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
-            onClick={onManageSchedules}
-          >
-            <CalendarClock className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Manage schedules
           </Button>
         </div>
       </div>
@@ -356,132 +338,6 @@ function NetworkDetailPanel({
   return null;
 }
 
-interface SchoolScheduleTooltipContentProps {
-  schedule: {
-    id: number;
-    name?: string | null;
-    code?: string | null;
-    shift?: string | null;
-    days?: string[] | null;
-    arrivalDeadline?: string | null;
-    departureTime?: string | null;
-    isActive?: boolean;
-    isDefault?: boolean;
-    effectiveFrom?: string | null;
-    effectiveTo?: string | null;
-  };
-}
-
-function SchoolScheduleTooltipContent({ schedule }: SchoolScheduleTooltipContentProps) {
-  const formatShiftName = (shift: string | undefined | null) => {
-    if (!shift) return '—';
-    const s = shift.toUpperCase();
-    if (s === 'MORNING') return 'Morning';
-    if (s === 'AFTERNOON') return 'Afternoon';
-    return shift.charAt(0).toUpperCase() + shift.slice(1).toLowerCase();
-  };
-
-  const formatDaysList = (days: string[] | undefined | null) => {
-    if (!days || days.length === 0) return '—';
-    const dayMap: Record<string, string> = {
-      MONDAY: 'Mon',
-      TUESDAY: 'Tue',
-      WEDNESDAY: 'Wed',
-      THURSDAY: 'Thu',
-      FRIDAY: 'Fri',
-      SATURDAY: 'Sat',
-      SUNDAY: 'Sun',
-    };
-    const mapped = days.map((d) => dayMap[d.toUpperCase()] || d);
-    if (mapped.length <= 5) {
-      return mapped.join(', ');
-    }
-    return `${mapped.slice(0, 3).join(', ')} +${mapped.length - 3}`;
-  };
-
-  const formatTimeStr = (time: string | undefined | null) => {
-    if (!time) return '—';
-    const parts = time.split(':');
-    if (parts.length >= 2) {
-      return `${parts[0]}:${parts[1]}`;
-    }
-    return time;
-  };
-
-  const formatDateStr = (date: string | undefined | null) => {
-    if (!date) return '—';
-    try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return date;
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return date;
-    }
-  };
-
-  const shiftFormatted = formatShiftName(schedule.shift);
-  const daysFormatted = formatDaysList(schedule.days);
-  const timeFormatted = `${formatTimeStr(schedule.arrivalDeadline)} - ${formatTimeStr(schedule.departureTime)}`;
-  
-  const fromStr = formatDateStr(schedule.effectiveFrom);
-  const toStr = formatDateStr(schedule.effectiveTo);
-  const effectiveFormatted = fromStr !== '—' || toStr !== '—' 
-    ? `${fromStr} - ${toStr}` 
-    : '—';
-
-  return (
-    <div className="w-[280px] sm:w-[300px] bg-white text-slate-900 rounded-xl border border-slate-200 p-4 shadow-xl text-xs space-y-3.5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2.5 pb-2 border-b border-slate-100">
-        <h4 className="font-bold text-slate-900 leading-snug truncate flex-1" title={schedule.name ?? undefined}>
-          {schedule.name || '—'}
-        </h4>
-        <span className={cn(
-          "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border shrink-0",
-          schedule.isActive
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-            : "bg-slate-50 text-slate-500 border-slate-200"
-        )}>
-          {schedule.isActive ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-
-      {/* Details Grid */}
-      <div className="grid grid-cols-3 gap-y-2 gap-x-1.5">
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Code</span>
-        <span className="col-span-2 font-mono text-[10px] font-bold text-[#C81E3A] bg-red-50/50 px-1.5 py-0.5 rounded border border-red-100/50 w-fit">
-          {schedule.code || '—'}
-        </span>
-
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Shift</span>
-        <span className="col-span-2 font-medium text-slate-700">{shiftFormatted}</span>
-
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Days</span>
-        <span className="col-span-2 font-medium text-slate-700 truncate" title={schedule.days?.join(', ')}>
-          {daysFormatted}
-        </span>
-
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Time</span>
-        <span className="col-span-2 font-mono font-semibold text-slate-700">{timeFormatted}</span>
-
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Effective</span>
-        <span className="col-span-2 font-medium text-slate-600">{effectiveFormatted}</span>
-      </div>
-
-      {schedule.isDefault && (
-        <div className="pt-1.5 border-t border-slate-50">
-          <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-650/10">
-            Default Schedule
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
@@ -553,10 +409,7 @@ function SchoolBusSchoolsPageContent() {
   const [pickupSearchValue, setPickupSearchValue] = React.useState('');
   const [pickupUsageFilter, setPickupUsageFilter] = React.useState<'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'>('ALL');
   const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<'ALL' | 'MISSING'>('ALL');
-
-  const [scheduleSearch, setScheduleSearch] = React.useState('');
   const [linkedSearch, setLinkedSearch] = React.useState('');
-
   const schoolsPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
   const pickupPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
 
@@ -572,9 +425,9 @@ function SchoolBusSchoolsPageContent() {
   const [createPickupPoint, { isLoading: creatingPickup }] = useCreatePickupPointMutation();
   const [updatePickupPoint, { isLoading: updatingPickup }] = useUpdatePickupPointMutation();
   const [deletePickupPoint, { isLoading: deletingPickup }] = useDeletePickupPointMutation();
-  const [createSchedule, { isLoading: creatingSchedule }] = useCreateSchoolScheduleMutation();
-  const [updateSchedule, { isLoading: updatingSchedule }] = useUpdateSchoolScheduleMutation();
-  const [deleteSchedule] = useDeleteSchoolScheduleMutation();
+  // createSchedule removed (Phase 3)
+  // updateSchedule removed
+  // deleteSchedule removed
   const [linkPickupPoint, { isLoading: linkingPickup }] = useLinkSchoolPickupPointMutation();
   const [unlinkPickupPoint] = useUnlinkSchoolPickupPointMutation();
 
@@ -592,11 +445,9 @@ function SchoolBusSchoolsPageContent() {
   // ─── Dialog state ────────────────────────────────────────────────
   const [schoolDialogOpen, setSchoolDialogOpen] = React.useState(false);
   const [pickupDialogOpen, setPickupDialogOpen] = React.useState(false);
-  const [scheduleDialogOpen, setScheduleDialogOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
   const [editingSchool, setEditingSchool] = React.useState<SchoolBusSchool | null>(null);
   const [editingPickup, setEditingPickup] = React.useState<SchoolBusPickupPoint | null>(null);
-  const [editingSchedule, setEditingSchedule] = React.useState<SchoolBusSchedule | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget>(null);
   const isMountedRef = React.useRef(false);
   React.useEffect(() => {
@@ -623,16 +474,11 @@ function SchoolBusSchoolsPageContent() {
     if (!selectedSchoolId && schools.length > 0) setSelectedSchoolId(schools[0].id);
   }, [schools, selectedSchoolId]);
 
-  // ─── Schedule & linked data ──────────────────────────────────────
-  const { data: schedulesData, isLoading: loadingSchedules } = useGetSchoolSchedulesQuery(
-    { schoolId: selectedSchoolId!, page: 0, size: 50 },
-    { skip: !selectedSchoolId }
-  );
+  // ─── Linked data ─────────────────────────────────────────────────
   const { data: linkedPickupData } = useGetSchoolPickupPointsQuery(
     { schoolId: selectedSchoolId!, page: 0, size: 50 },
     { skip: !selectedSchoolId }
   );
-  const schedules = getPageItems(schedulesData?.data);
   const linkedPickupPoints = getPageItems(linkedPickupData?.data);
   const allPickupPointsForLink = getPageItems(pickupPointsData?.data);
 
@@ -667,15 +513,7 @@ function SchoolBusSchoolsPageContent() {
     });
   }, [pickupPoints, pickupUsageFilter, pickupCoordsFilter]);
 
-  const filteredSchedulesTable = React.useMemo(() => {
-    if (!scheduleSearch) return schedules;
-    const q = scheduleSearch.toLowerCase();
-    return schedules.filter(
-      (sch) =>
-        sch.scheduleName.toLowerCase().includes(q) ||
-        (sch.scheduleCode ?? '').toLowerCase().includes(q)
-    );
-  }, [schedules, scheduleSearch]);
+
 
   const filteredLinkedPickupsTable = React.useMemo(() => {
     if (!linkedSearch) return linkedPickupPoints;
@@ -740,22 +578,7 @@ function SchoolBusSchoolsPageContent() {
     } catch (error: any) { toast.error(error?.data?.message || 'Delete failed'); }
   };
 
-  const handleSaveSchedule = async (values: any) => {
-    if (!selectedSchoolId) return;
-    try {
-      const response = editingSchedule
-        ? await updateSchedule({ id: editingSchedule.id, body: values }).unwrap()
-        : await createSchedule({ schoolId: selectedSchoolId, body: values }).unwrap();
-      toast.success(response.message || 'Schedule saved');
-      setScheduleDialogOpen(false);
-      setEditingSchedule(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save schedule'); }
-  };
 
-  const handleDeleteSchedule = async (id: number) => {
-    try { const r = await deleteSchedule(id).unwrap(); toast.success(r.message || 'Schedule deleted'); }
-    catch (error: any) { toast.error(error?.data?.message || 'Failed to delete schedule'); }
-  };
 
   const handleLinkPickupPoint = async (values: any) => {
     if (!selectedSchoolId) return;
@@ -1047,15 +870,9 @@ function SchoolBusSchoolsPageContent() {
                   selectedSchool={selectedSchoolObj}
                   selectedPickup={selectedPickupObj}
                   linkedPickupCount={linkedPickupPoints.length}
-                  scheduleCount={schedules.length}
                   onEditSchool={(s) => { setEditingSchool(s); setSchoolDialogOpen(true); }}
                   onEditPickup={(p) => { setEditingPickup(p); setPickupDialogOpen(true); }}
                   onLinkPickup={() => setLinkDialogOpen(true)}
-                  onManageSchedules={() => {
-                    if (selectedSchoolObj) {
-                      router.push(`/school-bus/schools/${selectedSchoolObj.id}&tab=schedules&view=network`);
-                    }
-                  }}
                 />
               }
             />
@@ -1173,47 +990,7 @@ function SchoolBusSchoolsPageContent() {
         );
       }
     },
-    {
-      key: 'schedules',
-      header: 'Schedules',
-      render: (school) => {
-        const schedules = school.schedules || [];
-        if (schedules.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
 
-        const limit = 2;
-        const visible = schedules.slice(0, limit);
-        const extra = schedules.length - limit;
-
-        return (
-          <TooltipProvider>
-            <div className='flex flex-col gap-1 items-start py-1'>
-              {visible.map((sch) => (
-                <Tooltip key={sch.id}>
-                  <TooltipTrigger asChild>
-                    <span className={cn(
-                      'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
-                      sch.shift === 'MORNING'
-                        ? 'bg-blue-50 text-blue-700 border-blue-100'
-                        : 'bg-orange-50 text-orange-700 border-orange-100'
-                    )}>
-                      {sch.code}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className='p-0 bg-transparent border-none shadow-none rounded-none'>
-                    <SchoolScheduleTooltipContent schedule={sch} />
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-              {extra > 0 && (
-                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
-                  +{extra} more
-                </span>
-              )}
-            </div>
-          </TooltipProvider>
-        );
-      }
-    },
     {
       key: 'pickupPoints',
       header: 'Pickup points',
@@ -1509,89 +1286,6 @@ function SchoolBusSchoolsPageContent() {
     }
   ];
 
-  // Columns definition for schedules
-  const scheduleColumns: SchoolBusTableColumn<SchoolBusSchedule>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      className: 'pl-6 font-bold text-slate-900 text-sm',
-      headerClassName: 'pl-6',
-      render: (schedule) => schedule.scheduleName
-    },
-    {
-      key: 'code',
-      header: 'Code',
-      render: (schedule) => (
-        schedule.scheduleCode ? (
-          <span className='inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10'>
-            {schedule.scheduleCode}
-          </span>
-        ) : (
-          <span className='text-slate-400 font-medium'>—</span>
-        )
-      )
-    },
-    {
-      key: 'shift',
-      header: 'Shift',
-      className: 'text-xs font-medium text-slate-600',
-      render: (schedule) => schedule.shiftType
-    },
-    {
-      key: 'days',
-      header: 'Days',
-      render: (schedule) => renderDayChips(schedule.daysOfWeek || [])
-    },
-    {
-      key: 'arrival',
-      header: 'Arrival',
-      className: 'text-xs font-semibold text-slate-700',
-      render: (schedule) => schedule.arrivalDeadline || '—'
-    },
-    {
-      key: 'departure',
-      header: 'Departure',
-      className: 'text-xs font-semibold text-slate-700',
-      render: (schedule) => schedule.departureTime || '—'
-    },
-    {
-      key: 'effective',
-      header: 'Effective Window',
-      className: 'text-xs text-slate-500',
-      render: (schedule) => (
-        `${formatDate(schedule.effectiveFrom)}${schedule.effectiveTo ? ` – ${formatDate(schedule.effectiveTo)}` : ' –'}`
-      )
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      className: 'pr-6 text-right',
-      headerClassName: 'pr-6 text-right',
-      render: (schedule) => (
-        <div className='flex justify-end gap-1.5'>
-          <Button
-            size='icon'
-            variant='outline'
-            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-            onClick={() => {
-              setEditingSchedule(schedule);
-              setScheduleDialogOpen(true);
-            }}
-          >
-            <Pencil className='h-3.5 w-3.5' />
-          </Button>
-          <Button
-            size='icon'
-            variant='outline'
-            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
-            onClick={() => handleDeleteSchedule(schedule.id)}
-          >
-            <Trash2 className='h-3.5 w-3.5' />
-          </Button>
-        </div>
-      )
-    }
-  ];
 
   // Toolbars definition
   const schoolToolbar = (
@@ -1683,32 +1377,7 @@ function SchoolBusSchoolsPageContent() {
     </div>
   );
 
-  const scheduleToolbar = (
-    <div className='flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between'>
-      <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
-        {schoolScopeSelector}
-        <div className='relative w-full max-w-xs'>
-          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
-          <input
-            type='text'
-            placeholder='Search schedules...'
-            value={scheduleSearch}
-            onChange={(e) => setScheduleSearch(e.target.value)}
-            className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
-          />
-        </div>
-      </div>
-      {selectedSchoolId && (
-        <Button
-          variant='outline'
-          className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
-          onClick={() => { setEditingSchedule(null); setScheduleDialogOpen(true); }}
-        >
-          <Plus className='h-4 w-4 mr-1.5' /> Add schedule
-        </Button>
-      )}
-    </div>
-  );
+
 
   const linkedPickupToolbar = (
     <div className='flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between'>
@@ -1907,36 +1576,28 @@ function SchoolBusSchoolsPageContent() {
                 ? schoolToolbar
                 : activeTab === 'pickup-points'
                   ? pickupToolbar
-                  : activeTab === 'schedules'
-                    ? scheduleToolbar
-                    : linkedPickupToolbar
+                  : linkedPickupToolbar
             }
             data={
               activeTab === 'schools'
                 ? filteredSchoolsTable
                 : activeTab === 'pickup-points'
                   ? filteredPickupsTable
-                  : activeTab === 'schedules'
-                    ? filteredSchedulesTable
-                    : []
+                  : []
             }
             columns={
               activeTab === 'schools'
                 ? schoolColumns
                 : activeTab === 'pickup-points'
                   ? pickupColumns
-                  : activeTab === 'schedules'
-                    ? scheduleColumns
-                    : []
+                  : []
             }
             isLoading={
               activeTab === 'schools'
                 ? loadingSchools
                 : activeTab === 'pickup-points'
                   ? loadingPickups
-                  : activeTab === 'schedules'
-                    ? loadingSchedules
-                    : false
+                  : false
             }
             pagination={
               activeTab === 'schools' && data
@@ -1982,13 +1643,7 @@ function SchoolBusSchoolsPageContent() {
           isLoading={deletingSchool || deletingPickup}
           onConfirm={handleDelete}
         />
-        <ScheduleFormDialog
-          open={scheduleDialogOpen}
-          onOpenChange={(open) => { setScheduleDialogOpen(open); if (!open) setEditingSchedule(null); }}
-          initialData={editingSchedule}
-          isLoading={creatingSchedule || updatingSchedule}
-          onSubmit={handleSaveSchedule}
-        />
+        {/* ScheduleFormDialog removed � Phase 3 */}
         <LinkPickupPointDialog
           open={linkDialogOpen}
           onOpenChange={setLinkDialogOpen}

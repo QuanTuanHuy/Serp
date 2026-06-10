@@ -64,7 +64,6 @@ function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): 
   const issues: string[] = [];
   if (!s.studentId) issues.push('Missing student selection');
   if (requiresRouting) {
-    if (!s.schoolScheduleId) issues.push('Missing school schedule');
     if (!s.tripOption) issues.push('Missing trip option');
     const opt = (s.tripOption || '').toUpperCase();
     const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
@@ -227,7 +226,6 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
   // ── Approval Checklist metrics
   const checklist = [
     { label: 'Students selected', passed: students.length > 0 && students.every(s => s.studentId) },
-    { label: 'Schedule configured', passed: !requiresRouting || students.every(s => s.schoolScheduleId) },
     { label: 'Trip options set', passed: !requiresRouting || students.every(s => s.tripOption) },
     { label: 'Points selected', passed: !requiresRouting || students.every(s => {
         const opt = (s.tripOption || '').toUpperCase();
@@ -389,22 +387,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
                             )}
                           </div>
 
-                          <div>
-                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>School schedule</span>
-                            {s.schoolScheduleName ? (
-                              <div className='space-y-0.5'>
-                                <p className='font-semibold text-slate-800 truncate'>{s.schoolScheduleName}</p>
-                                {(s.arrivalDeadline || s.departureTime) && (
-                                  <p className='text-xs font-medium text-slate-500 flex items-center gap-1'>
-                                    <Clock className='h-3 w-3 shrink-0' />
-                                    {s.departureTime ?? '—'} → {s.arrivalDeadline ?? '—'}
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <span className='text-red-500 font-bold'>Not configured</span>
-                            )}
-                          </div>
+
 
                           {/* Pickup point */}
                           {(needsPickup || !s.tripOption) && (

@@ -53,8 +53,6 @@ import type {
   SchoolBusTripHistory,
   SchoolBusTripStopLog,
   SchoolBusTripStudent,
-  SchoolBusSchedule,
-  SchoolBusScheduleUpsertRequest,
   SchoolBusSchoolPickupPoint,
   SchoolBusSchoolPickupPointUpsertRequest,
 } from '../types';
@@ -1393,88 +1391,6 @@ export const schoolBusApi = api.injectEndpoints({
       providesTags: [{ type: 'schoolBus/TripHistory', id: 'LIST' }],
     }),
 
-    // ===== School Schedule =====
-    getSchoolSchedules: builder.query<
-      ApiResponse<PagedResponse<SchoolBusSchedule>>,
-      { schoolId: number; page?: number; size?: number }
-    >({
-      query: ({ schoolId, page = 0, size = 20 }) => ({
-        url: '/school-schedules/by-school',
-        method: 'GET',
-        params: { schoolId, page, size },
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<PagedResponse<SchoolBusSchedule>>(),
-      providesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }],
-    }),
-    getActiveSchoolSchedules: builder.query<
-      ApiResponse<SchoolBusSchedule[]>,
-      number
-    >({
-      query: (schoolId) => ({
-        url: '/school-schedules/by-school/active',
-        method: 'GET',
-        params: { schoolId },
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusSchedule[]>(),
-      providesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
-    }),
-    getSchoolScheduleById: builder.query<
-      ApiResponse<SchoolBusSchedule>,
-      number
-    >({
-      query: (id) => ({
-        url: '/school-schedules',
-        method: 'GET',
-        params: { id },
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusSchedule>(),
-      providesTags: (_result, _error, id) => [{ type: 'schoolBus/School', id: `SCHEDULE-${id}` }],
-    }),
-    createSchoolSchedule: builder.mutation<
-      ApiResponse<SchoolBusSchedule>,
-      { schoolId: number; body: SchoolBusScheduleUpsertRequest }
-    >({
-      query: ({ schoolId, body }) => ({
-        url: '/school-schedules',
-        method: 'POST',
-        params: { schoolId },
-        body,
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusSchedule>(),
-      invalidatesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }, { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
-    }),
-    updateSchoolSchedule: builder.mutation<
-      ApiResponse<SchoolBusSchedule>,
-      { id: number; body: SchoolBusScheduleUpsertRequest }
-    >({
-      query: ({ id, body }) => ({
-        url: '/school-schedules',
-        method: 'PATCH',
-        params: { id },
-        body,
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<SchoolBusSchedule>(),
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: 'schoolBus/School', id: 'SCHEDULE_LIST' },
-        { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' },
-        { type: 'schoolBus/School', id: `SCHEDULE-${id}` },
-      ],
-    }),
-    deleteSchoolSchedule: builder.mutation<ApiResponse<void>, number>({
-      query: (id) => ({
-        url: '/school-schedules',
-        method: 'DELETE',
-        params: { id },
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<void>(),
-      invalidatesTags: [{ type: 'schoolBus/School', id: 'SCHEDULE_LIST' }, { type: 'schoolBus/School', id: 'SCHEDULE_ACTIVE' }],
-    }),
 
     // ===== School Pickup Points =====
     getSchoolPickupPoints: builder.query<
@@ -1855,12 +1771,6 @@ const {
   useStartBoardingTripStopMutation,
   useGetAttendanceQuery: useGetAttendanceQueryOrig,
   useGetTripHistoryQuery: useGetTripHistoryQueryOrig,
-  useGetSchoolSchedulesQuery: useGetSchoolSchedulesQueryOrig,
-  useGetActiveSchoolSchedulesQuery: useGetActiveSchoolSchedulesQueryOrig,
-  useGetSchoolScheduleByIdQuery: useGetSchoolScheduleByIdQueryOrig,
-  useCreateSchoolScheduleMutation,
-  useUpdateSchoolScheduleMutation,
-  useDeleteSchoolScheduleMutation,
   useGetSchoolPickupPointsQuery: useGetSchoolPickupPointsQueryOrig,
   useGetActiveSchoolPickupPointsQuery: useGetActiveSchoolPickupPointsQueryOrig,
   useGetSchoolPickupPointsCompatibilityQuery: useGetSchoolPickupPointsCompatibilityQueryOrig,
@@ -1930,9 +1840,6 @@ export const useGetTripAttendanceManifestQuery = wrapQueryHook(useGetTripAttenda
 export const useGetTripAttendanceSummaryQuery = wrapQueryHook(useGetTripAttendanceSummaryQueryOrig);
 export const useGetAttendanceQuery = wrapQueryHook(useGetAttendanceQueryOrig);
 export const useGetTripHistoryQuery = wrapQueryHook(useGetTripHistoryQueryOrig);
-export const useGetSchoolSchedulesQuery = wrapQueryHook(useGetSchoolSchedulesQueryOrig);
-export const useGetActiveSchoolSchedulesQuery = wrapQueryHook(useGetActiveSchoolSchedulesQueryOrig);
-export const useGetSchoolScheduleByIdQuery = wrapQueryHook(useGetSchoolScheduleByIdQueryOrig);
 export const useGetSchoolPickupPointsQuery = wrapQueryHook(useGetSchoolPickupPointsQueryOrig);
 export const useGetActiveSchoolPickupPointsQuery = wrapQueryHook(useGetActiveSchoolPickupPointsQueryOrig);
 export const useGetSchoolPickupPointsCompatibilityQuery = wrapQueryHook(useGetSchoolPickupPointsCompatibilityQueryOrig);
@@ -2001,9 +1908,6 @@ export {
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
   useStartBoardingTripStopMutation,
-  useCreateSchoolScheduleMutation,
-  useUpdateSchoolScheduleMutation,
-  useDeleteSchoolScheduleMutation,
   useLinkSchoolPickupPointMutation,
   useUpdateSchoolPickupPointMutation,
   useUnlinkSchoolPickupPointMutation,

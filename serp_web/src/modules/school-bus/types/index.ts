@@ -38,20 +38,6 @@ export interface SchoolBusBaseRecord {
   updatedBy?: string;
 }
 
-export interface SchoolScheduleSummary {
-  id: number;
-  code?: string | null;
-  name?: string | null;
-  shift?: string | null;
-  arrivalDeadline?: string | null;
-  departureTime?: string | null;
-  effectiveFrom?: string | null;
-  effectiveTo?: string | null;
-  isDefault?: boolean;
-  isActive?: boolean;
-  days?: string[];
-}
-
 export interface LinkedPickupPointSummary {
   id: number;
   linkId?: number;
@@ -73,11 +59,8 @@ export interface SchoolBusSchool extends SchoolBusBaseRecord {
   contactEmail?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  schedules?: SchoolScheduleSummary[];
   pickupPoints?: LinkedPickupPointSummary[];
-  scheduleCount?: number;
   pickupPointCount?: number;
-  activeScheduleCount?: number;
   hasCoordinates?: boolean;
   anyLinkedPointMissingCoordinates?: boolean;
 }
@@ -198,12 +181,6 @@ export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   dropoffPointAddress?: string | null;
   dropoffPointLatitude?: number | null;
   dropoffPointLongitude?: number | null;
-  schoolScheduleId?: number | null;
-  schoolScheduleCode?: string | null;
-  schoolScheduleName?: string | null;
-  shiftType?: string | null;
-  arrivalDeadline?: string | null;
-  departureTime?: string | null;
   tripOption?: string | null;
   monday?: boolean;
   tuesday?: boolean;
@@ -266,8 +243,6 @@ export interface SchoolBusSubscriptionHistory extends SchoolBusBaseRecord {
   newPickupPointId?: number | null;
   oldDropoffPointId?: number | null;
   newDropoffPointId?: number | null;
-  oldSchoolScheduleId?: number | null;
-  newSchoolScheduleId?: number | null;
   oldTripOption?: string | null;
   newTripOption?: string | null;
   oldEffectiveFrom?: string | null;
@@ -311,8 +286,6 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   routeCode: string;
   routeName: string;
   serviceDate: string;
-  schoolScheduleId: number;
-  schoolScheduleName: string;
   status: string;
   plannedDistanceKm?: number | null;
   plannedDurationMin?: number | null;
@@ -478,12 +451,6 @@ export interface SchoolBusSubscription extends SchoolBusBaseRecord {
   effectiveTo?: string | null;
   sourceRequestId?: number | null;
   sourceRequestCode?: string | null;
-  schoolScheduleId?: number | null;
-  schoolScheduleName?: string | null;
-  scheduleCode?: string | null;
-  shiftType?: string | null;
-  arrivalDeadline?: string | null;
-  departureTime?: string | null;
 }
 
 export interface SchoolBusTripStopLog extends SchoolBusBaseRecord {
@@ -518,7 +485,6 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   routeName: string;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
-  shiftType: string;
   status: string;
   plannedStartAt?: string | null;
   plannedEndAt?: string | null;
@@ -739,7 +705,6 @@ export interface SchoolBusTransportRequestStudentInput {
   studentId: number;
   pickupPointId?: number | null;
   dropoffPointId?: number | null;
-  schoolScheduleId?: number | null;
   tripOption?: string | null;
   monday?: boolean;
   tuesday?: boolean;
@@ -781,7 +746,6 @@ export interface SchoolBusSubscriptionUpsertRequest {
   friday?: boolean;
   saturday?: boolean;
   sunday?: boolean;
-  schoolScheduleId?: number | null;
   isActive?: boolean;
 }
 
@@ -801,7 +765,6 @@ export interface SchoolBusRouteUpsertRequest {
   endDepotId?: number | null;
   routeName: string;
   serviceDate: string;
-  schoolScheduleId: number;
   planningNotes?: string;
   isActive?: boolean;
 }
@@ -838,38 +801,6 @@ export interface SchoolBusMapLocation {
   addressParts?: SchoolBusMapAddressParts;
 }
 
-// --- School Schedule ---
-
-export interface SchoolBusSchedule extends SchoolBusBaseRecord {
-  schoolId: number;
-  schoolName: string;
-  scheduleCode?: string | null;
-  scheduleName: string;
-  educationLevel?: string | null;
-  grade?: string | null;
-  shiftType: string;
-  daysOfWeek?: string[];
-  arrivalDeadline?: string | null;
-  departureTime?: string | null;
-  effectiveFrom: string;
-  effectiveTo?: string | null;
-  isDefault?: boolean;
-}
-
-export interface SchoolBusScheduleUpsertRequest {
-  scheduleName: string;
-  educationLevel?: string | null;
-  grade?: string | null;
-  shiftType: string;
-  daysOfWeek?: string[];
-  arrivalDeadline?: string | null;
-  departureTime?: string | null;
-  effectiveFrom: string;
-  effectiveTo?: string | null;
-  isDefault?: boolean;
-  isActive?: boolean;
-}
-
 // --- School ↔ Pickup Point link ---
 
 export interface SchoolBusSchoolPickupPoint extends SchoolBusBaseRecord {
@@ -898,8 +829,6 @@ export type PlanningMethod = 'MANUAL' | 'GREEDY';
 export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   schoolId: number;
   schoolName: string;
-  schoolScheduleId: number;
-  schoolScheduleName: string;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod: PlanningMethod;
@@ -964,9 +893,6 @@ export interface PlanningDemandResponse {
   studentName: string;
   schoolId: number;
   schoolName: string;
-  schoolScheduleId: number;
-  scheduleCode?: string;
-  scheduleName?: string;
   tripOption: string;
   tripOptionLabel?: string;
   pointId?: number;
@@ -989,8 +915,6 @@ export interface PlanningPointResponse {
 export interface SchoolBusPlanningPreview {
   schoolId: number;
   schoolName: string;
-  schoolScheduleId: number;
-  schoolScheduleName?: string;
   serviceDate: string;
   routeDirection: string;
   totalEligibleStudents: number;
@@ -998,16 +922,8 @@ export interface SchoolBusPlanningPreview {
   eligibleStudents: SchoolBusEligibleStudent[];
   eligiblePickupPoints: SchoolBusPlanningPickupPoint[];
   
-  // New fields from Phase 2
   schoolCode?: string;
   schoolAddress?: string;
-  scheduleCode?: string;
-  scheduleName?: string;
-  shiftType?: string;
-  arrivalDeadline?: string;
-  departureTime?: string;
-  effectiveFrom?: string;
-  effectiveTo?: string;
   activeDays?: string[];
   serviceDayOfWeek?: string;
   direction?: string;
@@ -1021,7 +937,6 @@ export interface SchoolBusPlanningPreview {
 
 export interface PlanningSessionCreateRequest {
   schoolId: number;
-  schoolScheduleId: number;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod: PlanningMethod;
@@ -1030,7 +945,6 @@ export interface PlanningSessionCreateRequest {
 
 export interface PlanningSessionPreviewRequest {
   schoolId: number;
-  schoolScheduleId: number;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod?: PlanningMethod;
@@ -1048,7 +962,6 @@ export interface CreateRouteInSessionRequest {
   busId: number;
   routeName: string;
   serviceDate: string;
-  schoolScheduleId: number;
   planningNotes?: string;
 }
 

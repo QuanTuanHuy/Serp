@@ -105,7 +105,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
 export default function SchoolBusRoutePlanningPage() {
 
   const [form, setForm] = useState<ContextFormState>({
-    schoolId: '', schoolScheduleId: '',
+    schoolId: '',
     serviceDate: new Date().toISOString().slice(0, 10),
     routeDirection: 'OUTBOUND', planningMethod: 'MANUAL',
   });
@@ -196,8 +196,7 @@ export default function SchoolBusRoutePlanningPage() {
     if (activeSession && activeSession.id === activeSessionId) {
       const isContextMatch =
         Number(form.schoolId) === activeSession.schoolId &&
-        Number(form.schoolScheduleId) === activeSession.schoolScheduleId &&
-        form.serviceDate === activeSession.serviceDate &&
+          form.serviceDate === activeSession.serviceDate &&
         form.routeDirection === activeSession.routeDirection &&
         form.planningMethod === activeSession.planningMethod;
 
@@ -206,7 +205,7 @@ export default function SchoolBusRoutePlanningPage() {
         setSelectedRouteId(null);
       }
     }
-  }, [form.schoolId, form.schoolScheduleId, form.serviceDate, form.routeDirection, form.planningMethod, activeSession, activeSessionId]);
+  }, [form.schoolId, form.serviceDate, form.routeDirection, form.planningMethod, activeSession, activeSessionId]);
 
   // Reset selected route when active session changes
   React.useEffect(() => {
@@ -224,7 +223,6 @@ export default function SchoolBusRoutePlanningPage() {
         setForm(prev => ({
           ...prev,
           schoolId: String(matchedSession.schoolId),
-          schoolScheduleId: String(matchedSession.schoolScheduleId),
           serviceDate: matchedSession.serviceDate,
           routeDirection: matchedSession.routeDirection,
           planningMethod: matchedSession.planningMethod,
@@ -270,13 +268,12 @@ export default function SchoolBusRoutePlanningPage() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
-    if (!form.schoolId || !form.schoolScheduleId || !form.serviceDate) {
-      toast.error('Please fill School, Schedule and Service Date'); return;
+    if (!form.schoolId || !form.serviceDate) {
+      toast.error('Please fill School and Service Date'); return;
     }
     try {
       const res = await previewMutation({
         schoolId: Number(form.schoolId),
-        schoolScheduleId: Number(form.schoolScheduleId),
         serviceDate: form.serviceDate,
         routeDirection: form.routeDirection,
         planningMethod: form.planningMethod,
@@ -293,7 +290,7 @@ export default function SchoolBusRoutePlanningPage() {
   const handleCreateSession = useCallback(async () => {
     try {
       const res = await createSession({
-        schoolId: Number(form.schoolId), schoolScheduleId: Number(form.schoolScheduleId),
+        schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate, routeDirection: form.routeDirection,
         planningMethod: form.planningMethod,
       }).unwrap();
@@ -428,7 +425,6 @@ export default function SchoolBusRoutePlanningPage() {
     setForm(prev => ({
       ...prev,
       schoolId: String(s.schoolId),
-      schoolScheduleId: String(s.schoolScheduleId),
       serviceDate: s.serviceDate,
       routeDirection: s.routeDirection,
       planningMethod: s.planningMethod,

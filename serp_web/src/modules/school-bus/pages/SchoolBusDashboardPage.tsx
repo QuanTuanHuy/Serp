@@ -193,8 +193,7 @@ export function SchoolBusDashboardPage() {
                               {route.routeCode} - {route.routeName}
                             </p>
                             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                              {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                              {route.schoolScheduleName}
+                              {route.schoolName} - {formatDate(route.serviceDate)}
                             </p>
                           </div>
                           <SchoolBusStatusBadge status={route.status} />
@@ -377,8 +376,7 @@ export function SchoolBusDashboardPage() {
                               {route.routeCode} - {route.routeName}
                             </p>
                             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                              {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                              {route.schoolScheduleName}
+                              {route.schoolName} - {formatDate(route.serviceDate)}
                             </p>
                           </div>
                           <SchoolBusStatusBadge status={route.status} />
@@ -781,8 +779,7 @@ export function SchoolBusDashboardPage() {
                             {route.routeCode} - {route.routeName}
                           </p>
                           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                            {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                            {route.schoolScheduleName}
+                            {route.schoolName} - {formatDate(route.serviceDate)}
                           </p>
                         </div>
                         <SchoolBusStatusBadge status={route.status} />

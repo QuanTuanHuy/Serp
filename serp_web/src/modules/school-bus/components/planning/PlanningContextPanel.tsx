@@ -7,7 +7,6 @@ import { cn } from '@/shared/utils';
 import { schoolBusUi } from '../../theme';
 import {
   useGetSchoolsQuery,
-  useGetActiveSchoolSchedulesQuery,
 } from '../../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../../utils';
 import { SchoolBusSelect } from '../ui/SchoolBusSelect';
@@ -15,7 +14,6 @@ import { SchoolBusDatePicker } from '../ui/SchoolBusDatePicker';
 
 export interface ContextFormState {
   schoolId: string;
-  schoolScheduleId: string;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
   planningMethod: 'GREEDY' | 'MANUAL';
@@ -38,9 +36,6 @@ export function PlanningContextPanel({
 }: PlanningContextPanelProps) {
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const schools = getPageItems(schoolsData?.data);
-  const selectedSchoolId = Number(form.schoolId) || 0;
-  const { data: schedulesData } = useGetActiveSchoolSchedulesQuery(selectedSchoolId, { skip: !selectedSchoolId });
-  const schedules = schedulesData?.data ?? [];
 
   return (
     <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4'>
@@ -57,23 +52,10 @@ export function PlanningContextPanel({
         <SchoolBusSelect
           fullWidth
           value={form.schoolId}
-          onChange={val => onFormChange(f => ({ ...f, schoolId: val || '', schoolScheduleId: '' }))}
+          onChange={val => onFormChange(f => ({ ...f, schoolId: val || '' }))}
           placeholder='— Select school —'
           options={schools.map(s => ({ label: s.name, value: String(s.id) }))}
           searchable
-        />
-
-        <label className={fieldLabel}>School Schedule *</label>
-        <SchoolBusSelect
-          fullWidth
-          value={form.schoolScheduleId}
-          onChange={val => onFormChange(f => ({ ...f, schoolScheduleId: val || '' }))}
-          placeholder={selectedSchoolId ? '— Select schedule —' : '— Select school first —'}
-          disabled={!selectedSchoolId}
-          options={schedules.map(sc => ({
-            label: `${sc.scheduleName} (${sc.shiftType}${sc.daysOfWeek ? ` · ${sc.daysOfWeek.join(',')}` : ''})`,
-            value: String(sc.id)
-          }))}
         />
 
         <label className={fieldLabel}>Service Date *</label>
@@ -89,8 +71,8 @@ export function PlanningContextPanel({
           value={form.routeDirection}
           onChange={val => onFormChange(f => ({ ...f, routeDirection: val as 'OUTBOUND' | 'RETURN' }))}
           options={[
-            { label: 'OUTBOUND (Home → School)', value: 'OUTBOUND' },
-            { label: 'RETURN (School → Home)', value: 'RETURN' }
+            { label: 'Outbound (To school)', value: 'OUTBOUND' },
+            { label: 'Return (From school)', value: 'RETURN' }
           ]}
         />
 

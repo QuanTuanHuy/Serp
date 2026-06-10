@@ -139,11 +139,9 @@ export function SchoolBusSubscriptionDetailPage({
   const pickupPointConfigured = !requiresPickup || !!sub.pickupPointId;
   const dropoffPointConfigured = !requiresDropoff || !!sub.dropoffPointId;
 
-  const hasSchedule = !!sub.schoolScheduleId;
+  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured;
 
-  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured && hasSchedule;
-
-  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured || !hasSchedule;
+  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured;
 
   const descriptionNode = (
     <div className='space-y-1.5 mt-1'>
@@ -385,34 +383,7 @@ export function SchoolBusSubscriptionDetailPage({
             {/* Schedule & active days */}
             <SchoolBusSection title='Schedule & active days'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
-                {sub.schoolScheduleId ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pb-3 border-b border-slate-105'>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Name</span>
-                      <span className='text-slate-900 font-semibold'>{sub.schoolScheduleName}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Code</span>
-                      <span className='text-slate-900 font-semibold font-mono text-xs'>{sub.scheduleCode || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Shift Type</span>
-                      <span className='text-slate-900 font-semibold'>{sub.shiftType || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Arrival Deadline</span>
-                      <span className='text-slate-900 font-semibold'>{sub.arrivalDeadline || '—'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm md:col-span-2'>
-                      <span className='text-slate-500 font-medium'>Departure Time</span>
-                      <span className='text-slate-900 font-semibold'>{sub.departureTime || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className='pb-3 border-b border-slate-100 text-sm text-amber-600 italic font-medium'>
-                    No schedule linked to this subscription contract.
-                  </div>
-                )}
+                
 
                 <div>
                   <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2'>Active Days</span>
@@ -505,17 +476,6 @@ export function SchoolBusSubscriptionDetailPage({
                     <span className='ml-auto text-slate-700'>
                       {pickupPointConfigured && dropoffPointConfigured ? 'Configured' : 'Missing points'}
                     </span>
-                  </div>
-
-                  {/* 5. Schedule linked */}
-                  <div className='flex items-center gap-2'>
-                    {hasSchedule ? (
-                      <span className='text-emerald-600 font-bold'>✓</span>
-                    ) : (
-                      <span className='text-amber-500 font-bold'>⚠</span>
-                    )}
-                    <span className='text-slate-500 font-medium'>School schedule linked</span>
-                    <span className='ml-auto text-slate-700'>{hasSchedule ? 'Linked' : 'Missing schedule'}</span>
                   </div>
                 </div>
 

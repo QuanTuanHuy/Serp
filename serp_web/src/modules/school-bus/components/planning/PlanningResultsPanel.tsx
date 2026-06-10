@@ -19,7 +19,6 @@ import {
   useGetDepotsQuery,
   useGetBusesQuery,
   useGetSchoolByIdQuery,
-  useGetSchoolScheduleByIdQuery,
   useDeleteRouteInSessionMutation,
 } from '../../api/schoolBusApi';
 import type {
@@ -120,7 +119,6 @@ function CreateRoutePanel({
       endLocationType: form.endLocationType,
       routeName: form.routeName,
       serviceDate: session.serviceDate,
-      schoolScheduleId: session.schoolScheduleId,
       busId: Number(form.busId),
       planningNotes: form.planningNotes || undefined,
     };
@@ -947,13 +945,11 @@ export function PlanningResultsPanel({
   const { data: schoolData } = useGetSchoolByIdQuery(schoolId, { skip: !schoolId });
   const currentSchool = schoolData?.data ?? null;
 
-  const scheduleId = Number(preview?.schoolScheduleId ?? form?.schoolScheduleId) || 0;
-  const { data: scheduleData } = useGetSchoolScheduleByIdQuery(scheduleId, { skip: !scheduleId });
-  const currentSchedule = scheduleData?.data ?? null;
+  const scheduleId = 0; // schedule removed (Phase 3)
+  // scheduleData query removed (Phase 3)
 
   const isPreviewStale = preview ? (
     Number(preview.schoolId) !== Number(form?.schoolId) ||
-    Number(preview.schoolScheduleId) !== Number(form?.schoolScheduleId) ||
     preview.serviceDate !== form?.serviceDate ||
     preview.routeDirection !== form?.routeDirection ||
     preview.planningMethod !== form?.planningMethod
@@ -1227,19 +1223,10 @@ export function PlanningResultsPanel({
               const schCode = preview?.schoolCode ?? currentSchool?.code ?? '-';
               const schAddr = preview?.schoolAddress ?? currentSchool?.address ?? '-';
 
-              // 2. Schedule Info
-              const sName = preview?.scheduleName ?? currentSchedule?.scheduleName ?? '-';
-              const sCode = preview?.scheduleCode ?? currentSchedule?.scheduleCode ?? '-';
-              const sShift = preview?.shiftType ?? currentSchedule?.shiftType ?? '-';
-              const sArrival = preview?.arrivalDeadline ?? currentSchedule?.arrivalDeadline ?? '-';
-              const sDeparture = preview?.departureTime ?? currentSchedule?.departureTime ?? '-';
-              const effFrom = preview?.effectiveFrom ?? currentSchedule?.effectiveFrom;
-              const effTo = preview?.effectiveTo ?? currentSchedule?.effectiveTo;
-              const effRange = effFrom && effTo ? `${formatDate(effFrom)} - ${formatDate(effTo)}` : effFrom ? formatDate(effFrom) : '-';
 
               // 3. Active Days
               const pActiveDays = preview?.activeDays;
-              const rawActiveDays = pActiveDays ?? currentSchedule?.daysOfWeek ?? [];
+              const rawActiveDays = pActiveDays ?? [];
               const activeDaysSet = new Set(rawActiveDays.map((d: string) => d.toUpperCase()));
 
               const daysOfWeek = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
@@ -1293,33 +1280,6 @@ export function PlanningResultsPanel({
                       {schAddr && schAddr !== '-' && (
                         <p className='text-[10px] text-slate-500 mt-1 truncate'>{schAddr}</p>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Schedule Section */}
-                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2 shadow-sm'>
-                    <div className='flex items-start justify-between'>
-                      <div className='space-y-1'>
-                        <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>Schedule</p>
-                        <p className='font-bold text-slate-800 leading-snug'>{sName}</p>
-                        <p className='text-[10px] text-slate-400 font-bold mt-0.5'>
-                          {sCode} <span className='text-slate-300 mx-1'>•</span> <span className='text-[#C81E3A]'>{sShift}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className='grid grid-cols-2 gap-2 text-[10px] pt-1.5 border-t border-slate-100/60 text-slate-500'>
-                      <div>
-                        <span className='font-semibold text-slate-400'>Arrival:</span>{' '}
-                        <span className='font-bold text-slate-700'>{sArrival ? sArrival.slice(0, 5) : '-'}</span>
-                      </div>
-                      <div>
-                        <span className='font-semibold text-slate-400'>Departure:</span>{' '}
-                        <span className='font-bold text-slate-700'>{sDeparture ? sDeparture.slice(0, 5) : '-'}</span>
-                      </div>
-                      <div className='col-span-2'>
-                        <span className='font-semibold text-slate-400'>Effective:</span>{' '}
-                        <span className='font-bold text-slate-700'>{effRange}</span>
-                      </div>
                     </div>
                   </div>
 

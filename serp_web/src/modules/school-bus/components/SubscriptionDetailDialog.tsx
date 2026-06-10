@@ -122,8 +122,8 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               <Section title='Student & School' icon={User}>
                 <Field label='Student' value={sub.studentName} />
                 <Field label='School' value={sub.schoolName} />
-                <Field label='Schedule' value={sub.schoolScheduleName ?? '—'} />
                 <Field label='Trip Option' value={sub.tripOption} />
+                <div />
               </Section>
 
               {/* Pickup & Dropoff */}

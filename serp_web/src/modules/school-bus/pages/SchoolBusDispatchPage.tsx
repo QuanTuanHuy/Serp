@@ -214,15 +214,7 @@ export function SchoolBusDispatchPage() {
                         <Calendar className='h-3.5 w-3.5 text-slate-400 shrink-0' />
                         <span>{formatDate(route.serviceDate)}</span>
                       </div>
-                      {route.schoolScheduleName && (
-                        <>
-                          <span className='text-slate-300 hidden sm:inline'>|</span>
-                          <div className='flex items-center gap-1'>
-                            <Clock3 className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-                            <span>{route.schoolScheduleName}</span>
-                          </div>
-                        </>
-                      )}
+
                       <span className='text-slate-300 hidden sm:inline'>|</span>
                       <div className='flex items-center gap-1.5'>
                         <span className={cn(
