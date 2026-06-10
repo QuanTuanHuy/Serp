@@ -76,7 +76,7 @@ public class OrganizationUserController {
     }
 
     @PutMapping("/{userId}/roles")
-    public ResponseEntity<?> updateUserRoles(
+    public ResponseEntity<?>    updateUserRoles(
             @PathVariable Long organizationId,
             @PathVariable Long userId,
             @Valid @RequestBody UpdateUserRolesRequest request) {

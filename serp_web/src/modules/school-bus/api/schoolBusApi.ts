@@ -828,7 +828,7 @@ export const schoolBusApi = api.injectEndpoints({
       ],
     }),
 
-    getSubscriptions: builder.query<
+    getSchoolBusSubscriptions: builder.query<
       ApiResponse<PagedResponse<SchoolBusSubscription>>,
       SchoolBusListParams | void
     >({
@@ -838,7 +838,7 @@ export const schoolBusApi = api.injectEndpoints({
         transformApiResponse<PagedResponse<SchoolBusSubscription>>(),
       providesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' }],
     }),
-    getSubscriptionById: builder.query<ApiResponse<SchoolBusSubscription>, number>({
+    getSchoolBusSubscriptionById: builder.query<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
@@ -847,7 +847,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
       ],
     }),
-    createSubscription: builder.mutation<
+    createSchoolBusSubscription: builder.mutation<
       ApiResponse<SchoolBusSubscription>,
       SchoolBusSubscriptionUpsertRequest
     >({
@@ -859,7 +859,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
-    activateSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+    activateSchoolBusSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}/activate`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
@@ -871,7 +871,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
-    pauseSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+    pauseSchoolBusSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}/pause`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
@@ -883,7 +883,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
-    stopSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
+    stopSchoolBusSubscription: builder.mutation<ApiResponse<SchoolBusSubscription>, number>({
       query: (id) => ({ url: `/subscriptions/${id}/stop`, method: 'POST' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
@@ -895,7 +895,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
-    getSubscriptionHistory: builder.query<
+    getSchoolBusSubscriptionHistory: builder.query<
       ApiResponse<SchoolBusSubscriptionHistory[]>,
       number
     >({
@@ -1814,13 +1814,13 @@ const {
   useRejectTransportRequestMutation,
   useCancelTransportRequestMutation,
   useGetTransportRequestHistoryQuery: useGetTransportRequestHistoryQueryOrig,
-  useGetSubscriptionsQuery: useGetSubscriptionsQueryOrig,
-  useGetSubscriptionByIdQuery: useGetSubscriptionByIdQueryOrig,
-  useCreateSubscriptionMutation,
-  useActivateSubscriptionMutation,
-  usePauseSubscriptionMutation,
-  useStopSubscriptionMutation,
-  useGetSubscriptionHistoryQuery: useGetSubscriptionHistoryQueryOrig,
+  useGetSchoolBusSubscriptionsQuery: useGetSchoolBusSubscriptionsQueryOrig,
+  useGetSchoolBusSubscriptionByIdQuery: useGetSchoolBusSubscriptionByIdQueryOrig,
+  useCreateSchoolBusSubscriptionMutation,
+  useActivateSchoolBusSubscriptionMutation,
+  usePauseSchoolBusSubscriptionMutation,
+  useStopSchoolBusSubscriptionMutation,
+  useGetSchoolBusSubscriptionHistoryQuery: useGetSchoolBusSubscriptionHistoryQueryOrig,
   useGetRoutesQuery: useGetRoutesQueryOrig,
   useGetRouteByIdQuery: useGetRouteByIdQueryOrig,
   useGetRoutePathQuery: useGetRoutePathQueryOrig,
@@ -1914,9 +1914,9 @@ export const useGetDepotByIdQuery = wrapQueryHook(useGetDepotByIdQueryOrig);
 export const useGetTransportRequestsQuery = wrapQueryHook(useGetTransportRequestsQueryOrig);
 export const useGetTransportRequestByIdQuery = wrapQueryHook(useGetTransportRequestByIdQueryOrig);
 export const useGetTransportRequestHistoryQuery = wrapQueryHook(useGetTransportRequestHistoryQueryOrig);
-export const useGetSubscriptionsQuery = wrapQueryHook(useGetSubscriptionsQueryOrig);
-export const useGetSubscriptionByIdQuery = wrapQueryHook(useGetSubscriptionByIdQueryOrig);
-export const useGetSubscriptionHistoryQuery = wrapQueryHook(useGetSubscriptionHistoryQueryOrig);
+export const useGetSchoolBusSubscriptionsQuery = wrapQueryHook(useGetSchoolBusSubscriptionsQueryOrig);
+export const useGetSchoolBusSubscriptionByIdQuery = wrapQueryHook(useGetSchoolBusSubscriptionByIdQueryOrig);
+export const useGetSchoolBusSubscriptionHistoryQuery = wrapQueryHook(useGetSchoolBusSubscriptionHistoryQueryOrig);
 export const useGetRoutesQuery = wrapQueryHook(useGetRoutesQueryOrig);
 export const useGetRouteByIdQuery = wrapQueryHook(useGetRouteByIdQueryOrig);
 export const useGetRoutePathQuery = wrapQueryHook(useGetRoutePathQueryOrig);
@@ -1976,10 +1976,10 @@ export {
   useApproveTransportRequestMutation,
   useRejectTransportRequestMutation,
   useCancelTransportRequestMutation,
-  useCreateSubscriptionMutation,
-  useActivateSubscriptionMutation,
-  usePauseSubscriptionMutation,
-  useStopSubscriptionMutation,
+  useCreateSchoolBusSubscriptionMutation,
+  useActivateSchoolBusSubscriptionMutation,
+  usePauseSchoolBusSubscriptionMutation,
+  useStopSchoolBusSubscriptionMutation,
   useUpdateRouteMutation,
   useAssignRouteMutation,
   useManualDispatchRouteMutation,

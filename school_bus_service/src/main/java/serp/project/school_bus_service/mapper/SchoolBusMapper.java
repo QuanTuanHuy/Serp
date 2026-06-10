@@ -41,7 +41,6 @@ public class SchoolBusMapper extends BaseMapper {
     public AttendantProfileResponse toAttendantProfileResponse(BusAttendantProfileEntity e) { return masterDataMapper.toAttendantProfileResponse(e); }
     public PickupPointResponse toPickupPointResponse(PickupPointEntity e) { return masterDataMapper.toPickupPointResponse(e); }
     public DepotResponse toDepotResponse(DepotEntity e) { return masterDataMapper.toDepotResponse(e); }
-    public SchoolScheduleResponse toSchoolScheduleResponse(SchoolScheduleEntity e) { return masterDataMapper.toSchoolScheduleResponse(e); }
     public SchoolPickupPointResponse toSchoolPickupPointResponse(SchoolPickupPointEntity e) { return masterDataMapper.toSchoolPickupPointResponse(e); }
 
     // --- Route ---

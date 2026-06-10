@@ -17,8 +17,6 @@ public class PlanningSessionPreviewRequest {
     @NotNull
     private Long schoolId;
 
-    @NotNull
-    private Long schoolScheduleId;
 
     @NotNull
     private LocalDate serviceDate;

@@ -13,8 +13,6 @@ public class PlanningSessionResponse {
     private Long id;
     private Long schoolId;
     private String schoolName;
-    private Long schoolScheduleId;
-    private String schoolScheduleName;
 
     private LocalDate serviceDate;
     private String routeDirection;

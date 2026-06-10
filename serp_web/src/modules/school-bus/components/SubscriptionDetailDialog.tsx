@@ -1,7 +1,7 @@
 'use client';
 
 import { X, CalendarDays, User, School, MapPin, Clock, Hash, ExternalLink } from 'lucide-react';
-import { useGetSubscriptionByIdQuery } from '../api/schoolBusApi';
+import { useGetSchoolBusSubscriptionByIdQuery } from '../api/schoolBusApi';
 import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { cn } from '@/shared/utils';
@@ -57,7 +57,7 @@ interface Props {
 }
 
 export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
-  const { data, isLoading } = useGetSubscriptionByIdQuery(subscriptionId);
+  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
   const sub = data?.data;
 
   return (

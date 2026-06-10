@@ -13,7 +13,6 @@ import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
-import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 
@@ -60,7 +59,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     private final StudentSubscriptionHistoryRepository historyRepository;
     private final IMasterDataService masterDataService;
     private final ICodeGeneratorService codeGeneratorService;
-    private final ISchoolScheduleService schoolScheduleService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
@@ -71,7 +69,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             StudentSubscriptionHistoryRepository historyRepository,
             IMasterDataService masterDataService,
             ICodeGeneratorService codeGeneratorService,
-            ISchoolScheduleService schoolScheduleService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService) {
@@ -79,7 +76,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         this.historyRepository = historyRepository;
         this.masterDataService = masterDataService;
         this.codeGeneratorService = codeGeneratorService;
-        this.schoolScheduleService = schoolScheduleService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
@@ -252,7 +248,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.setEffectiveTo(request.getEffectiveTo());
         entity.setStatus(SubscriptionStatus.ACTIVE);
         entity.setSourceRequest(request);
-        entity.setSchoolSchedule(rs.getSchoolSchedule());
         entity.setIsActive(Boolean.TRUE);
         StudentSubscriptionEntity saved = subscriptionRepository.save(entity);
 
@@ -341,7 +336,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             if (rs.getTripOption() == null) rs.setTripOption(target.getTripOption());
             if (rs.getPickupPoint() == null) rs.setPickupPoint(target.getPickupPoint());
             if (rs.getDropoffPoint() == null) rs.setDropoffPoint(target.getDropoffPoint());
-            if (rs.getSchoolSchedule() == null) rs.setSchoolSchedule(target.getSchoolSchedule());
         }
 
         StudentSubscriptionEntity newSub = createFromApprovedRequest(request, rs, tenantId, actorId);
@@ -379,7 +373,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         // Snapshot key fields
         h.setNewPickupPointId(sub.getPickupPoint() != null ? sub.getPickupPoint().getId() : null);
         h.setNewDropoffPointId(sub.getDropoffPoint() != null ? sub.getDropoffPoint().getId() : null);
-        h.setNewSchoolScheduleId(sub.getSchoolSchedule() != null ? sub.getSchoolSchedule().getId() : null);
         h.setNewTripOption(sub.getTripOption() != null ? sub.getTripOption().name() : null);
         h.setNewEffectiveFrom(sub.getEffectiveFrom());
         h.setNewEffectiveTo(sub.getEffectiveTo());
@@ -459,10 +452,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.setEffectiveTo(request.getEffectiveTo());
         entity.setStatus(status);
         entity.setIsActive(request.resolveIsActive(Boolean.TRUE));
-        if (request.getSchoolScheduleId() != null)
-            entity.setSchoolSchedule(schoolScheduleService.getSchedule(request.getSchoolScheduleId(), tenantId));
-        else
-            entity.setSchoolSchedule(null);
     }
 
     private PickupPointEntity resolvePoint(Long pointId, Long tenantId) {

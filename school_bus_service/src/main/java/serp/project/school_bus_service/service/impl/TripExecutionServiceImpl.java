@@ -184,7 +184,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         trip.setRoute(route);
         trip.setServiceDate(route.getServiceDate());
         trip.setRouteDirection(route.getRouteDirection());
-        trip.setShiftType(route.getShiftType());
         trip.setStatus(TripStatus.ASSIGNED);
         trip.setPlannedDistanceKm(route.getPlannedDistanceKm());
         trip.setPlannedDurationMin(route.getPlannedDurationMin());

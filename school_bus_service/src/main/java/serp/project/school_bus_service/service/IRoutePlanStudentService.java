@@ -46,7 +46,7 @@ public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentE
 
     List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, RouteDirection direction);
 
-    List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, Long scheduleId, String direction, LocalDate serviceDate, Long tenantId);
+    List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, String direction, LocalDate serviceDate, Long tenantId);
 
     /** Internal: physically deletes a route plan student entry (used by greedy simulation). */
     void deletePhysical(Long id);

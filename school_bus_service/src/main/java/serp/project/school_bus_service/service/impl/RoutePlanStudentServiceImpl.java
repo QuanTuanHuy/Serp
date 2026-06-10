@@ -43,7 +43,7 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     }
 
     @Override
-    public List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, Long scheduleId, String direction, LocalDate serviceDate, Long tenantId) {
+    public List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, String direction, LocalDate serviceDate, Long tenantId) {
         boolean isOutbound = "OUTBOUND".equalsIgnoreCase(direction);
         int dayIndex = serviceDate.getDayOfWeek().getValue(); // 1=MON..7=SUN
         List<TripOption> allowedTrips = isOutbound

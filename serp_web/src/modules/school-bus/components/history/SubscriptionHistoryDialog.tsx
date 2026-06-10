@@ -11,7 +11,7 @@ import {
   DialogDescription,
 } from '@/shared/components/ui';
 import {
-  useGetSubscriptionHistoryQuery,
+  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../../api/schoolBusApi';
 import { SchoolBusTimeline } from './SchoolBusTimeline';
 import { mapSubscriptionHistoryToTimeline } from './mappers';
@@ -28,7 +28,7 @@ export function SubscriptionHistoryDialog({
 }: SubscriptionHistoryDialogProps) {
   const [open, setOpen] = React.useState(false);
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSubscriptionHistoryQuery(subscriptionId, { skip: !open });
+    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId, { skip: !open });
 
   const events = React.useMemo<TimelineEvent[]>(() => {
     const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);

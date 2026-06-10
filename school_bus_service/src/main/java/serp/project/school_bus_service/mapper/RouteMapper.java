@@ -31,10 +31,6 @@ public class RouteMapper extends BaseMapper {
         response.setRouteCode(entity.getRouteCode());
         response.setRouteName(entity.getRouteName());
         response.setServiceDate(entity.getServiceDate());
-        if (entity.getSchoolSchedule() != null) {
-            response.setSchoolScheduleId(entity.getSchoolSchedule().getId());
-            response.setSchoolScheduleName(entity.getSchoolSchedule().getScheduleName());
-        }
         response.setStatus(entity.getStatus().name());
         response.setPlannedDistanceKm(entity.getPlannedDistanceKm());
         response.setPlannedDurationMin(entity.getPlannedDurationMin());

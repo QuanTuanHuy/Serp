@@ -25,7 +25,6 @@ import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ISchoolService;
-import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteLocationType;
@@ -36,9 +35,7 @@ import serp.project.school_bus_service.entity.RouteAssignmentEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.enums.RouteStatus;
-import serp.project.school_bus_service.enums.ShiftType;
 import serp.project.school_bus_service.repository.RoutePlanRepository;
 import serp.project.school_bus_service.repository.RoutePlanningSessionRepository;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
@@ -63,7 +60,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final RoutePlanningSessionRepository planningSessionRepository;
     private final IRoutePlanStudentService routePlanStudentService;
     private final ISchoolService schoolService;
-    private final ISchoolScheduleService schoolScheduleService;
     private final IDepotService depotService;
     private final IBusService busService;
     private final ICodeGeneratorService codeGeneratorService;
@@ -76,7 +72,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             RoutePlanningSessionRepository planningSessionRepository,
                             IRoutePlanStudentService routePlanStudentService,
                             ISchoolService schoolService,
-                            ISchoolScheduleService schoolScheduleService,
                             IDepotService depotService,
                             IBusService busService,
                             ICodeGeneratorService codeGeneratorService,
@@ -88,7 +83,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         this.planningSessionRepository = planningSessionRepository;
         this.routePlanStudentService = routePlanStudentService;
         this.schoolService = schoolService;
-        this.schoolScheduleService = schoolScheduleService;
         this.depotService = depotService;
         this.busService = busService;
         this.codeGeneratorService = codeGeneratorService;
@@ -107,7 +101,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     public PageResponse<RoutePlanResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId) {
         return PageResponse.from(routePlanRepository.findAll(
                 spec(tenantId, params == null ? null : params.getKeyword(), "routeCode", "routeName", "status",
-                        "shiftType", "routeDirection", "school.name"),
+                        "routeDirection", "school.name"),
                 pageable(params, Set.of("id", "routeCode", "routeName", "serviceDate", "status", "createdAt",
                         "updatedAt", "routeDirection", "lastModifiedDate"), "lastModifiedDate")),
                 route -> toRoutePlanResponse(route, tenantId));
@@ -290,13 +284,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         applyStartLocation(route, school, startType, request, tenantId);
         applyEndLocation(route, school, endType, request, tenantId);
 
-        SchoolScheduleEntity schedule = schoolScheduleService.getSchedule(request.getSchoolScheduleId(), tenantId);
-        validateSameSchool(school.getId(), schedule.getSchool().getId(), "school schedule");
-
         route.setRouteName(request.getRouteName());
         route.setServiceDate(request.getServiceDate());
-        route.setSchoolSchedule(schedule);
-        route.setShiftType(ShiftType.parse(schedule.getShiftType()));
         route.setPlanningNotes(request.getPlanningNotes());
         route.setIsActive(request.resolveIsActive(Boolean.TRUE));
     }

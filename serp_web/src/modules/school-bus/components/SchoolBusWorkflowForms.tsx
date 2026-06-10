@@ -56,7 +56,7 @@ import {
   useGetActiveSchoolPickupPointsQuery,
   useGetSchoolPickupPointsCompatibilityQuery,
   useGetActiveSchoolSchedulesQuery,
-  useGetSubscriptionsQuery,
+  useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import type { StudentMapMarker } from './map/OperationsMapClient';
@@ -632,7 +632,7 @@ export function TransportRequestForm({
   const { data: schedulesData } = useGetActiveSchoolSchedulesQuery(
     Number(schoolId), { skip: !schoolId || Number(schoolId) === 0 }
   );
-  const { data: subscriptionsData } = useGetSubscriptionsQuery(
+  const { data: subscriptionsData } = useGetSchoolBusSubscriptionsQuery(
     { ...SCHOOL_BUS_OPTION_QUERY, schoolId: Number(schoolId) } as any,
     { skip: !schoolId || Number(schoolId) === 0 }
   );

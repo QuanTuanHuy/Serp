@@ -19,8 +19,6 @@ import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
-
-import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.enums.RequestStatus;
@@ -32,7 +30,6 @@ import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.entity.TransportRequestHistoryEntity;
 import serp.project.school_bus_service.entity.TransportRequestEntity;
@@ -66,7 +63,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final TransportRequestHistoryRepository transportRequestHistoryRepository;
     private final IMasterDataService masterDataService;
     private final IStudentSubscriptionService subscriptionService;
-    private final ISchoolScheduleService schoolScheduleService;
     private final ISchoolPickupPointService schoolPickupPointService;
     private final ICodeGeneratorService codeGeneratorService;
     private final IAuditLogService auditLogService;
@@ -81,7 +77,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             TransportRequestHistoryRepository transportRequestHistoryRepository,
             IMasterDataService masterDataService,
             IStudentSubscriptionService subscriptionService,
-            ISchoolScheduleService schoolScheduleService,
             ISchoolPickupPointService schoolPickupPointService,
             ICodeGeneratorService codeGeneratorService,
             IAuditLogService auditLogService,
@@ -93,7 +88,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         this.transportRequestHistoryRepository = transportRequestHistoryRepository;
         this.masterDataService = masterDataService;
         this.subscriptionService = subscriptionService;
-        this.schoolScheduleService = schoolScheduleService;
         this.schoolPickupPointService = schoolPickupPointService;
         this.codeGeneratorService = codeGeneratorService;
         this.auditLogService = auditLogService;
@@ -210,17 +204,8 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         if (requiresRoutingValidation) {
             for (RequestStudentEntity rs : requestStudents) {
-                SchoolScheduleEntity schedule = rs.getSchoolSchedule();
-                if (schedule == null) {
-                    throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                            "Missing school schedule for student #" + rs.getStudent().getId()
-                                    + ". Please edit the request and select a schedule before approving.");
-                }
-
                 TripOption opt = rs.getTripOption();
                 if (opt == null) {
-                    // For routing types, tripOption must have been set at create/update time.
-                    // A null value here means the request was created before this rule was enforced.
                     throw new AppException(AppErrorCode.Request.INVALID_STATE,
                             "Missing trip option for student #" + rs.getStudent().getId()
                                     + ". Please edit the request and select a trip option before approving.");
@@ -402,59 +387,18 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             }
             rs.setStudent(student);
 
-            // ── Routing requirement check: NEW/CHANGE/RENEW must supply schedule + tripOption ──
+            // ── Routing requirement check: NEW/CHANGE/RENEW must supply tripOption ──
             boolean requiresRouting = requestType == RequestType.NEW_SERVICE
                     || requestType == RequestType.CHANGE_SERVICE
                     || requestType == RequestType.RENEW_SERVICE;
 
-            if (requiresRouting && studentRequest.getSchoolScheduleId() == null) {
-                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                        "School schedule is required for request type " + requestType
-                                + " (student #" + studentRequest.getStudentId() + ")");
-            }
             if (requiresRouting && (studentRequest.getTripOption() == null || studentRequest.getTripOption().isBlank())) {
                 throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
                         "Trip option is required for request type " + requestType
                                 + " (student #" + studentRequest.getStudentId() + ")");
             }
 
-            // ── Schedule validation ─────────────────────────────────────────
-            SchoolScheduleEntity schedule = null;
-            Set<String> scheduleDays = Set.of();
-            if (studentRequest.getSchoolScheduleId() != null) {
-                // Load schedule with days for day subset validation
-                schedule = schoolScheduleService.getScheduleWithDays(studentRequest.getSchoolScheduleId(), tenantId);
-
-                // Rule 2a: schedule must belong to the selected school
-                if (!schedule.getSchool().getId().equals(schoolId)) {
-                    throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                            "Schedule #" + studentRequest.getSchoolScheduleId()
-                                    + " does not belong to the selected school");
-                }
-
-                // Rule 2b: request effective range must overlap schedule effective range
-                if (requestFrom != null) {
-                    LocalDate schedFrom = schedule.getEffectiveFrom();
-                    LocalDate schedTo   = schedule.getEffectiveTo() != null ? schedule.getEffectiveTo() : LocalDate.MAX;
-                    LocalDate reqTo     = requestTo != null ? requestTo : LocalDate.MAX;
-                    if (requestFrom.isAfter(schedTo) || reqTo.isBefore(schedFrom)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                                "Request effective range [" + requestFrom + " – " + (requestTo != null ? requestTo : "∞")
-                                        + "] does not overlap schedule effective range ["
-                                        + schedFrom + " – " + (schedule.getEffectiveTo() != null ? schedule.getEffectiveTo() : "∞") + "]");
-                    }
-                }
-
-                // Build schedule days set (upper-cased)
-                scheduleDays = schedule.getScheduleDays().stream()
-                        .filter(d -> !Boolean.TRUE.equals(d.getIsDeleted()))
-                        .map(d -> d.getDayOfWeek().toUpperCase())
-                        .collect(Collectors.toSet());
-
-                rs.setSchoolSchedule(schedule);
-            }
-
-            // ── Days of week validation ─────────────────────────────────────
+            // ── Days of week ───────────────────────────────────────────────
             boolean mon = Boolean.TRUE.equals(studentRequest.getMonday());
             boolean tue = Boolean.TRUE.equals(studentRequest.getTuesday());
             boolean wed = Boolean.TRUE.equals(studentRequest.getWednesday());
@@ -467,22 +411,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             if (!mon && !tue && !wed && !thu && !fri && !sat && !sun) {
                 throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
                         "At least one day of week must be selected for student #" + studentRequest.getStudentId());
-            }
-
-            // Rule 1: selected days must be a subset of schedule days (if schedule chosen)
-            final Set<String> finalScheduleDays = scheduleDays;
-            if (schedule != null && !finalScheduleDays.isEmpty()) {
-                Map<String, Boolean> selectedDayMap = Map.of(
-                        "MONDAY", mon, "TUESDAY", tue, "WEDNESDAY", wed,
-                        "THURSDAY", thu, "FRIDAY", fri, "SATURDAY", sat, "SUNDAY", sun);
-                selectedDayMap.forEach((dayName, selected) -> {
-                    if (selected && !finalScheduleDays.contains(dayName)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                                "Day " + dayName + " is not part of schedule #"
-                                        + studentRequest.getSchoolScheduleId() + " for student #"
-                                        + studentRequest.getStudentId());
-                    }
-                });
             }
 
             rs.setMonday(mon);

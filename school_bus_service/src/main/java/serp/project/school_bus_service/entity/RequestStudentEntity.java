@@ -33,9 +33,6 @@ public class RequestStudentEntity extends BaseModel {
     @JoinColumn(name = "dropoff_point_id")
     private PickupPointEntity dropoffPoint;
 
-    @ManyToOne
-    @JoinColumn(name = "school_schedule_id")
-    private SchoolScheduleEntity schoolSchedule;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "trip_option")

@@ -13,7 +13,6 @@ import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteGenerationMethod;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
-import serp.project.school_bus_service.enums.ShiftType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,10 +69,6 @@ public class RoutePlanEntity extends BaseModel {
 
     @Column(name = "service_date", nullable = false)
     private LocalDate serviceDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "shift_type", nullable = false)
-    private ShiftType shiftType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -135,10 +130,6 @@ public class RoutePlanEntity extends BaseModel {
     @JoinColumn(name = "planning_session_id")
     private RoutePlanningSessionEntity planningSession;
 
-    /** The school schedule this route covers. Required from Phase 1 onwards. */
-    @ManyToOne
-    @JoinColumn(name = "school_schedule_id")
-    private SchoolScheduleEntity schoolSchedule;
 
     /** Minimum bus capacity required to carry all planned students. */
     @Column(name = "required_capacity")

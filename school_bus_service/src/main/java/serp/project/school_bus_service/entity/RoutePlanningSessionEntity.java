@@ -17,10 +17,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Represents a single planning session for one (school + schedule + serviceDate + direction) context.
+ * Represents a single planning session for one (school + serviceDate + direction) context.
  * A session groups all routes produced in one planning run (manual or greedy).
- * The unique partial index uk_planning_session_context_active prevents duplicate active sessions
- * for the same context.
  */
 @Entity
 @Table(name = "school_bus_route_planning_session")
@@ -32,9 +30,6 @@ public class RoutePlanningSessionEntity extends BaseModel {
     @JoinColumn(name = "school_id")
     private SchoolEntity school;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "school_schedule_id")
-    private SchoolScheduleEntity schoolSchedule;
 
     @Column(name = "service_date", nullable = false)
     private LocalDate serviceDate;

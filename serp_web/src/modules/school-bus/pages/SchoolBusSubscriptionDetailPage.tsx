@@ -18,11 +18,11 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetSubscriptionByIdQuery,
-  useActivateSubscriptionMutation,
-  usePauseSubscriptionMutation,
-  useStopSubscriptionMutation,
-  useGetSubscriptionHistoryQuery,
+  useGetSchoolBusSubscriptionByIdQuery,
+  useActivateSchoolBusSubscriptionMutation,
+  usePauseSchoolBusSubscriptionMutation,
+  useStopSchoolBusSubscriptionMutation,
+  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusTimeline } from '../components/history/SchoolBusTimeline';
 import { mapSubscriptionHistoryToTimeline } from '../components/history/mappers';
@@ -57,13 +57,13 @@ interface SchoolBusSubscriptionDetailPageProps {
 export function SchoolBusSubscriptionDetailPage({
   subscriptionId,
 }: SchoolBusSubscriptionDetailPageProps) {
-  const { data, isLoading } = useGetSubscriptionByIdQuery(subscriptionId);
-  const [activateSubscription, { isLoading: activating }] = useActivateSubscriptionMutation();
-  const [pauseSubscription, { isLoading: pausing }] = usePauseSubscriptionMutation();
-  const [stopSubscription, { isLoading: stopping }] = useStopSubscriptionMutation();
+  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
+  const [activateSubscription, { isLoading: activating }] = useActivateSchoolBusSubscriptionMutation();
+  const [pauseSubscription, { isLoading: pausing }] = usePauseSchoolBusSubscriptionMutation();
+  const [stopSubscription, { isLoading: stopping }] = useStopSchoolBusSubscriptionMutation();
 
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSubscriptionHistoryQuery(subscriptionId);
+    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId);
 
   const sub = data?.data;
 

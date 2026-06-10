@@ -15,7 +15,6 @@ public class RequestStudentItemRequest extends BaseCommandRequest {
 
     private Long pickupPointId;
     private Long dropoffPointId;
-    private Long schoolScheduleId;
     private String tripOption;
 
     private Boolean monday;

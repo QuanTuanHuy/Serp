@@ -43,8 +43,6 @@ public class RoutePlanUpsertRequest extends BaseCommandRequest {
     @NotNull
     private LocalDate serviceDate;
 
-    @NotNull
-    private Long schoolScheduleId;
 
     private String planningNotes;
 }

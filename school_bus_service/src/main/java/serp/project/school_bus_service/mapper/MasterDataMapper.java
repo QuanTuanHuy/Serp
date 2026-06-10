@@ -9,7 +9,6 @@ import serp.project.school_bus_service.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.dto.response.SchoolPickupPointResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
-import serp.project.school_bus_service.dto.response.SchoolScheduleResponse;
 import serp.project.school_bus_service.dto.response.StudentResponse;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.entity.BusEntity;
@@ -19,8 +18,6 @@ import serp.project.school_bus_service.entity.ParentProfileEntity;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleDayEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.shared.base.BaseMapper;
 
@@ -128,31 +125,6 @@ public class MasterDataMapper extends BaseMapper {
         response.setLongitude(entity.getLongitude());
         response.setContactPhone(entity.getContactPhone());
         response.setDescription(entity.getDescription());
-        return response;
-    }
-
-    public SchoolScheduleResponse toSchoolScheduleResponse(SchoolScheduleEntity entity) {
-        SchoolScheduleResponse response = enrich(new SchoolScheduleResponse(), entity);
-        response.setSchoolId(entity.getSchool().getId());
-        response.setSchoolName(entity.getSchool().getName());
-        response.setScheduleCode(entity.getScheduleCode());
-        response.setScheduleName(entity.getScheduleName());
-        response.setEducationLevel(entity.getEducationLevel());
-        response.setGrade(entity.getGrade());
-        response.setShiftType(entity.getShiftType());
-        response.setDaysOfWeek(
-                entity.getScheduleDays() == null
-                        ? List.of()
-                        : entity.getScheduleDays().stream()
-                                .filter(d -> !Boolean.TRUE.equals(d.getIsDeleted()))
-                                .map(SchoolScheduleDayEntity::getDayOfWeek)
-                                .sorted()
-                                .toList());
-        response.setArrivalDeadline(entity.getArrivalDeadline());
-        response.setDepartureTime(entity.getDepartureTime());
-        response.setEffectiveFrom(entity.getEffectiveFrom());
-        response.setEffectiveTo(entity.getEffectiveTo());
-        response.setIsDefault(entity.getIsDefaultSchedule());
         return response;
     }
 

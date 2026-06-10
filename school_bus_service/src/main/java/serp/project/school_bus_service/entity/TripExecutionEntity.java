@@ -10,7 +10,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.ShiftType;
 import serp.project.school_bus_service.enums.TripStatus;
 
 import java.time.LocalDate;
@@ -35,10 +34,6 @@ public class TripExecutionEntity extends BaseModel {
     @Enumerated(EnumType.STRING)
     @Column(name = "route_direction", nullable = false)
     private RouteDirection routeDirection;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "shift_type", nullable = false)
-    private ShiftType shiftType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

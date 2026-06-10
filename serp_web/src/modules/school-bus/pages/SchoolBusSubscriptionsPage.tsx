@@ -19,7 +19,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolsQuery,
-  useGetSubscriptionsQuery,
+  useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -39,7 +39,7 @@ export function SchoolBusSubscriptionsPage() {
     sortBy: 'createdAt',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetSubscriptionsQuery(pagination.params);
+  const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(pagination.params);
   const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
   const subscriptions = getPageItems(data?.data);
   const schools = getPageItems(schoolsData?.data);

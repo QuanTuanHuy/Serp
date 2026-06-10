@@ -19,7 +19,6 @@ import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.PlanningMethod;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
@@ -30,7 +29,6 @@ import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
-import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
@@ -56,7 +54,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     private final IRouteStopService routeStopService;
     private final IRoutePlanStudentService routePlanStudentService;
     private final ISchoolService schoolService;
-    private final ISchoolScheduleService scheduleService;
     private final MessageCommon messageCommon;
 
     public RoutePlanningSessionServiceImpl(RoutePlanningSessionRepository sessionRepository,
@@ -64,14 +61,12 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
                                             IRouteStopService routeStopService,
                                             IRoutePlanStudentService routePlanStudentService,
                                             ISchoolService schoolService,
-                                            ISchoolScheduleService scheduleService,
                                             MessageCommon messageCommon) {
         this.sessionRepository = sessionRepository;
         this.routeService = routeService;
         this.routeStopService = routeStopService;
         this.routePlanStudentService = routePlanStudentService;
         this.schoolService = schoolService;
-        this.scheduleService = scheduleService;
         this.messageCommon = messageCommon;
     }
 
@@ -86,11 +81,10 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     @Transactional(readOnly = true)
     public PlanningPreviewResponse preview(PlanningSessionPreviewRequest req, Long tenantId) {
         SchoolEntity school = schoolService.getSchool(req.getSchoolId(), tenantId);
-        SchoolScheduleEntity schedule = scheduleService.getSchedule(req.getSchoolScheduleId(), tenantId);
         boolean isOutbound = "OUTBOUND".equalsIgnoreCase(req.getRouteDirection());
 
         List<StudentSubscriptionEntity> eligible = routePlanStudentService.findEligibleSubscriptions(
-                req.getSchoolId(), req.getSchoolScheduleId(),
+                req.getSchoolId(),
                 req.getRouteDirection(), req.getServiceDate(), tenantId);
 
         // Build demands list
@@ -106,9 +100,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
             demand.setStudentName(sub.getStudent().getFullName());
             demand.setSchoolId(school.getId());
             demand.setSchoolName(school.getName());
-            demand.setSchoolScheduleId(schedule.getId());
-            demand.setScheduleCode(schedule.getScheduleCode());
-            demand.setScheduleName(schedule.getScheduleName());
             demand.setTripOption(sub.getTripOption().name());
 
             // Resolve the relevant point based on direction
@@ -152,14 +143,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         response.setSchoolCode(school.getCode());
         response.setSchoolName(school.getName());
         response.setSchoolAddress(school.getAddress());
-        response.setSchoolScheduleId(schedule.getId());
-        response.setScheduleCode(schedule.getScheduleCode());
-        response.setScheduleName(schedule.getScheduleName());
-        response.setShiftType(schedule.getShiftType());
-        response.setArrivalDeadline(schedule.getArrivalDeadline());
-        response.setDepartureTime(schedule.getDepartureTime());
-        response.setEffectiveFrom(schedule.getEffectiveFrom());
-        response.setEffectiveTo(schedule.getEffectiveTo());
         response.setServiceDate(req.getServiceDate());
         response.setServiceDayOfWeek(req.getServiceDate().getDayOfWeek());
         response.setDirection(req.getRouteDirection());
@@ -180,7 +163,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     public PlanningSessionResponse createSession(PlanningSessionCreateRequest req,
                                                  Long tenantId, Long actorId) {
         List<RoutePlanningSessionEntity> existing = sessionRepository.findActiveByContext(
-                tenantId, req.getSchoolId(), req.getSchoolScheduleId(),
+                tenantId, req.getSchoolId(),
                 req.getServiceDate(), RouteDirection.parse(req.getRouteDirection()));
         if (!existing.isEmpty()) {
             throw new AppException(AppErrorCode.Session.CONFLICT,
@@ -188,16 +171,10 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         }
 
         SchoolEntity school = schoolService.getSchool(req.getSchoolId(), tenantId);
-        SchoolScheduleEntity schedule = scheduleService.getSchedule(req.getSchoolScheduleId(), tenantId);
-        if (!schedule.getSchool().getId().equals(school.getId())) {
-            throw new AppException(AppErrorCode.Session.SCHEDULE_MISMATCH,
-                    messageCommon.getMessage(AppErrorCode.Session.SCHEDULE_MISMATCH));
-        }
 
         RoutePlanningSessionEntity session = new RoutePlanningSessionEntity();
         session.markCreated(tenantId, actor(actorId));
         session.setSchool(school);
-        session.setSchoolSchedule(schedule);
         session.setServiceDate(req.getServiceDate());
         session.setRouteDirection(RouteDirection.parse(req.getRouteDirection()));
         session.setPlanningMethod(PlanningMethod.parse(req.getPlanningMethod()));
@@ -205,7 +182,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         session.setPlanningNotes(req.getPlanningNotes());
 
         List<StudentSubscriptionEntity> eligible = routePlanStudentService.findEligibleSubscriptions(
-                req.getSchoolId(), req.getSchoolScheduleId(),
+                req.getSchoolId(),
                 req.getRouteDirection(), req.getServiceDate(), tenantId);
         session.setTotalEligibleStudents(eligible.size());
         session.setTotalPlannedStudents(0);
@@ -307,7 +284,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
         List<StudentSubscriptionEntity> eligible = routePlanStudentService.findEligibleSubscriptions(
                 session.getSchool().getId(),
-                session.getSchoolSchedule().getId(),
                 session.getRouteDirection().name(),
                 session.getServiceDate(),
                 tenantId);
@@ -429,8 +405,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         r.setId(e.getId());
         r.setSchoolId(e.getSchool().getId());
         r.setSchoolName(e.getSchool().getName());
-        r.setSchoolScheduleId(e.getSchoolSchedule().getId());
-        r.setSchoolScheduleName(e.getSchoolSchedule().getScheduleName());
         r.setServiceDate(e.getServiceDate());
         r.setRouteDirection(e.getRouteDirection().name());
         r.setPlanningMethod(e.getPlanningMethod().name());

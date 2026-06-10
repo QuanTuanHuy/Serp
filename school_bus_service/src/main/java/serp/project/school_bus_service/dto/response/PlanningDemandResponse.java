@@ -18,9 +18,6 @@ public class PlanningDemandResponse {
     private Long schoolId;
     private String schoolName;
 
-    private Long schoolScheduleId;
-    private String scheduleCode;
-    private String scheduleName;
 
     private String tripOption;
     private String tripOptionLabel;

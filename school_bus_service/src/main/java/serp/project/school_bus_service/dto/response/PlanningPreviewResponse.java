@@ -17,14 +17,6 @@ public class PlanningPreviewResponse {
     private String schoolName;
     private String schoolAddress;
 
-    private Long schoolScheduleId;
-    private String scheduleCode;
-    private String scheduleName;
-    private String shiftType;
-    private LocalTime arrivalDeadline;
-    private LocalTime departureTime;
-    private LocalDate effectiveFrom;
-    private LocalDate effectiveTo;
     private List<DayOfWeek> activeDays;
 
     private LocalDate serviceDate;
@@ -38,7 +30,6 @@ public class PlanningPreviewResponse {
     private List<PlanningPointResponse> points;
 
     // --- Legacy / Backward compatibility fields ---
-    private String schoolScheduleName;
     private String routeDirection;
     private Integer totalEligibleStudents;
     private Integer totalEligiblePickupPoints;

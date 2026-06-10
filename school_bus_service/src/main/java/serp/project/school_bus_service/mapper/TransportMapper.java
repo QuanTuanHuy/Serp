@@ -29,14 +29,6 @@ public class TransportMapper extends BaseMapper {
         r.setDropoffPointLatitude(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getLatitude());
         r.setDropoffPointLongitude(entity.getDropoffPoint() == null ? null : entity.getDropoffPoint().getLongitude());
 
-        r.setSchoolScheduleId(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getId());
-        r.setSchoolScheduleCode(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleCode());
-        r.setSchoolScheduleName(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleName());
-        r.setShiftType(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getShiftType());
-        r.setArrivalDeadline(entity.getSchoolSchedule() == null || entity.getSchoolSchedule().getArrivalDeadline() == null
-                ? null : entity.getSchoolSchedule().getArrivalDeadline().toString());
-        r.setDepartureTime(entity.getSchoolSchedule() == null || entity.getSchoolSchedule().getDepartureTime() == null
-                ? null : entity.getSchoolSchedule().getDepartureTime().toString());
 
         r.setTripOption(entity.getTripOption() == null ? null : entity.getTripOption().name());
 
@@ -118,12 +110,6 @@ public class TransportMapper extends BaseMapper {
         r.setStatus(entity.getStatus().name());
         r.setSourceRequestId(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getId());
         r.setSourceRequestCode(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getRequestCode());
-        r.setSchoolScheduleId(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getId());
-        r.setSchoolScheduleName(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleName());
-        r.setScheduleCode(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getScheduleCode());
-        r.setShiftType(entity.getSchoolSchedule() == null ? null : entity.getSchoolSchedule().getShiftType());
-        r.setArrivalDeadline(entity.getSchoolSchedule() == null ? null : (entity.getSchoolSchedule().getArrivalDeadline() != null ? entity.getSchoolSchedule().getArrivalDeadline().toString() : null));
-        r.setDepartureTime(entity.getSchoolSchedule() == null ? null : (entity.getSchoolSchedule().getDepartureTime() != null ? entity.getSchoolSchedule().getDepartureTime().toString() : null));
         return r;
     }
 
@@ -152,8 +138,6 @@ public class TransportMapper extends BaseMapper {
         r.setNewPickupPointId(entity.getNewPickupPointId());
         r.setOldDropoffPointId(entity.getOldDropoffPointId());
         r.setNewDropoffPointId(entity.getNewDropoffPointId());
-        r.setOldSchoolScheduleId(entity.getOldSchoolScheduleId());
-        r.setNewSchoolScheduleId(entity.getNewSchoolScheduleId());
         r.setOldTripOption(entity.getOldTripOption());
         r.setNewTripOption(entity.getNewTripOption());
         r.setOldEffectiveFrom(entity.getOldEffectiveFrom());

@@ -30,8 +30,6 @@ public class RoutePlanResponse extends BaseResponse {
     private String routeCode;
     private String routeName;
     private LocalDate serviceDate;
-    private Long schoolScheduleId;
-    private String schoolScheduleName;
     private String status;
     private Double plannedDistanceKm;
     private Integer plannedDurationMin;
