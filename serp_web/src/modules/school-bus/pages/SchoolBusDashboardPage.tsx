@@ -16,7 +16,7 @@ import {
 import { Button } from '@/shared/components/ui';
 import {
   useGetOperationsDashboardQuery,
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -82,9 +82,9 @@ export function SchoolBusDashboardPage() {
     });
 
   // Fetch schools list for filter dropdown
-  const { data: schoolsData } = useGetSchoolsQuery({ size: 100 });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
-  const schools = schoolsData?.data?.items || [];
+  const schools = schoolsData?.data || [];
   const dashboard = operationsData?.data;
   const summary = dashboard?.summary;
 
@@ -93,7 +93,7 @@ export function SchoolBusDashboardPage() {
   const pendingRequests = dashboard?.pendingApprovalQueue || [];
   const recentAttendance = dashboard?.recentAttendanceActivity || [];
 
-  if (access.isParent) {
+  if (access.isParentOnly) {
     return (
       <SchoolBusPageShell
         title="Student Transit Dashboard"
@@ -500,7 +500,7 @@ export function SchoolBusDashboardPage() {
               <option value="">All Schools</option>
               {schools.map((school) => (
                 <option key={school.id} value={school.id}>
-                  {school.name}
+                  {school.label}
                 </option>
               ))}
             </select>
@@ -595,10 +595,10 @@ export function SchoolBusDashboardPage() {
               />
             </div>
 
-            {/* Route Readiness bar chart */}
+            {/* Route Assignment bar chart */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
               <DashboardBarChart
-                title="Route Readiness"
+                title="Route Assignment Status"
                 data={dashboard.routeReadinessChart}
                 colorMap={READINESS_COLORS}
               />

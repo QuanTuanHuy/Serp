@@ -250,7 +250,7 @@ export function SchoolBusDispatchPage() {
                       </div>
                     </div>
                     
-                    {/* Assignment Readiness Strip */}
+                    {/* Resource Assignment Status Strip */}
                     <div className='flex flex-wrap gap-2 text-xs'>
                       <span className={cn(
                         'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',

@@ -37,19 +37,16 @@ import { SchoolBusSelect } from './ui/SchoolBusSelect';
 import { SchoolBusCheckbox } from './ui/SchoolBusCheckbox';
 import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
 import type {
-  SchoolBusAttendant,
   SchoolBusDepot,
-  SchoolBusDriver,
-  SchoolBusParent,
   SchoolBusPickupPoint,
   SchoolBusRejectRequest,
   SchoolBusRoute,
   SchoolBusRouteAssignmentRequest,
   SchoolBusRouteUpsertRequest,
-  SchoolBusSchool,
   SchoolBusStudent,
   SchoolBusTransportRequestDetail,
   SchoolBusTransportRequestUpsertRequest,
+  SchoolBusDropdownOption,
 } from '../types';
 import {
   useGetActiveSchoolPickupPointsQuery,
@@ -129,14 +126,14 @@ function getRowReadiness(
   return 'ready';
 }
 
-function ReadinessBadge({ readiness }: { readiness: RowReadiness }) {
+function RowStatusBadge({ readiness }: { readiness: RowReadiness }) {
   const configs: Record<string, { label: string; className: string }> = {
     'missing-student': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-tripopt': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-pickup': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-dropoff': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
     'missing-target': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+    ready: { label: 'Complete', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   };
   const cfg = configs[readiness] ?? configs.ready;
   return (
@@ -273,8 +270,8 @@ type AssignmentFormValues = z.infer<typeof assignmentSchema>;
 
 interface TransportRequestFormProps {
   initialData?: SchoolBusTransportRequestDetail | null;
-  parents: SchoolBusParent[];
-  schools: SchoolBusSchool[];
+  parents: SchoolBusDropdownOption[];
+  schools: SchoolBusDropdownOption[];
   students: SchoolBusStudent[];
   onSubmit: (values: SchoolBusTransportRequestUpsertRequest) => Promise<void>;
   isLoading?: boolean;
@@ -639,6 +636,12 @@ export function TransportRequestForm({
     () => schools.find((school) => school.id === Number(schoolId)),
     [schoolId, schools]
   );
+  const selectedSchoolLat = selectedSchool
+    ? ('latitude' in selectedSchool ? selectedSchool.latitude : (selectedSchool as any).metadata?.latitude)
+    : undefined;
+  const selectedSchoolLng = selectedSchool
+    ? ('longitude' in selectedSchool ? selectedSchool.longitude : (selectedSchool as any).metadata?.longitude)
+    : undefined;
   const activeStudent = React.useMemo(
     () =>
       filteredStudents.find((student) => student.id === Number(activeStudentId)),
@@ -816,7 +819,7 @@ export function TransportRequestForm({
                     label='Parent'
                     options={parents.map((parent) => ({
                       value: String(parent.id),
-                      label: parent.fullName,
+                      label: parent.label,
                     }))}
                   />
                 )}
@@ -826,7 +829,7 @@ export function TransportRequestForm({
                   label='School'
                   options={schools.map((school) => ({
                     value: String(school.id),
-                    label: school.name,
+                    label: school.label,
                   }))}
                 />
                 <SelectField
@@ -905,7 +908,7 @@ export function TransportRequestForm({
                           {index + 1}
                         </span>
                         <span className='font-semibold text-slate-800 text-xs'>Student details</span>
-                        <ReadinessBadge readiness={rowReadinessList[index] ?? 'missing-student'} />
+                        <RowStatusBadge readiness={rowReadinessList[index] ?? 'missing-student'} />
                       </div>
                       <Button
                         type='button'
@@ -1134,7 +1137,7 @@ export function TransportRequestForm({
               fitRouteLabel='Fit Selected'
               map={
                 <OperationsMap
-                  schools={selectedSchool ? [selectedSchool] : []}
+                  schools={selectedSchool ? [selectedSchool as any] : []}
                   pickupPoints={mapPickupPoints}
                   studentMarkers={studentMarkers}
                   selectedSchoolId={selectedSchool?.id}
@@ -1216,7 +1219,7 @@ export function TransportRequestForm({
               }
             />
 
-            {!selectedSchool?.latitude || !selectedSchool?.longitude ? (
+            {!selectedSchoolLat || !selectedSchoolLng ? (
               <div className='rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 leading-relaxed shadow-sm'>
                 ⚠️ Missing coordinates: this school is not pinned yet, so only pickup points with coordinates will appear on the map.
               </div>
@@ -1251,7 +1254,7 @@ export function TransportRequestForm({
 
 interface RoutePlanFormProps {
   initialData?: SchoolBusRoute | null;
-  schools: SchoolBusSchool[];
+  schools: SchoolBusDropdownOption[];
   depots: SchoolBusDepot[];
   onSubmit: (values: SchoolBusRouteUpsertRequest) => Promise<void>;
   isLoading?: boolean;
@@ -1363,7 +1366,7 @@ export function RoutePlanForm({
             label='School'
             options={schools.map((school) => ({
               value: String(school.id),
-              label: school.name,
+              label: school.label,
             }))}
           />
           {initialData?.routeCode ? (
@@ -1421,8 +1424,12 @@ export function RoutePlanForm({
               <ReadOnlyField
                 label='Start school'
                 value={
-                  schools.find((school) => school.id === schoolId)?.name ||
-                  'Select a school'
+                  (() => {
+                    const found = schools.find((school) => school.id === schoolId);
+                    return found
+                      ? found.label
+                      : 'Select a school';
+                  })()
                 }
               />
             )}
@@ -1451,8 +1458,12 @@ export function RoutePlanForm({
               <ReadOnlyField
                 label='End school'
                 value={
-                  schools.find((school) => school.id === schoolId)?.name ||
-                  'Select a school'
+                  (() => {
+                    const found = schools.find((school) => school.id === schoolId);
+                    return found
+                      ? found.label
+                      : 'Select a school';
+                  })()
                 }
               />
             )}
@@ -1583,8 +1594,8 @@ interface RouteAssignmentDialogProps {
     driverId?: number | null;
     attendantId?: number | null;
   } | null;
-  drivers: SchoolBusDriver[];
-  attendants: SchoolBusAttendant[];
+  drivers: SchoolBusDropdownOption[];
+  attendants: SchoolBusDropdownOption[];
   onSubmit: (values: SchoolBusRouteAssignmentRequest) => Promise<void>;
   isLoading?: boolean;
 }
@@ -1646,7 +1657,7 @@ export function RouteAssignmentDialog({
               label='Driver'
               options={drivers.map((driver) => ({
                 value: String(driver.id),
-                label: driver.fullName,
+                label: driver.label,
               }))}
             />
             <SelectField
@@ -1658,7 +1669,7 @@ export function RouteAssignmentDialog({
               emptyLabel='No attendant'
               options={attendants.map((attendant) => ({
                 value: String(attendant.id),
-                label: attendant.fullName,
+                label: attendant.label,
               }))}
             />
           </div>

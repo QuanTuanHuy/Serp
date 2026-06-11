@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Activity,
   BarChart3,
-  Download,
   FileText,
   Milestone,
   Route,
@@ -20,14 +19,14 @@ import {
   ArrowRight,
   RotateCcw,
 } from 'lucide-react';
-import { Button } from '@/shared/components/ui';
+import { Button, Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolBusReportAttendanceQuery,
   useGetSchoolBusReportCapacityQuery,
   useGetSchoolBusReportQuery,
   useGetSchoolBusReportTripsQuery,
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -57,6 +56,18 @@ export function SchoolBusReportsPage() {
     status: '',
     direction: '',
   });
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.fromDate) count++;
+    if (filters.toDate) count++;
+    if (filters.schoolId) count++;
+    if (filters.status) count++;
+    if (filters.direction) count++;
+    return count;
+  }, [filters]);
 
   // ─── Keyword / Search States ───────────────────────────────────────────────
   const [keyword, setKeyword] = useState('');
@@ -144,25 +155,25 @@ export function SchoolBusReportsPage() {
   const { data: capacityData, isLoading: loadingCapacity } = useGetSchoolBusReportCapacityQuery(capacityParams);
   
   // School list query for filters dropdown
-  const { data: schoolsData } = useGetSchoolsQuery({
-    page: 0,
-    size: 100,
-    sortBy: 'name',
-    sortDirection: 'ASC',
-  });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+
+
+
+
+
 
   const report = summaryData?.data;
   const trips = getPageItems(tripsData?.data);
   const attendance = getPageItems(attendanceData?.data);
   const capacity = getPageItems(capacityData?.data);
-  const schoolsList = getPageItems(schoolsData?.data);
+  const schoolsList = schoolsData?.data || [];
 
   // ─── Dropdown Options ──────────────────────────────────────────────────────
   const schoolOptions = useMemo(() => {
     return [
       { label: 'All Schools', value: '' },
       ...schoolsList.map((school) => ({
-        label: school.name,
+        label: school.label,
         value: school.id,
       })),
     ];
@@ -189,6 +200,7 @@ export function SchoolBusReportsPage() {
     tripPagination.setPage(0);
     attendancePagination.setPage(0);
     capacityPagination.setPage(0);
+    setIsFilterOpen(false);
   };
 
   const handleResetFilters = () => {
@@ -205,22 +217,7 @@ export function SchoolBusReportsPage() {
     tripPagination.setPage(0);
     attendancePagination.setPage(0);
     capacityPagination.setPage(0);
-  };
-
-  const handleExport = () => {
-    const params = new URLSearchParams();
-    if (filters.fromDate) params.append('fromDate', filters.fromDate);
-    if (filters.toDate) params.append('toDate', filters.toDate);
-    if (filters.schoolId) params.append('schoolId', String(filters.schoolId));
-    if (filters.status) params.append('status', filters.status);
-    if (filters.direction) params.append('direction', filters.direction);
-
-    const queryString = params.toString();
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-    const url = `${baseUrl}/school-bus/api/v1/reports/operations-summary/export${
-      queryString ? `?${queryString}` : ''
-    }`;
-    window.open(url, '_blank');
+    setIsFilterOpen(false);
   };
 
   // ─── Attendance KPI strip calculations ─────────────────────────────────────
@@ -491,21 +488,40 @@ export function SchoolBusReportsPage() {
   const toolbar = (
     <div className='flex flex-col gap-4 w-full'>
       <div className='flex flex-wrap items-center justify-between gap-4'>
-        <div className='relative w-full max-w-xs'>
-          <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
-          <input
-            type='text'
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder={
-              activeTab === 'trips'
-                ? 'Search trips, routes...'
-                : activeTab === 'attendance'
-                ? 'Search students, routes...'
-                : 'Search trips, buses...'
-            }
-            className='w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all font-medium text-slate-700'
-          />
+        <div className='flex items-center gap-2 flex-1 min-w-[240px] max-w-xs'>
+          <div className='relative w-full'>
+            <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
+            <input
+              type='text'
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder={
+                activeTab === 'trips'
+                  ? 'Search trips, students, routes...'
+                  : activeTab === 'attendance'
+                  ? 'Search students, routes...'
+                  : 'Search trips, students, routes...'
+              }
+              className='w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all font-medium text-slate-700'
+            />
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => {
+              setTempFilters(filters);
+              setIsFilterOpen(true);
+            }}
+            className='h-9 rounded-lg px-3 flex items-center gap-2 border-slate-200 font-semibold text-xs text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+          >
+            <Filter className='h-3.5 w-3.5 text-slate-500' />
+            <span>Filter</span>
+            {activeFiltersCount > 0 && (
+              <span className='flex h-5 min-w-5 items-center justify-center rounded-full bg-[#C81E3A] px-1 text-[10px] font-bold text-white leading-none'>
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
         </div>
         <div className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>
           Page-level records
@@ -540,172 +556,172 @@ export function SchoolBusReportsPage() {
   );
 
   return (
-    <SchoolBusPageShell
-      title='Operational reporting'
-      description='Review trip execution, attendance activity, and capacity utilization.'
-      breadcrumb={
-        <SchoolBusBreadcrumb
-          items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Reports', current: true },
-          ]}
-        />
-      }
-      actions={
-        <Button onClick={handleExport} className='shadow-sm rounded-xl' variant='outline'>
-          <Download className='mr-2 h-4 w-4 text-slate-500' />
-          Export CSV
-        </Button>
-      }
-    >
-      <div className='space-y-6'>
-        {/* ─── 1. Filters Card ─────────────────────────────────────────────────── */}
-        <div className='bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm space-y-4'>
-          <div className='flex items-center gap-2 border-b border-slate-100 pb-3'>
-            <Filter className='h-4 w-4 text-slate-400' />
-            <h4 className='text-xs font-bold uppercase tracking-wider text-slate-500'>Report Filters</h4>
-          </div>
-          
-          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end'>
-            <SchoolBusDatePicker
-              label='From date'
-              value={tempFilters.fromDate}
-              onChange={(val) => setTempFilters({ ...tempFilters, fromDate: val })}
-              placeholder='Select start date'
-              size='sm'
-              fullWidth
-            />
-            <SchoolBusDatePicker
-              label='To date'
-              value={tempFilters.toDate}
-              onChange={(val) => setTempFilters({ ...tempFilters, toDate: val })}
-              placeholder='Select end date'
-              size='sm'
-              fullWidth
-            />
-            <div className='flex flex-col gap-1.5 w-full'>
-              <label className='text-xs font-semibold text-slate-700'>School</label>
-              <SchoolBusSelect
-                value={tempFilters.schoolId}
-                onChange={(val) => setTempFilters({ ...tempFilters, schoolId: val })}
-                options={schoolOptions}
-                placeholder='Select school'
-                size='sm'
-                searchable
-                fullWidth
+    <>
+      <SchoolBusPageShell
+        title='Reports'
+        description='Review trip execution, attendance activity, and capacity utilization.'
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Reports', current: true },
+            ]}
+          />
+        }
+      >
+        <div className='space-y-6'>
+          {/* ─── 1. Operations Summary Metrics ────────────────────────────────── */}
+          {loadingSummary || !report ? (
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className='bg-slate-50/50 border border-slate-100 rounded-[20px] h-28 animate-pulse' />
+              ))}
+            </div>
+          ) : (
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+              <SchoolBusMetricCard
+                label='Transport requests'
+                value={report.totalRequests}
+                hint='Transport demand records in scope'
+                icon={FileText}
+                tone='info'
+              />
+              <SchoolBusMetricCard
+                label='Approved requests'
+                value={report.approvedRequests}
+                hint='Released into subscriptions'
+                icon={CheckCircle2}
+                tone='success'
+              />
+              <SchoolBusMetricCard
+                label='Completed trips'
+                value={report.completedRoutes}
+                hint='Route plans closed'
+                icon={Milestone}
+                tone='success'
+              />
+              <SchoolBusMetricCard
+                label='Attendance events'
+                value={report.attendanceEvents}
+                hint='Boarding/dropoff/absence events'
+                icon={Fingerprint}
+                tone='info'
               />
             </div>
-            <div className='flex flex-col gap-1.5 w-full'>
-              <label className='text-xs font-semibold text-slate-700'>Status</label>
-              <SchoolBusSelect
-                value={tempFilters.status}
-                onChange={(val) => setTempFilters({ ...tempFilters, status: val })}
-                options={statusOptions}
-                placeholder='Select status'
+          )}
+
+          {/* ─── 2. Report Card ────────────────────────────────────────────────── */}
+          <SchoolBusDataTable
+            tabs={[
+              { key: 'trips', label: 'Trips', count: tripsData?.data?.totalElements || 0 },
+              { key: 'attendance', label: 'Attendance', count: attendanceData?.data?.totalElements || 0 },
+              { key: 'capacity', label: 'Capacity', count: capacityData?.data?.totalElements || 0 },
+            ]}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            toolbar={toolbar}
+            data={activeTab === 'trips' ? trips : activeTab === 'attendance' ? attendance : capacity}
+            columns={activeTab === 'trips' ? tripColumns : activeTab === 'attendance' ? attendanceColumns : capacityColumns}
+            isLoading={activeTab === 'trips' ? loadingTrips : activeTab === 'attendance' ? loadingAttendance : loadingCapacity}
+            pagination={{
+              page: activeTab === 'trips' ? tripsData?.data : activeTab === 'attendance' ? attendanceData?.data : capacityData?.data,
+              onPageChange: activeTab === 'trips' ? tripPagination.setPage : activeTab === 'attendance' ? attendancePagination.setPage : capacityPagination.setPage,
+            }}
+            emptyIcon={activeTab === 'trips' ? Milestone : activeTab === 'attendance' ? Fingerprint : BarChart3}
+            emptyTitle={
+              activeTab === 'trips'
+                ? 'No trip records found'
+                : activeTab === 'attendance'
+                ? 'No attendance events found'
+                : 'No capacity records found'
+            }
+            emptyDescription='Adjust filters or select another reporting period.'
+          />
+        </div>
+      </SchoolBusPageShell>
+
+      <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <SheetContent side="right" className="w-[100vw] sm:max-w-[400px] p-6 overflow-y-auto bg-white flex flex-col justify-between h-full">
+          <div className="flex flex-col gap-6">
+            <SheetHeader className="border-b border-slate-100 pb-4">
+              <SheetTitle className="text-base font-extrabold text-slate-800">
+                Filters
+              </SheetTitle>
+            </SheetHeader>
+
+            <div className="space-y-4">
+              <SchoolBusDatePicker
+                label='From date'
+                value={tempFilters.fromDate}
+                onChange={(val) => setTempFilters({ ...tempFilters, fromDate: val })}
+                placeholder='Select start date'
                 size='sm'
                 fullWidth
               />
-            </div>
-            <div className='flex flex-col gap-1.5 w-full'>
-              <label className='text-xs font-semibold text-slate-700'>Direction</label>
-              <SchoolBusSelect
-                value={tempFilters.direction}
-                onChange={(val) => setTempFilters({ ...tempFilters, direction: val })}
-                options={directionOptions}
-                placeholder='Select direction'
+              <SchoolBusDatePicker
+                label='To date'
+                value={tempFilters.toDate}
+                onChange={(val) => setTempFilters({ ...tempFilters, toDate: val })}
+                placeholder='Select end date'
                 size='sm'
                 fullWidth
               />
+              <div className='flex flex-col gap-1.5 w-full'>
+                <label className='text-xs font-semibold text-slate-700'>School</label>
+                <SchoolBusSelect
+                  value={tempFilters.schoolId}
+                  onChange={(val) => setTempFilters({ ...tempFilters, schoolId: val })}
+                  options={schoolOptions}
+                  placeholder='Select school'
+                  size='sm'
+                  searchable
+                  fullWidth
+                />
+              </div>
+              <div className='flex flex-col gap-1.5 w-full'>
+                <label className='text-xs font-semibold text-slate-700'>Status</label>
+                <SchoolBusSelect
+                  value={tempFilters.status}
+                  onChange={(val) => setTempFilters({ ...tempFilters, status: val })}
+                  options={statusOptions}
+                  placeholder='Select status'
+                  size='sm'
+                  fullWidth
+                />
+              </div>
+              <div className='flex flex-col gap-1.5 w-full'>
+                <label className='text-xs font-semibold text-slate-700'>Direction</label>
+                <SchoolBusSelect
+                  value={tempFilters.direction}
+                  onChange={(val) => setTempFilters({ ...tempFilters, direction: val })}
+                  options={directionOptions}
+                  placeholder='Select direction'
+                  size='sm'
+                  fullWidth
+                />
+              </div>
             </div>
           </div>
 
-          <div className='flex items-center justify-end gap-2 border-t border-slate-100 pt-4'>
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 mt-6">
             <Button
               variant='ghost'
               size='sm'
               onClick={handleResetFilters}
-              className='text-slate-500 hover:bg-slate-50 rounded-lg text-xs font-semibold'
+              className='text-slate-500 hover:bg-slate-50 rounded-lg text-xs font-semibold px-4 py-2'
             >
-              <RotateCcw className='mr-1.5 h-3.5 w-3.5' /> Reset
+              <RotateCcw className='mr-1.5 h-3.5 w-3.5' /> Clear Filters
             </Button>
             <Button
               size='sm'
               onClick={handleApplyFilters}
-              className='bg-[#C81E3A] text-white hover:bg-[#b01730] active:bg-[#961427] rounded-lg text-xs font-semibold shadow-sm'
+              className='bg-[#C81E3A] text-white hover:bg-[#b01730] active:bg-[#961427] rounded-lg text-xs font-semibold shadow-sm px-4 py-2'
             >
               Apply Filters
             </Button>
           </div>
-        </div>
-
-        {/* ─── 2. Operations Summary Metrics ────────────────────────────────── */}
-        {loadingSummary || !report ? (
-          <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className='bg-slate-50/50 border border-slate-100 rounded-[20px] h-28 animate-pulse' />
-            ))}
-          </div>
-        ) : (
-          <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-            <SchoolBusMetricCard
-              label='Transport requests'
-              value={report.totalRequests}
-              hint='Transport demand records in scope'
-              icon={FileText}
-              tone='info'
-            />
-            <SchoolBusMetricCard
-              label='Approved requests'
-              value={report.approvedRequests}
-              hint='Released into subscriptions'
-              icon={CheckCircle2}
-              tone='success'
-            />
-            <SchoolBusMetricCard
-              label='Completed trips'
-              value={report.completedRoutes}
-              hint='Route plans closed'
-              icon={Milestone}
-              tone='success'
-            />
-            <SchoolBusMetricCard
-              label='Attendance events'
-              value={report.attendanceEvents}
-              hint='Boarding/dropoff/absence events'
-              icon={Fingerprint}
-              tone='info'
-            />
-          </div>
-        )}
-
-        {/* ─── 3. Report Card ────────────────────────────────────────────────── */}
-        <SchoolBusDataTable
-          tabs={[
-            { key: 'trips', label: 'Trips', count: tripsData?.data?.totalElements || 0 },
-            { key: 'attendance', label: 'Attendance', count: attendanceData?.data?.totalElements || 0 },
-            { key: 'capacity', label: 'Capacity', count: capacityData?.data?.totalElements || 0 },
-          ]}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          toolbar={toolbar}
-          data={activeTab === 'trips' ? trips : activeTab === 'attendance' ? attendance : capacity}
-          columns={activeTab === 'trips' ? tripColumns : activeTab === 'attendance' ? attendanceColumns : capacityColumns}
-          isLoading={activeTab === 'trips' ? loadingTrips : activeTab === 'attendance' ? loadingAttendance : loadingCapacity}
-          pagination={{
-            page: activeTab === 'trips' ? tripsData?.data : activeTab === 'attendance' ? attendanceData?.data : capacityData?.data,
-            onPageChange: activeTab === 'trips' ? tripPagination.setPage : activeTab === 'attendance' ? attendancePagination.setPage : capacityPagination.setPage,
-          }}
-          emptyIcon={activeTab === 'trips' ? Milestone : activeTab === 'attendance' ? Fingerprint : BarChart3}
-          emptyTitle={
-            activeTab === 'trips'
-              ? 'No trip records found'
-              : activeTab === 'attendance'
-              ? 'No attendance events found'
-              : 'No capacity records found'
-          }
-          emptyDescription='Adjust filters or select another reporting period.'
-        />
-      </div>
-    </SchoolBusPageShell>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

@@ -14,7 +14,6 @@ public class StudentUpsertRequest extends BaseCommandRequest {
     @NotNull
     private Long schoolId;
 
-    @NotNull
     private Long parentProfileId;
 
     /** Default pickup point (legacy field name) */

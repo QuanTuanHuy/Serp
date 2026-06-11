@@ -8,7 +8,10 @@ import lombok.Setter;
 public class AttendantProfileResponse extends BaseResponse {
 
     private Long userId;
+    private Long schoolBusUserId;
+    private Long accountUserId;
     private String fullName;
     private String phone;
     private String status;
+    private SchoolBusUserResponse user;
 }

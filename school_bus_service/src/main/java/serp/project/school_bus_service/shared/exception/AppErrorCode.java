@@ -40,8 +40,6 @@ public class AppErrorCode {
     // ── Driver ────────────────────────────────────────────────────────────────
     public static class Driver {
         public static final ErrorInfo INVALID_STATUS    = new ErrorInfo("driver.status.invalid",        "Invalid driver status.",            HttpStatus.BAD_REQUEST);
-        public static final ErrorInfo LICENSE_CONFLICT  = new ErrorInfo("driver.licenseNumber.conflict","License number already exists.",    HttpStatus.CONFLICT);
-        public static final ErrorInfo LICENSE_EXPIRED   = new ErrorInfo("driver.licenseExpired",        "Driver license has expired.",       HttpStatus.BAD_REQUEST);
         public static final ErrorInfo DELETED           = new ErrorInfo("driver.deleted",               "Driver has been deleted.",          HttpStatus.BAD_REQUEST);
         public static final ErrorInfo INACTIVE          = new ErrorInfo("driver.inactive",              "Driver is not active.",             HttpStatus.BAD_REQUEST);
         public static final ErrorInfo NOT_AVAILABLE     = new ErrorInfo("driver.notAvailable",          "Driver is not available.",          HttpStatus.BAD_REQUEST);

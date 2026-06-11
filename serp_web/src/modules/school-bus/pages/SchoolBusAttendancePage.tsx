@@ -306,17 +306,13 @@ export function SchoolBusAttendancePage() {
 
   return (
     <SchoolBusPageShell
-      title={access.isParent ? 'Child Attendance History' : 'Attendance Board'}
-      description={
-        access.isParent
-          ? 'View attendance records for your children across all trips.'
-          : 'Manage student boarding, absence, no-show and drop-off attendance for active trips.'
-      }
+      title='Attendance History'
+      description='Manage and view student boarding, absence, no-show and drop-off attendance.'
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: access.isParent ? 'Child Attendance' : 'Attendance', current: true },
+            { label: 'Attendance', current: true },
           ]}
         />
       }

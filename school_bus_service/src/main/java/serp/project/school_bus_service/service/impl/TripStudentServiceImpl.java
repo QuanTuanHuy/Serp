@@ -7,6 +7,7 @@ import serp.project.school_bus_service.service.ITripStudentService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,14 @@ public class TripStudentServiceImpl extends AbstractBaseService<TripStudentEntit
     @Override
     public List<TripStudentEntity> findByTrip(Long tripId, Long tenantId) {
         return tripStudentRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(tripId, tenantId);
+    }
+
+    @Override
+    public List<TripStudentEntity> findByTrips(Collection<Long> tripIds, Long tenantId) {
+        if (tripIds == null || tripIds.isEmpty()) {
+            return List.of();
+        }
+        return tripStudentRepository.findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(tripIds, tenantId);
     }
 
     @Override

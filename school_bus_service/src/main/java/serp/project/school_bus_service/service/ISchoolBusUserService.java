@@ -19,4 +19,7 @@ public interface ISchoolBusUserService extends IBaseService<SchoolBusUserEntity,
 
     SchoolBusUserEntity getRequiredByKeycloakId(String keycloakId);
 
+    java.util.List<SchoolBusUserEntity> findAllByIds(java.util.List<Long> ids);
+
+    Optional<SchoolBusUserEntity> findById(Long id);
 }

@@ -7,6 +7,7 @@ import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
 import serp.project.school_bus_service.entity.ParentProfileEntity;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 
 public interface IParentService extends IBaseService<ParentProfileEntity, Long> {
 
@@ -23,4 +24,6 @@ public interface IParentService extends IBaseService<ParentProfileEntity, Long> 
     void deleteParent(Long id, Long tenantId, Long actorId);
 
     long countByTenant(Long tenantId);
+
+    void syncProfile(SchoolBusUserEntity user, boolean hasRole);
 }

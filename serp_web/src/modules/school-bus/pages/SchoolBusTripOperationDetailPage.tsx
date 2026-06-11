@@ -458,14 +458,26 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
         title={tripCode}
-        description='Real-time trip dispatch cockpit. Track stop execution lifecycle and review route operation logs.'
+        description={
+          access.isParentOnly
+            ? 'Track student trips and execution progress in real-time.'
+            : 'Real-time trip dispatch cockpit. Track stop execution lifecycle and review route operation logs.'
+        }
         breadcrumb={
           <SchoolBusBreadcrumb
-            items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Trip Operations', href: '/school-bus/trips' },
-              { label: tripCode, current: true },
-            ]}
+            items={
+              access.isParentOnly
+                ? [
+                    { label: 'School Bus', href: '/school-bus/dashboard' },
+                    { label: 'Student Trip Tracking', href: '/school-bus/trips' },
+                    { label: tripCode, current: true },
+                  ]
+                : [
+                    { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                    { label: 'Trip Operations', href: '/school-bus/trips' },
+                    { label: tripCode, current: true },
+                  ]
+            }
           />
         }
       >
@@ -476,7 +488,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               <Button variant='outline' size='sm' className='rounded-full h-8 px-3 font-semibold' asChild>
                 <Link href='/school-bus/trips'>
                   <ArrowLeft className='h-3.5 w-3.5 mr-1.5' />
-                  Back to Trip Operations
+                  {access.isParentOnly ? 'Back to Trip Tracking' : 'Back to Trip Operations'}
                 </Link>
               </Button>
             </div>
@@ -526,7 +538,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       setIsAttendanceDrawerOpen(true);
                     }}
                   >
-                    View Attendance List
+                    {access.isParentOnly ? 'View Student Status' : 'View Attendance List'}
                   </Button>
                 </div>
               </div>
@@ -732,7 +744,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               {summary && (
                 <div className='bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between'>
                   <div>
-                    <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-3'>Students Attendance</p>
+                    <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-3'>
+                      {access.isParentOnly ? 'Student Transit Status' : 'Students Attendance'}
+                    </p>
                     <div className='grid grid-cols-6 gap-1 text-center divide-x divide-slate-100 mb-3'>
                       <div className='flex flex-col gap-1 min-w-0'>
                         <span className='text-base font-extrabold text-slate-800'>{summary.totalStudents}</span>
@@ -768,7 +782,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       setIsAttendanceDrawerOpen(true);
                     }}
                   >
-                    Open Student Attendance Board
+                    {access.isParentOnly ? 'View Student Transit Status' : 'Open Student Attendance Board'}
                   </Button>
                 </div>
               )}
@@ -793,10 +807,12 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
             <div className='flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm max-h-[480px] overflow-y-auto'>
               <div>
                 <p className='text-[10px] font-extrabold uppercase tracking-wider text-slate-400'>
-                  Stop Operation Timeline
+                  {access.isParentOnly ? 'Trip Tracking Timeline' : 'Stop Operation Timeline'}
                 </p>
                 <p className='text-[10px] text-slate-450 mt-1 font-semibold leading-relaxed'>
-                  Execute arrivals, boarding periods, and departures sequentially along the path.
+                  {access.isParentOnly
+                    ? 'Track vehicle progress and stop arrivals sequentially.'
+                    : 'Execute arrivals, boarding periods, and departures sequentially along the path.'}
                 </p>
               </div>
 
@@ -946,7 +962,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                       setIsAttendanceDrawerOpen(true);
                                     }}
                                   >
-                                    {isBoarding && tripIsActive && access.canOperateTrip ? 'Mark Attendance' : 'View Attendance'}
+                                    {isBoarding && tripIsActive && access.canOperateTrip ? 'Mark Attendance' : (access.isParentOnly ? 'View Student Status' : 'View Attendance')}
                                   </Button>
                                 </div>
                               )}
@@ -1138,18 +1154,22 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
             <SheetHeader className="border-b border-slate-100 pb-4">
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-base font-extrabold text-slate-800">
-                  {selectedStop ? `Attendance at Stop: ${selectedStop.displayName}` : 'Trip Attendance Directory'}
+                  {access.isParentOnly
+                    ? (selectedStop ? `Stop Transit Status: ${selectedStop.displayName}` : 'Student Transit Status Directory')
+                    : (selectedStop ? `Attendance at Stop: ${selectedStop.displayName}` : 'Trip Attendance Directory')}
                 </SheetTitle>
               </div>
               <SheetDescription className="text-xs text-slate-400 mt-1 font-semibold">
                 {selectedStop
                   ? `${stopTypeLabel(selectedStop)} • Status: ${selectedStop.stopStatus}`
-                  : `Route: ${routeCode} • Direction: ${getFriendlyDirection(trip?.routeDirection)}`}
+                  : (access.isParentOnly
+                      ? `Route: ${routeCode} · Student Details`
+                      : `Route: ${routeCode} • Direction: ${getFriendlyDirection(trip?.routeDirection)}`)}
               </SheetDescription>
             </SheetHeader>
 
             {/* Stop Context Banner if stop selected */}
-            {selectedStop && (
+            {selectedStop && !access.isParentOnly && (
               <div className="space-y-3 shrink-0">
                 {tripStatus !== 'IN_PROGRESS' && tripStatus !== 'COMPLETED' && tripStatus !== 'CANCELLED' ? (
                   <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">

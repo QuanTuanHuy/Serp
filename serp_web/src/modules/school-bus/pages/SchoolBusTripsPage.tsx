@@ -336,14 +336,14 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'actions',
-      header: 'Operate',
+      header: access.isParentOnly ? 'Tracking' : 'Operate',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (trip) => {
         const normalized = trip.status.toUpperCase();
 
         // Non-operators (Attendant, Parent) see view-only link
-        if (!access.canOperateTrip) {
+        if (!access.canOperateTrip || access.isParentOnly) {
           return (
             <div className='flex items-center justify-end gap-1.5'>
               <Button
@@ -353,7 +353,7 @@ export function SchoolBusTripsPage() {
                 asChild
               >
                 <Link href={`/school-bus/trips/${trip.id}`}>
-                  View details
+                  {access.isParentOnly ? 'Track Trip' : 'View details'}
                 </Link>
               </Button>
             </div>
@@ -537,14 +537,25 @@ export function SchoolBusTripsPage() {
 
   return (
     <SchoolBusPageShell
-      title='Trip operations'
-      description='Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+      title={access.isParentOnly ? 'Student Trip Tracking' : 'Trip Operations'}
+      description={
+        access.isParentOnly
+          ? 'Track your student’s trips in real time.'
+          : 'Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+      }
       breadcrumb={
         <SchoolBusBreadcrumb
-          items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Trip Operations', current: true },
-          ]}
+          items={
+            access.isParentOnly
+              ? [
+                  { label: 'School Bus', href: '/school-bus/dashboard' },
+                  { label: 'Student Trip Tracking', current: true },
+                ]
+              : [
+                  { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                  { label: 'Trip Operations', current: true },
+                ]
+          }
         />
       }
     >
@@ -552,23 +563,23 @@ export function SchoolBusTripsPage() {
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label='Trips'
+            label={access.isParentOnly ? 'Total Tracking Trips' : 'Trips'}
             value={data?.data?.totalElements ?? 0}
-            hint='Route execution records'
+            hint={access.isParentOnly ? 'All historical & current student trips' : 'Route execution records'}
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
             label='In progress'
             value={trips.filter((trip) => trip.status === 'IN_PROGRESS').length}
-            hint='Trips currently operating'
+            hint={access.isParentOnly ? 'Trips currently running' : 'Trips currently operating'}
             icon={PlayCircle}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Completed'
             value={trips.filter((trip) => trip.status === 'COMPLETED').length}
-            hint='Closed trip executions'
+            hint={access.isParentOnly ? 'Successfully ended trips' : 'Closed trip executions'}
             icon={CheckCircle2}
             tone='success'
           />
@@ -576,8 +587,12 @@ export function SchoolBusTripsPage() {
 
         {/* Data Table within Card */}
         <SchoolBusDataTable
-          title='Trip Operations Board'
-          description='For each trip, only the next pending stop can be processed by the backend.'
+          title={access.isParentOnly ? 'Student Trips' : 'Trip Operations Board'}
+          description={
+            access.isParentOnly
+              ? 'View and track current and past trips.'
+              : 'For each trip, only the next pending stop can be processed by the backend.'
+          }
           toolbar={tripToolbar}
           data={filteredTrips}
           columns={tripColumns}
@@ -586,10 +601,10 @@ export function SchoolBusTripsPage() {
           stickyFirstColumn
           stickyActionColumn
           emptyIcon={Route}
-          emptyTitle={trips.length === 0 ? 'No trips yet' : 'No trips match current filters'}
+          emptyTitle={trips.length === 0 ? (access.isParentOnly ? 'No trips found' : 'No trips yet') : 'No trips match current filters'}
           emptyDescription={
             trips.length === 0
-              ? 'Create a trip from a dispatched route before execution can start.'
+              ? (access.isParentOnly ? 'There are no active or scheduled trips for your children.' : 'Create a trip from a dispatched route before execution can start.')
               : 'Try adjusting your search query or clear the active filters.'
           }
         />

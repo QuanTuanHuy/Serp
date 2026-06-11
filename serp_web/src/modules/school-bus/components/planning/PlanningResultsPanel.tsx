@@ -1067,7 +1067,7 @@ export function PlanningResultsPanel({
             <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
               <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
                 <Users className='h-4 w-4 text-[#C81E3A] shrink-0' />
-                Planning Readiness Preview
+                Planning Demand Preview
               </h3>
               <span className='px-2 py-0.5 bg-red-50 border border-red-100 text-[#C81E3A] text-[10px] font-bold rounded-full'>
                 {currentDirection === 'RETURN' ? 'Return' : 'Outbound'}

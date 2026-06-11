@@ -334,7 +334,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Attendance', href: '/school-bus/attendance' },
+            { label: 'Trip Operations', href: '/school-bus/trips' },
             { label: tripCode, current: true },
           ]}
         />
@@ -344,9 +344,9 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
         {/* Back link */}
         <div className='flex items-center justify-between'>
           <Button variant='outline' size='sm' className='rounded-full h-8 px-3 font-semibold' asChild>
-            <Link href='/school-bus/attendance'>
+            <Link href='/school-bus/trips'>
               <ArrowLeft className='h-3.5 w-3.5 mr-1.5' />
-              Back to Attendance list
+              Back to Trip Operations
             </Link>
           </Button>
           <div className='flex items-center gap-2'>

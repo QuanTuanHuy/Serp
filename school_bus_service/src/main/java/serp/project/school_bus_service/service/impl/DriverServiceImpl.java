@@ -18,9 +18,12 @@ import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
-
-import java.time.LocalDate;
-
+import org.springframework.context.annotation.Lazy;
+import serp.project.school_bus_service.service.ISchoolBusUserService;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
+import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Set;
 
 @Service
@@ -33,17 +36,20 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
     private final MessageCommon messageCommon;
+    private final ISchoolBusUserService schoolBusUserService;
 
 
     public DriverServiceImpl(
-    DriverProfileRepository driverProfileRepository,
-                                 SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
-                                 MessageCommon messageCommon) {
+            DriverProfileRepository driverProfileRepository,
+            SchoolBusMapper mapper,
+            IAuditLogService auditLogService,
+            MessageCommon messageCommon,
+            @Lazy ISchoolBusUserService schoolBusUserService) {
         this.driverProfileRepository = driverProfileRepository;
         this.mapper = mapper;
         this.auditLogService = auditLogService;
         this.messageCommon = messageCommon;
+        this.schoolBusUserService = schoolBusUserService;
     }
 
 
@@ -54,19 +60,57 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
 
     @Override
     public PageResponse<DriverProfileResponse> getDrivers(DriverProfileParamsRequest params, Long tenantId) {
-        return PageResponse.from(driverProfileRepository.findAll(
+        PageResponse<DriverProfileResponse> page = PageResponse.from(driverProfileRepository.findAll(
                 BaseSpecification.tenantActiveWithKeyword(tenantId,
                         params == null ? null : params.getKeyword(),
-                        "fullName", "phone", "licenseNumber", "status"),
+                        "fullName", "phone", "status"),
                 PageableUtils.from(params,
-                        Set.of("id", "fullName", "licenseNumber", "status", "createdAt", "updatedAt"),
+                        Set.of("id", "fullName", "status", "createdAt", "updatedAt"),
                         "fullName")),
                 mapper::toDriverProfileResponse);
+
+        // Enrich with SchoolBusUser details
+        java.util.List<Long> schoolBusUserIds = page.getItems().stream()
+                .map(DriverProfileResponse::getUserId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (!schoolBusUserIds.isEmpty()) {
+            Map<Long, SchoolBusUserEntity> userMap = schoolBusUserService.findAllByIds(schoolBusUserIds).stream()
+                    .collect(Collectors.toMap(
+                            SchoolBusUserEntity::getId,
+                            java.util.function.Function.identity()
+                    ));
+            page.getItems().forEach(r -> {
+                Long internalId = r.getUserId();
+                r.setSchoolBusUserId(internalId);
+                SchoolBusUserEntity u = userMap.get(internalId);
+                if (u != null) {
+                    r.setAccountUserId(u.getAccountUserId());
+                    r.setUserId(u.getAccountUserId()); // Map to accountUserId for UI select dropdown compatibility
+                    r.setUser(mapper.toSchoolBusUserResponse(u));
+                }
+            });
+        }
+        return page;
     }
 
     @Override
     public DriverProfileResponse getDriverResponse(Long id, Long tenantId) {
-        return mapper.toDriverProfileResponse(getDriver(id, tenantId));
+        DriverProfileEntity entity = getDriver(id, tenantId);
+        DriverProfileResponse response = mapper.toDriverProfileResponse(entity);
+        if (response.getUserId() != null) {
+            Long internalId = response.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId()); // Map to accountUserId for UI select dropdown compatibility
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -82,7 +126,20 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
         applyDriver(driver, request, tenantId);
         DriverProfileEntity saved = driverProfileRepository.save(driver);
         auditLogService.log(tenantId, actorId, "DriverProfile", saved.getId(), "CREATE", "Created driver profile");
-        return mapper.toDriverProfileResponse(saved);
+        
+        // Return enriched response
+        DriverProfileResponse response = mapper.toDriverProfileResponse(saved);
+        if (saved.getUserId() != null) {
+            Long internalId = saved.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId());
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -93,7 +150,20 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
         applyDriver(driver, request, tenantId);
         DriverProfileEntity saved = driverProfileRepository.save(driver);
         auditLogService.log(tenantId, actorId, "DriverProfile", saved.getId(), "UPDATE", "Updated driver profile");
-        return mapper.toDriverProfileResponse(saved);
+        
+        // Return enriched response
+        DriverProfileResponse response = mapper.toDriverProfileResponse(saved);
+        if (saved.getUserId() != null) {
+            Long internalId = saved.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId());
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -108,28 +178,47 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
             throw new AppException(AppErrorCode.Driver.INVALID_STATUS,
                     messageCommon.getMessage(AppErrorCode.Driver.INVALID_STATUS, request.getStatus(), VALID_CREW_STATUSES));
         }
-        // License number uniqueness (exclude self on update)
-        Long excludeId = driver.getId() != null ? driver.getId() : -1L;
-        if (driverProfileRepository.existsByLicenseNumberAndTenantIdAndIsDeletedFalseAndIdNot(
-                request.getLicenseNumber(), tenantId, excludeId)) {
-            throw new AppException(AppErrorCode.Driver.LICENSE_CONFLICT,
-                    messageCommon.getMessage(AppErrorCode.Driver.LICENSE_CONFLICT, request.getLicenseNumber()));
-        }
-        // License expiry check for operational statuses
         String normalizedStatus = request.getStatus() != null ? request.getStatus().toUpperCase() : "AVAILABLE";
-        if (("AVAILABLE".equals(normalizedStatus) || "ASSIGNED".equals(normalizedStatus))
-                && request.getLicenseExpiryDate() != null
-                && request.getLicenseExpiryDate().isBefore(LocalDate.now())) {
-            throw new AppException(AppErrorCode.Driver.LICENSE_EXPIRED,
-                    messageCommon.getMessage(AppErrorCode.Driver.LICENSE_EXPIRED, normalizedStatus));
+        if (request.getAccountUserId() != null) {
+            SchoolBusUserEntity schoolBusUser = schoolBusUserService.getRequiredByAccountUserId(request.getAccountUserId());
+            driver.setUserId(schoolBusUser.getId());
+        } else {
+            driver.setUserId(null);
         }
-        driver.setUserId(request.getUserId());
         driver.setFullName(request.getFullName());
         driver.setPhone(request.getPhone());
-        driver.setLicenseNumber(request.getLicenseNumber());
-        driver.setLicenseClass(request.getLicenseClass());
-        driver.setLicenseExpiryDate(request.getLicenseExpiryDate());
         driver.setStatus(normalizedStatus);
         driver.setIsActive(request.resolveIsActive(Boolean.TRUE));
+    }
+
+    @Override
+    @Transactional
+    public void syncProfile(SchoolBusUserEntity user, boolean hasRole) {
+        Optional<DriverProfileEntity> existingOpt = driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(user.getTenantId(), user.getId());
+        if (hasRole) {
+            DriverProfileEntity profile;
+            if (existingOpt.isPresent()) {
+                profile = existingOpt.get();
+            } else {
+                profile = new DriverProfileEntity();
+                profile.setTenantId(user.getTenantId());
+                profile.setUserId(user.getId());
+                profile.setStatus("AVAILABLE");
+                profile.setIsDeleted(false);
+                profile.markCreated(user.getTenantId(), "SYSTEM");
+            }
+            profile.setFullName(user.getFullName());
+            profile.setPhone(user.getPhoneNumber());
+            profile.setIsActive(true);
+            profile.markUpdated("SYSTEM");
+            driverProfileRepository.save(profile);
+        } else {
+            if (existingOpt.isPresent()) {
+                DriverProfileEntity profile = existingOpt.get();
+                profile.setIsActive(false);
+                profile.markUpdated("SYSTEM");
+                driverProfileRepository.save(profile);
+            }
+        }
     }
 }

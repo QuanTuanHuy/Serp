@@ -12,6 +12,15 @@ import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 
+import org.springframework.context.annotation.Lazy;
+import serp.project.school_bus_service.service.IParentService;
+import serp.project.school_bus_service.service.IDriverService;
+import serp.project.school_bus_service.service.IAttendantService;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import java.util.ArrayList;
+import java.util.List;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -20,11 +29,23 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
 
     private final SchoolBusUserRepository schoolBusUserRepository;
     private final SchoolBusUserMapper schoolBusUserMapper;
+    private final IParentService parentService;
+    private final IDriverService driverService;
+    private final IAttendantService attendantService;
+    private final ObjectMapper objectMapper;
 
     public SchoolBusUserServiceImpl(SchoolBusUserRepository schoolBusUserRepository,
-                                    SchoolBusUserMapper schoolBusUserMapper) {
+                                    SchoolBusUserMapper schoolBusUserMapper,
+                                    @Lazy IParentService parentService,
+                                    @Lazy IDriverService driverService,
+                                    @Lazy IAttendantService attendantService,
+                                    ObjectMapper objectMapper) {
         this.schoolBusUserRepository = schoolBusUserRepository;
         this.schoolBusUserMapper = schoolBusUserMapper;
+        this.parentService = parentService;
+        this.driverService = driverService;
+        this.attendantService = attendantService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -86,16 +107,39 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
             }
         }
 
-        // LƯU Ý CHO CÁC PHASE SAU:
-        // - Tại sao KHÔNG tự động tạo các profile (Parent, Driver, Attendant) ở đây?
-        //   Bởi vì việc tạo profile nghiệp vụ đòi hỏi các thông tin nghiệp vụ chuyên biệt (ví dụ: bằng lái xe, 
-        //   chứng chỉ giám hộ, hoặc phân luồng trường học) mà sự kiện Kafka User từ Account module không cung cấp.
-        //   Việc auto-create profile sẽ được xử lý độc lập ở các phase sau.
-        // - Tại sao KHÔNG gọi trực tiếp Account API ở đây?
-        //   Đây là hàm nhận dữ liệu từ Kafka consumer hoặc Sync Job để ghi/cache dữ liệu shadow. 
-        //   Việc gọi API đồng bộ hoặc fallback sẽ được cấu hình trong REST Client ở Phase 4.
-        
-        return schoolBusUserRepository.save(entity);
+        // Trigger synchronization of business profiles based on roles.
+        SchoolBusUserEntity savedUser = schoolBusUserRepository.save(entity);
+
+        List<String> roles = command.getRoles();
+        if (roles == null && command.getRawPayloadJson() != null) {
+            try {
+                roles = new ArrayList<>();
+                JsonNode root = objectMapper.readTree(command.getRawPayloadJson());
+                JsonNode rolesNode = root.get("roles");
+                if (rolesNode == null || rolesNode.isMissingNode()) {
+                    rolesNode = root.get("roleNames");
+                }
+                if (rolesNode != null && rolesNode.isArray()) {
+                    for (JsonNode node : rolesNode) {
+                        roles.add(node.asText());
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore parsing errors and fallback to empty
+            }
+        }
+
+        if (roles != null) {
+            boolean isParent = roles.stream().anyMatch("SCHOOL_BUS_PARENT"::equalsIgnoreCase);
+            boolean isDriver = roles.stream().anyMatch("SCHOOL_BUS_DRIVER"::equalsIgnoreCase);
+            boolean isAttendant = roles.stream().anyMatch("SCHOOL_BUS_ATTENDANT"::equalsIgnoreCase);
+
+            parentService.syncProfile(savedUser, isParent);
+            driverService.syncProfile(savedUser, isDriver);
+            attendantService.syncProfile(savedUser, isAttendant);
+        }
+
+        return savedUser;
     }
 
     @Override
@@ -128,6 +172,25 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     public SchoolBusUserEntity getRequiredByKeycloakId(String keycloakId) {
         return findByKeycloakId(keycloakId)
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "School bus shadow user not found by Keycloak ID: " + keycloakId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<SchoolBusUserEntity> findAllByIds(java.util.List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return schoolBusUserRepository.findAllById(ids);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SchoolBusUserEntity> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return schoolBusUserRepository.findById(id)
+                .filter(u -> !Boolean.TRUE.equals(u.getIsDeleted()));
     }
 
 }

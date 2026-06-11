@@ -25,14 +25,14 @@ public class StudentController extends AbstractBaseController {
     }
 
     @GetMapping
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
     public ResponseEntity<GeneralResponse<PageResponse<StudentResponse>>> getStudents(
             @ModelAttribute StudentParamsRequest params) {
         return ok("Fetched students", studentService.getStudents(params, getCurrentTenantId()));
     }
 
     @PostMapping
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.write')")
     public ResponseEntity<GeneralResponse<StudentResponse>> createStudent(
             @Valid @RequestBody StudentUpsertRequest request) {
         return created("Created student",
@@ -40,13 +40,13 @@ public class StudentController extends AbstractBaseController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
     public ResponseEntity<GeneralResponse<StudentResponse>> getStudent(@PathVariable Long id) {
         return ok("Fetched student", studentService.getStudentResponse(id, getCurrentTenantId()));
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.write')")
     public ResponseEntity<GeneralResponse<StudentResponse>> updateStudent(@PathVariable Long id,
             @Valid @RequestBody StudentUpsertRequest request) {
         return ok("Updated student",
@@ -54,7 +54,7 @@ public class StudentController extends AbstractBaseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.write')")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.write')")
     public ResponseEntity<GeneralResponse<Void>> deleteStudent(@PathVariable Long id) {
         studentService.deleteStudent(id, getCurrentTenantId(), getCurrentUserId());
         return ok("Deleted student");

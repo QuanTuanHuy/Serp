@@ -7,6 +7,7 @@ import serp.project.school_bus_service.service.ITripStopLogService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,14 @@ public class TripStopLogServiceImpl extends AbstractBaseService<TripStopLogEntit
     @Override
     public List<TripStopLogEntity> findByTrip(Long tripId, Long tenantId) {
         return tripStopLogRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(tripId, tenantId);
+    }
+
+    @Override
+    public List<TripStopLogEntity> findByTrips(Collection<Long> tripIds, Long tenantId) {
+        if (tripIds == null || tripIds.isEmpty()) {
+            return List.of();
+        }
+        return tripStopLogRepository.findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(tripIds, tenantId);
     }
 
     @Override

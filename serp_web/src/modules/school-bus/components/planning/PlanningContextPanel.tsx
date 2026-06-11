@@ -6,9 +6,9 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { schoolBusUi } from '../../theme';
 import {
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
 } from '../../api/schoolBusApi';
-import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../../utils';
+import { getPageItems } from '../../utils';
 import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import { SchoolBusDatePicker } from '../ui/SchoolBusDatePicker';
 
@@ -34,8 +34,8 @@ const fieldLabel = 'block text-[10px] font-bold text-slate-400 uppercase trackin
 export function PlanningContextPanel({
   form, onFormChange, onPreview, onCreateSession, previewing, creating, sessionActive,
 }: PlanningContextPanelProps) {
-  const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const schools = getPageItems(schoolsData?.data);
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const schools = schoolsData?.data || [];
 
   return (
     <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4'>
@@ -54,7 +54,7 @@ export function PlanningContextPanel({
           value={form.schoolId}
           onChange={val => onFormChange(f => ({ ...f, schoolId: val || '' }))}
           placeholder='— Select school —'
-          options={schools.map(s => ({ label: s.name, value: String(s.id) }))}
+          options={schools.map(s => ({ label: s.label, value: String(s.id) }))}
           searchable
         />
 

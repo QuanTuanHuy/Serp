@@ -90,18 +90,7 @@ function WarningBadge({ label }: { label: string }) {
   );
 }
 
-function isLicenseExpiringSoon(dateStr?: string | null): boolean {
-  if (!dateStr) return false;
-  const expiry = new Date(dateStr);
-  const now = new Date();
-  const daysLeft = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-  return daysLeft <= 30 && daysLeft >= 0;
-}
 
-function isLicenseExpired(dateStr?: string | null): boolean {
-  if (!dateStr) return false;
-  return new Date(dateStr) < new Date();
-}
 
 type FleetDeleteTarget =
   | { type: 'bus'; entity: SchoolBusBus }
@@ -193,7 +182,6 @@ export function SchoolBusFleetPage() {
 
   const [driverSearch, setDriverSearch] = React.useState('');
   const [driverStatusFilter, setDriverStatusFilter] = React.useState('');
-  const [driverLicenseFilter, setDriverLicenseFilter] = React.useState('');
 
   const [attendantSearch, setAttendantSearch] = React.useState('');
   const [attendantStatusFilter, setAttendantStatusFilter] = React.useState('');
@@ -217,23 +205,12 @@ export function SchoolBusFleetPage() {
     let result = drivers;
     if (driverSearch) {
       const q = driverSearch.toLowerCase();
-      result = result.filter((d) => d.fullName.toLowerCase().includes(q) || d.licenseNumber?.toLowerCase().includes(q));
+      result = result.filter((d) => d.fullName.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q));
     }
     if (driverStatusFilter === 'active') result = result.filter((d) => d.isActive !== false);
     if (driverStatusFilter === 'inactive') result = result.filter((d) => d.isActive === false);
-    if (driverStatusFilter === 'expiring') result = result.filter((d) => isLicenseExpiringSoon(d.licenseExpiryDate));
-
-    if (driverLicenseFilter === 'valid') {
-      result = result.filter((d) => !isLicenseExpired(d.licenseExpiryDate) && !isLicenseExpiringSoon(d.licenseExpiryDate));
-    }
-    if (driverLicenseFilter === 'expiring') {
-      result = result.filter((d) => isLicenseExpiringSoon(d.licenseExpiryDate) && !isLicenseExpired(d.licenseExpiryDate));
-    }
-    if (driverLicenseFilter === 'expired') {
-      result = result.filter((d) => isLicenseExpired(d.licenseExpiryDate));
-    }
     return result;
-  }, [drivers, driverSearch, driverStatusFilter, driverLicenseFilter]);
+  }, [drivers, driverSearch, driverStatusFilter]);
 
   const filteredAttendants = React.useMemo(() => {
     let result = attendants;
@@ -487,47 +464,13 @@ export function SchoolBusFleetPage() {
       ),
     },
     {
-      key: 'licenseNumber',
-      header: 'License number',
-      render: (driver) => <span className='font-mono text-xs text-slate-700 font-semibold'>{driver.licenseNumber || '—'}</span>,
-    },
-    {
-      key: 'licenseClass',
-      header: 'License class',
-      render: (driver) => driver.licenseClass ? (
-        <span className='text-xs font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100'>{driver.licenseClass}</span>
-      ) : (
-        <span className='text-slate-400 font-medium'>—</span>
+      key: 'linkedUser',
+      header: 'Linked account',
+      render: (driver) => (
+        <span className='text-xs font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100'>
+          {driver.user?.email || 'Local profile'}
+        </span>
       ),
-    },
-    {
-      key: 'licenseExpiry',
-      header: 'License expiry',
-      render: (driver) => {
-        if (!driver.licenseExpiryDate) {
-          return <WarningBadge label='No expiry date' />;
-        }
-        const expired = isLicenseExpired(driver.licenseExpiryDate);
-        const expiring = isLicenseExpiringSoon(driver.licenseExpiryDate) && !expired;
-
-        return (
-          <span className={cn(
-            'text-xs font-semibold px-2 py-0.5 rounded-full border',
-            expired && 'bg-red-50 text-red-700 border-red-150',
-            expiring && 'bg-amber-50 text-amber-700 border-amber-150',
-            !expired && !expiring && 'bg-emerald-50 text-emerald-700 border-emerald-150'
-          )}>
-            {driver.licenseExpiryDate}
-            {expired && ' (expired)'}
-            {expiring && ' (expiring)'}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'assignment',
-      header: 'Assignment',
-      render: () => <UnassignedBadge />,
     },
     {
       key: 'status',
@@ -568,7 +511,7 @@ export function SchoolBusFleetPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search driver or license...'
+          placeholder='Search driver...'
           value={driverSearch}
           onChange={(e) => setDriverSearch(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -581,19 +524,6 @@ export function SchoolBusFleetPage() {
         options={[
           { label: 'Active', value: 'active' },
           { label: 'Inactive', value: 'inactive' },
-          { label: 'License expiring', value: 'expiring' },
-        ]}
-        clearable
-      />
-      <SchoolBusSelect
-        value={driverLicenseFilter}
-        onChange={setDriverLicenseFilter}
-        placeholder='License status'
-        icon={ShieldCheck}
-        options={[
-          { label: 'Valid license', value: 'valid' },
-          { label: 'Expiring soon', value: 'expiring' },
-          { label: 'Expired license', value: 'expired' },
         ]}
         clearable
       />
@@ -797,8 +727,8 @@ export function SchoolBusFleetPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Fleet & crew readiness'
-        description='Operational fleet overview — vehicle availability, crew licensing, and depot readiness for route execution.'
+        title='Fleet & crew status'
+        description='Operational fleet overview — vehicle availability, crew licensing, and depot configuration.'
         breadcrumb={
           <SchoolBusBreadcrumb items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
@@ -834,7 +764,7 @@ export function SchoolBusFleetPage() {
         }
       >
         <div className='flex flex-col gap-6'>
-          {/* Readiness stats */}
+          {/* Fleet status stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
               label='Available buses'

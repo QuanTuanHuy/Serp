@@ -18,6 +18,12 @@ import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
+import org.springframework.context.annotation.Lazy;
+import serp.project.school_bus_service.service.ISchoolBusUserService;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
+import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import java.util.Set;
 
@@ -28,17 +34,20 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
     private final SchoolBusMapper mapper;
     private final IAuditLogService auditLogService;
     private final MessageCommon messageCommon;
+    private final ISchoolBusUserService schoolBusUserService;
 
 
     public ParentServiceImpl(
-    ParentProfileRepository parentProfileRepository,
-                                 SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
-                                 MessageCommon messageCommon) {
+            ParentProfileRepository parentProfileRepository,
+            SchoolBusMapper mapper,
+            IAuditLogService auditLogService,
+            MessageCommon messageCommon,
+            @Lazy ISchoolBusUserService schoolBusUserService) {
         this.parentProfileRepository = parentProfileRepository;
         this.mapper = mapper;
         this.auditLogService = auditLogService;
         this.messageCommon = messageCommon;
+        this.schoolBusUserService = schoolBusUserService;
     }
 
 
@@ -49,18 +58,56 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
 
     @Override
     public PageResponse<ParentProfileResponse> getParents(ParentProfileParamsRequest params, Long tenantId) {
-        return PageResponse.from(parentProfileRepository.findAll(
+        PageResponse<ParentProfileResponse> page = PageResponse.from(parentProfileRepository.findAll(
                 BaseSpecification.tenantActiveWithKeyword(tenantId,
                         params == null ? null : params.getKeyword(),
                         "fullName", "phone", "email", "address"),
                 PageableUtils.from(params,
                         Set.of("id", "fullName", "email", "createdAt", "updatedAt"), "fullName")),
                 mapper::toParentProfileResponse);
+
+        // Enrich with SchoolBusUser details
+        java.util.List<Long> schoolBusUserIds = page.getItems().stream()
+                .map(ParentProfileResponse::getUserId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (!schoolBusUserIds.isEmpty()) {
+            Map<Long, SchoolBusUserEntity> userMap = schoolBusUserService.findAllByIds(schoolBusUserIds).stream()
+                    .collect(Collectors.toMap(
+                            SchoolBusUserEntity::getId,
+                            java.util.function.Function.identity()
+                    ));
+            page.getItems().forEach(r -> {
+                Long internalId = r.getUserId();
+                r.setSchoolBusUserId(internalId);
+                SchoolBusUserEntity u = userMap.get(internalId);
+                if (u != null) {
+                    r.setAccountUserId(u.getAccountUserId());
+                    r.setUserId(u.getAccountUserId()); // Map to accountUserId for UI select dropdown compatibility
+                    r.setUser(mapper.toSchoolBusUserResponse(u));
+                }
+            });
+        }
+        return page;
     }
 
     @Override
     public ParentProfileResponse getParentResponse(Long id, Long tenantId) {
-        return mapper.toParentProfileResponse(getParent(id, tenantId));
+        ParentProfileEntity entity = getParent(id, tenantId);
+        ParentProfileResponse response = mapper.toParentProfileResponse(entity);
+        if (response.getUserId() != null) {
+            Long internalId = response.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId()); // Map to accountUserId for UI select dropdown compatibility
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -76,7 +123,20 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
         applyParent(parent, request);
         ParentProfileEntity saved = parentProfileRepository.save(parent);
         auditLogService.log(tenantId, actorId, "ParentProfile", saved.getId(), "CREATE", "Created parent profile");
-        return mapper.toParentProfileResponse(saved);
+        
+        // Return enriched response
+        ParentProfileResponse response = mapper.toParentProfileResponse(saved);
+        if (saved.getUserId() != null) {
+            Long internalId = saved.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId());
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -87,7 +147,20 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
         applyParent(parent, request);
         ParentProfileEntity saved = parentProfileRepository.save(parent);
         auditLogService.log(tenantId, actorId, "ParentProfile", saved.getId(), "UPDATE", "Updated parent profile");
-        return mapper.toParentProfileResponse(saved);
+        
+        // Return enriched response
+        ParentProfileResponse response = mapper.toParentProfileResponse(saved);
+        if (saved.getUserId() != null) {
+            Long internalId = saved.getUserId();
+            response.setSchoolBusUserId(internalId);
+            schoolBusUserService.findById(internalId)
+                    .ifPresent(u -> {
+                        response.setAccountUserId(u.getAccountUserId());
+                        response.setUserId(u.getAccountUserId());
+                        response.setUser(mapper.toSchoolBusUserResponse(u));
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -105,7 +178,12 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
                 && !request.getEmail().matches("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
             throw new AppException(AppErrorCode.Parent.EMAIL_INVALID, messageCommon.getMessage(AppErrorCode.Parent.EMAIL_INVALID));
         }
-        parent.setUserId(request.getUserId());
+        if (request.getAccountUserId() != null) {
+            SchoolBusUserEntity schoolBusUser = schoolBusUserService.getRequiredByAccountUserId(request.getAccountUserId());
+            parent.setUserId(schoolBusUser.getId());
+        } else {
+            parent.setUserId(null);
+        }
         parent.setFullName(request.getFullName());
         parent.setPhone(request.getPhone());
         parent.setEmail(request.getEmail());
@@ -116,5 +194,36 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
     @Override
     public long countByTenant(Long tenantId) {
         return parentProfileRepository.countByTenantIdAndIsDeletedFalse(tenantId);
+    }
+
+    @Override
+    @Transactional
+    public void syncProfile(SchoolBusUserEntity user, boolean hasRole) {
+        Optional<ParentProfileEntity> existingOpt = parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(user.getTenantId(), user.getId());
+        if (hasRole) {
+            ParentProfileEntity profile;
+            if (existingOpt.isPresent()) {
+                profile = existingOpt.get();
+            } else {
+                profile = new ParentProfileEntity();
+                profile.setTenantId(user.getTenantId());
+                profile.setUserId(user.getId());
+                profile.setIsDeleted(false);
+                profile.markCreated(user.getTenantId(), "SYSTEM");
+            }
+            profile.setFullName(user.getFullName());
+            profile.setPhone(user.getPhoneNumber());
+            profile.setEmail(user.getEmail());
+            profile.setIsActive(true);
+            profile.markUpdated("SYSTEM");
+            parentProfileRepository.save(profile);
+        } else {
+            if (existingOpt.isPresent()) {
+                ParentProfileEntity profile = existingOpt.get();
+                profile.setIsActive(false);
+                profile.markUpdated("SYSTEM");
+                parentProfileRepository.save(profile);
+            }
+        }
     }
 }

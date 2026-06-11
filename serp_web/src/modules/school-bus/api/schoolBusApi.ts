@@ -55,6 +55,7 @@ import type {
   SchoolBusTripStudent,
   SchoolBusSchoolPickupPoint,
   SchoolBusSchoolPickupPointUpsertRequest,
+  SchoolBusDropdownOption,
 } from '../types';
 
 const transformApiResponse = createApiResponseTransform;
@@ -163,6 +164,51 @@ export const schoolBusApi = api.injectEndpoints({
       query: () => ({ url: '/master-data/bus-types', method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusBusType[]>(),
+    }),
+
+    getSchoolDropdownOptions: builder.query<ApiResponse<SchoolBusDropdownOption[]>, void>({
+      query: () => ({ url: '/dropdowns/schools', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getSchoolPickupPointDropdownOptions: builder.query<
+      ApiResponse<SchoolBusDropdownOption[]>,
+      number
+    >({
+      query: (schoolId) => ({
+        url: '/dropdowns/school-pickup-points',
+        method: 'GET',
+        params: { schoolId },
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getParentDropdownOptions: builder.query<ApiResponse<SchoolBusDropdownOption[]>, void>({
+      query: () => ({ url: '/dropdowns/parents', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getDriverDropdownOptions: builder.query<ApiResponse<SchoolBusDropdownOption[]>, void>({
+      query: () => ({ url: '/dropdowns/drivers', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getAttendantDropdownOptions: builder.query<ApiResponse<SchoolBusDropdownOption[]>, void>({
+      query: () => ({ url: '/dropdowns/attendants', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getBusDropdownOptions: builder.query<
+      ApiResponse<SchoolBusDropdownOption[]>,
+      number | void
+    >({
+      query: (depotId) => ({
+        url: '/dropdowns/buses',
+        method: 'GET',
+        params: depotId ? { depotId } : undefined,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
     }),
 
     getSchools: builder.query<
@@ -1789,6 +1835,12 @@ const {
   useDeleteRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery: useGetSessionEligibleStudentsQueryOrig,
   useAssignStudentToRouteMutation,
+  useGetSchoolDropdownOptionsQuery: useGetSchoolDropdownOptionsQueryOrig,
+  useGetSchoolPickupPointDropdownOptionsQuery: useGetSchoolPickupPointDropdownOptionsQueryOrig,
+  useGetParentDropdownOptionsQuery: useGetParentDropdownOptionsQueryOrig,
+  useGetDriverDropdownOptionsQuery: useGetDriverDropdownOptionsQueryOrig,
+  useGetAttendantDropdownOptionsQuery: useGetAttendantDropdownOptionsQueryOrig,
+  useGetBusDropdownOptionsQuery: useGetBusDropdownOptionsQueryOrig,
 } = schoolBusApi;
 
 function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
@@ -1798,6 +1850,12 @@ function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
 }
 
 export const useGetSchoolBusSummaryQuery = wrapQueryHook(useGetSchoolBusSummaryQueryOrig);
+export const useGetSchoolDropdownOptionsQuery = wrapQueryHook(useGetSchoolDropdownOptionsQueryOrig);
+export const useGetSchoolPickupPointDropdownOptionsQuery = wrapQueryHook(useGetSchoolPickupPointDropdownOptionsQueryOrig);
+export const useGetParentDropdownOptionsQuery = wrapQueryHook(useGetParentDropdownOptionsQueryOrig);
+export const useGetDriverDropdownOptionsQuery = wrapQueryHook(useGetDriverDropdownOptionsQueryOrig);
+export const useGetAttendantDropdownOptionsQuery = wrapQueryHook(useGetAttendantDropdownOptionsQueryOrig);
+export const useGetBusDropdownOptionsQuery = wrapQueryHook(useGetBusDropdownOptionsQueryOrig);
 export const useGetOperationsDashboardQuery = wrapQueryHook(useGetOperationsDashboardQueryOrig);
 export const useGetSchoolBusReportQuery = wrapQueryHook(useGetSchoolBusReportQueryOrig);
 

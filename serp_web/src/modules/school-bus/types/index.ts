@@ -69,10 +69,13 @@ export interface SchoolBusSchool extends SchoolBusBaseRecord {
 
 export interface SchoolBusParent extends SchoolBusBaseRecord {
   userId: number;
+  schoolBusUserId?: number | null;
+  accountUserId?: number | null;
   fullName: string;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  user?: SchoolBusAccountUser | null;
 }
 
 export interface SchoolBusAccountUser {
@@ -126,19 +129,25 @@ export interface SchoolBusBusType {
 
 export interface SchoolBusDriver extends SchoolBusBaseRecord {
   userId: number;
+  schoolBusUserId?: number | null;
+  accountUserId?: number | null;
   fullName: string;
   phone?: string | null;
   licenseNumber?: string | null;
   licenseClass?: string | null;
   licenseExpiryDate?: string | null;
   status: string;
+  user?: SchoolBusAccountUser | null;
 }
 
 export interface SchoolBusAttendant extends SchoolBusBaseRecord {
   userId: number;
+  schoolBusUserId?: number | null;
+  accountUserId?: number | null;
   fullName: string;
   phone?: string | null;
   status: string;
+  user?: SchoolBusAccountUser | null;
 }
 
 export interface SchoolBusPickupPoint extends SchoolBusBaseRecord {
@@ -630,7 +639,7 @@ export interface SchoolBusSchoolUpsertRequest {
 }
 
 export interface SchoolBusParentUpsertRequest {
-  userId: number;
+  accountUserId: number;
   fullName: string;
   phone?: string;
   email?: string;
@@ -664,7 +673,7 @@ export interface SchoolBusBusUpsertRequest {
 }
 
 export interface SchoolBusDriverUpsertRequest {
-  userId: number;
+  accountUserId: number;
   fullName: string;
   phone?: string;
   licenseNumber: string;
@@ -675,7 +684,7 @@ export interface SchoolBusDriverUpsertRequest {
 }
 
 export interface SchoolBusAttendantUpsertRequest {
-  userId: number;
+  accountUserId: number;
   fullName: string;
   phone?: string;
   status: string;
@@ -989,6 +998,14 @@ export interface DashboardOperationsResponse {
   activeRoutes: SchoolBusRoute[];
   pendingApprovalQueue: SchoolBusTransportRequest[];
   recentAttendanceActivity: SchoolBusAttendance[];
+}
+
+export interface SchoolBusDropdownOption {
+  id: number;
+  label: string;
+  code?: string;
+  description?: string;
+  metadata?: Record<string, any>;
 }
 
 

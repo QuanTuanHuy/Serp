@@ -1,6 +1,9 @@
 package serp.project.school_bus_service.service.impl;
 
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,7 @@ import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.ITripStopLogService;
 import serp.project.school_bus_service.service.ITripStudentService;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
@@ -53,6 +57,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -78,6 +83,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final SchoolBusSecurityService securityService;
 
 
     public TripExecutionServiceImpl(TripExecutionRepository tripRepository,
@@ -92,7 +98,8 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                                      ICodeGeneratorService codeGeneratorService,
                                      SchoolBusMapper mapper,
                                      MessageCommon messageCommon,
-                                     ISchoolBusDataScopeService schoolBusDataScopeService) {
+                                     ISchoolBusDataScopeService schoolBusDataScopeService,
+                                     SchoolBusSecurityService securityService) {
         this.tripRepository = tripRepository;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
@@ -106,6 +113,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.securityService = securityService;
     }
 
 
@@ -129,11 +137,74 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         if (params != null && params.getStatus() != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), TripStatus.parse(params.getStatus())));
         }
-        return PageResponse.from(tripRepository.findAll(
+
+        if (securityService.isAdminOrDispatcher()) {
+            // Tenant scope - no extra filters
+        } else if (securityService.isDriver()) {
+            Long driverProfileId = schoolBusDataScopeService.getCurrentDriverProfileIdRequired();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("driver").get("id"), driverProfileId));
+        } else if (securityService.isAttendant()) {
+            Long attendantProfileId = schoolBusDataScopeService.getCurrentAttendantProfileIdRequired();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("attendant").get("id"), attendantProfileId));
+        } else if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            spec = spec.and((root, query, cb) -> {
+                Subquery<Long> subquery = query.subquery(Long.class);
+                Root<TripStudentEntity> tsRoot = subquery.from(TripStudentEntity.class);
+                subquery.select(cb.literal(1L));
+                subquery.where(
+                    cb.equal(tsRoot.get("trip"), root),
+                    cb.equal(tsRoot.get("student").get("parentProfile").get("id"), parentProfileId),
+                    cb.equal(tsRoot.get("isDeleted"), false)
+                );
+                return cb.exists(subquery);
+            });
+        }
+        Page<TripExecutionEntity> tripPage = tripRepository.findAll(
                 spec,
                 pageable(params, Set.of("id", "tripCode", "serviceDate", "status", "createdAt", "updatedAt"),
-                        "serviceDate")),
-                trip -> mapper.toTripExecutionResponse(trip, List.of(), List.of()));
+                        "serviceDate"));
+
+        List<TripExecutionEntity> trips = tripPage.getContent();
+        if (trips.isEmpty()) {
+            return PageResponse.from(tripPage, trip -> mapper.toTripExecutionResponse(trip, List.of(), List.of()));
+        }
+
+        List<Long> tripIds = trips.stream().map(TripExecutionEntity::getId).toList();
+
+        // Batch fetch stops and group by trip ID
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrips(tripIds, tenantId);
+        Map<Long, List<TripStopLogEntity>> stopsMap = stops.stream()
+                .collect(Collectors.groupingBy(stop -> stop.getTrip().getId()));
+
+        // Batch fetch students and group by trip ID
+        List<TripStudentEntity> students = tripStudentService.findByTrips(tripIds, tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            students = students.stream()
+                    .filter(s -> s.getStudent() != null && s.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(s.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
+        Map<Long, List<TripStudentEntity>> studentsMap = students.stream()
+                .collect(Collectors.groupingBy(student -> student.getTrip().getId()));
+
+        // Map to response DTOs
+        PageResponse<TripExecutionResponse> response = new PageResponse<>();
+        response.setItems(trips.stream().map(trip -> mapper.toTripExecutionResponse(
+                trip,
+                stopsMap.getOrDefault(trip.getId(), List.of()),
+                studentsMap.getOrDefault(trip.getId(), List.of())
+        )).toList());
+        response.setPage(tripPage.getNumber());
+        response.setSize(tripPage.getSize());
+        response.setTotalElements(tripPage.getTotalElements());
+        response.setTotalPages(tripPage.getTotalPages());
+        response.setFirst(tripPage.isFirst());
+        response.setLast(tripPage.isLast());
+        response.setHasNext(tripPage.hasNext());
+        response.setHasPrevious(tripPage.hasPrevious());
+        return response;
     }
 
     @Override
@@ -505,8 +576,15 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     public List<TripStudentResponse> getTripStudents(Long id, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessTrip(id);
         findById(id, tenantId);
-        return tripStudentService.findByTrip(id, tenantId)
-                .stream()
+        List<TripStudentEntity> students = tripStudentService.findByTrip(id, tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            students = students.stream()
+                    .filter(s -> s.getStudent() != null && s.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(s.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
+        return students.stream()
                 .map(mapper::toTripStudentResponse)
                 .toList();
     }
@@ -514,11 +592,16 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private TripExecutionResponse toDetail(TripExecutionEntity trip, Long tenantId) {
-        return mapper.toTripExecutionResponse(trip,
-                tripStopLogService.findByTrip(trip.getId(),
-                        tenantId),
-                tripStudentService.findByTrip(trip.getId(),
-                        tenantId));
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(trip.getId(), tenantId);
+        List<TripStudentEntity> students = tripStudentService.findByTrip(trip.getId(), tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            students = students.stream()
+                    .filter(s -> s.getStudent() != null && s.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(s.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
+        return mapper.toTripExecutionResponse(trip, stops, students);
     }
 
     /**

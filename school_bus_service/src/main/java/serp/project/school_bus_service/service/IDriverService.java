@@ -7,6 +7,7 @@ import serp.project.school_bus_service.dto.request.DriverProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.entity.DriverProfileEntity;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 
 public interface IDriverService extends IBaseService<DriverProfileEntity, Long> {
 
@@ -21,4 +22,6 @@ public interface IDriverService extends IBaseService<DriverProfileEntity, Long> 
     DriverProfileResponse updateDriver(Long id, DriverProfileUpsertRequest request, Long tenantId, Long actorId);
 
     void deleteDriver(Long id, Long tenantId, Long actorId);
+
+    void syncProfile(SchoolBusUserEntity user, boolean hasRole);
 }

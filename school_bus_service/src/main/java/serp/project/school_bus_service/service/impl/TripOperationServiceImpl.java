@@ -42,6 +42,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     private final ITripWebSocketPublisher webSocketPublisher;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
     public TripOperationServiceImpl(
             ITripExecutionService tripExecutionService,
@@ -52,7 +53,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
             IAuditLogService auditLogService,
             ITripWebSocketPublisher webSocketPublisher,
             SchoolBusMapper mapper,
-            MessageCommon messageCommon) {
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.tripExecutionService = tripExecutionService;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
@@ -62,6 +64,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         this.webSocketPublisher = webSocketPublisher;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
     private String actor(Long actorId) {
@@ -87,6 +90,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse startTrip(Long tripId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.ASSIGNED && trip.getStatus() != TripStatus.PLANNED) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -128,6 +132,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse arriveStop(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -175,6 +180,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse startBoarding(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -212,6 +218,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse departStop(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -284,6 +291,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse skipStop(Long tripId, Long routeStopId, SkipStopRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -351,6 +359,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse completeTrip(Long tripId, CompleteTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -450,6 +459,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse cancelTrip(Long tripId, CancelTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() == TripStatus.COMPLETED) {
             throw new AppException(AppErrorCode.Trip.ALREADY_COMPLETED, messageCommon.getMessage(AppErrorCode.Trip.ALREADY_COMPLETED));
@@ -529,6 +539,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public AttendanceResponse boardStudent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         AttendanceResponse res = attendanceService.boardTripStudent(tripId, request, tenantId, actorId);
         return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "BOARDED", tenantId, res);
     }
@@ -536,6 +547,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public AttendanceResponse dropoffStudent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         AttendanceResponse res = attendanceService.dropoffTripStudent(tripId, request, tenantId, actorId);
         return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "DROPPED_OFF", tenantId, res);
     }
@@ -543,6 +555,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public AttendanceResponse markStudentAbsent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         AttendanceResponse res = attendanceService.markTripStudentAbsent(tripId, request, tenantId, actorId);
         return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "ABSENT", tenantId, res);
     }
@@ -550,6 +563,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public AttendanceResponse markStudentNoShow(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         AttendanceResponse res = attendanceService.markTripStudentNoShow(tripId, request, tenantId, actorId);
         return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "NO_SHOW", tenantId, res);
     }
@@ -557,6 +571,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public AttendanceResponse markStudentNotServed(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Attendance.INVALID_STATE,

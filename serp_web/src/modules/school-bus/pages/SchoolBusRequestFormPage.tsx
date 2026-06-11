@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   useCreateTransportRequestMutation,
-  useGetParentsQuery,
-  useGetSchoolsQuery,
+  useGetParentDropdownOptionsQuery,
+  useGetSchoolDropdownOptionsQuery,
   useGetStudentsQuery,
   useGetTransportRequestByIdQuery,
   useUpdateTransportRequestMutation,
@@ -36,15 +36,12 @@ export function SchoolBusRequestFormPage({
 
   // For Admin/Dispatcher: fetch all parents for the dropdown.
   // For Parent role: skip the query — backend resolves identity from token.
-  const { data: parentsData } = useGetParentsQuery(
-    { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'fullName' },
-    { skip: access.isParent }
+  const { data: parentsData } = useGetParentDropdownOptionsQuery(
+    undefined,
+    { skip: access.isParentOnly }
   );
 
-  const { data: schoolsData } = useGetSchoolsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'name',
-  });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
   // Backend scopes students to own children for Parent role.
   // For Admin/Dispatcher: fetch all students (form handles parent+school filtering).
@@ -63,7 +60,7 @@ export function SchoolBusRequestFormPage({
   // students always reference their parent — so we borrow it from there.
   const students = getPageItems(studentsData?.data);
   const currentParentId: number | undefined =
-    access.isParent && students.length > 0
+    access.isParentOnly && students.length > 0
       ? (students[0].parentProfileId ?? undefined)
       : undefined;
 
@@ -90,7 +87,7 @@ export function SchoolBusRequestFormPage({
           label: 'Transport Requests',
           href: '/school-bus/requests',
         },
-        { label: isEditMode ? `Edit #${requestId}` : 'New request', current: true },
+        { label: isEditMode ? `Edit #${requestId}` : 'New Request', current: true },
       ]}
     />
   );
@@ -98,7 +95,7 @@ export function SchoolBusRequestFormPage({
   if (isEditMode && loadingRequest) {
     return (
       <SchoolBusPageShell
-        title='Edit transport request'
+        title='Edit Transport Request'
         description='Loading request details...'
         breadcrumb={breadcrumb}
       >
@@ -112,9 +109,9 @@ export function SchoolBusRequestFormPage({
 
   return (
     <SchoolBusPageShell
-      title={isEditMode ? 'Edit transport request' : 'New transport request'}
+      title={isEditMode ? 'Edit Transport Request' : 'New Transport Request'}
       description={
-        access.isParent
+        access.isParentOnly
           ? 'Submit a transport request for your child. Our team will review and process it shortly.'
           : 'Capture transport demand with effective dates, a parent profile, and the student list to be served.'
       }
@@ -122,12 +119,12 @@ export function SchoolBusRequestFormPage({
     >
       <TransportRequestForm
         initialData={requestData?.data}
-        parents={getPageItems(parentsData?.data)}
-        schools={getPageItems(schoolsData?.data)}
+        parents={parentsData?.data || []}
+        schools={schoolsData?.data || []}
         students={students}
         isLoading={creating || updating}
         submitLabel={isEditMode ? 'Update request' : 'Create request'}
-        isParentRole={access.isParent}
+        isParentRole={access.isParentOnly}
         currentParentId={currentParentId}
         onCancel={() =>
           router.push(

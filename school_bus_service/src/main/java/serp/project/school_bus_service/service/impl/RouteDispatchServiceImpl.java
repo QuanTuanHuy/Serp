@@ -124,7 +124,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         if (attendant != null) validateAttendantAvailable(attendant);
 
         // 3 — Driver license validation
-        String licenseWarning = checkDriverLicense(driver);
+        checkDriverLicense(driver);
 
         // 4 — Bus capacity validation against planned student count
         String capacityWarning = checkCapacity(route, bus);
@@ -185,7 +185,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                         + ", driver=" + driver.getFullName());
 
         RouteAssignmentResponse response = mapper.toRouteAssignmentResponse(saved);
-        if (licenseWarning != null)  response.setLicenseWarning(licenseWarning);
+
         if (capacityWarning != null) response.setCapacityWarning(capacityWarning);
         return response;
     }
@@ -279,15 +279,15 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
      * never blocks assignment (per plan: "display license warning").
      */
     private String checkDriverLicense(DriverProfileEntity driver) {
-        if (driver.getLicenseExpiryDate() == null) return null;
-        LocalDate today = LocalDate.now();
-        if (driver.getLicenseExpiryDate().isBefore(today)) {
-            return "Driver license has EXPIRED on " + driver.getLicenseExpiryDate();
-        }
-        if (!driver.getLicenseExpiryDate().isAfter(today.plusDays(30))) {
-            return "Driver license expires soon: " + driver.getLicenseExpiryDate();
-        }
         return null;
+
+
+
+
+
+
+
+
     }
 
     /**

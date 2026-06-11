@@ -107,10 +107,10 @@ public class RouteMapper extends BaseMapper {
         response.setBusCapacity(entity.getBus().getCapacity());
         response.setDriverId(entity.getDriver().getId());
         response.setDriverName(entity.getDriver().getFullName());
-        response.setDriverLicenseClass(entity.getDriver().getLicenseClass());
-        response.setDriverLicenseExpiryDate(
-                entity.getDriver().getLicenseExpiryDate() == null ? null
-                        : entity.getDriver().getLicenseExpiryDate().toString());
+
+
+
+
         response.setAttendantId(entity.getAttendant() == null ? null : entity.getAttendant().getId());
         response.setAttendantName(entity.getAttendant() == null ? null : entity.getAttendant().getFullName());
         response.setStatus(entity.getStatus() == null ? null : entity.getStatus().name());
