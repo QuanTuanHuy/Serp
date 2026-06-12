@@ -52,7 +52,7 @@ export const FirstMileHeader: React.FC<FirstMileHeaderProps> = ({
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
     router.push(
-      `/first-mile/post-offices?search=${encodeURIComponent(searchQuery.trim())}`
+      `/first-mile/network/post-offices?search=${encodeURIComponent(searchQuery.trim())}`
     );
   };
 
@@ -140,7 +140,7 @@ export const FirstMileHeader: React.FC<FirstMileHeaderProps> = ({
                     Profile
                   </Button>
                 </Link>
-                <Link href='/first-mile/post-offices'>
+                <Link href='/first-mile/network/post-offices'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <Settings className='mr-2 h-4 w-4' />
                     First Mile Settings

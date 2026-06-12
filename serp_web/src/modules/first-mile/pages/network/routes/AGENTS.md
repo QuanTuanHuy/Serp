@@ -1,6 +1,7 @@
 # AGENTS.md - TMS Routes UI Guide
 
-This guide applies to coding work in `serp_web/src/modules/first-mile/pages/routes/`.
+This guide applies to coding work in
+`serp_web/src/modules/first-mile/pages/network/routes/`.
 Read it together with:
 
 - `AGENTS.md`
@@ -46,9 +47,9 @@ Backend route model and validation:
 
 Frontend screen and API wiring:
 
-- `serp_web/src/app/first-mile/routes/page.tsx`
-- `serp_web/src/modules/first-mile/pages/routes/RouteListPage.tsx`
-- `serp_web/src/modules/first-mile/pages/routes/components/SecondMileRoutesMap.tsx`
+- `serp_web/src/app/first-mile/network/routes/page.tsx`
+- `serp_web/src/modules/first-mile/pages/network/routes/RouteListPage.tsx`
+- `serp_web/src/modules/first-mile/pages/network/routes/components/SecondMileRoutesMap.tsx`
 - `serp_web/src/modules/first-mile/api/firstMileApi.ts`
 - `serp_web/src/modules/first-mile/types/index.ts`
 
@@ -282,8 +283,8 @@ Deletion:
 
 When changing the Routes screen:
 
-- keep route pages under `src/modules/first-mile/pages/routes/`;
-- keep `src/app/first-mile/routes/page.tsx` as a thin wrapper;
+- keep route pages under `src/modules/first-mile/pages/network/routes/`;
+- keep `src/app/first-mile/network/routes/page.tsx` as a thin wrapper;
 - keep API additions in `api/firstMileApi.ts` with `SECOND_MILE_SERVICE`;
 - keep types in `types/index.ts` with `SecondMile*` names;
 - preserve `Author: Nguyen The Anh` headers in new or touched TMS files;

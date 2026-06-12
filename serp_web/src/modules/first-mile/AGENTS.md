@@ -30,12 +30,12 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 
 | Path | Page / scope |
 |------|----------------|
-| `/first-mile/post-offices` | Post offices (first-mile API) |
+| `/first-mile/network/post-offices` | Post offices (first-mile API) |
 | `/first-mile/orders` | Orders |
 | `/first-mile/pickup` | Pickup tracking & check-in |
 | `/first-mile/dispatchers/first-mile` | Pickup dispatch (auto/manual) |
-| `/first-mile/hubs` | Hubs (second-mile API) |
-| `/first-mile/routes` | Routes (second-mile API) |
+| `/first-mile/network/hubs` | Hubs (second-mile API) |
+| `/first-mile/network/routes` | Routes (second-mile API) |
 | `/first-mile/vehicles/first-mile` | Post-office vehicles |
 | `/first-mile/vehicles/second-mile` | Hub vehicles |
 | `/first-mile/billing` | Billing calculator & rules |
@@ -52,12 +52,13 @@ src/modules/first-mile/
   types/                  # Request/response TypeScript types
   components/             # Layout, auth guard
   pages/
-    post-offices/         # first-mile
+    network/
+      post-offices/       # first-mile
+      hubs/               # second-mile
+      routes/
     orders/
     pickup/
     dispatchers/first-mile/
-    hubs/                 # second-mile
-    routes/
     vehicles/
       first-mile/         # first-mile service
       second-mile/        # second-mile service

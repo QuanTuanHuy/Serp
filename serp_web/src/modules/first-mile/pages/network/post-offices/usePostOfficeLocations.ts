@@ -9,13 +9,13 @@ import {
   firstMileApi,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
-} from '../../api';
+} from '../../../api';
 import type {
   PostOffice,
   PostOfficeImportItem,
   Province,
   Ward,
-} from '../../types';
+} from '../../../types';
 import { normalizeLocationCode } from './postOfficeForm';
 
 interface UsePostOfficeLocationsParams {

@@ -18,7 +18,7 @@ import type {
   FirstMilePaginatedData,
   PostOffice,
   PostOfficeStatus,
-} from '../../../types';
+} from '../../../../types';
 import type { PostOfficeViewMode } from '../postOfficeForm';
 
 interface PostOfficeResultsCardProps {

@@ -17,7 +17,7 @@ import {
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
-import type { Province, Ward } from '../../../types';
+import type { Province, Ward } from '../../../../types';
 import {
   normalizeLocationCode,
   POST_OFFICE_STATUS_OPTIONS,

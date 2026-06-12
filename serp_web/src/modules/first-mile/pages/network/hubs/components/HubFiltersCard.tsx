@@ -10,8 +10,8 @@ import { Input, Label } from '@/shared/components/ui';
 import {
   TmsListFilterPanel,
   type TmsFilterMode,
-} from '../../../components/list';
-import type { HubType, Province, Ward } from '../../../types';
+} from '../../../../components/list';
+import type { HubType, Province, Ward } from '../../../../types';
 import { HUB_STATUS_OPTIONS, HUB_TYPE_OPTIONS } from '../hubForm';
 import type { HasLocationFilter, HubFilterFormState } from '../hubFilterModels';
 

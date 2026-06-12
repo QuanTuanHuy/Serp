@@ -4,12 +4,12 @@
  */
 
 import React from 'react';
-import { TmsExcelImportToolbar } from '../../../components/list';
+import { TmsExcelImportToolbar } from '../../../../components/list';
 import type {
   ImportHistory,
   PostOfficeImportItem,
   ValidateImportFileResponse,
-} from '../../../types';
+} from '../../../../types';
 
 interface PostOfficeImportCardProps {
   isTmsAdmin: boolean;

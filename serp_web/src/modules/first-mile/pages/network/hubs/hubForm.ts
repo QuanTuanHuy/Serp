@@ -9,7 +9,7 @@ import type {
   HubStatus,
   HubType,
   UpdateHubRequest,
-} from '../../types';
+} from '../../../types';
 
 export type HubFormMode = 'create' | 'edit';
 

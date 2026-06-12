@@ -25,7 +25,7 @@ import {
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Plus, ShieldAlert, UserCog } from 'lucide-react';
-import type { TmsFilterMode } from '../../components/list';
+import type { TmsFilterMode } from '../../../components/list';
 import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
@@ -42,7 +42,7 @@ import {
   useLazyExportPostOfficeTemplateQuery,
   useUpdatePostOfficeMutation,
   useValidatePostOfficeImportMutation,
-} from '../../api';
+} from '../../../api';
 import {
   CoordinatePickerMap,
   TmsCombobox,
@@ -50,7 +50,7 @@ import {
   TmsEntityOrdersTab,
   type TmsLocationMapPoint,
   type TmsMapBounds,
-} from '../../components';
+} from '../../../components';
 import type {
   FirstMileOrderStatus,
   ImportHistory,
@@ -60,7 +60,7 @@ import type {
   PostOfficeStaffRole,
   ValidateImportFileResponse,
   Ward,
-} from '../../types';
+} from '../../../types';
 import {
   PostOfficeFiltersCard,
   PostOfficeFormDialog,

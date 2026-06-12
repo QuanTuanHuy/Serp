@@ -34,7 +34,7 @@ import {
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
-import { TmsCombobox } from '../../components';
+import { TmsCombobox } from '../../../components';
 import {
   useCreateSecondMileRouteMutation,
   useDeleteSecondMileRouteMutation,
@@ -45,7 +45,7 @@ import {
   useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
   useUpdateSecondMileRouteMutation,
-} from '../../api';
+} from '../../../api';
 import type {
   Hub,
   PostOffice,
@@ -57,7 +57,7 @@ import type {
   SecondMileRouteStatus,
   SecondMileUpdateRouteRequest,
   SecondMileVehicle,
-} from '../../types';
+} from '../../../types';
 import {
   SecondMileRoutesMap,
   type RouteMapLine,

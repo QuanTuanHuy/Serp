@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - First-mile hubs route
+ * Description: Part of Serp Project - First-mile hubs route redirect
  */
 
-import { HubListPage } from '@/modules/first-mile/pages/hubs';
+import { redirect } from 'next/navigation';
 
 export default function HubsPage() {
-  return <HubListPage />;
+  redirect('/first-mile/network/hubs');
 }

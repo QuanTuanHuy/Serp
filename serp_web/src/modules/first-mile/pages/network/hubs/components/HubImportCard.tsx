@@ -4,12 +4,12 @@
  */
 
 import React from 'react';
-import { TmsExcelImportToolbar } from '../../../components/list';
+import { TmsExcelImportToolbar } from '../../../../components/list';
 import type {
   HubImportItem,
   ImportHistory,
   ValidateImportFileResponse,
-} from '../../../types';
+} from '../../../../types';
 
 interface HubImportCardProps {
   isTmsAdmin: boolean;

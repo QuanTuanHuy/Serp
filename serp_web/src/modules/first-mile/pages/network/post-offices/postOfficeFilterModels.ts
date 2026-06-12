@@ -8,8 +8,8 @@ import {
   parseOptionalNonNegativeInteger,
   parseTriStateBoolean,
   validateNumericRange,
-} from '../../components/list/listFilterUtils';
-import type { PostOfficeListFilters, PostOfficeStatus } from '../../types';
+} from '../../../components/list/listFilterUtils';
+import type { PostOfficeListFilters, PostOfficeStatus } from '../../../types';
 
 export type HasLocationFilter = 'ALL' | 'YES' | 'NO';
 

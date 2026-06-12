@@ -7,7 +7,7 @@ import type {
   CreatePostOfficeRequest,
   PostOffice,
   PostOfficeStatus,
-} from '../../types';
+} from '../../../types';
 
 export type PostOfficeFormMode = 'create' | 'edit';
 export type PostOfficeViewMode = 'list' | 'grid';

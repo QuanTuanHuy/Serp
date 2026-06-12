@@ -16,8 +16,8 @@ import {
   Label,
 } from '@/shared/components/ui';
 import { Loader2, LocateFixed } from 'lucide-react';
-import { CoordinatePickerMap, TmsCombobox } from '../../../components';
-import type { Province, Ward } from '../../../types';
+import { CoordinatePickerMap, TmsCombobox } from '../../../../components';
+import type { Province, Ward } from '../../../../types';
 import {
   HUB_FORM_STATUS_OPTIONS,
   HUB_TYPE_OPTIONS,

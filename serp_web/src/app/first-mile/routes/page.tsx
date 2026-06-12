@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Second-mile routes route page
+ * Description: Part of Serp Project - Second-mile routes route redirect
  */
 
-import { RouteListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileRoutesPage() {
-  return <RouteListPage />;
+  redirect('/first-mile/network/routes');
 }

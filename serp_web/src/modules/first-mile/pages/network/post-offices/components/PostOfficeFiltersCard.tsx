@@ -10,8 +10,8 @@ import { Input, Label } from '@/shared/components/ui';
 import {
   TmsListFilterPanel,
   type TmsFilterMode,
-} from '../../../components/list';
-import type { Hub, Province, Ward } from '../../../types';
+} from '../../../../components/list';
+import type { Hub, Province, Ward } from '../../../../types';
 import { POST_OFFICE_STATUS_OPTIONS } from '../postOfficeForm';
 import type {
   HasLocationFilter,
