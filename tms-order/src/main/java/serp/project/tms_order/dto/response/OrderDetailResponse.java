@@ -8,7 +8,6 @@ package serp.project.tms_order.dto.response;
 import serp.project.tms_order.enums.DeliveryRequestTime;
 import serp.project.tms_order.enums.FeePayer;
 import serp.project.tms_order.enums.OrderPickupMethod;
-import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.OrderType;
 import serp.project.tms_order.enums.PaymentStatus;
@@ -40,7 +39,6 @@ public record OrderDetailResponse(
         LocalDateTime pickupTimeEnd,
         DeliveryRequestTime deliveryRequestTime,
         OrderPickupMethod pickupMethod,
-        OrderProductCategory orderProductCategory,
         OrderType orderType,
         FeePayer feePayer,
         PaymentStatus paymentStatus,

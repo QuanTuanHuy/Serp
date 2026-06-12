@@ -7,10 +7,17 @@
 
 import React from 'react';
 import { getErrorMessage, useAppSelector } from '@/lib/store';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
   AssignmentResultCard,
+  CandidateOrdersPanel,
   DispatchAccessScopeCard,
   DispatchNoAccessCard,
   DispatchSetupCard,
@@ -18,7 +25,6 @@ import {
   PlanPreviewCard,
   type BusinessDispatchSettings,
   type DispatchCourierOption,
-  type DispatchOptimizationEffortOption,
   type DispatchOptimizationGoalOption,
   type DispatchSetupBusinessHandlers,
   type DispatchSetupBusinessValues,
@@ -56,9 +62,12 @@ import {
   getManualShiftLabel,
   type ManualAssignRisk,
 } from './manualAssignRisks';
+import { sortOrdersByBacklogPriority } from './dispatchOrderBacklog';
 
 const POST_OFFICE_PAGE_SIZE = 200;
 const MANUAL_ORDER_PAGE_SIZE = 200;
+
+type DispatcherTabValue = 'automatic' | 'manual';
 
 const CANDIDATE_ORDER_STATUSES: FirstMileOrderStatus[] = [
   'CREATED',
@@ -253,24 +262,37 @@ export const DispatchersPage: React.FC = () => {
     React.useState<RoutingVehicleOption>('DEFAULT');
   const [optimizationGoal, setOptimizationGoal] =
     React.useState<DispatchOptimizationGoalOption>('BALANCED');
-  const [optimizationEffort, setOptimizationEffort] =
-    React.useState<DispatchOptimizationEffortOption>('STANDARD');
 
   const [selectedOrderIds, setSelectedOrderIds] = React.useState<number[]>([]);
   const [optimizationResult, setOptimizationResult] =
     React.useState<PickupOptimizationResponse | null>(null);
   const [assignmentResult, setAssignmentResult] =
     React.useState<PickupAssignmentResponse | null>(null);
+  const [assignmentResultSource, setAssignmentResultSource] =
+    React.useState<DispatcherTabValue | null>(null);
+  const [activeDispatcherTab, setActiveDispatcherTab] =
+    React.useState<DispatcherTabValue>('automatic');
   const [isManualConfirmOpen, setIsManualConfirmOpen] = React.useState(false);
   const [manualAssignRisks, setManualAssignRisks] = React.useState<
     ManualAssignRisk[]
   >([]);
   const [pendingManualPayload, setPendingManualPayload] =
     React.useState<ManualAssignPickupOrdersRequest | null>(null);
+  const [candidateReferenceTime, setCandidateReferenceTime] = React.useState(
+    () => new Date()
+  );
 
   const [activeAction, setActiveAction] = React.useState<
     'preview' | 'auto' | 'manual' | null
   >(null);
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCandidateReferenceTime(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const { data: provincesData, isLoading: isLoadingProvinces } =
     useGetProvincesQuery(
@@ -386,6 +408,14 @@ export const DispatchersPage: React.FC = () => {
     [setupSelectedPostOfficeId]
   );
 
+  const setupSelectedPostOffice = React.useMemo(() => {
+    return setupPostOfficeOptions.find(
+      (postOffice) => String(postOffice.id) === setupSelectedPostOfficeId
+    );
+  }, [setupPostOfficeOptions, setupSelectedPostOfficeId]);
+
+  const setupSelectedPostOfficeCode = setupSelectedPostOffice?.code;
+
   const manualSelectedPostOffice = React.useMemo(() => {
     return manualPostOfficeOptions.find(
       (postOffice) => String(postOffice.id) === manualSelectedPostOfficeId
@@ -400,9 +430,12 @@ export const DispatchersPage: React.FC = () => {
   const manualSelectedPostOfficeCode = manualSelectedPostOffice?.code;
 
   const { data: setupCouriersData, isLoading: isLoadingSetupCouriers } =
-    useGetActiveCouriersByPostOfficeQuery(setupSelectedPostOfficeNumericId ?? 0, {
-      skip: !canDispatch || !setupSelectedPostOfficeNumericId,
-    });
+    useGetActiveCouriersByPostOfficeQuery(
+      setupSelectedPostOfficeNumericId ?? 0,
+      {
+        skip: !canDispatch || !setupSelectedPostOfficeNumericId,
+      }
+    );
 
   const { data: manualCouriersData, isLoading: isLoadingManualCouriers } =
     useGetActiveCouriersByPostOfficeQuery(
@@ -491,6 +524,33 @@ export const DispatchersPage: React.FC = () => {
   );
 
   const {
+    data: setupOrdersData,
+    isLoading: isLoadingSetupOrders,
+    refetch: refetchSetupOrders,
+  } = useGetOrdersQuery(
+    {
+      page: 0,
+      size: MANUAL_ORDER_PAGE_SIZE,
+      statuses: CANDIDATE_ORDER_STATUSES,
+      ...(setupSelectedPostOfficeCode
+        ? { originPostOfficeCode: setupSelectedPostOfficeCode }
+        : {}),
+    },
+    {
+      skip: !canDispatch || !setupSelectedPostOfficeCode,
+    }
+  );
+
+  const setupCandidateOrders = React.useMemo(() => {
+    return sortOrdersByBacklogPriority(
+      (setupOrdersData?.items ?? []).filter((order) =>
+        isCandidateOrderStatus(order.status)
+      ),
+      candidateReferenceTime
+    );
+  }, [candidateReferenceTime, setupOrdersData]);
+
+  const {
     data: manualOrdersData,
     isLoading: isLoadingManualOrders,
     refetch: refetchManualOrders,
@@ -498,6 +558,7 @@ export const DispatchersPage: React.FC = () => {
     {
       page: 0,
       size: MANUAL_ORDER_PAGE_SIZE,
+      statuses: CANDIDATE_ORDER_STATUSES,
       ...(manualSelectedPostOfficeCode
         ? { originPostOfficeCode: manualSelectedPostOfficeCode }
         : {}),
@@ -508,10 +569,13 @@ export const DispatchersPage: React.FC = () => {
   );
 
   const manualCandidateOrders = React.useMemo(() => {
-    return (manualOrdersData?.items ?? []).filter((order) =>
-      isCandidateOrderStatus(order.status)
+    return sortOrdersByBacklogPriority(
+      (manualOrdersData?.items ?? []).filter((order) =>
+        isCandidateOrderStatus(order.status)
+      ),
+      candidateReferenceTime
     );
-  }, [manualOrdersData]);
+  }, [candidateReferenceTime, manualOrdersData]);
 
   const manualOrdersById = React.useMemo(() => {
     const orderMap = new Map<number, FirstMileOrderDetail>();
@@ -530,6 +594,7 @@ export const DispatchersPage: React.FC = () => {
     setSelectedAutoCourierIds([]);
     setOptimizationResult(null);
     setAssignmentResult(null);
+    setAssignmentResultSource(null);
   }, [setupSelectedPostOfficeId]);
 
   React.useEffect(() => {
@@ -675,7 +740,7 @@ export const DispatchersPage: React.FC = () => {
   const buildBusinessDispatchSettings = React.useCallback(() => {
     const settings: BusinessDispatchSettings = {
       optimization_goal: optimizationGoal,
-      optimization_effort: optimizationEffort,
+      allow_lateness: true,
     };
 
     if (vehicleOption !== 'DEFAULT') {
@@ -683,7 +748,7 @@ export const DispatchersPage: React.FC = () => {
     }
 
     return settings;
-  }, [optimizationEffort, optimizationGoal, vehicleOption]);
+  }, [optimizationGoal, vehicleOption]);
 
   const handleClearSelectedOrders = () => {
     setSelectedOrderIds([]);
@@ -731,6 +796,7 @@ export const DispatchersPage: React.FC = () => {
       planning_start_time: context.shiftWindow.planningStartTime,
       planning_end_time: context.shiftWindow.planningEndTime,
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
+      allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
       ...businessSettings,
@@ -775,6 +841,7 @@ export const DispatchersPage: React.FC = () => {
       planning_start_time: context.shiftWindow.planningStartTime,
       planning_end_time: context.shiftWindow.planningEndTime,
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
+      allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
       ...businessSettings,
@@ -784,11 +851,16 @@ export const DispatchersPage: React.FC = () => {
     try {
       const result = await autoAssignPickupPlan(payload).unwrap();
       setAssignmentResult(result);
+      setAssignmentResultSource('automatic');
       setSelectedOrderIds([]);
 
       notification.success('Auto dispatch completed.', {
         description: `Assigned ${result.assignedOrders ?? 0}/${result.totalRequestedOrders ?? 0} order(s).`,
       });
+
+      if (setupSelectedPostOfficeCode) {
+        void refetchSetupOrders();
+      }
 
       if (manualSelectedPostOfficeId) {
         void refetchManualOrders();
@@ -811,6 +883,7 @@ export const DispatchersPage: React.FC = () => {
           force_assign: forceAssign,
         }).unwrap();
         setAssignmentResult(result);
+        setAssignmentResultSource('manual');
         setSelectedOrderIds([]);
         setPendingManualPayload(null);
         setManualAssignRisks([]);
@@ -826,7 +899,7 @@ export const DispatchersPage: React.FC = () => {
             const optimizerRisks: ManualAssignRisk[] = unassignedDetails.map(
               (item, index) => ({
                 id: `optimizer-unassigned-${item.orderId ?? index}`,
-                message: `Không thể xếp lộ trình tối ưu (${item.reason ?? 'NO_FEASIBLE_INSERTION'}).`,
+                message: `The optimizer could not place this order (${item.reason ?? 'NO_FEASIBLE_INSERTION'}).`,
                 orderCodes: [
                   item.orderCode ??
                     item.customerOrderCode ??
@@ -839,8 +912,8 @@ export const DispatchersPage: React.FC = () => {
             setManualAssignRisks(optimizerRisks);
             setIsManualConfirmOpen(true);
 
-            notification.warning('Cần xác nhận gán cưỡng bức.', {
-              description: `Chỉ gán được ${assignedCount}/${requestedCount} đơn theo tối ưu lộ trình.`,
+            notification.warning('Force assignment needs confirmation.', {
+              description: `Only ${assignedCount}/${requestedCount} order(s) fit the optimized route constraints.`,
             });
             return;
           }
@@ -853,18 +926,18 @@ export const DispatchersPage: React.FC = () => {
             )
             .join(' | ');
 
-          notification.warning('Gán thủ công chưa đủ số đơn.', {
-            description: `Đã gán ${assignedCount}/${requestedCount} đơn.${reasonSummary ? ` ${reasonSummary}` : ''}`,
+          notification.warning('Manual assignment is incomplete.', {
+            description: `Assigned ${assignedCount}/${requestedCount} order(s).${reasonSummary ? ` ${reasonSummary}` : ''}`,
           });
         } else {
-          notification.success('Gán thủ công thành công.', {
-            description: `Đã gán ${assignedCount}/${requestedCount} đơn.`,
+          notification.success('Manual assignment completed.', {
+            description: `Assigned ${assignedCount}/${requestedCount} order(s).`,
           });
         }
 
         void refetchManualOrders();
       } catch (error) {
-        notification.error('Gán thủ công thất bại.', {
+        notification.error('Manual assignment failed.', {
           description: getErrorMessage(error),
         });
       } finally {
@@ -881,7 +954,9 @@ export const DispatchersPage: React.FC = () => {
     }
 
     if (selectedOrderIds.length === 0) {
-      notification.error('Vui lòng chọn ít nhất một đơn để gán thủ công.');
+      notification.error(
+        'Please select at least one order to assign manually.'
+      );
       return;
     }
 
@@ -889,7 +964,7 @@ export const DispatchersPage: React.FC = () => {
       selectedManualCourierId
     );
     if (!courierStaffId) {
-      notification.error('Vui lòng chọn bưu tá để gán thủ công.');
+      notification.error('Please select a courier for manual assignment.');
       return;
     }
 
@@ -907,7 +982,6 @@ export const DispatchersPage: React.FC = () => {
         ? { vehicle: businessSettings.vehicle }
         : {}),
       optimization_goal: businessSettings.optimization_goal,
-      optimization_effort: businessSettings.optimization_effort,
     };
 
     const risks = evaluateManualAssignRisks({
@@ -961,13 +1035,11 @@ export const DispatchersPage: React.FC = () => {
   const businessValues: DispatchSetupBusinessValues = {
     vehicleOption,
     optimizationGoal,
-    optimizationEffort,
   };
 
   const businessHandlers: DispatchSetupBusinessHandlers = {
     onVehicleOptionChange: setVehicleOption,
     onOptimizationGoalChange: setOptimizationGoal,
-    onOptimizationEffortChange: setOptimizationEffort,
   };
 
   return (
@@ -989,111 +1061,148 @@ export const DispatchersPage: React.FC = () => {
         <DispatchNoAccessCard message='You do not have permission to access dispatch operations.' />
       ) : (
         <>
-          <DispatchSetupCard
-            postOfficeOptions={setupPostOfficeOptions}
-            courierOptions={setupCourierOptions}
-            selectedPostOfficeId={setupSelectedPostOfficeId}
-            onPostOfficeChange={setSetupSelectedPostOfficeId}
-            isLoadingPostOffices={isLoadingSetupPostOffices}
-            isLoadingCouriers={isLoadingSetupCouriers}
-            shift={setupShift}
-            onShiftChange={setSetupShift}
-            tripDate={setupTripDate}
-            onTripDateChange={setSetupTripDate}
-            orderLimitInput={orderLimitInput}
-            onOrderLimitInputChange={setOrderLimitInput}
-            selectedAutoCourierIds={selectedAutoCourierIds}
-            onToggleAutoCourier={handleToggleAutoCourier}
-            onClearAutoCourierSelection={() => setSelectedAutoCourierIds([])}
-            businessValues={businessValues}
-            businessHandlers={businessHandlers}
-            onPreviewPlan={() => void handlePreviewPlan()}
-            onAutoAssign={() => void handleAutoAssign()}
-            isOptimizing={isOptimizing}
-            isAutoAssigning={isAutoAssigning}
-            activeAction={activeAction}
-            isTmsAdmin={isTmsAdmin}
-          />
+          <Tabs
+            value={activeDispatcherTab}
+            onValueChange={(value) =>
+              setActiveDispatcherTab(value as DispatcherTabValue)
+            }
+            className='space-y-4'
+          >
+            <TabsList className='grid w-full grid-cols-2 lg:w-auto'>
+              <TabsTrigger value='automatic'>Automatic dispatch</TabsTrigger>
+              <TabsTrigger value='manual'>Manual dispatch</TabsTrigger>
+            </TabsList>
 
-          <ManualDispatchCard
-            provinceOptions={provinceOptions}
-            wardOptions={manualWardOptions}
-            selectedProvinceCode={manualProvinceCode}
-            onProvinceChange={handleManualProvinceChange}
-            selectedWardCode={manualWardCode || 'ALL'}
-            onWardChange={handleManualWardChange}
-            isLoadingProvinces={isLoadingProvinces}
-            isLoadingWards={isLoadingManualWards}
-            postOfficeOptions={manualPostOfficeOptions}
-            selectedPostOfficeId={manualSelectedPostOfficeId}
-            onPostOfficeChange={setManualSelectedPostOfficeId}
-            isLoadingPostOffices={isLoadingManualPostOffices}
-            shift={manualShift}
-            onShiftChange={setManualShift}
-            tripDate={manualTripDate}
-            onTripDateChange={setManualTripDate}
-            courierOptions={manualCourierOptions}
-            selectedManualCourierId={selectedManualCourierId}
-            onManualCourierIdChange={setSelectedManualCourierId}
-            isLoadingCouriers={isLoadingManualCouriers}
-            suggestedCouriers={suggestedCouriers}
-            onQuickPickCourier={(courierId) => {
-              if (!manualCourierIdSet.has(courierId)) {
-                notification.error(
-                  'Suggested courier is not active for the selected post office.'
-                );
-                return;
-              }
+            <TabsContent value='automatic' className='mt-0 space-y-4'>
+              <DispatchSetupCard
+                postOfficeOptions={setupPostOfficeOptions}
+                courierOptions={setupCourierOptions}
+                selectedPostOfficeId={setupSelectedPostOfficeId}
+                onPostOfficeChange={setSetupSelectedPostOfficeId}
+                isLoadingPostOffices={isLoadingSetupPostOffices}
+                isLoadingCouriers={isLoadingSetupCouriers}
+                shift={setupShift}
+                onShiftChange={setSetupShift}
+                tripDate={setupTripDate}
+                onTripDateChange={setSetupTripDate}
+                orderLimitInput={orderLimitInput}
+                onOrderLimitInputChange={setOrderLimitInput}
+                selectedAutoCourierIds={selectedAutoCourierIds}
+                onToggleAutoCourier={handleToggleAutoCourier}
+                onClearAutoCourierSelection={() =>
+                  setSelectedAutoCourierIds([])
+                }
+                businessValues={businessValues}
+                businessHandlers={businessHandlers}
+                onPreviewPlan={() => void handlePreviewPlan()}
+                onAutoAssign={() => void handleAutoAssign()}
+                isOptimizing={isOptimizing}
+                isAutoAssigning={isAutoAssigning}
+                activeAction={activeAction}
+                isTmsAdmin={isTmsAdmin}
+              />
 
-              setSelectedManualCourierId(String(courierId));
-            }}
-            isLoadingOrders={isLoadingManualOrders}
-            candidateOrders={manualCandidateOrders}
-            selectedOrderIds={selectedOrderIds}
-            onOrderSelectionChange={setSelectedOrderIds}
-            onClearSelectedOrders={handleClearSelectedOrders}
-            onManualAssign={() => void handleManualAssign()}
-            isManualAssigning={isManualAssigning}
-            activeAction={activeAction}
-          />
+              <CandidateOrdersPanel
+                title='Automatic dispatch candidates'
+                orders={setupCandidateOrders}
+                loading={isLoadingSetupOrders}
+                emptyText='No dispatchable orders for this post office.'
+                referenceTime={candidateReferenceTime}
+              />
 
-          {optimizationResult ? (
-            <PlanPreviewCard
-              optimizationResult={optimizationResult}
-              formatNumber={formatNumber}
-            />
-          ) : null}
+              {optimizationResult ? (
+                <PlanPreviewCard
+                  optimizationResult={optimizationResult}
+                  formatDateTime={formatDateTime}
+                  formatNumber={formatNumber}
+                />
+              ) : null}
 
-          {assignmentResult ? (
-            <AssignmentResultCard
-              assignmentResult={assignmentResult}
-              formatDateTime={formatDateTime}
-              formatNumber={formatNumber}
-            />
-          ) : null}
+              {assignmentResultSource === 'automatic' && assignmentResult ? (
+                <AssignmentResultCard
+                  assignmentResult={assignmentResult}
+                  formatDateTime={formatDateTime}
+                  formatNumber={formatNumber}
+                />
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value='manual' className='mt-0 space-y-4'>
+              <ManualDispatchCard
+                provinceOptions={provinceOptions}
+                wardOptions={manualWardOptions}
+                selectedProvinceCode={manualProvinceCode}
+                onProvinceChange={handleManualProvinceChange}
+                selectedWardCode={manualWardCode || 'ALL'}
+                onWardChange={handleManualWardChange}
+                isLoadingProvinces={isLoadingProvinces}
+                isLoadingWards={isLoadingManualWards}
+                postOfficeOptions={manualPostOfficeOptions}
+                selectedPostOfficeId={manualSelectedPostOfficeId}
+                onPostOfficeChange={setManualSelectedPostOfficeId}
+                isLoadingPostOffices={isLoadingManualPostOffices}
+                shift={manualShift}
+                onShiftChange={setManualShift}
+                tripDate={manualTripDate}
+                onTripDateChange={setManualTripDate}
+                courierOptions={manualCourierOptions}
+                selectedManualCourierId={selectedManualCourierId}
+                onManualCourierIdChange={setSelectedManualCourierId}
+                isLoadingCouriers={isLoadingManualCouriers}
+                suggestedCouriers={suggestedCouriers}
+                onQuickPickCourier={(courierId) => {
+                  if (!manualCourierIdSet.has(courierId)) {
+                    notification.error(
+                      'Suggested courier is not active for the selected post office.'
+                    );
+                    return;
+                  }
+
+                  setSelectedManualCourierId(String(courierId));
+                }}
+                isLoadingOrders={isLoadingManualOrders}
+                candidateOrders={manualCandidateOrders}
+                selectedOrderIds={selectedOrderIds}
+                onOrderSelectionChange={setSelectedOrderIds}
+                onClearSelectedOrders={handleClearSelectedOrders}
+                onManualAssign={() => void handleManualAssign()}
+                isManualAssigning={isManualAssigning}
+                activeAction={activeAction}
+              />
+
+              {assignmentResultSource === 'manual' && assignmentResult ? (
+                <AssignmentResultCard
+                  assignmentResult={assignmentResult}
+                  formatDateTime={formatDateTime}
+                  formatNumber={formatNumber}
+                />
+              ) : null}
+            </TabsContent>
+          </Tabs>
 
           <ConfirmDialog
             open={isManualConfirmOpen}
             onOpenChange={setIsManualConfirmOpen}
-            title='Cảnh báo trước khi gán đơn'
+            title='Review risks before assignment'
             description={
               <div className='space-y-3 text-left'>
                 <p>
-                  Hệ thống phát hiện {manualAssignRisks.length} nhóm rủi ro. Nếu
-                  bạn xác nhận, đơn vẫn được gán trực tiếp cho bưu tá (bỏ qua
-                  ràng buộc tối ưu lộ trình).
+                  The system found {manualAssignRisks.length} risk group(s). If
+                  you confirm, the selected orders will still be assigned
+                  directly to the courier and may bypass optimized route
+                  constraints.
                 </p>
                 <div className='rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground'>
                   <p>
-                    Bưu cục: {manualSelectedPostOffice?.code ?? '--'} -{' '}
+                    Post office: {manualSelectedPostOffice?.code ?? '--'} -{' '}
                     {manualSelectedPostOffice?.name ?? '--'}
                   </p>
-                  <p>Bưu tá: {pendingCourierLabel}</p>
+                  <p>Courier: {pendingCourierLabel}</p>
                   <p>
-                    Ca: {getManualShiftLabel(manualShift)} | Ngày:{' '}
+                    Shift: {getManualShiftLabel(manualShift)} | Date:{' '}
                     {manualTripDate}
                   </p>
-                  <p>Số đơn chọn: {selectedOrderIds.length}</p>
+                  <p>Selected orders: {selectedOrderIds.length}</p>
                 </div>
                 <ul className='list-disc space-y-2 pl-5 text-sm'>
                   {manualAssignRiskLines.map((warning, index) => (
@@ -1102,8 +1211,8 @@ export const DispatchersPage: React.FC = () => {
                 </ul>
               </div>
             }
-            confirmText='Vẫn gán đơn'
-            cancelText='Hủy'
+            confirmText='Assign anyway'
+            cancelText='Cancel'
             onConfirm={() => void handleConfirmManualAssign()}
             onCancel={() => {
               setIsManualConfirmOpen(false);

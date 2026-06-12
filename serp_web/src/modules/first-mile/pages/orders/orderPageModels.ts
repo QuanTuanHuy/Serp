@@ -9,7 +9,6 @@ import type {
   FirstMileFeePayer,
   FirstMileOrderDetail,
   FirstMileOrderPickupMethod,
-  FirstMileOrderProductCategory,
   FirstMileOrderProductItem,
   FirstMileOrderStatus,
   FirstMileOrderType,
@@ -93,7 +92,6 @@ export interface CreateOrderFormState {
   pickupTimeEnd: string;
   deliveryRequestTime: FirstMileDeliveryRequestTime;
   pickupMethod: FirstMileOrderPickupMethod;
-  orderProductCategory: 'NONE' | FirstMileOrderProductCategory;
   orderType: FirstMileOrderType;
   feePayer: FirstMileFeePayer;
   isCod: 'true' | 'false';
@@ -129,7 +127,6 @@ export const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
   pickupTimeEnd: '',
   deliveryRequestTime: 'BUSINESS_HOURS',
   pickupMethod: 'COURIER_PICKUP',
-  orderProductCategory: 'NONE',
   orderType: 'STANDARD_ORDER',
   feePayer: 'SENDER',
   isCod: 'false',
@@ -152,14 +149,6 @@ export const DELIVERY_REQUEST_TIME_OPTIONS: Array<{
   { value: 'HOLIDAY', label: 'Holiday' },
 ];
 
-export const ORDER_TYPE_OPTIONS: Array<{
-  value: FirstMileOrderType;
-  label: string;
-}> = [
-  { value: 'STANDARD_ORDER', label: 'Standard' },
-  { value: 'EXPRESS_ORDER', label: 'Express' },
-];
-
 export const ORDER_PICKUP_METHOD_OPTIONS: Array<{
   value: FirstMileOrderPickupMethod;
   label: string;
@@ -177,18 +166,6 @@ export const FEE_PAYER_OPTIONS: Array<{
 }> = [
   { value: 'SENDER', label: 'Sender' },
   { value: 'RECEIVER', label: 'Receiver' },
-];
-
-export const ORDER_PRODUCT_CATEGORY_OPTIONS: Array<{
-  value: FirstMileOrderProductCategory;
-  label: string;
-}> = [
-  { value: 'SOLID', label: 'Solid' },
-  { value: 'FRAGILE', label: 'Fragile' },
-  { value: 'HIGH_VALUE', label: 'High value' },
-  { value: 'OVERSIZED', label: 'Oversized' },
-  { value: 'LIQUID', label: 'Liquid' },
-  { value: 'MAGNETIC_BATTERY', label: 'Magnetic battery' },
 ];
 
 export const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
@@ -392,7 +369,6 @@ export const mapOrderToFormState = (
     pickupTimeEnd: toDateTimeLocalValue(order.pickupTimeEnd),
     deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
     pickupMethod: order.pickupMethod || 'COURIER_PICKUP',
-    orderProductCategory: order.orderProductCategory || 'NONE',
     orderType: order.orderType || 'STANDARD_ORDER',
     feePayer: order.feePayer || 'SENDER',
     isCod:

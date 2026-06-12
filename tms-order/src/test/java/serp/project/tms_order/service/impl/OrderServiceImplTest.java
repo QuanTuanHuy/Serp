@@ -17,8 +17,10 @@ import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
 import serp.project.tms_order.caller.PaymentServiceCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
+import serp.project.tms_order.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.domain.ProductType;
+import serp.project.tms_order.dto.request.CancelOrderRequest;
 import serp.project.tms_order.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.tms_order.dto.request.CreateOrderRequest;
 import serp.project.tms_order.dto.request.PaymentOrderConfirmedWebhookRequest;
@@ -34,6 +36,7 @@ import serp.project.tms_order.enums.OrderType;
 import serp.project.tms_order.enums.PaymentStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.repository.OrderRepository;
@@ -58,6 +61,7 @@ import static org.mockito.Mockito.when;
 class OrderServiceImplTest {
 
     private static final Long TENANT_ID = 9L;
+    private static final Long CUSTOMER_USER_ID = 42L;
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Mock
@@ -77,6 +81,9 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderSyncEventPublisher orderSyncEventPublisher;
+
+    @Mock
+    private OrderNotificationEventPublisher orderNotificationEventPublisher;
 
     @Mock
     private OrderTimelineService orderTimelineService;
@@ -192,6 +199,7 @@ class OrderServiceImplTest {
         assertEquals("PO-HN-01", order.getOriginPostOfficeCode());
         assertEquals("PO-HCM-01", order.getDestinationPostOfficeCode());
         verify(orderSyncEventPublisher).publish(order);
+        verify(orderNotificationEventPublisher).publishOrderConfirmed(order);
     }
 
     @Test
@@ -213,6 +221,54 @@ class OrderServiceImplTest {
         assertEquals("SUCCESS", response.gatewayStatus());
         verify(paymentServiceCaller, never()).queryOrderStatus(any());
         verify(orderSyncEventPublisher, never()).publish(any());
+        verify(orderNotificationEventPublisher, never()).publishOrderPaymentSucceeded(any());
+    }
+
+    @Test
+    void confirmOrderPaymentMarksOrderPaidAndPublishesNotification() {
+        Order order = confirmableOrder();
+        order.setPaymentStatus(PaymentStatus.UNPAID);
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+        when(paymentServiceCaller.queryOrderStatus("250101_abc"))
+                .thenReturn(PaymentQueryOrderResponse.builder()
+                        .status("SUCCESS")
+                        .message("Payment completed")
+                        .build());
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderPaymentConfirmResponse response = orderService.confirmOrderPayment(
+                1L,
+                TENANT_ID,
+                new ConfirmOrderPaymentRequest("250101_abc")
+        );
+
+        assertEquals(PaymentStatus.PAID, response.paymentStatus());
+        verify(orderSyncEventPublisher).publish(order);
+        verify(orderNotificationEventPublisher).publishOrderPaymentSucceeded(order);
+    }
+
+    @Test
+    void cancelOrderMarksCancelledAndPublishesNotification() {
+        Order order = confirmableOrder();
+        CancelOrderRequest request = new CancelOrderRequest();
+        request.setCancelReason("Customer requested cancellation");
+
+        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
+                .thenReturn(Optional.of(order));
+        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderDetailResponse response = orderService.cancelOrder(1L, TENANT_ID, request);
+
+        assertEquals(OrderStatus.CANCELLED, response.status());
+        assertEquals("Customer requested cancellation", order.getCancelReason());
+        verify(orderSyncEventPublisher).publish(order);
+        verify(orderNotificationEventPublisher).publishOrderCancelled(order);
     }
 
     @Test
@@ -241,6 +297,7 @@ class OrderServiceImplTest {
         assertEquals(PaymentStatus.PAID, order.getPaymentStatus());
         assertEquals(45000L, order.getTotalShippingFee());
         verify(orderSyncEventPublisher).publish(order);
+        verify(orderNotificationEventPublisher).publishOrderPaymentSucceeded(order);
     }
 
     private CreateOrderRequest createRequest() {
@@ -291,6 +348,7 @@ class OrderServiceImplTest {
                 .senderLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(105.8342D, 21.0278D)))
                 .receiverLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(106.7009D, 10.7769D)))
                 .tenantId(TENANT_ID)
+                .createdBy(String.valueOf(CUSTOMER_USER_ID))
                 .build();
     }
 

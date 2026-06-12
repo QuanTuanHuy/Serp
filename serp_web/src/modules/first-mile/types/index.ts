@@ -4,6 +4,7 @@
  */
 
 export * from './billing.types';
+export * from './dashboard';
 export * from './lastMile.types';
 
 export interface FirstMileApiResponse<T> {
@@ -240,8 +241,6 @@ export interface PostOfficeStaffAssignment {
   staffRole?: PostOfficeStaffRole;
   assignedFrom?: string;
   assignedTo?: string;
-  shiftStartTime?: string;
-  shiftEndTime?: string;
   isPrimary?: boolean;
   notes?: string;
   createdAt?: string;
@@ -254,8 +253,6 @@ export interface PostOfficeStaffAssignment {
 export interface UpdatePostOfficeStaffAssignmentRequest {
   assigned_from?: string;
   assigned_to?: string;
-  shift_start_time?: string;
-  shift_end_time?: string;
   is_primary?: boolean;
   notes?: string;
 }
@@ -870,7 +867,7 @@ export type FirstMileDeliveryRequestTime =
   | 'HOLIDAY'
   | 'BUSINESS_HOURS';
 
-export type FirstMileOrderType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
+export type FirstMileOrderType = 'STANDARD_ORDER';
 
 export type FirstMileOrderPickupMethod =
   | 'COURIER_PICKUP'
@@ -879,14 +876,6 @@ export type FirstMileOrderPickupMethod =
 export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
 
 export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
-
-export type FirstMileOrderProductCategory =
-  | 'HIGH_VALUE'
-  | 'FRAGILE'
-  | 'SOLID'
-  | 'OVERSIZED'
-  | 'LIQUID'
-  | 'MAGNETIC_BATTERY';
 
 export interface FirstMileOrderProductItem {
   id?: number;
@@ -923,7 +912,6 @@ export interface FirstMileOrderDetail {
   pickupTimeStart?: string;
   pickupTimeEnd?: string;
   deliveryRequestTime?: FirstMileDeliveryRequestTime;
-  orderProductCategory?: FirstMileOrderProductCategory;
   orderType?: FirstMileOrderType;
   feePayer?: FirstMileFeePayer;
   paymentStatus?: FirstMilePaymentStatus;
@@ -1019,7 +1007,6 @@ export interface CreateOrderRequest {
   pickup_time_end?: string;
   delivery_request_time: FirstMileDeliveryRequestTime;
   pickup_method?: FirstMileOrderPickupMethod;
-  order_product_category?: FirstMileOrderProductCategory;
   order_type: FirstMileOrderType;
   fee_payer: FirstMileFeePayer;
   is_cod?: boolean;
@@ -1114,8 +1101,6 @@ export type PickupOptimizationGoal =
   | 'COST_EFFICIENCY'
   | 'MAX_ASSIGNMENT';
 
-export type PickupOptimizationEffort = 'FAST' | 'STANDARD' | 'THOROUGH';
-
 export interface OptimizePickupPlanRequest {
   post_office_id: number;
   planning_start_time?: string;
@@ -1125,14 +1110,8 @@ export interface OptimizePickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1153,14 +1132,8 @@ export interface AutoAssignPickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1180,7 +1153,6 @@ export interface ManualAssignPickupOrdersRequest {
   planning_end_time?: string;
   vehicle?: string;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   allow_lateness?: boolean;
@@ -1605,7 +1577,6 @@ export interface OrderImportItem {
   receiver_province_code?: string;
   receiver_ward_code?: string;
   receiver_address_detail?: string;
-  order_product_category?: string;
   order_type?: string;
   note?: string;
   pickup_date?: string;

@@ -5,7 +5,6 @@ Description: Part of Serp Project
 
 package serp.project.first_mile.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -15,7 +14,6 @@ import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.first_mile.enums.PickupOptimizationEffort;
 import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 
@@ -59,9 +57,6 @@ public class ManualAssignPickupOrdersRequest {
 
     @JsonProperty("optimization_goal")
     private PickupOptimizationGoal optimizationGoal;
-
-    @JsonProperty("optimization_effort")
-    private PickupOptimizationEffort optimizationEffort;
 
     @JsonProperty("average_speed_kmph")
     @DecimalMin(value = "1.0")
