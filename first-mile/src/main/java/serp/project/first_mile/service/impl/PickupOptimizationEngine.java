@@ -185,7 +185,7 @@ class PickupOptimizationEngine {
                     continue;
                 }
 
-                if (bestDecision == null || candidate.deltaCost() < bestDecision.candidate().deltaCost()) {
+                if (isBetterInsertionDecision(state.order(), candidate, bestDecision, config)) {
                     bestDecision = new InsertionDecision(state.order(), candidate);
                 }
             }
@@ -303,6 +303,57 @@ class PickupOptimizationEngine {
         RouteState route = solution.routes().get(candidate.routeIndex());
         route.stops().add(candidate.insertPosition(), order);
         removeUnassignedOrder(solution.unassignedOrders(), order.orderId());
+    }
+
+    private boolean isBetterInsertionDecision(
+            PickupOrderNode order,
+            InsertionCandidate candidate,
+            InsertionDecision currentBest,
+            AlgorithmConfig config
+    ) {
+        if (currentBest == null) {
+            return true;
+        }
+
+        int orderPriority = dispatchPriority(order, config);
+        int bestPriority = dispatchPriority(currentBest.order(), config);
+        if (orderPriority != bestPriority) {
+            return orderPriority < bestPriority;
+        }
+
+        if (orderPriority == 0) {
+            int pickupEndCompare = comparePickupTimeEnd(order, currentBest.order());
+            if (pickupEndCompare != 0) {
+                return pickupEndCompare < 0;
+            }
+        }
+
+        return candidate.deltaCost() < currentBest.candidate().deltaCost();
+    }
+
+    private int dispatchPriority(PickupOrderNode order, AlgorithmConfig config) {
+        return isBacklogOrder(order, config) ? 0 : 1;
+    }
+
+    private boolean isBacklogOrder(PickupOrderNode order, AlgorithmConfig config) {
+        return order != null
+                && order.pickupTimeEnd() != null
+                && config != null
+                && config.planningStartTime() != null
+                && order.pickupTimeEnd().isBefore(config.planningStartTime());
+    }
+
+    private int comparePickupTimeEnd(PickupOrderNode first, PickupOrderNode second) {
+        if (first.pickupTimeEnd() == null && second.pickupTimeEnd() == null) {
+            return 0;
+        }
+        if (first.pickupTimeEnd() == null) {
+            return 1;
+        }
+        if (second.pickupTimeEnd() == null) {
+            return -1;
+        }
+        return first.pickupTimeEnd().compareTo(second.pickupTimeEnd());
     }
 
     private InsertionCandidate findBestInsertion(

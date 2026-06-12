@@ -37,6 +37,7 @@ export type DispatchActionType = 'preview' | 'auto' | 'manual' | null;
 export interface BusinessDispatchSettings {
   vehicle?: string;
   optimization_goal: DispatchOptimizationGoalOption;
+  allow_lateness?: boolean;
 }
 
 export interface SuggestedCourier {
@@ -98,8 +99,20 @@ export interface NoAccessCardProps {
 
 export interface CandidateOrderItemProps {
   order: FirstMileOrderDetail;
-  checked: boolean;
-  onToggle: (orderId: number, checked: boolean) => void;
+  checked?: boolean;
+  onToggle?: (orderId: number, checked: boolean) => void;
+  referenceTime?: Date;
+}
+
+export interface CandidateOrdersPanelProps {
+  title: string;
+  orders: FirstMileOrderDetail[];
+  loading?: boolean;
+  selectedOrderIds?: number[];
+  onOrderToggle?: (orderId: number, checked: boolean) => void;
+  maxVisibleOrders?: number;
+  emptyText?: string;
+  referenceTime?: Date;
 }
 
 export interface ManualDispatchCardProps {

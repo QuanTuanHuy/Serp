@@ -5,7 +5,7 @@
 
 // Enums
 export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-export type NotificationCategory = 'SYSTEM' | 'EMAIL' | 'CRM' | 'PTM';
+export type NotificationCategory = 'SYSTEM' | 'EMAIL' | 'CRM' | 'PTM' | 'TMS';
 export type NotificationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type NotificationStatus = 'UNREAD' | 'READ' | 'ARCHIVED';
 export type DeliveryChannel = 'IN_APP' | 'EMAIL' | 'PUSH' | 'SMS';

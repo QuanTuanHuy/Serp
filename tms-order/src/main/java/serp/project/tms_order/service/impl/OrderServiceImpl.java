@@ -62,6 +62,7 @@ import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.PaymentStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.kernel.utils.ExcelTemplateUtils;
@@ -123,6 +124,7 @@ public class OrderServiceImpl implements OrderService {
     private final FirstMilePostOfficeCaller firstMilePostOfficeCaller;
     private final FirstMilePostOfficeSuggestionCaller firstMilePostOfficeSuggestionCaller;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final OrderNotificationEventPublisher orderNotificationEventPublisher;
     private final OrderTimelineService orderTimelineService;
 
     @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
@@ -276,6 +278,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(cancelledOrder);
+        publishOrderCancelledNotificationAfterCommit(cancelledOrder);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
     }
 
@@ -328,6 +331,7 @@ public class OrderServiceImpl implements OrderService {
                     null
             );
             publishOrderAfterCommit(savedOrder);
+            publishOrderConfirmedNotificationAfterCommit(savedOrder);
             return toOrderConfirmationResponse(savedOrder, null, reservedDestinationPostOffice, true);
         }
 
@@ -348,6 +352,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
+        publishOrderConfirmedNotificationAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
@@ -413,6 +418,7 @@ public class OrderServiceImpl implements OrderService {
                         null
                 );
                 publishOrderAfterCommit(savedOrder);
+                publishOrderConfirmedNotificationAfterCommit(savedOrder);
                 return toOrderConfirmationResponse(savedOrder, managedPostOffice, reservedDestinationPostOffice, true);
             }
 
@@ -445,6 +451,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
+        publishOrderConfirmedNotificationAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
@@ -573,6 +580,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentStatus(PaymentStatus.PAID);
         Order savedOrder = orderRepository.save(order);
         publishOrderAfterCommit(savedOrder);
+        publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
 
         return new OrderPaymentConfirmResponse(
                 savedOrder.getId(),
@@ -613,6 +621,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
         publishOrderAfterCommit(savedOrder);
+        publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
 
         return new PaymentWebhookProcessResponse(
                 savedOrder.getOrderCode(),
@@ -1159,6 +1168,18 @@ public class OrderServiceImpl implements OrderService {
         TransactionAfterCommit.run(() -> orderSyncEventPublisher.publish(order));
     }
 
+    private void publishOrderConfirmedNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderConfirmed(order));
+    }
+
+    private void publishOrderPaymentSucceededNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderPaymentSucceeded(order));
+    }
+
+    private void publishOrderCancelledNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderCancelled(order));
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -1178,8 +1199,12 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByOrderCodeAndTenantId(orderCode, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
         PaymentStatus status = PaymentStatus.valueOf(paymentStatus);
+        PaymentStatus currentStatus = order.getPaymentStatus();
         order.setPaymentStatus(status);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        if (!PaymentStatus.PAID.equals(currentStatus) && PaymentStatus.PAID.equals(status)) {
+            publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
+        }
         log.info("Updated payment status for order {} to {} (tenant {})", orderCode, paymentStatus, tenantId);
     }
 }

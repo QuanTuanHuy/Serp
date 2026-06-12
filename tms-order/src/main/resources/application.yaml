@@ -61,6 +61,7 @@ app:
       sync-order: ${SYNC_ORDER_TOPIC:SYNC_ORDER}
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
       delivery-status: ${DELIVERY_STATUS_TOPIC:DELIVERY_STATUS}
+      user-notification: ${USER_NOTIFICATION_TOPIC:serp.notification.user.events}
     order-sync:
       consumer-group-id: ${KAFKA_LAST_MILE_ORDER_SYNC_GROUP:last-mile-sync-order}
     handover-manifest-sync:

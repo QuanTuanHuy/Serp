@@ -73,14 +73,19 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
                     or upper(o.originPostOfficeCode) = upper(:postOfficeCode)
                 )
                 and (
-                    o.pickupTimeEnd is null
-                    or o.pickupTimeEnd >= coalesce(:horizonStart, o.pickupTimeEnd)
-                )
-                and (
                     o.pickupTimeStart is null
                     or o.pickupTimeStart <= coalesce(:horizonEnd, o.pickupTimeStart)
                 )
-            order by o.pickupTimeEnd asc, o.id asc
+            order by
+                case
+                    when :horizonStart is not null
+                        and o.pickupTimeEnd is not null
+                        and o.pickupTimeEnd < :horizonStart
+                    then 0
+                    else 1
+                end asc,
+                o.pickupTimeEnd asc,
+                o.id asc
             """)
     List<Order> findPickupCandidateOrders(
             @Param("tenantId") Long tenantId,

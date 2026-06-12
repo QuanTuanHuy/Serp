@@ -27,6 +27,11 @@ import type {
   PickupOptimizationStop,
   PickupOptimizationUnassignedOrder,
 } from '../../../../types';
+import {
+  formatPickupBacklogDuration,
+  getPickupBacklogMinutes,
+  isPickupBacklogOrder,
+} from '../dispatchOrderBacklog';
 import type { PlanPreviewCardProps } from './types';
 
 const toSafeNumber = (value?: number): number => {
@@ -350,74 +355,87 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
 
                     {stops.length > 0 ? (
                       <div className='max-h-[30rem] space-y-3 overflow-y-auto p-4'>
-                        {stops.map((stop) => (
-                          <div
-                            key={`${stop.sequence}-${stop.orderId}`}
-                            className='grid gap-3 rounded-md border bg-background p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(11rem,0.8fr)]'
-                          >
-                            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground'>
-                              {stop.sequence}
-                            </div>
-                            <div className='min-w-0 space-y-1'>
-                              <div className='flex flex-wrap items-center gap-2'>
-                                <p className='font-medium'>
-                                  {getOrderLabel(stop)}
-                                </p>
-                                {stop.customerOrderCode ? (
-                                  <Badge variant='outline'>
-                                    {stop.customerOrderCode}
-                                  </Badge>
-                                ) : null}
-                                {toSafeNumber(stop.latenessMinutes) > 0 ? (
-                                  <Badge variant='destructive'>
-                                    Late{' '}
-                                    {formatMetric(
-                                      stop.latenessMinutes,
-                                      'min',
-                                      formatNumber
-                                    )}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant='secondary'>On time</Badge>
-                                )}
+                        {stops.map((stop) => {
+                          const isBacklog = isPickupBacklogOrder(stop);
+                          const backlogDuration = formatPickupBacklogDuration(
+                            getPickupBacklogMinutes(stop)
+                          );
+
+                          return (
+                            <div
+                              key={`${stop.sequence}-${stop.orderId}`}
+                              className='grid gap-3 rounded-md border bg-background p-3 md:grid-cols-[auto_minmax(0,1fr)_minmax(11rem,0.8fr)]'
+                            >
+                              <div className='flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground'>
+                                {stop.sequence}
                               </div>
-                              <p className='text-xs text-muted-foreground'>
-                                Sender {stop.senderName || '--'}
-                                {stop.senderPhone
-                                  ? ` | ${stop.senderPhone}`
-                                  : ''}
-                              </p>
-                              <p className='text-xs text-muted-foreground'>
-                                Pickup window{' '}
-                                {formatStopTime(stop.pickupTimeStart)} -{' '}
-                                {formatStopTime(stop.pickupTimeEnd)}
-                              </p>
+                              <div className='min-w-0 space-y-1'>
+                                <div className='flex flex-wrap items-center gap-2'>
+                                  <p className='font-medium'>
+                                    {getOrderLabel(stop)}
+                                  </p>
+                                  {isBacklog ? (
+                                    <Badge variant='destructive'>Backlog</Badge>
+                                  ) : null}
+                                  {stop.customerOrderCode ? (
+                                    <Badge variant='outline'>
+                                      {stop.customerOrderCode}
+                                    </Badge>
+                                  ) : null}
+                                  {toSafeNumber(stop.latenessMinutes) > 0 ? (
+                                    <Badge variant='destructive'>
+                                      Late{' '}
+                                      {formatMetric(
+                                        stop.latenessMinutes,
+                                        'min',
+                                        formatNumber
+                                      )}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant='secondary'>On time</Badge>
+                                  )}
+                                </div>
+                                <p className='text-xs text-muted-foreground'>
+                                  Sender {stop.senderName || '--'}
+                                  {stop.senderPhone
+                                    ? ` | ${stop.senderPhone}`
+                                    : ''}
+                                </p>
+                                <p className='text-xs text-muted-foreground'>
+                                  Pickup window{' '}
+                                  {formatStopTime(stop.pickupTimeStart)} -{' '}
+                                  {formatStopTime(stop.pickupTimeEnd)}
+                                  {backlogDuration
+                                    ? ` | ${backlogDuration}`
+                                    : ''}
+                                </p>
+                              </div>
+                              <div className='space-y-1 text-xs text-muted-foreground'>
+                                <p className='flex items-center gap-1'>
+                                  <Clock3 className='h-3.5 w-3.5' />
+                                  Arrive {formatStopTime(stop.arrivalTime)}
+                                </p>
+                                <p>
+                                  Depart {formatStopTime(stop.departureTime)} |
+                                  Travel{' '}
+                                  {formatMetric(
+                                    stop.travelMinutes,
+                                    'min',
+                                    formatNumber
+                                  )}
+                                </p>
+                                <p>
+                                  From previous{' '}
+                                  {formatMetric(
+                                    stop.distanceFromPreviousKm,
+                                    'km',
+                                    formatNumber
+                                  )}
+                                </p>
+                              </div>
                             </div>
-                            <div className='space-y-1 text-xs text-muted-foreground'>
-                              <p className='flex items-center gap-1'>
-                                <Clock3 className='h-3.5 w-3.5' />
-                                Arrive {formatStopTime(stop.arrivalTime)}
-                              </p>
-                              <p>
-                                Depart {formatStopTime(stop.departureTime)} |
-                                Travel{' '}
-                                {formatMetric(
-                                  stop.travelMinutes,
-                                  'min',
-                                  formatNumber
-                                )}
-                              </p>
-                              <p>
-                                From previous{' '}
-                                {formatMetric(
-                                  stop.distanceFromPreviousKm,
-                                  'km',
-                                  formatNumber
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className='p-4 text-sm text-muted-foreground'>

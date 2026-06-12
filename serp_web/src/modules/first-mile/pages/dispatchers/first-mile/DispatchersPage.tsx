@@ -17,6 +17,7 @@ import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
   AssignmentResultCard,
+  CandidateOrdersPanel,
   DispatchAccessScopeCard,
   DispatchNoAccessCard,
   DispatchSetupCard,
@@ -61,6 +62,7 @@ import {
   getManualShiftLabel,
   type ManualAssignRisk,
 } from './manualAssignRisks';
+import { sortOrdersByBacklogPriority } from './dispatchOrderBacklog';
 
 const POST_OFFICE_PAGE_SIZE = 200;
 const MANUAL_ORDER_PAGE_SIZE = 200;
@@ -276,10 +278,21 @@ export const DispatchersPage: React.FC = () => {
   >([]);
   const [pendingManualPayload, setPendingManualPayload] =
     React.useState<ManualAssignPickupOrdersRequest | null>(null);
+  const [candidateReferenceTime, setCandidateReferenceTime] = React.useState(
+    () => new Date()
+  );
 
   const [activeAction, setActiveAction] = React.useState<
     'preview' | 'auto' | 'manual' | null
   >(null);
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCandidateReferenceTime(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const { data: provincesData, isLoading: isLoadingProvinces } =
     useGetProvincesQuery(
@@ -395,6 +408,14 @@ export const DispatchersPage: React.FC = () => {
     [setupSelectedPostOfficeId]
   );
 
+  const setupSelectedPostOffice = React.useMemo(() => {
+    return setupPostOfficeOptions.find(
+      (postOffice) => String(postOffice.id) === setupSelectedPostOfficeId
+    );
+  }, [setupPostOfficeOptions, setupSelectedPostOfficeId]);
+
+  const setupSelectedPostOfficeCode = setupSelectedPostOffice?.code;
+
   const manualSelectedPostOffice = React.useMemo(() => {
     return manualPostOfficeOptions.find(
       (postOffice) => String(postOffice.id) === manualSelectedPostOfficeId
@@ -503,6 +524,33 @@ export const DispatchersPage: React.FC = () => {
   );
 
   const {
+    data: setupOrdersData,
+    isLoading: isLoadingSetupOrders,
+    refetch: refetchSetupOrders,
+  } = useGetOrdersQuery(
+    {
+      page: 0,
+      size: MANUAL_ORDER_PAGE_SIZE,
+      statuses: CANDIDATE_ORDER_STATUSES,
+      ...(setupSelectedPostOfficeCode
+        ? { originPostOfficeCode: setupSelectedPostOfficeCode }
+        : {}),
+    },
+    {
+      skip: !canDispatch || !setupSelectedPostOfficeCode,
+    }
+  );
+
+  const setupCandidateOrders = React.useMemo(() => {
+    return sortOrdersByBacklogPriority(
+      (setupOrdersData?.items ?? []).filter((order) =>
+        isCandidateOrderStatus(order.status)
+      ),
+      candidateReferenceTime
+    );
+  }, [candidateReferenceTime, setupOrdersData]);
+
+  const {
     data: manualOrdersData,
     isLoading: isLoadingManualOrders,
     refetch: refetchManualOrders,
@@ -510,6 +558,7 @@ export const DispatchersPage: React.FC = () => {
     {
       page: 0,
       size: MANUAL_ORDER_PAGE_SIZE,
+      statuses: CANDIDATE_ORDER_STATUSES,
       ...(manualSelectedPostOfficeCode
         ? { originPostOfficeCode: manualSelectedPostOfficeCode }
         : {}),
@@ -520,10 +569,13 @@ export const DispatchersPage: React.FC = () => {
   );
 
   const manualCandidateOrders = React.useMemo(() => {
-    return (manualOrdersData?.items ?? []).filter((order) =>
-      isCandidateOrderStatus(order.status)
+    return sortOrdersByBacklogPriority(
+      (manualOrdersData?.items ?? []).filter((order) =>
+        isCandidateOrderStatus(order.status)
+      ),
+      candidateReferenceTime
     );
-  }, [manualOrdersData]);
+  }, [candidateReferenceTime, manualOrdersData]);
 
   const manualOrdersById = React.useMemo(() => {
     const orderMap = new Map<number, FirstMileOrderDetail>();
@@ -688,6 +740,7 @@ export const DispatchersPage: React.FC = () => {
   const buildBusinessDispatchSettings = React.useCallback(() => {
     const settings: BusinessDispatchSettings = {
       optimization_goal: optimizationGoal,
+      allow_lateness: true,
     };
 
     if (vehicleOption !== 'DEFAULT') {
@@ -743,6 +796,7 @@ export const DispatchersPage: React.FC = () => {
       planning_start_time: context.shiftWindow.planningStartTime,
       planning_end_time: context.shiftWindow.planningEndTime,
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
+      allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
       ...businessSettings,
@@ -787,6 +841,7 @@ export const DispatchersPage: React.FC = () => {
       planning_start_time: context.shiftWindow.planningStartTime,
       planning_end_time: context.shiftWindow.planningEndTime,
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
+      allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
       ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
       ...businessSettings,
@@ -802,6 +857,10 @@ export const DispatchersPage: React.FC = () => {
       notification.success('Auto dispatch completed.', {
         description: `Assigned ${result.assignedOrders ?? 0}/${result.totalRequestedOrders ?? 0} order(s).`,
       });
+
+      if (setupSelectedPostOfficeCode) {
+        void refetchSetupOrders();
+      }
 
       if (manualSelectedPostOfficeId) {
         void refetchManualOrders();
@@ -1041,6 +1100,14 @@ export const DispatchersPage: React.FC = () => {
                 isAutoAssigning={isAutoAssigning}
                 activeAction={activeAction}
                 isTmsAdmin={isTmsAdmin}
+              />
+
+              <CandidateOrdersPanel
+                title='Automatic dispatch candidates'
+                orders={setupCandidateOrders}
+                loading={isLoadingSetupOrders}
+                emptyText='No dispatchable orders for this post office.'
+                referenceTime={candidateReferenceTime}
               />
 
               {optimizationResult ? (

@@ -22,6 +22,13 @@ import {
   PopoverTrigger,
 } from '@/shared/components/ui/popover';
 import type { FirstMileOrderDetail } from '../../../../types';
+import {
+  formatPickupBacklogDuration,
+  formatPickupWindow,
+  getPickupBacklogMinutes,
+  isPickupBacklogOrder,
+  sortOrdersByBacklogPriority,
+} from '../dispatchOrderBacklog';
 
 export interface OrderMultiSelectProps {
   orders: FirstMileOrderDetail[];
@@ -65,6 +72,10 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
 
   const orderById = React.useMemo(
     () => new Map(orders.map((order) => [order.id, order])),
+    [orders]
+  );
+  const sortedOrders = React.useMemo(
+    () => sortOrdersByBacklogPriority(orders),
     [orders]
   );
 
@@ -135,14 +146,21 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0' align='start'>
+      <PopoverContent
+        className='w-[var(--radix-popover-trigger-width)] p-0'
+        align='start'
+      >
         <Command>
           <CommandInput placeholder='Search by order code, customer code...' />
           <CommandList>
             <CommandEmpty>No candidate orders found.</CommandEmpty>
             <CommandGroup heading='Candidate orders'>
-              {orders.map((order) => {
+              {sortedOrders.map((order) => {
                 const isSelected = selectedOrderIds.includes(order.id);
+                const isBacklog = isPickupBacklogOrder(order);
+                const backlogDuration = formatPickupBacklogDuration(
+                  getPickupBacklogMinutes(order)
+                );
 
                 return (
                   <CommandItem
@@ -158,7 +176,16 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
                           {order.customerOrderCode || '--'} | {order.status} |{' '}
                           {order.senderName || '--'}
                         </span>
+                        <span className='text-xs text-muted-foreground'>
+                          Pickup window: {formatPickupWindow(order)}
+                          {backlogDuration ? ` | ${backlogDuration}` : ''}
+                        </span>
                       </div>
+                      {isBacklog ? (
+                        <Badge variant='destructive' className='mt-0.5'>
+                          Backlog
+                        </Badge>
+                      ) : null}
                       {isSelected ? (
                         <Check className='mt-0.5 h-4 w-4 shrink-0 text-primary' />
                       ) : null}

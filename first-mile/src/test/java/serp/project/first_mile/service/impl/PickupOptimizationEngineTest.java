@@ -237,6 +237,27 @@ class PickupOptimizationEngineTest {
     }
 
     @Test
+    void buildGreedySolutionPrioritizesBacklogOrderWhenRouteStopLimitIsReached() {
+        PickupOrderNode regularOrder = orderNode(1L);
+        PickupOrderNode backlogOrder = orderNodeWithWindow(
+                2L,
+                PLANNING_START.minusHours(2),
+                PLANNING_START.minusMinutes(30)
+        );
+        TravelMetricProvider metricProvider = simpleMetricProvider(List.of(regularOrder, backlogOrder));
+
+        SolutionState solution = engine.buildGreedySolution(
+                List.of(route(10L, 100L, 1, 10.0, 1.0, List.of())),
+                new PreparedOrderData(List.of(regularOrder, backlogOrder), List.of()),
+                config(metricProvider)
+        );
+
+        assertEquals(List.of(2L), orderIds(solution.routes().getFirst().stops()));
+        assertEquals(1, solution.unassignedOrders().size());
+        assertEquals(1L, solution.unassignedOrders().getFirst().order().orderId());
+    }
+
+    @Test
     void buildGreedySolutionKeepsInitialUnassignedOrdersWithoutReinsertingThem() {
         UnassignedOrderState initialUnassigned = new UnassignedOrderState(
                 orderNodeWithoutLocation(99L),
