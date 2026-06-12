@@ -89,13 +89,25 @@ export default function TripMapClient({
   if (actualPathCoords.length < 2 && routeGeometry) {
     try {
       const parsed = JSON.parse(routeGeometry);
+
       if (parsed && Array.isArray(parsed.coordinates)) {
+        // Wrapped format: { coordinates: [{latitude, longitude}, ...] }
         actualPathCoords = parsed.coordinates
           .filter((c: any) => typeof c.latitude === 'number' && typeof c.longitude === 'number')
           .map((c: any) => [c.latitude, c.longitude] as [number, number]);
         
         if (actualPathCoords.length >= 2) {
           isFallback = parsed.fallbackUsed === true || parsed.geometrySource === 'STRAIGHT_LINE_ESTIMATE';
+        }
+      } else if (Array.isArray(parsed)) {
+        // Raw OSRM GeoJSON coordinate array: [[lng, lat], [lng, lat], ...]
+        // Note: OSRM returns [longitude, latitude], Leaflet needs [latitude, longitude]
+        actualPathCoords = parsed
+          .filter((c: any) => Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number')
+          .map((c: any) => [c[1], c[0]] as [number, number]); // swap: [lat, lng]
+        
+        if (actualPathCoords.length >= 2) {
+          isFallback = false;
         }
       }
     } catch (e) {

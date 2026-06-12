@@ -83,12 +83,68 @@ export function SchoolBusTripsPage() {
     sortBy: 'serviceDate',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetTripsQuery(pagination.params);
+  const { data, isLoading, refetch: refetchTrips } = useGetTripsQuery(pagination.params);
   const [startTrip] = useStartTripMutation();
   const [arriveTripStop] = useArriveTripStopMutation();
   const [departTripStop] = useDepartTripStopMutation();
   const [completeTrip] = useCompleteTripMutation();
   const trips = getPageItems(data?.data);
+
+  const [lastUpdated, setLastUpdated] = React.useState<string>('');
+  const [isTabVisible, setIsTabVisible] = React.useState(true);
+  const [pollInterval, setPollInterval] = React.useState(20000); // 20s default
+
+  // Track page visibility
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsTabVisible(visible);
+      if (visible) {
+        refetchTrips().then((result) => {
+          if (result.error) {
+            const err = result.error as any;
+            if (err?.status === 429) {
+              setPollInterval(60000);
+            }
+          } else {
+            setLastUpdated(new Date().toLocaleTimeString());
+            setPollInterval(20000);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetchTrips]);
+
+  // Polling effect
+  React.useEffect(() => {
+    if (!isTabVisible) return;
+
+    const intervalId = setInterval(() => {
+      refetchTrips().then((result) => {
+        if (result.error) {
+          const err = result.error as any;
+          if (err?.status === 429) {
+            setPollInterval(60000);
+          }
+        } else {
+          setLastUpdated(new Date().toLocaleTimeString());
+          setPollInterval(20000);
+        }
+      });
+    }, pollInterval);
+
+    return () => clearInterval(intervalId);
+  }, [refetchTrips, isTabVisible, pollInterval]);
+
+  React.useEffect(() => {
+    if (data) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [data]);
 
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -560,6 +616,16 @@ export function SchoolBusTripsPage() {
       }
     >
       <div className='flex flex-col gap-6'>
+        {/* Polling connection indicator */}
+        {lastUpdated && (
+          <div className='flex items-center justify-end -mb-3'>
+            <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
+              <span className='inline-flex h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5 animate-pulse' />
+              Auto-refreshes every 20s • Last updated: {lastUpdated}
+            </span>
+          </div>
+        )}
+
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard

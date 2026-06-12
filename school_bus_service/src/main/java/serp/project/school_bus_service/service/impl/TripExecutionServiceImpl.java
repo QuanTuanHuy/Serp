@@ -355,6 +355,53 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         if (stop.getStatus() != TripStopStatus.ARRIVED && stop.getStatus() != TripStopStatus.BOARDING) {
             throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED, messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED));
         }
+        // Ensure next active/current stop
+        TripStopLogEntity firstUnfinished = tripStopLogService.findByTrip(id, tenantId).stream()
+                .filter(s -> s.getStatus() != TripStopStatus.DEPARTED && s.getStatus() != TripStopStatus.SKIPPED)
+                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE, "No active stops to depart."));
+        if (!firstUnfinished.getId().equals(stop.getId())) {
+            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Cannot depart stop because there are earlier unfinished stops.");
+        }
+
+        RouteStopEntity routeStop = stop.getRouteStop();
+        boolean isTerminal = (routeStop != null && routeStop.getStopPurpose() != null && routeStop.getStopPurpose().isTerminal());
+
+        if (!isTerminal) {
+            List<TripStudentEntity> allStudents = tripStudentService.findByTrip(id, tenantId);
+            boolean isOutbound = (trip.getRouteDirection() == RouteDirection.OUTBOUND);
+
+            List<TripStudentEntity> stopStudents = allStudents.stream()
+                    .filter(ts -> {
+                        if (isOutbound) {
+                            return ts.getPickupStop() != null && ts.getPickupStop().getId().equals(routeStopId);
+                        } else {
+                            return ts.getDropoffStop() != null && ts.getDropoffStop().getId().equals(routeStopId);
+                        }
+                    })
+                    .toList();
+
+            if (!stopStudents.isEmpty()) {
+                if (stop.getStatus() != TripStopStatus.BOARDING) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start boarding/dropoff at this stop before departing.");
+                }
+
+                long pendingCount = stopStudents.stream()
+                        .filter(ts -> {
+                            if (isOutbound) {
+                                return ts.getStatus() == TripStudentStatus.PLANNED;
+                            } else {
+                                return ts.getStatus() == TripStudentStatus.BOARDED;
+                            }
+                        })
+                        .count();
+                if (pendingCount > 0) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                            "Cannot depart stop because some planned students have not been processed.");
+                }
+            }
+        }
+
         stop.setStatus(TripStopStatus.DEPARTED);
         stop.setActualDepartureTime(LocalDateTime.now());
         stop.markUpdated(actor(actorId));
@@ -429,14 +476,24 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         schoolBusDataScopeService.assertCanOperateTrip(id);
         TripExecutionEntity trip = requireInProgress(id, tenantId);
 
-        // All stops must be DEPARTED or SKIPPED
-        boolean hasPendingStops = tripStopLogService
-                .findByTrip(id, tenantId)
-                .stream()
-                .anyMatch(stop -> stop.getStatus() != TripStopStatus.DEPARTED
-                        && stop.getStatus() != TripStopStatus.SKIPPED);
-        if (hasPendingStops) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
+        // All stops except the last stop (end terminal) must be DEPARTED or SKIPPED.
+        // The last stop (end terminal) must be ARRIVED, BOARDING, or DEPARTED.
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(id, tenantId).stream()
+                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .toList();
+
+        for (int i = 0; i < stops.size(); i++) {
+            TripStopLogEntity stop = stops.get(i);
+            boolean isEndTerminal = (i == stops.size() - 1);
+            if (isEndTerminal) {
+                if (stop.getStatus() != TripStopStatus.ARRIVED && stop.getStatus() != TripStopStatus.BOARDING && stop.getStatus() != TripStopStatus.DEPARTED) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
+                }
+            } else {
+                if (stop.getStatus() != TripStopStatus.DEPARTED && stop.getStatus() != TripStopStatus.SKIPPED) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
+                }
+            }
         }
 
         // Auto-resolve PLANNED students whose service stop was SKIPPED as NOT_SERVED (safety net).

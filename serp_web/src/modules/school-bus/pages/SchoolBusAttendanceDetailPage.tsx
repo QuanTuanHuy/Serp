@@ -18,7 +18,6 @@ import {
   Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Client } from '@stomp/stompjs';
 import {
   useAbsentTripStudentMutation,
   useBoardTripStudentMutation,
@@ -26,11 +25,10 @@ import {
   useGetTripAttendanceManifestQuery,
   useGetTripAttendanceQuery,
   useGetTripAttendanceSummaryQuery,
-  useGetTripsQuery,
+  useGetTripByIdQuery,
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
 } from '../api/schoolBusApi';
-import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -130,21 +128,20 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [wsEvents, setWsEvents] = React.useState<any[]>([]);
-  const [wsState, setWsState] = React.useState<'Live' | 'Offline'>('Offline');
-  const clientRef = React.useRef<Client | null>(null);
+
+  const [lastUpdated, setLastUpdated] = React.useState<string>('');
+  const [isTabVisible, setIsTabVisible] = React.useState(true);
+  const [pollInterval, setPollInterval] = React.useState(6000); // 6s default
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  const tripsQuery = useGetTripsQuery({ page: 0, size: 50, sortBy: 'serviceDate', sortDirection: 'DESC' });
+  const { data: tripData, isLoading: tripLoading, refetch: refetchTrip } = useGetTripByIdQuery(tripId);
   const { data: manifestData, isLoading: manifestLoading, refetch: refetchManifest } =
     useGetTripAttendanceManifestQuery(tripId);
   const { data: summaryData, refetch: refetchSummary } = useGetTripAttendanceSummaryQuery(tripId);
   const { data: eventsData, refetch: refetchEvents } = useGetTripAttendanceQuery(tripId);
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const allTrips = getPageItems(tripsQuery.data?.data);
-  const trip = allTrips.find((t) => t.id === tripId) ?? null;
-
+  const trip = tripData?.data ?? null;
   const manifest = manifestData?.data ?? null;
   const summary = summaryData?.data ?? manifest?.summary ?? null;
   const restEvents = eventsData?.data ?? [];
@@ -158,63 +155,101 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   const routeCode = manifest?.routeCode ?? trip?.routeCode ?? '';
   const routeName = (manifest as any)?.routeName ?? trip?.routeName ?? '';
 
-  // ── WebSocket Real-time ───────────────────────────────────────────────────
-  React.useEffect(() => {
-    const client = connectSchoolBusSocket();
-    clientRef.current = client;
+  // ── Polling implementation ─────────────────────────────────────────────────
+  const isRefreshingRef = React.useRef(false);
 
-    const originalOnConnect = client.onConnect;
-    client.onConnect = (frame) => {
-      originalOnConnect?.(frame);
-      setWsState('Live');
-    };
-
-    const originalOnWebSocketClose = client.onWebSocketClose;
-    client.onWebSocketClose = (evt) => {
-      originalOnWebSocketClose?.(evt);
-      setWsState('Offline');
-    };
-
-    subscribeTripEvents(client, tripId, (msg) => {
-      setWsEvents((prev) => [msg, ...prev]);
-      refetchManifest();
-      refetchSummary();
-      refetchEvents();
-    });
-
-    return () => {
-      if (client.active) {
-        client.deactivate();
+  const refreshTripDetailData = React.useCallback(async () => {
+    if (isRefreshingRef.current) return false;
+    isRefreshingRef.current = true;
+    try {
+      const results = await Promise.allSettled([
+        refetchTrip(),
+        refetchManifest(),
+        refetchSummary(),
+        refetchEvents(),
+      ]);
+      let hit429 = false;
+      for (const res of results) {
+        if (res.status === 'fulfilled') {
+          const val = res.value as any;
+          if (val?.error) {
+            const err = val.error as any;
+            if (err?.status === 429) {
+              hit429 = true;
+            }
+          }
+        }
       }
-      clientRef.current = null;
-      setWsState('Offline');
-    };
-  }, [tripId, refetchManifest, refetchSummary, refetchEvents]);
+      return hit429;
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, [refetchTrip, refetchManifest, refetchSummary, refetchEvents]);
 
-  // ── Merge & Sort Events ───────────────────────────────────────────────────
-  const mergedEvents = React.useMemo<any[]>(() => {
-    if (wsEvents.length === 0) return restEvents;
-    const wsConverted = wsEvents.map((e, idx) => ({
-      id: -idx - 1,
-      studentName: e.studentName || 'System',
-      studentCode: e.studentCode || '',
-      eventType: e.eventType || e.action,
-      recordedAt: e.timestamp || new Date().toISOString(),
-      notes: e.reason || e.notes || '',
-      attendanceType: e.attendanceType || e.eventType || '',
-    }));
-    const eventKey = (e: any) =>
-      `${e.studentName}|${e.eventType}|${e.recordedAt}`;
-    const restKeys = new Set(restEvents.map(eventKey));
-    const newWs = wsConverted.filter((e) => !restKeys.has(eventKey(e)));
-    return [...newWs, ...restEvents];
-  }, [wsEvents, restEvents]);
+  // Track page visibility
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsTabVisible(visible);
+      if (visible) {
+        refreshTripDetailData().then((hit429) => {
+          if (hit429) {
+            setPollInterval(60000);
+          } else {
+            setLastUpdated(new Date().toLocaleTimeString());
+            const currentInterval =
+              tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
+            setPollInterval(currentInterval);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshTripDetailData, tripIsCompleted, tripIsCancelled, tripIsActive]);
+
+  // Polling effect
+  React.useEffect(() => {
+    let currentInterval =
+      tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
+
+    if (pollInterval === 60000) {
+      currentInterval = 60000;
+    } else {
+      setPollInterval(currentInterval);
+    }
+
+    if (currentInterval === 0 || !isTabVisible) return;
+
+    const intervalId = setInterval(() => {
+      refreshTripDetailData().then((hit429) => {
+        if (hit429) {
+          setPollInterval(60000);
+        } else {
+          setLastUpdated(new Date().toLocaleTimeString());
+          const normalInterval =
+            tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
+          setPollInterval(normalInterval);
+        }
+      });
+    }, currentInterval);
+
+    return () => clearInterval(intervalId);
+  }, [refreshTripDetailData, isTabVisible, pollInterval, tripIsCompleted, tripIsCancelled, tripIsActive]);
+
+  React.useEffect(() => {
+    if (tripData || manifestData) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [tripData, manifestData]);
 
   const sortedEvents = React.useMemo<any[]>(() => {
-    return [...mergedEvents].sort(
+    return [...restEvents].sort(
       (a: any, b: any) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
     );
-  }, [mergedEvents]);
+  }, [restEvents]);
 
   // ── Auto-advance Stop Selection ──────────────────────────────────────────
   React.useEffect(() => {
@@ -288,6 +323,10 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     try {
       await fn();
       toast.success(`${label} recorded`);
+      refetchTrip();
+      refetchManifest();
+      refetchSummary();
+      refetchEvents();
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       toast.error(err?.data?.message ?? `${label} failed`);
@@ -350,12 +389,11 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
             </Link>
           </Button>
           <div className='flex items-center gap-2'>
-            <span className={cn(
-              'text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0',
-              wsState === 'Live' ? 'bg-emerald-50 border-emerald-250 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-400'
-            )}>
-              {wsState} feed
-            </span>
+            {lastUpdated && (
+              <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
+                Last updated: {lastUpdated}
+              </span>
+            )}
             {renderTripBadge(tripStatus || '')}
           </div>
         </div>
@@ -606,7 +644,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
                       const canAbsent = isPickupActionStop && isPlanned;
                       const canNotServed = isDropoffActionStop && isBoarded;
 
-                      const lastEvent = mergedEvents.find(
+                      const lastEvent = sortedEvents.find(
                         (e: any) =>
                           (e.studentCode && e.studentCode === student.studentCode) ||
                           e.studentName === student.studentName
@@ -734,12 +772,10 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
           <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 max-h-[500px] overflow-y-auto'>
             <div className='flex items-center justify-between pb-2 border-b border-slate-100'>
               <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider'>Activity Log Feed</p>
-              {wsState === 'Live' && (
-                <span className='flex h-2 w-2 relative'>
-                  <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
-                  <span className='relative inline-flex rounded-full h-2 w-2 bg-emerald-500'></span>
-                </span>
-              )}
+              <span className='flex h-2 w-2 relative'>
+                <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-300 opacity-75'></span>
+                <span className='relative inline-flex rounded-full h-2 w-2 bg-slate-400'></span>
+              </span>
             </div>
 
             {sortedEvents.length === 0 ? (
