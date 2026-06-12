@@ -29,7 +29,6 @@ import type { TmsFilterMode } from '../../../components/list';
 import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
-  useGetHubsQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetWardsByProvinceCodeQuery,
@@ -241,16 +240,6 @@ export const PostOfficeListPage: React.FC = () => {
         skip: !selectedFilterProvinceCode,
       }
     );
-
-  const { data: hubsForFilterData } = useGetHubsQuery({
-    page: 0,
-    size: 200,
-  });
-
-  const hubFilterOptions = React.useMemo(
-    () => hubsForFilterData?.items ?? [],
-    [hubsForFilterData]
-  );
 
   const advancedFieldCount = React.useMemo(
     () => countActivePostOfficeAdvancedFilters(filterFormValues),
@@ -800,7 +789,6 @@ export const PostOfficeListPage: React.FC = () => {
           isFetching={isFetching}
           provinceSelectOptions={provinceSelectOptions}
           filterWardOptions={filterWardOptions}
-          hubOptions={hubFilterOptions}
           selectedFilterProvinceCode={selectedFilterProvinceCode}
           selectedFilterWardCode={selectedFilterWardCode}
           isFetchingWardsForFilter={isFetchingWardsForFilter}

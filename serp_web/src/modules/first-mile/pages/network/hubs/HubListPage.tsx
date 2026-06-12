@@ -1,6 +1,6 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Hub list, CRUD, import, post office links
+ * Description: Part of Serp Project - Hub list, CRUD, import, and staff
  */
 
 'use client';
@@ -31,10 +31,8 @@ import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
   Building2,
-  AlertCircle,
   MapPin,
   Plus,
-  X,
   Pencil,
   Trash2,
   Eye,
@@ -55,9 +53,6 @@ import {
   useGetHubsQuery,
   useGetHubPostOfficesQuery,
   useGetOrdersQuery,
-  useAssignPostOfficeToHubMutation,
-  useRemovePostOfficeFromHubMutation,
-  useGetPostOfficesQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
@@ -76,7 +71,6 @@ import {
 import type {
   FirstMileOrderStatus,
   Hub,
-  HubPostOfficeMapping,
   HubStatus,
   HubImportItem,
   HubListFilters,
@@ -273,38 +267,6 @@ export function HubListPage() {
   const hasNext = hubsData?.hasNext || false;
   const hasPrev = hubsData?.hasPrevious || false;
 
-  const [managePostOfficesHub, setManagePostOfficesHub] =
-    React.useState<Hub | null>(null);
-  const [postOfficeDialogOpen, setPostOfficeDialogOpen] = React.useState(false);
-  const [postOfficePageNumber, setPostOfficePageNumber] = React.useState(0);
-
-  const {
-    data: hubPostOfficeData,
-    isFetching: isFetchingHubPostOffices,
-    refetch: refetchHubPostOffices,
-  } = useGetHubPostOfficesQuery(
-    {
-      hubId: managePostOfficesHub?.id || 0,
-      page: postOfficePageNumber,
-      size: 20,
-    },
-    { skip: !managePostOfficesHub }
-  );
-
-  const hubPostOffices = hubPostOfficeData?.items || [];
-  const hasNextPostOffice = hubPostOfficeData?.hasNext || false;
-  const hasPrevPostOffice = hubPostOfficeData?.hasPrevious || false;
-
-  const [assignMutation, { isLoading: isAssigning }] =
-    useAssignPostOfficeToHubMutation();
-  const [removeMutation, { isLoading: isRemoving }] =
-    useRemovePostOfficeFromHubMutation();
-
-  const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
-  const [assignSearchKeyword, setAssignSearchKeyword] = React.useState('');
-  const [selectedPostOfficeCode, setSelectedPostOfficeCode] =
-    React.useState('');
-
   const [manageStaffHub, setManageStaffHub] = React.useState<Hub | null>(null);
   const [staffDialogOpen, setStaffDialogOpen] = React.useState(false);
   const [staffRoleFilter, setStaffRoleFilter] = React.useState<
@@ -315,21 +277,6 @@ export function HubListPage() {
   const [staffSearchKeyword, setStaffSearchKeyword] = React.useState('');
   const [selectedStaffIdToAssign, setSelectedStaffIdToAssign] =
     React.useState('');
-
-  const { data: availablePostOfficesData } = useGetPostOfficesQuery(
-    {
-      page: 0,
-      size: 50,
-      keyword: assignSearchKeyword || undefined,
-    },
-    { skip: !assignDialogOpen }
-  );
-
-  const availablePostOffices = availablePostOfficesData?.items || [];
-  const availablePostOfficeOptions = availablePostOffices.map((po) => ({
-    value: po.code,
-    label: `${po.name} (${po.code})`,
-  }));
 
   const [formDialogOpen, setFormDialogOpen] = React.useState(false);
   const [formMode, setFormMode] = React.useState<HubFormMode>('create');
@@ -726,12 +673,6 @@ export function HubListPage() {
     }
   };
 
-  const openPostOfficeDialog = (hub: Hub) => {
-    setManagePostOfficesHub(hub);
-    setPostOfficePageNumber(0);
-    setPostOfficeDialogOpen(true);
-  };
-
   const openHubStaffDialog = (hub: Hub) => {
     setManageStaffHub(hub);
     setStaffRoleFilter('ALL');
@@ -759,56 +700,6 @@ export function HubListPage() {
     },
     [hubsData?.items, mapHubsData?.items, openHubDetail]
   );
-
-  const handleAssignPostOffice = async () => {
-    if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can assign post offices to hubs.');
-      return;
-    }
-    if (!managePostOfficesHub || !selectedPostOfficeCode) {
-      notification.error('Please select a post office.');
-      return;
-    }
-    try {
-      await assignMutation({
-        hubId: managePostOfficesHub.id,
-        request: { post_office_code: selectedPostOfficeCode },
-      }).unwrap();
-      notification.success('Post office assigned successfully.');
-      setAssignDialogOpen(false);
-      setSelectedPostOfficeCode('');
-      setAssignSearchKeyword('');
-      refetchHubPostOffices();
-      refetch();
-    } catch (error) {
-      notification.error('Failed to assign post office.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
-
-  const handleRemovePostOffice = async (mapping: HubPostOfficeMapping) => {
-    if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can remove post offices from hubs.');
-      return;
-    }
-    if (!managePostOfficesHub) {
-      return;
-    }
-    try {
-      await removeMutation({
-        hubId: managePostOfficesHub.id,
-        postOfficeCode: mapping.postOfficeCode,
-      }).unwrap();
-      notification.success('Post office removed from hub.');
-      refetchHubPostOffices();
-      refetch();
-    } catch (error) {
-      notification.error('Failed to remove post office.', {
-        description: getErrorMessage(error),
-      });
-    }
-  };
 
   const handleAssignHubStaff = async () => {
     if (!canManageHubStaffAssignments) {
@@ -927,8 +818,8 @@ export function HubListPage() {
           <div className='flex flex-col gap-2'>
             <h1 className='text-2xl font-bold tracking-tight'>Hubs</h1>
             <p className='text-muted-foreground'>
-              Distribution hubs (second-mile). Post office links sync to
-              first-mile.
+              Manage second-mile hubs, staff assignments, location quality, and
+              hub stock visibility.
             </p>
           </div>
           <div className='flex flex-wrap items-center gap-2'>
@@ -1018,7 +909,7 @@ export function HubListPage() {
               Hub list
             </CardTitle>
             <CardDescription>
-              Apply filters above, then open hub details or manage post offices.
+              Apply filters above, then open hub details or manage staff.
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
@@ -1087,13 +978,6 @@ export function HubListPage() {
                         >
                           <Eye className='h-4 w-4 mr-1' />
                           Details
-                        </Button>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => openPostOfficeDialog(hub)}
-                        >
-                          Post offices
                         </Button>
                         <Button
                           variant='outline'
@@ -1303,116 +1187,6 @@ export function HubListPage() {
       </Dialog>
 
       <Dialog
-        open={postOfficeDialogOpen}
-        onOpenChange={(open) => {
-          setPostOfficeDialogOpen(open);
-          if (!open) {
-            setManagePostOfficesHub(null);
-          }
-        }}
-      >
-        <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle>
-              Post offices — {managePostOfficesHub?.name} (
-              {managePostOfficesHub?.code})
-            </DialogTitle>
-            <DialogDescription>
-              {isTmsAdmin
-                ? 'Assign or remove post offices for this hub.'
-                : 'View post offices linked to this hub.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='space-y-4'>
-            {isTmsAdmin && (
-              <Button
-                variant='default'
-                size='sm'
-                className='w-full'
-                onClick={() => setAssignDialogOpen(true)}
-                disabled={isAssigning}
-              >
-                <Plus className='h-4 w-4 mr-2' />
-                Assign post office
-              </Button>
-            )}
-
-            {isFetchingHubPostOffices && hubPostOffices.length === 0 ? (
-              <div className='text-center text-muted-foreground py-4'>
-                Loading post offices...
-              </div>
-            ) : hubPostOffices.length === 0 ? (
-              <div className='text-center text-muted-foreground py-4 flex flex-col items-center gap-2'>
-                <AlertCircle className='h-8 w-8' />
-                <p>No post offices assigned yet</p>
-              </div>
-            ) : (
-              <div className='space-y-2'>
-                {hubPostOffices.map((mapping) => (
-                  <div
-                    key={mapping.id}
-                    className='flex items-center justify-between p-3 border rounded-lg'
-                  >
-                    <div>
-                      <div className='font-medium'>
-                        {mapping.postOfficeCode}
-                      </div>
-                      <div className='text-xs text-muted-foreground'>
-                        Assigned:{' '}
-                        {mapping.createdAt
-                          ? new Date(mapping.createdAt).toLocaleDateString()
-                          : '—'}
-                      </div>
-                    </div>
-                    {isTmsAdmin && (
-                      <Button
-                        variant='destructive'
-                        size='sm'
-                        onClick={() => handleRemovePostOffice(mapping)}
-                        disabled={isRemoving}
-                      >
-                        <X className='h-4 w-4 mr-1' />
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {(hasNextPostOffice || hasPrevPostOffice) && (
-              <div className='flex items-center justify-between border-t pt-3'>
-                <div className='text-sm text-muted-foreground'>
-                  Page {postOfficePageNumber + 1}
-                </div>
-                <div className='flex gap-2'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={!hasPrevPostOffice}
-                    onClick={() =>
-                      setPostOfficePageNumber((p) => Math.max(0, p - 1))
-                    }
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={!hasNextPostOffice}
-                    onClick={() => setPostOfficePageNumber((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
         open={staffDialogOpen}
         onOpenChange={(open) => {
           setStaffDialogOpen(open);
@@ -1543,59 +1317,6 @@ export function HubListPage() {
                 ))}
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign post office</DialogTitle>
-            <DialogDescription>
-              Select a post office for {managePostOfficesHub?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='assign-search'>Search</Label>
-              <Input
-                id='assign-search'
-                placeholder='Code or name'
-                value={assignSearchKeyword}
-                onChange={(e) => setAssignSearchKeyword(e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='assign-po-select'>Post office</Label>
-              <TmsCombobox
-                id='assign-po-select'
-                value={selectedPostOfficeCode}
-                onValueChange={setSelectedPostOfficeCode}
-                options={availablePostOfficeOptions}
-                placeholder='Select a post office'
-                emptyText='No post offices available'
-              />
-            </div>
-
-            <div className='flex justify-end gap-2 pt-4 border-t'>
-              <Button
-                variant='outline'
-                onClick={() => {
-                  setAssignDialogOpen(false);
-                  setSelectedPostOfficeCode('');
-                  setAssignSearchKeyword('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAssignPostOffice}
-                disabled={!selectedPostOfficeCode || isAssigning}
-              >
-                {isAssigning ? 'Assigning...' : 'Assign'}
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

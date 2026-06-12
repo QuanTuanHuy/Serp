@@ -21,7 +21,6 @@ export interface PostOfficeFilterFormState {
   wardCode: string;
   status: 'ALL' | PostOfficeStatus;
   hasLocation: HasLocationFilter;
-  hubId: string;
   minServiceRadiusM: string;
   maxServiceRadiusM: string;
   minDailyCapacity: string;
@@ -44,7 +43,6 @@ export const DEFAULT_POST_OFFICE_FILTER_FORM: PostOfficeFilterFormState = {
   wardCode: '',
   status: 'ALL',
   hasLocation: 'ALL',
-  hubId: '',
   minServiceRadiusM: '',
   maxServiceRadiusM: '',
   minDailyCapacity: '',
@@ -67,7 +65,6 @@ export const countActivePostOfficeAdvancedFilters = (
   if (values.code.trim()) count += 1;
   if (values.name.trim()) count += 1;
   if (values.hasLocation !== 'ALL') count += 1;
-  if (values.hubId.trim()) count += 1;
   if (values.minServiceRadiusM.trim()) count += 1;
   if (values.maxServiceRadiusM.trim()) count += 1;
   if (values.minDailyCapacity.trim()) count += 1;
@@ -155,16 +152,6 @@ export const buildPostOfficeListFilters = (
   );
   validateNumericRange(minPriority, maxPriority, 'Priority');
 
-  const hubIdRaw = values.hubId.trim();
-  let hubId: number | undefined;
-  if (hubIdRaw) {
-    const parsedHubId = Number(hubIdRaw);
-    if (!Number.isInteger(parsedHubId) || parsedHubId <= 0) {
-      throw new Error('Hub ID must be a positive integer.');
-    }
-    hubId = parsedHubId;
-  }
-
   return {
     keyword: normalizeFilterText(values.keyword),
     code: normalizeFilterText(values.code),
@@ -173,7 +160,6 @@ export const buildPostOfficeListFilters = (
     wardCode: normalizeFilterText(values.wardCode),
     status: values.status === 'ALL' ? undefined : values.status,
     hasLocation: parseTriStateBoolean(values.hasLocation),
-    hubId,
     minServiceRadiusM,
     maxServiceRadiusM,
     minDailyCapacity,

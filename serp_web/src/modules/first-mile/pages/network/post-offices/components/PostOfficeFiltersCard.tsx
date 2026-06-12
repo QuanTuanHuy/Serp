@@ -11,7 +11,7 @@ import {
   TmsListFilterPanel,
   type TmsFilterMode,
 } from '../../../../components/list';
-import type { Hub, Province, Ward } from '../../../../types';
+import type { Province, Ward } from '../../../../types';
 import { POST_OFFICE_STATUS_OPTIONS } from '../postOfficeForm';
 import type {
   HasLocationFilter,
@@ -25,7 +25,6 @@ interface PostOfficeFiltersCardProps {
   isFetching: boolean;
   provinceSelectOptions: Province[];
   filterWardOptions: Ward[];
-  hubOptions: Hub[];
   selectedFilterProvinceCode: string;
   selectedFilterWardCode: string;
   isFetchingWardsForFilter: boolean;
@@ -46,7 +45,6 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
   isFetching,
   provinceSelectOptions,
   filterWardOptions,
-  hubOptions,
   selectedFilterProvinceCode,
   selectedFilterWardCode,
   isFetchingWardsForFilter,
@@ -91,14 +89,6 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
     { value: 'YES', label: 'Has location' },
     { value: 'NO', label: 'No location' },
   ];
-  const hubFilterOptions = [
-    { value: 'ALL', label: 'Any hub' },
-    ...hubOptions.map((hub) => ({
-      value: String(hub.id),
-      label: `${hub.code} - ${hub.name}`,
-    })),
-  ];
-
   return (
     <TmsListFilterPanel
       title='Search & filters'
@@ -224,20 +214,6 @@ export const PostOfficeFiltersCard: React.FC<PostOfficeFiltersCardProps> = ({
               options={hasLocationOptions}
               placeholder='All records'
               emptyText='No options found'
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='post-office-filter-hub-id'>Hub ID</Label>
-            <TmsCombobox
-              id='post-office-filter-hub-id'
-              value={filterFormValues.hubId || 'ALL'}
-              onValueChange={(value) =>
-                onFilterFieldChange('hubId', value === 'ALL' ? '' : value)
-              }
-              options={hubFilterOptions}
-              placeholder='Any hub'
-              emptyText='No hubs found'
             />
           </div>
 
