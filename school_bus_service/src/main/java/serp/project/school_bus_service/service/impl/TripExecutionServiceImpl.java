@@ -729,6 +729,11 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     }
 
     @Override
+    public boolean existsByRoute(Long routeId, Long tenantId) {
+        return tripRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId).isPresent();
+    }
+
+    @Override
     public TripExecutionEntity save(TripExecutionEntity entity) {
         return tripRepository.save(entity);
     }

@@ -97,7 +97,7 @@ export default function TripMapClient({
           .map((c: any) => [c.latitude, c.longitude] as [number, number]);
         
         if (actualPathCoords.length >= 2) {
-          isFallback = parsed.fallbackUsed === true || parsed.geometrySource === 'STRAIGHT_LINE_ESTIMATE';
+          isFallback = parsed.fallbackUsed === true || parsed.geometrySource === 'HAVERSINE_FALLBACK';
         }
       } else if (Array.isArray(parsed)) {
         // Raw OSRM GeoJSON coordinate array: [[lng, lat], [lng, lat], ...]

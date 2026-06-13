@@ -25,7 +25,4 @@ public class PlanningSessionPreviewRequest {
     @NotBlank
     private String routeDirection;
 
-    @NotBlank
-    private String planningMethod;
-
 }

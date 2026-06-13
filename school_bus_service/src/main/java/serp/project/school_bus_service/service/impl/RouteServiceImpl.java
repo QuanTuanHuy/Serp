@@ -27,6 +27,7 @@ import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.BusEntity;
@@ -132,11 +133,13 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         response.setDurationMin(route.getPlannedDurationMin());
 
         String geometryPath = route.getGeometryPath();
+        RouteGeometrySource geometrySource = route.getGeometrySource() != null
+                ? route.getGeometrySource() : RouteGeometrySource.UNKNOWN;
+        response.setGeometrySource(geometrySource.name());
+        response.setFallbackUsed(geometrySource == RouteGeometrySource.HAVERSINE_FALLBACK);
         if (geometryPath != null && !geometryPath.isBlank()) {
-            response.setGeometrySource("ROAD_NETWORK");
             response.setCoordinates(parseGeometryPath(geometryPath));
         } else {
-            response.setGeometrySource("NONE");
             response.setCoordinates(List.of());
         }
         return response;

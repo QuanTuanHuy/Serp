@@ -11,6 +11,7 @@ public class RoutePathResponse {
 
     private Long routeId;
     private String geometrySource;
+    private Boolean fallbackUsed;
     private Double distanceKm;
     private Integer durationMin;
     private List<Coordinate> coordinates;

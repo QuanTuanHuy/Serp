@@ -9,7 +9,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import serp.project.school_bus_service.enums.PlanningMethod;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 
@@ -39,10 +38,6 @@ public class RoutePlanningSessionEntity extends BaseModel {
     private RouteDirection routeDirection;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "planning_method", nullable = false, length = 30)
-    private PlanningMethod planningMethod;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private PlanningSessionStatus status;
 
@@ -70,12 +65,6 @@ public class RoutePlanningSessionEntity extends BaseModel {
     private Integer totalDurationMin;
 
     // ── Lifecycle timestamps ─────────────────────────────────────────
-
-    @Column(name = "generated_at")
-    private LocalDateTime generatedAt;
-
-    @Column(name = "generated_by")
-    private Long generatedBy;
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;

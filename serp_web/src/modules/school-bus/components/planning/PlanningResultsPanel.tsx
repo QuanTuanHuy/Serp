@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, AlertCircle, Loader2, Navigation } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, AlertCircle, Loader2, Navigation, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -20,6 +20,7 @@ import {
   useGetBusesQuery,
   useGetSchoolByIdQuery,
   useDeleteRouteInSessionMutation,
+  useGreedyFillRouteMutation,
 } from '../../api/schoolBusApi';
 import type {
   SchoolBusPlanningPreview,
@@ -29,7 +30,7 @@ import type {
   CreateRouteInSessionRequest,
 } from '../../types';
 
-/* ── Create Route Dialog (MANUAL mode) ────────────────────────────────── */
+/* ── Create Route Dialog ──────────────────────────────────────────────── */
 
 type LocationType = 'SCHOOL' | 'DEPOT';
 type DirectionType = 'OUTBOUND' | 'RETURN';
@@ -318,7 +319,7 @@ function CreateRoutePanel({
   );
 }
 
-/* ── Session Route Card (MANUAL or reloaded GREEDY routes) ────────────────── */
+/* ── Session Route Card ──────────────────────────────────────────────────── */
 
 function SessionRouteCard({
   route,
@@ -326,12 +327,18 @@ function SessionRouteCard({
   isSelected,
   onDelete,
   deleting,
+  onGreedyFill,
+  greedyFilling,
+  onAddStudents,
 }: {
   route: SchoolBusRoute;
   onSelect: (id: number) => void;
   isSelected: boolean;
   onDelete?: () => void;
   deleting?: boolean;
+  onGreedyFill?: () => void;
+  greedyFilling?: boolean;
+  onAddStudents?: (id: number) => void;
 }) {
   const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
   const studentCount = route.plannedStudentCount ?? 0;
@@ -343,6 +350,12 @@ function SessionRouteCard({
     route.status !== 'PUBLISHED' &&
     route.status !== 'TRIP_CREATED' &&
     studentCount === 0;
+  const canGreedyFill =
+    ['DRAFT', 'GENERATED', 'REVIEWING'].includes(route.status) &&
+    Boolean(route.busId) &&
+    capacity != null &&
+    studentCount < capacity;
+  const handleAddStudents = () => (onAddStudents ?? onSelect)(route.id);
 
   return (
     <div
@@ -426,6 +439,20 @@ function SessionRouteCard({
 
       {isSelected && (
         <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
+          {canGreedyFill && onGreedyFill && (
+            <Button
+              size='sm'
+              variant='outline'
+              disabled={greedyFilling}
+              className='rounded-full h-8 text-xs font-semibold border-indigo-200 text-indigo-700 bg-indigo-50/40 hover:bg-indigo-50 gap-1.5'
+              onClick={onGreedyFill}
+            >
+              {greedyFilling
+                ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                : <Sparkles className='h-3.5 w-3.5' />}
+              {greedyFilling ? 'Running...' : 'Greedy Fill'}
+            </Button>
+          )}
           {(() => {
             const hasNoOrUnderCapacityStudents = capacity === null || capacity === 0 || studentCount < capacity;
             const hasStudentsButNoStaff = studentCount > 0 && !route.driverName && !route.attendantName;
@@ -447,7 +474,7 @@ function SessionRouteCard({
                     size='sm'
                     variant='outline'
                     className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
-                    onClick={() => onSelect(route.id)}
+                    onClick={handleAddStudents}
                   >
                     Add Students
                   </Button>
@@ -481,7 +508,7 @@ function SessionRouteCard({
                     size='sm'
                     variant='outline'
                     className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
-                    onClick={() => onSelect(route.id)}
+                    onClick={handleAddStudents}
                   >
                     Add Students
                   </Button>
@@ -505,7 +532,7 @@ function SessionRouteCard({
                 <Button
                   size='sm'
                   className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
-                  onClick={() => onSelect(route.id)}
+                  onClick={handleAddStudents}
                 >
                   Add Students
                 </Button>
@@ -884,7 +911,7 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
 
 interface PlanningResultsPanelProps {
   preview: SchoolBusPlanningPreview | null;
-  /** Routes loaded from backend (survives refresh, works for both GREEDY + MANUAL) */
+  /** Routes loaded from backend and preserved across refreshes. */
   sessionRoutes: SchoolBusRoute[];
   activeSession: SchoolBusPlanningSession | null;
   eligibleStudents: SchoolBusEligibleStudent[];
@@ -898,6 +925,7 @@ interface PlanningResultsPanelProps {
   onTabChange: (tab: 'demand-preview' | 'route-builder') => void;
   onPreviewDemandClick?: () => void;
   previewing?: boolean;
+  onOpenSession?: (id: number) => void;
 }
 
 export function PlanningResultsPanel({
@@ -915,13 +943,40 @@ export function PlanningResultsPanel({
   onTabChange,
   onPreviewDemandClick,
   previewing,
+  onOpenSession,
 }: PlanningResultsPanelProps) {
 
-  const isManual = activeSession?.planningMethod === 'MANUAL';
-
   const [previewTab, setPreviewTab] = useState<'demands' | 'points' | 'context'>('demands');
+  const [pendingAssignScrollRouteId, setPendingAssignScrollRouteId] = useState<number | null>(null);
+  const manualAssignPanelRef = React.useRef<HTMLDivElement>(null);
 
   const [deleteRoute, { isLoading: deletingRoute }] = useDeleteRouteInSessionMutation();
+  const [greedyFillRoute, { isLoading: greedyFilling }] = useGreedyFillRouteMutation();
+
+  const handleAddStudents = (routeId: number) => {
+    setPendingAssignScrollRouteId(routeId);
+    if (selectedRouteId !== routeId) {
+      onSelectRoute(routeId);
+    }
+  };
+
+  useEffect(() => {
+    if (rightPanelTab !== 'route-builder'
+        || pendingAssignScrollRouteId === null
+        || selectedRouteId !== pendingAssignScrollRouteId) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      manualAssignPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      setPendingAssignScrollRouteId(null);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [pendingAssignScrollRouteId, rightPanelTab, selectedRouteId]);
 
   const deleteConfirm = useSchoolBusConfirm({
     onConfirm: async () => {
@@ -941,6 +996,28 @@ export function PlanningResultsPanel({
     isLoading: deletingRoute,
   });
 
+  const greedyConfirm = useSchoolBusConfirm({
+    onConfirm: async () => {
+      const routeId = greedyConfirm.confirmState.payload as number;
+      if (!activeSession) return;
+      try {
+        const response = await greedyFillRoute({
+          sessionId: activeSession.id,
+          routeId,
+          body: { preserveExistingAssignments: true },
+        }).unwrap();
+        toast.success(
+          `Added ${response.data.addedStudents} students across ${response.data.addedStops} stops. Remaining capacity: ${response.data.remainingCapacity}.`,
+        );
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Greedy Fill failed');
+        throw e;
+      }
+    },
+    isLoading: greedyFilling,
+  });
+
   const schoolId = Number(preview?.schoolId ?? form?.schoolId) || 0;
   const { data: schoolData } = useGetSchoolByIdQuery(schoolId, { skip: !schoolId });
   const currentSchool = schoolData?.data ?? null;
@@ -951,8 +1028,7 @@ export function PlanningResultsPanel({
   const isPreviewStale = preview ? (
     Number(preview.schoolId) !== Number(form?.schoolId) ||
     preview.serviceDate !== form?.serviceDate ||
-    preview.routeDirection !== form?.routeDirection ||
-    preview.planningMethod !== form?.planningMethod
+    preview.routeDirection !== form?.routeDirection
   ) : false;
 
   return (
@@ -989,7 +1065,7 @@ export function PlanningResultsPanel({
           <span className='text-xs font-bold'>Route Builder</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {activeSession
-              ? `${activeSession.planningMethod === 'MANUAL' ? 'Manual' : 'Greedy'} (${sessionRoutes.length})`
+              ? `Routes (${sessionRoutes.length})`
               : 'No session'}
           </span>
         </button>
@@ -1054,6 +1130,44 @@ export function PlanningResultsPanel({
         const summary = preview?.summary;
         const eligibleDemands = preview?.eligibleDemands ?? [];
         const points = preview?.points ?? [];
+
+        if (preview.existingSessionId) {
+          return (
+            <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px] space-y-4'>
+              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100 text-amber-500 shadow-sm'>
+                <AlertTriangle className='h-6 w-6' />
+              </div>
+              <p className='text-sm font-bold text-slate-800 leading-snug'>
+                Planning session already exists for this school, date and direction. Please open the existing session to continue.
+              </p>
+              {onOpenSession && (
+                <Button
+                  size='sm'
+                  onClick={() => onOpenSession(preview.existingSessionId!)}
+                  className='rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm gap-1.5'
+                >
+                  Open Existing Session
+                </Button>
+              )}
+            </div>
+          );
+        }
+
+        if (eligibleDemands.length === 0) {
+          return (
+            <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px] space-y-3'>
+              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 border border-slate-150 text-slate-400 shadow-sm'>
+                <Ban className='h-6 w-6' />
+              </div>
+              <p className='text-sm font-bold text-slate-700'>
+                No eligible students for this date and direction.
+              </p>
+              <p className='text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                Make sure students have active subscriptions for this school and route direction.
+              </p>
+            </div>
+          );
+        }
 
         // Derived variables for display
         const totalSubs = summary?.totalSubscriptions ?? preview.totalEligibleStudents;
@@ -1255,7 +1369,6 @@ export function PlanningResultsPanel({
               const serviceDateFormatted = sDate ? formatDate(sDate) : '-';
               const dirVal = preview?.direction ?? form?.routeDirection;
               const dirLabel = dirVal === 'OUTBOUND' ? 'Home ➔ School' : dirVal === 'RETURN' ? 'School ➔ Home' : dirVal ?? '-';
-              const methodLabel = 'Manual Routing';
               const hasContext = !!(form?.schoolId || preview?.schoolId);
               if (!hasContext) {
                 return (
@@ -1327,10 +1440,6 @@ export function PlanningResultsPanel({
                         <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Direction</span>
                         <span className='font-bold text-slate-800 mt-0.5'>{dirLabel}</span>
                       </div>
-                      <div className='flex flex-col'>
-                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Planning Method</span>
-                        <span className='font-bold text-slate-800 mt-0.5'>{methodLabel}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1361,13 +1470,11 @@ export function PlanningResultsPanel({
             {/* Case B: Active Session exists */}
             {activeSession && (
               <>
-                {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
-                {isManual && activeSession && (
         <div className='p-5 space-y-4'>
           <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
             <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
               <Route className='h-4 w-4 text-blue-600 shrink-0' />
-              Manual Routes ({sessionRoutes.length})
+              Routes ({sessionRoutes.length})
             </h3>
           </div>
           <CreateRoutePanel
@@ -1397,6 +1504,7 @@ export function PlanningResultsPanel({
                   route={r}
                   onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
                   isSelected={selectedRouteId === r.id}
+                  onAddStudents={handleAddStudents}
                   onDelete={() => {
                     deleteConfirm.requestConfirm({
                       title: 'Delete empty route?',
@@ -1407,65 +1515,35 @@ export function PlanningResultsPanel({
                     });
                   }}
                   deleting={deletingRoute && deleteConfirm.confirmState.payload === r.id}
+                  onGreedyFill={() => {
+                    greedyConfirm.requestConfirm({
+                      title: 'Greedy Fill this route?',
+                      description: 'Automatically assign eligible students to this route based on distance and remaining bus capacity?',
+                      confirmLabel: 'Greedy Fill',
+                      variant: 'primary',
+                      payload: r.id,
+                    });
+                  }}
+                  greedyFilling={greedyFilling && greedyConfirm.confirmState.payload === r.id}
                 />
               ))}
             </div>
           )}
         </div>
-      )}
 
-      {/* MANUAL mode: Demand assignment panel - shown when a route is selected */}
-      {isManual && activeSession && (
-        <ManualDemandAssignPanel
-          selectedRoute={sessionRoutes.find(r => r.id === selectedRouteId) ?? null}
-          eligibleStudents={eligibleStudents}
-          sessionId={activeSession.id}
-          loadingEligible={loadingEligible}
-        />
-      )}
-
-      {/* Show session routes */}
-      {!isManual && activeSession && sessionRoutes.length === 0 && (
-        <div className='p-5'>
-          <div className='rounded-2xl border border-sky-100 bg-sky-50/40 p-5 text-center shadow-sm'>
-            <p className='text-xs font-bold text-sky-700 flex items-center justify-center gap-1.5'>
-              <Info className='h-4 w-4' />
-              Auto-routing feature is simplified and will be updated later.
-            </p>
-          </div>
+      {/* Demand assignment panel - shown when a route is selected */}
+        <div
+          ref={manualAssignPanelRef}
+          id='manual-demand-assign-panel'
+          className='scroll-mt-4'
+        >
+          <ManualDemandAssignPanel
+            selectedRoute={sessionRoutes.find(r => r.id === selectedRouteId) ?? null}
+            eligibleStudents={eligibleStudents}
+            sessionId={activeSession.id}
+            loadingEligible={loadingEligible}
+          />
         </div>
-      )}
-
-      {!isManual && sessionRoutes.length > 0 && (
-        <div className='p-5 space-y-4'>
-          <div className='border-b border-slate-100 pb-2.5'>
-            <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
-              <Route className='h-4 w-4 text-blue-600 shrink-0' />
-              Session Routes ({sessionRoutes.length})
-            </h3>
-          </div>
-          <div className='space-y-3'>
-            {sessionRoutes.map(r => (
-              <SessionRouteCard
-                key={r.id}
-                route={r}
-                onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
-                isSelected={selectedRouteId === r.id}
-                onDelete={() => {
-                  deleteConfirm.requestConfirm({
-                    title: 'Delete empty route?',
-                    description: 'Are you sure you want to delete this route? This action cannot be undone.',
-                    confirmLabel: 'Delete',
-                    variant: 'danger',
-                    payload: r.id,
-                  });
-                }}
-                deleting={deletingRoute && deleteConfirm.confirmState.payload === r.id}
-              />
-            ))}
-          </div>
-        </div>
-      )}
               </>
             )}
           </>
@@ -1476,6 +1554,7 @@ export function PlanningResultsPanel({
         )}
       </div>
       <SchoolBusConfirmDialog {...deleteConfirm.dialogProps} />
+      <SchoolBusConfirmDialog {...greedyConfirm.dialogProps} />
     </div>
   );
 }

@@ -145,6 +145,15 @@ public class TripOperationServiceImpl implements ITripOperationService {
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(tripId, tenantId).stream()
+                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .toList();
+        boolean isLastStop = !stops.isEmpty() && stops.get(stops.size() - 1).getId().equals(stopLog.getId());
+
+        if (isLastStop) {
+            return completeTrip(tripId, null, tenantId, actorId);
+        }
+
         return toDetail(trip, tenantId);
     }
 

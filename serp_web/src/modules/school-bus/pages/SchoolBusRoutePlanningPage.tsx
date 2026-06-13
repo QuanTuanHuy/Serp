@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -103,11 +103,13 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
 }
 
 export default function SchoolBusRoutePlanningPage() {
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [form, setForm] = useState<ContextFormState>({
     schoolId: '',
     serviceDate: new Date().toISOString().slice(0, 10),
-    routeDirection: 'OUTBOUND', planningMethod: 'MANUAL',
+    routeDirection: 'OUTBOUND',
   });
 
   const searchParams = useSearchParams();
@@ -117,6 +119,7 @@ export default function SchoolBusRoutePlanningPage() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
 
+  const [isHydrated, setIsHydrated] = useState(false);
   const [preview, setPreview] = useState<SchoolBusPlanningPreview | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<'demand-preview' | 'route-builder'>('demand-preview');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -164,7 +167,7 @@ export default function SchoolBusRoutePlanningPage() {
 
   const { data: eligibleStudentsData, isFetching: fetchingEligible } = useGetSessionEligibleStudentsQuery(
     activeSessionId ?? 0,
-    { skip: !activeSessionId || activeSession?.planningMethod !== 'MANUAL' }
+    { skip: !activeSessionId }
   );
   const eligibleStudents = eligibleStudentsData?.data ?? [];
 
@@ -191,21 +194,44 @@ export default function SchoolBusRoutePlanningPage() {
   );
   const selectedRoutePath = selectedRoutePathData?.data ?? null;
 
+  const clearSessionQueryParams = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+    if (params.has('sessionId')) {
+      params.delete('sessionId');
+      changed = true;
+    }
+    if (params.has('routeId')) {
+      params.delete('routeId');
+      changed = true;
+    }
+    if (changed) {
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    }
+  }, [router, pathname, searchParams]);
+
   // Check session context alignment when planning context changes
   React.useEffect(() => {
+    if (!isHydrated) return;
+
     if (activeSession && activeSession.id === activeSessionId) {
       const isContextMatch =
         Number(form.schoolId) === activeSession.schoolId &&
-          form.serviceDate === activeSession.serviceDate &&
-        form.routeDirection === activeSession.routeDirection &&
-        form.planningMethod === activeSession.planningMethod;
-
+        form.serviceDate === activeSession.serviceDate &&
+        form.routeDirection === activeSession.routeDirection;
+ 
       if (!isContextMatch) {
         setActiveSessionId(null);
         setSelectedRouteId(null);
+        setPreview(null);
+        clearSessionQueryParams();
       }
+    } else if (querySessionId || queryRouteId) {
+      clearSessionQueryParams();
+      setPreview(null);
     }
-  }, [form.schoolId, form.serviceDate, form.routeDirection, form.planningMethod, activeSession, activeSessionId]);
+  }, [form.schoolId, form.serviceDate, form.routeDirection, activeSession, activeSessionId, isHydrated, clearSessionQueryParams, querySessionId, queryRouteId]);
 
   // Reset selected route when active session changes
   React.useEffect(() => {
@@ -214,25 +240,24 @@ export default function SchoolBusRoutePlanningPage() {
 
   // Auto-hydrate session from query params
   React.useEffect(() => {
-    if (querySessionId && sessions.length > 0) {
-      const sessionIdNum = Number(querySessionId);
-      const matchedSession = sessions.find(s => s.id === sessionIdNum);
-      if (matchedSession) {
-        setActiveSessionId(sessionIdNum);
-        setRightPanelTab('route-builder');
-        setForm(prev => ({
-          ...prev,
-          schoolId: String(matchedSession.schoolId),
-          serviceDate: matchedSession.serviceDate,
-          routeDirection: matchedSession.routeDirection,
-          planningMethod: matchedSession.planningMethod,
-        }));
-        setSessionError(null);
-      } else {
-        setSessionError('Planning session not found or no longer available.');
+    if (sessions.length > 0) {
+      if (querySessionId) {
+        const sessionIdNum = Number(querySessionId);
+        const matchedSession = sessions.find(s => s.id === sessionIdNum);
+        if (matchedSession) {
+          setActiveSessionId(sessionIdNum);
+          setRightPanelTab('route-builder');
+          setForm({
+            schoolId: String(matchedSession.schoolId),
+            serviceDate: matchedSession.serviceDate,
+            routeDirection: matchedSession.routeDirection,
+          });
+          setSessionError(null);
+        } else {
+          setSessionError('Planning session not found or no longer available.');
+        }
       }
-    } else {
-      setSessionError(null);
+      setIsHydrated(true);
     }
   }, [querySessionId, sessions]);
 
@@ -276,7 +301,6 @@ export default function SchoolBusRoutePlanningPage() {
         schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate,
         routeDirection: form.routeDirection,
-        planningMethod: form.planningMethod,
       }).unwrap();
       setPreview(res.data);
       setRightPanelTab('demand-preview');
@@ -292,7 +316,6 @@ export default function SchoolBusRoutePlanningPage() {
       const res = await createSession({
         schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate, routeDirection: form.routeDirection,
-        planningMethod: form.planningMethod,
       }).unwrap();
       setActiveSessionId(res.data.id);
       setRightPanelTab('route-builder');
@@ -422,17 +445,58 @@ export default function SchoolBusRoutePlanningPage() {
   const handleSelectSession = useCallback((s: SchoolBusPlanningSession) => {
     setActiveSessionId(s.id);
     setRightPanelTab('route-builder');
-    setForm(prev => ({
-      ...prev,
+    setForm({
       schoolId: String(s.schoolId),
       serviceDate: s.serviceDate,
       routeDirection: s.routeDirection,
-      planningMethod: s.planningMethod,
+    });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sessionId', String(s.id));
+    params.delete('routeId');
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [router, pathname, searchParams]);
+
+  const handleOpenSession = useCallback((id: number) => {
+    setActiveSessionId(id);
+    setRightPanelTab('route-builder');
+    
+    const matchedSession = sessions.find(s => s.id === id);
+    if (matchedSession) {
+      setForm({
+        schoolId: String(matchedSession.schoolId),
+        serviceDate: matchedSession.serviceDate,
+        routeDirection: matchedSession.routeDirection,
+      });
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sessionId', String(id));
+    params.delete('routeId');
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [sessions, router, pathname, searchParams]);
+
+  const handleNewSession = useCallback(() => {
+    // Reset service date to today, keep schoolId and routeDirection
+    setForm(prev => ({
+      ...prev,
+      serviceDate: new Date().toISOString().slice(0, 10),
     }));
-  }, []);
+    setActiveSessionId(null);
+    setSelectedRouteId(null);
+    setPreview(null);
+    clearSessionQueryParams();
+    toast.success('Workspace reset to new session planning context');
+  }, [clearSessionQueryParams]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const unassignedStudents = activeSession?.totalUnassignedStudents ?? 0;
+  const isPreviewContextMatch =
+    preview !== null &&
+    Number(preview.schoolId) === Number(form.schoolId) &&
+    preview.serviceDate === form.serviceDate &&
+    preview.routeDirection === form.routeDirection;
   const blockingTotal = 0;
   const hasRoutes = sessionRoutes.length > 0;
   const canPublish =
@@ -513,17 +577,23 @@ export default function SchoolBusRoutePlanningPage() {
             {/* Scrollable inner area */}
             <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50'>
               <PlanningContextPanel
-                form={form} onFormChange={setForm}
-                onPreview={handlePreview} onCreateSession={handleCreateSession}
-                previewing={previewing} creating={creating}
-                sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
+                form={form}
+                onFormChange={setForm}
+                onPreview={handlePreview}
+                onCreateSession={handleCreateSession}
+                previewing={previewing}
+                creating={creating}
+                canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
+                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                isPreviewContextMatch={isPreviewContextMatch}
+                onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
-                planningMethod={form.planningMethod} blockingTotal={blockingTotal}
-                canPublish={canPublish} generating={false} publishing={publishing}
-                cancelling={cancelling} hasRoutes={hasRoutes}
-                onGenerate={() => {}} onPublish={handlePublish} onCancel={handleCancel}
+                blockingTotal={blockingTotal}
+                canPublish={canPublish} publishing={publishing}
+                cancelling={cancelling}
+                onPublish={handlePublish} onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
                 hidePastSessions
               />
@@ -623,17 +693,23 @@ export default function SchoolBusRoutePlanningPage() {
             {/* Scrollable inner area — left panel scrolls independently */}
             <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20'>
               <PlanningContextPanel
-                form={form} onFormChange={setForm}
-                onPreview={handlePreview} onCreateSession={handleCreateSession}
-                previewing={previewing} creating={creating}
-                sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
+                form={form}
+                onFormChange={setForm}
+                onPreview={handlePreview}
+                onCreateSession={handleCreateSession}
+                previewing={previewing}
+                creating={creating}
+                canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
+                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                isPreviewContextMatch={isPreviewContextMatch}
+                onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
-                planningMethod={form.planningMethod} blockingTotal={blockingTotal}
-                canPublish={canPublish} generating={false} publishing={publishing}
-                cancelling={cancelling} hasRoutes={hasRoutes}
-                onGenerate={() => {}} onPublish={handlePublish} onCancel={handleCancel}
+                blockingTotal={blockingTotal}
+                canPublish={canPublish} publishing={publishing}
+                cancelling={cancelling}
+                onPublish={handlePublish} onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
               />
             </div>
@@ -712,6 +788,7 @@ export default function SchoolBusRoutePlanningPage() {
                 onTabChange={setRightPanelTab}
                 onPreviewDemandClick={handlePreview}
                 previewing={previewing}
+                onOpenSession={handleOpenSession}
               />
             </div>
           </div>

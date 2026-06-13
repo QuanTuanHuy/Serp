@@ -20,7 +20,6 @@ import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
-import serp.project.school_bus_service.enums.PlanningMethod;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStatus;
@@ -137,6 +136,46 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         summary.setPickupPointCount(isOutbound ? pointMap.size() : 0);
         summary.setDropoffPointCount(isOutbound ? 0 : pointMap.size());
 
+        // Map eligibleStudents for backward compat / completeness
+        List<EligibleStudentResponse> eligibleStudentsList = eligible.stream()
+                .map(sub -> {
+                    EligibleStudentResponse resp = new EligibleStudentResponse();
+                    resp.setStudentId(sub.getStudent().getId());
+                    resp.setStudentName(sub.getStudent().getFullName());
+                    resp.setStudentCode(sub.getStudent().getStudentCode());
+                    resp.setSubscriptionId(sub.getId());
+                    resp.setSubscriptionCode(sub.getSubscriptionCode());
+                    resp.setTripOption(sub.getTripOption().name());
+
+                    if (sub.getPickupPoint() != null) {
+                        resp.setPickupPointId(sub.getPickupPoint().getId());
+                        resp.setPickupPointName(sub.getPickupPoint().getName());
+                        resp.setPickupPointLatitude(sub.getPickupPoint().getLatitude());
+                        resp.setPickupPointLongitude(sub.getPickupPoint().getLongitude());
+                    }
+
+                    if (sub.getDropoffPoint() != null) {
+                        resp.setDropoffPointId(sub.getDropoffPoint().getId());
+                        resp.setDropoffPointName(sub.getDropoffPoint().getName());
+                        resp.setDropoffPointLatitude(sub.getDropoffPoint().getLatitude());
+                        resp.setDropoffPointLongitude(sub.getDropoffPoint().getLongitude());
+                    }
+
+                    var relevantPoint = isOutbound ? sub.getPickupPoint() : sub.getDropoffPoint();
+                    if (relevantPoint != null) {
+                        resp.setRelevantPointId(relevantPoint.getId());
+                        resp.setRelevantPointName(relevantPoint.getName());
+                        resp.setRelevantPointLatitude(relevantPoint.getLatitude());
+                        resp.setRelevantPointLongitude(relevantPoint.getLongitude());
+                    }
+
+                    resp.setSpecialNote(sub.getStudent().getSpecialNote());
+                    resp.setAssigned(false);
+                    resp.setAssignedRouteId(null);
+                    return resp;
+                })
+                .toList();
+
         // Build response
         PlanningPreviewResponse response = new PlanningPreviewResponse();
         response.setSchoolId(school.getId());
@@ -147,12 +186,36 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         response.setServiceDayOfWeek(req.getServiceDate().getDayOfWeek());
         response.setDirection(req.getRouteDirection());
         response.setRouteDirection(req.getRouteDirection());
-        response.setPlanningMethod(req.getPlanningMethod());
         response.setSummary(summary);
         response.setEligibleDemands(eligibleDemands);
         response.setPoints(new ArrayList<>(pointMap.values()));
         response.setTotalEligibleStudents(eligible.size());
         response.setTotalEligiblePickupPoints(pointMap.size());
+        response.setEligibleStudents(eligibleStudentsList);
+
+        // Check for existing active session for this context
+        List<RoutePlanningSessionEntity> existing = sessionRepository.findActiveByContext(
+                tenantId, req.getSchoolId(),
+                req.getServiceDate(), RouteDirection.parse(req.getRouteDirection()));
+
+        if (!existing.isEmpty()) {
+            RoutePlanningSessionEntity existingSession = existing.get(0);
+            response.setExistingSessionId(existingSession.getId());
+            response.setExistingSessionStatus(existingSession.getStatus().name());
+            response.setCanCreate(false);
+            response.setCreateDisabledReason("Planning session already exists for this school, date and direction.");
+        } else {
+            response.setExistingSessionId(null);
+            response.setExistingSessionStatus(null);
+            if (eligible.isEmpty()) {
+                response.setCanCreate(false);
+                response.setCreateDisabledReason("No eligible students for this date and direction.");
+            } else {
+                response.setCanCreate(true);
+                response.setCreateDisabledReason(null);
+            }
+        }
+
         return response;
     }
 
@@ -177,7 +240,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         session.setSchool(school);
         session.setServiceDate(req.getServiceDate());
         session.setRouteDirection(RouteDirection.parse(req.getRouteDirection()));
-        session.setPlanningMethod(PlanningMethod.parse(req.getPlanningMethod()));
         session.setStatus(PlanningSessionStatus.DRAFT);
         session.setPlanningNotes(req.getPlanningNotes());
 
@@ -197,7 +259,7 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     @Transactional(readOnly = true)
     public List<PlanningSessionResponse> listSessions(Long tenantId) {
         return sessionRepository
-                .findByTenantIdAndIsDeletedFalseOrderByServiceDateDescIdDesc(tenantId)
+                .findAllByTenantOrderByLastModifiedDesc(tenantId)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -268,10 +330,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
     public RoutePlanResponse createRouteInSession(Long sessionId, RoutePlanUpsertRequest request,
                                                    Long tenantId, Long actorId) {
         RoutePlanningSessionEntity session = requireSession(sessionId, tenantId);
-        if (session.getPlanningMethod() != PlanningMethod.MANUAL) {
-            throw new AppException(AppErrorCode.Session.NOT_MANUAL,
-                    messageCommon.getMessage(AppErrorCode.Session.NOT_MANUAL));
-        }
         requireSessionEditable(session);
         RoutePlanResponse response = routeService.createRouteInSession(request, sessionId, tenantId, actorId);
         refreshSessionSummary(sessionId, tenantId);
@@ -407,7 +465,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         r.setSchoolName(e.getSchool().getName());
         r.setServiceDate(e.getServiceDate());
         r.setRouteDirection(e.getRouteDirection().name());
-        r.setPlanningMethod(e.getPlanningMethod().name());
         r.setStatus(e.getStatus().name());
         r.setTotalEligibleStudents(e.getTotalEligibleStudents());
         r.setTotalPlannedStudents(e.getTotalPlannedStudents());
@@ -416,7 +473,6 @@ public class RoutePlanningSessionServiceImpl extends AbstractBaseService<RoutePl
         r.setTotalStops(e.getTotalStops());
         r.setTotalDistanceKm(e.getTotalDistanceKm());
         r.setTotalDurationMin(e.getTotalDurationMin());
-        r.setGeneratedAt(e.getGeneratedAt());
         r.setPublishedAt(e.getPublishedAt());
         r.setPlanningNotes(e.getPlanningNotes());
         r.setCreatedAt(e.getCreatedAt());

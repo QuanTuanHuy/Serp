@@ -313,16 +313,14 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   attendantId?: number | null;
   attendantName?: string | null;
   startDepotName?: string | null;
-  routeGenerationMethod?: string | null;
   versionNo?: number | null;
   planningNotes?: string | null;
   geometryPath?: string | null;
-  geometrySource?: 'ROAD_NETWORK' | 'STRAIGHT_LINE_ESTIMATE' | 'NONE' | null;
+  geometrySource?: 'OSRM' | 'HAVERSINE_FALLBACK' | 'MANUAL' | 'UNKNOWN' | null;
   fallbackUsed?: boolean | null;
   startedAt?: string | null;
   completedAt?: string | null;
   planningSessionId?: number | null;
-  planningMethod?: 'MANUAL' | 'GREEDY' | null;
 }
 
 export interface SchoolBusRoutePathCoordinate {
@@ -335,7 +333,7 @@ export interface SchoolBusRoutePath {
   provider?: string | null;
   estimated?: boolean | null;
   fallbackUsed?: boolean | null;
-  geometrySource?: 'ROAD_NETWORK' | 'STRAIGHT_LINE_ESTIMATE' | 'NONE' | null;
+  geometrySource?: 'OSRM' | 'HAVERSINE_FALLBACK' | 'MANUAL' | 'UNKNOWN' | null;
   distanceKm?: number | null;
   durationMin?: number | null;
   warning?: string | null;
@@ -835,14 +833,12 @@ export interface SchoolBusSchoolPickupPointUpsertRequest {
 // ── Planning Session ──────────────────────────────────────────────────────
 
 export type PlanningSessionStatus = 'DRAFT' | 'GENERATED' | 'REVIEWING' | 'PUBLISHED' | 'CANCELLED';
-export type PlanningMethod = 'MANUAL' | 'GREEDY';
 
 export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   schoolId: number;
   schoolName: string;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
-  planningMethod: PlanningMethod;
   status: PlanningSessionStatus;
   totalEligibleStudents: number;
   totalPlannedStudents: number;
@@ -851,7 +847,6 @@ export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   totalStops: number;
   totalDistanceKm?: number | null;
   totalDurationMin?: number | null;
-  generatedAt?: string | null;
   publishedAt?: string | null;
   planningNotes?: string | null;
 }
@@ -938,10 +933,13 @@ export interface SchoolBusPlanningPreview {
   activeDays?: string[];
   serviceDayOfWeek?: string;
   direction?: string;
-  planningMethod?: string;
   summary?: PlanningReadinessSummary;
   eligibleDemands?: PlanningDemandResponse[];
   points?: PlanningPointResponse[];
+  existingSessionId?: number | null;
+  existingSessionStatus?: string | null;
+  canCreate?: boolean;
+  createDisabledReason?: string | null;
 }
 
 // ── Requests ─────────────────────────────────────────────────────────────
@@ -950,7 +948,6 @@ export interface PlanningSessionCreateRequest {
   schoolId: number;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
-  planningMethod: PlanningMethod;
   planningNotes?: string;
 }
 
@@ -958,7 +955,6 @@ export interface PlanningSessionPreviewRequest {
   schoolId: number;
   serviceDate: string;
   routeDirection: 'OUTBOUND' | 'RETURN';
-  planningMethod?: PlanningMethod;
 }
 
 export interface CreateRouteInSessionRequest {
@@ -979,6 +975,27 @@ export interface CreateRouteInSessionRequest {
 export interface AddStudentToStopRequest {
   studentId: number;
   subscriptionId: number;
+}
+
+export interface GreedyFillRouteRequest {
+  preserveExistingAssignments?: boolean;
+  maxStops?: number | null;
+}
+
+export interface GreedyFillRouteResponse {
+  routeId: number;
+  sessionId: number;
+  addedStudents: number;
+  addedStops: number;
+  totalAssignedStudents: number;
+  remainingCapacity: number;
+  plannedDistanceKm?: number | null;
+  plannedDurationMin?: number | null;
+  unassignedCandidates: number;
+  skippedAssignedElsewhere?: number;
+  skippedMissingCoordinates?: number;
+  skippedInvalidPoint?: number;
+  message: string;
 }
 
 export interface ChartItemDto {

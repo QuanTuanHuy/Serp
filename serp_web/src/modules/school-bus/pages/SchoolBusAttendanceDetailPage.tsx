@@ -24,7 +24,6 @@ import {
   useDropoffTripStudentMutation,
   useGetTripAttendanceManifestQuery,
   useGetTripAttendanceQuery,
-  useGetTripAttendanceSummaryQuery,
   useGetTripByIdQuery,
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
@@ -134,16 +133,15 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
   const [pollInterval, setPollInterval] = React.useState(6000); // 6s default
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  const { data: tripData, isLoading: tripLoading, refetch: refetchTrip } = useGetTripByIdQuery(tripId);
+  const { data: tripData, isLoading: tripLoading } = useGetTripByIdQuery(tripId);
   const { data: manifestData, isLoading: manifestLoading, refetch: refetchManifest } =
     useGetTripAttendanceManifestQuery(tripId);
-  const { data: summaryData, refetch: refetchSummary } = useGetTripAttendanceSummaryQuery(tripId);
   const { data: eventsData, refetch: refetchEvents } = useGetTripAttendanceQuery(tripId);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const trip = tripData?.data ?? null;
   const manifest = manifestData?.data ?? null;
-  const summary = summaryData?.data ?? manifest?.summary ?? null;
+  const summary = manifest?.summary ?? null;
   const restEvents = eventsData?.data ?? [];
 
   const tripStatus = manifest?.tripStatus ?? trip?.status ?? null;
@@ -163,9 +161,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     isRefreshingRef.current = true;
     try {
       const results = await Promise.allSettled([
-        refetchTrip(),
         refetchManifest(),
-        refetchSummary(),
         refetchEvents(),
       ]);
       let hit429 = false;
@@ -184,7 +180,7 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [refetchTrip, refetchManifest, refetchSummary, refetchEvents]);
+  }, [refetchManifest, refetchEvents]);
 
   // Track page visibility
   React.useEffect(() => {
@@ -323,13 +319,13 @@ export function SchoolBusAttendanceDetailPage({ tripId }: SchoolBusAttendanceDet
     try {
       await fn();
       toast.success(`${label} recorded`);
-      refetchTrip();
-      refetchManifest();
-      refetchSummary();
-      refetchEvents();
     } catch (e: unknown) {
-      const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? `${label} failed`);
+      const err = e as { status?: number; data?: { message?: string } };
+      toast.error(
+        err?.status === 429
+          ? 'System is busy. Please wait a few seconds and try again.'
+          : (err?.data?.message ?? `${label} failed`)
+      );
     }
   };
 

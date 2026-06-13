@@ -212,7 +212,11 @@ export function SchoolBusTripsPage() {
       const response = await action();
       toast.success(response.message || `${label} completed`);
     } catch (error: any) {
-      toast.error(error?.data?.message || `${label} failed`);
+      toast.error(
+        error?.status === 429
+          ? 'System is busy. Please wait a few seconds and try again.'
+          : (error?.data?.message ?? `${label} failed`)
+      );
     }
   };
 
@@ -340,7 +344,22 @@ export function SchoolBusTripsPage() {
       header: 'Stop Progress',
       render: (trip) => {
         const totalStops = trip.stops?.length ?? 0;
-        const completedStops = trip.stops?.filter((s: any) => s.status === 'DEPARTED' || s.status === 'SKIPPED').length ?? 0;
+        const completedStops = trip.status === 'COMPLETED'
+          ? totalStops
+          : trip.stops ? (() => {
+              const sortedStops = [...trip.stops].sort((a: any, b: any) => (a.stopOrder ?? 0) - (b.stopOrder ?? 0));
+              return sortedStops.filter((s: any, idx: number) => {
+                const isFirst = idx === 0;
+                const isLast = idx === sortedStops.length - 1;
+                if (isFirst) {
+                  return s.status === 'DEPARTED';
+                }
+                if (isLast) {
+                  return s.status === 'ARRIVED' || s.status === 'DEPARTED' || s.status === 'SKIPPED';
+                }
+                return s.status === 'DEPARTED' || s.status === 'SKIPPED';
+              }).length;
+            })() : 0;
         const nextStop = trip.stops?.find((s: any) =>
           ['PENDING', 'ARRIVED', 'BOARDING'].includes(s.status)
         );

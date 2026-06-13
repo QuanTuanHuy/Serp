@@ -53,14 +53,13 @@ public class RouteMapper extends BaseMapper {
         }
         response.setPlanningNotes(entity.getPlanningNotes());
         response.setGeometryPath(entity.getGeometryPath());
+        response.setGeometrySource(entity.getGeometrySource() != null
+                ? entity.getGeometrySource().name() : null);
         response.setStartedAt(entity.getStartedAt());
         response.setCompletedAt(entity.getCompletedAt());
         response.setRequiredCapacity(entity.getRequiredCapacity());
         if (entity.getPlanningSession() != null) {
             response.setPlanningSessionId(entity.getPlanningSession().getId());
-        }
-        if (entity.getRouteGenerationMethod() != null) {
-            response.setPlanningMethod(entity.getRouteGenerationMethod().name());
         }
         return response;
     }

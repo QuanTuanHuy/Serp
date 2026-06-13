@@ -48,9 +48,9 @@ public class RoutePlanResponse extends BaseResponse {
     private String startDepotName;
     private String planningNotes;
     private String geometryPath;
+    private String geometrySource;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private Integer requiredCapacity;
     private Long planningSessionId;
-    private String planningMethod;
 }

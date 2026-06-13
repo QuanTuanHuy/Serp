@@ -30,7 +30,6 @@ import {
   useDepartTripStopMutation,
   useGetTripAttendanceManifestQuery,
   useGetTripAttendanceQuery,
-  useGetTripAttendanceSummaryQuery,
   useGetTripByIdQuery,
   useSkipTripStopMutation,
   useStartTripMutation,
@@ -120,6 +119,27 @@ interface SchoolBusTripOperationDetailPageProps {
   tripId: number;
 }
 
+const ACTIVE_POLL_INTERVAL_MS = 10_000;
+const IDLE_POLL_INTERVAL_MS = 25_000;
+const ATTENDANCE_POLL_INTERVAL_MS = 30_000;
+const DEFAULT_RATE_LIMIT_BACKOFF_MS = 60_000;
+
+type PollingError = {
+  status?: number;
+  data?: {
+    retryAfterSeconds?: number;
+  };
+};
+
+function getRateLimitBackoffMs(error: PollingError | undefined): number | null {
+  if (error?.status !== 429) return null;
+
+  const retryAfterSeconds = error.data?.retryAfterSeconds;
+  return retryAfterSeconds && retryAfterSeconds > 0
+    ? retryAfterSeconds * 1000
+    : DEFAULT_RATE_LIMIT_BACKOFF_MS;
+}
+
 export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperationDetailPageProps) {
   const access = useSchoolBusAccess();
   // ── State ──────────────────────────────────────────────────────────────────
@@ -133,14 +153,14 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
 
   const [lastUpdated, setLastUpdated] = React.useState<string>('');
   const [isTabVisible, setIsTabVisible] = React.useState(true);
-  const [pollInterval, setPollInterval] = React.useState(6000); // 6s default
+  const [pollInterval, setPollInterval] = React.useState(IDLE_POLL_INTERVAL_MS);
+  const [isSyncDelayed, setIsSyncDelayed] = React.useState(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  const { data: tripData, isLoading: tripLoading, refetch: refetchTrip } = useGetTripByIdQuery(tripId);
+  const { data: tripData, isLoading: tripLoading } = useGetTripByIdQuery(tripId);
 
   const { data: manifestData, isLoading: manifestLoading, refetch: refetchManifest } =
     useGetTripAttendanceManifestQuery(tripId);
-  const { data: summaryData, refetch: refetchSummary } = useGetTripAttendanceSummaryQuery(tripId);
   const { data: eventsData, refetch: refetchEvents } = useGetTripAttendanceQuery(tripId);
   // Parents do not have the planning.read permission required by the route path
   // endpoint, so we skip the call entirely. The map falls back to the geometry
@@ -153,11 +173,13 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   // ── Derived ────────────────────────────────────────────────────────────────
   const trip = tripData?.data ?? null;
   const manifest = manifestData?.data ?? null;
-  const summary = summaryData?.data ?? manifest?.summary ?? null;
+  const summary = manifest?.summary ?? null;
   const restEvents = eventsData?.data ?? [];
 
   const tripStatus = manifest?.tripStatus ?? trip?.status ?? null;
-  const tripIsActive = tripStatus === 'IN_PROGRESS';
+  const tripIsActive = ['IN_PROGRESS', 'BOARDING', 'DROPOFF', 'ARRIVED'].includes(
+    tripStatus ?? ''
+  );
   const tripIsCompleted = tripStatus === 'COMPLETED';
   const tripIsCancelled = tripStatus === 'CANCELLED';
   const isOutbound = (manifest?.routeDirection ?? trip?.routeDirection) === 'OUTBOUND';
@@ -167,34 +189,49 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
 
   // ── Polling implementation ─────────────────────────────────────────────────
   const isRefreshingRef = React.useRef(false);
+  const lastAttendanceRefreshRef = React.useRef(Date.now());
 
-  const refreshTripDetailData = React.useCallback(async () => {
-    if (isRefreshingRef.current) return false;
+  const refreshTripDetailData = React.useCallback(async (forceAttendance = false) => {
+    if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     try {
-      const results = await Promise.allSettled([
-        refetchTrip(),
-        refetchManifest(),
-        refetchSummary(),
-        refetchEvents(),
-      ]);
-      let hit429 = false;
-      for (const res of results) {
-        if (res.status === 'fulfilled') {
-          const val = res.value as any;
-          if (val?.error) {
-            const err = val.error as any;
-            if (err?.status === 429) {
-              hit429 = true;
-            }
-          }
-        }
+      const now = Date.now();
+      const shouldRefreshAttendance =
+        forceAttendance ||
+        now - lastAttendanceRefreshRef.current >= ATTENDANCE_POLL_INTERVAL_MS;
+
+      const manifestResult = await refetchManifest();
+      const attendanceResult = shouldRefreshAttendance
+        ? await refetchEvents()
+        : undefined;
+
+      if (attendanceResult && !attendanceResult.error) {
+        lastAttendanceRefreshRef.current = now;
       }
-      return hit429;
+
+      const manifestBackoff = getRateLimitBackoffMs(
+        manifestResult.error as PollingError | undefined
+      );
+      const attendanceBackoff = getRateLimitBackoffMs(
+        attendanceResult?.error as PollingError | undefined
+      );
+      const backoffMs = Math.max(manifestBackoff ?? 0, attendanceBackoff ?? 0);
+
+      if (backoffMs > 0) {
+        setIsSyncDelayed(true);
+        setPollInterval(backoffMs);
+        return;
+      }
+
+      if (!manifestResult.error) {
+        setLastUpdated(new Date().toLocaleTimeString());
+        setIsSyncDelayed(false);
+        setPollInterval(tripIsActive ? ACTIVE_POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS);
+      }
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [refetchTrip, refetchManifest, refetchSummary, refetchEvents]);
+  }, [refetchManifest, refetchEvents, tripIsActive]);
 
   // Track page visibility
   React.useEffect(() => {
@@ -202,16 +239,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
       const visible = document.visibilityState === 'visible';
       setIsTabVisible(visible);
       if (visible) {
-        refreshTripDetailData().then((hit429) => {
-          if (hit429) {
-            setPollInterval(60000);
-          } else {
-            setLastUpdated(new Date().toLocaleTimeString());
-            const currentInterval =
-              tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
-            setPollInterval(currentInterval);
-          }
-        });
+        void refreshTripDetailData(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -222,38 +250,26 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
 
   // Polling effect
   React.useEffect(() => {
-    let currentInterval =
-      tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
-
-    if (pollInterval === 60000) {
-      currentInterval = 60000;
-    } else {
-      setPollInterval(currentInterval);
-    }
-
-    if (currentInterval === 0 || !isTabVisible) return;
+    if (tripIsCompleted || tripIsCancelled || !isTabVisible) return;
 
     const intervalId = setInterval(() => {
-      refreshTripDetailData().then((hit429) => {
-        if (hit429) {
-          setPollInterval(60000);
-        } else {
-          setLastUpdated(new Date().toLocaleTimeString());
-          const normalInterval =
-            tripIsCompleted || tripIsCancelled ? 0 : tripIsActive ? 6000 : 20000;
-          setPollInterval(normalInterval);
-        }
-      });
-    }, currentInterval);
+      void refreshTripDetailData();
+    }, pollInterval);
 
     return () => clearInterval(intervalId);
-  }, [refreshTripDetailData, isTabVisible, pollInterval, tripIsCompleted, tripIsCancelled, tripIsActive]);
+  }, [refreshTripDetailData, isTabVisible, pollInterval, tripIsCompleted, tripIsCancelled]);
 
   React.useEffect(() => {
     if (tripData || manifestData) {
       setLastUpdated(new Date().toLocaleTimeString());
     }
   }, [tripData, manifestData]);
+
+  React.useEffect(() => {
+    if (!isSyncDelayed && !tripIsCompleted && !tripIsCancelled) {
+      setPollInterval(tripIsActive ? ACTIVE_POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS);
+    }
+  }, [isSyncDelayed, tripIsActive, tripIsCompleted, tripIsCancelled]);
 
   const sortedEvents = React.useMemo(() => {
     return [...restEvents].sort(
@@ -286,9 +302,17 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     if (!manifest?.stops?.length) return null;
     const stops = manifest.stops;
     const total = stops.length;
-    const done = stops.filter(
-      (s) => s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED',
-    ).length;
+    const done = tripStatus === 'COMPLETED'
+      ? total
+      : stops.filter((s) => {
+          if (s.stopPurpose === 'START_TERMINAL') {
+            return s.stopStatus === 'DEPARTED';
+          }
+          if (s.stopPurpose === 'END_TERMINAL') {
+            return s.stopStatus === 'ARRIVED' || s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+          }
+          return s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+        }).length;
 
     let current = null;
     let next = null;
@@ -422,13 +446,13 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     try {
       await fn();
       toast.success(`${label} completed`);
-      refetchTrip();
-      refetchManifest();
-      refetchSummary();
-      refetchEvents();
     } catch (e: unknown) {
-      const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? `${label} failed`);
+      const err = e as { status?: number; data?: { message?: string } };
+      toast.error(
+        err?.status === 429
+          ? 'System is busy. Please wait a few seconds and try again.'
+          : (err?.data?.message ?? `${label} failed`)
+      );
     }
   };
 
@@ -547,6 +571,16 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               <div className='flex items-center gap-2.5 bg-red-50 border border-red-100 text-red-800 px-4 py-3 rounded-2xl text-xs font-semibold shadow-xs'>
                 <XCircle className='h-4.5 w-4.5 text-red-600 shrink-0' />
                 <span>Trip cancelled. Reason: {(manifest as any)?.cancellationReason || trip?.cancellationReason || 'N/A'}</span>
+              </div>
+            )}
+
+            {isSyncDelayed && (
+              <div className='flex items-center gap-2.5 bg-amber-50 border border-amber-100 text-amber-800 px-4 py-3 rounded-2xl text-xs font-semibold shadow-xs'>
+                <Clock className='h-4.5 w-4.5 text-amber-600 shrink-0' />
+                <span>
+                  Sync is delayed. Retrying automatically
+                  {lastUpdated ? ` - last updated: ${lastUpdated}` : '...'}
+                </span>
               </div>
             )}
           </div>

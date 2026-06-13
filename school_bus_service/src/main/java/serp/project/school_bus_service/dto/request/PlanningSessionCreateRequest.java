@@ -25,9 +25,5 @@ public class PlanningSessionCreateRequest {
     @NotBlank
     private String routeDirection;
 
-    /** MANUAL or GREEDY */
-    @NotBlank
-    private String planningMethod;
-
     private String planningNotes;
 }
