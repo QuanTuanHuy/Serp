@@ -13,7 +13,14 @@ import java.util.Optional;
 
 public interface RoutePlanningSessionRepository extends BaseRepository<RoutePlanningSessionEntity, Long> {
 
-    List<RoutePlanningSessionEntity> findByTenantIdAndIsDeletedFalseOrderByServiceDateDescIdDesc(Long tenantId);
+    @Query("""
+            SELECT s FROM RoutePlanningSessionEntity s
+            WHERE s.tenantId = :tenantId
+              AND s.isDeleted = false
+            ORDER BY COALESCE(s.updatedAt, s.createdAt) DESC, s.id DESC
+            """)
+    List<RoutePlanningSessionEntity> findAllByTenantOrderByLastModifiedDesc(
+            @Param("tenantId") Long tenantId);
 
     List<RoutePlanningSessionEntity> findByTenantIdAndStatusAndIsDeletedFalse(
             Long tenantId, PlanningSessionStatus status);

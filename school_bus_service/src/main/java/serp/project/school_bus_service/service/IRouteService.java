@@ -76,7 +76,7 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
     // List routes by session as DTOs
     List<RoutePlanResponse> listRoutesBySession(Long sessionId, Long tenantId);
 
-    // Create a route linked to a planning session (MANUAL mode)
+    // Create a route linked to a planning session.
     RoutePlanResponse createRouteInSession(RoutePlanUpsertRequest request, Long sessionId, Long tenantId, Long actorId);
 
     void deleteRoute(Long sessionId, Long routeId, Long tenantId, Long actorId);

@@ -13,12 +13,15 @@ import org.springframework.http.ResponseEntity;
 import serp.project.school_bus_service.dto.request.PlanningSessionCreateRequest;
 import serp.project.school_bus_service.dto.request.PlanningSessionPreviewRequest;
 import serp.project.school_bus_service.dto.request.RoutePlanUpsertRequest;
+import serp.project.school_bus_service.dto.request.GreedyFillRouteRequest;
 import serp.project.school_bus_service.dto.response.EligibleStudentResponse;
+import serp.project.school_bus_service.dto.response.GreedyFillRouteResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PlanningPreviewResponse;
 import serp.project.school_bus_service.dto.response.PlanningSessionResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
+import serp.project.school_bus_service.service.algorithm.RouteGreedyFillService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
 
@@ -29,11 +32,14 @@ import java.util.List;
 public class RoutePlanningSessionController extends AbstractBaseController {
 
     private final IRoutePlanningSessionService sessionService;
+    private final RouteGreedyFillService routeGreedyFillService;
 
     public RoutePlanningSessionController(IRoutePlanningSessionService sessionService,
+                                          RouteGreedyFillService routeGreedyFillService,
                                           AuthUtils authUtils) {
         super(authUtils);
         this.sessionService = sessionService;
+        this.routeGreedyFillService = routeGreedyFillService;
     }
 
     @PostMapping("/preview")
@@ -78,6 +84,17 @@ public class RoutePlanningSessionController extends AbstractBaseController {
             @Valid @RequestBody RoutePlanUpsertRequest request) {
         return created("Route created in session",
                 sessionService.createRouteInSession(id, request, getCurrentTenantId(), getCurrentUserId()));
+    }
+
+    @PostMapping("/{sessionId}/routes/{routeId}/greedy-fill")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.write')")
+    public ResponseEntity<GeneralResponse<GreedyFillRouteResponse>> greedyFillRoute(
+            @PathVariable Long sessionId,
+            @PathVariable Long routeId,
+            @Valid @RequestBody(required = false) GreedyFillRouteRequest request) {
+        GreedyFillRouteResponse response = routeGreedyFillService.greedyFillRoute(
+                sessionId, routeId, request, getCurrentTenantId(), getCurrentUserId());
+        return ok(response.getMessage(), response);
     }
 
     @GetMapping("/{id}/eligible-students")

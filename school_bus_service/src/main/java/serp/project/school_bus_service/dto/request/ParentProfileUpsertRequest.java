@@ -12,7 +12,7 @@ import lombok.Setter;
 public class ParentProfileUpsertRequest extends BaseCommandRequest {
 
     @NotNull
-    private Long userId;
+    private Long accountUserId;
 
     @NotBlank
     private String fullName;

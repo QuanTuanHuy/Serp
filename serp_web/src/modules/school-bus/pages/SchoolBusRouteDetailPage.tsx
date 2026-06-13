@@ -24,8 +24,8 @@ import { cn } from '@/shared/utils';
 import {
   useAssignRouteMutation,
   useCreateTripFromRouteMutation,
-  useGetAttendantsQuery,
-  useGetDriversQuery,
+  useGetAttendantDropdownOptionsQuery,
+  useGetDriverDropdownOptionsQuery,
   useGetRoutePathQuery,
   useGetRouteByIdQuery,
 } from '../api/schoolBusApi';
@@ -50,14 +50,14 @@ export function SchoolBusRouteDetailPage({
   routeId,
 }: SchoolBusRouteDetailPageProps) {
   const { data, isLoading, refetch: refetchRoute } = useGetRouteByIdQuery(routeId);
-  const { data: driversData } = useGetDriversQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'fullName',
-  });
-  const { data: attendantsData } = useGetAttendantsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'fullName',
-  });
+  const { data: driversData } = useGetDriverDropdownOptionsQuery();
+
+
+
+  const { data: attendantsData } = useGetAttendantDropdownOptionsQuery();
+
+
+
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
   const [createTripFromRoute, { isLoading: creatingTrip }] =
     useCreateTripFromRouteMutation();
@@ -185,24 +185,24 @@ export function SchoolBusRouteDetailPage({
           </>
         }
       >
-        {/* Readiness Strip */}
+        {/* Status Strip */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-6'>
-          <ReadinessCard
+          <StatusCard
             label="Planning"
             value={route.status === 'DRAFT' ? 'Draft' : 'Complete'}
             status={route.status === 'DRAFT' ? 'warning' : 'success'}
           />
-          <ReadinessCard
+          <StatusCard
             label="Assignment"
             value={isAssigned ? 'Ready' : 'Missing'}
             status={isAssigned ? 'success' : 'warning'}
           />
-          <ReadinessCard
+          <StatusCard
             label="Trip Snapshot"
             value={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'Locked' : 'Not created'}
             status={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'success' : 'muted'}
           />
-          <ReadinessCard
+          <StatusCard
             label="Attendance"
             value={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'Available' : 'Locked'}
             status={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'success' : 'muted'}
@@ -369,8 +369,8 @@ export function SchoolBusRouteDetailPage({
                   action={
                     ['TRIP_CREATED', 'IN_PROGRESS'].includes(route.status) ? (
                       <Button size='sm' variant='outline' className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none' asChild>
-                        <Link href='/school-bus/attendance'>
-                          Open attendance
+                        <Link href='/school-bus/trips'>
+                          Open Trip Operations
                         </Link>
                       </Button>
                     ) : null
@@ -504,8 +504,8 @@ export function SchoolBusRouteDetailPage({
         open={assignmentOpen}
         onOpenChange={setAssignmentOpen}
         initialData={detail.assignment}
-        drivers={getPageItems(driversData?.data)}
-        attendants={getPageItems(attendantsData?.data)}
+        drivers={driversData?.data || []}
+        attendants={attendantsData?.data || []}
         onSubmit={handleAssign}
         isLoading={assigning}
       />
@@ -513,7 +513,7 @@ export function SchoolBusRouteDetailPage({
   );
 }
 
-function ReadinessCard({
+function StatusCard({
   label,
   value,
   status,

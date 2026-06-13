@@ -27,6 +27,7 @@ import type { StudentMapMarker } from '../components/map/OperationsMapClient';
 import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
 import type { SchoolBusRequestStudent } from '../types';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,9 @@ const DAY_KEYS: { key: keyof SchoolBusRequestStudent; label: string }[] = [
   { key: 'sunday', label: 'Sun' },
 ];
 
-/** Row-level readiness derived purely from snapshot data on the detail page. */
-function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): {
-  state: 'ready' | 'needs-config' | 'blocking';
+/** Row-level completeness check derived purely from snapshot data on the detail page. */
+function deriveEligibility(s: SchoolBusRequestStudent, requiresRouting: boolean): {
+  state: 'complete' | 'needs-config' | 'blocking';
   label: string;
   issues: string[];
 } {
@@ -87,7 +88,7 @@ function deriveReadiness(s: SchoolBusRequestStudent, requiresRouting: boolean): 
   }
 
   if (issues.length > 0) return { state: 'blocking', label: 'Needs configuration', issues };
-  return { state: 'ready', label: 'Ready', issues: [] };
+  return { state: 'complete', label: 'Complete', issues: [] };
 }
 
 // ─── sub-components ─────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ function InfoRow({ label, value, className }: { label: string; value: React.Reac
 interface SchoolBusRequestDetailPageProps { requestId: number }
 
 export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetailPageProps) {
+  const access = useSchoolBusAccess();
   const { data, isLoading } = useGetTransportRequestByIdQuery(requestId);
   const [approveTransportRequest, { isLoading: approving }] = useApproveTransportRequestMutation();
   const [rejectTransportRequest, { isLoading: rejecting }] = useRejectTransportRequestMutation();
@@ -173,7 +175,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
   if (isLoading || !detail) {
     return (
       <SchoolBusPageShell
-        title='Transport request detail'
+        title='Transport Request Detail'
         description='Loading…'
       >
         <SchoolBusEmptyState title='Loading request detail' description='Fetching data…' />
@@ -186,9 +188,9 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
   const requiresRouting = ['NEW_SERVICE', 'CHANGE_SERVICE', 'RENEW_SERVICE'].includes(request.requestType);
   const isSubmitted = request.status === 'SUBMITTED';
 
-  // ── Readiness analysis
-  const rowReadiness = students.map((s) => deriveReadiness(s, requiresRouting));
-  const blockingIssues = rowReadiness.flatMap((r, i) =>
+  // ── Eligibility analysis
+  const rowEligibility = students.map((s) => deriveEligibility(s, requiresRouting));
+  const blockingIssues = rowEligibility.flatMap((r, i) =>
     r.issues.map((issue) => `${students[i].studentName}: ${issue}`)
   );
   const allReady = blockingIssues.length === 0;
@@ -246,34 +248,64 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
   return (
     <>
       <SchoolBusPageShell
-        title={`Transport request #${request.id}`}
-        description='Inspect the full request payload, review the student list, and take approval actions.'
+        title={`Transport Request #${request.requestCode || request.id}`}
+        description={access.isParentOnly
+          ? 'View transport request details, student information, and processing status.'
+          : 'Inspect the full request payload, review the student list, and take approval actions.'
+        }
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Transport Requests', href: '/school-bus/requests' },
+              { label: `#${request.requestCode || request.id}`, current: true },
+            ]}
+          />
+        }
         actions={
           <div className='flex flex-wrap items-center gap-2'>
-            {isSubmitted && (
-              <Button variant='outline' className='rounded-full' asChild>
-                <Link href={`/school-bus/requests/${request.id}/edit`}>
-                  <Pencil className='h-4 w-4' /> Edit
-                </Link>
-              </Button>
-            )}
-            {(isSubmitted || request.status === 'DRAFT') && (
-              <Button variant='outline' className='rounded-full' onClick={handleCancel}>Cancel</Button>
-            )}
-            {isSubmitted && (
-              <Button variant='outline' className='rounded-full' onClick={() => setRejectOpen(true)}>
-                <XCircle className='h-4 w-4' /> Reject
-              </Button>
-            )}
-            {isSubmitted && (
-              <Button
-                className='rounded-full bg-[#C81E3A] text-white hover:bg-[#B31B34] font-medium px-6'
-                disabled={!allReady}
-                onClick={handleApprove}
-              >
-                <CheckCircle2 className='h-4 w-4' />
-                {approving ? 'Approving…' : 'Approve'}
-              </Button>
+            {/* Parent: Edit (if editable) and Cancel (if cancellable) — no Approve/Reject */}
+            {access.isParentOnly ? (
+              <>
+                {(isSubmitted || request.status === 'REJECTED') && (
+                  <Button variant='outline' className='rounded-full' asChild>
+                    <Link href={`/school-bus/requests/${request.id}/edit`}>
+                      <Pencil className='h-4 w-4' /> Edit
+                    </Link>
+                  </Button>
+                )}
+                {(isSubmitted || request.status === 'DRAFT') && (
+                  <Button variant='outline' className='rounded-full' onClick={handleCancel}>Cancel</Button>
+                )}
+              </>
+            ) : (
+              <>
+                {isSubmitted && (
+                  <Button variant='outline' className='rounded-full' asChild>
+                    <Link href={`/school-bus/requests/${request.id}/edit`}>
+                      <Pencil className='h-4 w-4' /> Edit
+                    </Link>
+                  </Button>
+                )}
+                {(isSubmitted || request.status === 'DRAFT') && (
+                  <Button variant='outline' className='rounded-full' onClick={handleCancel}>Cancel</Button>
+                )}
+                {isSubmitted && (
+                  <Button variant='outline' className='rounded-full' onClick={() => setRejectOpen(true)}>
+                    <XCircle className='h-4 w-4' /> Reject
+                  </Button>
+                )}
+                {isSubmitted && (
+                  <Button
+                    className='rounded-full bg-[#C81E3A] text-white hover:bg-[#B31B34] font-medium px-6'
+                    disabled={!allReady}
+                    onClick={handleApprove}
+                  >
+                    <CheckCircle2 className='h-4 w-4' />
+                    {approving ? 'Approving…' : 'Approve'}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         }
@@ -290,52 +322,87 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
             </span>
           </div>
 
-          {/* ── Approval Readiness Banner */}
-          {request.status === 'SUBMITTED' ? (
-            <div className={cn(
-              'flex items-start gap-3.5 rounded-2xl border p-5 shadow-sm transition-all',
-              allReady
-                ? 'border-emerald-200 bg-emerald-50/60'
-                : 'border-amber-200 bg-amber-50/60'
-            )}>
-              {allReady ? (
-                <CheckCircle2 className='mt-0.5 h-6 w-6 shrink-0 text-emerald-600' />
-              ) : (
-                <AlertTriangle className='mt-0.5 h-6 w-6 shrink-0 text-amber-600' />
-              )}
-              <div className='min-w-0'>
-                <p className={cn('font-bold text-base', allReady ? 'text-emerald-900' : 'text-amber-900')}>
-                  {allReady ? 'Ready to approve' : `Cannot approve yet — ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
-                </p>
-                {allReady ? (
-                  <p className='text-xs text-emerald-700 mt-1 font-medium'>
-                    All required student, schedule, pickup/drop-off, and coordinate checks passed.
-                  </p>
-                ) : (
-                  <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
-                    {blockingIssues.map((msg, i) => (
-                      <li key={i} className='flex items-center gap-2 text-xs font-semibold text-amber-800'>
-                        <AlertCircle className='h-4 w-4 shrink-0 text-amber-600' /> {msg}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          ) : (
+          {/* ── Status / Eligibility Banner */}
+          {access.isParentOnly ? (
+            /* ── Parent-friendly status banner */
             <div className={cn(
               'flex items-center gap-3 rounded-2xl border p-4.5 shadow-sm',
+              request.status === 'SUBMITTED' && 'border-blue-200 bg-blue-50/40 text-blue-800',
               request.status === 'APPROVED' && 'border-emerald-200 bg-emerald-50/40 text-emerald-800',
               request.status === 'REJECTED' && 'border-red-200 bg-red-50/40 text-red-800',
               ['CANCELLED', 'DRAFT'].includes(request.status) && 'border-slate-200 bg-slate-50 text-slate-700'
             )}>
+              {request.status === 'SUBMITTED' && <Clock className='h-5 w-5 shrink-0 text-blue-600' />}
               {request.status === 'APPROVED' && <CheckCircle2 className='h-5 w-5 shrink-0 text-emerald-600' />}
               {request.status === 'REJECTED' && <XCircle className='h-5 w-5 shrink-0 text-red-600' />}
               {['CANCELLED', 'DRAFT'].includes(request.status) && <Clock className='h-5 w-5 shrink-0 text-slate-500' />}
-              <span className='text-sm font-bold'>
-                Request is currently {request.status.toLowerCase()} — no further actions required.
-              </span>
+              <div>
+                <span className='text-sm font-bold block'>
+                  {request.status === 'SUBMITTED' && 'Request is waiting for review'}
+                  {request.status === 'APPROVED' && 'Request approved'}
+                  {request.status === 'REJECTED' && 'Request rejected'}
+                  {request.status === 'CANCELLED' && 'Request cancelled'}
+                  {request.status === 'DRAFT' && 'Draft request'}
+                </span>
+                <span className='text-xs font-medium opacity-80'>
+                  {request.status === 'SUBMITTED' && 'All required information has been submitted.'}
+                  {request.status === 'APPROVED' && 'This transport request has been approved.'}
+                  {request.status === 'REJECTED' && 'Please review the rejection reason below.'}
+                  {request.status === 'CANCELLED' && 'This request has been cancelled.'}
+                  {request.status === 'DRAFT' && 'This draft has not been submitted yet.'}
+                </span>
+              </div>
             </div>
+          ) : (
+            /* ── Admin/Dispatcher approval banner */
+            <>
+              {request.status === 'SUBMITTED' ? (
+                <div className={cn(
+                  'flex items-start gap-3.5 rounded-2xl border p-5 shadow-sm transition-all',
+                  allReady
+                    ? 'border-emerald-200 bg-emerald-50/60'
+                    : 'border-amber-200 bg-amber-50/60'
+                )}>
+                  {allReady ? (
+                    <CheckCircle2 className='mt-0.5 h-6 w-6 shrink-0 text-emerald-600' />
+                  ) : (
+                    <AlertTriangle className='mt-0.5 h-6 w-6 shrink-0 text-amber-600' />
+                  )}
+                  <div className='min-w-0'>
+                    <p className={cn('font-bold text-base', allReady ? 'text-emerald-900' : 'text-amber-900')}>
+                      {allReady ? 'Eligible for approval' : `Cannot approve yet — ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
+                    </p>
+                    {allReady ? (
+                      <p className='text-xs text-emerald-700 mt-1 font-medium'>
+                        All required student, pickup/drop-off, and coordinate checks passed.
+                      </p>
+                    ) : (
+                      <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
+                        {blockingIssues.map((msg, i) => (
+                          <li key={i} className='flex items-center gap-2 text-xs font-semibold text-amber-800'>
+                            <AlertCircle className='h-4 w-4 shrink-0 text-amber-600' /> {msg}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={cn(
+                  'flex items-center gap-3 rounded-2xl border p-4.5 shadow-sm',
+                  request.status === 'APPROVED' && 'border-emerald-200 bg-emerald-50/40 text-emerald-800',
+                  request.status === 'REJECTED' && 'border-red-200 bg-red-50/40 text-red-800',
+                  ['CANCELLED', 'DRAFT'].includes(request.status) && 'border-slate-200 bg-slate-50 text-slate-700'
+                )}>
+                  {request.status === 'APPROVED' && <CheckCircle2 className='h-5 w-5 shrink-0 text-emerald-600' />}
+                  {request.status === 'REJECTED' && <XCircle className='h-5 w-5 shrink-0 text-red-600' />}
+                  {['CANCELLED', 'DRAFT'].includes(request.status) && <Clock className='h-5 w-5 shrink-0 text-slate-500' />}
+                  <span className='text-sm font-bold'>
+                    Request is currently {request.status.toLowerCase()} — no further actions required.
+                  </span>
+                </div>
+              )}
+            </>
           )}
 
           {/* ── Main layout grid */}
@@ -346,11 +413,14 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
               {/* Requested students */}
               <SchoolBusSection
                 title='Requested students'
-                description='Linked students, school schedule, trip option, stops and schedule detail.'
+                description={access.isParentOnly
+                  ? 'Students included in this transport request.'
+                  : 'Linked students, trip options, stops, and active days.'
+                }
               >
                 <div className='grid gap-4 sm:grid-cols-1'>
                   {students.map((s, i) => {
-                    const r = rowReadiness[i];
+                    const r = rowEligibility[i];
                     const opt = (s.tripOption || '').toUpperCase();
                     const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
                     const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
@@ -367,11 +437,11 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
                           </div>
                           <span className={cn(
                             'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset',
-                            r.state === 'ready'
+                            r.state === 'complete'
                               ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
                               : 'bg-amber-50 text-amber-700 ring-amber-600/20'
                           )}>
-                            {r.state === 'ready' ? <CheckCircle2 className='h-3.5 w-3.5' /> : <AlertTriangle className='h-3.5 w-3.5' />}
+                            {r.state === 'complete' ? <CheckCircle2 className='h-3.5 w-3.5' /> : <AlertTriangle className='h-3.5 w-3.5' />}
                             {r.label}
                           </span>
                         </div>
@@ -435,7 +505,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
 
                           {/* Days active */}
                           <div className='md:col-span-2 border-t border-slate-100 pt-3'>
-                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>Active schedule days</span>
+                            <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>Active days</span>
                             <DayBadges student={s} />
                           </div>
                         </div>
@@ -448,7 +518,10 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
               {/* Request map */}
               <SchoolBusSection
                 title='Request map'
-                description='Geographical overview of the school hub, configured stops, and students.'
+                description={access.isParentOnly
+                  ? 'Map view of the school and selected pickup/drop-off points.'
+                  : 'Geographical overview of the school hub, configured stops, and students.'
+                }
               >
                 <div className='mt-2 rounded-2xl overflow-hidden border border-slate-200 shadow-sm'>
                   <SchoolBusMapWorkspace
@@ -527,7 +600,7 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
               <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
                 <h3 className='font-bold text-slate-900 text-base'>Request summary</h3>
                 <div className='flex flex-col border-t border-slate-100 mt-1'>
-                  <InfoRow label='Parent name' value={request.parentProfileName} />
+                  {!access.isParentOnly && <InfoRow label='Parent name' value={request.parentProfileName} />}
                   <InfoRow label='School name' value={request.schoolName} />
                   <InfoRow label='Request type' value={REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType} />
                   <InfoRow label='Status' value={<SchoolBusStatusBadge status={request.status} />} />
@@ -547,8 +620,8 @@ export function SchoolBusRequestDetailPage({ requestId }: SchoolBusRequestDetail
                 </div>
               </div>
 
-              {/* Approval checklist */}
-              {isSubmitted && (
+              {/* Approval checklist — Admin/Dispatcher only */}
+              {isSubmitted && !access.isParentOnly && (
                 <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
                   <h3 className='font-bold text-slate-900 text-base'>Approval checklist</h3>
                   <div className='space-y-3 mt-1'>

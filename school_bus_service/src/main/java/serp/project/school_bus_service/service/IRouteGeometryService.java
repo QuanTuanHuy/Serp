@@ -11,7 +11,8 @@ public interface IRouteGeometryService {
 
     /**
      * Recalculate the route geometry using OSRM.
-     * Updates: route.geometryPath, route.plannedDistanceKm, route.plannedDurationMin.
+     * Updates: route.geometryPath, route.geometrySource, route.plannedDistanceKm,
+     * route.plannedDurationMin.
      * If OSRM fails: logs warning, leaves geometry unchanged, does not block route operations.
      */
     void recalculateGeometry(RoutePlanEntity route, Long tenantId);

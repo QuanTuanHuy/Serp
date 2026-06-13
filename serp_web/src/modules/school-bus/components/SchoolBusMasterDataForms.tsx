@@ -50,7 +50,7 @@ import type {
 import { toCoordinateString } from '../utils';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 import { LocationPickerMap } from './map/LocationPickerMap';
-import { useGetActiveSchoolPickupPointsQuery } from '../api/schoolBusApi';
+import { useGetSchoolPickupPointDropdownOptionsQuery } from '../api/schoolBusApi';
 
 const schoolSchema = z.object({
   name: z.string().min(1, 'School name is required'),
@@ -86,7 +86,7 @@ const depotSchema = z.object({
 });
 
 const parentSchema = z.object({
-  userId: z.coerce.number().min(1, 'User ID is required'),
+  accountUserId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
   phone: z.string().min(1, 'Phone is required'),
   email: z.string().optional().refine(
@@ -122,18 +122,15 @@ const busSchema = z.object({
 });
 
 const driverSchema = z.object({
-  userId: z.coerce.number().min(1, 'User ID is required'),
+  accountUserId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
   phone: z.string().optional(),
-  licenseNumber: z.string().min(1, 'License number is required'),
-  licenseClass: z.string().min(1, 'License class is required'),
-  licenseExpiryDate: z.string().min(1, 'License expiry date is required'),
   status: z.string().min(1, 'Status is required'),
   isActive: z.boolean().default(true),
 });
 
 const attendantSchema = z.object({
-  userId: z.coerce.number().min(1, 'User ID is required'),
+  accountUserId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
   phone: z.string().optional(),
   status: z.string().min(1, 'Status is required'),
@@ -544,7 +541,7 @@ export function ParentFormDialog({
   const form = useForm<ParentFormValues>({
     resolver: zodResolver(parentSchema) as any,
     defaultValues: {
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       email: initialData?.email || '',
@@ -555,7 +552,7 @@ export function ParentFormDialog({
 
   React.useEffect(() => {
     form.reset({
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       email: initialData?.email || '',
@@ -565,14 +562,14 @@ export function ParentFormDialog({
   }, [form, initialData]);
 
   const isEditMode = Boolean(initialData);
-  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUserId = Number(form.watch('accountUserId') || 0);
   const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
 
   const handleAccountUserChange = (value: string) => {
     const userId = Number(value);
     const user = accountUsers.find((candidate) => candidate.id === userId);
 
-    form.setValue('userId', userId, {
+    form.setValue('accountUserId', userId, {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -613,7 +610,7 @@ export function ParentFormDialog({
         <FormSectionHeader title='Linked account' />
         <SelectField
           form={form}
-          name='userId'
+          name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
@@ -623,7 +620,7 @@ export function ParentFormDialog({
               : accountUsers.length === 0
                 ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
-                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  ? `Selected: ${selectedUser.email}`
                   : 'This links the parent profile to a platform login account.'
           }
           placeholder={
@@ -661,12 +658,10 @@ function getAccountUserOptionLabel(user: SchoolBusAccountUser) {
 
 interface StudentFormDialogProps extends BaseDialogProps {
   initialData?: SchoolBusStudent | null;
-  schools: SchoolBusSchool[];
-  parents: SchoolBusParent[];
-  pickupPoints: SchoolBusPickupPoint[];
-  /** Active school-pickup links used to filter pickup/dropoff per school */
-  schoolPickupPoints?: SchoolBusSchoolPickupPoint[];
+  schools: any[];
+  parents: any[];
   onSubmit: (values: SchoolBusStudentUpsertRequest) => Promise<void>;
+  isParent?: boolean;
 }
 
 export function StudentFormDialog({
@@ -675,16 +670,15 @@ export function StudentFormDialog({
   initialData,
   schools,
   parents,
-  pickupPoints,
-  schoolPickupPoints = [],
   onSubmit,
   isLoading = false,
+  isParent = false,
 }: StudentFormDialogProps) {
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema) as any,
     defaultValues: {
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
-      parentProfileId: initialData?.parentProfileId ?? parents[0]?.id ?? 0,
+      parentProfileId: initialData?.parentProfileId ?? (isParent ? 999999 : (parents[0]?.id ?? 0)),
       pickupPointId:
         initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
           ? ''
@@ -707,7 +701,7 @@ export function StudentFormDialog({
   React.useEffect(() => {
     form.reset({
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
-      parentProfileId: initialData?.parentProfileId ?? parents[0]?.id ?? 0,
+      parentProfileId: initialData?.parentProfileId ?? (isParent ? 999999 : (parents[0]?.id ?? 0)),
       pickupPointId:
         initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
           ? ''
@@ -725,7 +719,7 @@ export function StudentFormDialog({
       specialNote: initialData?.specialNote || '',
       isActive: initialData?.isActive ?? true,
     });
-  }, [form, initialData, schools, parents]);
+  }, [form, initialData, schools, parents, isParent]);
 
   // Watch schoolId to filter pickup/dropoff by school
   const selectedSchoolId = form.watch('schoolId');
@@ -741,42 +735,34 @@ export function StudentFormDialog({
     prevSchoolRef.current = numericSchoolId;
   }, [numericSchoolId, form]);
 
-  // Fetch active school pickup point links from backend dynamically when school changes
-  const { data: activeLinksData, isFetching } = useGetActiveSchoolPickupPointsQuery(
+  // Fetch active school pickup point links from backend dynamically when school changes using the dropdown API
+  const { data: dropdownPointsData, isFetching } = useGetSchoolPickupPointDropdownOptionsQuery(
     numericSchoolId,
     { skip: !numericSchoolId }
   );
-  const activeSchoolPickupPoints = activeLinksData?.data ?? [];
+  const schoolDropdownPoints = dropdownPointsData?.data ?? [];
 
-  // Filter linked pickup points by the selected school
-  const linkedPointIds = React.useMemo(() => {
-    if (!numericSchoolId) return new Set<number>();
-    return new Set(activeSchoolPickupPoints.map((sp) => sp.pickupPointId));
-  }, [activeSchoolPickupPoints, numericSchoolId]);
-
-  // Pickup options: linked points with usage PICKUP_ONLY or PICKUP_DROPOFF
+  // Pickup options: options with usage PICKUP_ONLY or PICKUP_DROPOFF
   const pickupOptions = React.useMemo(() => {
     if (!numericSchoolId) return [];
-    return pickupPoints
+    return schoolDropdownPoints
       .filter(
-        (pp) =>
-          linkedPointIds.has(pp.id) &&
-          (pp.usageType === 'PICKUP_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
+        (sp) =>
+          sp.metadata?.usageType === 'PICKUP_ONLY' || sp.metadata?.usageType === 'PICKUP_DROPOFF'
       )
-      .map((pp) => ({ value: String(pp.id), label: pp.name }));
-  }, [pickupPoints, linkedPointIds, numericSchoolId]);
+      .map((sp) => ({ value: String(sp.id), label: sp.label }));
+  }, [schoolDropdownPoints, numericSchoolId]);
 
-  // Dropoff options: linked points with usage DROPOFF_ONLY or PICKUP_DROPOFF
+  // Dropoff options: options with usage DROPOFF_ONLY or PICKUP_DROPOFF
   const dropoffOptions = React.useMemo(() => {
     if (!numericSchoolId) return [];
-    return pickupPoints
+    return schoolDropdownPoints
       .filter(
-        (pp) =>
-          linkedPointIds.has(pp.id) &&
-          (pp.usageType === 'DROPOFF_ONLY' || pp.usageType === 'PICKUP_DROPOFF')
+        (sp) =>
+          sp.metadata?.usageType === 'DROPOFF_ONLY' || sp.metadata?.usageType === 'PICKUP_DROPOFF'
       )
-      .map((pp) => ({ value: String(pp.id), label: pp.name }));
-  }, [pickupPoints, linkedPointIds, numericSchoolId]);
+      .map((sp) => ({ value: String(sp.id), label: sp.label }));
+  }, [schoolDropdownPoints, numericSchoolId]);
 
   const noSchoolSelected = !numericSchoolId;
 
@@ -817,47 +803,51 @@ export function StudentFormDialog({
             form={form}
             name='schoolId'
             label='School *'
-            options={schools.map((school) => ({
-              value: String(school.id),
-              label: school.name,
-            }))}
-          />
-          <TextField form={form} name='fullName' label='Student name *' />
-        </div>
-        {initialData?.studentCode ? (
-          <ReadOnlyField label='Student code' value={initialData.studentCode} />
-        ) : null}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <TextField form={form} name='grade' label='Grade' />
-          <TextField form={form} name='className' label='Class name' />
-        </div>
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <TextField form={form} name='dateOfBirth' label='Date of birth' type='date' />
-          <SelectField
-            form={form}
-            name='gender'
-            label='Gender'
-            allowEmpty
-            emptyLabel='Not specified'
-            options={[
-              { value: 'MALE', label: 'Male' },
-              { value: 'FEMALE', label: 'Female' },
-              { value: 'OTHER', label: 'Other' },
-            ]}
-          />
-        </div>
-
-        {/* ── Section: Parent & contact ── */}
-        <FormSectionHeader title='Parent & contact' />
-        <SelectField
-          form={form}
-          name='parentProfileId'
-          label='Parent *'
-          options={parents.map((parent) => ({
-            value: String(parent.id),
-            label: parent.fullName,
-          }))}
-        />
+             options={schools.map((school) => ({
+               value: String(school.id),
+               label: school.label,
+             }))}
+           />
+           <TextField form={form} name='fullName' label='Student name *' />
+         </div>
+         {initialData?.studentCode ? (
+           <ReadOnlyField label='Student code' value={initialData.studentCode} />
+         ) : null}
+         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+           <TextField form={form} name='grade' label='Grade' />
+           <TextField form={form} name='className' label='Class name' />
+         </div>
+         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+           <TextField form={form} name='dateOfBirth' label='Date of birth' type='date' />
+           <SelectField
+             form={form}
+             name='gender'
+             label='Gender'
+             allowEmpty
+             emptyLabel='Not specified'
+             options={[
+               { value: 'MALE', label: 'Male' },
+               { value: 'FEMALE', label: 'Female' },
+               { value: 'OTHER', label: 'Other' },
+             ]}
+           />
+         </div>
+ 
+         {/* ── Section: Parent & contact ── */}
+         {!isParent && (
+           <>
+             <FormSectionHeader title='Parent & contact' />
+             <SelectField
+               form={form}
+               name='parentProfileId'
+               label='Parent *'
+               options={parents.map((parent) => ({
+                 value: String(parent.id),
+                 label: parent.label,
+               }))}
+             />
+           </>
+         )}
 
         {/* ── Section: Transport defaults ── */}
         <FormSectionHeader title='Transport defaults' />
@@ -1111,12 +1101,9 @@ export function DriverFormDialog({
   const form = useForm<DriverFormValues>({
     resolver: zodResolver(driverSchema) as any,
     defaultValues: {
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
-      licenseNumber: initialData?.licenseNumber || '',
-      licenseClass: initialData?.licenseClass || '',
-      licenseExpiryDate: initialData?.licenseExpiryDate || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     },
@@ -1124,26 +1111,23 @@ export function DriverFormDialog({
 
   React.useEffect(() => {
     form.reset({
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
-      licenseNumber: initialData?.licenseNumber || '',
-      licenseClass: initialData?.licenseClass || '',
-      licenseExpiryDate: initialData?.licenseExpiryDate || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData]);
 
   const isEditMode = Boolean(initialData);
-  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUserId = Number(form.watch('accountUserId') || 0);
   const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
 
   const handleAccountUserChange = (value: string) => {
     const userId = Number(value);
     const user = accountUsers.find((candidate) => candidate.id === userId);
 
-    form.setValue('userId', userId, {
+    form.setValue('accountUserId', userId, {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -1169,7 +1153,7 @@ export function DriverFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={initialData ? 'Edit driver' : 'Create driver'}
-      description='Manage driver availability and license metadata.'
+      description='Manage driver availability.'
     >
       <SimpleForm
         form={form}
@@ -1178,10 +1162,10 @@ export function DriverFormDialog({
         onSubmit={onSubmit}
       >
         {/* ── Section: Account link ── */}
-        <FormSectionHeader title='Account link' />
+        <FormSectionHeader title='ACCOUNT LINK' />
         <SelectField
           form={form}
-          name='userId'
+          name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
@@ -1191,7 +1175,7 @@ export function DriverFormDialog({
               : accountUsers.length === 0
                 ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
-                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  ? `Selected: ${selectedUser.email}`
                   : 'Choose an existing user account if this driver can log in.'
           }
           placeholder={
@@ -1205,18 +1189,12 @@ export function DriverFormDialog({
         />
 
         {/* ── Section: Driver information ── */}
-        <FormSectionHeader title='Driver information' />
+        <FormSectionHeader title='DRIVER INFORMATION' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
 
-        {/* ── Section: License information ── */}
-        <FormSectionHeader title='License information' />
-        <TextField form={form} name='licenseNumber' label='License number *' />
-        <TextField form={form} name='licenseClass' label='License class *' />
-        <TextField form={form} name='licenseExpiryDate' label='License expiry date *' type='date' />
-
         {/* ── Section: Operational status ── */}
-        <FormSectionHeader title='Operational status' />
+        <FormSectionHeader title='OPERATIONAL STATUS' />
         <SelectField
           form={form}
           name='status'
@@ -1250,7 +1228,7 @@ export function AttendantFormDialog({
   const form = useForm<AttendantFormValues>({
     resolver: zodResolver(attendantSchema) as any,
     defaultValues: {
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
@@ -1260,7 +1238,7 @@ export function AttendantFormDialog({
 
   React.useEffect(() => {
     form.reset({
-      userId: initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
@@ -1269,14 +1247,14 @@ export function AttendantFormDialog({
   }, [form, initialData]);
 
   const isEditMode = Boolean(initialData);
-  const selectedUserId = Number(form.watch('userId') || 0);
+  const selectedUserId = Number(form.watch('accountUserId') || 0);
   const selectedUser = accountUsers.find((user) => user.id === selectedUserId);
 
   const handleAccountUserChange = (value: string) => {
     const userId = Number(value);
     const user = accountUsers.find((candidate) => candidate.id === userId);
 
-    form.setValue('userId', userId, {
+    form.setValue('accountUserId', userId, {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -1314,7 +1292,7 @@ export function AttendantFormDialog({
         <FormSectionHeader title='Account link' />
         <SelectField
           form={form}
-          name='userId'
+          name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
           disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
@@ -1324,7 +1302,7 @@ export function AttendantFormDialog({
               : accountUsers.length === 0
                 ? 'No users with School Bus module access found. Grant access in Account settings first.'
                 : selectedUser
-                  ? `Selected #${selectedUser.id} - ${selectedUser.email}`
+                  ? `Selected: ${selectedUser.email}`
                   : 'Choose an existing user account if this attendant can log in.'
           }
           placeholder={

@@ -7,6 +7,7 @@ import serp.project.school_bus_service.shared.base.BaseRepository;
 
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,9 @@ import java.util.Optional;
 public interface TripStudentRepository extends BaseRepository<TripStudentEntity, Long> {
 
     List<TripStudentEntity> findByTripIdAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Long tripId,
+            Long tenantId);
+
+    List<TripStudentEntity> findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Collection<Long> tripIds,
             Long tenantId);
 
     Optional<TripStudentEntity> findByTripIdAndStudentIdAndTenantIdAndIsDeletedFalse(

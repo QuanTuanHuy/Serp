@@ -44,6 +44,8 @@ public interface IRoutePlanStudentService extends IBaseService<RoutePlanStudentE
 
     boolean existsByRouteAndStudent(Long routeId, Long studentId);
 
+    boolean existsByRouteStudentAndSubscription(Long routeId, Long studentId, Long subscriptionId);
+
     List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, RouteDirection direction);
 
     List<StudentSubscriptionEntity> findEligibleSubscriptions(Long schoolId, String direction, LocalDate serviceDate, Long tenantId);

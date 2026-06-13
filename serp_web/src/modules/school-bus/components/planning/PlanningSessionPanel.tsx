@@ -1,26 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Zap, Rocket, X, Loader2, Activity, History } from 'lucide-react';
+import { Rocket, X, Loader2, Activity, History } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusStatusBadge } from '../SchoolBusStatusBadge';
-import { schoolBusUi } from '../../theme';
-import type { SchoolBusPlanningSession, PlanningMethod } from '../../types';
-
-const methodLabel: Record<PlanningMethod, string> = { MANUAL: 'Manual', GREEDY: 'Greedy' };
+import type { SchoolBusPlanningSession } from '../../types';
 
 interface PlanningSessionPanelProps {
   activeSession: SchoolBusPlanningSession | null;
   sessions: SchoolBusPlanningSession[];
-  planningMethod: PlanningMethod;
   blockingTotal: number;
   canPublish: boolean;
-  generating: boolean;
   publishing: boolean;
   cancelling: boolean;
-  hasRoutes: boolean;
-  onGenerate: () => void;
   onPublish: () => void;
   onCancel: () => void;
   onSelectSession: (s: SchoolBusPlanningSession) => void;
@@ -38,9 +31,9 @@ function StatItem({ label, value, warn }: { label: string; value: string | numbe
 }
 
 export function PlanningSessionPanel({
-  activeSession, sessions, planningMethod, blockingTotal, canPublish,
-  generating, publishing, cancelling, hasRoutes,
-  onGenerate, onPublish, onCancel, onSelectSession,
+  activeSession, sessions, blockingTotal, canPublish,
+  publishing, cancelling,
+  onPublish, onCancel, onSelectSession,
   hidePastSessions = false,
 }: PlanningSessionPanelProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(!!activeSession);
@@ -71,21 +64,10 @@ export function PlanningSessionPanel({
             <StatItem label='Unassigned' value={activeSession.totalUnassignedStudents} warn={activeSession.totalUnassignedStudents > 0} />
             <StatItem label='Routes' value={activeSession.totalRoutes} />
             <StatItem label='ID' value={`#${activeSession.id}`} />
-            <StatItem label='Method' value={methodLabel[activeSession.planningMethod]} />
+            <StatItem label='Stops' value={activeSession.totalStops} />
           </div>
 
           <div className='flex flex-wrap gap-2 pt-2 border-t border-slate-100'>
-            {planningMethod === 'GREEDY' && (
-              <Button
-                onClick={onGenerate}
-                disabled={generating || activeSession.status === 'PUBLISHED' || activeSession.status === 'CANCELLED'}
-                variant='outline'
-                className={cn('flex-1 justify-center', schoolBusUi.outlineButton)}
-              >
-                {generating ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Zap className='mr-1.5 h-3.5 w-3.5' />}
-                Generate
-              </Button>
-            )}
             <Button
               onClick={onPublish}
               disabled={!canPublish || publishing}
@@ -143,7 +125,7 @@ export function PlanningSessionPanel({
                     <SchoolBusStatusBadge status={s.status} />
                   </div>
                   <p className='mt-1 text-[10px] font-semibold text-slate-500'>
-                    {s.schoolName} · {s.routeDirection} · {methodLabel[s.planningMethod]}
+                    {s.schoolName} · {s.routeDirection}
                   </p>
                 </button>
               ))}

@@ -39,6 +39,7 @@ import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final SchoolBusSecurityService securityService;
 
 
     public StudentSubscriptionServiceImpl(
@@ -71,7 +73,8 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             ICodeGeneratorService codeGeneratorService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
-            ISchoolBusDataScopeService schoolBusDataScopeService) {
+            ISchoolBusDataScopeService schoolBusDataScopeService,
+            SchoolBusSecurityService securityService) {
         this.subscriptionRepository = subscriptionRepository;
         this.historyRepository = historyRepository;
         this.masterDataService = masterDataService;
@@ -79,6 +82,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.securityService = securityService;
     }
 
 
@@ -93,6 +97,11 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public PageResponse<StudentSubscriptionResponse> getSubscriptions(StudentSubscriptionParamsRequest params, Long tenantId) {
         Specification<StudentSubscriptionEntity> spec = spec(tenantId, params == null ? null : params.getKeyword(),
                 "subscriptionCode", "student.fullName", "school.name", "status", "tripOption");
+        // Parent data scope: filter to subscriptions belonging to current parent's students
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("student").get("parentProfile").get("id"), parentProfileId));
+        }
         if (params != null && params.getSchoolId() != null)
             spec = spec.and((r, q, cb) -> cb.equal(r.get("school").get("id"), params.getSchoolId()));
         if (params != null && params.getStudentId() != null)

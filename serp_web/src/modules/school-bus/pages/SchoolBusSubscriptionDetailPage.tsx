@@ -33,6 +33,7 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import type { TimelineEvent } from '../components/history/SchoolBusTimeline';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
   MORNING: 'To school only (Morning)',
@@ -57,6 +58,7 @@ interface SchoolBusSubscriptionDetailPageProps {
 export function SchoolBusSubscriptionDetailPage({
   subscriptionId,
 }: SchoolBusSubscriptionDetailPageProps) {
+  const access = useSchoolBusAccess();
   const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
   const [activateSubscription, { isLoading: activating }] = useActivateSchoolBusSubscriptionMutation();
   const [pauseSubscription, { isLoading: pausing }] = usePauseSchoolBusSubscriptionMutation();
@@ -121,7 +123,7 @@ export function SchoolBusSubscriptionDetailPage({
     );
   }
 
-  // derive readiness checklist
+  // derive eligibility checklist
   const isStatusActive = sub.status === 'ACTIVE';
   const isDateValid = (() => {
     const now = new Date();
@@ -168,49 +170,54 @@ export function SchoolBusSubscriptionDetailPage({
         </Button>
       </Link>
 
-      {sub.status === 'ACTIVE' && (
+      {/* Admin/Dispatcher: lifecycle actions — Parent cannot write subscriptions directly */}
+      {!access.isParentOnly && (
         <>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('pause')}
-            disabled={pausing}
-            className='h-9 rounded-xl border-amber-200 hover:bg-amber-50 text-amber-700 font-bold gap-1.5'
-          >
-            <PauseCircle className='h-4 w-4' />
-            Pause
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('stop')}
-            disabled={stopping}
-            className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
-          >
-            <StopCircle className='h-4 w-4' />
-            Stop
-          </Button>
-        </>
-      )}
+          {sub.status === 'ACTIVE' && (
+            <>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('pause')}
+                disabled={pausing}
+                className='h-9 rounded-xl border-amber-200 hover:bg-amber-50 text-amber-700 font-bold gap-1.5'
+              >
+                <PauseCircle className='h-4 w-4' />
+                Pause
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('stop')}
+                disabled={stopping}
+                className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
+              >
+                <StopCircle className='h-4 w-4' />
+                Stop
+              </Button>
+            </>
+          )}
 
-      {sub.status === 'PAUSED' && (
-        <>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('activate')}
-            disabled={activating}
-            className='h-9 rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-bold gap-1.5'
-          >
-            <PlayCircle className='h-4 w-4' />
-            Resume
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('stop')}
-            disabled={stopping}
-            className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
-          >
-            <StopCircle className='h-4 w-4' />
-            Stop
-          </Button>
+          {sub.status === 'PAUSED' && (
+            <>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('activate')}
+                disabled={activating}
+                className='h-9 rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-bold gap-1.5'
+              >
+                <PlayCircle className='h-4 w-4' />
+                Resume
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('stop')}
+                disabled={stopping}
+                className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
+              >
+                <StopCircle className='h-4 w-4' />
+                Stop
+              </Button>
+            </>
+          )}
         </>
       )}
     </div>
@@ -220,12 +227,21 @@ export function SchoolBusSubscriptionDetailPage({
     <SchoolBusPageShell
       title={`Subscription ${sub.subscriptionCode}`}
       description={descriptionNode}
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Subscriptions', href: '/school-bus/subscriptions' },
+            { label: sub.subscriptionCode || 'Detail', current: true },
+          ]}
+        />
+      }
       actions={actionsNode}
     >
       <div className='flex flex-col gap-6 mt-4'>
 
 
-        {/* Status / Readiness Banners */}
+        {/* Status / Eligibility Banners */}
         <div className='space-y-3'>
           {sub.status === 'ACTIVE' && (
             <div className='flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-emerald-800 shadow-sm'>
@@ -233,7 +249,7 @@ export function SchoolBusSubscriptionDetailPage({
               <div>
                 <h4 className='font-bold text-sm text-emerald-950'>Active subscription</h4>
                 <p className='text-xs text-emerald-850 mt-0.5 leading-relaxed font-medium'>
-                  This student is eligible for route planning when schedule, service date, active days and pickup/drop-off conditions match.
+                  This student is eligible for route planning when service date, active days, and pickup/drop-off conditions match.
                 </p>
               </div>
             </div>
@@ -309,10 +325,12 @@ export function SchoolBusSubscriptionDetailPage({
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>Student Code</span>
                     <span className='text-sm font-semibold text-slate-700 font-mono'>{sub.studentCode || 'N/A'}</span>
                   </div>
+                  {!access.isParentOnly && (
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>Parent</span>
                     <span className='text-sm font-semibold text-slate-700'>{sub.parentName || 'N/A'}</span>
                   </div>
+                  )}
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>School</span>
                     <div className='flex items-center gap-2'>
@@ -380,8 +398,8 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Schedule & active days */}
-            <SchoolBusSection title='Schedule & active days'>
+            {/* Active days */}
+            <SchoolBusSection title='Active days'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
                 
 
@@ -409,8 +427,9 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Planning Readiness Checklist */}
-            <SchoolBusSection title='Route Planning Readiness'>
+            {/* Planning Eligibility Checklist — Admin/Dispatcher only */}
+            {!access.isParentOnly && (
+            <SchoolBusSection title='Route Planning Eligibility'>
               <div className={cn(
                 'p-5 rounded-2xl border shadow-sm space-y-4 transition-all',
                 isEligible
@@ -427,7 +446,7 @@ export function SchoolBusSubscriptionDetailPage({
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     )}
                   >
-                    {isEligible ? 'Yes (Ready)' : 'No (Blocked)'}
+                    {isEligible ? 'Yes (Eligible)' : 'No (Ineligible)'}
                   </span>
                 </div>
 
@@ -480,10 +499,11 @@ export function SchoolBusSubscriptionDetailPage({
                 </div>
 
                 <div className='rounded-xl bg-slate-50 p-3 text-slate-500 text-[11px] font-semibold leading-relaxed border border-slate-200/60'>
-                  ⚠️ Detailed planning readiness (such as pickup windows, coordinates, and school link compatibility) will be evaluated during the route planning phase.
+                  ⚠️ Detailed route planning compatibility (such as coordinates and school link compatibility) will be evaluated during the route planning phase.
                 </div>
               </div>
             </SchoolBusSection>
+            )}
           </div>
 
           {/* Sidebar Column */}

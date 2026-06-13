@@ -22,7 +22,6 @@ public class PlanningPreviewResponse {
     private LocalDate serviceDate;
     private DayOfWeek serviceDayOfWeek;
     private String direction;
-    private String planningMethod;
 
     private PlanningReadinessSummary summary;
 
@@ -35,6 +34,12 @@ public class PlanningPreviewResponse {
     private Integer totalEligiblePickupPoints;
     private List<EligibleStudentResponse> eligibleStudents;
     private List<EligiblePickupPointResponse> eligiblePickupPoints;
+
+    // --- New fields for conditional planning context ---
+    private Long existingSessionId;
+    private String existingSessionStatus;
+    private Boolean canCreate;
+    private String createDisabledReason;
 
     @Getter
     @Setter

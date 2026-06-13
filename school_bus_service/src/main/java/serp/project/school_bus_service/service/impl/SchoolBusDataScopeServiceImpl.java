@@ -17,6 +17,8 @@ import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
 import serp.project.school_bus_service.repository.TransportRequestRepository;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.repository.TripStudentRepository;
+import serp.project.school_bus_service.repository.SchoolBusUserRepository;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -34,6 +36,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
     private final ParentProfileRepository parentProfileRepository;
     private final DriverProfileRepository driverProfileRepository;
     private final BusAttendantProfileRepository busAttendantProfileRepository;
+    private final SchoolBusUserRepository schoolBusUserRepository;
     private final SchoolBusSecurityService securityService;
 
     public SchoolBusDataScopeServiceImpl(
@@ -45,6 +48,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
             ParentProfileRepository parentProfileRepository,
             DriverProfileRepository driverProfileRepository,
             BusAttendantProfileRepository busAttendantProfileRepository,
+            SchoolBusUserRepository schoolBusUserRepository,
             SchoolBusSecurityService securityService) {
         this.tripExecutionRepository = tripExecutionRepository;
         this.tripStudentRepository = tripStudentRepository;
@@ -54,6 +58,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         this.parentProfileRepository = parentProfileRepository;
         this.driverProfileRepository = driverProfileRepository;
         this.busAttendantProfileRepository = busAttendantProfileRepository;
+        this.schoolBusUserRepository = schoolBusUserRepository;
         this.securityService = securityService;
     }
 
@@ -223,11 +228,31 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE);
     }
 
+    private SchoolBusUserEntity getCurrentSchoolBusUser() {
+        Long accountUserId = securityService.getCurrentUserId();
+        SchoolBusUserEntity schoolBusUser = schoolBusUserRepository.findByAccountUserIdAndIsDeletedFalse(accountUserId)
+                .orElseGet(() -> {
+                    try {
+                        String keycloakId = securityService.getCurrentKeycloakId();
+                        if (keycloakId != null && !keycloakId.isBlank()) {
+                            return schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    return null;
+                });
+        if (schoolBusUser == null) {
+            throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE, "Current shadow user not synchronized or found.");
+        }
+        return schoolBusUser;
+    }
+
     @Override
     public Long getCurrentParentProfileIdRequired() {
         Long tenantId = securityService.getCurrentTenantId();
-        Long userId = securityService.getCurrentUserId();
-        return parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, userId)
+        SchoolBusUserEntity user = getCurrentSchoolBusUser();
+        return parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId())
                 .map(ParentProfileEntity::getId)
                 .orElseThrow(() -> new AppException(AppErrorCode.Security.PARENT_PROFILE_NOT_FOUND));
     }
@@ -235,8 +260,8 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
     @Override
     public Long getCurrentDriverProfileIdRequired() {
         Long tenantId = securityService.getCurrentTenantId();
-        Long userId = securityService.getCurrentUserId();
-        return driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, userId)
+        SchoolBusUserEntity user = getCurrentSchoolBusUser();
+        return driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId())
                 .map(DriverProfileEntity::getId)
                 .orElseThrow(() -> new AppException(AppErrorCode.Security.DRIVER_PROFILE_NOT_FOUND));
     }
@@ -244,8 +269,8 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
     @Override
     public Long getCurrentAttendantProfileIdRequired() {
         Long tenantId = securityService.getCurrentTenantId();
-        Long userId = securityService.getCurrentUserId();
-        return busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, userId)
+        SchoolBusUserEntity user = getCurrentSchoolBusUser();
+        return busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId())
                 .map(BusAttendantProfileEntity::getId)
                 .orElseThrow(() -> new AppException(AppErrorCode.Security.ATTENDANT_PROFILE_NOT_FOUND));
     }

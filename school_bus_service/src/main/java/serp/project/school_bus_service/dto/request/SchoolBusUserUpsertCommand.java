@@ -22,5 +22,6 @@ public class SchoolBusUserUpsertCommand extends BaseCommandRequest {
     private String status;
     private String syncSource;
     private String rawPayloadJson;
+    private java.util.List<String> roles;
 
 }

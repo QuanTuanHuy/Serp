@@ -99,6 +99,18 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
             @Param("studentId") Long studentId);
 
     @Query("""
+            SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
+            WHERE ps.route.id = :routeId
+              AND ps.student.id = :studentId
+              AND ps.subscription.id = :subscriptionId
+              AND ps.isDeleted = false
+            """)
+    boolean existsByRouteStudentAndSubscription(
+            @Param("routeId") Long routeId,
+            @Param("studentId") Long studentId,
+            @Param("subscriptionId") Long subscriptionId);
+
+    @Query("""
             SELECT ps FROM RoutePlanStudentEntity ps
             WHERE ps.route.planningSession.id = :sessionId
               AND ps.route.id <> :routeId

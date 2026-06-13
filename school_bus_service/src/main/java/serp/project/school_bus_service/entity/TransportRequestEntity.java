@@ -13,6 +13,8 @@ import serp.project.school_bus_service.enums.RequestStatus;
 import serp.project.school_bus_service.enums.RequestSource;
 import serp.project.school_bus_service.enums.RequestType;
 
+import org.hibernate.annotations.Formula;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -68,4 +70,7 @@ public class TransportRequestEntity extends BaseModel {
 
     @Column(name = "change_reason", columnDefinition = "TEXT")
     private String changeReason;
+
+    @Formula("(select count(*) from school_bus_request_student rs where rs.request_id = id and rs.is_deleted = false)")
+    private Integer studentCount;
 }

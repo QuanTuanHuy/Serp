@@ -16,7 +16,6 @@ public class PlanningSessionResponse {
 
     private LocalDate serviceDate;
     private String routeDirection;
-    private String planningMethod;
     private String status;
 
     private Integer totalEligibleStudents;
@@ -27,7 +26,6 @@ public class PlanningSessionResponse {
     private Double totalDistanceKm;
     private Integer totalDurationMin;
 
-    private LocalDateTime generatedAt;
     private LocalDateTime publishedAt;
     private String planningNotes;
 

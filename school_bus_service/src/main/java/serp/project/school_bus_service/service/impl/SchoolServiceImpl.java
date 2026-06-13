@@ -7,7 +7,6 @@ import serp.project.school_bus_service.dto.params.SchoolParamsRequest;
 import serp.project.school_bus_service.dto.request.SchoolUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -37,20 +36,17 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
 
     private final SchoolRepository schoolRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
     private final ISchoolPickupPointService pickupPointService;
 
     public SchoolServiceImpl(SchoolRepository schoolRepository,
                              SchoolBusMapper mapper,
-                             IAuditLogService auditLogService,
                              ICodeGeneratorService codeGeneratorService,
                              MessageCommon messageCommon,
                              @Lazy ISchoolPickupPointService pickupPointService) {
         this.schoolRepository = schoolRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
         this.pickupPointService = pickupPointService;
@@ -151,7 +147,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
         school.setCode(codeGeneratorService.generate(
                 SchoolBusCode.SCHOOL.sequenceKey(), SchoolBusCode.SCHOOL.prefix(), tenantId, actorId));
         SchoolEntity saved = schoolRepository.save(school);
-        auditLogService.log(tenantId, actorId, "School", saved.getId(), "CREATE", "Created school master data");
         return mapper.toSchoolResponse(saved);
     }
 
@@ -162,7 +157,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
         school.markUpdated(actor(actorId));
         applySchool(school, request);
         SchoolEntity saved = schoolRepository.save(school);
-        auditLogService.log(tenantId, actorId, "School", saved.getId(), "UPDATE", "Updated school master data");
         return mapper.toSchoolResponse(saved);
     }
 
@@ -170,7 +164,6 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
     @Transactional
     public void deleteSchool(Long id, Long tenantId, Long actorId) {
         softDeleteById(schoolRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "School", id, "SOFT_DELETE", "Soft deleted school");
     }
 
     private void applySchool(SchoolEntity school, SchoolUpsertRequest request) {

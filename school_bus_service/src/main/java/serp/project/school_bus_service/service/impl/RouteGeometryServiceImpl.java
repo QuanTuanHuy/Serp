@@ -7,6 +7,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
+import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.repository.RouteStopRepository;
 import serp.project.school_bus_service.service.IRouteGeometryService;
 import tools.jackson.databind.JsonNode;
@@ -53,12 +54,14 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
             route.setPlannedDistanceKm(null);
             route.setPlannedDurationMin(null);
             route.setGeometryPath(null);
+            route.setGeometrySource(RouteGeometrySource.UNKNOWN);
             return;
         }
 
         try {
             OsrmRouteResult result = callOsrmRoute(validStops);
             route.setGeometryPath(result.geometryJson);
+            route.setGeometrySource(RouteGeometrySource.OSRM);
             route.setPlannedDistanceKm(result.distanceKm);
             route.setPlannedDurationMin(result.durationMin);
 

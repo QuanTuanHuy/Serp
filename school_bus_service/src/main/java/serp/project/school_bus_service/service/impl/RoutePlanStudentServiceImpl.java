@@ -113,6 +113,11 @@ public class RoutePlanStudentServiceImpl extends AbstractBaseService<RoutePlanSt
     }
 
     @Override
+    public boolean existsByRouteStudentAndSubscription(Long routeId, Long studentId, Long subscriptionId) {
+        return routePlanStudentRepository.existsByRouteStudentAndSubscription(routeId, studentId, subscriptionId);
+    }
+
+    @Override
     public List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(Long sessionId, Long routeId, RouteDirection direction) {
         return routePlanStudentRepository.findStudentsInOtherRoutesOfSessionAndDirection(sessionId, routeId, direction);
     }

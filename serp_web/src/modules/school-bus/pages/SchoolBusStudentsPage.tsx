@@ -19,12 +19,10 @@ import { cn } from '@/shared/utils';
 import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
-  useGetAllActiveSchoolPickupLinksQuery,
-  useGetParentsQuery,
-  useGetPickupPointsQuery,
-  useGetSchoolsQuery,
   useGetStudentsQuery,
   useUpdateStudentMutation,
+  useGetSchoolDropdownOptionsQuery,
+  useGetParentDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
@@ -40,34 +38,6 @@ import type { SchoolBusStudent } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
-// ── Readiness helpers ─────────────────────────────────────────────────────────
-
-type Readiness = 'ready' | 'missing-pickup' | 'missing-dropoff' | 'missing-parent';
-
-function getStudentReadiness(student: SchoolBusStudent): Readiness {
-  if (!student.parentProfileId) return 'missing-parent';
-  if (!student.pickupPointId) return 'missing-pickup';
-  if (!student.defaultDropoffPointId) return 'missing-dropoff';
-  return 'ready';
-}
-
-const readinessConfig: Record<Readiness, { label: string; className: string }> = {
-  ready: { label: 'Ready', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  'missing-pickup': { label: 'Missing pickup', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'missing-dropoff': { label: 'Missing drop-off', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'missing-parent': { label: 'Missing parent', className: 'bg-red-50 text-red-700 ring-red-200' },
-};
-
-function ReadinessBadge({ readiness }: { readiness: Readiness }) {
-  const cfg = readinessConfig[readiness];
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1', cfg.className)}>
-      {readiness === 'ready' ? <CheckCircle2 className='h-3 w-3' /> : <AlertTriangle className='h-3 w-3' />}
-      {cfg.label}
-    </span>
-  );
-}
-
 function UnassignedBadge() {
   return (
     <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
@@ -82,30 +52,28 @@ export function SchoolBusStudentsPage() {
   const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
   const { data, isLoading } = useGetStudentsQuery(pagination.params);
-  const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: parentsData } = useGetParentsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'fullName' });
-  const { data: pickupPointsData } = useGetPickupPointsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const { data: parentsData } = useGetParentDropdownOptionsQuery(
+    undefined,
+    { skip: access.isParentOnly }
+  );
   const [createStudent, { isLoading: creating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: updating }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: deleting }] = useDeleteStudentMutation();
 
   const students = getPageItems(data?.data);
-  const schools = getPageItems(schoolsData?.data);
-  const parents = getPageItems(parentsData?.data);
-  const pickupPoints = getPageItems(pickupPointsData?.data);
+  const schools = schoolsData?.data || [];
+  const parents = parentsData?.data || [];
 
-  const { data: allLinksData } = useGetAllActiveSchoolPickupLinksQuery();
-  const schoolPickupPoints = allLinksData?.data ?? [];
 
   // ─── Stats ───────────────────────────────────────────────────────
   const uniqueSchools = new Set(students.map((s) => s.schoolName).filter(Boolean)).size;
   const linkedParents = new Set(students.map((s) => s.parentProfileId).filter(Boolean)).size;
-  const missingTransport = students.filter((s) => !s.pickupPointId || !s.defaultDropoffPointId).length;
+  const activeStudents = students.filter((s) => s.isActive !== false).length;
 
   // ─── Filter state ────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterSchool, setFilterSchool] = React.useState<string>('');
-  const [filterReadiness, setFilterReadiness] = React.useState<string>('');
   const [filterStatus, setFilterStatus] = React.useState<string>('');
 
   // Debounced keyword search
@@ -123,10 +91,8 @@ export function SchoolBusStudentsPage() {
     if (filterSchool) result = result.filter((s) => s.schoolName === filterSchool);
     if (filterStatus === 'active') result = result.filter((s) => s.isActive !== false);
     if (filterStatus === 'inactive') result = result.filter((s) => s.isActive === false);
-    if (filterReadiness === 'ready') result = result.filter((s) => getStudentReadiness(s) === 'ready');
-    if (filterReadiness === 'missing') result = result.filter((s) => getStudentReadiness(s) !== 'ready');
     return result;
-  }, [students, filterSchool, filterStatus, filterReadiness]);
+  }, [students, filterSchool, filterStatus]);
 
   // Unique school names for filter
   const schoolNames = React.useMemo(() => [...new Set(students.map((s) => s.schoolName).filter(Boolean))].sort(), [students]);
@@ -215,33 +181,12 @@ export function SchoolBusStudentsPage() {
     {
       key: 'pickup',
       header: 'Default pickup',
-      render: (student) => student.pickupPointName ? (
-        <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
-          {student.pickupPointName}
-        </span>
-      ) : (
-        <span className='inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200'>
-          Missing pickup
-        </span>
-      ),
+      render: (student) => student.pickupPointName || '—',
     },
     {
       key: 'dropoff',
       header: 'Default drop-off',
-      render: (student) => student.defaultDropoffPointName ? (
-        <span className='inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-700/10'>
-          {student.defaultDropoffPointName}
-        </span>
-      ) : (
-        <span className='inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200'>
-          Missing drop-off
-        </span>
-      ),
-    },
-    {
-      key: 'readiness',
-      header: 'Readiness',
-      render: (student) => <ReadinessBadge readiness={getStudentReadiness(student)} />,
+      render: (student) => student.defaultDropoffPointName || '—',
     },
     {
       key: 'status',
@@ -280,6 +225,13 @@ export function SchoolBusStudentsPage() {
     },
   ];
 
+  const visibleColumns = React.useMemo(() => {
+    return studentColumns.filter((col) => {
+      if (access.isParentOnly && col.key === 'parent') return false;
+      return true;
+    });
+  }, [access.isParentOnly, studentColumns]);
+
   const toolbar = (
     <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
       {/* Search */}
@@ -311,32 +263,6 @@ export function SchoolBusStudentsPage() {
         })}
         clearable
         searchable
-      />
-      <SchoolBusSelect
-        value={filterReadiness}
-        onChange={setFilterReadiness}
-        placeholder='All readiness'
-        options={[
-          {
-            label: 'Ready',
-            value: 'ready',
-            badge: (
-              <span className='inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600'>
-                {students.filter((s) => getStudentReadiness(s) === 'ready').length}
-              </span>
-            )
-          },
-          {
-            label: 'Missing transport',
-            value: 'missing',
-            badge: (
-              <span className='inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-600'>
-                {students.filter((s) => getStudentReadiness(s) !== 'ready').length}
-              </span>
-            )
-          },
-        ]}
-        clearable
       />
       <SchoolBusSelect
         value={filterStatus}
@@ -388,25 +314,26 @@ export function SchoolBusStudentsPage() {
       >
         <div className='flex flex-col gap-6'>
           {/* Stats */}
-          <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
+          <div className={cn('grid gap-3', access.isParentOnly ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4')}>
             <SchoolBusMetricCard label='Students' value={students.length} icon={User} tone='student' />
             <SchoolBusMetricCard label='Schools' value={uniqueSchools} icon={GraduationCap} tone='school' />
-            <SchoolBusMetricCard label='Linked parents' value={linkedParents} icon={Users} tone='default' />
+            {!access.isParentOnly && (
+              <SchoolBusMetricCard label='Linked parents' value={linkedParents} icon={Users} tone='default' />
+            )}
             <SchoolBusMetricCard
-              label='Missing transport'
-              value={missingTransport}
-              icon={AlertTriangle}
-              tone={missingTransport > 0 ? 'warning' : 'success'}
-              hint={missingTransport > 0 ? 'Students without pickup or drop-off' : 'All transport assigned'}
+              label='Active students'
+              value={activeStudents}
+              icon={CheckCircle2}
+              tone='success'
             />
           </div>
 
           <SchoolBusDataTable
             title='Student roster'
-            description='Manage student profiles, parent associations, and default transport windows.'
+            description='Manage student profiles, schools, parents, and default transport points.'
             toolbar={toolbar}
             data={filteredStudents}
-            columns={studentColumns}
+            columns={visibleColumns}
             isLoading={isLoading}
             pagination={{ page: data?.data, onPageChange: pagination.setPage }}
             stickyFirstColumn
@@ -428,10 +355,9 @@ export function SchoolBusStudentsPage() {
         initialData={editingStudent}
         schools={schools}
         parents={parents}
-        pickupPoints={pickupPoints}
-        schoolPickupPoints={schoolPickupPoints}
         isLoading={creating || updating}
         onSubmit={handleSave}
+        isParent={access.isParentOnly}
       />
 
       <SchoolBusDeleteDialog

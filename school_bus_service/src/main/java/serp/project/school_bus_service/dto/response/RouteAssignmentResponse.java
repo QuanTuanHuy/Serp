@@ -18,9 +18,6 @@ public class RouteAssignmentResponse extends BaseResponse {
 
     private Long driverId;
     private String driverName;
-    private String driverLicenseClass;
-    private String driverLicenseExpiryDate;
-
     private Long attendantId;
     private String attendantName;
 
@@ -33,5 +30,4 @@ public class RouteAssignmentResponse extends BaseResponse {
 
     // Validation warnings returned to caller (not persisted)
     private String capacityWarning;
-    private String licenseWarning;
 }

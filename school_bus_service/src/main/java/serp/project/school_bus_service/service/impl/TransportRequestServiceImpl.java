@@ -14,7 +14,6 @@ import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
@@ -44,6 +43,7 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -65,10 +65,10 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final IStudentSubscriptionService subscriptionService;
     private final ISchoolPickupPointService schoolPickupPointService;
     private final ICodeGeneratorService codeGeneratorService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final SchoolBusSecurityService securityService;
 
 
     public TransportRequestServiceImpl(
@@ -79,10 +79,10 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             IStudentSubscriptionService subscriptionService,
             ISchoolPickupPointService schoolPickupPointService,
             ICodeGeneratorService codeGeneratorService,
-            IAuditLogService auditLogService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
-            ISchoolBusDataScopeService schoolBusDataScopeService) {
+            ISchoolBusDataScopeService schoolBusDataScopeService,
+            SchoolBusSecurityService securityService) {
         this.transportRequestRepository = transportRequestRepository;
         this.requestStudentRepository = requestStudentRepository;
         this.transportRequestHistoryRepository = transportRequestHistoryRepository;
@@ -90,10 +90,10 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         this.subscriptionService = subscriptionService;
         this.schoolPickupPointService = schoolPickupPointService;
         this.codeGeneratorService = codeGeneratorService;
-        this.auditLogService = auditLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.securityService = securityService;
     }
 
 
@@ -104,12 +104,33 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId) {
-        return PageResponse.from(transportRequestRepository.findAll(
-                spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
-                        "requestType", "status", "notes"),
+        // Parent data scope: filter by current parent profile
+        Specification<TransportRequestEntity> baseSpec = spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
+                        "requestType", "status", "notes");
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            baseSpec = baseSpec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), parentProfileId));
+        }
+
+        PageResponse<TransportRequestResponse> response = PageResponse.from(transportRequestRepository.findAll(
+                baseSpec,
                 pageable(params, Set.of("id", "requestType", "status", "effectiveFrom", "effectiveTo", "createdAt",
                         "updatedAt"), "createdAt")),
                 mapper::toTransportRequestResponse);
+
+        List<TransportRequestResponse> items = response.getItems();
+        if (items != null && !items.isEmpty()) {
+            List<Long> requestIds = items.stream().map(TransportRequestResponse::getId).toList();
+            List<Object[]> counts = requestStudentRepository.countStudentsByRequestIds(requestIds, tenantId);
+            Map<Long, Integer> countMap = counts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> ((Number) row[1]).intValue()
+                    ));
+            items.forEach(item -> item.setStudentCount(countMap.getOrDefault(item.getId(), 0)));
+        }
+
+        return response;
     }
 
     @Override
@@ -143,12 +164,18 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     @Transactional
     public TransportRequestResponse createTransportRequest(TransportRequestUpsertRequest request, Long tenantId, Long actorId) {
+        // Parent data scope: override parentProfileId from security context
+        if (securityService.isParentOnly()) {
+            Long currentParentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            request.setParentProfileId(currentParentProfileId);
+        }
+
         TransportRequestEntity entity = new TransportRequestEntity();
         entity.markCreated(tenantId, actor(actorId));
         applyTransportRequest(entity, request, tenantId);
         entity.setRequestCode(generateCode(SchoolBusCode.REQUEST, tenantId, actorId));
         entity.setRequestedAt(LocalDateTime.now());
-        entity.setRequestSource(RequestSource.ADMIN);
+        entity.setRequestSource(securityService.isParent() ? RequestSource.PARENT : RequestSource.ADMIN);
         entity.setChangeReason(request.getChangeReason());
         entity.setStatus(RequestStatus.SUBMITTED);
         entity.setApprovedAt(null);
@@ -157,8 +184,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, null, RequestStatus.SUBMITTED, actorId, null, "Created transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CREATE", "Created transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -169,6 +195,11 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() == RequestStatus.APPROVED || entity.getStatus() == RequestStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Request.CANNOT_EDIT, messageCommon.getMessage(AppErrorCode.Request.CANNOT_EDIT, entity.getStatus()));
+        }
+        // Parent data scope: override parentProfileId from security context
+        if (securityService.isParentOnly()) {
+            Long currentParentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            request.setParentProfileId(currentParentProfileId);
         }
         entity.markUpdated(actor(actorId));
         RequestStatus oldStatus = entity.getStatus();
@@ -182,8 +213,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, oldStatus, saved.getStatus(), actorId, request.getChangeReason(), "Updated transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "UPDATE", "Updated transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -264,9 +294,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         recordHistory(saved, oldStatus, RequestStatus.APPROVED, actorId, null,
                 "Approved transport request (" + saved.getRequestType().name() + ")");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "APPROVE",
-                "Approved " + saved.getRequestType().name());
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -286,8 +314,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setApprovedAt(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.REJECTED, actorId, request.getReason(), "Rejected transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "REJECT", "Rejected transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -305,8 +332,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setStatus(RequestStatus.CANCELLED);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.CANCELLED, actorId, null, "Cancelled transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CANCEL", "Cancelled transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -606,5 +632,13 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     public long countBySchoolAndTenant(Long schoolId, Long tenantId) {
         return transportRequestRepository.countBySchoolIdAndTenantIdAndIsDeletedFalse(schoolId, tenantId);
+    }
+
+    private TransportRequestResponse toResponse(TransportRequestEntity entity) {
+        TransportRequestResponse response = mapper.toTransportRequestResponse(entity);
+        if (response != null) {
+            response.setStudentCount(requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(entity.getId(), entity.getTenantId()).size());
+        }
+        return response;
     }
 }

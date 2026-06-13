@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.RouteGenerationMethod;
+import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 
@@ -86,12 +86,6 @@ public class RoutePlanEntity extends BaseModel {
     @Column(name = "assigned_bus_capacity")
     private Integer assignedBusCapacity;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "route_generation_method", nullable = false)
-    private RouteGenerationMethod routeGenerationMethod = RouteGenerationMethod.MANUAL;
-
-
-
     @Column(name = "version_no", nullable = false)
     private Integer versionNo = 1;
 
@@ -100,6 +94,10 @@ public class RoutePlanEntity extends BaseModel {
 
     @Column(name = "geometry_path", columnDefinition = "TEXT")
     private String geometryPath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "geometry_source", nullable = false)
+    private RouteGeometrySource geometrySource = RouteGeometrySource.UNKNOWN;
 
     @Column(name = "started_at")
     private LocalDateTime startedAt;

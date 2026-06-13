@@ -14,7 +14,6 @@ import serp.project.school_bus_service.service.IReportingService;
 import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IAttendanceService;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.enums.RequestStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.TripStatus;
@@ -35,7 +34,6 @@ public class ReportingServiceImpl implements IReportingService {
     private final TripExecutionRepository tripExecutionRepository;
     private final AttendanceRepository attendanceRepository;
     private final IAttendanceService attendanceService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
 
 
@@ -45,14 +43,12 @@ public class ReportingServiceImpl implements IReportingService {
             TripExecutionRepository tripExecutionRepository,
             AttendanceRepository attendanceRepository,
             IAttendanceService attendanceService,
-            IAuditLogService auditLogService,
             SchoolBusMapper mapper) {
         this.transportRequestService = transportRequestService;
         this.routeService = routeService;
         this.tripExecutionRepository = tripExecutionRepository;
         this.attendanceRepository = attendanceRepository;
         this.attendanceService = attendanceService;
-        this.auditLogService = auditLogService;
         this.mapper = mapper;
     }
 
@@ -78,7 +74,7 @@ public class ReportingServiceImpl implements IReportingService {
                 activeTrips,
                 completedTrips,
                 attendanceService.countByTenant(tenantId),
-                auditLogService.countByTenant(tenantId));
+                0L);
     }
 
     @Override

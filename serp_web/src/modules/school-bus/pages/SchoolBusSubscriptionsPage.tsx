@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
   useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -30,8 +30,10 @@ import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import { SubscriptionHistoryDialog } from '../components/history';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 export function SchoolBusSubscriptionsPage() {
+  const access = useSchoolBusAccess();
   const router = useRouter();
   const pagination = useSchoolBusPagination({
     page: 0,
@@ -40,9 +42,9 @@ export function SchoolBusSubscriptionsPage() {
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(pagination.params);
-  const { data: schoolsData } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
-  const schools = getPageItems(schoolsData?.data);
+  const schools = schoolsData?.data || [];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -78,8 +80,8 @@ export function SchoolBusSubscriptionsPage() {
     return [
       { label: 'All schools', value: '' },
       ...schools.map((s: any) => ({
-        label: s.name,
-        value: s.name,
+        label: s.label,
+        value: s.label,
       })),
     ];
   }, [schools]);
@@ -145,15 +147,6 @@ export function SchoolBusSubscriptionsPage() {
         <div className='flex items-center gap-2'>
           <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
           <span className='text-slate-700 font-medium truncate'>{subscription.schoolName}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'schedule',
-      header: 'Schedule',
-      render: (subscription) => (
-        <div className='flex items-center gap-2'>
-          <Calendar className='h-4 w-4 text-slate-400 shrink-0' />
         </div>
       ),
     },
@@ -292,7 +285,10 @@ export function SchoolBusSubscriptionsPage() {
   return (
     <SchoolBusPageShell
       title='Subscriptions'
-      description='Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
+      description={access.isParentOnly
+        ? 'Track active transport services and subscription history for your children.'
+        : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
+      }
     >
       <div className='flex flex-col gap-6'>
         {/* Stats */}
@@ -300,21 +296,21 @@ export function SchoolBusSubscriptionsPage() {
           <SchoolBusMetricCard
             label='Subscriptions'
             value={data?.data?.totalElements ?? 0}
-            hint='Active and historical service contracts'
+            hint={access.isParentOnly ? 'Transport services for your children' : 'Active and historical service contracts'}
             icon={Repeat}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Active'
             value={subscriptions.filter((item) => item.status === 'ACTIVE').length}
-            hint='Visible in route planning'
+            hint={access.isParentOnly ? 'Currently active services' : 'Visible in route planning'}
             icon={PlayCircle}
             tone='success'
           />
           <SchoolBusMetricCard
             label='Paused or stopped'
             value={subscriptions.filter((item) => item.status !== 'ACTIVE').length}
-            hint='Excluded from route generation'
+            hint={access.isParentOnly ? 'Paused or stopped services' : 'Excluded from route generation'}
             icon={PauseCircle}
             tone='warning'
           />
@@ -323,7 +319,10 @@ export function SchoolBusSubscriptionsPage() {
         {/* Data Table */}
         <SchoolBusDataTable
           title='Subscription directory'
-          description='Use status actions to control whether a student is eligible for daily routing.'
+          description={access.isParentOnly
+            ? 'View subscription details and history for your children.'
+            : 'Use status actions to control whether a student is eligible for daily routing.'
+          }
           toolbar={subscriptionToolbar}
           data={filteredSubscriptions}
           columns={subscriptionColumns}

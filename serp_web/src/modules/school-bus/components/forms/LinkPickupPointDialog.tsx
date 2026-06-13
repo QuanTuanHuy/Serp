@@ -73,7 +73,7 @@ export function LinkPickupPointDialog({
       open={open}
       onOpenChange={onOpenChange}
       title='Link pickup point to school'
-      description='Associate an existing pickup point with this school. Time windows are configured separately per schedule.'
+      description='Associate an existing pickup point with this school.'
     >
       <Form {...form}>
         <form

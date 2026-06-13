@@ -87,9 +87,6 @@ public class MasterDataMapper extends BaseMapper {
         response.setUserId(entity.getUserId());
         response.setFullName(entity.getFullName());
         response.setPhone(entity.getPhone());
-        response.setLicenseNumber(entity.getLicenseNumber());
-        response.setLicenseClass(entity.getLicenseClass());
-        response.setLicenseExpiryDate(entity.getLicenseExpiryDate());
         response.setStatus(entity.getStatus());
         return response;
     }

@@ -22,7 +22,7 @@ import {
   useApproveTransportRequestMutation,
   useGetTransportRequestsQuery,
   useRejectTransportRequestMutation,
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -51,10 +51,10 @@ export function SchoolBusRequestsPage() {
   });
   const { setKeyword } = pagination;
   const { data, isLoading } = useGetTransportRequestsQuery(pagination.params);
-  const { data: schoolsData } = useGetSchoolsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'name',
-  });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+
+
+
   const [approveTransportRequest, { isLoading: approving }] =
     useApproveTransportRequestMutation();
   const [rejectTransportRequest, { isLoading: rejecting }] =
@@ -64,7 +64,7 @@ export function SchoolBusRequestsPage() {
     React.useState<SchoolBusTransportRequest | null>(null);
 
   const requests = getPageItems(data?.data);
-  const schools = getPageItems(schoolsData?.data);
+  const schools = schoolsData?.data || [];
 
   // Stats (derived from unfiltered requests in current page for dashboard metrics)
   const totalRequestsCount = data?.data?.totalElements || requests.length;
@@ -107,8 +107,8 @@ export function SchoolBusRequestsPage() {
   // School options derived from actual list
   const schoolOptions = React.useMemo(() => {
     return schools.map((s) => ({
-      label: s.name,
-      value: s.name,
+      label: s.label,
+      value: s.label,
     }));
   }, [schools]);
 
@@ -178,143 +178,174 @@ export function SchoolBusRequestsPage() {
     }
   };
 
-  const requestColumns: SchoolBusTableColumn<SchoolBusTransportRequest>[] = [
-    {
-      key: 'request',
-      header: 'Request',
-      className: 'pl-6',
-      headerClassName: 'pl-6',
-      render: (request) => {
-        const typeDetails = getRequestTypeDetails(request.requestType);
-        return (
-          <div className='flex items-center gap-3'>
-            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border', typeDetails.iconColor)}>
-              <FileText className='h-4.5 w-4.5' />
+  const requestColumns: SchoolBusTableColumn<SchoolBusTransportRequest>[] = React.useMemo(() => {
+    const cols: SchoolBusTableColumn<SchoolBusTransportRequest>[] = [
+      {
+        key: 'request',
+        header: 'Request',
+        className: 'pl-6',
+        headerClassName: 'pl-6',
+        render: (request) => {
+          const typeDetails = getRequestTypeDetails(request.requestType);
+          return (
+            <div className='flex items-center gap-3'>
+              <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border', typeDetails.iconColor)}>
+                <FileText className='h-4.5 w-4.5' />
+              </div>
+              <div>
+                <p className='font-bold text-xs text-slate-800 font-mono leading-none'>
+                  #{request.requestCode || request.id}
+                </p>
+                <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-[9px] font-semibold mt-1.5 leading-none', typeDetails.badgeColor)}>
+                  {typeDetails.label}
+                </span>
+              </div>
             </div>
-            <div>
-              <p className='font-bold text-xs text-slate-800 font-mono leading-none'>
-                #{request.requestCode || request.id}
-              </p>
-              <span className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-[9px] font-semibold mt-1.5 leading-none', typeDetails.badgeColor)}>
-                {typeDetails.label}
-              </span>
-            </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      key: 'parent',
-      header: 'Parent',
-      render: (request) => (
-        <div className='flex items-center gap-2'>
-          <User className='h-4 w-4 text-slate-400 shrink-0' />
-          <span className='font-semibold text-xs text-slate-700'>{request.parentProfileName}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'school',
-      header: 'School',
-      render: (request) => (
-        <div className='flex items-center gap-2'>
-          <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
-          <span className='text-xs text-slate-700 truncate max-w-[160px]' title={request.schoolName}>
-            {request.schoolName}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'students',
-      header: 'Students',
-      render: (request: any) => (
-        <div className='flex items-center gap-1.5'>
-          <span className='font-medium text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100'>
-            {request.studentCount != null ? `${request.studentCount} student${request.studentCount !== 1 ? 's' : ''}` : '—'}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'approvalState',
-      header: 'Approval state',
-      render: (request) => (
-        <div className='space-y-1'>
-          <SchoolBusStatusBadge status={request.status} />
-          {request.approvedAt ? (
-            <p className='text-[10px] text-slate-400'>
-              Approved: {formatDateTime(request.approvedAt)}
-            </p>
-          ) : request.rejectionReason ? (
-            <p className='text-[10px] text-rose-500 truncate max-w-[150px]' title={request.rejectionReason}>
-              Reason: {request.rejectionReason}
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      key: 'window',
-      header: 'Window',
-      render: (request) => (
-        <div className='text-xs text-slate-700 flex items-start gap-1.5'>
-          <Calendar className='h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0' />
-          <div>
-            <p className='font-semibold text-slate-800 leading-none'>{formatDate(request.effectiveFrom)}</p>
-            <p className='text-[10px] text-slate-400 mt-1 leading-none'>
-              {request.effectiveTo ? formatDate(request.effectiveTo) : 'Open ended'}
-            </p>
+    ];
+
+    // Parent column — only for Admin/Dispatcher
+    if (!access.isParentOnly) {
+      cols.push({
+        key: 'parent',
+        header: 'Parent',
+        render: (request) => (
+          <div className='flex items-center gap-2'>
+            <User className='h-4 w-4 text-slate-400 shrink-0' />
+            <span className='font-semibold text-xs text-slate-700'>{request.parentProfileName}</span>
           </div>
-        </div>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      className: 'pr-6 text-right',
-      headerClassName: 'pr-6 text-right',
-      render: (request) => (
-        <div className='flex justify-end gap-2 items-center'>
-          <Button size='icon' variant='outline' className='h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700' asChild>
-            <Link href={`/school-bus/requests/${request.id}`} title='View Details'>
-              <Eye className='h-4 w-4 text-slate-600' />
-            </Link>
-          </Button>
-          {request.status === 'SUBMITTED' && access.canApproveRequests ? (
-            <>
+        ),
+      });
+    }
+
+    cols.push(
+      {
+        key: 'school',
+        header: 'School',
+        render: (request) => (
+          <div className='flex items-center gap-2'>
+            <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
+            <span className='text-xs text-slate-700 truncate max-w-[160px]' title={request.schoolName}>
+              {request.schoolName}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'students',
+        header: 'Students',
+        render: (request: any) => (
+          <div className='flex items-center gap-1.5'>
+            <span className='font-medium text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100'>
+              {request.studentCount != null ? `${request.studentCount} student${request.studentCount !== 1 ? 's' : ''}` : '—'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'approvalState',
+        header: 'Status',
+        render: (request) => (
+          <div className='space-y-1'>
+            <SchoolBusStatusBadge status={request.status} />
+            {request.approvedAt ? (
+              <p className='text-[10px] text-slate-400'>
+                Approved: {formatDateTime(request.approvedAt)}
+              </p>
+            ) : request.rejectionReason ? (
+              <p className='text-[10px] text-rose-500 truncate max-w-[150px]' title={request.rejectionReason}>
+                Reason: {request.rejectionReason}
+              </p>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: 'window',
+        header: 'Effective dates',
+        render: (request) => (
+          <div className='text-xs text-slate-700 flex items-start gap-1.5'>
+            <Calendar className='h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0' />
+            <div>
+              <p className='font-semibold text-slate-800 leading-none'>{formatDate(request.effectiveFrom)}</p>
+              <p className='text-[10px] text-slate-400 mt-1 leading-none'>
+                {request.effectiveTo ? formatDate(request.effectiveTo) : 'Open ended'}
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'actions',
+        header: 'Actions',
+        className: 'pr-6 text-right',
+        headerClassName: 'pr-6 text-right',
+        render: (request) => {
+          const canEdit = request.status === 'SUBMITTED' || request.status === 'REJECTED';
+          const canCancel = request.status === 'SUBMITTED';
+
+          return (
+            <div className='flex justify-end gap-2 items-center'>
               <Button size='icon' variant='outline' className='h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700' asChild>
-                <Link href={`/school-bus/requests/${request.id}/edit`} title='Edit Request'>
-                  <Pencil className='h-4 w-4 text-slate-600' />
+                <Link href={`/school-bus/requests/${request.id}`} title='View Details'>
+                  <Eye className='h-4 w-4 text-slate-600' />
                 </Link>
               </Button>
-              <Button
-                size='sm'
-                variant='outline'
-                className='h-8 text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200 hover:border-red-300 rounded-lg text-xs font-semibold px-2.5'
-                disabled={rejecting && processingId === request.id}
-                onClick={() => setRejectingRequest(request)}
-              >
-                Reject
-              </Button>
-              <Button
-                size='sm'
-                className='h-8 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg text-xs font-semibold px-2.5'
-                disabled={approving && processingId === request.id}
-                onClick={() => handleApprove(request.id)}
-              >
-                {approving && processingId === request.id ? '...' : 'Approve'}
-              </Button>
-            </>
-          ) : (
-            <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
-              {request.status === 'SUBMITTED' ? 'Pending' : 'Locked'}
-            </span>
-          )}
-        </div>
-      ),
-    },
-  ];
+              {access.isParentOnly ? (
+                <>
+                  {canEdit && (
+                    <Button size='icon' variant='outline' className='h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700' asChild>
+                      <Link href={`/school-bus/requests/${request.id}/edit`} title='Edit Request'>
+                        <Pencil className='h-4 w-4 text-slate-600' />
+                      </Link>
+                    </Button>
+                  )}
+                  {!canEdit && (
+                    <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
+                      Locked
+                    </span>
+                  )}
+                </>
+              ) : request.status === 'SUBMITTED' && access.canApproveRequests ? (
+                <>
+                  <Button size='icon' variant='outline' className='h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700' asChild>
+                    <Link href={`/school-bus/requests/${request.id}/edit`} title='Edit Request'>
+                      <Pencil className='h-4 w-4 text-slate-600' />
+                    </Link>
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='h-8 text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200 hover:border-red-300 rounded-lg text-xs font-semibold px-2.5'
+                    disabled={rejecting && processingId === request.id}
+                    onClick={() => setRejectingRequest(request)}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size='sm'
+                    className='h-8 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg text-xs font-semibold px-2.5'
+                    disabled={approving && processingId === request.id}
+                    onClick={() => handleApprove(request.id)}
+                  >
+                    {approving && processingId === request.id ? '...' : 'Approve'}
+                  </Button>
+                </>
+              ) : (
+                <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
+                  {request.status === 'SUBMITTED' ? 'Pending' : 'Locked'}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+    );
+
+    return cols;
+  }, [access.isParentOnly, access.canApproveRequests, approving, rejecting, processingId]);
 
   const requestToolbar = (
     <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
@@ -368,8 +399,8 @@ export function SchoolBusRequestsPage() {
       <SchoolBusPageShell
         title='Transport Requests'
         description={
-          access.isParent
-            ? 'Track the status of your transport requests and create new ones.'
+          access.isParentOnly
+            ? 'Track transport request status and create new service requests.'
             : 'Manage the approval queue and move valid demand into planning without leaving the module.'
         }
         breadcrumb={
@@ -397,28 +428,28 @@ export function SchoolBusRequestsPage() {
             <SchoolBusMetricCard
               label='Total requests'
               value={totalRequestsCount}
-              hint='Demand records currently stored in the tenant'
+              hint={access.isParentOnly ? 'All requests submitted' : 'Demand records currently stored in the tenant'}
               icon={FileText}
               tone='info'
             />
             <SchoolBusMetricCard
-              label='Pending approvals'
+              label={access.isParentOnly ? 'Pending requests' : 'Pending approvals'}
               value={pendingRequestsCount}
-              hint='Requires dispatcher action'
+              hint={access.isParentOnly ? 'Waiting for review' : 'Requires dispatcher action'}
               icon={Clock3}
               tone='warning'
             />
             <SchoolBusMetricCard
               label='Approved requests'
               value={approvedRequestsCount}
-              hint='Ready to be included in planning'
+              hint={access.isParentOnly ? 'Approved and active' : 'Ready to be included in planning'}
               icon={CheckCircle2}
               tone='success'
             />
             <SchoolBusMetricCard
               label='Rejected requests'
               value={rejectedRequestsCount}
-              hint='Excluded from planning'
+              hint={access.isParentOnly ? 'Not approved' : 'Excluded from planning'}
               icon={XCircle}
               tone='default'
             />
@@ -427,9 +458,9 @@ export function SchoolBusRequestsPage() {
           {/* Conditional Layout for Approval Focus */}
           <div className={cn(
             'grid gap-6',
-            pendingRequests.length > 0 ? 'xl:grid-cols-[400px_1fr]' : 'grid-cols-1'
+            pendingRequests.length > 0 && !access.isParentOnly ? 'xl:grid-cols-[400px_1fr]' : 'grid-cols-1'
           )}>
-            {pendingRequests.length > 0 && access.canApproveRequests && (
+            {pendingRequests.length > 0 && access.canApproveRequests && !access.isParentOnly && (
               <SchoolBusSection
                 title='Approval focus'
                 description='The pending subset remains the highest-value operational queue.'
@@ -519,7 +550,7 @@ export function SchoolBusRequestsPage() {
                 title='All requests'
                 description='Review, inspect, approve, reject, and edit transport demand.'
               >
-                {pendingRequests.length === 0 && (
+                {pendingRequests.length === 0 && !access.isParentOnly && (
                   <div className='mb-4 flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100/50 rounded-2xl text-emerald-800 text-xs shadow-sm'>
                     <div className='flex items-center gap-2.5'>
                       <div className='flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200/50'>

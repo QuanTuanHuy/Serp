@@ -7,6 +7,7 @@ import serp.project.school_bus_service.dto.request.BusAttendantProfileUpsertRequ
 import serp.project.school_bus_service.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
+import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 
 public interface IAttendantService extends IBaseService<BusAttendantProfileEntity, Long> {
 
@@ -21,4 +22,6 @@ public interface IAttendantService extends IBaseService<BusAttendantProfileEntit
     AttendantProfileResponse updateAttendant(Long id, BusAttendantProfileUpsertRequest request, Long tenantId, Long actorId);
 
     void deleteAttendant(Long id, Long tenantId, Long actorId);
+
+    void syncProfile(SchoolBusUserEntity user, boolean hasRole);
 }

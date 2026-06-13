@@ -53,14 +53,13 @@ public class RouteMapper extends BaseMapper {
         }
         response.setPlanningNotes(entity.getPlanningNotes());
         response.setGeometryPath(entity.getGeometryPath());
+        response.setGeometrySource(entity.getGeometrySource() != null
+                ? entity.getGeometrySource().name() : null);
         response.setStartedAt(entity.getStartedAt());
         response.setCompletedAt(entity.getCompletedAt());
         response.setRequiredCapacity(entity.getRequiredCapacity());
         if (entity.getPlanningSession() != null) {
             response.setPlanningSessionId(entity.getPlanningSession().getId());
-        }
-        if (entity.getRouteGenerationMethod() != null) {
-            response.setPlanningMethod(entity.getRouteGenerationMethod().name());
         }
         return response;
     }
@@ -107,10 +106,10 @@ public class RouteMapper extends BaseMapper {
         response.setBusCapacity(entity.getBus().getCapacity());
         response.setDriverId(entity.getDriver().getId());
         response.setDriverName(entity.getDriver().getFullName());
-        response.setDriverLicenseClass(entity.getDriver().getLicenseClass());
-        response.setDriverLicenseExpiryDate(
-                entity.getDriver().getLicenseExpiryDate() == null ? null
-                        : entity.getDriver().getLicenseExpiryDate().toString());
+
+
+
+
         response.setAttendantId(entity.getAttendant() == null ? null : entity.getAttendant().getId());
         response.setAttendantName(entity.getAttendant() == null ? null : entity.getAttendant().getFullName());
         response.setStatus(entity.getStatus() == null ? null : entity.getStatus().name());

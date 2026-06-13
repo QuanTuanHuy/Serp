@@ -24,9 +24,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<GeneralResponse<Void>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         log.error("Data integrity violation", e);
+        if (containsMessage(e, "uk_route_plan_student_active")) {
+            AppErrorCode.ErrorInfo errorCode = AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED;
+            return ResponseEntity.status(errorCode.status())
+                    .body(GeneralResponse.error(errorCode.status(), "FAILED", errorCode.defaultMessage()));
+        }
         AppErrorCode.ErrorInfo errorCode = AppErrorCode.DATA_INTEGRITY_VIOLATION;
         return ResponseEntity.status(errorCode.status())
                 .body(GeneralResponse.error(errorCode.status(), "FAILED", errorCode.defaultMessage()));
+    }
+
+    private boolean containsMessage(Throwable error, String expected) {
+        Throwable current = error;
+        while (current != null) {
+            if (current.getMessage() != null && current.getMessage().contains(expected)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

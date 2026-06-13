@@ -70,6 +70,7 @@ public class TransportMapper extends BaseMapper {
         r.setApprovedAt(entity.getApprovedAt());
         r.setRejectionReason(entity.getRejectionReason());
         r.setChangeReason(entity.getChangeReason());
+        r.setStudentCount(entity.getStudentCount());
         return r;
     }
 
@@ -77,6 +78,9 @@ public class TransportMapper extends BaseMapper {
                                                                            List<RequestStudentEntity> students) {
         TransportRequestDetailResponse r = new TransportRequestDetailResponse();
         r.setRequest(toTransportRequestResponse(entity));
+        if (r.getRequest() != null) {
+            r.getRequest().setStudentCount(students != null ? students.size() : 0);
+        }
         r.setStudents(mapList(students, this::toRequestStudentResponse));
         return r;
     }
