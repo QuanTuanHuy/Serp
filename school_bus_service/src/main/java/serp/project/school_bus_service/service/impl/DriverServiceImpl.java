@@ -6,7 +6,6 @@ import serp.project.school_bus_service.dto.params.DriverProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.DriverProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.DriverProfileResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IDriverService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.DriverProfileEntity;
@@ -34,7 +33,6 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
 
     private final DriverProfileRepository driverProfileRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final MessageCommon messageCommon;
     private final ISchoolBusUserService schoolBusUserService;
 
@@ -42,12 +40,10 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
     public DriverServiceImpl(
             DriverProfileRepository driverProfileRepository,
             SchoolBusMapper mapper,
-            IAuditLogService auditLogService,
             MessageCommon messageCommon,
             @Lazy ISchoolBusUserService schoolBusUserService) {
         this.driverProfileRepository = driverProfileRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.messageCommon = messageCommon;
         this.schoolBusUserService = schoolBusUserService;
     }
@@ -125,7 +121,6 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
         driver.markCreated(tenantId, actor(actorId));
         applyDriver(driver, request, tenantId);
         DriverProfileEntity saved = driverProfileRepository.save(driver);
-        auditLogService.log(tenantId, actorId, "DriverProfile", saved.getId(), "CREATE", "Created driver profile");
         
         // Return enriched response
         DriverProfileResponse response = mapper.toDriverProfileResponse(saved);
@@ -149,7 +144,6 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
         driver.markUpdated(actor(actorId));
         applyDriver(driver, request, tenantId);
         DriverProfileEntity saved = driverProfileRepository.save(driver);
-        auditLogService.log(tenantId, actorId, "DriverProfile", saved.getId(), "UPDATE", "Updated driver profile");
         
         // Return enriched response
         DriverProfileResponse response = mapper.toDriverProfileResponse(saved);
@@ -170,7 +164,6 @@ public class DriverServiceImpl extends AbstractBaseService<DriverProfileEntity, 
     @Transactional
     public void deleteDriver(Long id, Long tenantId, Long actorId) {
         softDeleteById(driverProfileRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "DriverProfile", id, "SOFT_DELETE", "Soft deleted driver profile");
     }
 
     private void applyDriver(DriverProfileEntity driver, DriverProfileUpsertRequest request, Long tenantId) {

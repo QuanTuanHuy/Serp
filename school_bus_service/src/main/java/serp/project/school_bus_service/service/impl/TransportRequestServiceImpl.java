@@ -14,7 +14,6 @@ import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
@@ -66,7 +65,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final IStudentSubscriptionService subscriptionService;
     private final ISchoolPickupPointService schoolPickupPointService;
     private final ICodeGeneratorService codeGeneratorService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
@@ -81,7 +79,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             IStudentSubscriptionService subscriptionService,
             ISchoolPickupPointService schoolPickupPointService,
             ICodeGeneratorService codeGeneratorService,
-            IAuditLogService auditLogService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService,
@@ -93,7 +90,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         this.subscriptionService = subscriptionService;
         this.schoolPickupPointService = schoolPickupPointService;
         this.codeGeneratorService = codeGeneratorService;
-        this.auditLogService = auditLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
@@ -188,7 +184,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, null, RequestStatus.SUBMITTED, actorId, null, "Created transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CREATE", "Created transport request");
         return toResponse(saved);
     }
 
@@ -218,7 +213,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, oldStatus, saved.getStatus(), actorId, request.getChangeReason(), "Updated transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "UPDATE", "Updated transport request");
         return toResponse(saved);
     }
 
@@ -300,8 +294,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         recordHistory(saved, oldStatus, RequestStatus.APPROVED, actorId, null,
                 "Approved transport request (" + saved.getRequestType().name() + ")");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "APPROVE",
-                "Approved " + saved.getRequestType().name());
         return toResponse(saved);
     }
 
@@ -322,7 +314,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setApprovedAt(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.REJECTED, actorId, request.getReason(), "Rejected transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "REJECT", "Rejected transport request");
         return toResponse(saved);
     }
 
@@ -341,7 +332,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setStatus(RequestStatus.CANCELLED);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.CANCELLED, actorId, null, "Cancelled transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CANCEL", "Cancelled transport request");
         return toResponse(saved);
     }
 

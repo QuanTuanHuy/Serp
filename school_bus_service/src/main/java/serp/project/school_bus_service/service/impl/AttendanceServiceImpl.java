@@ -14,7 +14,6 @@ import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IAttendanceService;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.ITripStopLogService;
@@ -53,7 +52,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     private final AttendanceRepository attendanceRepository;
     private final ITripExecutionService tripExecutionService;
-    private final IAuditLogService auditLogService;
     private final IRouteStopService routeStopService;
     private final ITripStudentService tripStudentService;
     private final ITripStopLogService tripStopLogService;
@@ -66,7 +64,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     public AttendanceServiceImpl(
             AttendanceRepository attendanceRepository,
             @Lazy ITripExecutionService tripExecutionService,
-            IAuditLogService auditLogService,
             IRouteStopService routeStopService,
             ITripStudentService tripStudentService,
             ITripStopLogService tripStopLogService,
@@ -76,7 +73,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             SchoolBusSecurityService securityService) {
         this.attendanceRepository = attendanceRepository;
         this.tripExecutionService = tripExecutionService;
-        this.auditLogService = auditLogService;
         this.routeStopService = routeStopService;
         this.tripStudentService = tripStudentService;
         this.tripStopLogService = tripStopLogService;
@@ -303,8 +299,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         }
 
         AttendanceEntity saved = attendanceRepository.save(attendance);
-        auditLogService.log(tenantId, actorId, "TripAttendance", saved.getId(), eventType.name(),
-                "Recorded trip attendance event");
         // TODO notification: notify parents/guardians of the attendance event (eventType).
         return mapper.toAttendanceResponse(saved);
     }

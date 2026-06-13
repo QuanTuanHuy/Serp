@@ -7,7 +7,6 @@ import serp.project.school_bus_service.dto.request.PickupPointUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.PickupPointResponse;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.PickupPointEntity;
@@ -34,7 +33,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
     private final PickupPointRepository pickupPointRepository;
     private final SchoolPickupPointRepository schoolPickupPointRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
 
@@ -43,13 +41,11 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
             PickupPointRepository pickupPointRepository,
             SchoolPickupPointRepository schoolPickupPointRepository,
             SchoolBusMapper mapper,
-            IAuditLogService auditLogService,
             ICodeGeneratorService codeGeneratorService,
             MessageCommon messageCommon) {
         this.pickupPointRepository = pickupPointRepository;
         this.schoolPickupPointRepository = schoolPickupPointRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
     }
@@ -121,7 +117,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         }
         pickupPoint.setCode(code);
         PickupPointEntity saved = pickupPointRepository.save(pickupPoint);
-        auditLogService.log(tenantId, actorId, "PickupPoint", saved.getId(), "CREATE", "Created pickup point");
         return mapper.toPickupPointResponse(saved);
     }
 
@@ -132,7 +127,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         pickupPoint.markUpdated(actor(actorId));
         applyPickupPoint(pickupPoint, request);
         PickupPointEntity saved = pickupPointRepository.save(pickupPoint);
-        auditLogService.log(tenantId, actorId, "PickupPoint", saved.getId(), "UPDATE", "Updated pickup point");
         return mapper.toPickupPointResponse(saved);
     }
 
@@ -140,7 +134,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
     @Transactional
     public void deletePickupPoint(Long id, Long tenantId, Long actorId) {
         softDeleteById(pickupPointRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "PickupPoint", id, "SOFT_DELETE", "Soft deleted pickup point");
     }
 
     private static final Set<String> VALID_USAGE_TYPES = Set.of(

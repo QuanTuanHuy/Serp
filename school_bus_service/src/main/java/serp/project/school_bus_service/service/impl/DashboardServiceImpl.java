@@ -29,7 +29,6 @@ public class DashboardServiceImpl implements IDashboardService {
     private final ITripExecutionService tripExecutionService;
     private final ITripHistoryService tripHistoryService;
     private final IAttendanceService attendanceService;
-    private final IAuditLogService auditLogService;
 
     private final TripExecutionRepository tripExecutionRepository;
     private final TripStudentRepository tripStudentRepository;
@@ -57,7 +56,6 @@ public class DashboardServiceImpl implements IDashboardService {
             ITripExecutionService tripExecutionService,
             ITripHistoryService tripHistoryService,
             IAttendanceService attendanceService,
-            IAuditLogService auditLogService,
             TripExecutionRepository tripExecutionRepository,
             TripStudentRepository tripStudentRepository,
             RoutePlanRepository routePlanRepository,
@@ -81,7 +79,6 @@ public class DashboardServiceImpl implements IDashboardService {
         this.tripExecutionService = tripExecutionService;
         this.tripHistoryService = tripHistoryService;
         this.attendanceService = attendanceService;
-        this.auditLogService = auditLogService;
         this.tripExecutionRepository = tripExecutionRepository;
         this.tripStudentRepository = tripStudentRepository;
         this.routePlanRepository = routePlanRepository;
@@ -200,7 +197,7 @@ public class DashboardServiceImpl implements IDashboardService {
                 activeTrips,
                 completedTrips,
                 attendanceService.countByTenant(tenantId),
-                auditLogService.countByTenant(tenantId));
+                0L);
     }
 
     @Override

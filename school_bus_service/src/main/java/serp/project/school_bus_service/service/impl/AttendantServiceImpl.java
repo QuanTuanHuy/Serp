@@ -7,7 +7,6 @@ import serp.project.school_bus_service.dto.request.BusAttendantProfileUpsertRequ
 import serp.project.school_bus_service.dto.response.AttendantProfileResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.IAttendantService;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.repository.BusAttendantProfileRepository;
@@ -34,7 +33,6 @@ public class AttendantServiceImpl extends AbstractBaseService<BusAttendantProfil
 
     private final BusAttendantProfileRepository busAttendantProfileRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final MessageCommon messageCommon;
     private final ISchoolBusUserService schoolBusUserService;
 
@@ -42,12 +40,10 @@ public class AttendantServiceImpl extends AbstractBaseService<BusAttendantProfil
     public AttendantServiceImpl(
             BusAttendantProfileRepository busAttendantProfileRepository,
             SchoolBusMapper mapper,
-            IAuditLogService auditLogService,
             MessageCommon messageCommon,
             @Lazy ISchoolBusUserService schoolBusUserService) {
         this.busAttendantProfileRepository = busAttendantProfileRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.messageCommon = messageCommon;
         this.schoolBusUserService = schoolBusUserService;
     }
@@ -124,7 +120,6 @@ public class AttendantServiceImpl extends AbstractBaseService<BusAttendantProfil
         attendant.markCreated(tenantId, actor(actorId));
         applyAttendant(attendant, request);
         BusAttendantProfileEntity saved = busAttendantProfileRepository.save(attendant);
-        auditLogService.log(tenantId, actorId, "AttendantProfile", saved.getId(), "CREATE", "Created attendant profile");
         
         // Return enriched response
         AttendantProfileResponse response = mapper.toAttendantProfileResponse(saved);
@@ -148,7 +143,6 @@ public class AttendantServiceImpl extends AbstractBaseService<BusAttendantProfil
         attendant.markUpdated(actor(actorId));
         applyAttendant(attendant, request);
         BusAttendantProfileEntity saved = busAttendantProfileRepository.save(attendant);
-        auditLogService.log(tenantId, actorId, "AttendantProfile", saved.getId(), "UPDATE", "Updated attendant profile");
         
         // Return enriched response
         AttendantProfileResponse response = mapper.toAttendantProfileResponse(saved);
@@ -169,7 +163,6 @@ public class AttendantServiceImpl extends AbstractBaseService<BusAttendantProfil
     @Transactional
     public void deleteAttendant(Long id, Long tenantId, Long actorId) {
         softDeleteById(busAttendantProfileRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "AttendantProfile", id, "SOFT_DELETE", "Soft deleted attendant profile");
     }
 
     private void applyAttendant(BusAttendantProfileEntity attendant, BusAttendantProfileUpsertRequest request) {

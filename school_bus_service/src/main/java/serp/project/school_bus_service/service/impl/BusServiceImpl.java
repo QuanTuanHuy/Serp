@@ -7,7 +7,6 @@ import serp.project.school_bus_service.dto.params.BusParamsRequest;
 import serp.project.school_bus_service.dto.request.BusUpsertRequest;
 import serp.project.school_bus_service.dto.response.BusResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IBusService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -31,7 +30,6 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
 
     private final BusRepository busRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final IDepotService depotService;
     private final MessageCommon messageCommon;
 
@@ -39,12 +37,10 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
     public BusServiceImpl(
     BusRepository busRepository,
                                  SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
                                  IDepotService depotService,
                                  MessageCommon messageCommon) {
         this.busRepository = busRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.depotService = depotService;
         this.messageCommon = messageCommon;
     }
@@ -90,7 +86,6 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
         bus.markCreated(tenantId, actor(actorId));
         applyBus(bus, request, tenantId);
         BusEntity saved = busRepository.save(bus);
-        auditLogService.log(tenantId, actorId, "Bus", saved.getId(), "CREATE", "Created bus profile");
         return mapper.toBusResponse(saved);
     }
 
@@ -101,7 +96,6 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
         bus.markUpdated(actor(actorId));
         applyBus(bus, request, tenantId);
         BusEntity saved = busRepository.save(bus);
-        auditLogService.log(tenantId, actorId, "Bus", saved.getId(), "UPDATE", "Updated bus profile");
         return mapper.toBusResponse(saved);
     }
 
@@ -109,7 +103,6 @@ public class BusServiceImpl extends AbstractBaseService<BusEntity, Long> impleme
     @Transactional
     public void deleteBus(Long id, Long tenantId, Long actorId) {
         softDeleteById(busRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "Bus", id, "SOFT_DELETE", "Soft deleted bus profile");
     }
 
     private void applyBus(BusEntity bus, BusUpsertRequest request, Long tenantId) {

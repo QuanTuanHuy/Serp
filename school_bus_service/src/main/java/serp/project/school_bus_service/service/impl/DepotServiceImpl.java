@@ -6,7 +6,6 @@ import serp.project.school_bus_service.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.dto.response.DepotResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -28,7 +27,6 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
 
     private final DepotRepository depotRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
 
@@ -36,12 +34,10 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
     public DepotServiceImpl(
     DepotRepository depotRepository,
                                  SchoolBusMapper mapper,
-                                 IAuditLogService auditLogService,
                                  ICodeGeneratorService codeGeneratorService,
                                  MessageCommon messageCommon) {
         this.depotRepository = depotRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
     }
@@ -82,7 +78,6 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
                 SchoolBusCode.DEPOT.sequenceKey(), SchoolBusCode.DEPOT.prefix(), tenantId, actorId));
         applyDepot(depot, request);
         DepotEntity saved = depotRepository.save(depot);
-        auditLogService.log(tenantId, actorId, "Depot", saved.getId(), "CREATE", "Created depot");
         return mapper.toDepotResponse(saved);
     }
 
@@ -93,7 +88,6 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
         depot.markUpdated(actor(actorId));
         applyDepot(depot, request);
         DepotEntity saved = depotRepository.save(depot);
-        auditLogService.log(tenantId, actorId, "Depot", saved.getId(), "UPDATE", "Updated depot");
         return mapper.toDepotResponse(saved);
     }
 
@@ -101,7 +95,6 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
     @Transactional
     public void deleteDepot(Long id, Long tenantId, Long actorId) {
         softDeleteById(depotRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "Depot", id, "SOFT_DELETE", "Soft deleted depot");
     }
 
     private void applyDepot(DepotEntity depot, DepotUpsertRequest request) {

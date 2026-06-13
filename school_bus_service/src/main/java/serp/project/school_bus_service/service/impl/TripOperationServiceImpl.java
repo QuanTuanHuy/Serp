@@ -39,7 +39,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
     private final ITripStudentService tripStudentService;
     private final IRouteStopService routeStopService;
     private final IAttendanceService attendanceService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
@@ -50,7 +49,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
             ITripStudentService tripStudentService,
             IRouteStopService routeStopService,
             @Lazy IAttendanceService attendanceService,
-            IAuditLogService auditLogService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService) {
@@ -59,7 +57,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         this.tripStudentService = tripStudentService;
         this.routeStopService = routeStopService;
         this.attendanceService = attendanceService;
-        this.auditLogService = auditLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
@@ -114,8 +111,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
                     tripStopLogService.save(startTerminal);
                 });
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "START", "Started trip");
-
         return toDetail(trip, tenantId);
     }
 
@@ -149,9 +144,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         stopLog.setActualArrivalTime(now);
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
-
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "ARRIVE_STOP",
-                "Arrived stop " + stopLog.getStopOrder());
 
         return toDetail(trip, tenantId);
     }
@@ -203,9 +195,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         stopLog.setStatus(TripStopStatus.BOARDING);
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
-
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), isOutbound ? "START_BOARDING" : "START_DROPOFF",
-                (isOutbound ? "Started boarding" : "Started dropoff") + " at stop " + stopLog.getStopOrder());
 
         return toDetail(trip, tenantId);
     }
@@ -281,9 +270,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "DEPART_STOP",
-                "Departed stop " + stopLog.getStopOrder());
-
         return toDetail(trip, tenantId);
     }
 
@@ -337,9 +323,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
                     attendanceService.recordNotServedEvent(trip, ts, stopLog.getRouteStop(),
                             "Stop skipped: " + request.getReason(), tenantId, actorId);
                 });
-
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "SKIP_STOP",
-                "Skipped stop " + stopLog.getStopOrder() + ": " + request.getReason());
 
         return toDetail(trip, tenantId);
     }
@@ -430,8 +413,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         trip.markUpdated(actor(actorId));
         tripExecutionService.save(trip);
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "COMPLETE", "Completed trip");
-
         return toDetail(trip, tenantId);
     }
 
@@ -485,8 +466,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 });
 
         tripExecutionService.save(trip);
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "CANCEL",
-                "Cancelled trip: " + request.getReason());
 
         return toDetail(trip, tenantId);
     }
@@ -574,8 +553,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         response.setRecordedAt(LocalDateTime.now());
         response.setRecordedBy(actorId);
         response.setNotes(request.getNotes());
-
-        auditLogService.log(tenantId, actorId, "TripAttendance", null, "NOT_SERVED", "Recorded student not served manually");
 
         return response;
     }

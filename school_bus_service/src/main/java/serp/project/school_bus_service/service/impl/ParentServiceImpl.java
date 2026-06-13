@@ -6,7 +6,6 @@ import serp.project.school_bus_service.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IParentService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.ParentProfileEntity;
@@ -32,7 +31,6 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
 
     private final ParentProfileRepository parentProfileRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final MessageCommon messageCommon;
     private final ISchoolBusUserService schoolBusUserService;
 
@@ -40,12 +38,10 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
     public ParentServiceImpl(
             ParentProfileRepository parentProfileRepository,
             SchoolBusMapper mapper,
-            IAuditLogService auditLogService,
             MessageCommon messageCommon,
             @Lazy ISchoolBusUserService schoolBusUserService) {
         this.parentProfileRepository = parentProfileRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.messageCommon = messageCommon;
         this.schoolBusUserService = schoolBusUserService;
     }
@@ -122,7 +118,6 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
         parent.markCreated(tenantId, actor(actorId));
         applyParent(parent, request);
         ParentProfileEntity saved = parentProfileRepository.save(parent);
-        auditLogService.log(tenantId, actorId, "ParentProfile", saved.getId(), "CREATE", "Created parent profile");
         
         // Return enriched response
         ParentProfileResponse response = mapper.toParentProfileResponse(saved);
@@ -146,7 +141,6 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
         parent.markUpdated(actor(actorId));
         applyParent(parent, request);
         ParentProfileEntity saved = parentProfileRepository.save(parent);
-        auditLogService.log(tenantId, actorId, "ParentProfile", saved.getId(), "UPDATE", "Updated parent profile");
         
         // Return enriched response
         ParentProfileResponse response = mapper.toParentProfileResponse(saved);
@@ -167,7 +161,6 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
     @Transactional
     public void deleteParent(Long id, Long tenantId, Long actorId) {
         softDeleteById(parentProfileRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "ParentProfile", id, "SOFT_DELETE", "Soft deleted parent profile");
     }
 
     private void applyParent(ParentProfileEntity parent, ParentProfileUpsertRequest request) {
