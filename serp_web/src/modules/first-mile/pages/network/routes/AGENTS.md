@@ -47,7 +47,7 @@ Backend route model and validation:
 
 Frontend screen and API wiring:
 
-- `serp_web/src/app/first-mile/network/routes/page.tsx`
+- `serp_web/src/app/first-mile/network/route/page.tsx`
 - `serp_web/src/modules/first-mile/pages/network/routes/RouteListPage.tsx`
 - `serp_web/src/modules/first-mile/pages/network/routes/components/SecondMileRoutesMap.tsx`
 - `serp_web/src/modules/first-mile/api/firstMileApi.ts`
@@ -74,7 +74,9 @@ Use RTK Query through `firstMileApi.ts`; do not call `fetch` directly.
 Routes endpoints must use:
 
 ```ts
-extraOptions: { service: 'second-mile' }
+extraOptions: {
+  service: 'second-mile';
+}
 ```
 
 Current endpoint contracts:
@@ -284,7 +286,7 @@ Deletion:
 When changing the Routes screen:
 
 - keep route pages under `src/modules/first-mile/pages/network/routes/`;
-- keep `src/app/first-mile/network/routes/page.tsx` as a thin wrapper;
+- keep `src/app/first-mile/network/route/page.tsx` as a thin wrapper;
 - keep API additions in `api/firstMileApi.ts` with `SECOND_MILE_SERVICE`;
 - keep types in `types/index.ts` with `SecondMile*` names;
 - preserve `Author: Nguyen The Anh` headers in new or touched TMS files;
@@ -292,4 +294,3 @@ When changing the Routes screen:
 - do not introduce direct cross-module imports outside established TMS module
   boundaries;
 - run `npm run type-check` from `serp_web/` after TypeScript changes.
-

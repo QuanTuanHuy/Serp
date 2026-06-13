@@ -475,13 +475,13 @@ export function HubPostOfficeLinkPage() {
               </div>
 
               <Button variant='outline' asChild>
-                <Link href='/first-mile/network/hubs'>
+                <Link href='/first-mile/network/hub'>
                   <Building2 className='h-4 w-4' />
                   Hubs
                 </Link>
               </Button>
               <Button variant='outline' asChild>
-                <Link href='/first-mile/network/post-offices'>
+                <Link href='/first-mile/network/post-office'>
                   <MapPin className='h-4 w-4' />
                   Post Offices
                 </Link>

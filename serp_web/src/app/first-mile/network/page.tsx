@@ -6,5 +6,5 @@
 import { redirect } from 'next/navigation';
 
 export default function FirstMileNetworkPage() {
-  redirect('/first-mile/network/post-offices');
+  redirect('/first-mile/network/post-office');
 }

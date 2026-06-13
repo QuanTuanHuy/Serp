@@ -12,24 +12,30 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/shared/components/ui';
-import { Eye, LayoutGrid, List, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Loader2, Pencil, Trash2 } from 'lucide-react';
 import type {
   FirstMilePaginatedData,
   PostOffice,
   PostOfficeStatus,
 } from '../../../../types';
-import type { PostOfficeViewMode } from '../postOfficeForm';
 
 interface PostOfficeResultsCardProps {
   data?: FirstMilePaginatedData<PostOffice>;
   isLoading: boolean;
   isFetching: boolean;
-  viewMode: PostOfficeViewMode;
   isTmsAdmin: boolean;
   isSaving: boolean;
   isDeleting: boolean;
-  onViewModeChange: (mode: PostOfficeViewMode) => void;
   onViewDetails: (postOffice: PostOffice) => void;
   onEdit: (postOffice: PostOffice) => void;
   onDelete: (postOffice: PostOffice) => void;
@@ -42,15 +48,17 @@ interface PostOfficeResultsCardProps {
   ) => 'default' | 'secondary' | 'outline' | 'destructive';
 }
 
+const ACTION_COLUMN_CLASS =
+  'sticky right-0 z-10 w-[148px] min-w-[148px] border-l bg-card';
+const ACTION_HEADER_CLASS = `${ACTION_COLUMN_CLASS} z-20`;
+
 export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
   data,
   isLoading,
   isFetching,
-  viewMode,
   isTmsAdmin,
   isSaving,
   isDeleting,
-  onViewModeChange,
   onViewDetails,
   onEdit,
   onDelete,
@@ -62,248 +70,161 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
 }) => {
   return (
     <Card>
-      <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-        <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
-        <div className='flex items-center gap-2'>
-          <Button
-            type='button'
-            size='sm'
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            onClick={() => onViewModeChange('list')}
-          >
-            <List className='h-4 w-4 mr-1' />
-            List
-          </Button>
-          <Button
-            type='button'
-            size='sm'
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            onClick={() => onViewModeChange('grid')}
-          >
-            <LayoutGrid className='h-4 w-4 mr-1' />
-            Grid
-          </Button>
-        </div>
+      <CardHeader>
+        <CardTitle>Post office table ({data?.totalItems ?? 0})</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className='space-y-4'>
         {isLoading ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
             Loading post offices...
           </div>
         ) : data && data.items.length > 0 ? (
-          <div className='space-y-4'>
-            {viewMode === 'list' ? (
-              <div className='space-y-3'>
-                {data.items.map((item) => {
-                  const imageUrl = item.imageUrl?.trim();
+          <>
+            <div className='rounded-md border'>
+              <Table className='min-w-[1320px]'>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className='w-[96px]'>Image</TableHead>
+                    <TableHead className='w-[150px]'>Code</TableHead>
+                    <TableHead className='w-[220px]'>Name</TableHead>
+                    <TableHead className='w-[130px]'>Status</TableHead>
+                    <TableHead className='w-[220px]'>Province / Ward</TableHead>
+                    <TableHead className='w-[280px]'>Address</TableHead>
+                    <TableHead className='w-[150px]'>Pickup load</TableHead>
+                    <TableHead className='w-[150px]'>Delivery load</TableHead>
+                    <TableHead className='w-[180px]'>Coordinates</TableHead>
+                    <TableHead className={ACTION_HEADER_CLASS}>
+                      <span className='flex justify-end'>Actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.items.map((item) => {
+                    const imageUrl = item.imageUrl?.trim();
+                    const hasCoordinates =
+                      item.latitude !== undefined &&
+                      item.latitude !== null &&
+                      item.longitude !== undefined &&
+                      item.longitude !== null;
 
-                  return (
-                    <div
-                      key={item.id}
-                      className='rounded-lg border p-3 flex flex-col gap-3'
-                    >
-                      <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-                        <div className='flex gap-3 min-w-0'>
-                          <div className='relative h-20 w-28 shrink-0 overflow-hidden rounded-md border bg-muted'>
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div className='relative h-12 w-16 overflow-hidden rounded-md border bg-muted'>
                             {imageUrl ? (
                               <Image
                                 src={imageUrl}
                                 alt={`Post office ${item.code}`}
                                 fill
                                 unoptimized
-                                sizes='112px'
+                                sizes='64px'
                                 className='object-cover'
                               />
                             ) : (
-                              <div className='h-full w-full flex items-center justify-center text-[11px] text-muted-foreground'>
+                              <div className='flex h-full w-full items-center justify-center text-[10px] text-muted-foreground'>
                                 No image
                               </div>
                             )}
                           </div>
-
-                          <div className='space-y-1 min-w-0'>
-                            <div className='flex flex-wrap items-center gap-2'>
-                              <p className='font-medium'>
-                                {item.code} - {item.name}
-                              </p>
-                              <Badge
-                                variant={getStatusBadgeVariant(item.status)}
-                              >
-                                {item.status}
-                              </Badge>
-                            </div>
-                            <p className='text-sm text-muted-foreground'>
-                              {item.addressDetail}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              Province/Ward:{' '}
-                              {getProvinceLabel(item.provinceCode)} /{' '}
-                              {getWardLabel(item.provinceCode, item.wardCode)}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              Pickup load: {item.currentLoad ?? '--'} /{' '}
-                              {item.dailyCapacity ?? '--'} | Delivery load:{' '}
-                              {item.currentDeliveryLoad ?? '--'} /{' '}
-                              {item.deliveryCapacity ?? '--'}
-                            </p>
-                            {item.latitude !== undefined &&
-                              item.latitude !== null &&
-                              item.longitude !== undefined &&
-                              item.longitude !== null && (
-                                <p className='text-xs text-muted-foreground'>
-                                  GPS: {item.latitude}, {item.longitude}
-                                </p>
-                              )}
-                          </div>
-                        </div>
-
-                        <div className='flex items-center gap-2 self-end sm:self-start'>
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => onViewDetails(item)}
-                            disabled={isSaving || isDeleting}
-                          >
-                            <Eye className='h-4 w-4 mr-1' />
-                            View
-                          </Button>
-
-                          {isTmsAdmin ? (
-                            <>
-                              <Button
-                                type='button'
-                                variant='outline'
-                                size='sm'
-                                onClick={() => onEdit(item)}
-                                disabled={isSaving || isDeleting}
-                              >
-                                <Pencil className='h-4 w-4 mr-1' />
-                                Edit
-                              </Button>
-                              <Button
-                                type='button'
-                                variant='destructive'
-                                size='sm'
-                                onClick={() => onDelete(item)}
-                                disabled={isSaving || isDeleting}
-                              >
-                                <Trash2 className='h-4 w-4 mr-1' />
-                                Delete
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
-                {data.items.map((item) => {
-                  const imageUrl = item.imageUrl?.trim();
-
-                  return (
-                    <div
-                      key={item.id}
-                      className='rounded-lg border overflow-hidden flex flex-col'
-                    >
-                      <div className='relative h-40 w-full bg-muted'>
-                        {imageUrl ? (
-                          <Image
-                            src={imageUrl}
-                            alt={`Post office ${item.code}`}
-                            fill
-                            unoptimized
-                            sizes='(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw'
-                            className='object-cover'
-                          />
-                        ) : (
-                          <div className='h-full w-full flex items-center justify-center text-xs text-muted-foreground'>
-                            No image
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='p-3 space-y-1 flex-1'>
-                        <div className='flex flex-wrap items-center gap-2'>
-                          <p className='font-medium'>
-                            {item.code} - {item.name}
-                          </p>
+                        </TableCell>
+                        <TableCell className='font-mono text-xs'>
+                          {item.code}
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {item.name}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={getStatusBadgeVariant(item.status)}>
                             {item.status}
                           </Badge>
-                        </div>
-                        <p className='text-sm text-muted-foreground line-clamp-2'>
-                          {item.addressDetail}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          Province/Ward: {getProvinceLabel(item.provinceCode)} /{' '}
-                          {getWardLabel(item.provinceCode, item.wardCode)}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          Pickup load: {item.currentLoad ?? '--'} /{' '}
-                          {item.dailyCapacity ?? '--'} | Delivery load:{' '}
+                        </TableCell>
+                        <TableCell>
+                          <div className='space-y-1'>
+                            <p>{getProvinceLabel(item.provinceCode)}</p>
+                            <p className='text-xs text-muted-foreground'>
+                              {getWardLabel(item.provinceCode, item.wardCode)}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className='max-w-[280px] whitespace-normal'>
+                          <span className='line-clamp-2'>
+                            {item.addressDetail || '--'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {item.currentLoad ?? '--'} /{' '}
+                          {item.dailyCapacity ?? '--'}
+                        </TableCell>
+                        <TableCell>
                           {item.currentDeliveryLoad ?? '--'} /{' '}
                           {item.deliveryCapacity ?? '--'}
-                        </p>
-                        {item.latitude !== undefined &&
-                          item.latitude !== null &&
-                          item.longitude !== undefined &&
-                          item.longitude !== null && (
-                            <p className='text-xs text-muted-foreground'>
-                              GPS: {item.latitude}, {item.longitude}
-                            </p>
-                          )}
-                      </div>
+                        </TableCell>
+                        <TableCell className='font-mono text-xs'>
+                          {hasCoordinates
+                            ? `${item.latitude}, ${item.longitude}`
+                            : '--'}
+                        </TableCell>
+                        <TableCell className={ACTION_COLUMN_CLASS}>
+                          <div className='flex justify-end gap-2'>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type='button'
+                                  variant='outline'
+                                  size='icon'
+                                  aria-label='View post office details'
+                                  onClick={() => onViewDetails(item)}
+                                  disabled={isSaving || isDeleting}
+                                >
+                                  <Eye className='h-4 w-4' />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View details</TooltipContent>
+                            </Tooltip>
 
-                      <div className='flex items-center gap-2 p-3 pt-0'>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => onViewDetails(item)}
-                          disabled={isSaving || isDeleting}
-                          className={isTmsAdmin ? '' : 'flex-1'}
-                        >
-                          <Eye className='h-4 w-4 mr-1' />
-                          View
-                        </Button>
-
-                        {isTmsAdmin ? (
-                          <>
-                            <Button
-                              type='button'
-                              variant='outline'
-                              size='sm'
-                              onClick={() => onEdit(item)}
-                              disabled={isSaving || isDeleting}
-                              className='flex-1'
-                            >
-                              <Pencil className='h-4 w-4 mr-1' />
-                              Edit
-                            </Button>
-                            <Button
-                              type='button'
-                              variant='destructive'
-                              size='sm'
-                              onClick={() => onDelete(item)}
-                              disabled={isSaving || isDeleting}
-                              className='flex-1'
-                            >
-                              <Trash2 className='h-4 w-4 mr-1' />
-                              Delete
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                            {isTmsAdmin ? (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type='button'
+                                      variant='outline'
+                                      size='icon'
+                                      aria-label='Edit post office'
+                                      onClick={() => onEdit(item)}
+                                      disabled={isSaving || isDeleting}
+                                    >
+                                      <Pencil className='h-4 w-4' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type='button'
+                                      variant='destructive'
+                                      size='icon'
+                                      aria-label='Delete post office'
+                                      onClick={() => onDelete(item)}
+                                      disabled={isSaving || isDeleting}
+                                    >
+                                      <Trash2 className='h-4 w-4' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                              </>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
 
             <div className='flex items-center justify-between pt-2'>
               <Button
@@ -324,7 +245,7 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                 Next
               </Button>
             </div>
-          </div>
+          </>
         ) : (
           <p className='text-muted-foreground'>No post offices found.</p>
         )}

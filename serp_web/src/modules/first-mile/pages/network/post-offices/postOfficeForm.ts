@@ -10,7 +10,6 @@ import type {
 } from '../../../types';
 
 export type PostOfficeFormMode = 'create' | 'edit';
-export type PostOfficeViewMode = 'list' | 'grid';
 
 export interface PostOfficeFormState {
   code: string;

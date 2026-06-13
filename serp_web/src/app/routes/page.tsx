@@ -6,5 +6,5 @@
 import { redirect } from 'next/navigation';
 
 export default function RoutesEntryPage() {
-  redirect('/first-mile/network/routes');
+  redirect('/first-mile/network/route');
 }

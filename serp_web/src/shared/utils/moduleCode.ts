@@ -26,9 +26,9 @@ const MODULE_ROOT_PATHS: Record<string, string> = {
 };
 
 const TMS_NETWORK_ROUTE_ALIASES: Record<string, string> = {
-  '/first-mile/post-offices': '/first-mile/network/post-offices',
-  '/first-mile/hubs': '/first-mile/network/hubs',
-  '/first-mile/routes': '/first-mile/network/routes',
+  '/first-mile/post-offices': '/first-mile/network/post-office',
+  '/first-mile/hubs': '/first-mile/network/hub',
+  '/first-mile/routes': '/first-mile/network/route',
 };
 
 const KNOWN_APP_ROOT_SEGMENTS = new Set([

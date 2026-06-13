@@ -6,5 +6,5 @@
 import { redirect } from 'next/navigation';
 
 export default function HubsPage() {
-  redirect('/first-mile/network/hubs');
+  redirect('/first-mile/network/hub');
 }

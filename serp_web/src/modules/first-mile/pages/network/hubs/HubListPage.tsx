@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Dialog,
@@ -26,12 +25,20 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
 import {
   Building2,
-  MapPin,
   Plus,
   Pencil,
   Trash2,
@@ -133,6 +140,10 @@ function getHubStatusBadgeVariant(
       return 'secondary';
   }
 }
+
+const HUB_ACTION_COLUMN_CLASS =
+  'sticky right-0 z-10 w-[240px] min-w-[240px] border-l bg-card';
+const HUB_ACTION_HEADER_CLASS = `${HUB_ACTION_COLUMN_CLASS} z-20`;
 
 export function HubListPage() {
   const notification = useNotification();
@@ -906,11 +917,8 @@ export function HubListPage() {
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Building2 className='h-5 w-5' />
-              Hub list
+              Hub table
             </CardTitle>
-            <CardDescription>
-              Apply filters above, then open hub details or manage staff.
-            </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             {isFetching && hubs.length === 0 ? (
@@ -922,104 +930,163 @@ export function HubListPage() {
                 No hubs found
               </div>
             ) : (
-              <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-                {hubs.map((hub) => (
-                  <Card
-                    key={hub.id}
-                    className='hover:shadow-md transition-shadow'
-                  >
-                    <CardHeader className='pb-3'>
-                      <div className='flex items-start justify-between gap-2'>
-                        <div className='space-y-1 min-w-0'>
-                          <CardTitle className='text-lg truncate'>
-                            {hub.name}
-                          </CardTitle>
-                          <CardDescription className='font-mono text-xs'>
+              <div className='rounded-md border'>
+                <Table className='min-w-[1240px]'>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className='w-[150px]'>Code</TableHead>
+                      <TableHead className='w-[220px]'>Name</TableHead>
+                      <TableHead className='w-[120px]'>Type</TableHead>
+                      <TableHead className='w-[130px]'>Status</TableHead>
+                      <TableHead className='w-[220px]'>
+                        Province / Ward
+                      </TableHead>
+                      <TableHead className='w-[280px]'>Address</TableHead>
+                      <TableHead className='w-[130px]'>Hub load</TableHead>
+                      <TableHead className='w-[180px]'>Coordinates</TableHead>
+                      <TableHead className={HUB_ACTION_HEADER_CLASS}>
+                        <span className='flex justify-end'>Actions</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {hubs.map((hub) => {
+                      const hasCoordinates =
+                        hub.latitude !== undefined &&
+                        hub.latitude !== null &&
+                        hub.longitude !== undefined &&
+                        hub.longitude !== null;
+
+                      return (
+                        <TableRow key={hub.id}>
+                          <TableCell className='font-mono text-xs'>
                             {hub.code}
-                          </CardDescription>
-                        </div>
-                        <Badge variant={getHubStatusBadgeVariant(hub.status)}>
-                          {hub.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      {hub.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={hub.imageUrl}
-                          alt=''
-                          className='h-28 w-full rounded-md object-cover border'
-                        />
-                      )}
-                      <div className='text-sm'>
-                        <span className='font-medium'>Type:</span>{' '}
-                        {getHubTypeLabel(hub.hubType)}
-                      </div>
-                      {hub.addressDetail && (
-                        <div className='flex items-start gap-2 text-sm text-muted-foreground'>
-                          <MapPin className='h-4 w-4 mt-0.5 shrink-0' />
-                          <span className='line-clamp-2'>
-                            {hub.addressDetail}
-                          </span>
-                        </div>
-                      )}
-                      {hub.dailyCapacity !== undefined && (
-                        <div className='text-sm'>
-                          <span className='font-medium'>Hub load:</span>{' '}
-                          {hub.currentLoad ?? 0}/{hub.dailyCapacity}
-                        </div>
-                      )}
-                      <div className='flex flex-wrap gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => openHubDetail(hub)}
-                        >
-                          <Eye className='h-4 w-4 mr-1' />
-                          Details
-                        </Button>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => openHubStaffDialog(hub)}
-                        >
-                          <UserCog className='h-4 w-4 mr-1' />
-                          Staff
-                        </Button>
-                        {isTmsAdmin && (
-                          <>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => openEditDialog(hub)}
+                          </TableCell>
+                          <TableCell className='font-medium'>
+                            {hub.name}
+                            {hub.phoneNumber ? (
+                              <p className='text-xs font-normal text-muted-foreground'>
+                                {hub.phoneNumber}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>{getHubTypeLabel(hub.hubType)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getHubStatusBadgeVariant(hub.status)}
                             >
-                              <Pencil className='h-4 w-4 mr-1' />
-                              Edit
-                            </Button>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => triggerHubImagePicker(hub.id)}
-                              disabled={isUploadingImage}
-                            >
-                              <ImageUp className='h-4 w-4 mr-1' />
-                              Image
-                            </Button>
-                            <Button
-                              variant='destructive'
-                              size='sm'
-                              onClick={() => setDeleteTarget(hub)}
-                            >
-                              <Trash2 className='h-4 w-4 mr-1' />
-                              Delete
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                              {hub.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className='space-y-1'>
+                              <p>{getProvinceLabel(hub.provinceCode)}</p>
+                              <p className='text-xs text-muted-foreground'>
+                                {hub.wardCode || '--'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className='max-w-[280px] whitespace-normal'>
+                            <span className='line-clamp-2'>
+                              {hub.addressDetail || '--'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {hub.currentLoad ?? 0} / {hub.dailyCapacity ?? '--'}
+                          </TableCell>
+                          <TableCell className='font-mono text-xs'>
+                            {hasCoordinates
+                              ? `${hub.latitude}, ${hub.longitude}`
+                              : '--'}
+                          </TableCell>
+                          <TableCell className={HUB_ACTION_COLUMN_CLASS}>
+                            <div className='flex justify-end gap-2'>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type='button'
+                                    variant='outline'
+                                    size='icon'
+                                    aria-label='View hub details'
+                                    onClick={() => openHubDetail(hub)}
+                                  >
+                                    <Eye className='h-4 w-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View details</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type='button'
+                                    variant='outline'
+                                    size='icon'
+                                    aria-label='Manage hub staff'
+                                    onClick={() => openHubStaffDialog(hub)}
+                                  >
+                                    <UserCog className='h-4 w-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Staff</TooltipContent>
+                              </Tooltip>
+
+                              {isTmsAdmin ? (
+                                <>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type='button'
+                                        variant='outline'
+                                        size='icon'
+                                        aria-label='Edit hub'
+                                        onClick={() => openEditDialog(hub)}
+                                      >
+                                        <Pencil className='h-4 w-4' />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Edit</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type='button'
+                                        variant='outline'
+                                        size='icon'
+                                        aria-label='Upload hub image'
+                                        onClick={() =>
+                                          triggerHubImagePicker(hub.id)
+                                        }
+                                        disabled={isUploadingImage}
+                                      >
+                                        <ImageUp className='h-4 w-4' />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Image</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type='button'
+                                        variant='destructive'
+                                        size='icon'
+                                        aria-label='Delete hub'
+                                        onClick={() => setDeleteTarget(hub)}
+                                      >
+                                        <Trash2 className='h-4 w-4' />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Delete</TooltipContent>
+                                  </Tooltip>
+                                </>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
 

@@ -79,7 +79,6 @@ import {
   mapPostOfficeToFormState,
   type PostOfficeFormMode,
   type PostOfficeFormState,
-  type PostOfficeViewMode,
   validatePostOfficeForm,
 } from './postOfficeForm';
 import { usePostOfficeLocations } from './usePostOfficeLocations';
@@ -118,7 +117,6 @@ export const PostOfficeListPage: React.FC = () => {
     React.useState<PostOfficeListFilters>({});
   const [mapBounds, setMapBounds] = React.useState<TmsMapBounds | null>(null);
   const [formMode, setFormMode] = React.useState<PostOfficeFormMode>('create');
-  const [viewMode, setViewMode] = React.useState<PostOfficeViewMode>('list');
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] = React.useState<PostOfficeFormState>(
@@ -818,11 +816,9 @@ export const PostOfficeListPage: React.FC = () => {
           data={data}
           isLoading={isLoading}
           isFetching={isFetching}
-          viewMode={viewMode}
           isTmsAdmin={isTmsAdmin}
           isSaving={isSaving}
           isDeleting={isDeleting}
-          onViewModeChange={setViewMode}
           onViewDetails={handleOpenDetail}
           onEdit={handleOpenEditDialog}
           onDelete={handleRequestDelete}
