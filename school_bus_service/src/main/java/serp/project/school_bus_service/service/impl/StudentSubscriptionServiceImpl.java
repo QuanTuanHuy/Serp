@@ -14,6 +14,7 @@ import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
+import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -64,6 +65,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
     private final SchoolBusSecurityService securityService;
+    private final ISchoolBusDomainNotificationService domainNotificationService;
 
 
     public StudentSubscriptionServiceImpl(
@@ -74,7 +76,8 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService,
-            SchoolBusSecurityService securityService) {
+            SchoolBusSecurityService securityService,
+            ISchoolBusDomainNotificationService domainNotificationService) {
         this.subscriptionRepository = subscriptionRepository;
         this.historyRepository = historyRepository;
         this.masterDataService = masterDataService;
@@ -83,6 +86,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
         this.securityService = securityService;
+        this.domainNotificationService = domainNotificationService;
     }
 
 
@@ -150,7 +154,9 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.markCreated(tenantId, actor(actorId));
         entity.setSubscriptionCode(genCode(tenantId, actorId));
         apply(entity, request, tenantId);
-        return mapper.toStudentSubscriptionResponse(subscriptionRepository.save(entity));
+        StudentSubscriptionEntity saved = subscriptionRepository.save(entity);
+        domainNotificationService.notifySubscriptionCreated(saved, actorId);
+        return mapper.toStudentSubscriptionResponse(saved);
     }
 
     @Override
@@ -160,7 +166,9 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         StudentSubscriptionEntity entity = findById(id, tenantId);
         entity.markUpdated(actor(actorId));
         apply(entity, request, tenantId);
-        return mapper.toStudentSubscriptionResponse(subscriptionRepository.save(entity));
+        StudentSubscriptionEntity saved = subscriptionRepository.save(entity);
+        domainNotificationService.notifySubscriptionUpdated(saved, actorId);
+        return mapper.toStudentSubscriptionResponse(saved);
     }
 
     @Override
@@ -431,6 +439,7 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
                 oldStatus.name(), newStatus.name(), actorId, null,
                 "Manual " + changeType.name().toLowerCase() + " by admin");
 
+        domainNotificationService.notifySubscriptionStatusChanged(saved, newStatus, actorId);
         return mapper.toStudentSubscriptionResponse(saved);
     }
 

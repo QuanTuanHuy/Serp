@@ -281,8 +281,7 @@ public class AccountUserSyncServiceImpl implements IAccountUserSyncService {
         command.setSyncSource("ACCOUNT_API");
         command.setRawPayloadJson(objectMapper.writeValueAsString(user));
         
-        // Full sync from API contains these fields
-        command.setKeycloakId(user.getKeycloakId());
+        // Account user ID is the only identity used by School Bus synchronization.
         command.setAvatarUrl(user.getAvatarUrl());
         command.setPreferredLanguage(user.getPreferredLanguage());
         command.setTimezone(user.getTimezone());
