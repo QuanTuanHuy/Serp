@@ -12,7 +12,7 @@ export function SchoolBusScrollableTable({
   footer,
 }: SchoolBusScrollableTableProps) {
   return (
-    <div className='overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm'>
+    <div className='overflow-hidden rounded-[22px] border border-border bg-card text-card-foreground shadow-sm'>
       <div className='overflow-x-auto'>
         <div className='min-w-max whitespace-nowrap [&_table]:min-w-max [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap'>
           {children}

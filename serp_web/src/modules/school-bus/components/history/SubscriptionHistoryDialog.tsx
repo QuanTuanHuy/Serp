@@ -49,7 +49,7 @@ export function SubscriptionHistoryDialog({
         History
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className='max-w-lg'>
+        <DialogContent className='school-bus-shell max-w-lg'>
           <DialogHeader>
             <DialogTitle>Subscription History — {subscriptionCode}</DialogTitle>
             <DialogDescription>

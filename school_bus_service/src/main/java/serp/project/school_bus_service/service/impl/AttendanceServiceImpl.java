@@ -13,6 +13,7 @@ import serp.project.school_bus_service.dto.response.TripAttendanceSummaryRespons
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
+import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ITripExecutionService;
@@ -59,6 +60,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
     private final SchoolBusSecurityService securityService;
+    private final ISchoolBusDomainNotificationService domainNotificationService;
 
 
     public AttendanceServiceImpl(
@@ -70,7 +72,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
             ISchoolBusDataScopeService schoolBusDataScopeService,
-            SchoolBusSecurityService securityService) {
+            SchoolBusSecurityService securityService,
+            ISchoolBusDomainNotificationService domainNotificationService) {
         this.attendanceRepository = attendanceRepository;
         this.tripExecutionService = tripExecutionService;
         this.routeStopService = routeStopService;
@@ -80,6 +83,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
         this.securityService = securityService;
+        this.domainNotificationService = domainNotificationService;
     }
 
 
@@ -299,7 +303,7 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         }
 
         AttendanceEntity saved = attendanceRepository.save(attendance);
-        // TODO notification: notify parents/guardians of the attendance event (eventType).
+        domainNotificationService.notifyAttendanceRecorded(trip, tripStudent, eventType, actorId);
         return mapper.toAttendanceResponse(saved);
     }
 

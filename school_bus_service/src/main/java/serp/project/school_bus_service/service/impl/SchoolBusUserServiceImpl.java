@@ -7,6 +7,7 @@ import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 import serp.project.school_bus_service.mapper.SchoolBusUserMapper;
 import serp.project.school_bus_service.repository.SchoolBusUserRepository;
 import serp.project.school_bus_service.service.ISchoolBusUserService;
+import serp.project.school_bus_service.service.ISchoolBusUserRoleService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -22,7 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserEntity, Long> implements ISchoolBusUserService {
@@ -32,6 +36,7 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     private final IParentService parentService;
     private final IDriverService driverService;
     private final IAttendantService attendantService;
+    private final ISchoolBusUserRoleService schoolBusUserRoleService;
     private final ObjectMapper objectMapper;
 
     public SchoolBusUserServiceImpl(SchoolBusUserRepository schoolBusUserRepository,
@@ -39,12 +44,14 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
                                     @Lazy IParentService parentService,
                                     @Lazy IDriverService driverService,
                                     @Lazy IAttendantService attendantService,
+                                    ISchoolBusUserRoleService schoolBusUserRoleService,
                                     ObjectMapper objectMapper) {
         this.schoolBusUserRepository = schoolBusUserRepository;
         this.schoolBusUserMapper = schoolBusUserMapper;
         this.parentService = parentService;
         this.driverService = driverService;
         this.attendantService = attendantService;
+        this.schoolBusUserRoleService = schoolBusUserRoleService;
         this.objectMapper = objectMapper;
     }
 
@@ -60,22 +67,15 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Command is null");
         }
 
-        // 1. Tìm bản ghi shadow user hiện tại theo thứ tự ưu tiên:
-        //    - Ưu tiên 1: Tìm theo accountUserId (ID từ bảng users của Account Module)
-        //    - Ưu tiên 2: Tìm theo keycloakId (định danh từ Keycloak phục vụ khớp token)
-        //    - Ưu tiên 3: Tìm theo cặp tenantId + email (dành cho các user tạo tay hoặc chưa có keycloakId)
-        // Việc khớp theo nhiều định danh giúp tối đa hóa khả năng nhận diện người dùng và tránh bị trùng lặp
-        // bản ghi khi thông tin tài khoản được cập nhật từ nhiều nguồn khác nhau.
-        SchoolBusUserEntity entity = null;
-        if (command.getAccountUserId() != null) {
-            entity = schoolBusUserRepository.findByAccountUserIdAndIsDeletedFalse(command.getAccountUserId()).orElse(null);
+        if (command.getAccountUserId() == null) {
+            throw new AppException(
+                    AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Account user ID is required for School Bus user synchronization");
         }
-        if (entity == null && command.getKeycloakId() != null && !command.getKeycloakId().isBlank()) {
-            entity = schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(command.getKeycloakId()).orElse(null);
-        }
-        if (entity == null && command.getTenantId() != null && command.getEmail() != null && !command.getEmail().isBlank()) {
-            entity = schoolBusUserRepository.findByTenantIdAndEmailIgnoreCaseAndIsDeletedFalse(command.getTenantId(), command.getEmail()).orElse(null);
-        }
+
+        SchoolBusUserEntity entity = schoolBusUserRepository
+                .findByAccountUserIdAndIsDeletedFalse(command.getAccountUserId())
+                .orElse(null);
 
         boolean isNew = false;
         if (entity == null) {
@@ -110,36 +110,58 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
         // Trigger synchronization of business profiles based on roles.
         SchoolBusUserEntity savedUser = schoolBusUserRepository.save(entity);
 
-        List<String> roles = command.getRoles();
-        if (roles == null && command.getRawPayloadJson() != null) {
-            try {
-                roles = new ArrayList<>();
-                JsonNode root = objectMapper.readTree(command.getRawPayloadJson());
-                JsonNode rolesNode = root.get("roles");
-                if (rolesNode == null || rolesNode.isMissingNode()) {
-                    rolesNode = root.get("roleNames");
-                }
-                if (rolesNode != null && rolesNode.isArray()) {
-                    for (JsonNode node : rolesNode) {
-                        roles.add(node.asText());
-                    }
-                }
-            } catch (Exception e) {
-                // Ignore parsing errors and fallback to empty
-            }
-        }
+        List<String> roles = resolveRoles(command);
+        schoolBusUserRoleService.replaceRoles(savedUser, roles);
 
-        if (roles != null) {
-            boolean isParent = roles.stream().anyMatch("SCHOOL_BUS_PARENT"::equalsIgnoreCase);
-            boolean isDriver = roles.stream().anyMatch("SCHOOL_BUS_DRIVER"::equalsIgnoreCase);
-            boolean isAttendant = roles.stream().anyMatch("SCHOOL_BUS_ATTENDANT"::equalsIgnoreCase);
+        boolean isParent = roles.stream().anyMatch("SCHOOL_BUS_PARENT"::equalsIgnoreCase);
+        boolean isDriver = roles.stream().anyMatch("SCHOOL_BUS_DRIVER"::equalsIgnoreCase);
+        boolean isAttendant = roles.stream().anyMatch("SCHOOL_BUS_ATTENDANT"::equalsIgnoreCase);
 
-            parentService.syncProfile(savedUser, isParent);
-            driverService.syncProfile(savedUser, isDriver);
-            attendantService.syncProfile(savedUser, isAttendant);
-        }
+        parentService.syncProfile(savedUser, isParent);
+        driverService.syncProfile(savedUser, isDriver);
+        attendantService.syncProfile(savedUser, isAttendant);
 
         return savedUser;
+    }
+
+    private List<String> resolveRoles(SchoolBusUserUpsertCommand command) {
+        if (command.getRoles() != null) {
+            return normalizeRoles(command.getRoles());
+        }
+        if (command.getRawPayloadJson() == null || command.getRawPayloadJson().isBlank()) {
+            return List.of();
+        }
+
+        try {
+            List<String> roles = new ArrayList<>();
+            JsonNode root = objectMapper.readTree(command.getRawPayloadJson());
+            JsonNode rolesNode = root.get("roles");
+            if (rolesNode == null || rolesNode.isMissingNode()) {
+                rolesNode = root.get("roleNames");
+            }
+            if (rolesNode != null && rolesNode.isArray()) {
+                for (JsonNode node : rolesNode) {
+                    roles.add(node.asText());
+                }
+            }
+            return normalizeRoles(roles);
+        } catch (Exception exception) {
+            return List.of();
+        }
+    }
+
+    private List<String> normalizeRoles(List<String> roles) {
+        Set<String> normalizedRoles = new LinkedHashSet<>();
+        for (String role : roles) {
+            if (role == null || role.isBlank()) {
+                continue;
+            }
+            String normalized = role.trim().toUpperCase(Locale.ROOT);
+            if (normalized.startsWith("SCHOOL_BUS_")) {
+                normalizedRoles.add(normalized);
+            }
+        }
+        return new ArrayList<>(normalizedRoles);
     }
 
     @Override

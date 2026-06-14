@@ -7,6 +7,7 @@ import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,18 @@ public interface RouteAssignmentRepository extends BaseRepository<RouteAssignmen
     List<RouteAssignmentEntity> findByDriverIdAndTenantIdAndIsDeletedFalse(Long driverId, Long tenantId);
 
     List<RouteAssignmentEntity> findByAttendantIdAndTenantIdAndIsDeletedFalse(Long attendantId, Long tenantId);
+
+    @Query("""
+            SELECT a FROM RouteAssignmentEntity a
+            WHERE a.route.id IN :routeIds
+              AND a.tenantId = :tenantId
+              AND a.isDeleted = false
+              AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                               serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
+            """)
+    List<RouteAssignmentEntity> findDashboardAssignments(
+            @Param("routeIds") Collection<Long> routeIds,
+            @Param("tenantId") Long tenantId);
 
     /**
      * Find active assignments for a given bus on a service date whose planned time windows

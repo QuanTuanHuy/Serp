@@ -32,14 +32,14 @@ export function SchoolBusDeleteDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
-        className='rounded-[28px] border-slate-200 bg-white text-slate-950 shadow-[0_30px_90px_rgba(15,23,42,0.18)]'
+        className='school-bus-shell rounded-[28px] border-border bg-background text-foreground shadow-[0_30px_90px_rgba(15,23,42,0.18)]'
         style={schoolBusThemeStyle}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle className='text-xl font-semibold tracking-tight text-slate-950'>
+          <AlertDialogTitle className='text-xl font-semibold tracking-tight text-foreground'>
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className='text-slate-500'>
+          <AlertDialogDescription className='text-muted-foreground'>
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>

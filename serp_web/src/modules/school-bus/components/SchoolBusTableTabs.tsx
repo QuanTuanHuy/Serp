@@ -47,14 +47,14 @@ export function SchoolBusTableTabs({
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         {/* Tabs switcher wrapper */}
         <div className='flex items-center justify-start'>
-          <TabsList className='inline-flex h-10 items-center justify-start gap-1 rounded-xl bg-slate-100/60 p-1 border border-slate-200/40 shadow-none'>
+          <TabsList className='inline-flex h-10 items-center justify-start gap-1 rounded-xl border border-border bg-muted/60 p-1 shadow-none'>
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
                 className={cn(
                   'group relative rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 outline-none',
-                  'text-slate-600 hover:bg-slate-200/40 hover:text-slate-900',
+                  'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   'data-[state=active]:bg-[#C81E3A] data-[state=active]:text-white data-[state=active]:hover:bg-[#C81E3A] data-[state=active]:hover:text-white',
                   'shadow-none border-0'
                 )}
@@ -64,7 +64,7 @@ export function SchoolBusTableTabs({
                   <span
                     className={cn(
                       'rounded-md px-1.5 py-0.5 text-[9px] font-bold transition-colors duration-150',
-                      'bg-slate-200/70 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-600',
+                      'bg-background/70 text-muted-foreground group-hover:bg-background group-hover:text-foreground',
                       'group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white'
                     )}
                   >
@@ -91,7 +91,7 @@ export function SchoolBusTableTabs({
             ))}
           </div>
         ) : (
-          <div className={cn(schoolBusUi.card, 'mt-2 overflow-hidden p-0 bg-white')}>
+          <div className={cn(schoolBusUi.card, 'mt-2 overflow-hidden p-0')}>
             {tabs.map((tab) => (
               <TabsContent key={tab.value} value={tab.value} className='mt-0 p-0'>
                 <div
@@ -124,4 +124,3 @@ export function SchoolBusTableTabs({
     </div>
   );
 }
-

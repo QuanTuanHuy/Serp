@@ -36,6 +36,7 @@ import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { schoolBusUi } from '../theme';
 
 const statusMap: Record<string, { label: string; className: string }> = {
   CREATED: { label: 'Created', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
@@ -474,7 +475,10 @@ export function SchoolBusTripsPage() {
                 {isArrivedOrBoarding ? (
                   <Button
                     size='sm'
-                    className='bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
+                    className={cn(
+                      schoolBusUi.primaryButton,
+                      'rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
+                    )}
                     onClick={() =>
                       call('Depart stop', () =>
                         departTripStop({
@@ -520,7 +524,10 @@ export function SchoolBusTripsPage() {
               <div className='flex items-center justify-end gap-1.5'>
                 <Button
                   size='sm'
-                  className='bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
+                  className={cn(
+                    schoolBusUi.primaryButton,
+                    'rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
+                  )}
                   onClick={() =>
                     call('Complete trip', () =>
                       completeTrip({ id: trip.id }).unwrap()

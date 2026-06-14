@@ -32,7 +32,7 @@ function Field({ label, value, mono }: { label: string; value: React.ReactNode; 
   return (
     <div className='flex flex-col gap-0.5'>
       <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>{label}</span>
-      <span className={cn('text-sm text-slate-800', mono && 'font-mono')}>{value || '—'}</span>
+      <span className={cn('text-sm text-foreground', mono && 'font-mono')}>{value || '—'}</span>
     </div>
   );
 }
@@ -40,10 +40,10 @@ function Field({ label, value, mono }: { label: string; value: React.ReactNode; 
 /* ── Section ──────────────────────────────────────────────────────────────── */
 function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className='rounded-2xl border border-slate-100 bg-slate-50/60 p-4'>
+    <div className='rounded-2xl border border-border bg-muted/40 p-4'>
       <div className='mb-3 flex items-center gap-2'>
-        <Icon className='h-4 w-4 text-slate-500' />
-        <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>{title}</p>
+        <Icon className='h-4 w-4 text-muted-foreground' />
+        <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>{title}</p>
       </div>
       <div className='grid grid-cols-2 gap-x-6 gap-y-3'>{children}</div>
     </div>
@@ -68,17 +68,17 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
     >
       {/* Panel */}
       <div
-        className='relative w-full max-w-xl mx-4 rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/20 overflow-hidden'
+        className='relative mx-4 w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-card text-card-foreground shadow-2xl shadow-black/20'
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className='flex items-center justify-between border-b border-slate-100 px-6 py-4'>
+        <div className='flex items-center justify-between border-b border-border px-6 py-4'>
           <div className='flex items-center gap-3'>
-            <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100'>
-              <CalendarDays className='h-4 w-4 text-slate-600' />
+            <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-muted'>
+              <CalendarDays className='h-4 w-4 text-muted-foreground' />
             </div>
             <div>
-              <h2 className='text-base font-bold text-slate-900'>Subscription Detail</h2>
+              <h2 className='text-base font-bold text-foreground'>Subscription Detail</h2>
               {sub && (
                 <p className='text-xs font-mono text-slate-400'>{sub.subscriptionCode}</p>
               )}
@@ -88,7 +88,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             {sub && <SchoolBusStatusBadge status={sub.status} />}
             <button
               onClick={onClose}
-              className='flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700'
+              className='flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground'
               aria-label='Close'
             >
               <X className='h-4 w-4' />
@@ -100,7 +100,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
         <div className='max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4'>
           {isLoading && (
             <div className='flex items-center justify-center py-12'>
-              <div className='h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900' />
+              <div className='h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground' />
             </div>
           )}
 
@@ -171,10 +171,10 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className='flex items-center justify-end border-t border-slate-100 px-6 py-3'>
+        <div className='flex items-center justify-end border-t border-border px-6 py-3'>
           <button
             onClick={onClose}
-            className='rounded-xl bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200'
+            className='rounded-xl bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground'
           >
             Close
           </button>

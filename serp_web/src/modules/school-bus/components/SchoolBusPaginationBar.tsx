@@ -21,10 +21,10 @@ export function SchoolBusPaginationBar({
   const totalPages = Math.max(page.totalPages, 1);
 
   return (
-    <div className='flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between'>
+    <div className='flex flex-col gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
       <div>
-        Page <span className='font-semibold text-slate-950'>{currentPage}</span>{' '}
-        of <span className='font-semibold text-slate-950'>{totalPages}</span>
+        Page <span className='font-semibold text-foreground'>{currentPage}</span>{' '}
+        of <span className='font-semibold text-foreground'>{totalPages}</span>
         {' · '}
         <span>{page.totalElements} records</span>
       </div>

@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
+import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteStatus;
 
 import java.time.LocalDate;
@@ -50,7 +51,7 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
         @Param("tenantId") Long tenantId,
         @Param("serviceDate") LocalDate serviceDate,
         @Param("schoolId") Long schoolId,
-        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+        @Param("direction") RouteDirection direction
     );
 
     @Query("""
@@ -103,4 +104,73 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
         @Param("attendantId") Long attendantId,
         @Param("serviceDate") LocalDate serviceDate
     );
+
+    @Query("""
+        SELECT r FROM RoutePlanEntity r
+        WHERE r.tenantId = :tenantId
+          AND r.isDeleted = false
+          AND r.serviceDate = :serviceDate
+          AND r.status IN (serp.project.school_bus_service.enums.RouteStatus.PUBLISHED,
+                           serp.project.school_bus_service.enums.RouteStatus.ASSIGNED,
+                           serp.project.school_bus_service.enums.RouteStatus.TRIP_CREATED)
+          AND (:schoolId IS NULL OR r.school.id = :schoolId)
+          AND (:direction IS NULL OR r.routeDirection = :direction)
+          AND (
+              :tenantWide = true
+              OR (:driverProfileId IS NOT NULL AND (
+                  EXISTS (
+                      SELECT a FROM RouteAssignmentEntity a
+                      WHERE a.route.id = r.id
+                        AND a.driver.id = :driverProfileId
+                        AND a.tenantId = :tenantId
+                        AND a.isDeleted = false
+                        AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                         serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
+                  )
+                  OR EXISTS (
+                      SELECT t FROM TripExecutionEntity t
+                      WHERE t.route.id = r.id
+                        AND t.driver.id = :driverProfileId
+                        AND t.tenantId = :tenantId
+                        AND t.isDeleted = false
+                  )
+              ))
+              OR (:attendantProfileId IS NOT NULL AND (
+                  EXISTS (
+                      SELECT a FROM RouteAssignmentEntity a
+                      WHERE a.route.id = r.id
+                        AND a.attendant.id = :attendantProfileId
+                        AND a.tenantId = :tenantId
+                        AND a.isDeleted = false
+                        AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                         serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
+                  )
+                  OR EXISTS (
+                      SELECT t FROM TripExecutionEntity t
+                      WHERE t.route.id = r.id
+                        AND t.attendant.id = :attendantProfileId
+                        AND t.tenantId = :tenantId
+                        AND t.isDeleted = false
+                  )
+              ))
+              OR (:parentProfileId IS NOT NULL AND EXISTS (
+                  SELECT rps FROM RoutePlanStudentEntity rps
+                  WHERE rps.route.id = r.id
+                    AND rps.student.parentProfile.id = :parentProfileId
+                    AND rps.tenantId = :tenantId
+                    AND rps.isDeleted = false
+                    AND rps.student.isDeleted = false
+                    AND rps.student.isActive = true
+              ))
+          )
+    """)
+    List<RoutePlanEntity> findDashboardRoutes(
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
 }

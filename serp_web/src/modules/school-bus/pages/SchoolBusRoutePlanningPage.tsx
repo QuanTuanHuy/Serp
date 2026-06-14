@@ -541,7 +541,7 @@ export default function SchoolBusRoutePlanningPage() {
 
   const cancelDialog = (
     <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-      <AlertDialogContent>
+      <AlertDialogContent className='school-bus-shell'>
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel Session?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -567,15 +567,15 @@ export default function SchoolBusRoutePlanningPage() {
     return (
       <MapMarkerVisibilityProvider>
         {/* Fixed full-viewport overlay — prevents any body scroll */}
-        <div className='fixed inset-0 z-[900] flex overflow-hidden bg-slate-900/10 backdrop-blur-[1px]'>
+        <div className='school-bus-shell fixed inset-0 z-[900] flex overflow-hidden bg-background/90 text-foreground backdrop-blur-[1px]'>
           {/* Left panel — own scroll, no page scroll */}
-          <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl'>
-            <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3'>
-              <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>School Bus Platform</p>
-              <h2 className='mt-0.5 text-base font-bold text-slate-900'>Route Planning</h2>
+          <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-border bg-card text-card-foreground shadow-xl'>
+            <div className='shrink-0 border-b border-border bg-muted/40 px-4 py-3'>
+              <p className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>School Bus Platform</p>
+              <h2 className='mt-0.5 text-base font-bold text-foreground'>Route Planning</h2>
             </div>
             {/* Scrollable inner area */}
-            <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50'>
+            <div className='flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4'>
               <PlanningContextPanel
                 form={form}
                 onFormChange={setForm}

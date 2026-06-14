@@ -105,8 +105,8 @@ export function SchoolBusDataTable<T>({
     if (hasTabs || (!title && !description)) return null;
     return (
       <div className='px-6 pt-5 pb-4'>
-        {title && <h3 className='text-base font-semibold text-slate-900'>{title}</h3>}
-        {description && <p className='mt-1 text-xs text-slate-500'>{description}</p>}
+        {title && <h3 className='text-base font-semibold text-foreground'>{title}</h3>}
+        {description && <p className='mt-1 text-xs text-muted-foreground'>{description}</p>}
       </div>
     );
   };
@@ -115,9 +115,9 @@ export function SchoolBusDataTable<T>({
   const renderTabs = () => {
     if (!hasTabs) return null;
     return (
-      <div className='px-6 pt-4 pb-3 border-b border-slate-100 bg-slate-50/5'>
+      <div className='border-b border-border bg-muted/20 px-6 pt-4 pb-3'>
         <div className='flex items-center justify-start'>
-          <div className='inline-flex h-10 items-center justify-start gap-1 rounded-xl bg-slate-100/60 p-1 border border-slate-200/40 shadow-none'>
+          <div className='inline-flex h-10 items-center justify-start gap-1 rounded-xl border border-border bg-muted/60 p-1 shadow-none'>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
               return (
@@ -129,7 +129,7 @@ export function SchoolBusDataTable<T>({
                     'group relative rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-150 outline-none select-none border-0 shadow-none',
                     isActive
                       ? 'bg-[#C81E3A] text-white hover:bg-[#B31B34] active:bg-[#99182D]'
-                      : 'text-slate-600 hover:bg-slate-200/40 hover:text-slate-900'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <span className='inline-flex items-center gap-1.5 whitespace-nowrap'>
@@ -140,7 +140,7 @@ export function SchoolBusDataTable<T>({
                           'rounded-md px-1.5 py-0.5 text-[9px] font-bold transition-colors duration-150',
                           isActive
                             ? 'bg-white/20 text-white'
-                            : 'bg-slate-200/70 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-600'
+                            : 'bg-muted text-muted-foreground group-hover:text-foreground'
                         )}
                       >
                         {tab.count}
@@ -161,8 +161,8 @@ export function SchoolBusDataTable<T>({
     if (!toolbar) return null;
     return (
       <div className={cn(
-        'flex flex-wrap items-center justify-between gap-4 px-6 py-3 bg-slate-50/15',
-        hasTabs ? 'border-b border-slate-100' : 'border-t border-b border-slate-100'
+        'flex flex-wrap items-center justify-between gap-4 bg-muted/20 px-6 py-3',
+        hasTabs ? 'border-b border-border' : 'border-t border-b border-border'
       )}>
         {toolbar}
       </div>
@@ -173,8 +173,8 @@ export function SchoolBusDataTable<T>({
   const renderBody = () => {
     if (isLoading) {
       return (
-        <div className='px-6 py-16 flex flex-col items-center justify-center text-sm text-slate-500 gap-3'>
-          <div className='h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#C81E3A]' />
+        <div className='flex flex-col items-center justify-center gap-3 px-6 py-16 text-sm text-muted-foreground'>
+          <div className='h-6 w-6 animate-spin rounded-full border-2 border-border border-t-[#C81E3A]' />
           <span>Loading resources...</span>
         </div>
       );
@@ -199,9 +199,9 @@ export function SchoolBusDataTable<T>({
 
     return (
       <div className='overflow-x-auto min-h-0 min-w-0'>
-        <Table className='min-w-full divide-y divide-slate-100'>
-          <TableHeader className='bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100'>
-            <TableRow className='border-b border-slate-100'>
+        <Table className='min-w-full divide-y divide-border'>
+          <TableHeader className='border-b border-border bg-muted/40 hover:bg-muted/40'>
+            <TableRow className='border-b border-border'>
               {columns.map((col, index) => {
                 const isLeftSticky = col.sticky === 'left' || (index === 0 && stickyFirstColumn);
                 const isRightSticky = col.sticky === 'right' || (index === columns.length - 1 && stickyActionColumn);
@@ -209,10 +209,10 @@ export function SchoolBusDataTable<T>({
                   <TableHead
                     key={col.key}
                     className={cn(
-                      'h-10 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap',
+                      'h-10 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap',
                       col.headerClassName,
-                      isLeftSticky && 'sticky left-0 z-20 bg-[#fafafa] border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]',
-                      isRightSticky && 'sticky right-0 z-20 bg-[#fafafa] border-l border-slate-100 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'
+                      isLeftSticky && 'sticky left-0 z-20 border-r border-border bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]',
+                      isRightSticky && 'sticky right-0 z-20 border-l border-border bg-muted shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'
                     )}
                     style={{ width: col.width }}
                   >
@@ -222,12 +222,12 @@ export function SchoolBusDataTable<T>({
               })}
             </TableRow>
           </TableHeader>
-          <TableBody className='divide-y divide-slate-100/70 border-b border-slate-100'>
+          <TableBody className='divide-y divide-border border-b border-border'>
             {data.map((row, rowIndex) => (
               <TableRow
                 key={(row as any).id || rowIndex}
                 className={cn(
-                  'group hover:bg-slate-50/50 transition-colors border-b border-slate-100/70 last:border-b-0',
+                  'group border-b border-border transition-colors last:border-b-0 hover:bg-muted/40',
                   onRowDoubleClick && 'cursor-pointer select-none'
                 )}
                 onDoubleClick={() => onRowDoubleClick?.(row)}
@@ -239,10 +239,10 @@ export function SchoolBusDataTable<T>({
                     <TableCell
                       key={col.key}
                       className={cn(
-                        'py-3.5 text-sm text-slate-700 whitespace-nowrap align-middle',
+                        'py-3.5 text-sm text-foreground whitespace-nowrap align-middle',
                         col.className,
-                        isLeftSticky && 'sticky left-0 z-10 bg-white group-hover:bg-[#fcfcfc] border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors',
-                        isRightSticky && 'sticky right-0 z-10 bg-white group-hover:bg-[#fcfcfc] border-l border-slate-100 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors'
+                        isLeftSticky && 'sticky left-0 z-10 border-r border-border bg-card shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted',
+                        isRightSticky && 'sticky right-0 z-10 border-l border-border bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted'
                       )}
                     >
                       {col.render(row)}
@@ -269,7 +269,7 @@ export function SchoolBusDataTable<T>({
   };
 
   return (
-    <div className={cn(schoolBusUi.card, 'overflow-hidden flex flex-col bg-white p-0', className)}>
+    <div className={cn(schoolBusUi.card, 'flex flex-col overflow-hidden p-0', className)}>
       {renderHeader()}
       {renderTabs()}
       {renderToolbar()}

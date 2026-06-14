@@ -1,5 +1,5 @@
-import { SchoolBusAttendancePage } from '@/modules/school-bus';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <SchoolBusAttendancePage />;
+  redirect('/school-bus/trips');
 }

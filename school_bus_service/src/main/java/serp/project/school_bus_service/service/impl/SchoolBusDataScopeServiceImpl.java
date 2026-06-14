@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.entity.DriverProfileEntity;
 import serp.project.school_bus_service.entity.ParentProfileEntity;
+import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.entity.TransportRequestEntity;
@@ -12,6 +13,7 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.repository.BusAttendantProfileRepository;
 import serp.project.school_bus_service.repository.DriverProfileRepository;
 import serp.project.school_bus_service.repository.ParentProfileRepository;
+import serp.project.school_bus_service.repository.SchoolRepository;
 import serp.project.school_bus_service.repository.StudentRepository;
 import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
 import serp.project.school_bus_service.repository.TransportRequestRepository;
@@ -20,9 +22,15 @@ import serp.project.school_bus_service.repository.TripStudentRepository;
 import serp.project.school_bus_service.repository.SchoolBusUserRepository;
 import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
+import serp.project.school_bus_service.service.model.DashboardDataScope;
 import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
+
+import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,6 +45,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
     private final DriverProfileRepository driverProfileRepository;
     private final BusAttendantProfileRepository busAttendantProfileRepository;
     private final SchoolBusUserRepository schoolBusUserRepository;
+    private final SchoolRepository schoolRepository;
     private final SchoolBusSecurityService securityService;
 
     public SchoolBusDataScopeServiceImpl(
@@ -49,6 +58,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
             DriverProfileRepository driverProfileRepository,
             BusAttendantProfileRepository busAttendantProfileRepository,
             SchoolBusUserRepository schoolBusUserRepository,
+            SchoolRepository schoolRepository,
             SchoolBusSecurityService securityService) {
         this.tripExecutionRepository = tripExecutionRepository;
         this.tripStudentRepository = tripStudentRepository;
@@ -59,6 +69,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         this.driverProfileRepository = driverProfileRepository;
         this.busAttendantProfileRepository = busAttendantProfileRepository;
         this.schoolBusUserRepository = schoolBusUserRepository;
+        this.schoolRepository = schoolRepository;
         this.securityService = securityService;
     }
 
@@ -228,24 +239,30 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE);
     }
 
-    private SchoolBusUserEntity getCurrentSchoolBusUser() {
+    private Optional<SchoolBusUserEntity> findCurrentSchoolBusUser() {
         Long accountUserId = securityService.getCurrentUserId();
-        SchoolBusUserEntity schoolBusUser = schoolBusUserRepository.findByAccountUserIdAndIsDeletedFalse(accountUserId)
-                .orElseGet(() -> {
-                    try {
-                        String keycloakId = securityService.getCurrentKeycloakId();
-                        if (keycloakId != null && !keycloakId.isBlank()) {
-                            return schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId).orElse(null);
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                    return null;
-                });
-        if (schoolBusUser == null) {
-            throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE, "Current shadow user not synchronized or found.");
+        Optional<SchoolBusUserEntity> byAccountUserId =
+                schoolBusUserRepository.findByAccountUserIdAndIsDeletedFalse(accountUserId);
+        if (byAccountUserId.isPresent()) {
+            return byAccountUserId;
         }
-        return schoolBusUser;
+
+        try {
+            String keycloakId = securityService.getCurrentKeycloakId();
+            if (keycloakId != null && !keycloakId.isBlank()) {
+                return schoolBusUserRepository.findByKeycloakIdAndIsDeletedFalse(keycloakId);
+            }
+        } catch (AppException ignored) {
+            // Account user id remains the canonical lookup; Keycloak subject is a fallback.
+        }
+        return Optional.empty();
+    }
+
+    private SchoolBusUserEntity getCurrentSchoolBusUser() {
+        return findCurrentSchoolBusUser()
+                .orElseThrow(() -> new AppException(
+                        AppErrorCode.Security.FORBIDDEN_DATA_SCOPE,
+                        "Current shadow user not synchronized or found."));
     }
 
     @Override
@@ -273,5 +290,69 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         return busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.getId())
                 .map(BusAttendantProfileEntity::getId)
                 .orElseThrow(() -> new AppException(AppErrorCode.Security.ATTENDANT_PROFILE_NOT_FOUND));
+    }
+
+    @Override
+    public DashboardDataScope getDashboardDataScope(Long tenantId) {
+        DashboardDataScope scope = new DashboardDataScope();
+        scope.setTenantId(tenantId);
+
+        List<SchoolEntity> schools;
+        if (securityService.isAdminOrDispatcher()) {
+            scope.setTenantWide(true);
+            schools = schoolRepository.findByTenantIdAndIsDeletedFalseOrderByNameAsc(tenantId).stream()
+                    .filter(school -> school.getIsActive() == Boolean.TRUE)
+                    .toList();
+        } else {
+            Optional<SchoolBusUserEntity> user = findCurrentSchoolBusUser();
+            if (user.isEmpty()) {
+                return scope;
+            }
+
+            if (securityService.isDriver()) {
+                Optional<DriverProfileEntity> driver =
+                        driverProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.get().getId());
+                if (driver.isEmpty()) {
+                    return scope;
+                }
+                scope.setDriverProfileId(driver.get().getId());
+                schools = schoolRepository.findDashboardSchoolsForDriver(tenantId, driver.get().getId());
+            } else if (securityService.isAttendant()) {
+                Optional<BusAttendantProfileEntity> attendant =
+                        busAttendantProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(
+                                tenantId,
+                                user.get().getId());
+                if (attendant.isEmpty()) {
+                    return scope;
+                }
+                scope.setAttendantProfileId(attendant.get().getId());
+                schools = schoolRepository.findDashboardSchoolsForAttendant(tenantId, attendant.get().getId());
+            } else if (securityService.isParent()) {
+                Optional<ParentProfileEntity> parent =
+                        parentProfileRepository.findByTenantIdAndUserIdAndIsDeletedFalse(tenantId, user.get().getId());
+                if (parent.isEmpty()) {
+                    return scope;
+                }
+                scope.setParentProfileId(parent.get().getId());
+                schools = schoolRepository.findDashboardSchoolsForParent(tenantId, parent.get().getId());
+            } else {
+                throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE);
+            }
+        }
+
+        scope.setAllowedSchoolIds(schools.stream()
+                .map(SchoolEntity::getId)
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
+        return scope;
+    }
+
+    @Override
+    public void assertCanAccessDashboardSchool(DashboardDataScope scope, Long schoolId) {
+        if (schoolId == null) {
+            return;
+        }
+        if (scope == null || !scope.getAllowedSchoolIds().contains(schoolId)) {
+            throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE);
+        }
     }
 }
