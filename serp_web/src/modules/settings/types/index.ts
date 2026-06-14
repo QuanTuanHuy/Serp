@@ -4,6 +4,7 @@
  */
 
 export * from './general.types';
+export * from './global-search.types';
 export * from './user.types';
 export * from './department.types';
 export * from './module-access.types';
