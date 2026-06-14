@@ -40,6 +40,15 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    if (pathname !== '/settings/search') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setSearchQuery(params.get('q') || '');
+  }, [pathname]);
+
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => ({
@@ -54,9 +63,10 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      // TODO: Implement settings search
-      console.log('Searching:', searchQuery);
+    const trimmedQuery = searchQuery.trim();
+
+    if (trimmedQuery) {
+      router.push(`/settings/search?q=${encodeURIComponent(trimmedQuery)}`);
     }
   };
 

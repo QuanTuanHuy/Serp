@@ -10,6 +10,12 @@ export {
   useUpdateOrganizationSettingsMutation,
 } from './general/generalApi';
 
+// Global Search API
+export {
+  settingsGlobalSearchApi,
+  useGetSettingsGlobalSearchQuery,
+} from './global-search/globalSearchApi';
+
 // Users API
 export {
   settingsUsersApi,
