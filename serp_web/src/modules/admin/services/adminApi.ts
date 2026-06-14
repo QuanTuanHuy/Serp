@@ -9,6 +9,12 @@ export {
   useGetAdminDashboardQuery,
 } from './dashboard/dashboardApi';
 
+// Global Search API
+export {
+  globalSearchApi,
+  useGetAdminGlobalSearchQuery,
+} from './global-search/globalSearchApi';
+
 // Organizations API
 export {
   organizationsApi,
