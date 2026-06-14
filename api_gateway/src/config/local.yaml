@@ -102,11 +102,11 @@ external:
       webSocketPath: /school-bus/api/v1/ws/school-bus
     firstMileService:
       host: localhost
-      port: "8093"
+      port: "8101"
       timeout: 15s
     secondMileService:
       host: localhost
-      port: "8095"
+      port: "8102"
       timeout: 15s
     crmService:
       host: localhost
@@ -114,15 +114,15 @@ external:
       timeout: 15s
     paymentService:
       host: localhost
-      port: "8096"
+      port: "8103"
       timeout: 15s
     tmsBillingService:
       host: localhost
-      port: "8097"
+      port: "8104"
       timeout: 15s
     tmsOrderService:
       host: localhost
-      port: "8099"
+      port: "8105"
       timeout: 15s
     notificationService:
       host: localhost

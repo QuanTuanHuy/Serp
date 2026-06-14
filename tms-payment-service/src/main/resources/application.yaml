@@ -1,5 +1,5 @@
 server:
-  port: ${PAYMENT_SERVICE_PORT:8096}
+  port: ${PAYMENT_SERVICE_PORT:8103}
 spring:
   application:
     name: tms-payment-service
@@ -41,7 +41,7 @@ app:
     default-tenant-id: ${PAYMENT_NOTIFICATION_DEFAULT_TENANT_ID:1}
   webhook:
     tms-order:
-      payment-confirmed-url: ${TMS_ORDER_PAYMENT_CONFIRMED_WEBHOOK_URL:${FIRST_MILE_PAYMENT_CONFIRMED_WEBHOOK_URL:http://localhost:8099/api/v1/internal/payment-webhooks/orders/payment-confirmed}}
+      payment-confirmed-url: ${TMS_ORDER_PAYMENT_CONFIRMED_WEBHOOK_URL:${FIRST_MILE_PAYMENT_CONFIRMED_WEBHOOK_URL:http://localhost:8105/api/v1/internal/payment-webhooks/orders/payment-confirmed}}
       secret: ${TMS_ORDER_PAYMENT_WEBHOOK_SECRET:${FIRST_MILE_PAYMENT_WEBHOOK_SECRET:change-me}}
     retry:
       max-attempts: ${WEBHOOK_MAX_ATTEMPTS:5}
@@ -89,4 +89,3 @@ zalopay:
   redirect-url: ${ZALOPAY_REDIRECT_URL:http://localhost:3000/payment/result}
   # Thời gian hết hạn đơn hàng (giây) - 15 phút
   expire-duration-seconds: 900
-

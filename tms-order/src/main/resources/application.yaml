@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8099}
+  port: ${SERVER_PORT:8105}
 
 spring:
   servlet:
@@ -79,7 +79,7 @@ internal-api:
 
 payment:
   service:
-    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
+    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8103}
     gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
     create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
     query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
@@ -89,7 +89,7 @@ payment:
 
 first-mile:
   service:
-    base-url: ${FIRST_MILE_SERVICE_BASE_URL:http://localhost:8093}
+    base-url: ${FIRST_MILE_SERVICE_BASE_URL:http://localhost:8101}
     reserve-best-origin-path: ${FIRST_MILE_RESERVE_BEST_ORIGIN_PATH:/api/v1/internal/post-office-reservations/origin/best}
     reserve-drop-off-origin-path: ${FIRST_MILE_RESERVE_DROP_OFF_ORIGIN_PATH:/api/v1/internal/post-office-reservations/origin/%d/drop-off}
     reserve-best-destination-path: ${FIRST_MILE_RESERVE_BEST_DESTINATION_PATH:/api/v1/internal/post-office-reservations/destination/best}

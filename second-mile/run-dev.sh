@@ -14,7 +14,7 @@ else
   echo "Warning: .env file not found; using application defaults."
 fi
 
-export SERVER_PORT="${SERVER_PORT:-8095}"
+export SERVER_PORT="${SERVER_PORT:-8102}"
 export DB_URL="${DB_URL:-jdbc:postgresql://localhost:5432/second-mile}"
 export DB_USERNAME="${DB_USERNAME:-serp}"
 export DB_PASSWORD="${DB_PASSWORD:-serp123}"
