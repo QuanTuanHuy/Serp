@@ -7,46 +7,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {
-  CheckCircle2,
-  Eye,
-  MapPin,
-  PackageCheck,
-  Plus,
-  RefreshCw,
-  ScanLine,
-  Send,
-  Truck,
-  XCircle,
-} from 'lucide-react';
+import { MapPin, PackageCheck, Plus, RefreshCw, Truck } from 'lucide-react';
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
-  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Checkbox,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Textarea,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
-import { TmsCombobox } from '../../components';
 import {
   useCancelPostOfficeHandoverManifestMutation,
   useConfirmHandoverManifestInboundMutation,
@@ -65,231 +36,34 @@ import {
 } from '../../api';
 import type {
   HandoverManifest,
-  HandoverManifestOrderItem,
   HandoverManifestStatus,
   Hub,
   PostOffice,
   SecondMileRoute,
   SecondMileVehicle,
 } from '../../types';
+import { DriverHandoverPage } from './DriverHandoverPage';
 import {
-  DriverHandoverPage,
+  HandoverManifestCreateDialog,
+  HandoverManifestDetailDialog,
+  HandoverManifestDispatchDialog,
+  HandoverManifestReceiveDialog,
+  HandoverManifestScanOutDialog,
+  HandoverManifestTableCard,
+} from './components';
+import {
+  canManagePostOfficeHandover,
+  canReceiveHubHandover,
+  getDefaultArrivalTime,
+  getDefaultDepartureTime,
   isHandoverDriverOnly,
-} from './DriverHandoverPage';
-
-const PAGE_SIZE = 20;
-const SELECT_PAGE_SIZE = 200;
-
-type ManifestMode = 'POST_OFFICE' | 'HUB';
-
-const MANIFEST_STATUS_OPTIONS: Array<{
-  value: HandoverManifestStatus;
-  label: string;
-}> = [
-  { value: 'CREATED', label: 'Created' },
-  { value: 'OUTBOUND_CONFIRMED', label: 'Dispatched to hub' },
-  { value: 'INBOUND_CONFIRMED', label: 'Received at hub' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
-
-const MANIFEST_STATUS_LABELS: Record<HandoverManifestStatus, string> = {
-  CREATED: 'Created',
-  OUTBOUND_CONFIRMED: 'Dispatched to hub',
-  INBOUND_CONFIRMED: 'Received at hub',
-  CANCELLED: 'Cancelled',
-};
-
-const canManagePostOfficeHandover = (roles: string[]): boolean =>
-  roles.includes('TMS_ADMIN') || roles.includes('TMS_POSTOFFICER_MANAGER');
-
-const canReceiveHubHandover = (roles: string[]): boolean =>
-  roles.includes('TMS_ADMIN') ||
-  roles.includes('TMS_HUB_MANAGER') ||
-  roles.includes('TMS_HUB_EMPLOYEE') ||
-  roles.includes('TMS_HUB_DRIVER');
-
-const getStatusBadgeVariant = (
-  status?: HandoverManifestStatus
-): 'default' | 'secondary' | 'outline' | 'destructive' => {
-  if (status === 'INBOUND_CONFIRMED') {
-    return 'default';
-  }
-  if (status === 'OUTBOUND_CONFIRMED') {
-    return 'outline';
-  }
-  if (status === 'CANCELLED') {
-    return 'destructive';
-  }
-  return 'secondary';
-};
-
-const formatDateTime = (value?: string): string => {
-  if (!value) {
-    return '--';
-  }
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-
-  return parsedDate.toLocaleString('en-US');
-};
-
-const getTotalOrders = (manifest?: HandoverManifest | null): number =>
-  manifest?.totalOrders ?? manifest?.orders?.length ?? 0;
-
-const getScannedOutOrders = (manifest?: HandoverManifest | null): number =>
-  manifest?.scannedOutOrders ??
-  manifest?.orders?.filter((order) => Boolean(order.scanOutTime)).length ??
-  0;
-
-const getScannedInOrders = (manifest?: HandoverManifest | null): number =>
-  manifest?.scannedInOrders ??
-  manifest?.orders?.filter((order) => Boolean(order.scanInTime)).length ??
-  0;
-
-const isReadyForDispatch = (manifest: HandoverManifest): boolean => {
-  const totalOrders = getTotalOrders(manifest);
-  return (
-    manifest.status === 'CREATED' &&
-    totalOrders > 0 &&
-    getScannedOutOrders(manifest) >= totalOrders
-  );
-};
-
-const normalizeScanCode = (value: string): string => value.trim();
-
-const padDatePart = (value: number): string => String(value).padStart(2, '0');
-
-const toDateTimeLocalValue = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = padDatePart(date.getMonth() + 1);
-  const day = padDatePart(date.getDate());
-  const hours = padDatePart(date.getHours());
-  const minutes = padDatePart(date.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const getDefaultDepartureTime = (): string => {
-  const date = new Date();
-  date.setMinutes(date.getMinutes() + 15);
-  return toDateTimeLocalValue(date);
-};
-
-const getDefaultArrivalTime = (): string => {
-  const date = new Date();
-  date.setMinutes(date.getMinutes() + 75);
-  return toDateTimeLocalValue(date);
-};
-
-interface DetailItemProps {
-  label: string;
-  value: React.ReactNode;
-}
-
-function DetailItem({ label, value }: DetailItemProps) {
-  return (
-    <div className='space-y-1 rounded-md border p-3'>
-      <p className='text-xs font-medium uppercase text-muted-foreground'>
-        {label}
-      </p>
-      <div className='text-sm'>{value}</div>
-    </div>
-  );
-}
-
-interface ManifestOrdersTableProps {
-  actionMode?: 'SCAN_OUT' | 'RECEIVE';
-  isActionLoading?: boolean;
-  onScan?: (orderCode: string) => void;
-  orders?: HandoverManifestOrderItem[];
-  scannedOrderCodes?: string[];
-}
-
-function ManifestOrdersTable({
-  actionMode,
-  isActionLoading,
-  onScan,
-  orders = [],
-  scannedOrderCodes = [],
-}: ManifestOrdersTableProps) {
-  return (
-    <div className='overflow-x-auto rounded-md border'>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Customer order</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Scan out</TableHead>
-            <TableHead>Scan in</TableHead>
-            {actionMode ? <TableHead>Action</TableHead> : null}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={actionMode ? 6 : 5}
-                className='py-8 text-center text-muted-foreground'
-              >
-                No orders in this manifest.
-              </TableCell>
-            </TableRow>
-          ) : (
-            orders.map((order) => {
-              const orderCode = order.orderCode ?? '';
-              const isScanned =
-                actionMode === 'SCAN_OUT'
-                  ? Boolean(order.scanOutTime)
-                  : Boolean(
-                      order.scanInTime ||
-                        (orderCode && scannedOrderCodes.includes(orderCode))
-                    );
-              const scannedLabel =
-                actionMode === 'SCAN_OUT' ? 'Scanned out' : 'Scanned in';
-
-              return (
-                <TableRow key={order.id ?? order.orderCode}>
-                  <TableCell className='font-medium'>
-                    {order.orderCode || '--'}
-                  </TableCell>
-                  <TableCell>{order.customerOrderCode || '--'}</TableCell>
-                  <TableCell>
-                    {order.status ? (
-                      <Badge variant='outline'>{order.status}</Badge>
-                    ) : (
-                      '--'
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDateTime(order.scanOutTime)}</TableCell>
-                  <TableCell>{formatDateTime(order.scanInTime)}</TableCell>
-                  {actionMode ? (
-                    <TableCell>
-                      {isScanned ? (
-                        <Badge variant='secondary'>{scannedLabel}</Badge>
-                      ) : (
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          disabled={!orderCode || isActionLoading}
-                          onClick={() => onScan?.(orderCode)}
-                        >
-                          Scan
-                        </Button>
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
+  isReadyForDispatch,
+  MANIFEST_STATUS_OPTIONS,
+  normalizeScanCode,
+  PAGE_SIZE,
+  SELECT_PAGE_SIZE,
+  type ManifestMode,
+} from './handoverManifestModels';
 
 function HandoverManifestManagementPage() {
   const notification = useNotification();
@@ -656,6 +430,22 @@ function HandoverManifestManagementPage() {
     setSelectedOrderCodes([]);
   };
 
+  const resetDispatchForm = () => {
+    setDispatchManifest(null);
+    setDispatchRouteId('');
+    setDispatchVehicleId('');
+    setDispatchDepartureAt('');
+    setDispatchArrivalAt('');
+    setDispatchSealCode('');
+    setDispatchNote('');
+  };
+
+  const resetReceiveForm = () => {
+    setReceiveManifest(null);
+    setReceiveOrderCode('');
+    setReceivedOrderCodes([]);
+  };
+
   const handleToggleOrder = (orderCode: string, checked?: boolean) => {
     setSelectedOrderCodes((current) => {
       const exists = current.includes(orderCode);
@@ -802,13 +592,7 @@ function HandoverManifestManagementPage() {
         },
       }).unwrap();
       notification.success('Manifest dispatched to hub successfully.');
-      setDispatchManifest(null);
-      setDispatchRouteId('');
-      setDispatchVehicleId('');
-      setDispatchDepartureAt('');
-      setDispatchArrivalAt('');
-      setDispatchSealCode('');
-      setDispatchNote('');
+      resetDispatchForm();
       void refetchPostOfficeManifests();
     } catch (error) {
       notification.error('Failed to dispatch manifest.', {
@@ -883,9 +667,7 @@ function HandoverManifestManagementPage() {
         orderCodes: receivedOrderCodes,
       }).unwrap();
       notification.success('Inbound receiving confirmed successfully.');
-      setReceiveManifest(null);
-      setReceiveOrderCode('');
-      setReceivedOrderCodes([]);
+      resetReceiveForm();
       void refetchHubManifests();
     } catch (error) {
       notification.error('Failed to confirm inbound receiving.', {
@@ -963,868 +745,162 @@ function HandoverManifestManagementPage() {
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            {effectiveMode === 'POST_OFFICE' ? (
-              <Truck className='h-5 w-5' />
-            ) : (
-              <PackageCheck className='h-5 w-5' />
-            )}
-            {effectiveMode === 'POST_OFFICE'
-              ? 'Post office manifests'
-              : 'Hub inbound manifests'}
-          </CardTitle>
-          <CardDescription>
-            {effectiveMode === 'POST_OFFICE'
-              ? 'Build a handover manifest, scan every order out, then dispatch it to the mapped hub.'
-              : 'Receive dispatched manifests from post offices and confirm inbound orders at the hub.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='grid gap-4 md:grid-cols-3'>
-            {postOfficeOptions.length > 0 ? (
-              <div className='space-y-2'>
-                <Label htmlFor='filter-post-office'>Origin post office</Label>
-                <TmsCombobox
-                  id='filter-post-office'
-                  value={filterPostOfficeId || 'ALL'}
-                  onValueChange={(value) => {
-                    setFilterPostOfficeId(value === 'ALL' ? '' : value);
-                    setPage(0);
-                  }}
-                  options={postOfficeFilterOptions}
-                  placeholder='All post offices'
-                  emptyText='No post offices found'
-                />
-              </div>
-            ) : null}
+      <HandoverManifestTableCard
+        effectiveMode={effectiveMode}
+        filterHubId={filterHubId}
+        filterPostOfficeId={filterPostOfficeId}
+        filterStatus={filterStatus}
+        hubFilterOptions={hubFilterOptions}
+        isCancelling={isCancelling}
+        isDispatching={isDispatching}
+        isFetching={isFetching}
+        manifests={manifests}
+        manifestsData={manifestsData}
+        page={page}
+        postOfficeFilterOptions={postOfficeFilterOptions}
+        resolveHubLabel={resolveHubLabel}
+        resolvePostOfficeLabel={resolvePostOfficeLabel}
+        resolveRouteLabel={resolveRouteLabel}
+        resolveVehicleLabel={resolveVehicleLabel}
+        showHubFilter={hubOptions.length > 0}
+        showPostOfficeFilter={postOfficeOptions.length > 0}
+        statusFilterOptions={statusFilterOptions}
+        onCancelManifest={(manifest) => void handleCancelManifest(manifest)}
+        onFilterHubChange={(value) => {
+          setFilterHubId(value);
+          setPage(0);
+        }}
+        onFilterPostOfficeChange={(value) => {
+          setFilterPostOfficeId(value);
+          setPage(0);
+        }}
+        onFilterStatusChange={(value) => {
+          setFilterStatus(value);
+          setPage(0);
+        }}
+        onNextPage={() => setPage((current) => current + 1)}
+        onOpenDetail={(manifest) =>
+          setDetailTarget({
+            manifest,
+            mode: effectiveMode,
+          })
+        }
+        onOpenDispatch={handleOpenDispatch}
+        onOpenReceive={handleOpenReceive}
+        onOpenScanOut={(manifest) => {
+          setScanManifest(manifest);
+          setScanOrderCode('');
+        }}
+        onPreviousPage={() => setPage((current) => Math.max(current - 1, 0))}
+      />
 
-            {hubOptions.length > 0 ? (
-              <div className='space-y-2'>
-                <Label htmlFor='filter-hub'>Target hub</Label>
-                <TmsCombobox
-                  id='filter-hub'
-                  value={filterHubId || 'ALL'}
-                  onValueChange={(value) => {
-                    setFilterHubId(value === 'ALL' ? '' : value);
-                    setPage(0);
-                  }}
-                  options={hubFilterOptions}
-                  placeholder='All hubs'
-                  emptyText='No hubs found'
-                />
-              </div>
-            ) : null}
-
-            <div className='space-y-2'>
-              <Label htmlFor='filter-status'>Status</Label>
-              <TmsCombobox
-                id='filter-status'
-                value={filterStatus}
-                onValueChange={(value) => {
-                  setFilterStatus(value as 'ALL' | HandoverManifestStatus);
-                  setPage(0);
-                }}
-                options={statusFilterOptions}
-                placeholder='All statuses'
-                emptyText='No statuses found'
-              />
-            </div>
-          </div>
-
-          <div className='overflow-x-auto rounded-md border'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Manifest</TableHead>
-                  <TableHead>Post office</TableHead>
-                  <TableHead>Hub</TableHead>
-                  <TableHead>Transport</TableHead>
-                  <TableHead>Planned</TableHead>
-                  <TableHead>Orders</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Seal</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {manifests.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={11}
-                      className='py-8 text-center text-muted-foreground'
-                    >
-                      {isFetching
-                        ? 'Loading handover manifests...'
-                        : 'No handover manifests found.'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  manifests.map((manifest) => {
-                    const totalOrders = getTotalOrders(manifest);
-                    const scannedOutOrders = getScannedOutOrders(manifest);
-                    const scannedInOrders = getScannedInOrders(manifest);
-
-                    return (
-                      <TableRow key={manifest.id}>
-                        <TableCell className='font-medium'>
-                          {manifest.manifestCode || `#${manifest.id}`}
-                        </TableCell>
-                        <TableCell>
-                          {resolvePostOfficeLabel(
-                            manifest.originPostOfficeId,
-                            manifest.originPostOfficeCode
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {resolveHubLabel(manifest.targetHubId)}
-                        </TableCell>
-                        <TableCell>
-                          <div className='space-y-1 text-xs'>
-                            <div>
-                              Route:{' '}
-                              {resolveRouteLabel(
-                                manifest.routeId,
-                                manifest.routeCode
-                              )}
-                            </div>
-                            <div>
-                              Vehicle:{' '}
-                              {resolveVehicleLabel(
-                                manifest.vehicleId,
-                                manifest.vehicleLicensePlate
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className='space-y-1 text-xs'>
-                            <div>
-                              Depart{' '}
-                              {formatDateTime(manifest.plannedDepartureAt)}
-                            </div>
-                            <div>
-                              Arrive {formatDateTime(manifest.plannedArrivalAt)}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{totalOrders}</TableCell>
-                        <TableCell>
-                          {effectiveMode === 'POST_OFFICE'
-                            ? `${scannedOutOrders}/${totalOrders} out`
-                            : `${scannedInOrders}/${totalOrders} in`}
-                        </TableCell>
-                        <TableCell>{manifest.sealCode || '--'}</TableCell>
-                        <TableCell>
-                          {manifest.status ? (
-                            <Badge
-                              variant={getStatusBadgeVariant(manifest.status)}
-                            >
-                              {MANIFEST_STATUS_LABELS[manifest.status]}
-                            </Badge>
-                          ) : (
-                            '--'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatDateTime(manifest.updatedAt)}
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex flex-wrap gap-2'>
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() =>
-                                setDetailTarget({
-                                  manifest,
-                                  mode: effectiveMode,
-                                })
-                              }
-                            >
-                              <Eye className='mr-1 h-3.5 w-3.5' />
-                              View
-                            </Button>
-
-                            {effectiveMode === 'POST_OFFICE' &&
-                            manifest.status === 'CREATED' ? (
-                              <>
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  onClick={() => {
-                                    setScanManifest(manifest);
-                                    setScanOrderCode('');
-                                  }}
-                                >
-                                  <ScanLine className='mr-1 h-3.5 w-3.5' />
-                                  Scan out
-                                </Button>
-                                <Button
-                                  size='sm'
-                                  disabled={
-                                    !isReadyForDispatch(manifest) ||
-                                    isDispatching
-                                  }
-                                  onClick={() => handleOpenDispatch(manifest)}
-                                >
-                                  <Send className='mr-1 h-3.5 w-3.5' />
-                                  Dispatch
-                                </Button>
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  disabled={isCancelling}
-                                  onClick={() =>
-                                    void handleCancelManifest(manifest)
-                                  }
-                                >
-                                  <XCircle className='mr-1 h-3.5 w-3.5' />
-                                  Cancel
-                                </Button>
-                              </>
-                            ) : null}
-
-                            {effectiveMode === 'HUB' &&
-                            manifest.status === 'OUTBOUND_CONFIRMED' ? (
-                              <>
-                                <Button
-                                  size='sm'
-                                  onClick={() => handleOpenReceive(manifest)}
-                                >
-                                  <CheckCircle2 className='mr-1 h-3.5 w-3.5' />
-                                  Receive
-                                </Button>
-                              </>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className='flex items-center justify-between'>
-            <p className='text-sm text-muted-foreground'>
-              Page {(manifestsData?.currentPage ?? 0) + 1} of{' '}
-              {Math.max(manifestsData?.totalPages ?? 1, 1)} ·{' '}
-              {manifestsData?.totalItems ?? 0} manifest(s)
-            </p>
-            <div className='flex gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={page <= 0 || isFetching}
-                onClick={() => setPage((current) => Math.max(current - 1, 0))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                disabled={
-                  isFetching || (manifestsData?.totalPages ?? 1) <= page + 1
-                }
-                onClick={() => setPage((current) => current + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog
+      <HandoverManifestCreateDialog
+        allReadyOrdersSelected={allReadyOrdersSelected}
+        createNote={createNote}
+        createPostOfficeId={createPostOfficeId}
+        createPostOfficeOptions={createPostOfficeOptions}
+        isCreating={isCreating}
+        isLoadingReadyOrders={isLoadingReadyOrders}
         open={isCreateOpen}
+        readyOrderCodes={readyOrderCodes}
+        readyOrders={readyOrders}
+        selectedCreatePostOffice={selectedCreatePostOffice}
+        selectedOrderCodes={selectedOrderCodes}
+        targetHubLabel={
+          selectedCreatePostOffice?.hubId
+            ? resolveHubLabel(selectedCreatePostOffice.hubId)
+            : 'No mapped hub'
+        }
+        onCreateNoteChange={setCreateNote}
+        onCreatePostOfficeChange={setCreatePostOfficeId}
         onOpenChange={(open) => {
           setIsCreateOpen(open);
           if (!open) {
             resetCreateForm();
           }
         }}
-      >
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
-          <DialogHeader>
-            <DialogTitle>New post office handover</DialogTitle>
-            <DialogDescription>
-              Select orders waiting at the post office. The target hub is read
-              from the post office mapping.
-            </DialogDescription>
-          </DialogHeader>
+        onSubmit={() => void handleCreateManifest()}
+        onToggleAllReadyOrders={handleToggleAllReadyOrders}
+        onToggleOrder={handleToggleOrder}
+      />
 
-          <div className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='create-post-office'>Origin post office *</Label>
-                <TmsCombobox
-                  id='create-post-office'
-                  value={createPostOfficeId}
-                  onValueChange={setCreatePostOfficeId}
-                  options={createPostOfficeOptions}
-                  placeholder='Select post office'
-                  emptyText='No post offices found'
-                />
-              </div>
-
-              <DetailItem
-                label='Target hub'
-                value={
-                  selectedCreatePostOffice?.hubId
-                    ? resolveHubLabel(selectedCreatePostOffice.hubId)
-                    : 'No mapped hub'
-                }
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='create-note'>Note</Label>
-              <Textarea
-                id='create-note'
-                value={createNote}
-                onChange={(event) => setCreateNote(event.target.value)}
-                placeholder='Optional handover note'
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <div className='flex flex-wrap items-center justify-between gap-2'>
-                <Label>Orders ready at post office *</Label>
-                {readyOrderCodes.length > 0 ? (
-                  <label className='flex items-center gap-2 text-sm'>
-                    <Checkbox
-                      checked={allReadyOrdersSelected}
-                      onCheckedChange={(value) =>
-                        handleToggleAllReadyOrders(Boolean(value))
-                      }
-                    />
-                    Select all
-                  </label>
-                ) : null}
-              </div>
-
-              {!selectedCreatePostOffice ? (
-                <p className='text-sm text-muted-foreground'>
-                  Select a post office to load ready orders.
-                </p>
-              ) : isLoadingReadyOrders ? (
-                <p className='text-sm text-muted-foreground'>
-                  Loading ready orders...
-                </p>
-              ) : readyOrders.length === 0 ? (
-                <p className='text-sm text-muted-foreground'>
-                  No orders with status AT_ORIGIN_POST_OFFICE at this post
-                  office.
-                </p>
-              ) : (
-                <div className='max-h-72 space-y-2 overflow-y-auto rounded-md border p-3'>
-                  {readyOrders.map((order) => {
-                    const orderCode = order.orderCode;
-                    if (!orderCode) {
-                      return null;
-                    }
-                    const checked = selectedOrderCodes.includes(orderCode);
-                    return (
-                      <div
-                        key={order.id}
-                        className='flex items-start gap-3 rounded-md border p-3'
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) =>
-                            handleToggleOrder(orderCode, Boolean(value))
-                          }
-                          aria-label={`Select order ${orderCode}`}
-                        />
-                        <div className='min-w-0 flex-1 space-y-1 text-sm'>
-                          <div className='flex flex-wrap items-center gap-2'>
-                            <span className='font-medium'>{orderCode}</span>
-                            <Badge variant='outline'>{order.status}</Badge>
-                          </div>
-                          <p className='text-xs text-muted-foreground'>
-                            Customer order: {order.customerOrderCode || '--'}
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Receiver: {order.receiverName || '--'} (
-                            {order.receiverPhone || '--'})
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={isCreating}
-              onClick={() => void handleCreateManifest()}
-            >
-              {isCreating ? 'Creating...' : 'Create manifest'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <HandoverManifestScanOutDialog
+        activeScanManifest={activeScanManifest}
+        isFetchingScanManifest={isFetchingScanManifest}
+        isScanningOut={isScanningOut}
         open={Boolean(scanManifest)}
+        scanOrderCode={scanOrderCode}
+        scanOrders={scanOrders}
         onOpenChange={(open) => {
           if (!open) {
             setScanManifest(null);
             setScanOrderCode('');
           }
         }}
-      >
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
-          <DialogHeader>
-            <DialogTitle>Scan orders out</DialogTitle>
-            <DialogDescription>
-              Scan each order before dispatching the manifest to the hub.
-            </DialogDescription>
-          </DialogHeader>
+        onScan={(orderCode) => void handleScanOutOrder(orderCode)}
+        onScanOrderCodeChange={setScanOrderCode}
+      />
 
-          <div className='space-y-4'>
-            <div className='grid gap-3 sm:grid-cols-3'>
-              <DetailItem
-                label='Manifest'
-                value={activeScanManifest?.manifestCode || '--'}
-              />
-              <DetailItem
-                label='Scanned out'
-                value={`${getScannedOutOrders(activeScanManifest)}/${getTotalOrders(
-                  activeScanManifest
-                )}`}
-              />
-              <DetailItem
-                label='Status'
-                value={activeScanManifest?.status || '--'}
-              />
-            </div>
-
-            <div className='flex flex-col gap-2 sm:flex-row'>
-              <Input
-                value={scanOrderCode}
-                onChange={(event) => setScanOrderCode(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    void handleScanOutOrder();
-                  }
-                }}
-                placeholder='Scan or enter order code'
-              />
-              <Button
-                disabled={isScanningOut}
-                onClick={() => void handleScanOutOrder()}
-              >
-                <ScanLine className='mr-2 h-4 w-4' />
-                Scan out
-              </Button>
-            </div>
-
-            {isFetchingScanManifest ? (
-              <p className='text-sm text-muted-foreground'>
-                Loading manifest orders...
-              </p>
-            ) : (
-              <ManifestOrdersTable
-                actionMode='SCAN_OUT'
-                isActionLoading={isScanningOut}
-                orders={scanOrders}
-                onScan={(orderCode) => void handleScanOutOrder(orderCode)}
-              />
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setScanManifest(null)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <HandoverManifestDispatchDialog
+        dispatchArrivalAt={dispatchArrivalAt}
+        dispatchDepartureAt={dispatchDepartureAt}
+        dispatchManifest={dispatchManifest}
+        dispatchNote={dispatchNote}
+        dispatchRouteId={dispatchRouteId}
+        dispatchRouteOptions={dispatchRouteOptions}
+        dispatchSealCode={dispatchSealCode}
+        dispatchVehicleId={dispatchVehicleId}
+        dispatchVehicleOptions={dispatchVehicleOptions}
+        isDispatching={isDispatching}
+        isLoadingDispatchRoutes={isLoadingDispatchRoutes}
+        isLoadingDispatchVehicles={isLoadingDispatchVehicles}
         open={Boolean(dispatchManifest)}
+        onArrivalAtChange={setDispatchArrivalAt}
+        onDepartureAtChange={setDispatchDepartureAt}
+        onNoteChange={setDispatchNote}
         onOpenChange={(open) => {
           if (!open) {
-            setDispatchManifest(null);
-            setDispatchRouteId('');
-            setDispatchVehicleId('');
-            setDispatchDepartureAt('');
-            setDispatchArrivalAt('');
-            setDispatchSealCode('');
-            setDispatchNote('');
+            resetDispatchForm();
           }
         }}
-      >
-        <DialogContent className='sm:max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Dispatch manifest to hub</DialogTitle>
-            <DialogDescription>
-              Dispatch is allowed only after all orders have been scanned out.
-            </DialogDescription>
-          </DialogHeader>
+        onRouteChange={setDispatchRouteId}
+        onSealCodeChange={setDispatchSealCode}
+        onSubmit={() => void handleDispatchManifest()}
+        onVehicleChange={setDispatchVehicleId}
+      />
 
-          <div className='space-y-4'>
-            <div className='grid gap-3 sm:grid-cols-2'>
-              <DetailItem
-                label='Manifest'
-                value={dispatchManifest?.manifestCode || '--'}
-              />
-              <DetailItem
-                label='Scan progress'
-                value={`${getScannedOutOrders(dispatchManifest)}/${getTotalOrders(
-                  dispatchManifest
-                )}`}
-              />
-            </div>
-
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-route'>Route *</Label>
-                <TmsCombobox
-                  id='dispatch-route'
-                  value={dispatchRouteId}
-                  onValueChange={setDispatchRouteId}
-                  options={dispatchRouteOptions}
-                  placeholder={
-                    isLoadingDispatchRoutes
-                      ? 'Loading routes...'
-                      : 'Select route'
-                  }
-                  emptyText='No matching hub to post office routes'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-vehicle'>Vehicle *</Label>
-                <TmsCombobox
-                  id='dispatch-vehicle'
-                  value={dispatchVehicleId}
-                  onValueChange={setDispatchVehicleId}
-                  options={dispatchVehicleOptions}
-                  placeholder={
-                    isLoadingDispatchVehicles
-                      ? 'Loading vehicles...'
-                      : 'Select vehicle'
-                  }
-                  emptyText='No active vehicles found'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-departure'>Planned departure *</Label>
-                <Input
-                  id='dispatch-departure'
-                  type='datetime-local'
-                  value={dispatchDepartureAt}
-                  onChange={(event) =>
-                    setDispatchDepartureAt(event.target.value)
-                  }
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='dispatch-arrival'>Planned arrival *</Label>
-                <Input
-                  id='dispatch-arrival'
-                  type='datetime-local'
-                  value={dispatchArrivalAt}
-                  onChange={(event) => setDispatchArrivalAt(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='dispatch-seal'>Seal code</Label>
-              <Input
-                id='dispatch-seal'
-                value={dispatchSealCode}
-                onChange={(event) => setDispatchSealCode(event.target.value)}
-                placeholder='Optional seal code'
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='dispatch-note'>Dispatch note</Label>
-              <Textarea
-                id='dispatch-note'
-                value={dispatchNote}
-                onChange={(event) => setDispatchNote(event.target.value)}
-                placeholder='Optional dispatch note'
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setDispatchManifest(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                !dispatchManifest ||
-                !isReadyForDispatch(dispatchManifest) ||
-                !dispatchRouteId ||
-                !dispatchVehicleId ||
-                !dispatchDepartureAt ||
-                !dispatchArrivalAt ||
-                isDispatching
-              }
-              onClick={() => void handleDispatchManifest()}
-            >
-              {isDispatching ? 'Dispatching...' : 'Dispatch to hub'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <HandoverManifestReceiveDialog
+        activeReceiveManifest={activeReceiveManifest}
+        isConfirmingInbound={isConfirmingInbound}
+        isFetchingReceiveManifest={isFetchingReceiveManifest}
         open={Boolean(receiveManifest)}
+        receiveOrderCode={receiveOrderCode}
+        receiveOrders={receiveOrders}
+        receivedOrderCodes={receivedOrderCodes}
+        onConfirm={() => void handleConfirmInbound()}
         onOpenChange={(open) => {
           if (!open) {
-            setReceiveManifest(null);
-            setReceiveOrderCode('');
-            setReceivedOrderCodes([]);
+            resetReceiveForm();
           }
         }}
-      >
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
-          <DialogHeader>
-            <DialogTitle>Receive manifest at hub</DialogTitle>
-            <DialogDescription>
-              Scan received order codes, then confirm inbound for the scanned
-              orders.
-            </DialogDescription>
-          </DialogHeader>
+        onReceiveOrderCodeChange={setReceiveOrderCode}
+        onScanInboundOrder={handleScanInboundOrder}
+      />
 
-          <div className='space-y-4'>
-            <div className='grid gap-3 sm:grid-cols-4'>
-              <DetailItem
-                label='Manifest'
-                value={activeReceiveManifest?.manifestCode || '--'}
-              />
-              <DetailItem
-                label='Post office'
-                value={activeReceiveManifest?.originPostOfficeCode || '--'}
-              />
-              <DetailItem
-                label='Seal'
-                value={activeReceiveManifest?.sealCode || '--'}
-              />
-              <DetailItem
-                label='Scanned in'
-                value={`${receivedOrderCodes.length}/${getTotalOrders(
-                  activeReceiveManifest
-                )}`}
-              />
-            </div>
-
-            <div className='flex flex-col gap-2 sm:flex-row'>
-              <Input
-                value={receiveOrderCode}
-                onChange={(event) => setReceiveOrderCode(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    handleScanInboundOrder();
-                  }
-                }}
-                placeholder='Scan or enter received order code'
-              />
-              <Button
-                variant='outline'
-                onClick={() => handleScanInboundOrder()}
-              >
-                <ScanLine className='mr-2 h-4 w-4' />
-                Scan received
-              </Button>
-            </div>
-
-            {isFetchingReceiveManifest ? (
-              <p className='text-sm text-muted-foreground'>
-                Loading manifest orders...
-              </p>
-            ) : (
-              <ManifestOrdersTable
-                actionMode='RECEIVE'
-                isActionLoading={isConfirmingInbound}
-                orders={receiveOrders}
-                scannedOrderCodes={receivedOrderCodes}
-                onScan={handleScanInboundOrder}
-              />
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setReceiveManifest(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={receivedOrderCodes.length === 0 || isConfirmingInbound}
-              onClick={() => void handleConfirmInbound()}
-            >
-              {isConfirmingInbound ? 'Confirming...' : 'Confirm inbound'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
+      <HandoverManifestDetailDialog
+        detailManifest={detailManifest}
+        isFetchingDetail={isFetchingDetail}
         open={Boolean(detailTarget)}
+        resolveHubLabel={resolveHubLabel}
+        resolvePostOfficeLabel={resolvePostOfficeLabel}
+        resolveRouteLabel={resolveRouteLabel}
+        resolveVehicleLabel={resolveVehicleLabel}
         onOpenChange={(open) => {
           if (!open) {
             setDetailTarget(null);
           }
         }}
-      >
-        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
-          <DialogHeader>
-            <DialogTitle>Handover manifest detail</DialogTitle>
-            <DialogDescription>
-              Manifest summary, timestamps, and order scan history.
-            </DialogDescription>
-          </DialogHeader>
-
-          {detailManifest ? (
-            <div className='space-y-4'>
-              <div className='grid gap-3 sm:grid-cols-3'>
-                <DetailItem
-                  label='Manifest'
-                  value={detailManifest.manifestCode || `#${detailManifest.id}`}
-                />
-                <DetailItem
-                  label='Status'
-                  value={
-                    detailManifest.status ? (
-                      <Badge
-                        variant={getStatusBadgeVariant(detailManifest.status)}
-                      >
-                        {MANIFEST_STATUS_LABELS[detailManifest.status]}
-                      </Badge>
-                    ) : (
-                      '--'
-                    )
-                  }
-                />
-                <DetailItem
-                  label='Target hub'
-                  value={resolveHubLabel(detailManifest.targetHubId)}
-                />
-                <DetailItem
-                  label='Route'
-                  value={resolveRouteLabel(
-                    detailManifest.routeId,
-                    detailManifest.routeCode
-                  )}
-                />
-                <DetailItem
-                  label='Vehicle'
-                  value={resolveVehicleLabel(
-                    detailManifest.vehicleId,
-                    detailManifest.vehicleLicensePlate
-                  )}
-                />
-                <DetailItem
-                  label='Origin post office'
-                  value={resolvePostOfficeLabel(
-                    detailManifest.originPostOfficeId,
-                    detailManifest.originPostOfficeCode
-                  )}
-                />
-                <DetailItem
-                  label='Scan out'
-                  value={`${getScannedOutOrders(detailManifest)}/${getTotalOrders(
-                    detailManifest
-                  )}`}
-                />
-                <DetailItem
-                  label='Scan in'
-                  value={`${getScannedInOrders(detailManifest)}/${getTotalOrders(
-                    detailManifest
-                  )}`}
-                />
-                <DetailItem
-                  label='Seal'
-                  value={detailManifest.sealCode || '--'}
-                />
-                <DetailItem
-                  label='Dispatched'
-                  value={formatDateTime(detailManifest.dispatchedAt)}
-                />
-                <DetailItem
-                  label='Planned departure'
-                  value={formatDateTime(detailManifest.plannedDepartureAt)}
-                />
-                <DetailItem
-                  label='Planned arrival'
-                  value={formatDateTime(detailManifest.plannedArrivalAt)}
-                />
-                <DetailItem
-                  label='Inbound confirmed'
-                  value={formatDateTime(detailManifest.inboundConfirmedAt)}
-                />
-                <DetailItem
-                  label='Departure check-in'
-                  value={
-                    detailManifest.driverStartCheckinAt
-                      ? `${formatDateTime(
-                          detailManifest.driverStartCheckinAt
-                        )} (${Math.round(
-                          detailManifest.driverStartDistanceM ?? 0
-                        )}m)`
-                      : '--'
-                  }
-                />
-                <DetailItem
-                  label='Arrival check-in'
-                  value={
-                    detailManifest.driverEndCheckinAt
-                      ? `${formatDateTime(
-                          detailManifest.driverEndCheckinAt
-                        )} (${Math.round(
-                          detailManifest.driverEndDistanceM ?? 0
-                        )}m)`
-                      : '--'
-                  }
-                />
-              </div>
-
-              {detailManifest.note ? (
-                <div className='space-y-1 rounded-md border p-3'>
-                  <p className='text-xs font-medium uppercase text-muted-foreground'>
-                    Note
-                  </p>
-                  <p className='text-sm'>{detailManifest.note}</p>
-                </div>
-              ) : null}
-
-              {isFetchingDetail ? (
-                <p className='text-sm text-muted-foreground'>
-                  Loading detail...
-                </p>
-              ) : (
-                <ManifestOrdersTable orders={detailManifest.orders ?? []} />
-              )}
-            </div>
-          ) : null}
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setDetailTarget(null)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
     </div>
   );
 }

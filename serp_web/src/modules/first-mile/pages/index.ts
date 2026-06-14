@@ -4,11 +4,10 @@
  */
 
 export * from './dashboard';
-export * from './post-offices';
+export * from './network';
 export * from './product-types';
 export * from './import-history';
 export * from './vehicles';
-export * from './routes';
 export * from './bags';
 export * from './bag-distribution';
 export * from './orders';

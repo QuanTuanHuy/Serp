@@ -1,10 +1,18 @@
 /**
  * Author: Nguyễn Thế Anh
- * Description: Part of Serp Project - First-mile post offices route page
+ * Description: Part of Serp Project - First-mile post offices route redirect
  */
 
-import { PostOfficeListPage } from '@/modules/first-mile';
+import {
+  type RedirectWithSearchParamsPageProps,
+  redirectWithSearchParams,
+} from '../redirectWithSearchParams';
 
-export default function FirstMilePostOfficesRoutePage() {
-  return <PostOfficeListPage />;
+export default async function FirstMilePostOfficesRoutePage({
+  searchParams,
+}: RedirectWithSearchParamsPageProps) {
+  return redirectWithSearchParams(
+    '/first-mile/network/post-office',
+    searchParams
+  );
 }
