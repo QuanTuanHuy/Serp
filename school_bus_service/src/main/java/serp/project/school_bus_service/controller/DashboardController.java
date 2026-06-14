@@ -14,8 +14,12 @@ import serp.project.school_bus_service.dto.response.CapacityUtilizationReportRes
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
+import java.util.List;
+import serp.project.school_bus_service.dto.params.DashboardFilterParamsRequest;
+import serp.project.school_bus_service.dto.response.ChartItemDto;
 import serp.project.school_bus_service.dto.response.DashboardOperationsResponse;
 import serp.project.school_bus_service.dto.response.DashboardSummaryResponse;
+import serp.project.school_bus_service.dto.response.DropdownOptionResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
@@ -40,12 +44,59 @@ public class DashboardController extends AbstractBaseController {
 
     @GetMapping("/summary")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
-    public ResponseEntity<GeneralResponse<DashboardSummaryResponse>> getSummary() {
-        return ok("Fetched dashboard summary", dashboardService.getSummary(getCurrentTenantId()));
+    public ResponseEntity<GeneralResponse<DashboardSummaryResponse>> getSummary(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched dashboard summary", dashboardService.getSummary(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/charts/trip-status")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<ChartItemDto>>> getTripStatusChart(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched trip status chart", dashboardService.getTripStatusChart(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/charts/attendance-status")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<ChartItemDto>>> getAttendanceStatusChart(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched attendance status chart",
+                dashboardService.getAttendanceStatusChart(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/charts/route-readiness")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<ChartItemDto>>> getRouteReadinessChart(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched route readiness chart",
+                dashboardService.getRouteReadinessChart(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/charts/request-status")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<ChartItemDto>>> getRequestStatusChart(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched request status chart",
+                dashboardService.getRequestStatusChart(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/charts/trips-by-date")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<ChartItemDto>>> getTripsByDateChart(
+            @ModelAttribute DashboardFilterParamsRequest params) {
+        return ok("Fetched trips by date chart",
+                dashboardService.getTripsByDateChart(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/schools")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    public ResponseEntity<GeneralResponse<List<DropdownOptionResponse>>> getDashboardSchools() {
+        return ok("Fetched dashboard schools", dashboardService.getDashboardSchools(getCurrentTenantId()));
     }
 
     @GetMapping("/operations")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.dashboard.read')")
+    @Deprecated
     public ResponseEntity<GeneralResponse<DashboardOperationsResponse>> getOperationsDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate serviceDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,

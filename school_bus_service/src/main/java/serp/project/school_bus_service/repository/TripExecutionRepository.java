@@ -1,6 +1,7 @@
 package serp.project.school_bus_service.repository;
 
 import serp.project.school_bus_service.enums.TripStatus;
+import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,7 +37,7 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("tenantId") Long tenantId,
         @Param("serviceDate") LocalDate serviceDate,
         @Param("schoolId") Long schoolId,
-        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+        @Param("direction") RouteDirection direction
     );
 
     @Query("""
@@ -52,7 +54,7 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("fromDate") LocalDate fromDate,
         @Param("toDate") LocalDate toDate,
         @Param("schoolId") Long schoolId,
-        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+        @Param("direction") RouteDirection direction
     );
 
     @Query("""
@@ -67,7 +69,7 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("tenantId") Long tenantId,
         @Param("serviceDate") LocalDate serviceDate,
         @Param("schoolId") Long schoolId,
-        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+        @Param("direction") RouteDirection direction
     );
 
     @Query("""
@@ -81,7 +83,7 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("tenantId") Long tenantId,
         @Param("serviceDate") LocalDate serviceDate,
         @Param("schoolId") Long schoolId,
-        @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
+        @Param("direction") RouteDirection direction
     );
 
     @Query("""
@@ -168,5 +170,139 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("attendantId") Long attendantId,
         @Param("serviceDate") LocalDate serviceDate
     );
+
+    List<TripExecutionEntity> findByRouteIdInAndTenantIdAndIsDeletedFalse(
+            Collection<Long> routeIds,
+            Long tenantId);
+
+    @Query("""
+        SELECT MAX(t.serviceDate) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.route.isDeleted = false
+          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
+          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND (
+              :tenantWide = true
+              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
+              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:parentProfileId IS NOT NULL AND EXISTS (
+                  SELECT ts FROM TripStudentEntity ts
+                  WHERE ts.trip.id = t.id
+                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.tenantId = :tenantId
+                    AND ts.isDeleted = false
+                    AND ts.student.isDeleted = false
+                    AND ts.student.isActive = true
+              ))
+          )
+    """)
+    Optional<LocalDate> findLatestDashboardServiceDate(
+            @Param("tenantId") Long tenantId,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
+
+    @Query("""
+        SELECT t.status, COUNT(t) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.route.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
+          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND (
+              :tenantWide = true
+              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
+              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:parentProfileId IS NOT NULL AND EXISTS (
+                  SELECT ts FROM TripStudentEntity ts
+                  WHERE ts.trip.id = t.id
+                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.tenantId = :tenantId
+                    AND ts.isDeleted = false
+                    AND ts.student.isDeleted = false
+                    AND ts.student.isActive = true
+              ))
+          )
+        GROUP BY t.status
+    """)
+    List<Object[]> countDashboardTripsByStatus(
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
+
+    @Query("""
+        SELECT t.serviceDate, COUNT(t) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.route.isDeleted = false
+          AND t.serviceDate BETWEEN :fromDate AND :toDate
+          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
+          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND (
+              :tenantWide = true
+              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
+              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:parentProfileId IS NOT NULL AND EXISTS (
+                  SELECT ts FROM TripStudentEntity ts
+                  WHERE ts.trip.id = t.id
+                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.tenantId = :tenantId
+                    AND ts.isDeleted = false
+                    AND ts.student.isDeleted = false
+                    AND ts.student.isActive = true
+              ))
+          )
+        GROUP BY t.serviceDate
+        ORDER BY t.serviceDate ASC
+    """)
+    List<Object[]> countDashboardTripsByDate(
+            @Param("tenantId") Long tenantId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
+
+    @Query("""
+        SELECT COUNT(DISTINCT t.route.school.id) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.route.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
+          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND (
+              :tenantWide = true
+              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
+              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:parentProfileId IS NOT NULL AND EXISTS (
+                  SELECT ts FROM TripStudentEntity ts
+                  WHERE ts.trip.id = t.id
+                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.tenantId = :tenantId
+                    AND ts.isDeleted = false
+                    AND ts.student.isDeleted = false
+                    AND ts.student.isActive = true
+              ))
+          )
+    """)
+    long countDashboardSchools(
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
 }
 

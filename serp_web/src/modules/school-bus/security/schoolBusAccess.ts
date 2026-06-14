@@ -247,6 +247,7 @@ export function useSchoolBusAccess() {
   return useMemo(
     () => ({
       roles,
+      userKey: user ? `${user.id}:${user.email}` : 'anonymous',
       effectiveRole: getEffectiveSchoolBusRole(roles),
       landingPath: getSchoolBusLandingPath(roles),
 
@@ -270,6 +271,6 @@ export function useSchoolBusAccess() {
       canWriteRequest: canWriteRequest(roles),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [roles.join(',')]
+    [roles.join(','), user?.email, user?.id]
   );
 }

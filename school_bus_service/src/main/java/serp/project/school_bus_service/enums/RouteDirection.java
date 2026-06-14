@@ -13,4 +13,8 @@ public enum RouteDirection {
             throw new AppException(AppErrorCode.INVALID_ENUM_VALUE, "Invalid routeDirection: " + value);
         }
     }
+
+    public static RouteDirection parseNullable(String value) {
+        return value == null || value.isBlank() ? null : parse(value);
+    }
 }
