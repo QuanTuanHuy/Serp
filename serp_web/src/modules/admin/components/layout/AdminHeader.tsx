@@ -49,6 +49,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    if (pathname !== '/admin/search') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setSearchQuery(params.get('q') || '');
+  }, [pathname]);
+
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => ({
@@ -63,9 +72,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      // TODO: Implement global admin search
-      console.log('Searching:', searchQuery);
+    const trimmedQuery = searchQuery.trim();
+
+    if (trimmedQuery) {
+      router.push(`/admin/search?q=${encodeURIComponent(trimmedQuery)}`);
     }
   };
 

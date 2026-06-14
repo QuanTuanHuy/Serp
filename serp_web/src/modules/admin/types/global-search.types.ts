@@ -3,11 +3,7 @@
  * Description: Part of Serp Project - Admin global search types
  */
 
-export type AdminGlobalSearchType =
-  | 'ORGANIZATION'
-  | 'USER'
-  | 'ROLE'
-  | 'MODULE';
+export type AdminGlobalSearchType = 'ORGANIZATION' | 'USER' | 'ROLE' | 'MODULE';
 
 export interface AdminGlobalSearchItem {
   id: string;
