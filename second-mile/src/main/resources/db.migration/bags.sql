@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS bags (
     destination_hub_id BIGINT,
     destination_post_office_code VARCHAR(255),
     vehicle_id BIGINT,
+    route_id BIGINT,
     max_weight DOUBLE PRECISION NOT NULL DEFAULT 50,
     max_volume DOUBLE PRECISION NOT NULL DEFAULT 0.5,
     max_orders INT NOT NULL DEFAULT 30,
@@ -34,6 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_bags_origin_hub_id ON bags(origin_hub_id);
 CREATE INDEX IF NOT EXISTS idx_bags_destination_hub_id ON bags(destination_hub_id);
 CREATE INDEX IF NOT EXISTS idx_bags_destination_post_office_code ON bags(destination_post_office_code);
 CREATE INDEX IF NOT EXISTS idx_bags_vehicle_id ON bags(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_bags_route_id ON bags(route_id);
 CREATE INDEX IF NOT EXISTS idx_bags_status ON bags(status);
 
 DO $$

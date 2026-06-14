@@ -5,6 +5,8 @@ import serp.project.account.core.domain.enums.ModuleStatus;
 
 import java.util.List;
 
+import org.springframework.data.util.Pair;
+
 public interface IModulePort {
     ModuleEntity save(ModuleEntity module);
 
@@ -23,4 +25,6 @@ public interface IModulePort {
     Long countModules();
 
     Long countModulesByStatus(ModuleStatus status);
+
+    Pair<List<ModuleEntity>, Long> searchModules(String search, int limit);
 }

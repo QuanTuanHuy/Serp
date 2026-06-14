@@ -5,6 +5,8 @@
 
 package serp.project.account.infrastructure.store.adapter;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
@@ -50,5 +52,13 @@ public class RoleAdapter implements IRolePort {
         return roleRepository.findById(roleId)
                 .map(roleMapper::toEntity)
                 .orElse(null);
+    }
+
+    @Override
+    public Pair<List<RoleEntity>, Long> searchRoles(String search, int limit) {
+        var pageable = PageRequest.of(0, limit);
+        var roles = roleMapper.toEntityList(roleRepository.searchRoles(search, pageable));
+        Long total = roleRepository.countSearchRoles(search);
+        return Pair.of(roles, total != null ? total : 0L);
     }
 }

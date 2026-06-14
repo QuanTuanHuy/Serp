@@ -45,6 +45,7 @@ public class TmsOrderStatusTransitionRequest {
         private Long hubId;
         private String hubCode;
         private String hubName;
+        private String postOfficeCode;
         private Long manifestId;
         private String manifestCode;
         private Long bagId;

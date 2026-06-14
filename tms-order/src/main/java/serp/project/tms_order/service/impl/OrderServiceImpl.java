@@ -62,6 +62,7 @@ import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.PaymentStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.kernel.utils.ExcelTemplateUtils;
@@ -110,7 +111,7 @@ public class OrderServiceImpl implements OrderService {
     private static final int START_ROW_INDEX = 1;
     private static final int WARD_COLUMN_INDEX = 0;
     private static final int PROVINCE_COLUMN_INDEX = 1;
-    private static final int PRODUCT_TYPE_COLUMN_INDEX = 5;
+    private static final int PRODUCT_TYPE_COLUMN_INDEX = 4;
     private static final int DEFAULT_DROP_OFF_SUGGESTION_LIMIT = 5;
     private static final int MAX_DROP_OFF_SUGGESTION_LIMIT = 20;
 
@@ -123,6 +124,7 @@ public class OrderServiceImpl implements OrderService {
     private final FirstMilePostOfficeCaller firstMilePostOfficeCaller;
     private final FirstMilePostOfficeSuggestionCaller firstMilePostOfficeSuggestionCaller;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final OrderNotificationEventPublisher orderNotificationEventPublisher;
     private final OrderTimelineService orderTimelineService;
 
     @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
@@ -276,6 +278,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(cancelledOrder);
+        publishOrderCancelledNotificationAfterCommit(cancelledOrder);
         return OrderMapper.toOrderDetailResponse(cancelledOrder);
     }
 
@@ -328,6 +331,7 @@ public class OrderServiceImpl implements OrderService {
                     null
             );
             publishOrderAfterCommit(savedOrder);
+            publishOrderConfirmedNotificationAfterCommit(savedOrder);
             return toOrderConfirmationResponse(savedOrder, null, reservedDestinationPostOffice, true);
         }
 
@@ -348,6 +352,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
+        publishOrderConfirmedNotificationAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
@@ -413,6 +418,7 @@ public class OrderServiceImpl implements OrderService {
                         null
                 );
                 publishOrderAfterCommit(savedOrder);
+                publishOrderConfirmedNotificationAfterCommit(savedOrder);
                 return toOrderConfirmationResponse(savedOrder, managedPostOffice, reservedDestinationPostOffice, true);
             }
 
@@ -445,6 +451,7 @@ public class OrderServiceImpl implements OrderService {
                 null
         );
         publishOrderAfterCommit(savedOrder);
+        publishOrderConfirmedNotificationAfterCommit(savedOrder);
         return toOrderConfirmationResponse(savedOrder, reservedPostOffice, reservedDestinationPostOffice, false);
     }
 
@@ -573,6 +580,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentStatus(PaymentStatus.PAID);
         Order savedOrder = orderRepository.save(order);
         publishOrderAfterCommit(savedOrder);
+        publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
 
         return new OrderPaymentConfirmResponse(
                 savedOrder.getId(),
@@ -613,6 +621,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
         publishOrderAfterCommit(savedOrder);
+        publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
 
         return new PaymentWebhookProcessResponse(
                 savedOrder.getOrderCode(),
@@ -671,7 +680,6 @@ public class OrderServiceImpl implements OrderService {
         order.setPickupMethod(request.getPickupMethod() == null
                 ? OrderPickupMethod.COURIER_PICKUP
                 : request.getPickupMethod());
-        order.setOrderProductCategory(request.getOrderProductCategory());
         order.setOrderType(request.getOrderType());
         order.setFeePayer(request.getFeePayer());
         order.setNote(normalizeText(request.getNote()));
@@ -868,14 +876,49 @@ public class OrderServiceImpl implements OrderService {
                 .senderPhone(normalizeText(filterRequest.getSenderPhone()))
                 .receiverPhone(normalizeText(filterRequest.getReceiverPhone()))
                 .originPostOfficeCode(normalizeText(filterRequest.getOriginPostOfficeCode()))
+                .originPostOfficeCodes(normalizeTextList(filterRequest.getOriginPostOfficeCodes()))
                 .destinationPostOfficeCode(normalizeText(filterRequest.getDestinationPostOfficeCode()))
                 .status(filterRequest.getStatus())
+                .statuses(normalizeOrderStatuses(filterRequest))
                 .isConfirm(filterRequest.getIsConfirm())
                 .createdFrom(filterRequest.getCreatedFrom())
                 .createdTo(filterRequest.getCreatedTo())
                 .pickupFrom(filterRequest.getPickupFrom())
                 .pickupTo(filterRequest.getPickupTo())
                 .build();
+    }
+
+    private List<OrderStatus> normalizeOrderStatuses(OrderFilterRequest filterRequest) {
+        List<OrderStatus> statuses = new ArrayList<>();
+        if (filterRequest.getStatuses() != null) {
+            for (OrderStatus status : filterRequest.getStatuses()) {
+                if (status != null && !statuses.contains(status)) {
+                    statuses.add(status);
+                }
+            }
+        }
+        if (filterRequest.getStatus() != null && !statuses.contains(filterRequest.getStatus())) {
+            statuses.add(filterRequest.getStatus());
+        }
+        return statuses;
+    }
+
+    private List<String> normalizeTextList(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> normalizedValues = new ArrayList<>();
+        for (String value : values) {
+            String normalizedValue = normalizeText(value);
+            if (normalizedValue != null) {
+                normalizedValue = normalizedValue.toLowerCase(Locale.ROOT);
+                if (!normalizedValues.contains(normalizedValue)) {
+                    normalizedValues.add(normalizedValue);
+                }
+            }
+        }
+        return normalizedValues;
     }
 
     private void validateOrderFilterRanges(OrderFilterRequest filterRequest) {
@@ -1125,6 +1168,18 @@ public class OrderServiceImpl implements OrderService {
         TransactionAfterCommit.run(() -> orderSyncEventPublisher.publish(order));
     }
 
+    private void publishOrderConfirmedNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderConfirmed(order));
+    }
+
+    private void publishOrderPaymentSucceededNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderPaymentSucceeded(order));
+    }
+
+    private void publishOrderCancelledNotificationAfterCommit(Order order) {
+        TransactionAfterCommit.run(() -> orderNotificationEventPublisher.publishOrderCancelled(order));
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -1136,5 +1191,20 @@ public class OrderServiceImpl implements OrderService {
 
         String trimmedValue = value.trim();
         return trimmedValue.isEmpty() ? null : trimmedValue;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePaymentStatus(String orderCode, Long tenantId, String paymentStatus) {
+        Order order = orderRepository.findByOrderCodeAndTenantId(orderCode, tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        PaymentStatus status = PaymentStatus.valueOf(paymentStatus);
+        PaymentStatus currentStatus = order.getPaymentStatus();
+        order.setPaymentStatus(status);
+        Order savedOrder = orderRepository.save(order);
+        if (!PaymentStatus.PAID.equals(currentStatus) && PaymentStatus.PAID.equals(status)) {
+            publishOrderPaymentSucceededNotificationAfterCommit(savedOrder);
+        }
+        log.info("Updated payment status for order {} to {} (tenant {})", orderCode, paymentStatus, tenantId);
     }
 }

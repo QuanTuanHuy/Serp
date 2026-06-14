@@ -295,7 +295,7 @@ export const OrderListPage: React.FC = () => {
       size: 200,
     },
     {
-      skip: !canConfirmDropOffAtPostOffice,
+      skip: !canViewOrders,
     }
   );
 
@@ -994,9 +994,6 @@ export const OrderListPage: React.FC = () => {
         : {}),
       delivery_request_time: createForm.deliveryRequestTime,
       pickup_method: createForm.pickupMethod,
-      ...(createForm.orderProductCategory !== 'NONE'
-        ? { order_product_category: createForm.orderProductCategory }
-        : {}),
       order_type: createForm.orderType,
       fee_payer: createForm.feePayer,
       is_cod: createForm.isCod === 'true',
@@ -1111,8 +1108,7 @@ export const OrderListPage: React.FC = () => {
       const heightCm = Math.max(1, Math.round(order.dimensionHeightCm ?? 0));
 
       return {
-        serviceCode:
-          order.orderType === 'EXPRESS_ORDER' ? 'HOA_TOC' : 'TIEU_CHUAN',
+        serviceCode: 'TIEU_CHUAN',
         senderWardCode: order.senderWardCode,
         receiverWardCode: order.receiverWardCode,
         actualWeightGram,
@@ -1121,9 +1117,6 @@ export const OrderListPage: React.FC = () => {
         heightCm,
         ...(order.codAmount && order.codAmount > 0
           ? { codAmount: Math.round(order.codAmount) }
-          : {}),
-        ...(order.totalValue && order.totalValue > 0
-          ? { declaredValue: Math.round(order.totalValue) }
           : {}),
       };
     },
@@ -1783,6 +1776,8 @@ export const OrderListPage: React.FC = () => {
         filterFormValues={filterFormValues}
         advancedFieldCount={advancedFieldCount}
         statusOptions={ORDER_STATUS_OPTIONS}
+        postOffices={managerPostOfficeOptions}
+        isLoadingPostOffices={isFetchingManagerPostOffices}
         isFetching={isFetching}
         onFilterModeChange={setFilterMode}
         onFilterFieldChange={updateFilterField}

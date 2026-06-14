@@ -37,10 +37,14 @@ import {
 } from '@/shared/components/ui/table';
 import { Badge } from '@/shared/components/ui/badge';
 import { formatStringCurrencyVN } from '@/shared/utils/format';
+import { useUser } from '@/modules/account';
 
 export const ProductListPage: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+
+  const { user } = useUser();
+
   const pagination = useAppSelector(selectProductPagination);
   const filters = useAppSelector(selectProductFilters);
 
@@ -54,6 +58,8 @@ export const ProductListPage: React.FC = () => {
     null
   );
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+
+  const isSalesAdmin = user?.roles?.includes('SALES_ADMIN');
 
   const handleSearch = () => {
     dispatch(setProductFilters({ ...filters, query: searchTerm }));
@@ -70,10 +76,12 @@ export const ProductListPage: React.FC = () => {
           <h1 className='text-3xl font-bold tracking-tight'>Sản phẩm</h1>
           <p className='text-muted-foreground'>Quản lý danh mục sản phẩm</p>
         </div>
-        <Button onClick={() => router.push('/sales/products/new')}>
-          <Plus className='mr-2 h-4 w-4' />
-          Thêm Sản Phẩm
-        </Button>
+        {isSalesAdmin && (
+          <Button onClick={() => router.push('/sales/products/new')}>
+            <Plus className='mr-2 h-4 w-4' />
+            Thêm Sản Phẩm
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -121,7 +129,9 @@ export const ProductListPage: React.FC = () => {
                       key={product.id}
                       onClick={() => {
                         setSelectedProduct(product);
-                        setEditDialogOpen(true);
+                        if (isSalesAdmin) {
+                          setEditDialogOpen(true);
+                        }
                       }}
                       className='cursor-pointer hover:bg-muted/50'
                     >

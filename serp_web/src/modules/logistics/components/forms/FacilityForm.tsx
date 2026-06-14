@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui';
+import { MapLocationPicker } from '@/shared/components';
 import { cn } from '@/shared/utils';
 import type {
   Facility,
@@ -29,7 +31,7 @@ import type {
 } from '../../types';
 import { toast } from 'sonner';
 
-const facilitySchema = z.object({
+const baseFacilitySchema = z.object({
   name: z.string().min(1, 'Tên là bắt buộc').max(255, 'Tên quá dài'),
   phone: z.string().optional(),
   statusId: z.enum(['ACTIVE', 'INACTIVE']),
@@ -37,14 +39,28 @@ const facilitySchema = z.object({
   length: z.string().optional(),
   width: z.string().optional(),
   height: z.string().optional(),
-  // Creation only
-  addressType: z.enum(['FACILITY', 'SHIPPING', 'BUSINESS']).optional(),
-  fullAddress: z.string().optional(),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
 });
 
-type FacilityFormData = z.infer<typeof facilitySchema>;
+const updateFacilitySchema = baseFacilitySchema;
+
+const createFacilitySchema = baseFacilitySchema.extend({
+  addressType: z.enum(['FACILITY', 'SHIPPING', 'BUSINESS']),
+  fullAddress: z.string().min(1, 'Địa chỉ đầy đủ là bắt buộc'),
+  latitude: z.string().min(1, 'Vui lòng ghim vị trí trên bản đồ'),
+  longitude: z.string().min(1, 'Vui lòng ghim vị trí trên bản đồ'),
+});
+
+type FacilityFormData = z.infer<typeof baseFacilitySchema> & {
+  addressType?: AddressType;
+  fullAddress?: string;
+  latitude?: string;
+  longitude?: string;
+};
+
+const DEFAULT_MAP_CENTER = {
+  lat: 16.047079,
+  lng: 108.20623,
+};
 
 interface FacilityFormProps {
   facility?: Facility;
@@ -62,6 +78,10 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
   className,
 }) => {
   const isEditing = !!facility;
+  const [showMap, setShowMap] = useState(false);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const activeSchema = isEditing ? updateFacilitySchema : createFacilitySchema;
 
   const {
     register,
@@ -70,7 +90,7 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
     setValue,
     watch,
   } = useForm<FacilityFormData>({
-    resolver: zodResolver(facilitySchema),
+    resolver: zodResolver(activeSchema) as Resolver<FacilityFormData>,
     defaultValues: facility
       ? {
           name: facility.name,
@@ -97,6 +117,52 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
   });
 
   const statusId = watch('statusId');
+  const fullAddress = watch('fullAddress');
+  const hasLocationError = Boolean(errors.latitude || errors.longitude);
+
+  const handleGeocodeAndShowMap = async () => {
+    if (!fullAddress?.trim()) {
+      toast.error('Vui lòng nhập địa chỉ đầy đủ trước');
+      return;
+    }
+
+    setIsGeocoding(true);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`
+      );
+      const data: Array<{ lat: string; lon: string }> = await response.json();
+
+      if (data && data.length > 0) {
+        const lat = Number.parseFloat(data[0].lat);
+        const lng = Number.parseFloat(data[0].lon);
+
+        setMapCenter({ lat, lng });
+        setValue('latitude', lat.toString(), {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        setValue('longitude', lng.toString(), {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      } else {
+        toast.error(
+          'Không tìm thấy tọa độ cho địa chỉ này, vui lòng ghim thủ công.'
+        );
+        setMapCenter(DEFAULT_MAP_CENTER);
+      }
+
+      setShowMap(true);
+    } catch (error) {
+      console.error('Lỗi khi tìm tọa độ:', error);
+      toast.error('Lỗi khi tìm tọa độ');
+      setShowMap(true);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   const onFormSubmit = handleSubmit(async (data: FacilityFormData) => {
     try {
@@ -275,37 +341,58 @@ export const FacilityForm: React.FC<FacilityFormProps> = ({
 
                 <div className='space-y-2 md:col-span-2'>
                   <Label htmlFor='fullAddress'>Địa chỉ đầy đủ</Label>
-                  <Input
-                    id='fullAddress'
-                    {...register('fullAddress')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='Nhập địa chỉ đầy đủ'
-                  />
+                  <div className='flex flex-col gap-2 md:flex-row'>
+                    <Input
+                      id='fullAddress'
+                      {...register('fullAddress')}
+                      className={cn(errors.fullAddress && 'border-destructive')}
+                      disabled={isLoading || isSubmitting}
+                      placeholder='Nhập địa chỉ đầy đủ (VD: Số 1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội)'
+                    />
+                    <Button
+                      type='button'
+                      onClick={handleGeocodeAndShowMap}
+                      disabled={isGeocoding || !fullAddress?.trim()}
+                    >
+                      {isGeocoding ? 'Đang tìm...' : 'Tìm trên bản đồ'}
+                    </Button>
+                  </div>
+                  {errors.fullAddress && (
+                    <p className='text-sm text-destructive'>
+                      {errors.fullAddress.message}
+                    </p>
+                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='latitude'>Vĩ độ</Label>
-                  <Input
-                    id='latitude'
-                    type='number'
-                    step='any'
-                    {...register('latitude')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='VD: 10.7769'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='longitude'>Kinh độ</Label>
-                  <Input
-                    id='longitude'
-                    type='number'
-                    step='any'
-                    {...register('longitude')}
-                    disabled={isLoading || isSubmitting}
-                    placeholder='VD: 106.7009'
-                  />
-                </div>
+                {showMap && (
+                  <div className='space-y-2 md:col-span-2'>
+                    <Label>
+                      Kéo thả hoặc click trên bản đồ để chọn vị trí chính xác
+                    </Label>
+                    <MapLocationPicker
+                      initialLat={mapCenter.lat}
+                      initialLng={mapCenter.lng}
+                      className={cn(hasLocationError && 'border-destructive')}
+                      onLocationSelect={(lat, lng) => {
+                        setValue('latitude', lat.toString(), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        setValue('longitude', lng.toString(), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                    />
+                    {hasLocationError && (
+                      <p className='text-sm text-destructive'>
+                        {errors.latitude?.message ||
+                          errors.longitude?.message ||
+                          'Vui lòng ghim vị trí trên bản đồ'}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

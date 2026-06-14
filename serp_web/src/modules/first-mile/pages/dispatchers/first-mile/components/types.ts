@@ -32,14 +32,12 @@ export type DispatchOptimizationGoalOption =
   | 'COST_EFFICIENCY'
   | 'MAX_ASSIGNMENT';
 
-export type DispatchOptimizationEffortOption = 'FAST' | 'STANDARD' | 'THOROUGH';
-
 export type DispatchActionType = 'preview' | 'auto' | 'manual' | null;
 
 export interface BusinessDispatchSettings {
   vehicle?: string;
   optimization_goal: DispatchOptimizationGoalOption;
-  optimization_effort: DispatchOptimizationEffortOption;
+  allow_lateness?: boolean;
 }
 
 export interface SuggestedCourier {
@@ -56,13 +54,11 @@ export interface DispatchCourierOption {
 export interface DispatchSetupBusinessValues {
   vehicleOption: RoutingVehicleOption;
   optimizationGoal: DispatchOptimizationGoalOption;
-  optimizationEffort: DispatchOptimizationEffortOption;
 }
 
 export interface DispatchSetupBusinessHandlers {
   onVehicleOptionChange: (value: RoutingVehicleOption) => void;
   onOptimizationGoalChange: (value: DispatchOptimizationGoalOption) => void;
-  onOptimizationEffortChange: (value: DispatchOptimizationEffortOption) => void;
 }
 
 export interface DispatchSetupCardProps {
@@ -103,8 +99,20 @@ export interface NoAccessCardProps {
 
 export interface CandidateOrderItemProps {
   order: FirstMileOrderDetail;
-  checked: boolean;
-  onToggle: (orderId: number, checked: boolean) => void;
+  checked?: boolean;
+  onToggle?: (orderId: number, checked: boolean) => void;
+  referenceTime?: Date;
+}
+
+export interface CandidateOrdersPanelProps {
+  title: string;
+  orders: FirstMileOrderDetail[];
+  loading?: boolean;
+  selectedOrderIds?: number[];
+  onOrderToggle?: (orderId: number, checked: boolean) => void;
+  maxVisibleOrders?: number;
+  emptyText?: string;
+  referenceTime?: Date;
 }
 
 export interface ManualDispatchCardProps {
@@ -142,6 +150,7 @@ export interface ManualDispatchCardProps {
 
 export interface PlanPreviewCardProps {
   optimizationResult: PickupOptimizationResponse;
+  formatDateTime: (value?: string) => string;
   formatNumber: (value?: number) => string;
 }
 

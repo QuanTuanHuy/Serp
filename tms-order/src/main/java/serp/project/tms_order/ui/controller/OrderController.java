@@ -104,8 +104,10 @@ public class OrderController {
             @RequestParam(name = "sender_phone", required = false) String senderPhone,
             @RequestParam(name = "receiver_phone", required = false) String receiverPhone,
             @RequestParam(name = "origin_post_office_code", required = false) String originPostOfficeCode,
+            @RequestParam(name = "origin_post_office_codes", required = false) List<String> originPostOfficeCodes,
             @RequestParam(name = "destination_post_office_code", required = false) String destinationPostOfficeCode,
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(name = "statuses", required = false) List<OrderStatus> statuses,
             @RequestParam(name = "is_confirm", required = false) Boolean isConfirm,
             @RequestParam(name = "created_from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdFrom,
@@ -124,8 +126,10 @@ public class OrderController {
                 .senderPhone(senderPhone)
                 .receiverPhone(receiverPhone)
                 .originPostOfficeCode(originPostOfficeCode)
+                .originPostOfficeCodes(originPostOfficeCodes)
                 .destinationPostOfficeCode(destinationPostOfficeCode)
                 .status(status)
+                .statuses(statuses)
                 .isConfirm(isConfirm)
                 .createdFrom(createdFrom)
                 .createdTo(createdTo)

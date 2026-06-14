@@ -16,12 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.tms_order.dto.request.InternalOrderLookupRequest;
 import serp.project.tms_order.dto.request.InternalOrderStatusTransitionRequest;
 import serp.project.tms_order.dto.request.InternalPickupCandidateRequest;
+import serp.project.tms_order.dto.request.UpdatePaymentStatusRequest;
 import serp.project.tms_order.dto.response.OrderOperationView;
 import serp.project.tms_order.dto.response.OrderStatusTransitionResponse;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.service.OrderQueryService;
+import serp.project.tms_order.service.OrderService;
 import serp.project.tms_order.service.OrderTransitionService;
 
 import java.util.List;
@@ -34,6 +36,7 @@ public class InternalOrderController {
 
     private final AuthUtils authUtils;
     private final OrderQueryService orderQueryService;
+    private final OrderService orderService;
     private final OrderTransitionService orderTransitionService;
 
     @PostMapping("/lookup")
@@ -61,6 +64,14 @@ public class InternalOrderController {
         log.info("Internal request to apply order transitions source={} idempotencyKey={} tenant {}",
                 request.getSource(), request.getIdempotencyKey(), tenantId);
         return orderTransitionService.applyTransitions(request, tenantId);
+    }
+
+    @PostMapping("/payment-status")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER', 'TMS_POSTOFFICER')")
+    public void updatePaymentStatus(@RequestBody UpdatePaymentStatusRequest request) {
+        Long tenantId = getCurrentTenantId();
+        log.info("Internal request to update payment status orderCode={} tenant {}", request.getOrderCode(), tenantId);
+        orderService.updatePaymentStatus(request.getOrderCode(), tenantId, request.getPaymentStatus());
     }
 
     private Long getCurrentTenantId() {

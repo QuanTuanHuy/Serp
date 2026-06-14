@@ -11,8 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.second_mile.domain.Vehicle;
+import serp.project.second_mile.enums.VehicleStatus;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -29,5 +31,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long>, JpaSpec
             @Param("tenantId") Long tenantId,
             @Param("normalizedLicensePlates") Collection<String> normalizedLicensePlates
     );
-}
 
+    List<Vehicle> findByTenantIdAndHubIdAndStatus(Long tenantId, Long hubId, VehicleStatus status);
+}

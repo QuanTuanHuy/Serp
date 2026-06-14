@@ -42,7 +42,10 @@ import {
 } from '@/shared/components/ui';
 import type { ComboboxItem } from '@/shared/components/ui/combobox';
 import { cn } from '@/shared/utils';
-import type { PMWorkItemSearchApi } from '../../../types/api';
+import type {
+  PMWorkItemSearchApi,
+  PMWorkItemTransitionApi,
+} from '../../../types/api';
 import {
   InlineEditorShell,
   WorkItemListComboboxEditor,
@@ -71,6 +74,7 @@ interface WorkItemListProps {
 interface WorkItemListTableProps extends WorkItemListProps {
   assigneeOptions: ComboboxItem[];
   priorityOptions: ComboboxItem[];
+  resolutionLabels: Map<number, string>;
   isAssigneeLoading: boolean;
   isPriorityLoading: boolean;
   isUpdating: boolean;
@@ -94,7 +98,7 @@ interface WorkItemListTableProps extends WorkItemListProps {
   onLoadTransitions: WorkItemListTransitionLoader;
   onUpdateStatus: (
     item: PMWorkItemSearchApi,
-    transitionId: number
+    transition: PMWorkItemTransitionApi
   ) => Promise<void>;
 }
 
@@ -126,6 +130,7 @@ export function PMWorkItemListTable({
   onToggleSelectAll,
   assigneeOptions,
   priorityOptions,
+  resolutionLabels,
   isAssigneeLoading,
   isPriorityLoading,
   isUpdating,
@@ -275,7 +280,8 @@ export function PMWorkItemListTable({
                   </TableCell>
                   <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>
                     {item.resolutionId
-                      ? `Resolution ${item.resolutionId}`
+                      ? (resolutionLabels.get(item.resolutionId) ??
+                        `Resolution ${item.resolutionId}`)
                       : 'Unresolved'}
                   </TableCell>
                   <TableCell className='border-r px-3 py-1.5 text-sm text-muted-foreground'>

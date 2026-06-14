@@ -4,6 +4,8 @@
  */
 
 export * from './billing.types';
+export * from './dashboard';
+export * from './lastMile.types';
 
 export interface FirstMileApiResponse<T> {
   code: number;
@@ -239,8 +241,6 @@ export interface PostOfficeStaffAssignment {
   staffRole?: PostOfficeStaffRole;
   assignedFrom?: string;
   assignedTo?: string;
-  shiftStartTime?: string;
-  shiftEndTime?: string;
   isPrimary?: boolean;
   notes?: string;
   createdAt?: string;
@@ -253,8 +253,6 @@ export interface PostOfficeStaffAssignment {
 export interface UpdatePostOfficeStaffAssignmentRequest {
   assigned_from?: string;
   assigned_to?: string;
-  shift_start_time?: string;
-  shift_end_time?: string;
   is_primary?: boolean;
   notes?: string;
 }
@@ -400,6 +398,7 @@ export interface SecondMileBag {
   destinationHubId?: number;
   destinationPostOfficeCode?: string;
   vehicleId?: number;
+  routeId?: number;
   maxWeight?: number;
   maxVolume?: number;
   maxOrders?: number;
@@ -415,6 +414,19 @@ export interface SecondMileBag {
   createdBy?: string;
   updatedBy?: string;
   tenantId?: number;
+}
+
+export interface SecondMileBagCapacitySettings {
+  id?: number;
+  maxWeight: number;
+  maxVolume: number;
+  maxOrders: number;
+}
+
+export interface UpdateSecondMileBagCapacitySettingsRequest {
+  max_weight: number;
+  max_volume: number;
+  max_orders: number;
 }
 
 export interface SecondMileBagListFilters {
@@ -435,6 +447,7 @@ export interface CreateSecondMileBagRequest {
   destination_hub_id?: number;
   destination_post_office_code?: string;
   vehicle_id?: number;
+  route_id?: number;
   max_weight?: number;
   max_volume?: number;
   max_orders?: number;
@@ -637,6 +650,125 @@ export interface HandoverManifestListFilters {
   status?: HandoverManifestStatus;
 }
 
+export type BagDistributionManifestStatus = HandoverManifestStatus;
+
+export interface BagDistributionManifestBag {
+  id: number;
+  bagId?: number;
+  bagCode?: string;
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  totalWeightSnapshot?: number;
+  totalVolumeSnapshot?: number;
+  totalOrdersSnapshot?: number;
+  scanOutTime?: string;
+  scanInTime?: string;
+}
+
+export interface BagDistributionManifest {
+  id: number;
+  manifestCode?: string;
+  originHubId?: number;
+  originHubCode?: string;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationHubCode?: string;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  routeCode?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  assignedDriverId?: number;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
+  actualDepartureAt?: string;
+  actualArrivalAt?: string;
+  driverStartLatitude?: number;
+  driverStartLongitude?: number;
+  driverStartDistanceM?: number;
+  driverStartPhotoUrl?: string;
+  driverEndLatitude?: number;
+  driverEndLongitude?: number;
+  driverEndDistanceM?: number;
+  driverEndPhotoUrl?: string;
+  status?: BagDistributionManifestStatus;
+  note?: string;
+  bags?: BagDistributionManifestBag[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BagDistributionManifestListFilters {
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  vehicleId?: number;
+  assignedDriverId?: number;
+  status?: BagDistributionManifestStatus;
+}
+
+export interface CreateBagDistributionManifestRequest {
+  origin_hub_id: number;
+  destination_type: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  route_id: number;
+  vehicle_id: number;
+  planned_departure_at: string;
+  planned_arrival_at: string;
+  bag_ids: number[];
+  note?: string;
+}
+
+export interface AutoPlanBagDistributionRequest {
+  origin_hub_id: number;
+  destination_type?: SecondMileBagDestinationType;
+  destination_hub_id?: number;
+  destination_post_office_code?: string;
+  planned_departure_at: string;
+  planned_arrival_at: string;
+  sealed_sla_hours?: number;
+  execute?: boolean;
+  note?: string;
+}
+
+export interface ConfirmBagDistributionInboundRequest {
+  bag_ids?: number[];
+}
+
+export interface BagDistributionPlanItem {
+  originHubId?: number;
+  destinationType?: SecondMileBagDestinationType;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  routeId?: number;
+  routeCode?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  assignedDriverId?: number;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
+  bagIds: number[];
+  bagCodes: string[];
+  totalWeight?: number;
+  totalVolume?: number;
+  totalOrders?: number;
+  score?: number;
+  hints: string[];
+  createdManifestId?: number;
+  createdManifestCode?: string;
+}
+
+export interface BagDistributionPlan {
+  executed: boolean;
+  manifestCount: number;
+  items: BagDistributionPlanItem[];
+}
+
 export interface CreateHandoverManifestRequest {
   origin_post_office_code: string;
   target_hub_id: number;
@@ -706,7 +838,9 @@ export interface SecondMileOrderListFilters {
   keyword?: string;
   orderCode?: string;
   originPostOfficeCode?: string;
+  originPostOfficeCodes?: string[];
   status?: SecondMileOrderStatus;
+  statuses?: SecondMileOrderStatus[];
 }
 
 export type FirstMileOrderStatus =
@@ -733,7 +867,7 @@ export type FirstMileDeliveryRequestTime =
   | 'HOLIDAY'
   | 'BUSINESS_HOURS';
 
-export type FirstMileOrderType = 'EXPRESS_ORDER' | 'STANDARD_ORDER';
+export type FirstMileOrderType = 'STANDARD_ORDER';
 
 export type FirstMileOrderPickupMethod =
   | 'COURIER_PICKUP'
@@ -742,14 +876,6 @@ export type FirstMileOrderPickupMethod =
 export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
 
 export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
-
-export type FirstMileOrderProductCategory =
-  | 'HIGH_VALUE'
-  | 'FRAGILE'
-  | 'SOLID'
-  | 'OVERSIZED'
-  | 'LIQUID'
-  | 'MAGNETIC_BATTERY';
 
 export interface FirstMileOrderProductItem {
   id?: number;
@@ -786,7 +912,6 @@ export interface FirstMileOrderDetail {
   pickupTimeStart?: string;
   pickupTimeEnd?: string;
   deliveryRequestTime?: FirstMileDeliveryRequestTime;
-  orderProductCategory?: FirstMileOrderProductCategory;
   orderType?: FirstMileOrderType;
   feePayer?: FirstMileFeePayer;
   paymentStatus?: FirstMilePaymentStatus;
@@ -843,8 +968,10 @@ export interface FirstMileOrderListFilters {
   senderPhone?: string;
   receiverPhone?: string;
   originPostOfficeCode?: string;
+  originPostOfficeCodes?: string[];
   destinationPostOfficeCode?: string;
   status?: FirstMileOrderStatus;
+  statuses?: FirstMileOrderStatus[];
   isConfirm?: boolean;
   createdFrom?: string;
   createdTo?: string;
@@ -880,7 +1007,6 @@ export interface CreateOrderRequest {
   pickup_time_end?: string;
   delivery_request_time: FirstMileDeliveryRequestTime;
   pickup_method?: FirstMileOrderPickupMethod;
-  order_product_category?: FirstMileOrderProductCategory;
   order_type: FirstMileOrderType;
   fee_payer: FirstMileFeePayer;
   is_cod?: boolean;
@@ -975,8 +1101,6 @@ export type PickupOptimizationGoal =
   | 'COST_EFFICIENCY'
   | 'MAX_ASSIGNMENT';
 
-export type PickupOptimizationEffort = 'FAST' | 'STANDARD' | 'THOROUGH';
-
 export interface OptimizePickupPlanRequest {
   post_office_id: number;
   planning_start_time?: string;
@@ -986,14 +1110,8 @@ export interface OptimizePickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1014,14 +1132,8 @@ export interface AutoAssignPickupPlanRequest {
   vehicle?: string;
   order_limit?: number;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
-  max_iterations?: number;
-  max_runtime_millis?: number;
-  destroy_rate?: number;
-  initial_temperature?: number;
-  cooling_rate?: number;
   allow_lateness?: boolean;
   enforce_planning_end?: boolean;
   enforce_capacity?: boolean;
@@ -1041,7 +1153,6 @@ export interface ManualAssignPickupOrdersRequest {
   planning_end_time?: string;
   vehicle?: string;
   optimization_goal?: PickupOptimizationGoal;
-  optimization_effort?: PickupOptimizationEffort;
   average_speed_kmph?: number;
   service_minutes_per_stop?: number;
   allow_lateness?: boolean;
@@ -1466,7 +1577,6 @@ export interface OrderImportItem {
   receiver_province_code?: string;
   receiver_ward_code?: string;
   receiver_address_detail?: string;
-  order_product_category?: string;
   order_type?: string;
   note?: string;
   pickup_date?: string;

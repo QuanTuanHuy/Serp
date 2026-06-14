@@ -27,6 +27,7 @@ public final class BagMapper {
         bag.setDestinationHubId(request.getDestinationHubId());
         bag.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
         bag.setVehicleId(request.getVehicleId());
+        bag.setRouteId(request.getRouteId());
         bag.setMaxWeight(request.getMaxWeight());
         bag.setMaxVolume(request.getMaxVolume());
         bag.setMaxOrders(request.getMaxOrders());
@@ -42,6 +43,7 @@ public final class BagMapper {
         bag.setDestinationHubId(request.getDestinationHubId());
         bag.setDestinationPostOfficeCode(request.getDestinationPostOfficeCode());
         bag.setVehicleId(request.getVehicleId());
+        bag.setRouteId(request.getRouteId());
         bag.setMaxWeight(request.getMaxWeight());
         bag.setMaxVolume(request.getMaxVolume());
         bag.setMaxOrders(request.getMaxOrders());
@@ -58,6 +60,7 @@ public final class BagMapper {
                 bag.getDestinationHubId(),
                 bag.getDestinationPostOfficeCode(),
                 bag.getVehicleId(),
+                bag.getRouteId(),
                 bag.getMaxWeight(),
                 bag.getMaxVolume(),
                 bag.getMaxOrders(),

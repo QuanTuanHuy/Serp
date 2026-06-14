@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.tms_billing_service.core.service.impl;
 
 import org.junit.jupiter.api.Test;
@@ -6,19 +11,30 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
+import serp.project.tms_billing_service.domain.VasRule;
+import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
+import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
+import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
+import serp.project.tms_billing_service.enums.CalculationType;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
+import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
+import serp.project.tms_billing_service.enums.VasRuleCode;
+import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +53,7 @@ class AdminPricingServiceImplTest {
     @Test
     void shouldUpsertTariffByServiceRouteAndEffectiveDate() {
         UpsertTariffRequest request = new UpsertTariffRequest();
-        request.setServiceCode(DeliveryService.HOA_TOC);
+        request.setServiceCode(DeliveryService.TIEU_CHUAN);
         request.setRouteTypeCode(RouteType.NOI_MIEN);
         request.setBaseWeight(2000d);
         request.setBasePrice(20000d);
@@ -47,7 +63,7 @@ class AdminPricingServiceImplTest {
         request.setExpirationDate(null);
 
         when(tariffRepository.findByServiceCodeAndRouteTypeCodeAndEffectiveDate(
-                DeliveryService.HOA_TOC,
+                DeliveryService.TIEU_CHUAN,
                 RouteType.NOI_MIEN,
                 LocalDate.of(2026, 5, 20)
         )).thenReturn(Optional.empty());
@@ -69,5 +85,71 @@ class AdminPricingServiceImplTest {
         assertEquals(4000d, savedTariff.getStepPrice());
         assertEquals(1L, response.getId());
         assertEquals(RouteType.NOI_MIEN, response.getRouteTypeCode());
+    }
+
+    @Test
+    void shouldListOnlyActiveSurchargeRules() {
+        SurchargeRule remoteRule = SurchargeRule.builder()
+                .id(1L)
+                .code(SurchargeRuleEnum.VUNG_XA)
+                .name("Remote area surcharge")
+                .calculationType(CalculationType.STEP_WEIGHT)
+                .build();
+        SurchargeRule legacySpecialGoodsRule = SurchargeRule.builder()
+                .id(2L)
+                .code(SurchargeRuleEnum.QUA_KHO)
+                .name("Oversized goods surcharge")
+                .calculationType(CalculationType.FIXED_PER_KG)
+                .build();
+
+        when(surchargeRuleRepository.findAll()).thenReturn(List.of(remoteRule, legacySpecialGoodsRule));
+
+        List<SurchargeRuleAdminResponse> response = adminPricingService.listSurchargeRules();
+
+        assertEquals(1, response.size());
+        assertEquals(SurchargeRuleEnum.VUNG_XA, response.getFirst().getCode());
+    }
+
+    @Test
+    void shouldRejectUnsupportedSpecialGoodsSurchargeRule() {
+        UpsertSurchargeRuleRequest request = new UpsertSurchargeRuleRequest();
+        request.setCode(SurchargeRuleEnum.QUA_KHO);
+        request.setName("Oversized goods surcharge");
+        request.setCalculationType(CalculationType.FIXED_PER_KG);
+
+        assertThrows(AppException.class, () -> adminPricingService.upsertSurchargeRule(request));
+    }
+
+    @Test
+    void shouldListOnlyActiveVasRules() {
+        VasRule codRule = VasRule.builder()
+                .id(1L)
+                .code(VasRuleCode.COD)
+                .name("COD fee")
+                .calculationType(CalculationType.FIXED_PER_ORDER)
+                .build();
+        VasRule legacyInsuranceRule = VasRule.builder()
+                .id(2L)
+                .code(VasRuleCode.BAO_HIEM)
+                .name("Insurance fee")
+                .calculationType(CalculationType.PERCENTAGE)
+                .build();
+
+        when(vasRuleRepository.findAll()).thenReturn(List.of(codRule, legacyInsuranceRule));
+
+        var response = adminPricingService.listVasRules();
+
+        assertEquals(1, response.size());
+        assertEquals(VasRuleCode.COD, response.getFirst().getCode());
+    }
+
+    @Test
+    void shouldRejectUnsupportedInsuranceVasRule() {
+        UpsertVasRuleRequest request = new UpsertVasRuleRequest();
+        request.setCode(VasRuleCode.BAO_HIEM);
+        request.setName("Insurance fee");
+        request.setCalculationType(CalculationType.PERCENTAGE);
+
+        assertThrows(AppException.class, () -> adminPricingService.upsertVasRule(request));
     }
 }

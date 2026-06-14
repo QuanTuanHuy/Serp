@@ -37,9 +37,9 @@ public interface IResolutionRepository extends JpaRepository<ResolutionModel, Lo
             WHERE (r.tenantId = :tenantId OR r.tenantId = 0)
               AND (:isSystem IS NULL OR r.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(r.name) LIKE :searchPattern
+                    OR LOWER(r.description) LIKE :searchPattern
               )
             """,
             countQuery = """
@@ -48,13 +48,13 @@ public interface IResolutionRepository extends JpaRepository<ResolutionModel, Lo
             WHERE (r.tenantId = :tenantId OR r.tenantId = 0)
               AND (:isSystem IS NULL OR r.isSystem = :isSystem)
               AND (
-                    :search IS NULL
-                    OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
-                    OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))
+                    :searchPattern IS NULL
+                    OR LOWER(r.name) LIKE :searchPattern
+                    OR LOWER(r.description) LIKE :searchPattern
               )
             """)
     Page<ResolutionModel> findAllVisibleWithFilters(@Param("tenantId") Long tenantId,
-                                                    @Param("search") String search,
+                                                    @Param("searchPattern") String searchPattern,
                                                     @Param("isSystem") Boolean isSystem,
                                                     Pageable pageable);
 

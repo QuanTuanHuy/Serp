@@ -66,15 +66,23 @@ import type {
   SecondMileVehicleImportItem,
   SecondMileVehicleListFilters,
   AddSecondMileBagOrderRequest,
+  AutoPlanBagDistributionRequest,
   AutoSecondMileBaggingPlan,
   AutoSecondMileBaggingPlanRequest,
+  BagDistributionManifest,
+  BagDistributionManifestListFilters,
+  BagDistributionPlan,
+  ConfirmBagDistributionInboundRequest,
+  CreateBagDistributionManifestRequest,
   CreateSecondMileBagRequest,
   ReopenSecondMileBagRequest,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagListFilters,
   SecondMileBagSuggestion,
   SecondMileBaggingKpi,
   SecondMileBaggingValidation,
+  UpdateSecondMileBagCapacitySettingsRequest,
   UpdateSecondMileBagRequest,
   ValidateSecondMileBaggingRequest,
   SecondMileRoute,
@@ -101,12 +109,16 @@ import {
   normalizePostOfficeStaffAssignment,
   normalizeHubPostOfficeMapping,
   normalizeHubPostOfficeMappingPage,
+  normalizeBagDistributionManifest,
+  normalizeBagDistributionManifestPage,
+  normalizeBagDistributionPlan,
   normalizeHandoverManifest,
   normalizeHandoverManifestPage,
   normalizeSecondMileRoute,
   normalizeSecondMileRoutePage,
   normalizeAutoSecondMileBaggingPlan,
   normalizeSecondMileBag,
+  normalizeSecondMileBagCapacitySettings,
   normalizeSecondMileBagPage,
   normalizeSecondMileBagSuggestion,
   normalizeSecondMileBaggingKpi,
@@ -575,6 +587,42 @@ export const firstMileApi = api.injectEndpoints({
       ],
     }),
 
+    getSecondMileBagCapacitySettings: builder.query<
+      SecondMileBagCapacitySettings,
+      void
+    >({
+      query: () => ({
+        url: '/bags/capacity-settings',
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBagCapacitySettings>
+      ) =>
+        normalizeSecondMileBagCapacitySettings(unwrapFirstMileResult(response)),
+      providesTags: [{ type: 'SecondMileBag', id: 'CAPACITY_SETTINGS' }],
+    }),
+
+    updateSecondMileBagCapacitySettings: builder.mutation<
+      SecondMileBagCapacitySettings,
+      UpdateSecondMileBagCapacitySettingsRequest
+    >({
+      query: (body) => ({
+        url: '/bags/capacity-settings',
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<SecondMileBagCapacitySettings>
+      ) =>
+        normalizeSecondMileBagCapacitySettings(unwrapFirstMileResult(response)),
+      invalidatesTags: [
+        { type: 'SecondMileBag', id: 'CAPACITY_SETTINGS' },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
     createSecondMileBag: builder.mutation<
       SecondMileBag,
       CreateSecondMileBagRequest
@@ -855,6 +903,210 @@ export const firstMileApi = api.injectEndpoints({
         response?.message || 'Deleted successfully',
     }),
 
+    getBagDistributionManifests: builder.query<
+      FirstMilePaginatedData<BagDistributionManifest>,
+      { page?: number; size?: number } & BagDistributionManifestListFilters
+    >({
+      query: ({
+        page = 0,
+        size = 20,
+        originHubId,
+        destinationType,
+        destinationHubId,
+        destinationPostOfficeCode,
+        routeId,
+        vehicleId,
+        assignedDriverId,
+        status,
+      }) => ({
+        url: '/bag-distribution-manifests',
+        method: 'GET',
+        params: {
+          page,
+          size,
+          ...(originHubId !== undefined ? { origin_hub_id: originHubId } : {}),
+          ...(destinationType ? { destination_type: destinationType } : {}),
+          ...(destinationHubId !== undefined
+            ? { destination_hub_id: destinationHubId }
+            : {}),
+          ...(destinationPostOfficeCode
+            ? { destination_post_office_code: destinationPostOfficeCode }
+            : {}),
+          ...(routeId !== undefined ? { route_id: routeId } : {}),
+          ...(vehicleId !== undefined ? { vehicle_id: vehicleId } : {}),
+          ...(assignedDriverId !== undefined
+            ? { assigned_driver_id: assignedDriverId }
+            : {}),
+          ...(status ? { status } : {}),
+        },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeBagDistributionManifestPage,
+      providesTags: (result) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        ...(result?.items ?? []).map((manifest) => ({
+          type: 'BagDistributionManifest' as const,
+          id: String(manifest.id),
+        })),
+      ],
+    }),
+
+    getBagDistributionManifestById: builder.query<
+      BagDistributionManifest,
+      number
+    >({
+      query: (id) => ({
+        url: `/bag-distribution-manifests/${id}`,
+        method: 'GET',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      providesTags: (_result, _error, id) => [
+        { type: 'BagDistributionManifest', id: String(id) },
+      ],
+    }),
+
+    createBagDistributionManifest: builder.mutation<
+      BagDistributionManifest,
+      CreateBagDistributionManifestRequest
+    >({
+      query: (body) => ({
+        url: '/bag-distribution-manifests',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
+    autoPlanBagDistribution: builder.mutation<
+      BagDistributionPlan,
+      AutoPlanBagDistributionRequest
+    >({
+      query: (body) => ({
+        url: '/bag-distribution-manifests/auto-plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionPlan>
+      ) => normalizeBagDistributionPlan(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, request) =>
+        request.execute
+          ? [
+              { type: 'BagDistributionManifest', id: 'LIST' },
+              { type: 'SecondMileBag', id: 'LIST' },
+            ]
+          : [],
+    }),
+
+    confirmBagDistributionManifestOutbound: builder.mutation<
+      BagDistributionManifest,
+      number
+    >({
+      query: (manifestId) => ({
+        url: `/bag-distribution-manifests/${manifestId}/confirm-outbound`,
+        method: 'POST',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'BagDistributionManifest', id: String(id) },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
+    confirmBagDistributionManifestInbound: builder.mutation<
+      BagDistributionManifest,
+      { manifestId: number; body?: ConfirmBagDistributionInboundRequest }
+    >({
+      query: ({ manifestId, body }) => ({
+        url: `/bag-distribution-manifests/${manifestId}/confirm-inbound`,
+        method: 'POST',
+        ...(body ? { body } : {}),
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { manifestId }) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'BagDistributionManifest', id: String(manifestId) },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
+    driverCheckinBagDistributionStart: builder.mutation<
+      BagDistributionManifest,
+      { manifestId: number; formData: FormData }
+    >({
+      query: ({ manifestId, formData }) => ({
+        url: `/bag-distribution-manifests/${manifestId}/driver-checkin-start`,
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { manifestId }) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'BagDistributionManifest', id: String(manifestId) },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
+    driverCheckinBagDistributionEnd: builder.mutation<
+      BagDistributionManifest,
+      { manifestId: number; formData: FormData }
+    >({
+      query: ({ manifestId, formData }) => ({
+        url: `/bag-distribution-manifests/${manifestId}/driver-checkin-end`,
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, { manifestId }) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'BagDistributionManifest', id: String(manifestId) },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
+    cancelBagDistributionManifest: builder.mutation<
+      BagDistributionManifest,
+      number
+    >({
+      query: (manifestId) => ({
+        url: `/bag-distribution-manifests/${manifestId}/cancel`,
+        method: 'POST',
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<BagDistributionManifest>
+      ) => normalizeBagDistributionManifest(unwrapFirstMileResult(response)),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'BagDistributionManifest', id: 'LIST' },
+        { type: 'BagDistributionManifest', id: String(id) },
+        { type: 'SecondMileBag', id: 'LIST' },
+      ],
+    }),
+
     getHandoverManifests: builder.query<
       FirstMilePaginatedData<HandoverManifest>,
       { page?: number; size?: number } & HandoverManifestListFilters
@@ -1096,7 +1348,9 @@ export const firstMileApi = api.injectEndpoints({
         keyword,
         orderCode,
         originPostOfficeCode,
+        originPostOfficeCodes,
         status,
+        statuses,
       }) => ({
         url: '/orders',
         method: 'GET',
@@ -1108,7 +1362,11 @@ export const firstMileApi = api.injectEndpoints({
           ...(originPostOfficeCode
             ? { origin_post_office_code: originPostOfficeCode }
             : {}),
+          ...(originPostOfficeCodes?.length
+            ? { origin_post_office_codes: originPostOfficeCodes }
+            : {}),
           ...(status ? { status } : {}),
+          ...(statuses?.length ? { statuses } : {}),
         },
       }),
       extraOptions: TMS_ORDER_SERVICE,
@@ -1559,8 +1817,10 @@ export const firstMileApi = api.injectEndpoints({
         senderPhone,
         receiverPhone,
         originPostOfficeCode,
+        originPostOfficeCodes,
         destinationPostOfficeCode,
         status,
+        statuses,
         isConfirm,
         createdFrom,
         createdTo,
@@ -1582,10 +1842,14 @@ export const firstMileApi = api.injectEndpoints({
           ...(originPostOfficeCode
             ? { origin_post_office_code: originPostOfficeCode }
             : {}),
+          ...(originPostOfficeCodes?.length
+            ? { origin_post_office_codes: originPostOfficeCodes }
+            : {}),
           ...(destinationPostOfficeCode
             ? { destination_post_office_code: destinationPostOfficeCode }
             : {}),
           ...(status ? { status } : {}),
+          ...(statuses?.length ? { statuses } : {}),
           ...(isConfirm !== undefined ? { is_confirm: isConfirm } : {}),
           ...(createdFrom ? { created_from: createdFrom } : {}),
           ...(createdTo ? { created_to: createdTo } : {}),
@@ -2018,6 +2282,8 @@ export const {
   useImportSecondMileVehiclesMutation,
   useGetSecondMileBagsQuery,
   useGetSecondMileBagByIdQuery,
+  useGetSecondMileBagCapacitySettingsQuery,
+  useUpdateSecondMileBagCapacitySettingsMutation,
   useCreateSecondMileBagMutation,
   useUpdateSecondMileBagMutation,
   useDeleteSecondMileBagMutation,
@@ -2034,6 +2300,15 @@ export const {
   useCreateSecondMileRouteMutation,
   useUpdateSecondMileRouteMutation,
   useDeleteSecondMileRouteMutation,
+  useGetBagDistributionManifestsQuery,
+  useGetBagDistributionManifestByIdQuery,
+  useCreateBagDistributionManifestMutation,
+  useAutoPlanBagDistributionMutation,
+  useConfirmBagDistributionManifestOutboundMutation,
+  useConfirmBagDistributionManifestInboundMutation,
+  useDriverCheckinBagDistributionStartMutation,
+  useDriverCheckinBagDistributionEndMutation,
+  useCancelBagDistributionManifestMutation,
   useGetHandoverManifestsQuery,
   useGetHandoverManifestByIdQuery,
   useCreateHandoverManifestMutation,

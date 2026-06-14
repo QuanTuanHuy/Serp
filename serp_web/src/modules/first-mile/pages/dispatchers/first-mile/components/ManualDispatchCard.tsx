@@ -18,6 +18,7 @@ import {
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
 import type { PickupShift, Province, Ward } from '../../../../types';
+import { CandidateOrdersPanel } from './CandidateOrdersPanel';
 import { OrderMultiSelect } from './OrderMultiSelect';
 import type { ManualDispatchCardProps } from './types';
 
@@ -262,6 +263,28 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
             </p>
           ) : null}
         </div>
+
+        <CandidateOrdersPanel
+          title='Manual dispatch candidates'
+          orders={candidateOrders}
+          loading={isLoadingOrders}
+          selectedOrderIds={selectedOrderIds}
+          onOrderToggle={(orderId, checked) => {
+            if (checked) {
+              onOrderSelectionChange(
+                selectedOrderIds.includes(orderId)
+                  ? selectedOrderIds
+                  : [...selectedOrderIds, orderId]
+              );
+              return;
+            }
+
+            onOrderSelectionChange(
+              selectedOrderIds.filter((selectedId) => selectedId !== orderId)
+            );
+          }}
+          emptyText='No dispatchable orders for this post office.'
+        />
 
         <div className='pt-1'>
           <Button

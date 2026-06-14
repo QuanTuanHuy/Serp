@@ -34,13 +34,25 @@ public final class OrderOperationMapper {
                 order.getTotalWeight(),
                 order.getTotalVolume(),
                 order.getDimensions(),
-                order.getOrderProductCategory(),
                 order.getOrderType(),
                 order.getNote(),
                 order.getPickupMethod(),
                 order.getCreatedBy(),
                 order.getCreatedAt(),
-                order.getTenantId()
+                order.getTenantId(),
+                // Receiver info
+                order.getReceiverName(),
+                order.getReceiverPhone(),
+                order.getReceiverWardCode(),
+                order.getReceiverProvinceCode(),
+                order.getReceiverAddressDetail(),
+                toLatitude(order.getReceiverLocation()),
+                toLongitude(order.getReceiverLocation()),
+                // COD & fee
+                order.getCodAmount(),
+                order.getTotalShippingFee(),
+                order.getFeePayer() != null ? order.getFeePayer().name() : null,
+                order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null
         );
     }
 

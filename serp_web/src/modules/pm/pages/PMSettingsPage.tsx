@@ -31,13 +31,17 @@ import {
   useCreatePmPrioritySchemeMutation,
   useCreatePmWorkflowMutation,
   useCreatePmWorkflowSchemeMutation,
+  useCreatePmResolutionMutation,
   useDeletePmIssueTypeMutation,
   useDeletePmIssueTypeSchemeMutation,
   useDeletePmPriorityMutation,
   useDeletePmPrioritySchemeMutation,
   useDeletePmWorkflowSchemeMutation,
+  useDeletePmResolutionMutation,
   useGetPmIssueTypeSettingsOverviewQuery,
   useGetPmPrioritySettingsOverviewQuery,
+  useGetPmResolutionsQuery,
+  useGetPmResourceCalendarSettingsOverviewQuery,
   useGetPmWorkflowSettingsOverviewQuery,
   useManagePmIssueTypeSchemeItemsMutation,
   useManagePmPrioritySchemeItemsMutation,
@@ -46,12 +50,14 @@ import {
   useUpdatePmIssueTypeSchemeMutation,
   useUpdatePmPriorityMutation,
   useUpdatePmPrioritySchemeMutation,
+  useUpdatePmResolutionMutation,
   useUpdatePmWorkflowMutation,
   useUpdatePmWorkflowSchemeMutation,
 } from '../api';
 import {
   PriorityDialog,
   PrioritySchemeDialog,
+  ResolutionDialog,
   SchemeDialog,
   WorkflowDialog,
   WorkflowSchemeDialog,
@@ -61,12 +67,14 @@ import {
   MiniStat,
   PrioritiesTable,
   PrioritySchemesTable,
+  ResolutionsTable,
   WorkflowSchemesTable,
   WorkflowsTable,
   WorkTypeSchemesTable,
   WorkTypesTable,
 } from '../components/settings/settings-tables';
 import { PMSkillCatalogSection } from '../components/skills';
+import { PMResourceCalendarSettingsSection } from '../components/settings/resource-calendar';
 import {
   SETTINGS_GROUPS,
   SETTINGS_ITEMS,
@@ -74,10 +82,12 @@ import {
   orderedSelectedPriorityIds,
   orderedSelectedWorkTypeIds,
   orderedWorkflowSchemeItems,
+  sortBySequence,
   type DeleteTarget,
   type PMSettingsSection,
   type PriorityDialogState,
   type PrioritySchemeDialogState,
+  type ResolutionDialogState,
   type SchemeDialogState,
   type WorkflowDialogState,
   type WorkflowSchemeDialogState,
@@ -86,14 +96,17 @@ import {
 import type {
   PMCreateIssueTypeRequest,
   PMCreatePriorityRequest,
+  PMCreateResolutionRequest,
   PMCreateWorkflowRequest,
   PMManageIssueTypeSchemeItemsRequest,
   PMManagePrioritySchemeItemsRequest,
   PMManageWorkflowSchemeItemsRequest,
   PMPrioritySchemeSettingsApi,
   PMPrioritySettingsApi,
+  PMResolutionSettingsApi,
   PMUpdateIssueTypeRequest,
   PMUpdatePriorityRequest,
+  PMUpdateResolutionRequest,
   PMUpdateWorkflowRequest,
   PMWorkflowSchemeSettingsApi,
   PMWorkflowSettingsApi,
@@ -107,12 +120,16 @@ const SECTION_DESCRIPTIONS: Record<PMSettingsSection, string> = {
     'Choose which work types are available to each project space.',
   skills:
     'Maintain the skill catalog used by people profiles, work item requirements, and optimization ranking.',
+  'resource-calendars':
+    'Configure workspace-level working calendars and capacity for optimization.',
   workflows:
     'A workflow is a set of statuses and transitions that a work item moves through during its lifecycle.',
   'workflow-schemes':
     'Define which workflows apply to given work types and project spaces.',
   priorities:
     'Add priorities, edit their order, and tune their visual treatment.',
+  resolutions:
+    'Maintain the resolution outcomes users select when work items are closed.',
   'priority-schemes':
     'Associate a priority or group of priorities with project spaces.',
 };
@@ -121,9 +138,11 @@ const SECTION_ADD_LABELS: Record<PMSettingsSection, string> = {
   'work-types': 'Add work type',
   'work-type-schemes': 'Add work type scheme',
   skills: 'Add skill',
+  'resource-calendars': 'Add calendar',
   workflows: 'Add workflow',
   'workflow-schemes': 'Add workflow scheme',
   priorities: 'Add priority',
+  resolutions: 'Add resolution',
   'priority-schemes': 'Add priority scheme',
 };
 
@@ -131,9 +150,11 @@ const SECTION_SEARCH_PLACEHOLDERS: Record<PMSettingsSection, string> = {
   'work-types': 'Filter work types',
   'work-type-schemes': 'Filter work type schemes',
   skills: 'Filter skills',
+  'resource-calendars': 'Filter resource calendars',
   workflows: 'Find workflow',
   'workflow-schemes': 'Filter workflow schemes',
   priorities: 'Filter priorities',
+  resolutions: 'Filter resolutions',
   'priority-schemes': 'Filter priority schemes',
 };
 
@@ -160,6 +181,8 @@ export function PMSettingsPage() {
     useState<PriorityDialogState | null>(null);
   const [prioritySchemeDialog, setPrioritySchemeDialog] =
     useState<PrioritySchemeDialogState | null>(null);
+  const [resolutionDialog, setResolutionDialog] =
+    useState<ResolutionDialogState | null>(null);
   const [workflowDialog, setWorkflowDialog] =
     useState<WorkflowDialogState | null>(null);
   const [workflowSchemeDialog, setWorkflowSchemeDialog] =
@@ -168,7 +191,15 @@ export function PMSettingsPage() {
 
   const overviewQuery = useGetPmIssueTypeSettingsOverviewQuery();
   const priorityOverviewQuery = useGetPmPrioritySettingsOverviewQuery();
+  const resolutionQuery = useGetPmResolutionsQuery({
+    page: 0,
+    pageSize: 100,
+    sortBy: 'sequence',
+    sortDirection: 'asc',
+  });
   const workflowOverviewQuery = useGetPmWorkflowSettingsOverviewQuery();
+  const resourceCalendarOverviewQuery =
+    useGetPmResourceCalendarSettingsOverviewQuery();
   const [createWorkType, createWorkTypeState] = useCreatePmIssueTypeMutation();
   const [updateWorkType, updateWorkTypeState] = useUpdatePmIssueTypeMutation();
   const [deleteWorkType, deleteWorkTypeState] = useDeletePmIssueTypeMutation();
@@ -191,6 +222,12 @@ export function PMSettingsPage() {
     useManagePmPrioritySchemeItemsMutation();
   const [deletePriorityScheme, deletePrioritySchemeState] =
     useDeletePmPrioritySchemeMutation();
+  const [createResolution, createResolutionState] =
+    useCreatePmResolutionMutation();
+  const [updateResolution, updateResolutionState] =
+    useUpdatePmResolutionMutation();
+  const [deleteResolution, deleteResolutionState] =
+    useDeletePmResolutionMutation();
   const [createWorkflow, createWorkflowState] = useCreatePmWorkflowMutation();
   const [updateWorkflow, updateWorkflowState] = useUpdatePmWorkflowMutation();
   const [createWorkflowScheme, createWorkflowSchemeState] =
@@ -206,6 +243,7 @@ export function PMSettingsPage() {
   const schemes = overviewQuery.data?.workTypeSchemes ?? [];
   const priorities = priorityOverviewQuery.data?.priorities ?? [];
   const prioritySchemes = priorityOverviewQuery.data?.prioritySchemes ?? [];
+  const resolutions = resolutionQuery.data?.data.items ?? [];
   const workflows = workflowOverviewQuery.data?.workflows ?? [];
   const workflowSchemes = workflowOverviewQuery.data?.workflowSchemes ?? [];
 
@@ -263,6 +301,18 @@ export function PMSettingsPage() {
     );
   }, [deferredSearch, prioritySchemes]);
 
+  const filteredResolutions = useMemo(() => {
+    const ordered = sortBySequence(resolutions);
+    if (!deferredSearch) {
+      return ordered;
+    }
+    return ordered.filter(
+      (resolution) =>
+        includesText(resolution.name, deferredSearch) ||
+        includesText(resolution.description, deferredSearch)
+    );
+  }, [deferredSearch, resolutions]);
+
   const filteredWorkflows = useMemo(() => {
     if (!deferredSearch) {
       return workflows;
@@ -304,12 +354,14 @@ export function PMSettingsPage() {
       schemes: schemes.length,
       priorities: priorities.length,
       prioritySchemes: prioritySchemes.length,
+      resolutions: resolutions.length,
       workflows: workflows.length,
       workflowSchemes: workflowSchemes.length,
     }),
     [
       priorities.length,
       prioritySchemes.length,
+      resolutions.length,
       schemes.length,
       workflowSchemes.length,
       workflows.length,
@@ -339,7 +391,9 @@ export function PMSettingsPage() {
       setWorkflowSchemeDialog({ mode: 'create' });
     } else if (section === 'priorities') {
       setPriorityDialog({ mode: 'create' });
-    } else {
+    } else if (section === 'resolutions') {
+      setResolutionDialog({ mode: 'create' });
+    } else if (section === 'priority-schemes') {
       setPrioritySchemeDialog({ mode: 'create' });
     }
   }, [section]);
@@ -457,6 +511,35 @@ export function PMSettingsPage() {
       }
     },
     [createPriority, updatePriority]
+  );
+
+  const handleResolutionSubmit = useCallback(
+    async (
+      mode: ResolutionDialogState['mode'],
+      id: number | undefined,
+      values: PMCreateResolutionRequest
+    ) => {
+      try {
+        if (mode === 'create') {
+          await createResolution(values).unwrap();
+          toast.success('Resolution created.');
+        } else if (id) {
+          const updateBody: PMUpdateResolutionRequest = {
+            name: values.name,
+            description: values.description,
+            sequence: values.sequence,
+          };
+          await updateResolution({ id, body: updateBody }).unwrap();
+          toast.success('Resolution updated.');
+        }
+        setResolutionDialog(null);
+      } catch (error) {
+        toast.error('Unable to save resolution', {
+          description: getErrorMessage(error),
+        });
+      }
+    },
+    [createResolution, updateResolution]
   );
 
   const handlePrioritySchemeSubmit = useCallback(
@@ -644,6 +727,38 @@ export function PMSettingsPage() {
     [priorities, updatePriority]
   );
 
+  const handleMoveResolution = useCallback(
+    async (resolution: PMResolutionSettingsApi, direction: 'up' | 'down') => {
+      const ordered = sortBySequence(resolutions);
+      const currentIndex = ordered.findIndex(
+        (item) => item.id === resolution.id
+      );
+      const nextIndex =
+        direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      const swapWith = ordered[nextIndex];
+      if (currentIndex < 0 || !swapWith) {
+        return;
+      }
+
+      try {
+        await updateResolution({
+          id: resolution.id,
+          body: { sequence: swapWith.sequence ?? nextIndex + 1 },
+        }).unwrap();
+        await updateResolution({
+          id: swapWith.id,
+          body: { sequence: resolution.sequence ?? currentIndex + 1 },
+        }).unwrap();
+        toast.success('Resolution order updated.');
+      } catch (error) {
+        toast.error('Unable to update resolution order', {
+          description: getErrorMessage(error),
+        });
+      }
+    },
+    [resolutions, updateResolution]
+  );
+
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget) {
       return;
@@ -662,6 +777,9 @@ export function PMSettingsPage() {
       } else if (deleteTarget.kind === 'priority-scheme') {
         await deletePriorityScheme(deleteTarget.item.id).unwrap();
         toast.success('Priority scheme deleted.');
+      } else if (deleteTarget.kind === 'resolution') {
+        await deleteResolution(deleteTarget.item.id).unwrap();
+        toast.success('Resolution deleted.');
       } else {
         await deleteWorkflowScheme(deleteTarget.item.id).unwrap();
         toast.success('Workflow scheme deleted.');
@@ -675,6 +793,7 @@ export function PMSettingsPage() {
   }, [
     deletePriority,
     deletePriorityScheme,
+    deleteResolution,
     deleteWorkflowScheme,
     deleteScheme,
     deleteTarget,
@@ -707,6 +826,16 @@ export function PMSettingsPage() {
   const handleDeletePriority = useCallback(
     (item: PMPrioritySettingsApi) =>
       setDeleteTarget({ kind: 'priority', item }),
+    []
+  );
+  const handleEditResolution = useCallback(
+    (item: PMResolutionSettingsApi) =>
+      setResolutionDialog({ mode: 'edit', item }),
+    []
+  );
+  const handleDeleteResolution = useCallback(
+    (item: PMResolutionSettingsApi) =>
+      setDeleteTarget({ kind: 'resolution', item }),
     []
   );
   const handleEditPriorityScheme = useCallback(
@@ -760,6 +889,11 @@ export function PMSettingsPage() {
       setPrioritySchemeDialog(null);
     }
   }, []);
+  const handleResolutionDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setResolutionDialog(null);
+    }
+  }, []);
   const handleWorkflowDialogOpenChange = useCallback((open: boolean) => {
     if (!open) {
       setWorkflowDialog(null);
@@ -781,6 +915,7 @@ export function PMSettingsPage() {
     deleteSchemeState.isLoading ||
     deletePriorityState.isLoading ||
     deletePrioritySchemeState.isLoading ||
+    deleteResolutionState.isLoading ||
     deleteWorkflowSchemeState.isLoading;
   const isSchemeSaving =
     createSchemeState.isLoading ||
@@ -805,13 +940,17 @@ export function PMSettingsPage() {
             ? filteredWorkflowSchemes
             : section === 'priorities'
               ? filteredPriorities
-              : filteredPrioritySchemes;
+              : section === 'resolutions'
+                ? filteredResolutions
+                : filteredPrioritySchemes;
   const activeQuery =
     section === 'work-types' || section === 'work-type-schemes'
       ? overviewQuery
       : section === 'workflows' || section === 'workflow-schemes'
         ? workflowOverviewQuery
-        : priorityOverviewQuery;
+        : section === 'resolutions'
+          ? resolutionQuery
+          : priorityOverviewQuery;
 
   return (
     <div className='grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]'>
@@ -875,6 +1014,16 @@ export function PMSettingsPage() {
       <main className='space-y-4'>
         {section === 'skills' ? (
           <PMSkillCatalogSection />
+        ) : section === 'resource-calendars' ? (
+          <PMResourceCalendarSettingsSection
+            overview={resourceCalendarOverviewQuery.data}
+            isLoading={resourceCalendarOverviewQuery.isLoading}
+            errorMessage={
+              resourceCalendarOverviewQuery.error
+                ? getErrorMessage(resourceCalendarOverviewQuery.error)
+                : undefined
+            }
+          />
         ) : (
           <>
             <div className='flex flex-col gap-3 border-b border-border/60 pb-4 md:flex-row md:items-start md:justify-between'>
@@ -891,10 +1040,11 @@ export function PMSettingsPage() {
               </Button>
             </div>
 
-            <div className='grid gap-3 md:grid-cols-3 xl:grid-cols-6'>
+            <div className='grid gap-3 md:grid-cols-3 xl:grid-cols-7'>
               <MiniStat title='Work types' value={stats.workTypes} />
               <MiniStat title='Workflows' value={stats.workflows} />
               <MiniStat title='Priorities' value={stats.priorities} />
+              <MiniStat title='Resolutions' value={stats.resolutions} />
               <MiniStat title='Schemes' value={stats.schemes} />
               <MiniStat
                 title='Workflow schemes'
@@ -962,6 +1112,13 @@ export function PMSettingsPage() {
                     onEdit={handleEditPriority}
                     onDelete={handleDeletePriority}
                   />
+                ) : section === 'resolutions' ? (
+                  <ResolutionsTable
+                    resolutions={filteredResolutions}
+                    onMove={handleMoveResolution}
+                    onEdit={handleEditResolution}
+                    onDelete={handleDeleteResolution}
+                  />
                 ) : (
                   <PrioritySchemesTable
                     schemes={filteredPrioritySchemes}
@@ -998,6 +1155,15 @@ export function PMSettingsPage() {
         }
         onOpenChange={handlePriorityDialogOpenChange}
         onSubmit={handlePrioritySubmit}
+      />
+      <ResolutionDialog
+        state={resolutionDialog}
+        resolutions={resolutions}
+        isSubmitting={
+          createResolutionState.isLoading || updateResolutionState.isLoading
+        }
+        onOpenChange={handleResolutionDialogOpenChange}
+        onSubmit={handleResolutionSubmit}
       />
       <PrioritySchemeDialog
         state={prioritySchemeDialog}

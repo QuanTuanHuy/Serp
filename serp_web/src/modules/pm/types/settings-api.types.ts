@@ -126,6 +126,39 @@ export interface PMPrioritySettingsOverviewApi {
   prioritySchemes: PMPrioritySchemeSettingsApi[];
 }
 
+export interface PMResolutionSettingsApi {
+  id: number;
+  tenantId: number;
+  name: string;
+  description?: string | null;
+  sequence?: number | null;
+  isSystem: boolean;
+  readOnly: boolean;
+  createdAt?: number | string;
+  createdBy?: number;
+  updatedAt?: number | string;
+  updatedBy?: number;
+}
+
+export interface PMCreateResolutionRequest {
+  name: string;
+  description?: string | null;
+  sequence: number;
+}
+
+export interface PMUpdateResolutionRequest {
+  name?: string;
+  description?: string | null;
+  sequence?: number;
+}
+
+export interface PMDeleteResolutionResponse {
+  id: number;
+  deleted: boolean;
+  deletedAt?: number | string | null;
+  updatedBy?: number | null;
+}
+
 export type PMWorkflowLifecycleStateApi = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 export type PMWorkflowVersionStateApi = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 

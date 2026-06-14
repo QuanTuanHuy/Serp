@@ -423,19 +423,6 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        if (request.getShiftStartTime() != null || request.getShiftEndTime() != null) {
-            if (request.getShiftStartTime() == null || request.getShiftEndTime() == null) {
-                throw new AppException(ErrorCode.INVALID_REQUEST);
-            }
-
-            if (!request.getShiftEndTime().isAfter(request.getShiftStartTime())) {
-                throw new AppException(ErrorCode.INVALID_REQUEST);
-            }
-
-            assignment.setShiftStartTime(request.getShiftStartTime());
-            assignment.setShiftEndTime(request.getShiftEndTime());
-        }
-
         if (request.getIsPrimary() != null) {
             assignment.setIsPrimary(request.getIsPrimary());
         }

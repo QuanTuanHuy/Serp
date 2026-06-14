@@ -8,6 +8,10 @@ import type {
   FirstMileApiResponse,
   FirstMilePageResponse,
   FirstMilePaginatedData,
+  BagDistributionManifest,
+  BagDistributionManifestBag,
+  BagDistributionPlan,
+  BagDistributionPlanItem,
   HandoverManifest,
   HandoverManifestOrderItem,
   HubPostOfficeMapping,
@@ -17,6 +21,7 @@ import type {
   PostOfficeStaffAssignment,
   AutoSecondMileBaggingPlan,
   SecondMileBag,
+  SecondMileBagCapacitySettings,
   SecondMileBagDestinationType,
   SecondMileBagOrder,
   SecondMileBagStatus,
@@ -147,12 +152,6 @@ export const normalizePostOfficeStaffAssignment = (
     staffRole: readField(record, 'staff_role', 'staffRole'),
     assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
     assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
-    shiftStartTime: readField<string>(
-      record,
-      'shift_start_time',
-      'shiftStartTime'
-    ),
-    shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
     isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
     notes: readField<string>(record, 'notes', 'notes'),
     createdAt: readField<string>(record, 'created_at', 'createdAt'),
@@ -269,6 +268,7 @@ export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
       'destinationPostOfficeCode'
     ),
     vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    routeId: readOptionalNumber(record, 'route_id', 'routeId'),
     maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
     maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
     maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,
@@ -288,6 +288,18 @@ export const normalizeSecondMileBag = (raw: unknown): SecondMileBag => {
     createdBy: readField<string>(record, 'created_by', 'createdBy'),
     updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
     tenantId: readOptionalNumber(record, 'tenant_id', 'tenantId'),
+  };
+};
+
+export const normalizeSecondMileBagCapacitySettings = (
+  raw: unknown
+): SecondMileBagCapacitySettings => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: readOptionalNumber(record, 'id', 'id'),
+    maxWeight: readOptionalNumber(record, 'max_weight', 'maxWeight') ?? 0,
+    maxVolume: readOptionalNumber(record, 'max_volume', 'maxVolume') ?? 0,
+    maxOrders: readOptionalNumber(record, 'max_orders', 'maxOrders') ?? 0,
   };
 };
 
@@ -527,6 +539,158 @@ export const normalizeHandoverManifest = (raw: unknown): HandoverManifest => {
   };
 };
 
+export const normalizeBagDistributionManifestBag = (
+  raw: unknown
+): BagDistributionManifestBag => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    bagId: readOptionalNumber(record, 'bag_id', 'bagId'),
+    bagCode: readField<string>(record, 'bag_code', 'bagCode'),
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    destinationType: readField(record, 'destination_type', 'destinationType'),
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    totalWeightSnapshot: readOptionalNumber(
+      record,
+      'total_weight_snapshot',
+      'totalWeightSnapshot'
+    ),
+    totalVolumeSnapshot: readOptionalNumber(
+      record,
+      'total_volume_snapshot',
+      'totalVolumeSnapshot'
+    ),
+    totalOrdersSnapshot: readOptionalNumber(
+      record,
+      'total_orders_snapshot',
+      'totalOrdersSnapshot'
+    ),
+    scanOutTime: readField<string>(record, 'scan_out_time', 'scanOutTime'),
+    scanInTime: readField<string>(record, 'scan_in_time', 'scanInTime'),
+  };
+};
+
+export const normalizeBagDistributionManifest = (
+  raw: unknown
+): BagDistributionManifest => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const bagsRaw = readField<unknown[]>(record, 'bags', 'bags') ?? [];
+
+  return {
+    id: Number(record.id ?? 0),
+    manifestCode: readField<string>(record, 'manifest_code', 'manifestCode'),
+    originHubId: readOptionalNumber(record, 'origin_hub_id', 'originHubId'),
+    originHubCode: readField<string>(
+      record,
+      'origin_hub_code',
+      'originHubCode'
+    ),
+    destinationType: readField(record, 'destination_type', 'destinationType'),
+    destinationHubId: readOptionalNumber(
+      record,
+      'destination_hub_id',
+      'destinationHubId'
+    ),
+    destinationHubCode: readField<string>(
+      record,
+      'destination_hub_code',
+      'destinationHubCode'
+    ),
+    destinationPostOfficeCode: readField<string>(
+      record,
+      'destination_post_office_code',
+      'destinationPostOfficeCode'
+    ),
+    routeId: readOptionalNumber(record, 'route_id', 'routeId'),
+    routeCode: readField<string>(record, 'route_code', 'routeCode'),
+    vehicleId: readOptionalNumber(record, 'vehicle_id', 'vehicleId'),
+    vehicleLicensePlate: readField<string>(
+      record,
+      'vehicle_license_plate',
+      'vehicleLicensePlate'
+    ),
+    assignedDriverId: readOptionalNumber(
+      record,
+      'assigned_driver_id',
+      'assignedDriverId'
+    ),
+    plannedDepartureAt: readField<string>(
+      record,
+      'planned_departure_at',
+      'plannedDepartureAt'
+    ),
+    plannedArrivalAt: readField<string>(
+      record,
+      'planned_arrival_at',
+      'plannedArrivalAt'
+    ),
+    actualDepartureAt: readField<string>(
+      record,
+      'actual_departure_at',
+      'actualDepartureAt'
+    ),
+    actualArrivalAt: readField<string>(
+      record,
+      'actual_arrival_at',
+      'actualArrivalAt'
+    ),
+    driverStartLatitude: readOptionalNumber(
+      record,
+      'driver_start_latitude',
+      'driverStartLatitude'
+    ),
+    driverStartLongitude: readOptionalNumber(
+      record,
+      'driver_start_longitude',
+      'driverStartLongitude'
+    ),
+    driverStartDistanceM: readOptionalNumber(
+      record,
+      'driver_start_distance_m',
+      'driverStartDistanceM'
+    ),
+    driverStartPhotoUrl: readField<string>(
+      record,
+      'driver_start_photo_url',
+      'driverStartPhotoUrl'
+    ),
+    driverEndLatitude: readOptionalNumber(
+      record,
+      'driver_end_latitude',
+      'driverEndLatitude'
+    ),
+    driverEndLongitude: readOptionalNumber(
+      record,
+      'driver_end_longitude',
+      'driverEndLongitude'
+    ),
+    driverEndDistanceM: readOptionalNumber(
+      record,
+      'driver_end_distance_m',
+      'driverEndDistanceM'
+    ),
+    driverEndPhotoUrl: readField<string>(
+      record,
+      'driver_end_photo_url',
+      'driverEndPhotoUrl'
+    ),
+    status: readField(record, 'status', 'status'),
+    note: readField<string>(record, 'note', 'note'),
+    bags: bagsRaw.map((item) => normalizeBagDistributionManifestBag(item)),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+  };
+};
+
 export const normalizeHubPostOfficeMappingPage = (
   response:
     | FirstMileApiResponse<FirstMilePageResponse<HubPostOfficeMapping>>
@@ -596,6 +760,19 @@ export const normalizeHandoverManifestPage = (
   return {
     ...page,
     items: page.items.map((item) => normalizeHandoverManifest(item)),
+  };
+};
+
+export const normalizeBagDistributionManifestPage = (
+  response:
+    | FirstMileApiResponse<FirstMilePageResponse<BagDistributionManifest>>
+    | FirstMilePageResponse<BagDistributionManifest>
+): FirstMilePaginatedData<BagDistributionManifest> => {
+  const page =
+    unwrapFirstMilePageResultOrRaw<BagDistributionManifest>(response);
+  return {
+    ...page,
+    items: page.items.map((item) => normalizeBagDistributionManifest(item)),
   };
 };
 
@@ -688,6 +865,88 @@ export const normalizeSecondMileBaggingKpi = (
       0,
     avgOrdersPerBag:
       readOptionalNumber(record, 'avg_orders_per_bag', 'avgOrdersPerBag') ?? 0,
+  };
+};
+
+export const normalizeBagDistributionPlan = (
+  raw: unknown
+): BagDistributionPlan => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  const items = readField<unknown[]>(record, 'items', 'items') ?? [];
+
+  return {
+    executed: Boolean(readField<boolean>(record, 'executed', 'executed')),
+    manifestCount:
+      readOptionalNumber(record, 'manifest_count', 'manifestCount') ?? 0,
+    items: items.map((item) => {
+      const itemRecord = (item ?? {}) as Record<string, unknown>;
+      return {
+        originHubId: readOptionalNumber(
+          itemRecord,
+          'origin_hub_id',
+          'originHubId'
+        ),
+        destinationType: readField(
+          itemRecord,
+          'destination_type',
+          'destinationType'
+        ),
+        destinationHubId: readOptionalNumber(
+          itemRecord,
+          'destination_hub_id',
+          'destinationHubId'
+        ),
+        destinationPostOfficeCode: readField<string>(
+          itemRecord,
+          'destination_post_office_code',
+          'destinationPostOfficeCode'
+        ),
+        routeId: readOptionalNumber(itemRecord, 'route_id', 'routeId'),
+        routeCode: readField<string>(itemRecord, 'route_code', 'routeCode'),
+        vehicleId: readOptionalNumber(itemRecord, 'vehicle_id', 'vehicleId'),
+        vehicleLicensePlate: readField<string>(
+          itemRecord,
+          'vehicle_license_plate',
+          'vehicleLicensePlate'
+        ),
+        assignedDriverId: readOptionalNumber(
+          itemRecord,
+          'assigned_driver_id',
+          'assignedDriverId'
+        ),
+        plannedDepartureAt: readField<string>(
+          itemRecord,
+          'planned_departure_at',
+          'plannedDepartureAt'
+        ),
+        plannedArrivalAt: readField<string>(
+          itemRecord,
+          'planned_arrival_at',
+          'plannedArrivalAt'
+        ),
+        bagIds: readField<number[]>(itemRecord, 'bag_ids', 'bagIds') ?? [],
+        bagCodes:
+          readField<string[]>(itemRecord, 'bag_codes', 'bagCodes') ?? [],
+        totalWeight:
+          readOptionalNumber(itemRecord, 'total_weight', 'totalWeight') ?? 0,
+        totalVolume:
+          readOptionalNumber(itemRecord, 'total_volume', 'totalVolume') ?? 0,
+        totalOrders:
+          readOptionalNumber(itemRecord, 'total_orders', 'totalOrders') ?? 0,
+        score: readOptionalNumber(itemRecord, 'score', 'score'),
+        hints: readField<string[]>(itemRecord, 'hints', 'hints') ?? [],
+        createdManifestId: readOptionalNumber(
+          itemRecord,
+          'created_manifest_id',
+          'createdManifestId'
+        ),
+        createdManifestCode: readField<string>(
+          itemRecord,
+          'created_manifest_code',
+          'createdManifestCode'
+        ),
+      } satisfies BagDistributionPlanItem;
+    }),
   };
 };
 

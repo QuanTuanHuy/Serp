@@ -27,7 +27,6 @@ import serp.project.first_mile.dto.response.PickupOptimizationResponse;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
-import serp.project.first_mile.enums.PickupOptimizationEffort;
 import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.RoutingVehicle;
@@ -72,23 +71,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private static final int DEFAULT_ORDER_LIMIT = 300;
     private static final double DEFAULT_AVERAGE_SPEED_KMPH = 25.0;
     private static final int DEFAULT_SERVICE_MINUTES_PER_STOP = 8;
-    private static final int DEFAULT_MAX_ITERATIONS = 300;
-    private static final long DEFAULT_MAX_RUNTIME_MILLIS = 1500L;
-    private static final double DEFAULT_DESTROY_RATE = 0.20;
-    private static final double DEFAULT_INITIAL_TEMPERATURE = 50.0;
-    private static final double DEFAULT_COOLING_RATE = 0.995;
-
-    private static final int FAST_MAX_ITERATIONS = 120;
-    private static final long FAST_MAX_RUNTIME_MILLIS = 800L;
-    private static final double FAST_DESTROY_RATE = 0.15;
-    private static final double FAST_INITIAL_TEMPERATURE = 35.0;
-    private static final double FAST_COOLING_RATE = 0.985;
-
-    private static final int THOROUGH_MAX_ITERATIONS = 650;
-    private static final long THOROUGH_MAX_RUNTIME_MILLIS = 4000L;
-    private static final double THOROUGH_DESTROY_RATE = 0.25;
-    private static final double THOROUGH_INITIAL_TEMPERATURE = 65.0;
-    private static final double THOROUGH_COOLING_RATE = 0.997;
 
     private static final boolean DEFAULT_ALLOW_LATENESS = true;
     private static final boolean DEFAULT_ENFORCE_PLANNING_END = false;
@@ -173,12 +155,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                config.planningDate(),
-                config.planningStartTime().toLocalTime(),
-                config.planningEndTime().toLocalTime()
+                config.planningDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and planning window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and planning date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -210,10 +190,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
         AlgorithmConfig runtimeConfig = config.withTravelMetricProvider(travelMetricProvider);
 
-        SolutionState initialSolution = buildInitialSolution(initialRoutes, preparedOrderData, runtimeConfig);
-        SolutionState optimizedSolution = runAlns(initialSolution, runtimeConfig);
+        SolutionState greedySolution = buildGreedySolution(initialRoutes, preparedOrderData, runtimeConfig);
+        sanitizeSolution(greedySolution);
 
-        return toResponse(postOffice, runtimeConfig, optimizedSolution);
+        return toResponse(postOffice, runtimeConfig, greedySolution);
     }
 
     @Override
@@ -246,12 +226,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                shiftPlanningWindow.tripDate(),
-                shiftPlanningWindow.planningStartTime().toLocalTime(),
-                shiftPlanningWindow.planningEndTime().toLocalTime()
+                shiftPlanningWindow.tripDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and shift window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and trip date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -378,9 +356,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             courier,
             postOffice.getId(),
             tenantId,
-            shiftPlanningWindow.tripDate(),
-            shiftPlanningWindow.planningStartTime().toLocalTime(),
-            shiftPlanningWindow.planningEndTime().toLocalTime()
+            shiftPlanningWindow.tripDate()
         );
 
         AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
@@ -1291,9 +1267,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             PostOfficeStaff courier,
             Long postOfficeId,
             Long tenantId,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         if (!PostOfficeStaffRole.COURIER.equals(courier.getRole())
                 || !PostOfficeStaffStatus.ACTIVE.equals(courier.getStatus())) {
@@ -1307,9 +1281,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 tenantId,
                 planningDate
             );
-        boolean assigned = assignments.stream()
-                .anyMatch(assignment -> isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime));
-        if (!assigned) {
+        if (assignments.isEmpty()) {
             throw new AppException(ErrorCode.COURIER_NOT_ASSIGNED_TO_POST_OFFICE);
         }
     }
@@ -1382,40 +1354,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(AutoAssignPickupPlanRequest request, ShiftPlanningWindow shiftPlanningWindow) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(
-            request.getMaxIterations(),
-            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
-        );
-        long maxRuntimeMillis = resolvePositiveLong(
-            request.getMaxRuntimeMillis(),
-            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
-        );
-
-        double destroyRate = clamp(
-            resolvePositiveDouble(
-                request.getDestroyRate(),
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
-            ),
-            0.01,
-            0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-            request.getInitialTemperature(),
-            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
-        );
-        double coolingRate = clamp(
-            resolvePositiveDouble(
-                request.getCoolingRate(),
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
-            ),
-            0.80,
-            0.9999
-        );
 
         boolean allowLateness = resolveBoolean(
             request.getAllowLateness(),
@@ -1460,11 +1402,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 orderLimit,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -1481,26 +1418,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(ManualAssignPickupOrdersRequest request, ShiftPlanningWindow shiftPlanningWindow) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS);
-        long maxRuntimeMillis = resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS);
-        double destroyRate = clamp(
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE),
-                0.01,
-                0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-                effortPreset.initialTemperature(),
-                DEFAULT_INITIAL_TEMPERATURE
-        );
-        double coolingRate = clamp(
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE),
-                0.80,
-                0.9999
-        );
         boolean allowLateness = resolveBoolean(
                 request.getAllowLateness(),
                 goalPreset.allowLateness(),
@@ -1542,11 +1462,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 DEFAULT_ORDER_LIMIT,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -1596,27 +1511,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return false;
         }
         return !value.isBefore(startInclusive) && !value.isAfter(endInclusive);
-    }
-
-    private boolean isAssignmentUsableForWindow(
-            PostOfficeStaffAssignment assignment,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
-    ) {
-        if (assignment == null) {
-            return false;
-        }
-
-        LocalTime shiftStartTime = assignment.getShiftStartTime();
-        LocalTime shiftEndTime = assignment.getShiftEndTime();
-        if (shiftStartTime == null && shiftEndTime == null) {
-            return true;
-        }
-        if (shiftStartTime == null || shiftEndTime == null || !shiftEndTime.isAfter(shiftStartTime)) {
-            return false;
-        }
-
-        return !planningStartTime.isBefore(shiftStartTime) && !planningEndTime.isAfter(shiftEndTime);
     }
 
     private PickupOrderNode toOrderNodeIfValid(TmsOrderOperationView order) {
@@ -1729,16 +1623,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return "TRP-" + datePart + "-" + shiftPart + "-" + courierPart + "-" + randomPart;
     }
 
-    private SolutionState buildInitialSolution(
+    private SolutionState buildGreedySolution(
             List<RouteState> initialRoutes,
             PreparedOrderData preparedOrderData,
             AlgorithmConfig config
     ) {
-        return pickupOptimizationEngine.buildInitialSolution(initialRoutes, preparedOrderData, config);
-    }
-
-    private SolutionState runAlns(SolutionState initialSolution, AlgorithmConfig config) {
-        return pickupOptimizationEngine.runAlns(initialSolution, config);
+        return pickupOptimizationEngine.buildGreedySolution(initialRoutes, preparedOrderData, config);
     }
 
     private void applyGreedyRepair(SolutionState solution, AlgorithmConfig config) {
@@ -1873,9 +1763,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Long postOfficeId,
             Long tenantId,
             List<Long> requestCourierIds,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         List<PostOfficeStaffAssignment> assignments = postOfficeStaffAssignmentRepository
                 .findActiveAssignmentsByPostOfficeIdAndTenantIdAndStaffRoleAndStaffStatus(
@@ -1895,10 +1783,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         for (PostOfficeStaffAssignment assignment : assignments) {
             PostOfficeStaff staff = assignment.getStaff();
             if (staff == null || staff.getId() == null) {
-                continue;
-            }
-
-            if (!isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime)) {
                 continue;
             }
 
@@ -1932,7 +1816,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(OptimizePickupPlanRequest request) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         LocalDateTime planningStartTime = request.getPlanningStartTime() == null
                 ? LocalDateTime.now()
@@ -1949,35 +1832,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(
-            request.getMaxIterations(),
-            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
-        );
-        long maxRuntimeMillis = resolvePositiveLong(
-            request.getMaxRuntimeMillis(),
-            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
-        );
-
-        double destroyRate = clamp(
-            resolvePositiveDouble(
-                request.getDestroyRate(),
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
-            ),
-            0.01,
-            0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-            request.getInitialTemperature(),
-            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
-        );
-        double coolingRate = clamp(
-            resolvePositiveDouble(
-                request.getCoolingRate(),
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
-            ),
-            0.80,
-            0.9999
-        );
 
         boolean allowLateness = resolveBoolean(
             request.getAllowLateness(),
@@ -2022,11 +1876,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 orderLimit,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -2223,36 +2072,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         };
     }
 
-    private EffortPreset resolveEffortPreset(PickupOptimizationEffort optimizationEffort) {
-        PickupOptimizationEffort effectiveEffort = optimizationEffort == null
-                ? PickupOptimizationEffort.STANDARD
-                : optimizationEffort;
-
-        return switch (effectiveEffort) {
-            case FAST -> new EffortPreset(
-                    FAST_MAX_ITERATIONS,
-                    FAST_MAX_RUNTIME_MILLIS,
-                    FAST_DESTROY_RATE,
-                    FAST_INITIAL_TEMPERATURE,
-                    FAST_COOLING_RATE
-            );
-            case STANDARD -> new EffortPreset(
-                    DEFAULT_MAX_ITERATIONS,
-                    DEFAULT_MAX_RUNTIME_MILLIS,
-                    DEFAULT_DESTROY_RATE,
-                    DEFAULT_INITIAL_TEMPERATURE,
-                    DEFAULT_COOLING_RATE
-            );
-            case THOROUGH -> new EffortPreset(
-                    THOROUGH_MAX_ITERATIONS,
-                    THOROUGH_MAX_RUNTIME_MILLIS,
-                    THOROUGH_DESTROY_RATE,
-                    THOROUGH_INITIAL_TEMPERATURE,
-                    THOROUGH_COOLING_RATE
-            );
-        };
-    }
-
     private boolean resolveBoolean(Boolean explicitValue, Boolean presetValue, boolean defaultValue) {
         if (explicitValue != null) {
             return explicitValue;
@@ -2269,13 +2088,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private int resolvePositiveInt(Integer value, int defaultValue) {
-        if (value == null || value <= 0) {
-            return defaultValue;
-        }
-        return value;
-    }
-
-    private long resolvePositiveLong(Long value, long defaultValue) {
         if (value == null || value <= 0) {
             return defaultValue;
         }
@@ -2310,10 +2122,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return value;
     }
 
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
     private double round3(double value) {
         return Math.round(value * 1000.0) / 1000.0;
     }
@@ -2326,15 +2134,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Double latenessWeight,
             Double unassignedPenalty,
             Double usedRoutePenalty
-    ) {
-    }
-
-    private record EffortPreset(
-            Integer maxIterations,
-            Long maxRuntimeMillis,
-            Double destroyRate,
-            Double initialTemperature,
-            Double coolingRate
     ) {
     }
 

@@ -1,14 +1,10 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Inventory Detail Route
-*/
+import { InventoryDetailPage } from '@/modules/logistics'; //[cite: 2]
 
-import { InventoryDetailPage } from '@/modules/logistics';
-
-export default function InventoryItemDetailPage({
+export default async function InventoryItemDetailPage({
   params,
 }: {
-  params: { itemId: string };
+  params: Promise<{ itemId: string }>;
 }) {
-  return <InventoryDetailPage itemId={params.itemId} />;
+  const { itemId } = await params;
+  return <InventoryDetailPage itemId={itemId} />;
 }

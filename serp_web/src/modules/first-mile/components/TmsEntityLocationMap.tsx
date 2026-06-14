@@ -43,6 +43,7 @@ interface TmsEntityLocationMapProps {
   emptyText: string;
   className?: string;
   onBoundsChange: (bounds: TmsMapBounds) => void;
+  onPointClick?: (point: TmsLocationMapPoint) => void;
 }
 
 const DEFAULT_CENTER = {
@@ -68,10 +69,30 @@ function escapeHtml(value: string): string {
   });
 }
 
-function buildPopup(point: TmsLocationMapPoint): string {
-  const meta = [point.status, point.address].filter(Boolean).join(' · ');
+function formatCoordinate(value: number): string {
+  return Number(value.toFixed(6)).toString();
+}
 
-  return `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(point.name)}</strong><br/><span style="color:#475569">${escapeHtml(point.code)}</span>${meta ? `<br/><span style="color:#64748b">${escapeHtml(meta)}</span>` : ''}</div>`;
+function buildPopupRow(label: string, value: string): string {
+  return `<div style="display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px;align-items:start"><span style="color:#64748b">${label}</span><span style="color:#0f172a;word-break:break-word">${escapeHtml(value)}</span></div>`;
+}
+
+function buildPopup(point: TmsLocationMapPoint): string {
+  const coordinates = `${formatCoordinate(point.latitude)}, ${formatCoordinate(
+    point.longitude
+  )}`;
+  const rows = [
+    buildPopupRow('Code', point.code),
+    buildPopupRow('Name', point.name),
+    buildPopupRow('Address', point.address || '--'),
+    buildPopupRow('Coordinates', coordinates),
+  ];
+
+  if (point.status) {
+    rows.push(buildPopupRow('Status', point.status));
+  }
+
+  return `<div style="min-width:240px;max-width:320px;font-size:12px;line-height:1.45"><strong style="display:block;margin-bottom:8px;font-size:13px;color:#0f172a">${escapeHtml(point.name)}</strong><div style="display:grid;gap:5px">${rows.join('')}</div></div>`;
 }
 
 function readMapBounds(map: LeafletMap): TmsMapBounds {
@@ -98,6 +119,7 @@ export const TmsEntityLocationMap: React.FC<TmsEntityLocationMapProps> = ({
   emptyText,
   className,
   onBoundsChange,
+  onPointClick,
 }) => {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const leafletRef = React.useRef<LeafletModule | null>(null);
@@ -194,7 +216,7 @@ export const TmsEntityLocationMap: React.FC<TmsEntityLocationMapProps> = ({
     layerGroup.clearLayers();
 
     points.forEach((point) => {
-      leaflet
+      const marker = leaflet
         .circleMarker([point.latitude, point.longitude], {
           radius: 7,
           color: markerColor,
@@ -202,10 +224,16 @@ export const TmsEntityLocationMap: React.FC<TmsEntityLocationMapProps> = ({
           fillColor: markerFillColor,
           fillOpacity: 0.85,
         })
-        .bindPopup(buildPopup(point))
-        .addTo(layerGroup);
+        .bindPopup(buildPopup(point));
+
+      marker.on('click', () => {
+        marker.openPopup();
+        onPointClick?.(point);
+      });
+
+      marker.addTo(layerGroup);
     });
-  }, [markerColor, markerFillColor, points]);
+  }, [markerColor, markerFillColor, onPointClick, points]);
 
   const markerCountText =
     totalItems !== undefined && totalItems > points.length

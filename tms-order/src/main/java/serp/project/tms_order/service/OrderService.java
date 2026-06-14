@@ -73,4 +73,6 @@ public interface OrderService {
     );
 
     PaymentWebhookProcessResponse processPaymentOrderConfirmedWebhook(PaymentOrderConfirmedWebhookRequest request);
+
+    void updatePaymentStatus(String orderCode, Long tenantId, String paymentStatus);
 }

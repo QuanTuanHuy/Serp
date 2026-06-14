@@ -20,6 +20,7 @@ public record BagResponse(
         @JsonProperty("destination_hub_id") Long destinationHubId,
         @JsonProperty("destination_post_office_code") String destinationPostOfficeCode,
         @JsonProperty("vehicle_id") Long vehicleId,
+        @JsonProperty("route_id") Long routeId,
         @JsonProperty("max_weight") Double maxWeight,
         @JsonProperty("max_volume") Double maxVolume,
         @JsonProperty("max_orders") Integer maxOrders,

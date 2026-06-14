@@ -17,6 +17,7 @@ import type {
   PMListProjectsParams,
   PMListProjectComponentsParams,
   PMProjectPersonApi,
+  PMProjectPermissionSettingsApi,
   PMProjectRoleApi,
   PMProjectBlueprintApi,
   PMProjectCategoryApi,
@@ -27,6 +28,7 @@ import type {
   PMProjectDetailApi,
   PMReplaceProjectPersonRolesRequest,
   PMProjectSummaryFilterParams,
+  PMReplaceProjectPermissionGrantsRequest,
   PMUpdateProjectComponentRequest,
   PMUpdateProjectRequest,
   PMUpdateProjectResponse,
@@ -144,6 +146,21 @@ export const pmProjectApi = api.injectEndpoints({
       transformResponse: createDataTransform<PMProjectSettingsOverviewApi>(),
       providesTags: (_result, _error, id) => [
         { type: 'pm/ProjectSettingsOverview' as const, id },
+      ],
+    }),
+
+    getPmProjectPermissions: builder.query<
+      PMProjectPermissionSettingsApi,
+      number
+    >({
+      query: (projectId) => ({
+        url: `/projects/${projectId}/permissions`,
+        method: 'GET',
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectPermissionSettingsApi>(),
+      providesTags: (_result, _error, projectId) => [
+        { type: 'pm/ProjectPermission' as const, id: projectId },
       ],
     }),
 
@@ -293,6 +310,26 @@ export const pmProjectApi = api.injectEndpoints({
       ],
     }),
 
+    replacePmProjectPermissionGrants: builder.mutation<
+      PMProjectPermissionSettingsApi,
+      {
+        projectId: number;
+        body: PMReplaceProjectPermissionGrantsRequest;
+      }
+    >({
+      query: ({ projectId, body }) => ({
+        url: `/projects/${projectId}/permissions/grants`,
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: { service: 'pm' },
+      transformResponse: createDataTransform<PMProjectPermissionSettingsApi>(),
+      invalidatesTags: (_result, _error, { projectId }) => [
+        { type: 'pm/ProjectPermission' as const, id: projectId },
+        { type: 'pm/ProjectSettingsOverview' as const, id: String(projectId) },
+      ],
+    }),
+
     removePmProjectPerson: builder.mutation<
       void,
       { projectId: number; userId: number }
@@ -361,6 +398,7 @@ export const {
   useGetPmProjectRolesQuery,
   useGetPmProjectsQuery,
   useGetPmProjectByIdQuery,
+  useGetPmProjectPermissionsQuery,
   useGetPmProjectSettingsOverviewQuery,
   useGetPmProjectSummaryQuery,
   useGetPmProjectPeopleQuery,
@@ -370,6 +408,7 @@ export const {
   useUpdatePmProjectMutation,
   useUpdatePmProjectComponentMutation,
   useReplacePmProjectPersonRolesMutation,
+  useReplacePmProjectPermissionGrantsMutation,
   useRemovePmProjectPersonMutation,
   useDeletePmProjectComponentMutation,
   useArchivePmProjectMutation,

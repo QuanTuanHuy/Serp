@@ -7,7 +7,6 @@ package serp.project.tms_order.dto.response;
 
 import serp.project.tms_order.domain.Dimension;
 import serp.project.tms_order.enums.OrderPickupMethod;
-import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.OrderType;
 
@@ -33,12 +32,24 @@ public record OrderOperationView(
         Double totalWeight,
         Double totalVolume,
         Dimension dimensions,
-        OrderProductCategory orderProductCategory,
         OrderType orderType,
         String note,
         OrderPickupMethod pickupMethod,
         String createdBy,
         LocalDateTime createdAt,
-        Long tenantId
+        Long tenantId,
+        // Receiver info
+        String receiverName,
+        String receiverPhone,
+        String receiverWardCode,
+        String receiverProvinceCode,
+        String receiverAddressDetail,
+        Double receiverLatitude,
+        Double receiverLongitude,
+        // COD & fee
+        Long codAmount,
+        Long totalShippingFee,
+        String feePayer,
+        String paymentStatus
 ) {
 }

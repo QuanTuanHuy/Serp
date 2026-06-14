@@ -35,6 +35,7 @@ public class Constants {
         public static final String UNAUTHORIZED = "Unauthorized";
         public static final String FORBIDDEN = "Forbidden";
         public static final String BAD_REQUEST = "Bad Request";
+        public static final String SEARCH_QUERY_REQUIRED = "Search query is required";
         public static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
         public static final String CONFLICT = "Conflict";
         public static final String TOO_MANY_REQUESTS = "Too Many Requests";

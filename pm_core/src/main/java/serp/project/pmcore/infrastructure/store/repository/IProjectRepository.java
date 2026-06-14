@@ -75,6 +75,11 @@ public interface IProjectRepository extends JpaRepository<ProjectModel, Long> {
     List<ProjectModel> findActiveProjectsByWorkflowSchemeIds(@Param("workflowSchemeIds") List<Long> workflowSchemeIds,
                                                              @Param("tenantId") Long tenantId);
 
+    @Query("SELECT COUNT(p) FROM ProjectModel p " +
+            "WHERE p.permissionSchemeId = :permissionSchemeId AND p.tenantId = :tenantId AND p.deletedAt IS NULL")
+    long countActiveProjectsByPermissionSchemeId(@Param("permissionSchemeId") Long permissionSchemeId,
+                                                 @Param("tenantId") Long tenantId);
+
     Page<ProjectModel> findAllByTenantId(Long tenantId, Pageable pageable);
 
     @Query(value = """

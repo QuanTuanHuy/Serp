@@ -1,10 +1,3 @@
-/**
- * Order List Page - Enhanced
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Order management with modern UI
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -15,6 +8,7 @@ import {
   CardContent,
   Input,
   Badge,
+  Skeleton,
 } from '@/shared/components/ui';
 import {
   Search,
@@ -36,6 +30,8 @@ import {
   HandCoins,
   BanknoteArrowDown,
   TrendingUp,
+  FileText,
+  PackageCheck,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useGetOrdersQuery, useGetCustomersQuery } from '../../api/salesApi';
@@ -45,7 +41,13 @@ import {
   selectOrderPagination,
   selectOrderFilters,
 } from '../../store/selectors';
-import type { Customer, Order, OrderStatus } from '../../types';
+import type {
+  Customer,
+  Order,
+  OrderFilters,
+  OrderStatus,
+  SaleChannel,
+} from '../../types';
 import { OrderCard } from '../../components/cards/OrderCard';
 
 interface OrderListPageProps {
@@ -157,41 +159,68 @@ const StatsCard = ({
   );
 };
 
+interface OrderListPageProps {
+  className?: string;
+}
+
 export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
+  const SEARCH_PAGE_SIZE = 9;
+
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   const pagination = useAppSelector(selectOrderPagination);
   const filters = useAppSelector(selectOrderFilters);
 
-  const { data, isLoading, error } = useGetOrdersQuery({
-    filters,
-    pagination,
-  });
-
   // Local state
   const [searchQuery, setSearchQuery] = useState(filters.query || '');
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>(
+    (filters.statusId as OrderStatus) || ''
+  );
+  const [customerFilter, setCustomerFilter] = useState(
+    filters.toCustomerId || ''
+  );
+  const [saleChannelFilter, setSaleChannelFilter] = useState<SaleChannel | ''>(
+    (filters.saleChannelId as SaleChannel) || ''
+  );
+  const [orderDateAfter, setOrderDateAfter] = useState(
+    filters.orderDateAfter || ''
+  );
+  const [orderDateBefore, setOrderDateBefore] = useState(
+    filters.orderDateBefore || ''
+  );
+  const [deliveryAfter, setDeliveryAfter] = useState(
+    filters.deliveryAfter || ''
+  );
+  const [deliveryBefore, setDeliveryBefore] = useState(
+    filters.deliveryBefore || ''
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [hasSearched, setHasSearched] = useState(true);
+
+  const { data, isLoading, error } = useGetOrdersQuery(
+    {
+      filters: {
+        ...filters,
+      },
+      pagination: {
+        ...pagination,
+        size: SEARCH_PAGE_SIZE,
+      },
+    },
+    {
+      skip: !hasSearched,
+    }
+  );
 
   const orders = data?.data?.items || [];
 
-  // Collect unique customer IDs
-  const customerIds = useMemo(() => {
-    return Array.from(
-      new Set(orders.map((o: Order) => o.toCustomerId).filter(Boolean))
-    );
-  }, [orders]);
-
-  // Fetch all customers
-  const { data: customersResponse } = useGetCustomersQuery(
-    {
-      filters: {},
-      pagination: { page: 0, size: 100 },
-    },
-    { skip: customerIds.length === 0 }
-  );
+  // Fetch customers
+  const { data: customersResponse } = useGetCustomersQuery({
+    filters: {},
+    pagination: { page: 0, size: 100 },
+  });
 
   // Create customer map for quick lookup
   const customerMap = useMemo(() => {
@@ -201,18 +230,61 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     });
     return map;
   }, [customersResponse]);
+
   const totalItems = data?.data?.totalItems || 0;
   const totalPages = data?.data?.totalPages || 0;
   const currentPage = data?.data?.currentPage || 0;
 
+  const buildOrderFilters = (
+    overrides?: Partial<{
+      query: string;
+      statusId: OrderStatus | '';
+      toCustomerId: string;
+      saleChannelId: SaleChannel | '';
+      orderDateAfter: string;
+      orderDateBefore: string;
+      deliveryAfter: string;
+      deliveryBefore: string;
+    }>
+  ): OrderFilters => {
+    const query = overrides?.query ?? searchQuery;
+    const statusId = overrides?.statusId ?? statusFilter;
+    const toCustomerId = overrides?.toCustomerId ?? customerFilter;
+    const saleChannelId = overrides?.saleChannelId ?? saleChannelFilter;
+    const nextOrderDateAfter = overrides?.orderDateAfter ?? orderDateAfter;
+    const nextOrderDateBefore = overrides?.orderDateBefore ?? orderDateBefore;
+    const nextDeliveryAfter = overrides?.deliveryAfter ?? deliveryAfter;
+    const nextDeliveryBefore = overrides?.deliveryBefore ?? deliveryBefore;
+
+    return {
+      query: query || undefined,
+      statusId: statusId || undefined,
+      toCustomerId: toCustomerId || undefined,
+      saleChannelId: saleChannelId || undefined,
+      orderDateAfter: nextOrderDateAfter || undefined,
+      orderDateBefore: nextOrderDateBefore || undefined,
+      deliveryAfter: nextDeliveryAfter || undefined,
+      deliveryBefore: nextDeliveryBefore || undefined,
+    };
+  };
+
   // Handle actions
   const handleSearch = () => {
-    dispatch(setOrderFilters({ ...filters, query: searchQuery }));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    dispatch(setOrderFilters(buildOrderFilters()));
+    dispatch(
+      setOrderPagination({ ...pagination, page: 0, size: SEARCH_PAGE_SIZE })
+    );
+    setHasSearched(true);
   };
 
   const handlePageChange = (newPage: number) => {
-    dispatch(setOrderPagination({ ...pagination, page: newPage }));
+    dispatch(
+      setOrderPagination({
+        ...pagination,
+        page: newPage,
+        size: SEARCH_PAGE_SIZE,
+      })
+    );
   };
 
   const handleViewOrder = (orderId: string) => {
@@ -222,11 +294,35 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
   const clearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
-    dispatch(setOrderFilters({}));
-    dispatch(setOrderPagination({ ...pagination, page: 0 }));
+    setCustomerFilter('');
+    setSaleChannelFilter('');
+    setOrderDateAfter('');
+    setOrderDateBefore('');
+    setDeliveryAfter('');
+    setDeliveryBefore('');
   };
 
-  const hasActiveFilters = searchQuery || statusFilter;
+  const hasActiveFilters =
+    !!searchQuery ||
+    !!statusFilter ||
+    !!customerFilter ||
+    !!saleChannelFilter ||
+    !!orderDateAfter ||
+    !!orderDateBefore ||
+    !!deliveryAfter ||
+    !!deliveryBefore;
+
+  const activeFilterCount =
+    (searchQuery ? 1 : 0) +
+    (statusFilter ? 1 : 0) +
+    (customerFilter ? 1 : 0) +
+    (saleChannelFilter ? 1 : 0) +
+    (orderDateAfter ? 1 : 0) +
+    (orderDateBefore ? 1 : 0) +
+    (deliveryAfter ? 1 : 0) +
+    (deliveryBefore ? 1 : 0);
+
+  const shouldShowResults = hasSearched;
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -235,7 +331,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       approved: orders.filter((o: Order) => o.statusId === 'APPROVED').length,
       delivered: orders.filter((o: Order) => o.statusId === 'FULLY_DELIVERED')
         .length,
-      totalRevenue: orders
+      totalValue: orders
         .filter(
           (o: Order) =>
             o.statusId === 'APPROVED' || o.statusId === 'FULLY_DELIVERED'
@@ -244,27 +340,37 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
     };
   }, [totalItems, orders]);
 
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <div className='flex items-center justify-between mb-6'>
+          <Skeleton className='h-10 w-48' />
+          <Skeleton className='h-10 w-32' />
+        </div>
+        <Skeleton className='h-12 w-full mb-4' />
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className='h-64 w-full' />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('space-y-6', className)}>
       {/* Page Header */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            Danh sách đơn hàng
-          </h1>
+          <h1 className='text-2xl font-bold tracking-tight'>Đơn bán hàng</h1>
           <p className='text-muted-foreground'>
-            Theo dõi và quản lý tất cả các đơn hàng của bạn
+            Quản lý đơn bán hàng đến các đại lý
           </p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button
-            onClick={() => router.push('/sales/orders/new')}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Tạo đơn hàng
-          </Button>
-        </div>
+        <Button onClick={() => router.push('/sales/orders/new')}>
+          <Plus className='h-4 w-4 mr-2' />
+          Tạo đơn hàng mới
+        </Button>
       </div>
 
       {/* Quick Stats */}
@@ -272,7 +378,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         <StatsCard
           title='Tổng đơn hàng'
           value={stats.total}
-          icon={ShoppingCart}
+          icon={FileText}
           variant='primary'
         />
         <StatsCard
@@ -284,14 +390,14 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         <StatsCard
           title='Đã giao hàng'
           value={stats.delivered}
-          icon={Package}
-          variant='completed'
+          icon={PackageCheck}
+          variant='warning'
         />
         <StatsCard
-          title='Doanh thu'
-          value={formatCurrency(stats.totalRevenue)}
-          icon={BanknoteArrowDown}
-          variant='warning'
+          title='Tổng giá trị'
+          value={formatCurrency(stats.totalValue)}
+          icon={DollarSign}
+          variant='success'
         />
       </div>
 
@@ -301,17 +407,16 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
         <div className='relative flex-1'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
           <Input
-            placeholder='Tìm kiếm đơn hàng theo tên, khách hàng...'
+            placeholder='Tìm kiếm đơn hàng, NCC...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             className='pl-10 pr-10'
           />
           {searchQuery && (
             <button
               onClick={() => {
-                setSearchQuery('');
-                handleSearch();
+                const nextQuery = '';
+                setSearchQuery(nextQuery);
               }}
               className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
             >
@@ -320,7 +425,11 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
           )}
         </div>
 
-        <Button onClick={handleSearch} variant='secondary'>
+        <Button
+          onClick={handleSearch}
+          variant='secondary'
+          className='transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98]'
+        >
           <Search className='h-4 w-4 mr-2' />
           Tìm kiếm
         </Button>
@@ -369,7 +478,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       {showFilters && (
         <Card>
           <CardContent className='p-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
               <div>
                 <label className='text-sm font-medium mb-1.5 block'>
                   Trạng thái đơn hàng
@@ -379,51 +488,157 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
                   onChange={(e) => {
                     const value = e.target.value as OrderStatus | '';
                     setStatusFilter(value);
-                    dispatch(
-                      setOrderFilters({
-                        ...filters,
-                        statusId: value || undefined,
-                      })
-                    );
                   }}
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
                   <option value=''>Tất cả trạng thái</option>
-                  <option value='CREATED'>Nháp</option>
+                  <option value='CREATED'>Chờ duyệt</option>
                   <option value='APPROVED'>Đã duyệt</option>
                   <option value='CANCELLED'>Đã hủy</option>
                   <option value='FULLY_DELIVERED'>Đã giao hàng</option>
                 </select>
               </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Kênh bán
+                </label>
+                <select
+                  value={saleChannelFilter}
+                  onChange={(e) =>
+                    setSaleChannelFilter(e.target.value as SaleChannel | '')
+                  }
+                  className='w-full px-3 py-2 border rounded-lg bg-background'
+                >
+                  <option value=''>Tất cả kênh</option>
+                  <option value='ONLINE'>Online</option>
+                  <option value='PARTNER'>Partner</option>
+                  <option value='RETAIL'>Retail</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Nhà cung cấp
+                </label>
+                <select
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
+                  className='w-full px-3 py-2 border rounded-lg bg-background'
+                >
+                  <option value=''>Tất cả khách hàng</option>
+                  {(customersResponse?.data?.items || []).map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày đặt
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={orderDateAfter}
+                      onChange={(e) => setOrderDateAfter(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={orderDateBefore}
+                      onChange={(e) => setOrderDateBefore(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className='text-sm font-medium mb-1.5 block'>
+                  Ngày giao
+                </label>
+                <div className='grid grid-cols-2 gap-2'>
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Từ ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={deliveryAfter}
+                      onChange={(e) => setDeliveryAfter(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <p className='mb-1 text-xs text-muted-foreground'>
+                      Đến ngày
+                    </p>
+                    <Input
+                      type='date'
+                      value={deliveryBefore}
+                      onChange={(e) => setDeliveryBefore(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {hasActiveFilters && (
-              <div className='mt-4 pt-4 border-t flex items-center justify-between'>
-                <p className='text-sm text-muted-foreground'>
-                  Đã tìm thấy {totalItems} kết quả phù hợp
-                </p>
+            <div className='mt-4 pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+              <p className='text-sm text-muted-foreground'>
+                Đã tìm thấy {totalItems} kết quả phù hợp
+              </p>
+              {hasActiveFilters && (
                 <Button variant='ghost' size='sm' onClick={clearFilters}>
                   Xóa tất cả bộ lọc
                 </Button>
+              )}
+            </div>
+
+            {hasActiveFilters && (
+              <div className='mt-2'>
+                <p className='text-sm text-muted-foreground'>
+                  Đang bật {activeFilterCount} bộ lọc
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
+      {!shouldShowResults && (
+        <Card>
+          <CardContent className='py-10 text-center'>
+            <p className='text-sm text-muted-foreground'>
+              Bấm Tìm kiếm để tải dữ liệu đơn hàng.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Error State */}
-      {error && (
+      {shouldShowResults && error && (
         <Card className='border-destructive/50 bg-destructive/5'>
           <CardContent className='p-4'>
             <p className='text-destructive'>
-              Đã xảy ra lỗi khi tải đơn hàng. Vui lòng thử lại sau.
+              Đã xảy ra lỗi khi tải dữ liệu đơn hàng. Vui lòng thử lại sau.
             </p>
           </CardContent>
         </Card>
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {shouldShowResults && isLoading && (
         <div
           className={cn(
             'gap-4',
@@ -453,7 +668,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       )}
 
       {/* Order Grid/List */}
-      {!isLoading && orders.length > 0 && (
+      {shouldShowResults && !isLoading && orders.length > 0 && (
         <div
           className={cn(
             'gap-4',
@@ -468,13 +683,14 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
               order={order}
               onClick={() => handleViewOrder(order.id)}
               customer={customerMap.get(order.toCustomerId)}
+              viewMode={viewMode}
             />
           ))}
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && orders.length === 0 && !error && (
+      {shouldShowResults && !isLoading && orders.length === 0 && !error && (
         <Card>
           <CardContent className='py-16 text-center'>
             <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
@@ -486,16 +702,11 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
             <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
               {hasActiveFilters
                 ? 'Thử điều chỉnh bộ lọc để xem thêm kết quả.'
-                : 'Bắt đầu bằng cách tạo đơn hàng đầu tiên của bạn.'}
+                : 'Bắt đầu bằng cách tạo đơn đặt hàng mới.'}
             </p>
-            {hasActiveFilters ? (
+            {hasActiveFilters && (
               <Button variant='outline' onClick={clearFilters}>
                 Xóa bộ lọc
-              </Button>
-            ) : (
-              <Button onClick={() => router.push('/sales/orders/new')}>
-                <Plus className='h-4 w-4 mr-2' />
-                Tạo đơn hàng đầu tiên
               </Button>
             )}
           </CardContent>
@@ -503,12 +714,12 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       )}
 
       {/* Pagination */}
-      {totalItems > (pagination.size || 10) && (
+      {shouldShowResults && totalItems > SEARCH_PAGE_SIZE && (
         <div className='flex items-center justify-between pt-4'>
           <p className='text-sm text-muted-foreground'>
-            Hiển thị {currentPage * (pagination.size || 10) + 1} đến{' '}
-            {Math.min((currentPage + 1) * (pagination.size || 10), totalItems)}{' '}
-            trong tổng số {totalItems} đơn hàng
+            Hiển thị {currentPage * SEARCH_PAGE_SIZE + 1} đến{' '}
+            {Math.min((currentPage + 1) * SEARCH_PAGE_SIZE, totalItems)} trong
+            tổng số {totalItems} đơn hàng
           </p>
           <div className='flex items-center gap-2'>
             <Button

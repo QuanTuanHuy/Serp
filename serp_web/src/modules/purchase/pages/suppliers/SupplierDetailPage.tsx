@@ -48,6 +48,7 @@ import { formatDate, formatCurrency } from '@/shared/utils/format';
 import { toast } from 'sonner';
 import { UpdateAddressDialog } from '../../components/dialogs/UpdateAddressDialog';
 import type { Order } from '../../types';
+import { useUser } from '@/modules/account';
 
 interface SupplierDetailPageProps {
   supplierId: string;
@@ -67,7 +68,7 @@ const STATUS_CONFIG = {
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  CREATED: 'Mới tạo',
+  CREATED: 'Chờ phê duyệt',
   APPROVED: 'Đã duyệt',
   CANCELLED: 'Đã hủy',
   FULLY_DELIVERED: 'Đã giao',
@@ -152,6 +153,12 @@ export const SupplierDetailPage: React.FC<SupplierDetailPageProps> = ({
   supplierId,
 }) => {
   const router = useRouter();
+
+  const { user } = useUser();
+  const hasEditPermission =
+    user?.roles?.includes('PURCHASE_MANAGER') ||
+    user?.roles?.includes('PURCHASE_ADMIN');
+
   const [activeTab, setActiveTab] = useState('overview');
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
@@ -275,31 +282,33 @@ export const SupplierDetailPage: React.FC<SupplierDetailPageProps> = ({
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='outline' size='icon' disabled={isDeleting}>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuItem onClick={handleEdit}>
-              <Edit className='mr-2 h-4 w-4' />
-              Chỉnh sửa nhà cung cấp
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsAddressDialogOpen(true)}>
-              <MapPin className='mr-2 h-4 w-4' />
-              Thay đổi địa chỉ
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleDelete}
-              className='text-destructive focus:text-destructive'
-            >
-              <Trash2 className='mr-2 h-4 w-4' />
-              Xóa nhà cung cấp
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {hasEditPermission && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline' size='icon' disabled={isDeleting}>
+                <MoreHorizontal className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className='mr-2 h-4 w-4' />
+                Chỉnh sửa nhà cung cấp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsAddressDialogOpen(true)}>
+                <MapPin className='mr-2 h-4 w-4' />
+                Thay đổi địa chỉ
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleDelete}
+                className='text-destructive focus:text-destructive'
+              >
+                <Trash2 className='mr-2 h-4 w-4' />
+                Xóa nhà cung cấp
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Tabs */}

@@ -54,7 +54,7 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
             {mode === 'create' ? 'Create VAS Rule' : 'Edit VAS Rule'}
           </DialogTitle>
           <DialogDescription>
-            Configure add-on service rules such as COD and insurance.
+            Configure add-on service rules such as COD.
           </DialogDescription>
         </DialogHeader>
 
@@ -90,7 +90,7 @@ export const VasRuleFormDialog: React.FC<VasRuleFormDialogProps> = ({
                     name: event.target.value,
                   }))
                 }
-                placeholder='Example: Insurance fee'
+                placeholder='Example: COD fee'
                 disabled={isLoading}
               />
             </div>

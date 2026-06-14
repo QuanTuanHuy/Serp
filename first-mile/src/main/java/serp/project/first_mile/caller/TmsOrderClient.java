@@ -45,6 +45,9 @@ public class TmsOrderClient {
     @Value("${tms-order.service.status-transitions-path:/api/v1/internal/orders/status-transitions}")
     private String statusTransitionsPath;
 
+    @Value("${tms-order.service.payment-status-path:/api/v1/internal/orders/payment-status}")
+    private String paymentStatusPath;
+
     public TmsOrderClient(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
@@ -112,6 +115,23 @@ public class TmsOrderClient {
                 new ParameterizedTypeReference<TmsOrderStatusTransitionResponse>() {
                 }
         );
+    }
+
+    public List<TmsOrderOperationView> lookupAtPostOffice(
+            String postOfficeCode, List<OrderStatus> statuses, Long tenantId) {
+        return lookup(TmsOrderLookupRequest.builder()
+                .destinationPostOfficeCode(postOfficeCode)
+                .statuses(statuses)
+                .build(), tenantId);
+    }
+
+    public void updatePaymentStatus(String orderCode, Long tenantId, String paymentStatus) {
+        var request = java.util.Map.of(
+                "orderCode", orderCode,
+                "tenantId", tenantId,
+                "paymentStatus", paymentStatus
+        );
+        post(paymentStatusPath, request, tenantId, new ParameterizedTypeReference<Void>() {});
     }
 
     private List<TmsOrderOperationView> lookup(TmsOrderLookupRequest request, Long tenantId) {

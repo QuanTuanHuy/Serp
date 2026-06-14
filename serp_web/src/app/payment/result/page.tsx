@@ -56,6 +56,19 @@ export default function PaymentResultPage() {
     return undefined;
   }, [query.orderId]);
 
+  const manifestId = React.useMemo(() => {
+    const value = Number.parseInt(query.manifestId ?? '', 10);
+    if (Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    return undefined;
+  }, [query.manifestId]);
+
+  const orderCode = React.useMemo(() => {
+    const value = (query.orderCode ?? '').trim();
+    return value || undefined;
+  }, [query.orderCode]);
+
   const appTransId = React.useMemo(() => {
     const value = (
       query.appTransId ??
@@ -81,13 +94,15 @@ export default function PaymentResultPage() {
         type: PAYMENT_RESULT_MESSAGE_TYPE,
         payload: {
           orderId,
+          manifestId,
+          orderCode,
           appTransId,
           query,
         },
       },
       window.location.origin
     );
-  }, [orderId, appTransId, query]);
+  }, [orderId, manifestId, orderCode, appTransId, query]);
 
   return (
     <main className='flex min-h-screen items-center justify-center bg-background px-4'>
@@ -95,7 +110,7 @@ export default function PaymentResultPage() {
         <h1 className='text-lg font-semibold'>Payment result</h1>
         <p className='mt-2 text-sm text-muted-foreground'>
           {resolvePaymentStatusLabel(query)}. You can close this window and
-          continue in the order confirmation dialog.
+          continue in the payment confirmation dialog.
         </p>
 
         {appTransId ? (
@@ -111,9 +126,15 @@ export default function PaymentResultPage() {
           <Button
             type='button'
             variant='outline'
-            onClick={() => window.location.assign('/first-mile/orders')}
+            onClick={() =>
+              window.location.assign(
+                query.source === 'first-mile'
+                  ? '/first-mile/last-mile'
+                  : '/first-mile/orders'
+              )
+            }
           >
-            Go to orders
+            Go to TMS
           </Button>
         </div>
       </section>

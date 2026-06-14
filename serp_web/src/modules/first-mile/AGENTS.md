@@ -28,19 +28,20 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 
 ## Route Map
 
-| Path | Page / scope |
-|------|----------------|
-| `/first-mile/post-offices` | Post offices (first-mile API) |
-| `/first-mile/orders` | Orders |
-| `/first-mile/pickup` | Pickup tracking & check-in |
+| Path                                 | Page / scope                  |
+| ------------------------------------ | ----------------------------- |
+| `/first-mile/network/post-office`    | Post offices (first-mile API) |
+| `/first-mile/orders`                 | Orders                        |
+| `/first-mile/pickup`                 | Pickup tracking & check-in    |
 | `/first-mile/dispatchers/first-mile` | Pickup dispatch (auto/manual) |
-| `/first-mile/hubs` | Hubs (second-mile API) |
-| `/first-mile/routes` | Routes (second-mile API) |
-| `/first-mile/vehicles/first-mile` | Post-office vehicles |
-| `/first-mile/vehicles/second-mile` | Hub vehicles |
-| `/first-mile/billing` | Billing calculator & rules |
-| `/first-mile/product-types` | Product types |
-| `/first-mile/import-history` | Import jobs |
+| `/first-mile/network/hub`            | Hubs (second-mile API)        |
+| `/first-mile/network/hub-postoffice` | Hub to post office links      |
+| `/first-mile/network/route`          | Routes (second-mile API)      |
+| `/first-mile/vehicles/first-mile`    | Post-office vehicles          |
+| `/first-mile/vehicles/second-mile`   | Hub vehicles                  |
+| `/first-mile/billing`                | Billing calculator & rules    |
+| `/first-mile/product-types`          | Product types                 |
+| `/first-mile/import-history`         | Import jobs                   |
 
 Legacy redirects (e.g. `/billing` → `/first-mile/billing`) live under `src/app/`; prefer new links under `/first-mile/`.
 
@@ -52,12 +53,13 @@ src/modules/first-mile/
   types/                  # Request/response TypeScript types
   components/             # Layout, auth guard
   pages/
-    post-offices/         # first-mile
+    network/
+      post-offices/       # first-mile page implementation
+      hubs/               # second-mile page implementation
+      routes/
     orders/
     pickup/
     dispatchers/first-mile/
-    hubs/                 # second-mile
-    routes/
     vehicles/
       first-mile/         # first-mile service
       second-mile/        # second-mile service

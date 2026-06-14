@@ -185,6 +185,8 @@ target/
 
 .shared/
 .claude/
+.worktrees
+.worktrees/
 ui-ux*
 backend-expert.prompt.md
 
