@@ -7,6 +7,8 @@ package serp.project.account.infrastructure.store.adapter;
 
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
@@ -71,5 +73,13 @@ public class ModuleAdapter implements IModulePort {
     @Override
     public Long countModulesByStatus(ModuleStatus status) {
         return moduleRepository.countByStatus(status);
+    }
+
+    @Override
+    public Pair<List<ModuleEntity>, Long> searchModules(String search, int limit) {
+        var pageable = PageRequest.of(0, limit);
+        var modules = moduleMapper.toEntityList(moduleRepository.searchModules(search, pageable));
+        Long total = moduleRepository.countSearchModules(search);
+        return Pair.of(modules, total != null ? total : 0L);
     }
 }
