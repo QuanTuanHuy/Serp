@@ -51,6 +51,7 @@ import type { TripAttendanceStopItem, TripAttendanceStudentItem } from '../types
 import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { schoolBusUi } from '../theme';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1391,7 +1392,10 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                               {canDrop && (
                                 <Button
                                   size="sm"
-                                  className="h-7.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0"
+                                  className={cn(
+                                    schoolBusUi.primaryButton,
+                                    'h-7.5 rounded-full px-3 text-[10px] font-bold shadow-none border-0'
+                                  )}
                                   onClick={() => handleDropoff(student)}
                                   disabled={isActing}
                                 >

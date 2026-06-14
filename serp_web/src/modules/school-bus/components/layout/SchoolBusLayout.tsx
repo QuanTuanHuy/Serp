@@ -10,7 +10,6 @@ import { cn } from '@/shared/utils';
 import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
 import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
 import { SchoolBusTopbar } from './SchoolBusTopbar';
-import { SchoolBusPathGuard } from './SchoolBusPathGuard';
 import { SchoolBusSidebar } from './SchoolBusSidebar';
 
 interface SchoolBusLayoutProps {
@@ -25,7 +24,10 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
 
   return (
     <div
-      className={cn('school-bus-shell flex min-h-screen bg-background', schoolBusUi.pageGradient)}
+      className={cn(
+        'school-bus-shell flex min-h-screen bg-background',
+        schoolBusUi.pageGradient
+      )}
       style={schoolBusThemeStyle}
     >
       <style>
@@ -63,9 +65,7 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
         <SchoolBusTopbar scrollContainerRef={containerRef} />
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
-            <RouteGuard moduleCode='SCHOOLBUS'>
-              <SchoolBusPathGuard>{children}</SchoolBusPathGuard>
-            </RouteGuard>
+            <RouteGuard moduleCode='SCHOOLBUS'>{children}</RouteGuard>
           </div>
         </main>
       </div>

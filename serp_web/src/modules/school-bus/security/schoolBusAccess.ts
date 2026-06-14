@@ -1,7 +1,7 @@
 /**
  * School Bus Module - Role-Based Access Control Helper
  *
- * Provides pure utility functions for role checking and route access control.
+ * Provides pure utility functions for role checking and action visibility.
  * These functions are UX helpers only — backend authorization is the source of truth.
  *
  * Usage:
@@ -20,15 +20,22 @@ export const SCHOOL_BUS_ROLES = {
   PARENT: 'SCHOOL_BUS_PARENT',
 } as const;
 
-export type SchoolBusRole = (typeof SCHOOL_BUS_ROLES)[keyof typeof SCHOOL_BUS_ROLES];
+export type SchoolBusRole =
+  (typeof SCHOOL_BUS_ROLES)[keyof typeof SCHOOL_BUS_ROLES];
 
 // ─── Role Predicates ───────────────────────────────────────────────────────────
 
-export function hasSchoolBusRole(roles: string[], role: SchoolBusRole): boolean {
+export function hasSchoolBusRole(
+  roles: string[],
+  role: SchoolBusRole
+): boolean {
   return roles.includes(role);
 }
 
-export function hasAnySchoolBusRole(roles: string[], check: SchoolBusRole[]): boolean {
+export function hasAnySchoolBusRole(
+  roles: string[],
+  check: SchoolBusRole[]
+): boolean {
   return check.some((r) => roles.includes(r));
 }
 
@@ -56,7 +63,10 @@ export function isSchoolBusParent(roles: string[]): boolean {
  * Returns true if the user has full operational authority (Admin or Dispatcher).
  */
 export function isSchoolBusOperator(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER]);
+  return hasAnySchoolBusRole(roles, [
+    SCHOOL_BUS_ROLES.ADMIN,
+    SCHOOL_BUS_ROLES.DISPATCHER,
+  ]);
 }
 
 /**
@@ -65,110 +75,6 @@ export function isSchoolBusOperator(roles: string[]): boolean {
  */
 export function isSchoolBusParentOnly(roles: string[]): boolean {
   return isSchoolBusParent(roles) && !isSchoolBusOperator(roles);
-}
-
-/**
- * Returns true if the user has any recognized School Bus role.
- */
-export function hasAnySchoolBusAccess(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [
-    SCHOOL_BUS_ROLES.ADMIN,
-    SCHOOL_BUS_ROLES.DISPATCHER,
-    SCHOOL_BUS_ROLES.DRIVER,
-    SCHOOL_BUS_ROLES.ATTENDANT,
-    SCHOOL_BUS_ROLES.PARENT,
-  ]);
-}
-
-// ─── Route Access ──────────────────────────────────────────────────────────────
-
-/**
- * Route-to-allowed-roles mapping for the School Bus module.
- * Keys are path prefixes (exact or prefix match).
- */
-const ROUTE_ACCESS_MAP: { path: string; roles: SchoolBusRole[] }[] = [
-  {
-    path: '/school-bus/schools',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER],
-  },
-  {
-    path: '/school-bus/parents',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER],
-  },
-  {
-    path: '/school-bus/fleet',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER],
-  },
-  {
-    path: '/school-bus/dispatch',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER],
-  },
-  {
-    path: '/school-bus/reports',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER],
-  },
-  {
-    path: '/school-bus/students',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER, SCHOOL_BUS_ROLES.PARENT],
-  },
-  {
-    path: '/school-bus/requests',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER, SCHOOL_BUS_ROLES.PARENT],
-  },
-  {
-    path: '/school-bus/subscriptions',
-    roles: [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER, SCHOOL_BUS_ROLES.PARENT],
-  },
-  {
-    path: '/school-bus/trips',
-    roles: [
-      SCHOOL_BUS_ROLES.ADMIN,
-      SCHOOL_BUS_ROLES.DISPATCHER,
-      SCHOOL_BUS_ROLES.DRIVER,
-      SCHOOL_BUS_ROLES.ATTENDANT,
-      SCHOOL_BUS_ROLES.PARENT,
-    ],
-  },
-  {
-    path: '/school-bus/attendance',
-    roles: [
-      SCHOOL_BUS_ROLES.ADMIN,
-      SCHOOL_BUS_ROLES.DISPATCHER,
-      SCHOOL_BUS_ROLES.ATTENDANT,
-      SCHOOL_BUS_ROLES.PARENT,
-    ],
-  },
-  {
-    path: '/school-bus/dashboard',
-    roles: [
-      SCHOOL_BUS_ROLES.ADMIN,
-      SCHOOL_BUS_ROLES.DISPATCHER,
-      SCHOOL_BUS_ROLES.DRIVER,
-      SCHOOL_BUS_ROLES.ATTENDANT,
-      SCHOOL_BUS_ROLES.PARENT,
-    ],
-  },
-];
-
-/**
- * Check if the user (by roles) is allowed to visit a specific school-bus path.
- * Falls back to true if no explicit rule is found (backend will enforce).
- */
-export function canAccessSchoolBusRoute(roles: string[], pathname: string): boolean {
-  const normalized = pathname.split('?')[0]; // strip query params
-
-  for (const rule of ROUTE_ACCESS_MAP) {
-    if (normalized === rule.path || normalized.startsWith(rule.path + '/')) {
-      return hasAnySchoolBusRole(roles, rule.roles);
-    }
-  }
-
-  // Root /school-bus — allow any school bus user
-  if (normalized === '/school-bus') {
-    return hasAnySchoolBusAccess(roles);
-  }
-
-  return true; // unknown paths: let backend decide
 }
 
 // ─── Landing Path ─────────────────────────────────────────────────────────────
@@ -188,7 +94,9 @@ const ROLE_PRIORITY: SchoolBusRole[] = [
 /**
  * Get the effective (highest-priority) School Bus role for a user.
  */
-export function getEffectiveSchoolBusRole(roles: string[]): SchoolBusRole | null {
+export function getEffectiveSchoolBusRole(
+  roles: string[]
+): SchoolBusRole | null {
   for (const role of ROLE_PRIORITY) {
     if (roles.includes(role)) return role;
   }
@@ -200,7 +108,7 @@ export function getEffectiveSchoolBusRole(roles: string[]): SchoolBusRole | null
  *
  * - ADMIN / DISPATCHER → /school-bus/dashboard (full ops cockpit)
  * - DRIVER             → /school-bus/trips      (assigned trips)
- * - ATTENDANT          → /school-bus/attendance  (attendance workspace)
+ * - ATTENDANT          → /school-bus/trips      (assigned trips and attendance)
  * - PARENT             → /school-bus/dashboard  (child status dashboard)
  */
 export function getSchoolBusLandingPath(roles: string[]): string {
@@ -215,7 +123,7 @@ export function getSchoolBusLandingPath(roles: string[]): string {
       return '/school-bus/trips';
 
     case SCHOOL_BUS_ROLES.ATTENDANT:
-      return '/school-bus/attendance';
+      return '/school-bus/trips';
 
     case SCHOOL_BUS_ROLES.PARENT:
       return '/school-bus/dashboard';
@@ -256,7 +164,10 @@ export function canMarkAttendance(roles: string[]): boolean {
  * Backend permission: school-bus.request.approve / school-bus.subscription.approve
  */
 export function canApproveRequests(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER]);
+  return hasAnySchoolBusRole(roles, [
+    SCHOOL_BUS_ROLES.ADMIN,
+    SCHOOL_BUS_ROLES.DISPATCHER,
+  ]);
 }
 
 /**
@@ -272,7 +183,10 @@ export function canWriteMasterData(roles: string[]): boolean {
  * Backend permission: school-bus.planning.write / school-bus.dispatch.assign
  */
 export function canManageDispatching(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER]);
+  return hasAnySchoolBusRole(roles, [
+    SCHOOL_BUS_ROLES.ADMIN,
+    SCHOOL_BUS_ROLES.DISPATCHER,
+  ]);
 }
 
 /**
@@ -280,7 +194,10 @@ export function canManageDispatching(roles: string[]): boolean {
  * Backend permission: school-bus.report.read / school-bus.report.export
  */
 export function canAccessReports(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER]);
+  return hasAnySchoolBusRole(roles, [
+    SCHOOL_BUS_ROLES.ADMIN,
+    SCHOOL_BUS_ROLES.DISPATCHER,
+  ]);
 }
 
 /**
@@ -351,9 +268,6 @@ export function useSchoolBusAccess() {
       canAccessReports: canAccessReports(roles),
       canWriteStudentData: canWriteStudentData(roles),
       canWriteRequest: canWriteRequest(roles),
-
-      // Route access
-      canAccessRoute: (pathname: string) => canAccessSchoolBusRoute(roles, pathname),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [roles.join(',')]
