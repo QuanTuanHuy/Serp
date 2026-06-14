@@ -63,38 +63,39 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     );
 
     @Query("""
-            select o
-            from Order o
-            where o.tenantId = :tenantId
-                and o.status in :statuses
-                and o.senderLocation is not null
-                and (
-                    :postOfficeCode is null
-                    or upper(o.originPostOfficeCode) = upper(:postOfficeCode)
-                )
-                and (
-                    o.pickupTimeStart is null
-                    or o.pickupTimeStart <= coalesce(:horizonEnd, o.pickupTimeStart)
-                )
-            order by
-                case
-                    when :horizonStart is not null
-                        and o.pickupTimeEnd is not null
-                        and o.pickupTimeEnd < :horizonStart
-                    then 0
-                    else 1
-                end asc,
-                o.pickupTimeEnd asc,
-                o.id asc
-            """)
-    List<Order> findPickupCandidateOrders(
-            @Param("tenantId") Long tenantId,
-            @Param("statuses") Collection<OrderStatus> statuses,
-            @Param("postOfficeCode") String postOfficeCode,
-            @Param("horizonStart") LocalDateTime horizonStart,
-            @Param("horizonEnd") LocalDateTime horizonEnd,
-            Pageable pageable
-    );
+        select o
+        from Order o
+        where o.tenantId = :tenantId
+            and o.status in :statuses
+            and o.senderLocation is not null
+            and (
+                :postOfficeCode is null
+                or upper(o.originPostOfficeCode) = upper(:postOfficeCode)
+            )
+            and (
+                o.pickupTimeStart is null
+                or cast(:horizonEnd as java.time.LocalDateTime) is null
+                or o.pickupTimeStart <= :horizonEnd
+            )
+        order by
+            case
+                when cast(:horizonStart as java.time.LocalDateTime) is not null 
+                    and o.pickupTimeEnd is not null
+                    and o.pickupTimeEnd < :horizonStart
+                then 0
+                else 1
+            end asc,
+            o.pickupTimeEnd asc,
+            o.id asc
+        """)
+        List<Order> findPickupCandidateOrders(
+                @Param("tenantId") Long tenantId,
+                @Param("statuses") Collection<OrderStatus> statuses,
+                @Param("postOfficeCode") String postOfficeCode,
+                @Param("horizonStart") LocalDateTime horizonStart,
+                @Param("horizonEnd") LocalDateTime horizonEnd,
+                Pageable pageable
+        );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
