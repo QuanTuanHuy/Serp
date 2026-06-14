@@ -36,7 +36,7 @@ public class WebhookEventService {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${app.webhook.tms-order.payment-confirmed-url:${app.webhook.first-mile.payment-confirmed-url:http://localhost:8099/api/v1/internal/payment-webhooks/orders/payment-confirmed}}")
+    @Value("${app.webhook.tms-order.payment-confirmed-url:${app.webhook.first-mile.payment-confirmed-url:http://localhost:8105/api/v1/internal/payment-webhooks/orders/payment-confirmed}}")
     private String orderPaymentConfirmedUrl;
 
     @Value("${app.webhook.tms-order.secret:${app.webhook.first-mile.secret:}}")

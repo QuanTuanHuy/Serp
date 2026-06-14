@@ -23,6 +23,6 @@ COPY --from=build /app/target/second-mile-*.jar app.jar
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
 
-EXPOSE 8095
+EXPOSE 8102
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

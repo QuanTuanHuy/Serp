@@ -36,7 +36,7 @@ public class FirstMilePostOfficeSuggestionCaller {
     public FirstMilePostOfficeSuggestionCaller(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${first-mile.service.base-url:http://localhost:8093}") String firstMileBaseUrl,
+            @Value("${first-mile.service.base-url:http://localhost:8101}") String firstMileBaseUrl,
             @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;

@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
                 )
         ),
         servers = {
-                @Server(url = "http://localhost:8096", description = "Local Development Server"),
+        @Server(url = "http://localhost:8103", description = "Local Development Server"),
                 @Server(url = "http://localhost:8080/payment/api/v1", description = "API Gateway (recommended)")
         }
 )

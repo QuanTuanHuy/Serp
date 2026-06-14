@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8093}
+  port: ${SERVER_PORT:8101}
 
 spring:
   servlet:
@@ -86,7 +86,7 @@ internal-api:
 
 tms-order:
   service:
-    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8105}
     lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
     pickup-candidates-path: ${TMS_ORDER_PICKUP_CANDIDATES_PATH:/api/v1/internal/orders/pickup-candidates}
     status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
@@ -96,7 +96,7 @@ tms-order:
 
 payment:
   service:
-    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8096}
+    base-url: ${PAYMENT_SERVICE_BASE_URL:http://localhost:8103}
     gateway-code: ${PAYMENT_SERVICE_GATEWAY_CODE:zalopay}
     create-order-path-template: ${PAYMENT_SERVICE_CREATE_ORDER_PATH_TEMPLATE:/v1/payments/%s/create-order}
     query-order-path-template: ${PAYMENT_SERVICE_QUERY_ORDER_PATH_TEMPLATE:/v1/payments/%s/query-order}
@@ -104,7 +104,7 @@ payment:
 
 second-mile:
   service:
-    base-url: ${SECOND_MILE_SERVICE_BASE_URL:http://localhost:8095}
+    base-url: ${SECOND_MILE_SERVICE_BASE_URL:http://localhost:8102}
     validate-handover-outbound-sync-path: ${SECOND_MILE_VALIDATE_HANDOVER_OUTBOUND_SYNC_PATH:/api/v1/handover-manifests/internal/validate-outbound-sync}
 
 geocode:

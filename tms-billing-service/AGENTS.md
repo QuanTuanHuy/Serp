@@ -7,7 +7,8 @@ Use it together with the repository-root `AGENTS.md`. For TMS UI (billing pages)
 
 - **Module:** `tms-billing-service` — Spring Boot, package `serp.project.tms_billing_service`.
 - **Scope:** Public calculate-shipping-fee API and admin CRUD for pricing rules.
-- **Gateway path:** typically `/tms-billing/api/v1/...` (confirm in `api_gateway` when wiring).
+- **Default port:** `8104` (`SERVER_PORT`).
+- **Gateway path:** `/tms-billing-service/api/v1/...` (proxied by `api_gateway`).
 
 ## File headers (required)
 
