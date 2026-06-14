@@ -25,12 +25,6 @@ const MODULE_ROOT_PATHS: Record<string, string> = {
   SCHOOLBUS: '/school-bus',
 };
 
-const TMS_NETWORK_ROUTE_ALIASES: Record<string, string> = {
-  '/first-mile/post-offices': '/first-mile/network/post-office',
-  '/first-mile/hubs': '/first-mile/network/hub',
-  '/first-mile/routes': '/first-mile/network/route',
-};
-
 const KNOWN_APP_ROOT_SEGMENTS = new Set([
   'admin',
   'apps',
@@ -58,19 +52,6 @@ export const normalizePath = (path: string): string => {
   const trimmed = compacted.replace(/\/+$/, '');
 
   return trimmed || '/';
-};
-
-const normalizeTmsNetworkPath = (path: string): string => {
-  const alias = Object.entries(TMS_NETWORK_ROUTE_ALIASES).find(
-    ([legacyPath]) => path === legacyPath || path.startsWith(`${legacyPath}/`)
-  );
-
-  if (!alias) {
-    return path;
-  }
-
-  const [legacyPath, networkPath] = alias;
-  return `${networkPath}${path.slice(legacyPath.length)}`;
 };
 
 export const getModuleRootPath = (moduleCode?: string): string => {
@@ -103,23 +84,18 @@ export const normalizeMenuPathForModule = (
     normalized === moduleRootPath ||
     normalized.startsWith(moduleRootPath + '/')
   ) {
-    return canonicalCode === 'TMS'
-      ? normalizeTmsNetworkPath(normalized)
-      : normalized;
+    return normalized;
   }
 
   if (canonicalCode === 'TMS' && normalized.startsWith('/tms')) {
     const suffix = normalized.slice('/tms'.length);
-    return normalizeTmsNetworkPath(normalizePath(`${moduleRootPath}${suffix}`));
+    return normalizePath(`${moduleRootPath}${suffix}`);
   }
 
   const firstSegment = normalized.split('/').filter(Boolean)[0]?.toLowerCase();
 
   if (!firstSegment || !KNOWN_APP_ROOT_SEGMENTS.has(firstSegment)) {
-    const modulePath = normalizePath(`${moduleRootPath}${normalized}`);
-    return canonicalCode === 'TMS'
-      ? normalizeTmsNetworkPath(modulePath)
-      : modulePath;
+    return normalizePath(`${moduleRootPath}${normalized}`);
   }
 
   return normalized;
