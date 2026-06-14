@@ -28,18 +28,18 @@ export function DashboardDonutChart({
       const dataPoint = payload[0].payload;
       const color = colorMap[dataPoint.name] || '#6B7280';
       return (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-lg shadow-lg">
+        <div className="rounded-lg border border-border bg-popover p-2.5 text-popover-foreground shadow-lg">
           <div className="flex items-center gap-2">
             <span
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: color }}
             />
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="text-sm font-semibold text-foreground">
               {dataPoint.label || dataPoint.name}
             </span>
           </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 pl-5">
-            Count: <span className="font-bold text-zinc-800 dark:text-zinc-200">{dataPoint.count}</span>
+          <p className="mt-1 pl-5 text-xs text-muted-foreground">
+            Count: <span className="font-bold text-foreground">{dataPoint.count}</span>
           </p>
         </div>
       );
@@ -50,13 +50,13 @@ export function DashboardDonutChart({
   return (
     <div className="flex flex-col h-full">
       {title && (
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           {title}
         </h3>
       )}
       <div className="flex-1 min-h-[200px] relative flex items-center justify-center">
         {chartData.length === 0 ? (
-          <div className="text-sm text-zinc-400 dark:text-zinc-500 italic">
+          <div className="text-sm italic text-muted-foreground">
             No data available
           </div>
         ) : (
@@ -93,7 +93,7 @@ export function DashboardDonutChart({
                   const payload = entry.payload;
                   const item = data.find((d) => d.name === payload.name);
                   return (
-                    <span className="text-xs text-zinc-600 dark:text-zinc-400 font-medium ml-1">
+                    <span className="ml-1 text-xs font-medium text-muted-foreground">
                       {payload.label || payload.name} ({item?.count || 0})
                     </span>
                   );

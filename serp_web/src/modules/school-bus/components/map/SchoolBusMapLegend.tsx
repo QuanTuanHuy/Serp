@@ -51,16 +51,16 @@ export function SchoolBusMapLegend({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 select-none',
-        isCollapsed ? 'w-[180px] hover:bg-slate-50 cursor-pointer' : 'w-[200px]',
+        'rounded-2xl border border-border bg-popover/95 p-3 text-popover-foreground shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 select-none',
+        isCollapsed ? 'w-[180px] hover:bg-muted cursor-pointer' : 'w-[200px]',
         className
       )}
       onClick={isCollapsed ? () => setIsCollapsed(false) : undefined}
     >
       <div
         className={cn(
-          'flex items-center justify-between text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 cursor-pointer',
-          !isCollapsed && 'border-b border-slate-100 pb-1.5'
+          'flex items-center justify-between text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground cursor-pointer',
+          !isCollapsed && 'border-b border-border pb-1.5'
         )}
         onClick={(e) => {
           if (isCollapsed) return; // parent onClick handles expand
@@ -70,7 +70,7 @@ export function SchoolBusMapLegend({
         title={isCollapsed ? 'Click to show legend' : 'Click to hide legend'}
       >
         {isCollapsed ? (
-          <span className='normal-case tracking-normal text-slate-600 hover:text-slate-950'>
+          <span className='normal-case tracking-normal text-muted-foreground hover:text-foreground'>
             Map legend <span className='text-slate-400'>· show</span>
           </span>
         ) : (
@@ -85,7 +85,7 @@ export function SchoolBusMapLegend({
 
       {!isCollapsed && (
         <>
-          <div className='mt-2 grid gap-1 text-xs text-slate-700'>
+          <div className='mt-2 grid gap-1 text-xs text-foreground'>
             {(items ?? DEFAULT_LEGEND_ITEMS).map((item) => (
               <LegendRow
                 key={item.kind}
@@ -96,7 +96,7 @@ export function SchoolBusMapLegend({
             ))}
           </div>
           {showRouteLines && (
-            <div className='mt-2.5 space-y-1 text-xs border-t border-slate-100 pt-2'>
+            <div className='mt-2.5 space-y-1 border-t border-border pt-2 text-xs'>
               <p className='flex items-center gap-2 text-sky-700'>
                 <span
                   className='block h-[2px] w-8 rounded-full'
@@ -139,9 +139,9 @@ function LegendRow({
       onClick={onToggle}
       className={cn(
         'flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left transition-all duration-200',
-        'hover:bg-slate-50',
+        'hover:bg-muted',
         active
-          ? 'text-slate-700'
+          ? 'text-foreground'
           : 'text-slate-300 line-through decoration-slate-300'
       )}
       title={active ? `Hide ${label} markers` : `Show ${label} markers`}

@@ -27,8 +27,8 @@ export function DashboardLineChart({
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-2.5 rounded-lg shadow-lg">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mb-1">
+        <div className="rounded-lg border border-border bg-popover p-2.5 text-popover-foreground shadow-lg">
+          <p className="mb-1 text-xs font-semibold text-muted-foreground">
             Date: {dataPoint.label || dataPoint.name}
           </p>
           <div className="flex items-center gap-2">
@@ -36,7 +36,7 @@ export function DashboardLineChart({
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: color }}
             />
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <span className="text-sm font-semibold text-foreground">
               Trips: <span className="text-red-700 dark:text-red-400">{dataPoint.count}</span>
             </span>
           </div>
@@ -51,13 +51,13 @@ export function DashboardLineChart({
   return (
     <div className="flex flex-col h-full">
       {title && (
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
           {title}
         </h3>
       )}
       <div className="flex-1 min-h-[220px] relative flex items-center justify-center">
         {!hasData ? (
-          <div className="text-sm text-zinc-400 dark:text-zinc-500 italic">
+          <div className="text-sm italic text-muted-foreground">
             No trip history data available
           </div>
         ) : (
@@ -76,18 +76,17 @@ export function DashboardLineChart({
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
-                stroke="#E4E4E7"
-                className="dark:stroke-zinc-800"
+                stroke="var(--border)"
               />
               <XAxis
                 dataKey="label"
-                tick={{ fill: '#71717A', fontSize: 10 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fill: '#71717A', fontSize: 10 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
               />

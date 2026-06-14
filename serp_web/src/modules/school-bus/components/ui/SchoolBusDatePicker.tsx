@@ -171,7 +171,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
     return (
       <div className={cn('flex flex-col gap-1.5', fullWidth ? 'w-full' : 'w-auto', className)}>
         {label && (
-          <label className='text-xs font-semibold text-slate-700'>
+          <label className='text-xs font-semibold text-foreground'>
             {label}
             {required && <span className='text-red-500 ml-0.5'>*</span>}
           </label>
@@ -185,65 +185,65 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
               variant='outline'
               disabled={disabled}
               className={cn(
-                'relative flex items-center justify-between bg-white text-left font-medium transition-all shadow-sm border border-slate-200 text-slate-800 hover:bg-slate-50/50 outline-none',
+                'relative flex items-center justify-between border border-border bg-background text-left font-medium text-foreground shadow-sm outline-none transition-all hover:bg-muted/40',
                 size === 'sm' ? 'h-9 px-3 rounded-lg text-xs' : 'h-11 px-4 rounded-xl text-sm',
                 fullWidth && 'w-full',
                 error && 'border-rose-500 ring-rose-500/20 focus-visible:ring-rose-500/20',
-                !value && 'text-slate-400 hover:text-slate-400 font-normal',
+                !value && 'text-muted-foreground font-normal',
                 'focus-visible:ring-2 focus-visible:ring-[#C81E3A]/20 focus-visible:ring-offset-0 focus-visible:border-[#C81E3A]'
               )}
             >
               <span className='truncate'>{formattedDisplayValue || placeholder}</span>
               
-              <div className='flex items-center gap-1.5 ml-2 text-slate-400 shrink-0'>
+              <div className='ml-2 flex shrink-0 items-center gap-1.5 text-muted-foreground'>
                 {clearable && value && !disabled && (
                   <button
                     type='button'
                     onClick={handleClear}
-                    className='rounded-full p-0.5 hover:bg-slate-100 hover:text-slate-600 transition-colors'
+                    className='rounded-full p-0.5 transition-colors hover:bg-muted hover:text-foreground'
                   >
                     <X className='h-3.5 w-3.5' />
                   </button>
                 )}
-                <CalendarIcon className={cn('text-slate-400', size === 'sm' ? 'h-4 w-4' : 'h-4.5 w-4.5')} />
+                <CalendarIcon className={cn('text-muted-foreground', size === 'sm' ? 'h-4 w-4' : 'h-4.5 w-4.5')} />
               </div>
             </Button>
           </PopoverTrigger>
           <PopoverContent 
-            className='w-auto p-0 z-50 rounded-2xl border border-slate-100 bg-white shadow-xl origin-top-left' 
+            className='z-50 w-auto origin-top-left rounded-2xl border border-border bg-popover p-0 text-popover-foreground shadow-xl'
             align='start'
             sideOffset={6}
           >
             <div className='p-3 flex flex-col gap-3'>
               {isPickingMonthYear ? (
-                <div className='flex flex-col w-[276px] p-1 bg-white'>
+                <div className='flex w-[276px] flex-col bg-popover p-1'>
                   {/* Header */}
-                  <div className='flex items-center justify-between border-b border-slate-100 pb-2 mb-3'>
+                  <div className='mb-3 flex items-center justify-between border-b border-border pb-2'>
                     <button
                       type='button'
                       onClick={() => setIsPickingMonthYear(false)}
-                      className='p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors cursor-pointer'
+                      className='cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
                     >
                       <ArrowLeft className='h-4 w-4' />
                     </button>
-                    <span className='text-xs font-bold text-slate-700 uppercase tracking-wider'>Select Month & Year</span>
+                    <span className='text-xs font-bold text-foreground uppercase tracking-wider'>Select Month & Year</span>
                     <div className='w-6 h-6' />
                   </div>
 
                   {/* Year selection panel */}
-                  <div className='flex items-center justify-between bg-slate-50 border border-slate-200/60 rounded-xl p-2 mb-4'>
+                  <div className='mb-4 flex items-center justify-between rounded-xl border border-border bg-muted/40 p-2'>
                     <button
                       type='button'
                       onClick={() => setBrowsingYear(prev => prev - 1)}
-                      className='p-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-600 active:scale-95 transition-all cursor-pointer'
+                      className='cursor-pointer rounded-lg p-1 text-muted-foreground transition-all hover:bg-background hover:text-foreground hover:shadow-sm active:scale-95'
                     >
                       <ChevronLeft className='h-4 w-4' />
                     </button>
-                    <span className='text-sm font-bold text-slate-700'>{browsingYear}</span>
+                    <span className='text-sm font-bold text-foreground'>{browsingYear}</span>
                     <button
                       type='button'
                       onClick={() => setBrowsingYear(prev => prev + 1)}
-                      className='p-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-600 active:scale-95 transition-all cursor-pointer'
+                      className='cursor-pointer rounded-lg p-1 text-muted-foreground transition-all hover:bg-background hover:text-foreground hover:shadow-sm active:scale-95'
                     >
                       <ChevronRight className='h-4 w-4' />
                     </button>
@@ -262,7 +262,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                             'py-2 px-3 text-xs font-semibold rounded-xl text-center transition-all cursor-pointer border border-transparent',
                             isCurrent
                               ? 'bg-[#C81E3A] text-white font-bold shadow-sm'
-                              : 'text-slate-600 hover:bg-[#FDECEF]/60 hover:text-[#C81E3A] hover:border-[#FDECEF]'
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:border-border'
                           )}
                         >
                           {m.label}
@@ -290,7 +290,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                               e.stopPropagation();
                               setIsPickingMonthYear(true);
                             }}
-                            className='font-bold text-sm text-slate-700 hover:text-[#C81E3A] hover:bg-slate-50 px-2.5 py-1 rounded-xl transition-all cursor-pointer select-none border-none outline-none flex items-center gap-1 relative z-10'
+                            className='relative z-10 flex cursor-pointer select-none items-center gap-1 rounded-xl border-none px-2.5 py-1 text-sm font-bold text-foreground outline-none transition-all hover:bg-muted hover:text-[#C81E3A]'
                           >
                             {props.children}
                           </button>
@@ -309,7 +309,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                     )}
                   />
                   
-                  <div className='flex items-center justify-between border-t border-slate-100 pt-2 px-1 gap-2'>
+                  <div className='flex items-center justify-between gap-2 border-t border-border px-1 pt-2'>
                     <Button
                       type='button'
                       variant='ghost'
@@ -328,7 +328,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                           onChange('');
                           setOpen(false);
                         }}
-                        className='text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-lg'
+                        className='rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground'
                       >
                         Clear
                       </Button>

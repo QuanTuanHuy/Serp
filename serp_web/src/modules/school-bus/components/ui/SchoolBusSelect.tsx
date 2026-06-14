@@ -127,11 +127,11 @@ export function SchoolBusSelect({
           disabled={disabled}
           aria-label={label || placeholder}
           className={cn(
-            'inline-flex items-center justify-between gap-2 border bg-white text-slate-700 outline-none transition-all',
-            'hover:border-slate-300 hover:bg-slate-50/50',
-            'focus:border-slate-400 focus:ring-1 focus:ring-slate-300/30',
-            'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:border-slate-200',
-            hasValue && 'border-slate-300 text-slate-900 font-semibold',
+            'inline-flex items-center justify-between gap-2 border border-border bg-background text-muted-foreground outline-none transition-all',
+            'hover:bg-muted/40',
+            'focus:border-ring focus:ring-1 focus:ring-ring/30',
+            'disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-50',
+            hasValue && 'text-foreground font-semibold',
             size === 'sm' && 'h-9 px-3 text-xs rounded-lg',
             size === 'md' && 'h-10 px-4.5 text-sm rounded-xl',
             fullWidth && 'w-full',
@@ -141,10 +141,10 @@ export function SchoolBusSelect({
         >
           <div className='flex items-center gap-2 min-w-0 flex-1 text-left'>
             {TriggerIcon && (
-              <TriggerIcon className='h-3.5 w-3.5 shrink-0 opacity-60 text-slate-500' />
+              <TriggerIcon className='h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-60' />
             )}
             {selectedOption?.icon && !TriggerIcon && (
-              <selectedOption.icon className='h-3.5 w-3.5 shrink-0 opacity-60 text-slate-500' />
+              <selectedOption.icon className='h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-60' />
             )}
             {selectedOption?.color && (
               <span
@@ -181,23 +181,23 @@ export function SchoolBusSelect({
 
       <PopoverContent
         align='start'
-        className='z-[150] w-[var(--radix-popover-trigger-width)] min-w-[200px] max-w-[min(480px,calc(100vw-2rem))] rounded-xl border border-slate-200 bg-white p-1 shadow-lg'
+        className='z-[150] w-[var(--radix-popover-trigger-width)] min-w-[200px] max-w-[min(480px,calc(100vw-2rem))] rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg'
       >
         {searchable && (
-          <div className='relative p-1.5 border-b border-slate-100 mb-1'>
+          <div className='relative mb-1 border-b border-border p-1.5'>
             <Search className='absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
             <input
               type='text'
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='w-full h-8 pl-8 pr-3 text-xs bg-slate-50 rounded-lg border border-slate-200 outline-none focus:bg-white focus:border-slate-300 transition-all'
+              className='h-8 w-full rounded-lg border border-border bg-muted/40 pr-3 pl-8 text-xs text-foreground outline-none transition-all placeholder:text-muted-foreground focus:bg-background focus:border-ring'
             />
             {searchQuery && (
               <button
                 type='button'
                 onClick={() => setSearchQuery('')}
-                className='absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600'
+                className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground'
               >
                 <X className='h-3 w-3' />
               </button>
@@ -207,7 +207,7 @@ export function SchoolBusSelect({
 
         <div className='max-h-60 overflow-y-auto flex flex-col gap-0.5 custom-scrollbar'>
           {filteredOptions.length === 0 ? (
-            <div className='px-3 py-4 text-center text-xs text-slate-400 font-medium'>
+            <div className='px-3 py-4 text-center text-xs font-medium text-muted-foreground'>
               {emptyText}
             </div>
           ) : (
@@ -231,7 +231,7 @@ export function SchoolBusSelect({
                       ? colorInfo
                         ? cn(colorInfo.bg, colorInfo.text, 'font-semibold')
                         : 'bg-[#FDECEF] text-[#C81E3A] font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     opt.disabled && 'pointer-events-none opacity-40'
                   )}
                 >
@@ -255,7 +255,7 @@ export function SchoolBusSelect({
                         'h-3.5 w-3.5 shrink-0 opacity-70',
                         isSelected && colorInfo
                           ? colorInfo.text
-                          : 'text-slate-400'
+                          : 'text-muted-foreground'
                       )}
                     />
                   )}
@@ -279,7 +279,7 @@ export function SchoolBusSelect({
                         'truncate text-[10px] mt-0.5 font-normal',
                         opt.description === 'Ready' ? 'text-emerald-600' :
                         opt.description?.toLowerCase().includes('missing') ? 'text-amber-600' :
-                        'text-slate-400'
+                        'text-muted-foreground'
                       )}>
                         {opt.description}
                       </p>
@@ -294,7 +294,7 @@ export function SchoolBusSelect({
                           ? colorInfo
                             ? cn(colorInfo.bg, colorInfo.text)
                             : 'bg-white text-[#C81E3A] border border-[#C81E3A]/20'
-                          : 'bg-slate-100 text-slate-500'
+                          : 'bg-muted text-muted-foreground'
                       )}
                     >
                       {opt.count}

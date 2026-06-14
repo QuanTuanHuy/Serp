@@ -17,14 +17,14 @@ interface SchoolBusMetricCardProps {
 }
 
 const toneClasses: Record<MetricTone, string> = {
-  default: 'bg-slate-50 text-slate-600 ring-slate-100',
-  info: 'bg-blue-50 text-blue-700 ring-blue-100/70',
-  success: 'bg-emerald-50 text-emerald-700 ring-emerald-100/70',
-  warning: 'bg-amber-50 text-amber-700 ring-amber-100/70',
-  school: 'bg-red-50 text-[#C81E3A] ring-red-100/70',
-  pickup: 'bg-blue-50 text-blue-700 ring-blue-100/70',
-  linked: 'bg-indigo-50 text-indigo-700 ring-indigo-100/70',
-  student: 'bg-violet-50 text-violet-700 ring-violet-100/70',
+  default: 'bg-muted text-muted-foreground ring-border',
+  info: 'bg-blue-50 text-blue-700 ring-blue-100/70 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900',
+  success: 'bg-emerald-50 text-emerald-700 ring-emerald-100/70 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900',
+  warning: 'bg-amber-50 text-amber-700 ring-amber-100/70 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900',
+  school: 'bg-red-50 text-[#C81E3A] ring-red-100/70 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900',
+  pickup: 'bg-blue-50 text-blue-700 ring-blue-100/70 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-900',
+  linked: 'bg-indigo-50 text-indigo-700 ring-indigo-100/70 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-900',
+  student: 'bg-violet-50 text-violet-700 ring-violet-100/70 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900',
 };
 
 export function SchoolBusMetricCard({
@@ -37,7 +37,7 @@ export function SchoolBusMetricCard({
 }: SchoolBusMetricCardProps) {
   if (variant === 'compact') {
     return (
-      <Card className='py-0 shadow-none border border-slate-200 rounded-[20px] bg-white'>
+      <Card className='rounded-[20px] border border-border bg-card py-0 text-card-foreground shadow-none'>
         <CardContent className='flex items-center gap-3 px-4 py-3'>
           {Icon ? (
             <div

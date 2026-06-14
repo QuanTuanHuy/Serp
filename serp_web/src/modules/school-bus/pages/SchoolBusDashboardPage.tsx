@@ -155,14 +155,14 @@ export function SchoolBusDashboardPage() {
 
             {/* Attendance Chart (scoped to their children) */}
             <div className='grid gap-6 md:grid-cols-2'>
-              <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+              <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
                 <DashboardDonutChart
                   title='Student Attendance Status'
                   data={dashboard.attendanceChart}
                   colorMap={ATTENDANCE_COLORS}
                 />
               </div>
-              <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+              <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
                 <DashboardDonutChart
                   title='Student Trip Status'
                   data={dashboard.tripStatusChart}
@@ -366,7 +366,7 @@ export function SchoolBusDashboardPage() {
             </div>
 
             {/* Attendance Chart (scoped to their trips) */}
-            <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardDonutChart
                 title='Student Attendance Status on Trips'
                 data={dashboard.attendanceChart}
@@ -514,9 +514,9 @@ export function SchoolBusDashboardPage() {
       }
     >
       {/* Dynamic Filter Panel */}
-      <div className='mb-6 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm'>
+      <div className='mb-6 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm'>
         <div className='flex flex-wrap items-center justify-between gap-4'>
-          <div className='flex items-center gap-2 text-zinc-800 dark:text-zinc-200'>
+          <div className='flex items-center gap-2 text-foreground'>
             <Filter className='h-4 w-4 text-red-800' />
             <span className='font-semibold text-sm'>Dashboard Filters</span>
           </div>
@@ -528,7 +528,7 @@ export function SchoolBusDashboardPage() {
                 type='date'
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className='text-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-800'
+                className='rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring'
               />
             </div>
 
@@ -538,7 +538,7 @@ export function SchoolBusDashboardPage() {
               onChange={(e) =>
                 setSchoolId(e.target.value ? Number(e.target.value) : undefined)
               }
-              className='text-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-800'
+              className='rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring'
             >
               <option value=''>All Schools</option>
               {schools.map((school) => (
@@ -552,7 +552,7 @@ export function SchoolBusDashboardPage() {
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value)}
-              className='text-sm border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-800'
+              className='rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring'
             >
               <option value=''>All Directions</option>
               <option value='OUTBOUND'>Outbound</option>
@@ -621,7 +621,7 @@ export function SchoolBusDashboardPage() {
           {/* Grid Layout for Analytical Charts */}
           <div className='grid gap-6 md:grid-cols-3'>
             {/* Trip status distribution donut */}
-            <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardDonutChart
                 title='Trip Status Distribution'
                 data={dashboard.tripStatusChart}
@@ -630,7 +630,7 @@ export function SchoolBusDashboardPage() {
             </div>
 
             {/* Attendance donut */}
-            <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardDonutChart
                 title='Student Attendance Status'
                 data={dashboard.attendanceChart}
@@ -639,7 +639,7 @@ export function SchoolBusDashboardPage() {
             </div>
 
             {/* Route Assignment bar chart */}
-            <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardBarChart
                 title='Route Assignment Status'
                 data={dashboard.routeReadinessChart}
@@ -650,7 +650,7 @@ export function SchoolBusDashboardPage() {
 
           <div className='grid gap-6 md:grid-cols-3'>
             {/* Trips by Date Trend Chart (takes 2 cols) */}
-            <div className='md:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='md:col-span-2 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardLineChart
                 title='Trips Run Over Time'
                 data={dashboard.tripsByDate}
@@ -659,7 +659,7 @@ export function SchoolBusDashboardPage() {
             </div>
 
             {/* Request status bar chart */}
-            <div className='bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm'>
+            <div className='rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm'>
               <DashboardBarChart
                 title='Request Workload'
                 data={dashboard.requestStatusChart}

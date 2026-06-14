@@ -29,7 +29,7 @@ export function SchoolBusPageHeader({
   return (
     <div
       className={cn(
-        'flex flex-col gap-1 border-b border-slate-200/60 pb-5 bg-transparent',
+        'flex flex-col gap-1 border-b border-border pb-5 bg-transparent',
         compact && 'pb-3.5',
         className
       )}
@@ -39,7 +39,7 @@ export function SchoolBusPageHeader({
         <div className='min-w-0 flex-1'>
           <h1
             className={cn(
-              'font-bold leading-tight tracking-tight text-slate-900',
+              'font-bold leading-tight tracking-tight text-foreground',
               compact ? 'text-xl' : 'text-2xl sm:text-3xl'
             )}
           >
@@ -48,7 +48,7 @@ export function SchoolBusPageHeader({
           {description && (
             <div
               className={cn(
-                'text-slate-500 leading-normal',
+                'text-muted-foreground leading-normal',
                 compact ? 'text-xs mt-0.5' : 'text-sm mt-1.5 max-w-3xl'
               )}
             >

@@ -1269,7 +1269,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
         </div>
 
         <Sheet open={isAttendanceDrawerOpen} onOpenChange={setIsAttendanceDrawerOpen}>
-          <SheetContent side="right" className="w-[100vw] sm:max-w-[550px] p-6 overflow-y-auto bg-white flex flex-col gap-6 h-full">
+          <SheetContent side="right" className="school-bus-shell flex h-full w-[100vw] flex-col gap-6 overflow-y-auto bg-background p-6 text-foreground sm:max-w-[550px]">
             <SheetHeader className="border-b border-slate-100 pb-4">
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-base font-extrabold text-slate-800">
