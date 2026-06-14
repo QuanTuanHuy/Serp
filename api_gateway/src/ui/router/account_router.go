@@ -134,6 +134,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		organizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/users/:userId/type", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/users/:userId/reset-password", genericProxyController.ProxyHandler("account"))
 
+		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/settings/search", genericProxyController.ProxyHandler("account"))
+
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/invitations", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/invitations", genericProxyController.ProxyHandler("account"))
 		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/invitations/:invitationId", genericProxyController.ProxyHandler("account"))
