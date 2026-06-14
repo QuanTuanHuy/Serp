@@ -7,7 +7,6 @@ import type {
   BillingCalculationType,
   BillingDeliveryService,
   BillingRouteType,
-  BillingSpecialCargoRequest,
   BillingSurchargeRuleCode,
   BillingVasRuleCode,
   CalculateShippingFeeRequest,
@@ -30,23 +29,7 @@ export interface BillingFormState {
   widthCm: string;
   heightCm: string;
   codAmount: string;
-  declaredValue: string;
-  specialCargo: BillingSpecialCargoRequest;
 }
-
-export const updateSpecialCargoField = (
-  previous: BillingFormState,
-  key: keyof BillingSpecialCargoRequest,
-  checked: boolean
-): BillingFormState => {
-  return {
-    ...previous,
-    specialCargo: {
-      ...previous.specialCargo,
-      [key]: checked,
-    },
-  };
-};
 
 export interface BillingSelectOption {
   value: string;
@@ -64,12 +47,6 @@ export const DEFAULT_BILLING_FORM: BillingFormState = {
   widthCm: '',
   heightCm: '',
   codAmount: '',
-  declaredValue: '',
-  specialCargo: {
-    importantDocument: false,
-    fragile: false,
-    liquid: false,
-  },
 };
 
 export const DELIVERY_SERVICE_OPTIONS: Array<{
@@ -81,29 +58,6 @@ export const DELIVERY_SERVICE_OPTIONS: Array<{
     value: 'TIEU_CHUAN',
     label: 'Standard',
     description: 'Suitable for regular shipments with optimized cost.',
-  },
-  {
-    value: 'HOA_TOC',
-    label: 'Express',
-    description: 'Prioritizes faster delivery speed.',
-  },
-];
-
-export const SPECIAL_CARGO_OPTIONS: Array<{
-  key: keyof BillingSpecialCargoRequest;
-  label: string;
-}> = [
-  {
-    key: 'importantDocument',
-    label: 'Important documents',
-  },
-  {
-    key: 'fragile',
-    label: 'Fragile goods',
-  },
-  {
-    key: 'liquid',
-    label: 'Liquid goods',
   },
 ];
 
@@ -150,9 +104,7 @@ const parseOptionalNonNegativeNumber = (value: string): number | undefined => {
 
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(
-      'COD amount and declared value must be numbers greater than or equal to 0.'
-    );
+    throw new Error('COD amount must be a number greater than or equal to 0.');
   }
 
   return parsed;
@@ -172,9 +124,7 @@ export const buildCalculateRequest = (
     !receiverProvinceCode ||
     !receiverWardCode
   ) {
-    throw new Error(
-      'Please select sender/receiver province and ward.'
-    );
+    throw new Error('Please select sender/receiver province and ward.');
   }
 
   return {
@@ -189,12 +139,6 @@ export const buildCalculateRequest = (
     widthCm: parseRequiredPositiveNumber(form.widthCm, 'Width'),
     heightCm: parseRequiredPositiveNumber(form.heightCm, 'Height'),
     codAmount: parseOptionalNonNegativeNumber(form.codAmount),
-    declaredValue: parseOptionalNonNegativeNumber(form.declaredValue),
-    specialCargo: {
-      importantDocument: form.specialCargo.importantDocument,
-      fragile: form.specialCargo.fragile,
-      liquid: form.specialCargo.liquid,
-    },
   };
 };
 
@@ -312,7 +256,9 @@ export const surchargeResponseToForm = (
   expirationDate: rule.expirationDate ?? '',
 });
 
-export const vasResponseToForm = (rule: VasRuleAdminResponse): VasRuleFormState => ({
+export const vasResponseToForm = (
+  rule: VasRuleAdminResponse
+): VasRuleFormState => ({
   code: rule.code,
   name: rule.name,
   calculationType: rule.calculationType,
@@ -363,22 +309,12 @@ export const CALCULATION_TYPE_OPTIONS: Array<{
 export const SURCHARGE_RULE_CODE_OPTIONS: Array<{
   value: BillingSurchargeRuleCode;
   label: string;
-}> = [
-  { value: 'VUNG_XA', label: 'Remote Area' },
-  { value: 'HANG_GIA_TRI_CAO', label: 'High Value Item' },
-  { value: 'CHUNG_TU_QUAN_TRONG', label: 'Important Document' },
-  { value: 'DE_VO', label: 'Fragile Item' },
-  { value: 'QUA_KHO', label: 'Oversized Item' },
-  { value: 'CHAT_LONG', label: 'Liquid Item' },
-];
+}> = [{ value: 'VUNG_XA', label: 'Remote Area' }];
 
 export const VAS_RULE_CODE_OPTIONS: Array<{
   value: BillingVasRuleCode;
   label: string;
-}> = [
-  { value: 'COD', label: 'Cash On Delivery' },
-  { value: 'BAO_HIEM', label: 'Insurance' },
-];
+}> = [{ value: 'COD', label: 'Cash On Delivery' }];
 
 const parseRequiredDate = (value: string, fieldLabel: string): string => {
   const normalized = value.trim();

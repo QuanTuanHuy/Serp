@@ -1,30 +1,21 @@
 package serp.project.school_bus_service.mapper;
 
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
-import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.entity.RouteAssignmentEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
-import serp.project.school_bus_service.service.domain.IRouteGeometryService;
 import serp.project.school_bus_service.shared.base.BaseMapper;
 
 import java.util.List;
 
 @Component
 public class RouteMapper extends BaseMapper {
-
-    private final IRouteGeometryService routeGeometryService;
-
-    public RouteMapper(@Lazy IRouteGeometryService routeGeometryService) {
-        this.routeGeometryService = routeGeometryService;
-    }
 
     public RoutePlanResponse toRoutePlanResponse(RoutePlanEntity entity) {
         RoutePlanResponse response = enrich(new RoutePlanResponse(), entity);
@@ -40,32 +31,35 @@ public class RouteMapper extends BaseMapper {
         response.setRouteCode(entity.getRouteCode());
         response.setRouteName(entity.getRouteName());
         response.setServiceDate(entity.getServiceDate());
-        if (entity.getSchoolSchedule() != null) {
-            response.setSchoolScheduleId(entity.getSchoolSchedule().getId());
-            response.setSchoolScheduleName(entity.getSchoolSchedule().getScheduleName());
-        }
         response.setStatus(entity.getStatus().name());
         response.setPlannedDistanceKm(entity.getPlannedDistanceKm());
         response.setPlannedDurationMin(entity.getPlannedDurationMin());
-        response.setPlanningNotes(entity.getPlanningNotes());
-        response.setGeometryPath(entity.getGeometryPath());
-        if (entity.getGeometryPath() != null) {
-            RoutePathResponse path = routeGeometryService.deserialize(entity.getGeometryPath());
-            if (path != null) {
-                response.setGeometrySource(path.getGeometrySource());
-                response.setFallbackUsed(path.getFallbackUsed());
+        response.setPlannedStudentCount(entity.getPlannedStudentCount());
+        response.setAssignedBusCapacity(entity.getAssignedBusCapacity());
+        if (entity.getSelectedBus() != null) {
+            response.setBusId(entity.getSelectedBus().getId());
+            response.setBusPlateNumber(entity.getSelectedBus().getPlateNumber());
+            response.setBusName(entity.getSelectedBus().getPlateNumber());
+            response.setBusCapacity(entity.getSelectedBus().getCapacity());
+            response.setBusStatus(entity.getSelectedBus().getStatus());
+            if (response.getAssignedBusCapacity() == null) {
+                response.setAssignedBusCapacity(entity.getSelectedBus().getCapacity());
             }
         }
+        if (entity.getStartDepot() != null) {
+            response.setStartDepotName(entity.getStartDepot().getName());
+        } else if (entity.getEndDepot() != null) {
+            response.setStartDepotName(entity.getEndDepot().getName());
+        }
+        response.setPlanningNotes(entity.getPlanningNotes());
+        response.setGeometryPath(entity.getGeometryPath());
+        response.setGeometrySource(entity.getGeometrySource() != null
+                ? entity.getGeometrySource().name() : null);
         response.setStartedAt(entity.getStartedAt());
         response.setCompletedAt(entity.getCompletedAt());
-        response.setIssueCount(entity.getIssueCount());
-        response.setBlockingIssueCount(entity.getBlockingIssueCount());
         response.setRequiredCapacity(entity.getRequiredCapacity());
         if (entity.getPlanningSession() != null) {
             response.setPlanningSessionId(entity.getPlanningSession().getId());
-        }
-        if (entity.getRouteGenerationMethod() != null) {
-            response.setPlanningMethod(entity.getRouteGenerationMethod().name());
         }
         return response;
     }
@@ -76,6 +70,8 @@ public class RouteMapper extends BaseMapper {
         response.setLocationType(entity.getLocationType() != null ? entity.getLocationType().name() : null);
         response.setStopPurpose(entity.getStopPurpose() != null ? entity.getStopPurpose().name() : null);
         response.setDisplayName(entity.getDisplayName());
+        response.setLatitude(entity.getLatitude());
+        response.setLongitude(entity.getLongitude());
         if (entity.getPickupPoint() != null) {
             response.setPickupPointId(entity.getPickupPoint().getId());
             response.setPickupPointName(entity.getPickupPoint().getName());
@@ -93,8 +89,6 @@ public class RouteMapper extends BaseMapper {
         }
         response.setStopOrder(entity.getStopOrder());
         response.setEstimatedStudentCount(entity.getEstimatedStudentCount());
-        response.setPlannedArrivalTime(entity.getPlannedArrivalTime());
-        response.setPlannedDepartureTime(entity.getPlannedDepartureTime());
         response.setDistanceFromPreviousKm(entity.getDistanceFromPreviousKm());
         response.setEstimatedTravelTimeFromPrevious(entity.getEstimatedTravelTimeFromPrevious());
         return response;
@@ -112,10 +106,10 @@ public class RouteMapper extends BaseMapper {
         response.setBusCapacity(entity.getBus().getCapacity());
         response.setDriverId(entity.getDriver().getId());
         response.setDriverName(entity.getDriver().getFullName());
-        response.setDriverLicenseClass(entity.getDriver().getLicenseClass());
-        response.setDriverLicenseExpiryDate(
-                entity.getDriver().getLicenseExpiryDate() == null ? null
-                        : entity.getDriver().getLicenseExpiryDate().toString());
+
+
+
+
         response.setAttendantId(entity.getAttendant() == null ? null : entity.getAttendant().getId());
         response.setAttendantName(entity.getAttendant() == null ? null : entity.getAttendant().getFullName());
         response.setStatus(entity.getStatus() == null ? null : entity.getStatus().name());
@@ -126,26 +120,21 @@ public class RouteMapper extends BaseMapper {
         return response;
     }
 
-
     public RoutePlanStudentResponse toRoutePlanStudentResponse(RoutePlanStudentEntity entity) {
         RoutePlanStudentResponse response = new RoutePlanStudentResponse();
         response.setId(entity.getId());
         response.setRouteId(entity.getRoute().getId());
-        response.setRouteStopId(entity.getRouteStop() == null ? null : entity.getRouteStop().getId());
         response.setStudentId(entity.getStudent().getId());
         response.setStudentName(entity.getStudent().getFullName());
         response.setSubscriptionId(entity.getSubscription().getId());
-        response.setServiceAction(entity.getServiceAction().name());
-        if (entity.getRouteStop() != null) {
-            String displayName = entity.getRouteStop().getDisplayName();
-            response.setStopName(displayName);
-            response.setStopDisplayName(displayName);
-            response.setStopLocationType(entity.getRouteStop().getLocationType() != null
-                    ? entity.getRouteStop().getLocationType().name() : null);
-            response.setStopPurpose(entity.getRouteStop().getStopPurpose() != null
-                    ? entity.getRouteStop().getStopPurpose().name() : null);
+        if (entity.getPickupStop() != null) {
+            response.setPickupStopId(entity.getPickupStop().getId());
+            response.setPickupStopName(entity.getPickupStop().getDisplayName());
         }
-        response.setPlannedTime(entity.getPlannedTime() == null ? null : entity.getPlannedTime().toString());
+        if (entity.getDropoffStop() != null) {
+            response.setDropoffStopId(entity.getDropoffStop().getId());
+            response.setDropoffStopName(entity.getDropoffStop().getDisplayName());
+        }
         return response;
     }
 
@@ -159,7 +148,6 @@ public class RouteMapper extends BaseMapper {
         return response;
     }
 
-    /** @deprecated Use the 4-arg overload that includes students */
     public RouteDetailResponse toRouteDetailResponse(RoutePlanEntity route, List<RouteStopEntity> stops,
             RouteAssignmentEntity assignment) {
         RouteDetailResponse response = new RouteDetailResponse();
@@ -204,32 +192,5 @@ public class RouteMapper extends BaseMapper {
             response.setEndLocationLatitude(entity.getEndDepot().getLatitude());
             response.setEndLocationLongitude(entity.getEndDepot().getLongitude());
         }
-    }
-
-    public serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse toRouteCalculationTraceResponse(
-            serp.project.school_bus_service.entity.RouteCalculationTraceEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-        serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse response = enrich(
-                new serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse(), entity);
-        response.setRoutePlanId(entity.getRoutePlan().getId());
-        if (entity.getPlanningSession() != null) {
-            response.setPlanningSessionId(entity.getPlanningSession().getId());
-        }
-        response.setCalculationType(entity.getCalculationType().name());
-        response.setCalculationStatus(entity.getCalculationStatus().name());
-        response.setInputJson(entity.getInputJson());
-        response.setMatrixJson(entity.getMatrixJson());
-        response.setTimelineJson(entity.getTimelineJson());
-        response.setIssuesJson(entity.getIssuesJson());
-        response.setConfigSnapshotJson(entity.getConfigSnapshotJson());
-        response.setSourceSummary(entity.getSourceSummary());
-        return response;
-    }
-
-    public List<serp.project.school_bus_service.dto.response.RouteCalculationTraceResponse> toRouteCalculationTraceResponseList(
-            List<serp.project.school_bus_service.entity.RouteCalculationTraceEntity> entities) {
-        return mapList(entities, this::toRouteCalculationTraceResponse);
     }
 }

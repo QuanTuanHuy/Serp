@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -29,7 +29,6 @@ import {
   useCreatePlanningSessionMutation,
   useGetPlanningSessionsQueryQuery,
   useGetPlanningSessionQuery,
-  useGenerateGreedyForSessionMutation,
   usePublishPlanningSessionMutation,
   useCancelPlanningSessionMutation,
   useGetSessionRoutesQuery,
@@ -42,9 +41,10 @@ import {
 } from '../api/schoolBusApi';
 import type {
   SchoolBusPlanningSession,
-  SchoolBusGreedyGenerateResult,
   SchoolBusPlanningPreview,
   CreateRouteInSessionRequest,
+  PlanningPointResponse,
+  SchoolBusPlanningPickupPoint,
 } from '../types';
 import { SCHOOL_BUS_OPTION_QUERY } from '../utils';
 
@@ -103,12 +103,13 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
 }
 
 export default function SchoolBusRoutePlanningPage() {
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [form, setForm] = useState<ContextFormState>({
-    schoolId: '', schoolScheduleId: '',
+    schoolId: '',
     serviceDate: new Date().toISOString().slice(0, 10),
-    routeDirection: 'OUTBOUND', planningMethod: 'GREEDY', defaultBusCapacity: '30',
-    depotId: '',
+    routeDirection: 'OUTBOUND',
   });
 
   const searchParams = useSearchParams();
@@ -118,11 +119,11 @@ export default function SchoolBusRoutePlanningPage() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [routeError, setRouteError] = useState<string | null>(null);
 
+  const [isHydrated, setIsHydrated] = useState(false);
   const [preview, setPreview] = useState<SchoolBusPlanningPreview | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<'demand-preview' | 'route-builder'>('demand-preview');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
-  const [greedyResult, setGreedyResult] = useState<SchoolBusGreedyGenerateResult | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
 
@@ -143,7 +144,6 @@ export default function SchoolBusRoutePlanningPage() {
   // ── API mutations ──────────────────────────────────────────────────────────
   const [previewMutation, { isLoading: previewing }] = usePreviewPlanningDemandMutation();
   const [createSession, { isLoading: creating }] = useCreatePlanningSessionMutation();
-  const [generateGreedy, { isLoading: generating }] = useGenerateGreedyForSessionMutation();
   const [publishSession, { isLoading: publishing }] = usePublishPlanningSessionMutation();
   const [cancelSession, { isLoading: cancelling }] = useCancelPlanningSessionMutation();
   const [createRouteInSession, { isLoading: creatingRoute }] = useCreateRouteInSessionMutation();
@@ -167,7 +167,7 @@ export default function SchoolBusRoutePlanningPage() {
 
   const { data: eligibleStudentsData, isFetching: fetchingEligible } = useGetSessionEligibleStudentsQuery(
     activeSessionId ?? 0,
-    { skip: !activeSessionId || activeSession?.planningMethod !== 'MANUAL' }
+    { skip: !activeSessionId }
   );
   const eligibleStudents = eligibleStudentsData?.data ?? [];
 
@@ -185,6 +185,7 @@ export default function SchoolBusRoutePlanningPage() {
     { skip: !selectedRouteId }
   );
   const selectedRouteStops = selectedRouteDetailData?.data?.stops ?? [];
+  const selectedRoute = selectedRouteDetailData?.data?.route ?? null;
 
   // ── Route path (actual road geometry) ─────────────────────────────────────
   const { data: selectedRoutePathData } = useGetRoutePathQuery(
@@ -193,46 +194,70 @@ export default function SchoolBusRoutePlanningPage() {
   );
   const selectedRoutePath = selectedRoutePathData?.data ?? null;
 
-  // Clear greedy result and check session context alignment when planning context changes
+  const clearSessionQueryParams = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    let changed = false;
+    if (params.has('sessionId')) {
+      params.delete('sessionId');
+      changed = true;
+    }
+    if (params.has('routeId')) {
+      params.delete('routeId');
+      changed = true;
+    }
+    if (changed) {
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    }
+  }, [router, pathname, searchParams]);
+
+  // Check session context alignment when planning context changes
   React.useEffect(() => {
-    setGreedyResult(null);
-    setSelectedRouteId(null);
+    if (!isHydrated) return;
+
     if (activeSession && activeSession.id === activeSessionId) {
       const isContextMatch =
         Number(form.schoolId) === activeSession.schoolId &&
-        Number(form.schoolScheduleId) === activeSession.schoolScheduleId &&
         form.serviceDate === activeSession.serviceDate &&
-        form.routeDirection === activeSession.routeDirection &&
-        form.planningMethod === activeSession.planningMethod;
-
+        form.routeDirection === activeSession.routeDirection;
+ 
       if (!isContextMatch) {
         setActiveSessionId(null);
+        setSelectedRouteId(null);
+        setPreview(null);
+        clearSessionQueryParams();
       }
+    } else if (querySessionId || queryRouteId) {
+      clearSessionQueryParams();
+      setPreview(null);
     }
-  }, [form.schoolId, form.schoolScheduleId, form.serviceDate, form.routeDirection, form.planningMethod, form.depotId, form.defaultBusCapacity, activeSession, activeSessionId]);
+  }, [form.schoolId, form.serviceDate, form.routeDirection, activeSession, activeSessionId, isHydrated, clearSessionQueryParams, querySessionId, queryRouteId]);
+
+  // Reset selected route when active session changes
+  React.useEffect(() => {
+    setSelectedRouteId(null);
+  }, [activeSessionId]);
 
   // Auto-hydrate session from query params
   React.useEffect(() => {
-    if (querySessionId && sessions.length > 0) {
-      const sessionIdNum = Number(querySessionId);
-      const matchedSession = sessions.find(s => s.id === sessionIdNum);
-      if (matchedSession) {
-        setActiveSessionId(sessionIdNum);
-        setRightPanelTab('route-builder');
-        setForm(prev => ({
-          ...prev,
-          schoolId: String(matchedSession.schoolId),
-          schoolScheduleId: String(matchedSession.schoolScheduleId),
-          serviceDate: matchedSession.serviceDate,
-          routeDirection: matchedSession.routeDirection,
-          planningMethod: matchedSession.planningMethod,
-        }));
-        setSessionError(null);
-      } else {
-        setSessionError('Planning session not found or no longer available.');
+    if (sessions.length > 0) {
+      if (querySessionId) {
+        const sessionIdNum = Number(querySessionId);
+        const matchedSession = sessions.find(s => s.id === sessionIdNum);
+        if (matchedSession) {
+          setActiveSessionId(sessionIdNum);
+          setRightPanelTab('route-builder');
+          setForm({
+            schoolId: String(matchedSession.schoolId),
+            serviceDate: matchedSession.serviceDate,
+            routeDirection: matchedSession.routeDirection,
+          });
+          setSessionError(null);
+        } else {
+          setSessionError('Planning session not found or no longer available.');
+        }
       }
-    } else {
-      setSessionError(null);
+      setIsHydrated(true);
     }
   }, [querySessionId, sessions]);
 
@@ -268,18 +293,14 @@ export default function SchoolBusRoutePlanningPage() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
-    if (!form.schoolId || !form.schoolScheduleId || !form.serviceDate) {
-      toast.error('Please fill School, Schedule and Service Date'); return;
+    if (!form.schoolId || !form.serviceDate) {
+      toast.error('Please fill School and Service Date'); return;
     }
     try {
       const res = await previewMutation({
         schoolId: Number(form.schoolId),
-        schoolScheduleId: Number(form.schoolScheduleId),
         serviceDate: form.serviceDate,
         routeDirection: form.routeDirection,
-        planningMethod: form.planningMethod,
-        depotId: form.depotId ? Number(form.depotId) : undefined,
-        defaultBusCapacity: form.defaultBusCapacity ? Number(form.defaultBusCapacity) : undefined,
       }).unwrap();
       setPreview(res.data);
       setRightPanelTab('demand-preview');
@@ -293,9 +314,8 @@ export default function SchoolBusRoutePlanningPage() {
   const handleCreateSession = useCallback(async () => {
     try {
       const res = await createSession({
-        schoolId: Number(form.schoolId), schoolScheduleId: Number(form.schoolScheduleId),
+        schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate, routeDirection: form.routeDirection,
-        planningMethod: form.planningMethod,
       }).unwrap();
       setActiveSessionId(res.data.id);
       setRightPanelTab('route-builder');
@@ -305,24 +325,6 @@ export default function SchoolBusRoutePlanningPage() {
       toast.error(err?.data?.message ?? 'Failed to create session');
     }
   }, [form, createSession]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!activeSession) return;
-    if (!form.depotId) { toast.error('Please select a depot before generating routes'); return; }
-    try {
-      const res = await generateGreedy({
-        id: activeSession.id,
-        body: { defaultBusCapacity: Number(form.defaultBusCapacity) || 30, depotId: Number(form.depotId) },
-      }).unwrap();
-      setGreedyResult(res.data);
-      setFitTarget('all');
-      setFitKey((k) => k + 1);
-      toast.success(`Generated ${res.data.routes.length} route(s). ${res.data.totalUnassignedStudents} unassigned.`);
-      if (res.data?.routes && res.data.routes.length > 0) {
-        setSelectedRouteId(res.data.routes[0].routeId);
-      }
-    } catch { toast.error('Greedy generation failed'); }
-  }, [activeSession, form.defaultBusCapacity, form.depotId, generateGreedy]);
 
   const handleCreateManualRoute = useCallback(async (req: CreateRouteInSessionRequest) => {
     if (!activeSession) return;
@@ -424,7 +426,7 @@ export default function SchoolBusRoutePlanningPage() {
     if (!activeSession) return;
     try {
       await cancelSession(activeSession.id).unwrap();
-      setActiveSessionId(null); setGreedyResult(null); setPreview(null);
+      setActiveSessionId(null); setPreview(null);
       toast.success('Session cancelled');
     } catch { toast.error('Failed to cancel session'); } finally {
       setCancelDialogOpen(false);
@@ -443,44 +445,78 @@ export default function SchoolBusRoutePlanningPage() {
   const handleSelectSession = useCallback((s: SchoolBusPlanningSession) => {
     setActiveSessionId(s.id);
     setRightPanelTab('route-builder');
-    setForm(prev => ({
-      ...prev,
+    setForm({
       schoolId: String(s.schoolId),
-      schoolScheduleId: String(s.schoolScheduleId),
       serviceDate: s.serviceDate,
       routeDirection: s.routeDirection,
-      planningMethod: s.planningMethod,
+    });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sessionId', String(s.id));
+    params.delete('routeId');
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [router, pathname, searchParams]);
+
+  const handleOpenSession = useCallback((id: number) => {
+    setActiveSessionId(id);
+    setRightPanelTab('route-builder');
+    
+    const matchedSession = sessions.find(s => s.id === id);
+    if (matchedSession) {
+      setForm({
+        schoolId: String(matchedSession.schoolId),
+        serviceDate: matchedSession.serviceDate,
+        routeDirection: matchedSession.routeDirection,
+      });
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sessionId', String(id));
+    params.delete('routeId');
+    const queryString = params.toString();
+    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+  }, [sessions, router, pathname, searchParams]);
+
+  const handleNewSession = useCallback(() => {
+    // Reset service date to today, keep schoolId and routeDirection
+    setForm(prev => ({
+      ...prev,
+      serviceDate: new Date().toISOString().slice(0, 10),
     }));
-  }, []);
+    setActiveSessionId(null);
+    setSelectedRouteId(null);
+    setPreview(null);
+    clearSessionQueryParams();
+    toast.success('Workspace reset to new session planning context');
+  }, [clearSessionQueryParams]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const unassignedStudents =
-    activeSession?.totalUnassignedStudents ?? greedyResult?.totalUnassignedStudents ?? 0;
-  const blockingTotal =
-    greedyResult?.routes.reduce((s, r) => s + r.blockingIssueCount, 0) ?? 0;
-  const hasRoutes = sessionRoutes.length > 0 || (greedyResult?.routes.length ?? 0) > 0;
+  const unassignedStudents = activeSession?.totalUnassignedStudents ?? 0;
+  const isPreviewContextMatch =
+    preview !== null &&
+    Number(preview.schoolId) === Number(form.schoolId) &&
+    preview.serviceDate === form.serviceDate &&
+    preview.routeDirection === form.routeDirection;
+  const blockingTotal = 0;
+  const hasRoutes = sessionRoutes.length > 0;
   const canPublish =
     !!activeSession &&
     activeSession.status !== 'PUBLISHED' &&
     activeSession.status !== 'CANCELLED' &&
-    blockingTotal === 0 &&
     hasRoutes &&
     unassignedStudents === 0;
 
-  const hasBlockingIssues = preview?.issues?.some((issue) => issue.severity === 'BLOCKING') ?? false;
-
   // Map pickup points from preview (or from greedy result when preview was skipped)
-  const rawPickupPoints = preview?.points
+  const rawPickupPoints: (PlanningPointResponse | SchoolBusPlanningPickupPoint)[] = preview?.points
     ? preview.points
-    : (preview?.eligiblePickupPoints ?? greedyResult?.eligiblePickupPoints ?? []);
-  const mapPickupPoints = rawPickupPoints.map((pp: any) => ({
-    pickupPointId: pp.pointId ?? pp.pickupPointId,
-    pickupPointName: pp.pointName ?? pp.pickupPointName,
+    : (preview?.eligiblePickupPoints ?? []);
+  const mapPickupPoints = rawPickupPoints.map((pp) => ({
+    pickupPointId: 'pointId' in pp ? pp.pointId : pp.pickupPointId,
+    pickupPointName: 'pointName' in pp ? pp.pointName : pp.pickupPointName,
     latitude: pp.latitude,
     longitude: pp.longitude,
     studentCount: pp.studentCount,
-    pointRole: pp.pointRole,
-    readinessStatus: pp.readinessStatus,
+    pointRole: 'pointRole' in pp ? pp.pointRole : undefined,
   }));
 
   const hasMapData =
@@ -541,19 +577,23 @@ export default function SchoolBusRoutePlanningPage() {
             {/* Scrollable inner area */}
             <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50'>
               <PlanningContextPanel
-                form={form} onFormChange={setForm}
-                onPreview={handlePreview} onCreateSession={handleCreateSession}
-                previewing={previewing} creating={creating}
-                sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
-                depots={depots}
-                hasBlockingIssues={hasBlockingIssues}
+                form={form}
+                onFormChange={setForm}
+                onPreview={handlePreview}
+                onCreateSession={handleCreateSession}
+                previewing={previewing}
+                creating={creating}
+                canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
+                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                isPreviewContextMatch={isPreviewContextMatch}
+                onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
-                planningMethod={form.planningMethod} blockingTotal={blockingTotal}
-                canPublish={canPublish} generating={generating} publishing={publishing}
-                cancelling={cancelling} hasRoutes={hasRoutes}
-                onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
+                blockingTotal={blockingTotal}
+                canPublish={canPublish} publishing={publishing}
+                cancelling={cancelling}
+                onPublish={handlePublish} onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
                 hidePastSessions
               />
@@ -582,6 +622,7 @@ export default function SchoolBusRoutePlanningPage() {
                   pickupPoints={mapPickupPoints}
                   selectedRouteStops={selectedRouteStops}
                   selectedRoutePath={selectedRoutePath}
+                  selectedRoute={selectedRoute}
                   depots={depots}
                   fitTarget={fitTarget}
                   fitKey={fitKey}
@@ -609,7 +650,7 @@ export default function SchoolBusRoutePlanningPage() {
       <SchoolBusPageShell
         compact
         title='Route Planning Workspace'
-        description='Preview demand · auto-generate or build routes manually · publish.'
+        description='Build student routes by pickup points, vehicle capacity, and service date.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
@@ -652,19 +693,23 @@ export default function SchoolBusRoutePlanningPage() {
             {/* Scrollable inner area — left panel scrolls independently */}
             <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20'>
               <PlanningContextPanel
-                form={form} onFormChange={setForm}
-                onPreview={handlePreview} onCreateSession={handleCreateSession}
-                previewing={previewing} creating={creating}
-                sessionActive={!!activeSession && activeSession.status !== 'CANCELLED'}
-                depots={depots}
-                hasBlockingIssues={hasBlockingIssues}
+                form={form}
+                onFormChange={setForm}
+                onPreview={handlePreview}
+                onCreateSession={handleCreateSession}
+                previewing={previewing}
+                creating={creating}
+                canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
+                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                isPreviewContextMatch={isPreviewContextMatch}
+                onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
                 activeSession={activeSession} sessions={sessions}
-                planningMethod={form.planningMethod} blockingTotal={blockingTotal}
-                canPublish={canPublish} generating={generating} publishing={publishing}
-                cancelling={cancelling} hasRoutes={hasRoutes}
-                onGenerate={handleGenerate} onPublish={handlePublish} onCancel={handleCancel}
+                blockingTotal={blockingTotal}
+                canPublish={canPublish} publishing={publishing}
+                cancelling={cancelling}
+                onPublish={handlePublish} onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
               />
             </div>
@@ -696,6 +741,7 @@ export default function SchoolBusRoutePlanningPage() {
                     pickupPoints={mapPickupPoints}
                     selectedRouteStops={selectedRouteStops}
                     selectedRoutePath={selectedRoutePath}
+                    selectedRoute={selectedRoute}
                     depots={depots}
                     fitTarget={fitTarget}
                     fitKey={fitKey}
@@ -729,7 +775,6 @@ export default function SchoolBusRoutePlanningPage() {
             <div className='flex-1 overflow-y-auto'>
               <PlanningResultsPanel
                 preview={preview}
-                greedyResult={greedyResult}
                 sessionRoutes={sessionRoutes}
                 activeSession={activeSession}
                 eligibleStudents={eligibleStudents}
@@ -743,6 +788,7 @@ export default function SchoolBusRoutePlanningPage() {
                 onTabChange={setRightPanelTab}
                 onPreviewDemandClick={handlePreview}
                 previewing={previewing}
+                onOpenSession={handleOpenSession}
               />
             </div>
           </div>

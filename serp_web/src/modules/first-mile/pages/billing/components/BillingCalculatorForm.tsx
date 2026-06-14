@@ -11,7 +11,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Checkbox,
   Input,
   Label,
   Separator,
@@ -20,8 +19,6 @@ import { TmsCombobox } from '@/modules/first-mile/components';
 import { Calculator, Loader2 } from 'lucide-react';
 import {
   DELIVERY_SERVICE_OPTIONS,
-  SPECIAL_CARGO_OPTIONS,
-  updateSpecialCargoField,
   type BillingFormState,
   type BillingSelectOption,
 } from '../billingPageModels';
@@ -230,47 +227,6 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                 }
                 placeholder='Leave empty if not COD'
               />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='declaredValue'>Declared Value (VND)</Label>
-              <Input
-                id='declaredValue'
-                inputMode='numeric'
-                value={formValues.declaredValue}
-                onChange={(event) =>
-                  onFormChange((prev) => ({
-                    ...prev,
-                    declaredValue: event.target.value,
-                  }))
-                }
-                placeholder='Leave empty if not declared'
-              />
-            </div>
-          </div>
-
-          <div className='space-y-3'>
-            <h3 className='text-sm font-medium'>Special Cargo</h3>
-            <div className='grid gap-3 md:grid-cols-3'>
-              {SPECIAL_CARGO_OPTIONS.map((option) => (
-                <Label
-                  key={option.key}
-                  className='flex items-center gap-2 rounded-md border p-3 cursor-pointer'
-                >
-                  <Checkbox
-                    checked={formValues.specialCargo[option.key]}
-                    onCheckedChange={(checked) => {
-                      onFormChange((prev) =>
-                        updateSpecialCargoField(
-                          prev,
-                          option.key,
-                          checked === true
-                        )
-                      );
-                    }}
-                  />
-                  <span className='text-sm'>{option.label}</span>
-                </Label>
-              ))}
             </div>
           </div>
 

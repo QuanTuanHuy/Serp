@@ -6,11 +6,12 @@ import serp.project.school_bus_service.dto.params.PickupPointParamsRequest;
 import serp.project.school_bus_service.dto.request.PickupPointUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.PickupPointResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
+import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.repository.PickupPointRepository;
+import serp.project.school_bus_service.repository.SchoolPickupPointRepository;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -21,27 +22,30 @@ import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.shared.code.SchoolBusCode;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntity, Long> implements IPickupPointService {
 
     private final PickupPointRepository pickupPointRepository;
+    private final SchoolPickupPointRepository schoolPickupPointRepository;
     private final SchoolBusMapper mapper;
-    private final IAuditLogService auditLogService;
     private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
 
 
     public PickupPointServiceImpl(
             PickupPointRepository pickupPointRepository,
+            SchoolPickupPointRepository schoolPickupPointRepository,
             SchoolBusMapper mapper,
-            IAuditLogService auditLogService,
             ICodeGeneratorService codeGeneratorService,
             MessageCommon messageCommon) {
         this.pickupPointRepository = pickupPointRepository;
+        this.schoolPickupPointRepository = schoolPickupPointRepository;
         this.mapper = mapper;
-        this.auditLogService = auditLogService;
         this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
     }
@@ -54,18 +58,45 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
 
     @Override
     public PageResponse<PickupPointResponse> getPickupPoints(PickupPointParamsRequest params, Long tenantId) {
-        return PageResponse.from(pickupPointRepository.findAll(
+        PageResponse<PickupPointResponse> page = PageResponse.from(pickupPointRepository.findAll(
                 BaseSpecification.tenantActiveWithKeyword(tenantId,
                         params == null ? null : params.getKeyword(),
-                        "name", "address", "code", "zoneCode"),
+                        "name", "address", "code"),
                 PageableUtils.from(params,
                         Set.of("id", "name", "code", "createdAt", "updatedAt"), "name")),
                 mapper::toPickupPointResponse);
+
+        // Enrich with linked schools
+        List<Long> pickupPointIds = page.getItems().stream()
+                .map(PickupPointResponse::getId)
+                .collect(Collectors.toList());
+        if (!pickupPointIds.isEmpty()) {
+            Map<Long, List<PickupPointResponse.LinkedSchoolDto>> schoolsByPp =
+                    schoolPickupPointRepository.findByPickupPointIdInAndTenantIdAndIsDeletedFalse(pickupPointIds, tenantId)
+                            .stream()
+                            .collect(Collectors.groupingBy(
+                                    spp -> spp.getPickupPoint().getId(),
+                                    Collectors.mapping(spp -> new PickupPointResponse.LinkedSchoolDto(
+                                            spp.getSchool().getId(),
+                                            spp.getSchool().getCode(),
+                                            spp.getSchool().getName()
+                                    ), Collectors.toList())
+                            ));
+            page.getItems().forEach(pp -> pp.setSchools(schoolsByPp.getOrDefault(pp.getId(), List.of())));
+        }
+        return page;
     }
 
     @Override
     public PickupPointResponse getPickupPointResponse(Long id, Long tenantId) {
-        return mapper.toPickupPointResponse(getPickupPoint(id, tenantId));
+        PickupPointResponse response = mapper.toPickupPointResponse(getPickupPoint(id, tenantId));
+        List<SchoolPickupPointEntity> links = schoolPickupPointRepository
+                .findByPickupPointIdInAndTenantIdAndIsDeletedFalse(List.of(id), tenantId);
+        response.setSchools(links.stream()
+                .map(spp -> new PickupPointResponse.LinkedSchoolDto(
+                        spp.getSchool().getId(), spp.getSchool().getCode(), spp.getSchool().getName()))
+                .collect(Collectors.toList()));
+        return response;
     }
 
     @Override
@@ -86,7 +117,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         }
         pickupPoint.setCode(code);
         PickupPointEntity saved = pickupPointRepository.save(pickupPoint);
-        auditLogService.log(tenantId, actorId, "PickupPoint", saved.getId(), "CREATE", "Created pickup point");
         return mapper.toPickupPointResponse(saved);
     }
 
@@ -97,7 +127,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         pickupPoint.markUpdated(actor(actorId));
         applyPickupPoint(pickupPoint, request);
         PickupPointEntity saved = pickupPointRepository.save(pickupPoint);
-        auditLogService.log(tenantId, actorId, "PickupPoint", saved.getId(), "UPDATE", "Updated pickup point");
         return mapper.toPickupPointResponse(saved);
     }
 
@@ -105,7 +134,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
     @Transactional
     public void deletePickupPoint(Long id, Long tenantId, Long actorId) {
         softDeleteById(pickupPointRepository, id, tenantId, actorId);
-        auditLogService.log(tenantId, actorId, "PickupPoint", id, "SOFT_DELETE", "Soft deleted pickup point");
     }
 
     private static final Set<String> VALID_USAGE_TYPES = Set.of(
@@ -124,7 +152,6 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
         pickupPoint.setAddress(request.getAddress());
         pickupPoint.setLatitude(request.getLatitude());
         pickupPoint.setLongitude(request.getLongitude());
-        pickupPoint.setZoneCode(request.getZoneCode());
         pickupPoint.setUsageType(request.getUsageType());
         pickupPoint.setPickupInstruction(request.getPickupInstruction());
         pickupPoint.setIsActive(request.resolveIsActive(Boolean.TRUE));

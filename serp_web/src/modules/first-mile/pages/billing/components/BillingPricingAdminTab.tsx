@@ -61,9 +61,8 @@ export const BillingPricingAdminTab: React.FC = () => {
   const [surchargeFormMode, setSurchargeFormMode] =
     React.useState<SurchargeRuleFormMode>('create');
   const [vasDialogOpen, setVasDialogOpen] = React.useState(false);
-  const [vasFormMode, setVasFormMode] = React.useState<VasRuleFormMode>(
-    'create'
-  );
+  const [vasFormMode, setVasFormMode] =
+    React.useState<VasRuleFormMode>('create');
 
   const tariff = useTariffRuleForm();
   const surcharge = useSurchargeRuleForm();
@@ -172,9 +171,9 @@ export const BillingPricingAdminTab: React.FC = () => {
         <CircleHelp className='h-4 w-4' />
         <AlertTitle>How to use pricing administration</AlertTitle>
         <AlertDescription>
-          View current rules from the billing service. Click Edit on a row or Add
-          to open the form in a dialog, then save changes. Tariffs are keyed by
-          service, route type, and effective date.
+          View current rules from the billing service. Click Edit on a row or
+          Add to open the form in a dialog, then save changes. Tariffs are keyed
+          by service, route type, and effective date.
         </AlertDescription>
       </Alert>
 
@@ -234,7 +233,7 @@ export const BillingPricingAdminTab: React.FC = () => {
         <TabsContent value='surcharge' className='space-y-6'>
           <BillingPricingRulesTable<SurchargeRuleAdminResponse>
             title='Configured surcharge rules'
-            description='Optional fees such as remote area or special cargo handling.'
+            description='Optional fees such as remote-area handling.'
             columns={[
               { key: 'code', label: 'Code' },
               { key: 'name', label: 'Name' },
@@ -271,7 +270,7 @@ export const BillingPricingAdminTab: React.FC = () => {
         <TabsContent value='vas' className='space-y-6'>
           <BillingPricingRulesTable<VasRuleAdminResponse>
             title='Configured VAS rules'
-            description='Value-added services such as COD and insurance.'
+            description='Value-added services such as COD.'
             columns={[
               { key: 'code', label: 'Code' },
               { key: 'name', label: 'Name' },

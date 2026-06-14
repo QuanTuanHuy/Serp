@@ -34,5 +34,43 @@ public interface AttendanceRepository extends BaseRepository<AttendanceEntity, L
         @Param("schoolId") Long schoolId,
         Pageable pageable
     );
+
+    @Query("""
+        SELECT a FROM AttendanceEntity a
+        WHERE a.tenantId = :tenantId AND a.isDeleted = false
+          AND a.student.parentProfile.id = :parentProfileId
+        ORDER BY a.recordedAt DESC
+    """)
+    List<AttendanceEntity> findRecentAttendanceForParent(
+        @Param("tenantId") Long tenantId,
+        @Param("parentProfileId") Long parentProfileId,
+        Pageable pageable
+    );
+
+    @Query("""
+        SELECT a FROM AttendanceEntity a
+        JOIN a.trip t
+        WHERE a.tenantId = :tenantId AND a.isDeleted = false
+          AND t.driver.id = :driverId
+        ORDER BY a.recordedAt DESC
+    """)
+    List<AttendanceEntity> findRecentAttendanceForDriver(
+        @Param("tenantId") Long tenantId,
+        @Param("driverId") Long driverId,
+        Pageable pageable
+    );
+
+    @Query("""
+        SELECT a FROM AttendanceEntity a
+        JOIN a.trip t
+        WHERE a.tenantId = :tenantId AND a.isDeleted = false
+          AND t.attendant.id = :attendantId
+        ORDER BY a.recordedAt DESC
+    """)
+    List<AttendanceEntity> findRecentAttendanceForAttendant(
+        @Param("tenantId") Long tenantId,
+        @Param("attendantId") Long attendantId,
+        Pageable pageable
+    );
 }
 

@@ -1,26 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Zap, Rocket, X, Loader2, Activity, History } from 'lucide-react';
+import { Rocket, X, Loader2, Activity, History } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusStatusBadge } from '../SchoolBusStatusBadge';
-import { schoolBusUi } from '../../theme';
-import type { SchoolBusPlanningSession, PlanningMethod } from '../../types';
-
-const methodLabel: Record<PlanningMethod, string> = { MANUAL: 'Manual', GREEDY: 'Greedy' };
+import type { SchoolBusPlanningSession } from '../../types';
 
 interface PlanningSessionPanelProps {
   activeSession: SchoolBusPlanningSession | null;
   sessions: SchoolBusPlanningSession[];
-  planningMethod: PlanningMethod;
   blockingTotal: number;
   canPublish: boolean;
-  generating: boolean;
   publishing: boolean;
   cancelling: boolean;
-  hasRoutes: boolean;
-  onGenerate: () => void;
   onPublish: () => void;
   onCancel: () => void;
   onSelectSession: (s: SchoolBusPlanningSession) => void;
@@ -38,11 +31,19 @@ function StatItem({ label, value, warn }: { label: string; value: string | numbe
 }
 
 export function PlanningSessionPanel({
-  activeSession, sessions, planningMethod, blockingTotal, canPublish,
-  generating, publishing, cancelling, hasRoutes,
-  onGenerate, onPublish, onCancel, onSelectSession,
+  activeSession, sessions, blockingTotal, canPublish,
+  publishing, cancelling,
+  onPublish, onCancel, onSelectSession,
   hidePastSessions = false,
 }: PlanningSessionPanelProps) {
+  const [isCollapsed, setIsCollapsed] = React.useState(!!activeSession);
+
+  React.useEffect(() => {
+    if (activeSession) {
+      setIsCollapsed(true);
+    }
+  }, [activeSession]);
+
   if (!activeSession && sessions.length === 0) return null;
 
   return (
@@ -63,21 +64,10 @@ export function PlanningSessionPanel({
             <StatItem label='Unassigned' value={activeSession.totalUnassignedStudents} warn={activeSession.totalUnassignedStudents > 0} />
             <StatItem label='Routes' value={activeSession.totalRoutes} />
             <StatItem label='ID' value={`#${activeSession.id}`} />
-            <StatItem label='Method' value={methodLabel[activeSession.planningMethod]} />
+            <StatItem label='Stops' value={activeSession.totalStops} />
           </div>
 
           <div className='flex flex-wrap gap-2 pt-2 border-t border-slate-100'>
-            {planningMethod === 'GREEDY' && (
-              <Button
-                onClick={onGenerate}
-                disabled={generating || activeSession.status === 'PUBLISHED' || activeSession.status === 'CANCELLED'}
-                variant='outline'
-                className={cn('flex-1 justify-center', schoolBusUi.outlineButton)}
-              >
-                {generating ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Zap className='mr-1.5 h-3.5 w-3.5' />}
-                Generate
-              </Button>
-            )}
             <Button
               onClick={onPublish}
               disabled={!canPublish || publishing}
@@ -107,32 +97,40 @@ export function PlanningSessionPanel({
 
       {sessions.length > 0 && !hidePastSessions && (
         <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3'>
-          <div className='border-b border-slate-100 pb-2.5'>
+          <div
+            className='border-b border-slate-100 pb-2.5 flex items-center justify-between cursor-pointer select-none'
+            onClick={() => setIsCollapsed(c => !c)}
+          >
             <h3 className='text-sm font-bold text-slate-900 flex items-center gap-2'>
               <History className='h-4 w-4 text-slate-500' />
               Past Sessions ({sessions.length})
             </h3>
+            <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-650 transition-colors'>
+              {isCollapsed ? 'Show' : 'Hide'}
+            </span>
           </div>
 
-          <div className='max-h-56 space-y-1.5 overflow-y-auto pr-1'>
-            {sessions.map(s => (
-              <button key={s.id} onClick={() => onSelectSession(s)}
-                className={cn(
-                  'w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
-                  activeSession?.id === s.id
-                    ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
-                    : 'border-slate-150 hover:border-slate-250 hover:bg-slate-50',
-                )}>
-                <div className='flex items-center justify-between'>
-                  <span className='text-xs font-bold text-slate-800'>#{s.id} · {s.serviceDate}</span>
-                  <SchoolBusStatusBadge status={s.status} />
-                </div>
-                <p className='mt-1 text-[10px] font-semibold text-slate-500'>
-                  {s.schoolName} · {s.routeDirection} · {methodLabel[s.planningMethod]}
-                </p>
-              </button>
-            ))}
-          </div>
+          {!isCollapsed && (
+            <div className='max-h-56 space-y-1.5 overflow-y-auto pr-1'>
+              {sessions.map(s => (
+                <button key={s.id} onClick={() => onSelectSession(s)}
+                  className={cn(
+                    'w-full rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
+                    activeSession?.id === s.id
+                      ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500'
+                      : 'border-slate-150 hover:border-slate-250 hover:bg-slate-50',
+                  )}>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-xs font-bold text-slate-800'>#{s.id} · {s.serviceDate}</span>
+                    <SchoolBusStatusBadge status={s.status} />
+                  </div>
+                  <p className='mt-1 text-[10px] font-semibold text-slate-500'>
+                    {s.schoolName} · {s.routeDirection}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

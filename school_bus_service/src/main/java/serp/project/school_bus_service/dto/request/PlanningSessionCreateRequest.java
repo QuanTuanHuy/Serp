@@ -17,8 +17,6 @@ public class PlanningSessionCreateRequest {
     @NotNull
     private Long schoolId;
 
-    @NotNull
-    private Long schoolScheduleId;
 
     @NotNull
     private LocalDate serviceDate;
@@ -26,10 +24,6 @@ public class PlanningSessionCreateRequest {
     /** OUTBOUND or RETURN */
     @NotBlank
     private String routeDirection;
-
-    /** MANUAL or GREEDY */
-    @NotBlank
-    private String planningMethod;
 
     private String planningNotes;
 }

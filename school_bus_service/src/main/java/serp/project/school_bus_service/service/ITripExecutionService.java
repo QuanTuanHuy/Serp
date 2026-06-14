@@ -44,6 +44,8 @@ public interface ITripExecutionService extends IBaseService<TripExecutionEntity,
 
     long countByTenantAndStatus(Long tenantId, TripStatus status);
 
+    boolean existsByRoute(Long routeId, Long tenantId);
+
     TripExecutionEntity save(TripExecutionEntity entity);
 }
 

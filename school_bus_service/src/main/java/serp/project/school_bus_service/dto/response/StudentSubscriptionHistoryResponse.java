@@ -25,8 +25,6 @@ public class StudentSubscriptionHistoryResponse extends BaseResponse {
     private Long oldDropoffPointId;
     private Long newDropoffPointId;
 
-    private Long oldSchoolScheduleId;
-    private Long newSchoolScheduleId;
 
     private String oldTripOption;
     private String newTripOption;

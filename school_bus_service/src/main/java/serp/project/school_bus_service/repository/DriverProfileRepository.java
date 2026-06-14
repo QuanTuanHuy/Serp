@@ -9,8 +9,5 @@ import java.util.Optional;
 public interface DriverProfileRepository extends BaseRepository<DriverProfileEntity, Long> {
     List<DriverProfileEntity> findByTenantIdAndIsDeletedFalseOrderByFullNameAsc(Long tenantId);
 
-    boolean existsByLicenseNumberAndTenantIdAndIsDeletedFalseAndIdNot(
-            String licenseNumber, Long tenantId, Long excludeId);
-
     Optional<DriverProfileEntity> findByTenantIdAndUserIdAndIsDeletedFalse(Long tenantId, Long userId);
 }

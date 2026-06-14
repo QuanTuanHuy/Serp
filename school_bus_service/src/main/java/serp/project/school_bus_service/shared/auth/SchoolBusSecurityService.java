@@ -74,6 +74,15 @@ public class SchoolBusSecurityService {
         return isAdmin() || isDispatcher();
     }
 
+    /**
+     * Returns true only when the user has the PARENT role but does NOT have Admin or Dispatcher.
+     * Use this for data-scope decisions; plain isParent() is wrong for users with multiple roles
+     * (e.g. Admin+Parent should be treated as Admin, not as Parent-only).
+     */
+    public boolean isParentOnly() {
+        return isParent() && !isAdminOrDispatcher();
+    }
+
     private String normalizeRole(String authority) {
         String role = authority == null ? "" : authority.trim();
         if (role.toUpperCase(Locale.ROOT).startsWith("ROLE_")) {

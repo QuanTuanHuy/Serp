@@ -42,7 +42,6 @@ public class TripMapper extends BaseMapper {
         response.setRouteName(entity.getRoute().getRouteName());
         response.setServiceDate(entity.getServiceDate());
         response.setRouteDirection(entity.getRouteDirection().name());
-        response.setShiftType(entity.getShiftType().name());
         response.setStatus(entity.getStatus().name());
         response.setPlannedStartAt(entity.getPlannedStartAt());
         response.setPlannedEndAt(entity.getPlannedEndAt());

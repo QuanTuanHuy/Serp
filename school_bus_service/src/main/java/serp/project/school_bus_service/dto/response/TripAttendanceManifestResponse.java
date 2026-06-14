@@ -41,8 +41,6 @@ public class TripAttendanceManifestResponse {
         private Integer plannedDropoffCount;
         private Integer actualBoardedCount;
         private Integer actualDroppedCount;
-        private String plannedArrivalTime;
-        private String plannedDepartureTime;
         private String actualArrivalTime;
         private String actualDepartureTime;
         private Integer studentCount;

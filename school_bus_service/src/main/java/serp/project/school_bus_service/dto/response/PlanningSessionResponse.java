@@ -13,12 +13,9 @@ public class PlanningSessionResponse {
     private Long id;
     private Long schoolId;
     private String schoolName;
-    private Long schoolScheduleId;
-    private String schoolScheduleName;
 
     private LocalDate serviceDate;
     private String routeDirection;
-    private String planningMethod;
     private String status;
 
     private Integer totalEligibleStudents;
@@ -29,7 +26,6 @@ public class PlanningSessionResponse {
     private Double totalDistanceKm;
     private Integer totalDurationMin;
 
-    private LocalDateTime generatedAt;
     private LocalDateTime publishedAt;
     private String planningNotes;
 

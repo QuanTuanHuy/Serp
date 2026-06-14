@@ -12,3 +12,4 @@ export * from './OrderMultiSelect';
 export * from './PlanPreviewCard';
 export * from './AssignmentResultCard';
 export * from './CandidateOrderItem';
+export * from './CandidateOrdersPanel';

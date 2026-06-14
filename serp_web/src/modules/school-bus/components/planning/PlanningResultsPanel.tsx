@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, CheckCircle2, XCircle, AlertCircle, Loader2, Navigation } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, AlertTriangle, Info, Ban, MapPin, Users, Plus, Route, Clock, Calendar, AlertCircle, Loader2, Navigation, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
@@ -17,26 +17,20 @@ import {
   useRemoveRouteStopMutation,
   useRemoveRouteStudentMutation,
   useGetDepotsQuery,
+  useGetBusesQuery,
   useGetSchoolByIdQuery,
-  useGetSchoolScheduleByIdQuery,
-  useGetLatestRouteCalculationTraceQuery,
-  useGetRouteObjectiveScoreQuery,
-  useRecalculateRouteObjectiveScoreMutation,
-  useGetSessionObjectiveScoreQuery,
-  useRecalculateSessionObjectiveScoreMutation,
+  useDeleteRouteInSessionMutation,
+  useGreedyFillRouteMutation,
 } from '../../api/schoolBusApi';
 import type {
   SchoolBusPlanningPreview,
-  SchoolBusGreedyGenerateResult,
-  SchoolBusPlanningIssue,
-  SchoolBusRouteQuality,
   SchoolBusPlanningSession,
   SchoolBusRoute,
   SchoolBusEligibleStudent,
   CreateRouteInSessionRequest,
 } from '../../types';
 
-/* ── Create Route Dialog (MANUAL mode) ──────────────────────────────────── */
+/* ── Create Route Dialog ──────────────────────────────────────────────── */
 
 type LocationType = 'SCHOOL' | 'DEPOT';
 type DirectionType = 'OUTBOUND' | 'RETURN';
@@ -48,6 +42,7 @@ interface CreateRouteFormState {
   startDepotId: number | '';
   endLocationType: LocationType;
   endDepotId: number | '';
+  busId: number | '';
   planningNotes: string;
 }
 
@@ -55,12 +50,10 @@ function CreateRoutePanel({
   session,
   onSubmit,
   submitting,
-  contextDepotId,
 }: {
   session: SchoolBusPlanningSession;
   onSubmit: (req: CreateRouteInSessionRequest) => void;
   submitting?: boolean;
-  contextDepotId?: number | '';
 }) {
   const [open, setOpen] = useState(false);
 
@@ -69,9 +62,10 @@ function CreateRoutePanel({
     routeName: '',
     routeDirection: initDir,
     startLocationType: initDir === 'OUTBOUND' ? 'DEPOT' : 'SCHOOL',
-    startDepotId: initDir === 'OUTBOUND' && contextDepotId ? Number(contextDepotId) : '',
+    startDepotId: '',
     endLocationType: initDir === 'OUTBOUND' ? 'SCHOOL' : 'DEPOT',
-    endDepotId: initDir === 'RETURN' && contextDepotId ? Number(contextDepotId) : '',
+    endDepotId: '',
+    busId: '',
     planningNotes: '',
   });
 
@@ -82,7 +76,6 @@ function CreateRoutePanel({
         routeDirection: initDir,
         startLocationType: 'DEPOT',
         endLocationType: 'SCHOOL',
-        startDepotId: p.startDepotId === '' && contextDepotId ? Number(contextDepotId) : p.startDepotId,
         endDepotId: ''
       }));
     } else {
@@ -92,15 +85,21 @@ function CreateRoutePanel({
         startLocationType: 'SCHOOL',
         endLocationType: 'DEPOT',
         startDepotId: '',
-        endDepotId: p.endDepotId === '' && contextDepotId ? Number(contextDepotId) : p.endDepotId
       }));
     }
-  }, [initDir, contextDepotId]);
+  }, [initDir]);
 
   // Fetch depots for selectors
   const { data: depotsData } = useGetDepotsQuery({ page: 0, size: 100 });
   const depots = depotsData?.data?.items ?? [];
   const hasDepots = depots.length > 0;
+  const selectedDepotId = initDir === 'OUTBOUND' ? form.startDepotId : form.endDepotId;
+  const { data: busesData, isFetching: loadingBuses } = useGetBusesQuery(
+    selectedDepotId ? { page: 0, size: 100, depotId: Number(selectedDepotId), sortBy: 'plateNumber' } : undefined,
+    { skip: !selectedDepotId }
+  );
+  const buses = busesData?.data?.items ?? [];
+  const selectedBus = buses.find(b => Number(b.id) === Number(form.busId));
 
   const needsStartDepot = form.startLocationType === 'DEPOT';
   const needsEndDepot   = form.endLocationType   === 'DEPOT';
@@ -108,7 +107,8 @@ function CreateRoutePanel({
   const canSubmit =
     form.routeName.trim() !== '' &&
     (!needsStartDepot || form.startDepotId !== '') &&
-    (!needsEndDepot || form.endDepotId !== '');
+    (!needsEndDepot || form.endDepotId !== '') &&
+    form.busId !== '';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +120,7 @@ function CreateRoutePanel({
       endLocationType: form.endLocationType,
       routeName: form.routeName,
       serviceDate: session.serviceDate,
-      schoolScheduleId: session.schoolScheduleId,
+      busId: Number(form.busId),
       planningNotes: form.planningNotes || undefined,
     };
     if (form.startLocationType === 'SCHOOL') req.startSchoolId = session.schoolId;
@@ -129,7 +129,7 @@ function CreateRoutePanel({
     else req.endDepotId = Number(form.endDepotId);
     onSubmit(req);
     setOpen(false);
-    setForm(p => ({ ...p, routeName: '', startDepotId: '', endDepotId: '', planningNotes: '' }));
+    setForm(p => ({ ...p, routeName: '', startDepotId: '', endDepotId: '', busId: '', planningNotes: '' }));
   };
 
   const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all';
@@ -169,9 +169,9 @@ function CreateRoutePanel({
               <label className={labelCls}>Direction</label>
               <div className='w-full rounded-xl border border-slate-150 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-none'>
                 {initDir === 'OUTBOUND' ? (
-                  <span>OUTBOUND — Depot → School <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
+                  <span>OUTBOUND - Depot ➔ School <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
                 ) : (
-                  <span>RETURN — School → Depot <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
+                  <span>RETURN - School ➔ Depot <span className='text-[10px] font-medium text-slate-400 ml-1'>(Inherited from session context)</span></span>
                 )}
               </div>
             </div>
@@ -190,8 +190,8 @@ function CreateRoutePanel({
                     <SchoolBusSelect
                       fullWidth
                       value={form.startDepotId}
-                      onChange={val => setForm(p => ({ ...p, startDepotId: val === '' ? '' : Number(val) }))}
-                      placeholder='— Select depot —'
+                      onChange={val => setForm(p => ({ ...p, startDepotId: val === '' ? '' : Number(val), busId: '' }))}
+                      placeholder='- Select depot -'
                       options={depots.map(d => ({
                         label: d.name,
                         value: d.id
@@ -217,8 +217,8 @@ function CreateRoutePanel({
                     <SchoolBusSelect
                       fullWidth
                       value={form.endDepotId}
-                      onChange={val => setForm(p => ({ ...p, endDepotId: val === '' ? '' : Number(val) }))}
-                      placeholder='— Select depot —'
+                      onChange={val => setForm(p => ({ ...p, endDepotId: val === '' ? '' : Number(val), busId: '' }))}
+                      placeholder='- Select depot -'
                       options={depots.map(d => ({
                         label: d.name,
                         value: d.id
@@ -236,9 +236,63 @@ function CreateRoutePanel({
             </div>
           </div>
 
-          {/* Group 3: Notes & validation warnings */}
+          {/* Group 3: Bus */}
           <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
-            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>3. Additional Information</p>
+            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>3. Bus</p>
+            <div>
+              <label className={labelCls}>Bus *</label>
+              <SchoolBusSelect
+                fullWidth
+                value={form.busId}
+                onChange={val => setForm(p => ({ ...p, busId: val === '' ? '' : Number(val) }))}
+                disabled={!selectedDepotId || loadingBuses || buses.length === 0}
+                placeholder={
+                  !selectedDepotId
+                    ? 'Select depot first'
+                    : loadingBuses
+                      ? 'Loading buses...'
+                      : buses.length === 0
+                        ? 'No buses in this depot'
+                        : 'Select bus'
+                }
+                options={buses.map(bus => ({
+                  label: `${bus.plateNumber} - ${bus.capacity} seats - ${bus.busType || 'Vehicle'} - ${bus.status || 'UNKNOWN'}`,
+                  value: bus.id
+                }))}
+              />
+            </div>
+            {selectedBus ? (
+              <div className='grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2 text-[10px]'>
+                <div className='col-span-2'>
+                  <span className='block text-slate-400 font-bold uppercase'>Bus</span>
+                  <span className='font-bold text-slate-800'>{selectedBus.plateNumber}</span>
+                </div>
+                <div>
+                  <span className='block text-slate-400 font-bold uppercase'>Capacity</span>
+                  <span className='font-bold text-slate-800'>{selectedBus.capacity} students</span>
+                </div>
+                <div>
+                  <span className='block text-slate-400 font-bold uppercase'>Assigned</span>
+                  <span className='font-bold text-slate-800'>0/{selectedBus.capacity}</span>
+                </div>
+                <div>
+                  <span className='block text-slate-400 font-bold uppercase'>Available</span>
+                  <span className='font-bold text-slate-800'>{selectedBus.capacity}</span>
+                </div>
+                <div>
+                  <span className='block text-slate-400 font-bold uppercase'>Status</span>
+                  <span className='font-bold text-slate-800'>{selectedBus.status || '-'}</span>
+                </div>
+              </div>
+            ) : (
+              <p className='text-[11px] text-slate-450 font-medium'>
+                {!selectedDepotId ? 'Choose a depot before selecting a bus.' : 'Choose a bus to determine route capacity.'}
+              </p>
+            )}
+          </div>
+          {/* Group 4: Notes & validation warnings */}
+          <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
+            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>4. Additional Information</p>
             <div>
               <label className={labelCls}>Notes</label>
               <input
@@ -256,7 +310,7 @@ function CreateRoutePanel({
           <div className='flex justify-end gap-2 pt-2'>
             <Button type='button' size='sm' variant='ghost' onClick={() => setOpen(false)} className='text-slate-500 hover:text-slate-900'>Cancel</Button>
             <Button type='submit' size='sm' disabled={submitting || !canSubmit} className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white'>
-              {submitting ? 'Creating…' : 'Create Route'}
+              {submitting ? 'Creating...' : 'Create Route'}
             </Button>
           </div>
         </form>
@@ -265,18 +319,43 @@ function CreateRoutePanel({
   );
 }
 
-/* ── Session Route Card (MANUAL or reloaded GREEDY routes) ────────────────── */
+/* ── Session Route Card ──────────────────────────────────────────────────── */
 
 function SessionRouteCard({
   route,
   onSelect,
   isSelected,
+  onDelete,
+  deleting,
+  onGreedyFill,
+  greedyFilling,
+  onAddStudents,
 }: {
   route: SchoolBusRoute;
   onSelect: (id: number) => void;
   isSelected: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
+  onGreedyFill?: () => void;
+  greedyFilling?: boolean;
+  onAddStudents?: (id: number) => void;
 }) {
   const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
+  const studentCount = route.plannedStudentCount ?? 0;
+  const capacity = route.busCapacity ?? route.assignedBusCapacity ?? null;
+  const depotName = route.startDepotName ?? (route.startLocationType === 'DEPOT' ? route.startLocationName : route.endLocationName);
+
+  // Deletable if not published/tripped AND has 0 students
+  const isDeletable =
+    route.status !== 'PUBLISHED' &&
+    route.status !== 'TRIP_CREATED' &&
+    studentCount === 0;
+  const canGreedyFill =
+    ['DRAFT', 'GENERATED', 'REVIEWING'].includes(route.status) &&
+    Boolean(route.busId) &&
+    capacity != null &&
+    studentCount < capacity;
+  const handleAddStudents = () => (onAddStudents ?? onSelect)(route.id);
 
   return (
     <div
@@ -285,7 +364,7 @@ function SessionRouteCard({
       className={cn(
         'cursor-pointer rounded-2xl border p-4 transition-all duration-200 flex flex-col gap-2.5',
         isSelected
-          ? 'border-l-4 border-l-[#C81E3A] border-y-slate-350 border-r-slate-350 bg-slate-50/50 shadow-sm'
+          ? 'border-l-4 border-l-[#C81E3A] border-y-slate-350 border-r-slate-355 bg-slate-50/50 shadow-sm'
           : schoolBusUi.interactiveCard
       )}
     >
@@ -294,13 +373,13 @@ function SessionRouteCard({
           <p className='text-xs font-bold text-slate-900 truncate'>{route.routeName}</p>
           <p className='text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1.5'>
             <span className='px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-indigo-700 text-[9px]'>{route.routeCode}</span>
-            <span>{route.routeDirection === 'RETURN' ? 'Chiều về' : 'Chiều đi'}</span>
+            <span>{route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}</span>
           </p>
         </div>
         <div className='flex flex-col items-end gap-1.5 shrink-0'>
           <span className={cn(
             'rounded-full px-2.5 py-0.5 text-[10px] font-semibold border shadow-none text-center',
-            route.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-250' :
+            route.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-255' :
             route.status === 'CANCELLED' ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-250'
           )}>{route.status === 'PUBLISHED' ? 'Published' : route.status === 'CANCELLED' ? 'Cancelled' : 'Draft'}</span>
           <span className={cn(
@@ -313,85 +392,189 @@ function SessionRouteCard({
           </span>
         </div>
       </div>
-      {((route.blockingIssueCount ?? 0) > 0 || ((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0) && (
-        <div className='flex flex-wrap gap-1.5 text-[10px]'>
-          {(route.blockingIssueCount ?? 0) > 0 && (
-            <span className='inline-flex items-center gap-1 rounded bg-red-50 text-red-700 px-1.5 py-0.5 border border-red-100 font-bold shadow-none'>
-              🚫 {route.blockingIssueCount} blocking
-            </span>
-          )}
-          {((route.issueCount ?? 0) - (route.blockingIssueCount ?? 0)) > 0 && (
-            <span className='inline-flex items-center gap-1 rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-100 font-bold shadow-none'>
-              ⚠️ {route.issueCount! - route.blockingIssueCount!} warning(s)
-            </span>
-          )}
+
+      <div className='grid grid-cols-2 gap-2 text-[11px] text-slate-650 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/60'>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='text-slate-400 font-medium'>Bus:</span>
+          <span className='font-bold text-slate-700 truncate'>{route.busPlateNumber ?? 'Not selected'}</span>
         </div>
-      )}
+        <div className='flex items-center gap-1.5 justify-end'>
+          <span className='text-slate-400 font-medium'>Students:</span>
+          <span className='font-bold text-slate-700'>
+            {capacity != null ? `${studentCount}/${capacity}` : studentCount}
+          </span>
+        </div>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='text-slate-400 font-medium'>Depot:</span>
+          <span className='font-bold text-slate-700 truncate'>{depotName ?? 'N/A'}</span>
+        </div>
+        <div className='flex items-center gap-1.5 justify-end'>
+          <span className='text-slate-400 font-medium'>Stops:</span>
+          <span className='font-bold text-slate-700'>{route.stopsCount ?? 0}</span>
+        </div>
+        <div className='col-span-2 flex items-center gap-1.5 min-w-0 border-t border-slate-200/40 pt-1.5 mt-0.5'>
+          <span className='text-slate-400 font-medium'>Staff:</span>
+          <span className='font-semibold text-slate-700 truncate'>
+            {route.driverName && route.attendantName ? (
+              `Driver: ${route.driverName} · Attendant: ${route.attendantName}`
+            ) : route.driverName ? (
+              `Driver: ${route.driverName} (No attendant)`
+            ) : route.attendantName ? (
+              `Attendant: ${route.attendantName} (No driver)`
+            ) : (
+              <span className='text-slate-400 italic font-medium'>Not assigned</span>
+            )}
+          </span>
+        </div>
+      </div>
+
       <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
         <span>{route.serviceDate}</span>
-        {isSelected && <span className='font-extrabold text-[#C81E3A] flex items-center gap-1'>▶ Selected</span>}
+        {isSelected && (
+          <span className='px-2 py-0.5 bg-red-50 text-[#C81E3A] border border-red-100 text-[9px] font-extrabold rounded-full flex items-center gap-1 shadow-sm'>
+            Currently Selected
+          </span>
+        )}
       </div>
 
       {isSelected && (
         <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
-          <Button
-            size='sm'
-            variant='outline'
-            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
-            asChild
-          >
-            <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
-              Assign resources
-            </Link>
-          </Button>
-          <Button
-            size='sm'
-            variant='outline'
-            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
-            asChild
-          >
-            <Link href={`/school-bus/dispatch/${route.id}`}>
-              View route detail
-            </Link>
-          </Button>
-          <Button
-            size='sm'
-            variant='ghost'
-            className='rounded-full h-8 text-xs font-semibold text-slate-500 hover:bg-slate-100'
-            onClick={() => onSelect(route.id)}
-          >
-            Continue planning
-          </Button>
+          {canGreedyFill && onGreedyFill && (
+            <Button
+              size='sm'
+              variant='outline'
+              disabled={greedyFilling}
+              className='rounded-full h-8 text-xs font-semibold border-indigo-200 text-indigo-700 bg-indigo-50/40 hover:bg-indigo-50 gap-1.5'
+              onClick={onGreedyFill}
+            >
+              {greedyFilling
+                ? <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                : <Sparkles className='h-3.5 w-3.5' />}
+              {greedyFilling ? 'Running...' : 'Greedy Fill'}
+            </Button>
+          )}
+          {(() => {
+            const hasNoOrUnderCapacityStudents = capacity === null || capacity === 0 || studentCount < capacity;
+            const hasStudentsButNoStaff = studentCount > 0 && !route.driverName && !route.attendantName;
+            const hasStaff = !!route.driverName || !!route.attendantName;
+
+            if (hasStaff) {
+              return (
+                <>
+                  <Button
+                    size='sm'
+                    className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
+                    asChild
+                  >
+                    <Link href={`/school-bus/dispatch/${route.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+                    onClick={handleAddStudents}
+                  >
+                    Add Students
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+                    asChild
+                  >
+                    <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
+                      Edit Staff
+                    </Link>
+                  </Button>
+                </>
+              );
+            }
+
+            if (hasStudentsButNoStaff) {
+              return (
+                <>
+                  <Button
+                    size='sm'
+                    className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
+                    asChild
+                  >
+                    <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
+                      Assign Staff
+                    </Link>
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+                    onClick={handleAddStudents}
+                  >
+                    Add Students
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+                    asChild
+                  >
+                    <Link href={`/school-bus/dispatch/${route.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </>
+              );
+            }
+
+            // Case: hasNoOrUnderCapacityStudents is true (or fallback default)
+            return (
+              <>
+                <Button
+                  size='sm'
+                  className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
+                  onClick={handleAddStudents}
+                >
+                  Add Students
+                </Button>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+                  asChild
+                >
+                  <Link href={`/school-bus/dispatch/${route.id}`}>
+                    View Details
+                  </Link>
+                </Button>
+              </>
+            );
+          })()}
+
+          {isDeletable && onDelete && (
+            <Button
+              size='sm'
+              variant='ghost'
+              disabled={deleting}
+              className='rounded-full h-8 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50/50 gap-1 ml-auto'
+              onClick={onDelete}
+            >
+              {deleting ? (
+                <Loader2 className='h-3 w-3 animate-spin' />
+              ) : (
+                <Trash2 className='h-3.5 w-3.5' />
+              )}
+              Delete
+            </Button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-/* ── Issue badge ────────────────────────────────────────────────── */
+/* ── Route Card ─────────────────────────────────────────────────────────── */
 
-const severityStyle: Record<string, string> = {
-  BLOCKING: 'border-red-205 bg-red-50 text-red-700',
-  WARNING: 'border-amber-205 bg-amber-50 text-amber-700',
-  INFO: 'border-sky-205 bg-sky-50 text-sky-700',
-};
-const SeverityIcon = ({ s }: { s: string }) => s === 'BLOCKING' ? <Ban className='h-3 w-3' /> : s === 'WARNING' ? <AlertTriangle className='h-3 w-3' /> : <Info className='h-3 w-3' />;
-
-function IssueBadge({ issue }: { issue: SchoolBusPlanningIssue }) {
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', severityStyle[issue.severity] || severityStyle.INFO)}>
-      <SeverityIcon s={issue.severity} /> {issue.message}
-    </span>
-  );
-}
-
-/* ── Route Card ─────────────────────────────────────────────────── */
-
-function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuality; onSelect: (id: number) => void; isSelected: boolean }) {
-  const [showIssues, setShowIssues] = useState(false);
-  const score = route.qualityScore ?? 0;
-  const scoreColor = score >= 80 ? 'text-emerald-600 border-emerald-350 bg-emerald-50/50' : score >= 50 ? 'text-amber-600 border-amber-350 bg-amber-50/50' : 'text-red-600 border-red-350 bg-red-50/50';
-
+function RouteCard({ route, onSelect, isSelected }: { route: any; onSelect: (id: number) => void; isSelected: boolean }) {
   const isAssigned = ['ASSIGNED', 'TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status);
 
   return (
@@ -420,63 +603,49 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
               {isAssigned ? 'Ready for trip' : 'Needs assignment'}
             </span>
           </div>
-          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm', scoreColor)}>
-            {score.toFixed(0)}
-          </div>
         </div>
       </div>
       
-      <div className='grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-slate-50/50 border border-slate-100 text-[10px] text-slate-500'>
-        <div>
-          <span className='text-slate-400 block'>Students</span>
+      <div className='grid grid-cols-2 gap-2 text-[11px] text-slate-650 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/60'>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='text-slate-400 font-medium'>Capacity:</span>
+          <span className='font-bold text-slate-700'>{route.requiredCapacity ?? '-'}</span>
+        </div>
+        <div className='flex items-center gap-1.5 justify-end'>
+          <span className='text-slate-400 font-medium'>Students:</span>
           <span className='font-bold text-slate-700'>{route.studentCount}</span>
         </div>
-        <div>
-          <span className='text-slate-400 block'>Stops</span>
-          <span className='font-bold text-slate-700'>{route.stopCount}</span>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='text-slate-400 font-medium'>Distance:</span>
+          <span className='font-bold text-slate-700'>{route.totalDistanceKm != null ? route.totalDistanceKm.toFixed(1) + ' km' : '-'}</span>
         </div>
-        <div>
-          <span className='text-slate-400 block'>Capacity</span>
-          <span className='font-bold text-slate-700'>{route.requiredCapacity ?? '—'}</span>
+        <div className='flex items-center gap-1.5 justify-end'>
+          <span className='text-slate-400 font-medium'>Duration:</span>
+          <span className='font-bold text-slate-700'>{route.totalDurationMin != null ? route.totalDurationMin + ' min' : '-'}</span>
         </div>
-        <div className='col-span-1'>
-          <span className='text-slate-400 block'>Distance</span>
-          <span className='font-bold text-slate-700'>{route.totalDistanceKm != null ? route.totalDistanceKm.toFixed(1) + ' km' : '—'}</span>
-        </div>
-        <div className='col-span-2'>
-          <span className='text-slate-400 block'>Duration</span>
-          <span className='font-bold text-slate-700'>{route.totalDurationMin != null ? route.totalDurationMin + ' min' : '—'}</span>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <span className='text-slate-400 font-medium'>Stops:</span>
+          <span className='font-bold text-slate-700'>{route.stopCount ?? 0}</span>
         </div>
       </div>
 
-      {(route.blockingIssueCount > 0 || route.warningIssueCount > 0) && (
-        <div className='flex flex-wrap gap-1.5 text-[10px]'>
-          {route.blockingIssueCount > 0 && <span className='inline-flex items-center gap-1 rounded bg-red-50 text-red-700 px-1.5 py-0.5 border border-red-100 font-bold'>🚫 {route.blockingIssueCount} blocking</span>}
-          {route.warningIssueCount > 0 && <span className='inline-flex items-center gap-1 rounded bg-amber-50 text-amber-700 px-1.5 py-0.5 border border-amber-100 font-bold'>⚠️ {route.warningIssueCount} warning(s)</span>}
-        </div>
-      )}
-
-      {route.issues.length > 0 && (
-        <div className='pt-1 border-t border-slate-100/50'>
-          <button onClick={e => { e.stopPropagation(); setShowIssues(v => !v); }}
-            className='text-[10px] font-bold text-slate-400 hover:text-slate-900 flex items-center gap-1'>
-            {showIssues ? '▲ Hide issues' : '▼ Show issues'} ({route.issues.length})
-          </button>
-          {showIssues && <div className='mt-2 flex flex-col gap-1.5'>{route.issues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>}
-        </div>
-      )}
+      <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
+        <span>Draft Preview</span>
+        {isSelected && (
+          <span className='px-2 py-0.5 bg-red-50 text-[#C81E3A] border border-red-100 text-[9px] font-extrabold rounded-full flex items-center gap-1 shadow-sm'>
+            Currently Selected
+          </span>
+        )}
+      </div>
       
       {isSelected && (
         <div className='flex flex-wrap gap-2 border-t border-slate-100/50 pt-2.5 mt-1' onClick={e => e.stopPropagation()}>
           <Button
             size='sm'
-            variant='outline'
-            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
-            asChild
+            className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
+            onClick={() => onSelect(route.routeId)}
           >
-            <Link href={`/school-bus/dispatch/${route.routeId}?assign=true`}>
-              Assign resources
-            </Link>
+            Add Students
           </Button>
           <Button
             size='sm'
@@ -485,16 +654,18 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
             asChild
           >
             <Link href={`/school-bus/dispatch/${route.routeId}`}>
-              View route detail
+              View Details
             </Link>
           </Button>
           <Button
             size='sm'
-            variant='ghost'
-            className='rounded-full h-8 text-xs font-semibold text-slate-500 hover:bg-slate-100'
-            onClick={() => onSelect(route.routeId)}
+            variant='outline'
+            className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
+            asChild
           >
-            Continue planning
+            <Link href={`/school-bus/dispatch/${route.routeId}?assign=true`}>
+              Assign Staff
+            </Link>
           </Button>
         </div>
       )}
@@ -502,220 +673,16 @@ function RouteCard({ route, onSelect, isSelected }: { route: SchoolBusRouteQuali
   );
 }
 
-function SessionObjectiveScoreWidget({ sessionId }: { sessionId: number }) {
-  const { data: scoreData, refetch, isLoading } = useGetSessionObjectiveScoreQuery(sessionId);
-  const [recalculate, { isLoading: isRecalculating }] = useRecalculateSessionObjectiveScoreMutation();
-
-  const handleRecalculate = async () => {
-    try {
-      await recalculate(sessionId).unwrap();
-      toast.success('Recalculated session objective score');
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to recalculate session score');
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading solution score...</div>;
-  }
-
-  const score = scoreData?.data;
-  if (!score) {
-    return (
-      <div className="text-xs text-slate-450 py-2">
-        No solution score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-semibold text-[#C81E3A]">Calculate now</Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 rounded-2xl border border-indigo-100 bg-indigo-50/20 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Solution Quality Score</h4>
-          <p className="text-[10px] text-indigo-600 mt-0.5">Overall session cost (includes unassigned student penalties)</p>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRecalculate} 
-          disabled={isRecalculating} 
-          className="h-6 text-[10px] font-bold text-indigo-700 hover:bg-indigo-105/50 p-1 px-2 rounded-full"
-        >
-          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-medium text-slate-500 leading-none">Normalized Score</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={cn(
-              "text-lg font-black",
-              score.feasible ? "text-emerald-700" : "text-rose-700"
-            )}>
-              {score.displayScore?.toFixed(2)}
-            </span>
-            <span className="text-slate-450 text-[10px]">/ 100</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium text-slate-500 leading-none">Total Objective Value</p>
-          <p className="text-sm font-extrabold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Mini breakdown of session cost */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-slate-650 border-t border-indigo-100/40 pt-2.5">
-        <div className="flex justify-between">
-          <span>Distance cost:</span>
-          <span className="font-bold text-slate-750">{score.distanceCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Duration:</span>
-          <span className="font-bold text-slate-750">{score.durationCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Wait time:</span>
-          <span className="font-bold text-slate-750">{score.waitTimeCost?.toFixed(0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Routes:</span>
-          <span className="font-bold text-slate-750">{score.routeCountCost?.toFixed(0)}</span>
-        </div>
-        {score.unassignedCost > 0 && (
-          <div className="flex justify-between text-rose-600 font-medium col-span-2">
-            <span>Unassigned penalty:</span>
-            <span>+{score.unassignedCost?.toFixed(0)}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RouteObjectiveScoreWidget({ routeId }: { routeId: number }) {
-  const { data: scoreData, refetch, isLoading } = useGetRouteObjectiveScoreQuery(routeId);
-  const [recalculate, { isLoading: isRecalculating }] = useRecalculateRouteObjectiveScoreMutation();
-
-  const handleRecalculate = async () => {
-    try {
-      await recalculate(routeId).unwrap();
-      toast.success('Recalculated route objective score');
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || 'Failed to recalculate score');
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-xs text-slate-450 animate-pulse py-2">Loading score...</div>;
-  }
-
-  const score = scoreData?.data;
-  if (!score) {
-    return (
-      <div className="text-xs text-slate-450 py-2">
-        No score calculated. <Button variant="link" onClick={handleRecalculate} className="p-0 h-auto text-xs font-bold text-indigo-650">Calculate now</Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Objective Quality Score</h4>
-          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Normalized from travel duration & distance</p>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRecalculate} 
-          disabled={isRecalculating} 
-          className="h-6 text-[10px] font-semibold text-[#C81E3A] hover:bg-[#FDECEF]/50 p-1 px-2 rounded-full"
-        >
-          {isRecalculating ? 'Recalculating...' : 'Recalculate'}
-        </Button>
-      </div>
-
-      <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Normalized Score</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={cn(
-              "text-lg font-extrabold",
-              score.feasible ? "text-emerald-600" : "text-rose-600"
-            )}>
-              {score.displayScore?.toFixed(2)}
-            </span>
-            <span className="text-slate-400 text-[10px]">/ 100</span>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium text-slate-400 leading-none">Objective Value</p>
-          <p className="text-sm font-bold text-slate-700 mt-1">{score.objectiveValue?.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Breakdown Details */}
-      <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Distance cost:</span>
-          <span className="font-semibold text-slate-800">{score.distanceCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Duration cost:</span>
-          <span className="font-semibold text-slate-800">{score.durationCost?.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between items-center text-slate-650">
-          <span>Wait time cost:</span>
-          <span className="font-semibold text-slate-800">{score.waitTimeCost?.toFixed(2)}</span>
-        </div>
-        {score.capacityExcessCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Capacity excess cost:</span>
-            <span>+{score.capacityExcessCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.blockingIssueCost > 0 && (
-          <div className="flex justify-between items-center text-rose-600 font-medium">
-            <span>Blocking penalty:</span>
-            <span>+{score.blockingIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-        {score.warningIssueCost > 0 && (
-          <div className="flex justify-between items-center text-amber-600 font-medium">
-            <span>Warning penalty:</span>
-            <span>+{score.warningIssueCost?.toFixed(2)}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── Route Detail Panel ─────────────────────────────────────────── */
+/* ── Route Detail Panel ─────────────────────────────────────────────────── */
 
 function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: number }) {
   const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId);
-  const { data: traceData } = useGetLatestRouteCalculationTraceQuery(routeId, { skip: !routeId });
-  const [reorderStops] = useReorderRouteStopsMutation();
+  const [reorderStops, { isLoading: reorderingStops }] = useReorderRouteStopsMutation();
   const [removeStop, { isLoading: removingStop }] = useRemoveRouteStopMutation();
   const [removeStudent, { isLoading: removingStudent }] = useRemoveRouteStudentMutation();
   const detail = routeDetail?.data;
 
-  const issues = React.useMemo(() => {
-    if (!traceData?.data?.issuesJson) return [];
-    try {
-      return JSON.parse(traceData.data.issuesJson);
-    } catch {
-      return [];
-    }
-  }, [traceData]);
-
-  // ── Confirm dialogs ──────────────────────────────────────────────────────
+  // ── Confirm dialogs ──────────────────────────────────────────────────
   const stopConfirm = useSchoolBusConfirm({
     onConfirm: async () => {
       const stopId = stopConfirm.confirmState.payload as number;
@@ -741,7 +708,7 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
     isLoading: removingStudent,
   });
 
-  if (isLoading || !detail) return <div className='py-8 text-center text-sm text-slate-400'>Loading route detail…</div>;
+  if (isLoading || !detail) return <div className='py-8 text-center text-sm text-slate-400'>Loading route detail...</div>;
 
   const stops = detail.stops ?? [];
   const students = detail.students ?? [];
@@ -782,85 +749,18 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
 
   const middleStops = stops.filter(s => s.stopPurpose !== 'START_TERMINAL' && s.stopPurpose !== 'END_TERMINAL');
 
+  const anyLoading = reorderingStops || removingStop || removingStudent;
+
   return (
     <>
       <div className='p-5 space-y-4 border-t border-slate-200 bg-slate-50/20'>
         <div className='border-b border-slate-100 pb-2'>
           <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
             <Route className='h-4 w-4 text-emerald-600 shrink-0' />
-            {detail.route.routeName} — Detail
+            {detail.route.routeName} - Detail
           </h3>
         </div>
 
-        {/* Validation Issues */}
-        {detail.issues && detail.issues.length > 0 && (
-          <div className='rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm'>
-            <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none border-b border-slate-100 pb-2'>Feasibility Validation ({detail.issues.length})</p>
-            
-            <div className='space-y-3 max-h-[280px] overflow-y-auto pr-1'>
-              {/* Blocking Issues */}
-              {detail.blockingIssues && detail.blockingIssues.length > 0 && (
-                <div className='space-y-2'>
-                  <h4 className='text-[10px] font-bold text-rose-800 flex items-center gap-1.5'>
-                    <span className='h-1 w-1 rounded-full bg-rose-600' />
-                    Blocking ({detail.blockingIssues.length})
-                  </h4>
-                  <div className='grid gap-1.5'>
-                    {detail.blockingIssues.map((issue, idx) => (
-                      <div key={idx} className='bg-rose-50/40 border border-rose-100 rounded-xl p-2.5 space-y-1 text-xs'>
-                        <div className='flex justify-between items-start gap-2'>
-                          <div className='font-bold text-slate-800 leading-tight'>
-                            {issue.message}
-                          </div>
-                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-rose-100 text-rose-800 border border-rose-200/40 tracking-wider'>
-                            {issue.issueType}
-                          </span>
-                        </div>
-                        {issue.suggestedFix && (
-                          <div className='mt-1.5 pt-1.5 border-t border-rose-200/40 text-[10px] text-rose-900/90 leading-tight font-semibold flex items-start gap-1'>
-                            <span className='font-extrabold text-rose-955 shrink-0'>Fix:</span>
-                            <span>{issue.suggestedFix}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Warning Issues */}
-              {detail.warningIssues && detail.warningIssues.length > 0 && (
-                <div className='space-y-2'>
-                  <h4 className='text-[10px] font-bold text-amber-800 flex items-center gap-1.5'>
-                    <span className='h-1 w-1 rounded-full bg-amber-600' />
-                    Warnings ({detail.warningIssues.length})
-                  </h4>
-                  <div className='grid gap-1.5'>
-                    {detail.warningIssues.map((issue, idx) => (
-                      <div key={idx} className='bg-amber-50/40 border border-amber-100 rounded-xl p-2.5 space-y-1 text-xs'>
-                        <div className='flex justify-between items-start gap-2'>
-                          <div className='font-bold text-slate-850 leading-tight'>
-                            {issue.message}
-                          </div>
-                          <span className='shrink-0 px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200/40 tracking-wider'>
-                            {issue.issueType}
-                          </span>
-                        </div>
-                        {issue.suggestedFix && (
-                          <div className='mt-1.5 pt-1.5 border-t border-amber-200/40 text-[10px] text-amber-900/90 leading-tight font-semibold flex items-start gap-1'>
-                            <span className='font-extrabold text-amber-955 shrink-0'>Fix:</span>
-                            <span>{issue.suggestedFix}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
         <div>
           {/* Terminal route banner */}
           {(() => {
@@ -909,9 +809,9 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
                     <span className='text-[10px] text-slate-450'>{stop.estimatedStudentCount ?? 0} students</span>
                     {editable && (
                       <div className='flex gap-0.5' onClick={e => e.stopPropagation()}>
-                        <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex - 1)} disabled={isFirstMiddle}><ChevronUp className='h-3 w-3' /></Button>
-                        <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex + 1)} disabled={isLastMiddle}><ChevronDown className='h-3 w-3' /></Button>
-                        <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStop(stop.id)}><Trash2 className='h-3 w-3' /></Button>
+                        <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex - 1)} disabled={isFirstMiddle || anyLoading}><ChevronUp className='h-3 w-3' /></Button>
+                        <Button variant='ghost' size='icon' className='h-6 w-6' onClick={() => swap(middleIndex, middleIndex + 1)} disabled={isLastMiddle || anyLoading}><ChevronDown className='h-3 w-3' /></Button>
+                        <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStop(stop.id)} disabled={anyLoading}><Trash2 className='h-3 w-3' /></Button>
                       </div>
                     )}
                   </div>
@@ -923,65 +823,41 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
 
         <div>
           {(() => {
-            const uniqueStudentCount = new Set(students.map(ps => ps.studentId)).size;
-            interface GroupedStudent {
-              studentId: number;
-              studentName: string;
-              subscriptionId: number;
-              actions: {
-                serviceAction: string;
-                stopName: string;
-              }[];
-            }
-
-            const groupedStudents: GroupedStudent[] = [];
-            students.forEach(ps => {
-              let existing = groupedStudents.find(g => g.studentId === ps.studentId);
-              if (!existing) {
-                existing = {
-                  studentId: ps.studentId,
-                  studentName: ps.studentName,
-                  subscriptionId: ps.subscriptionId,
-                  actions: []
-                };
-                groupedStudents.push(existing);
-              }
-              existing.actions.push({
-                serviceAction: ps.serviceAction === 'BOARD' ? 'BOARD' : ps.serviceAction === 'DROPOFF' ? 'DROPOFF' : ps.serviceAction,
-                stopName: ps.stopName ?? '—'
-              });
-            });
-
             return (
               <>
-                <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({uniqueStudentCount})</p>
-                {groupedStudents.length === 0 ? (
+                <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Students ({students.length})</p>
+                {students.length === 0 ? (
                   <p className='text-xs text-slate-300'>No students assigned to stops</p>
                 ) : (
                   <div className='space-y-1.5'>
-                    {groupedStudents.map(g => (
-                      <div key={g.studentId} className='flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm hover:shadow transition-shadow'>
+                    {students.map(ps => (
+                      <div key={`${ps.studentId}-${ps.subscriptionId}`} className='flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm hover:shadow transition-shadow'>
                         <div className='flex items-center gap-2'>
                           <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-650'>
                             <Users className='h-3 w-3' />
                           </span>
-                          <span className='flex-1 font-bold text-slate-800 truncate'>{g.studentName || `Student #${g.studentId}`}</span>
+                          <span className='flex-1 font-bold text-slate-800 truncate'>{ps.studentName || `Student #${ps.studentId}`}</span>
                           {editable && (
-                            <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(g.studentId, g.subscriptionId)}><Trash2 className='h-3 w-3' /></Button>
+                            <Button variant='ghost' size='icon' className='h-6 w-6 text-red-500 hover:text-red-700' onClick={() => delStudent(ps.studentId, ps.subscriptionId ?? 0)} disabled={anyLoading}><Trash2 className='h-3 w-3' /></Button>
                           )}
                         </div>
                         <div className='pl-7 text-[10px] text-slate-450 space-y-1.5 border-t border-slate-100/60 pt-2 mt-1'>
-                          {g.actions.map((act, aIdx) => (
-                            <div key={aIdx} className='flex items-center gap-1.5'>
-                              <span className={cn(
-                                'px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider',
-                                act.serviceAction.includes('BOARD') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-blue-50 text-blue-700 border border-blue-100'
-                              )}>
-                                {act.serviceAction}
+                          {ps.pickupPointName && (
+                            <div className='flex items-center gap-1.5'>
+                              <span className='px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100'>
+                                PICKUP
                               </span>
-                              <span className='text-slate-600 font-semibold truncate'>{act.stopName}</span>
+                              <span className='text-slate-600 font-semibold truncate'>{ps.pickupPointName}</span>
                             </div>
-                          ))}
+                          )}
+                          {ps.dropoffPointName && (
+                            <div className='flex items-center gap-1.5'>
+                              <span className='px-1 py-0.2 rounded-[4px] font-extrabold text-[8px] uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100'>
+                                DROPOFF
+                              </span>
+                              <span className='text-slate-600 font-semibold truncate'>{ps.dropoffPointName}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -992,12 +868,36 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
           })()}
         </div>
 
-        <hr className='border-slate-150 mt-4' />
-
-        {/* Route Objective Score */}
-        <div className="pt-2">
-          <RouteObjectiveScoreWidget routeId={routeId} />
+        {/* Staff Section */}
+        <div>
+          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>Staff</p>
+          <div className='rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-700 shadow-sm'>
+            {detail.route.driverName || detail.route.attendantName ? (
+              <div className='space-y-2'>
+                {detail.route.driverName && (
+                  <div className='flex items-center justify-between'>
+                    <div className='flex items-center gap-2'>
+                      <span className='w-16 text-slate-400 font-semibold'>Driver:</span>
+                      <span className='font-bold text-slate-800'>{detail.route.driverName}</span>
+                    </div>
+                  </div>
+                )}
+                {detail.route.attendantName && (
+                  <div className='flex items-center justify-between border-t border-slate-100/65 pt-2 mt-2'>
+                    <div className='flex items-center gap-2'>
+                      <span className='w-16 text-slate-400 font-semibold'>Attendant:</span>
+                      <span className='font-bold text-slate-800'>{detail.route.attendantName}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className='text-xs text-slate-450 italic py-1'>No staff assigned to this route.</p>
+            )}
+          </div>
         </div>
+
+        <hr className='border-slate-150 mt-4' />
       </div>
 
       {/* Confirm dialogs */}
@@ -1007,12 +907,11 @@ function RouteDetailPanel({ routeId, sessionId }: { routeId: number; sessionId: 
   );
 }
 
-/* ── Main Results Panel ─────────────────────────────────────────── */
+/* ── Main Results Panel ─────────────────────────────────────────────────── */
 
 interface PlanningResultsPanelProps {
   preview: SchoolBusPlanningPreview | null;
-  greedyResult: SchoolBusGreedyGenerateResult | null;
-  /** Routes loaded from backend (survives refresh, works for both GREEDY + MANUAL) */
+  /** Routes loaded from backend and preserved across refreshes. */
   sessionRoutes: SchoolBusRoute[];
   activeSession: SchoolBusPlanningSession | null;
   eligibleStudents: SchoolBusEligibleStudent[];
@@ -1026,11 +925,11 @@ interface PlanningResultsPanelProps {
   onTabChange: (tab: 'demand-preview' | 'route-builder') => void;
   onPreviewDemandClick?: () => void;
   previewing?: boolean;
+  onOpenSession?: (id: number) => void;
 }
 
 export function PlanningResultsPanel({
   preview,
-  greedyResult,
   sessionRoutes,
   activeSession,
   eligibleStudents,
@@ -1044,33 +943,92 @@ export function PlanningResultsPanel({
   onTabChange,
   onPreviewDemandClick,
   previewing,
+  onOpenSession,
 }: PlanningResultsPanelProps) {
 
-  const isManual = activeSession?.planningMethod === 'MANUAL';
+  const [previewTab, setPreviewTab] = useState<'demands' | 'points' | 'context'>('demands');
+  const [pendingAssignScrollRouteId, setPendingAssignScrollRouteId] = useState<number | null>(null);
+  const manualAssignPanelRef = React.useRef<HTMLDivElement>(null);
 
-  const [previewTab, setPreviewTab] = useState<'summary' | 'demands' | 'points' | 'context'>('summary');
-  const [demandFilter, setDemandFilter] = useState<'all' | 'eligible' | 'blocked'>('all');
+  const [deleteRoute, { isLoading: deletingRoute }] = useDeleteRouteInSessionMutation();
+  const [greedyFillRoute, { isLoading: greedyFilling }] = useGreedyFillRouteMutation();
+
+  const handleAddStudents = (routeId: number) => {
+    setPendingAssignScrollRouteId(routeId);
+    if (selectedRouteId !== routeId) {
+      onSelectRoute(routeId);
+    }
+  };
+
+  useEffect(() => {
+    if (rightPanelTab !== 'route-builder'
+        || pendingAssignScrollRouteId === null
+        || selectedRouteId !== pendingAssignScrollRouteId) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      manualAssignPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      setPendingAssignScrollRouteId(null);
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [pendingAssignScrollRouteId, rightPanelTab, selectedRouteId]);
+
+  const deleteConfirm = useSchoolBusConfirm({
+    onConfirm: async () => {
+      const routeId = deleteConfirm.confirmState.payload as number;
+      if (!activeSession) return;
+      try {
+        await deleteRoute({ sessionId: activeSession.id, routeId }).unwrap();
+        toast.success('Route deleted successfully');
+        if (selectedRouteId === routeId) {
+          onSelectRoute(null);
+        }
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Failed to delete route');
+      }
+    },
+    isLoading: deletingRoute,
+  });
+
+  const greedyConfirm = useSchoolBusConfirm({
+    onConfirm: async () => {
+      const routeId = greedyConfirm.confirmState.payload as number;
+      if (!activeSession) return;
+      try {
+        const response = await greedyFillRoute({
+          sessionId: activeSession.id,
+          routeId,
+          body: { preserveExistingAssignments: true },
+        }).unwrap();
+        toast.success(
+          `Added ${response.data.addedStudents} students across ${response.data.addedStops} stops. Remaining capacity: ${response.data.remainingCapacity}.`,
+        );
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Greedy Fill failed');
+        throw e;
+      }
+    },
+    isLoading: greedyFilling,
+  });
 
   const schoolId = Number(preview?.schoolId ?? form?.schoolId) || 0;
   const { data: schoolData } = useGetSchoolByIdQuery(schoolId, { skip: !schoolId });
   const currentSchool = schoolData?.data ?? null;
 
-  const scheduleId = Number(preview?.schoolScheduleId ?? form?.schoolScheduleId) || 0;
-  const { data: scheduleData } = useGetSchoolScheduleByIdQuery(scheduleId, { skip: !scheduleId });
-  const currentSchedule = scheduleData?.data ?? null;
-
-  const { data: depotsData } = useGetDepotsQuery({ page: 1, size: 200 } as any);
-  const depots = depotsData?.data?.items ?? [];
-  const selectedDepot = depots.find((d: any) => String(d.id) === String(preview?.depotId ?? form?.depotId));
+  const scheduleId = 0; // schedule removed (Phase 3)
+  // scheduleData query removed (Phase 3)
 
   const isPreviewStale = preview ? (
     Number(preview.schoolId) !== Number(form?.schoolId) ||
-    Number(preview.schoolScheduleId) !== Number(form?.schoolScheduleId) ||
     preview.serviceDate !== form?.serviceDate ||
-    preview.routeDirection !== form?.routeDirection ||
-    preview.planningMethod !== form?.planningMethod ||
-    (form?.depotId ? Number(preview.depotId) !== Number(form.depotId) : false) ||
-    (form?.defaultBusCapacity ? Number(preview.defaultBusCapacity) !== Number(form.defaultBusCapacity) : false)
+    preview.routeDirection !== form?.routeDirection
   ) : false;
 
   return (
@@ -1086,10 +1044,10 @@ export function PlanningResultsPanel({
               : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100/50 hover:text-slate-700'
           )}
         >
-          <span className='text-xs font-bold'>Demand Preview</span>
+          <span className='text-xs font-bold'>Student Demand</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {preview && !isPreviewStale
-              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} · Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} · Blocked ${preview.summary?.blockedStudents ?? 0}`
+              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} • Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} • Points ${preview.summary?.pointCount ?? preview.totalEligiblePickupPoints}`
               : isPreviewStale
                 ? 'Out of date'
                 : 'No preview'}
@@ -1107,7 +1065,7 @@ export function PlanningResultsPanel({
           <span className='text-xs font-bold'>Route Builder</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {activeSession
-              ? `${activeSession.planningMethod === 'MANUAL' ? 'Manual' : 'Greedy'} (${sessionRoutes.length || (greedyResult?.routes.length ?? 0)})`
+              ? `Routes (${sessionRoutes.length})`
               : 'No session'}
           </span>
         </button>
@@ -1124,7 +1082,7 @@ export function PlanningResultsPanel({
                   <AlertTriangle className='h-6 w-6' />
                 </div>
                 <p className='text-sm font-bold text-slate-700'>Preview is out of date</p>
-                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   Planning context has changed. Click Preview to refresh.
                 </p>
                 {onPreviewDemandClick && (
@@ -1149,7 +1107,7 @@ export function PlanningResultsPanel({
                 <p className='text-sm font-bold text-slate-700'>
                   {activeSession ? 'Preview demand for this session' : 'No demand preview yet'}
                 </p>
-                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   {activeSession
                     ? 'Preview demand for this session to inspect eligible and blocked students.'
                     : 'Complete planning context and click Preview to inspect eligible students.'}
@@ -1171,23 +1129,50 @@ export function PlanningResultsPanel({
             {preview && !isPreviewStale && (() => {
         const summary = preview?.summary;
         const eligibleDemands = preview?.eligibleDemands ?? [];
-        const blockedDemands = preview?.blockedDemands ?? [];
-        const allDemands = [...eligibleDemands, ...blockedDemands];
         const points = preview?.points ?? [];
-        const issues = preview?.issues ?? [];
+
+        if (preview.existingSessionId) {
+          return (
+            <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px] space-y-4'>
+              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100 text-amber-500 shadow-sm'>
+                <AlertTriangle className='h-6 w-6' />
+              </div>
+              <p className='text-sm font-bold text-slate-800 leading-snug'>
+                Planning session already exists for this school, date and direction. Please open the existing session to continue.
+              </p>
+              {onOpenSession && (
+                <Button
+                  size='sm'
+                  onClick={() => onOpenSession(preview.existingSessionId!)}
+                  className='rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm gap-1.5'
+                >
+                  Open Existing Session
+                </Button>
+              )}
+            </div>
+          );
+        }
+
+        if (eligibleDemands.length === 0) {
+          return (
+            <div className='flex flex-col items-center justify-center p-8 text-center bg-white h-full min-h-[350px] space-y-3'>
+              <div className='flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 border border-slate-150 text-slate-400 shadow-sm'>
+                <Ban className='h-6 w-6' />
+              </div>
+              <p className='text-sm font-bold text-slate-700'>
+                No eligible students for this date and direction.
+              </p>
+              <p className='text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                Make sure students have active subscriptions for this school and route direction.
+              </p>
+            </div>
+          );
+        }
 
         // Derived variables for display
-        const totalSubs = preview ? (summary?.totalSubscriptions ?? preview.totalEligibleStudents) : '—';
-        const eligibleCount = preview ? (summary?.eligibleStudents ?? preview.totalEligibleStudents) : '—';
-        const blockedCount = preview ? (summary?.blockedStudents ?? 0) : '—';
-        const pointsCount = preview ? (summary?.pointCount ?? preview.totalEligiblePickupPoints) : '—';
-
-        // Filter demands based on filter selection
-        const filteredDemands = allDemands.filter(d => {
-          if (demandFilter === 'eligible') return d.readinessStatus === 'READY';
-          if (demandFilter === 'blocked') return d.readinessStatus === 'BLOCKED';
-          return true;
-        });
+        const totalSubs = summary?.totalSubscriptions ?? preview.totalEligibleStudents;
+        const eligibleCount = summary?.eligibleStudents ?? preview.totalEligibleStudents;
+        const pointsCount = summary?.pointCount ?? preview.totalEligiblePickupPoints;
 
         const currentDirection = preview?.routeDirection ?? form?.routeDirection;
 
@@ -1196,15 +1181,15 @@ export function PlanningResultsPanel({
             <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
               <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
                 <Users className='h-4 w-4 text-[#C81E3A] shrink-0' />
-                Planning Readiness Preview
+                Planning Demand Preview
               </h3>
               <span className='px-2 py-0.5 bg-red-50 border border-red-100 text-[#C81E3A] text-[10px] font-bold rounded-full'>
-                {currentDirection === 'RETURN' ? 'Chiều về' : 'Chiều đi'}
+                {currentDirection === 'RETURN' ? 'Return' : 'Outbound'}
               </span>
             </div>
 
             {/* KPI Summary Cards */}
-            <div className='grid grid-cols-4 gap-2 text-xs'>
+            <div className='grid grid-cols-3 gap-2 text-xs'>
               <div className='p-2.5 rounded-2xl bg-slate-50 border border-slate-150 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider leading-none'>Total</span>
                 <span className='text-sm font-black text-slate-850 mt-1.5'>{totalSubs}</span>
@@ -1212,10 +1197,6 @@ export function PlanningResultsPanel({
               <div className='p-2.5 rounded-2xl bg-emerald-50/50 border border-emerald-100 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-emerald-650 uppercase tracking-wider leading-none'>Eligible</span>
                 <span className='text-sm font-black text-emerald-700 mt-1.5'>{eligibleCount}</span>
-              </div>
-              <div className='p-2.5 rounded-2xl bg-red-50/50 border border-red-100 shadow-sm flex flex-col justify-between'>
-                <span className='text-[9px] font-extrabold text-red-650 uppercase tracking-wider leading-none'>Blocked</span>
-                <span className='text-sm font-black text-red-700 mt-1.5'>{blockedCount}</span>
               </div>
               <div className='p-2.5 rounded-2xl bg-blue-50/50 border border-blue-100 shadow-sm flex flex-col justify-between'>
                 <span className='text-[9px] font-extrabold text-blue-650 uppercase tracking-wider leading-none'>Points</span>
@@ -1226,22 +1207,13 @@ export function PlanningResultsPanel({
             {/* Tab Navigation */}
             <div className='flex border-b border-slate-150 text-xs font-bold'>
               <button
-                onClick={() => setPreviewTab('summary')}
-                className={cn(
-                  'px-3 py-2 border-b-2 transition-all -mb-px',
-                  previewTab === 'summary' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
-                )}
-              >
-                Overview
-              </button>
-              <button
                 onClick={() => setPreviewTab('demands')}
                 className={cn(
                   'px-3 py-2 border-b-2 transition-all -mb-px',
                   previewTab === 'demands' ? 'border-[#C81E3A] text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
                 )}
               >
-                Students ({preview ? allDemands.length : 0})
+                Students ({preview ? eligibleDemands.length : 0})
               </button>
               <button
                 onClick={() => setPreviewTab('points')}
@@ -1263,107 +1235,14 @@ export function PlanningResultsPanel({
               </button>
             </div>
 
-            {/* Tab 1: Overview & Diagnostics */}
-            {previewTab === 'summary' && (() => {
-              if (!preview) {
-                return (
-                  <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
-                    <Users className='h-8 w-8 text-slate-350 mb-2' />
-                    <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
-                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
-                      Fill context on the left and click "Preview Demand" to load diagnostics.
-                    </p>
-                  </div>
-                );
-              }
-              return (
-                <div className='space-y-4 pt-1'>
-                  {summary && (
-                    <div className='rounded-2xl border border-slate-150 bg-slate-50/35 p-4 space-y-3 shadow-sm'>
-                      <h4 className='text-[10px] font-extrabold text-slate-450 uppercase tracking-wider'>Readiness Diagnostics</h4>
-                      <div className='grid grid-cols-2 gap-2 text-xs'>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.pausedCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>⏸️</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.pausedCount} paused</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.inactiveCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>🚫</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.inactiveCount} inactive</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.dayMismatchCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>📅</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.dayMismatchCount} day mismatch</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.outOfEffectiveRangeCount > 0 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>⏳</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.outOfEffectiveRangeCount} expired/range</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.missingCoordinateCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>📍</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.missingCoordinateCount} missing coords</p>
-                          </div>
-                        </div>
-                        <div className='flex items-center gap-2 text-slate-650'>
-                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
-                            summary.missingWindowCount > 0 ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 text-slate-400 border-slate-100'
-                          )}>🕒</span>
-                          <div className='min-w-0'>
-                            <p className='font-bold truncate'>{summary.missingWindowCount} missing window</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {issues.length > 0 ? (
-                    <div className='space-y-2'>
-                      <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>Blocking Issues</p>
-                      <div className='flex flex-wrap gap-1.5'>
-                        {issues.map((issue, i) => (
-                          <IssueBadge key={i} issue={issue} />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className='p-4 bg-emerald-50/35 border border-emerald-100 rounded-2xl text-xs flex gap-2.5 shadow-sm'>
-                      <CheckCircle2 className='h-4 w-4 text-emerald-600 shrink-0 mt-0.5' />
-                      <div>
-                        <p className='font-bold text-emerald-800'>All Clear</p>
-                        <p className='text-[10px] text-emerald-600/80 mt-0.5'>No blocking issues found for eligible subscriptions.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Tab 2: Students List */}
+            {/* Tab: Students List */}
             {previewTab === 'demands' && (() => {
               if (!preview) {
                 return (
                   <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
                     <Users className='h-8 w-8 text-slate-350 mb-2' />
                     <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
-                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                    <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
                       Fill context on the left and click "Preview Demand" to load students.
                     </p>
                   </div>
@@ -1371,73 +1250,28 @@ export function PlanningResultsPanel({
               }
               return (
                 <div className='space-y-3 pt-1'>
-                  <div className='flex gap-1.5 p-1 bg-slate-100 rounded-xl text-[10px] font-bold text-slate-500'>
-                    {(['all', 'eligible', 'blocked'] as const).map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setDemandFilter(tab)}
-                        className={cn(
-                          'flex-1 py-1 rounded-lg capitalize transition-all',
-                          demandFilter === tab ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-850'
-                        )}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-
-                  {filteredDemands.length === 0 ? (
+                  {eligibleDemands.length === 0 ? (
                     <div className='text-center py-8 text-slate-400 text-xs'>No students found.</div>
                   ) : (
                     <div className='space-y-2 max-h-[380px] overflow-y-auto pr-1'>
-                      {filteredDemands.map(d => (
+                      {eligibleDemands.map(d => (
                         <div
                           key={d.subscriptionId}
-                          className={cn(
-                            'rounded-xl border p-3 flex flex-col gap-1.5 shadow-sm bg-white',
-                            d.readinessStatus === 'BLOCKED' ? 'border-red-150 border-l-4 border-l-red-500' : 'border-slate-150'
-                          )}
+                          className='rounded-xl border border-slate-150 p-3 flex flex-col gap-1.5 shadow-sm bg-white'
                         >
-                          <div className='flex items-start justify-between gap-2'>
-                            <div className='min-w-0'>
-                              <p className='text-xs font-bold text-slate-800 truncate'>{d.studentName}</p>
-                              <p className='text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5'>
-                                <span className='font-bold'>{d.studentCode}</span>
-                                <span>•</span>
-                                <span>{d.tripOption}</span>
-                              </p>
-                            </div>
-                            <span className={cn(
-                              'rounded-full px-2 py-0.5 text-[9px] font-bold border shrink-0',
-                              d.readinessStatus === 'READY'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-red-50 text-red-700 border-red-100'
-                            )}>
-                              {d.readinessStatus === 'READY' ? 'Eligible' : 'Blocked'}
-                            </span>
+                          <div className='min-w-0'>
+                            <p className='text-xs font-bold text-slate-800 truncate'>{d.studentName}</p>
+                            <p className='text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5'>
+                              <span className='font-bold'>{d.studentCode}</span>
+                              <span>•</span>
+                              <span>{d.tripOption === 'ONE_WAY' ? 'One Way' : d.tripOption === 'ROUND_TRIP' ? 'Round Trip' : d.tripOption}</span>
+                            </p>
                           </div>
 
                           {d.pointName && (
                             <div className='flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 mt-0.5'>
                               <MapPin className='h-3 w-3 text-slate-400 shrink-0' />
                               <span className='font-bold truncate'>{d.pointName}</span>
-                              {d.windowStart && (
-                                <>
-                                  <span>•</span>
-                                  <Clock className='h-3 w-3 text-slate-400 shrink-0' />
-                                  <span className='font-medium'>{d.windowStart.slice(0, 5)} - {d.windowEnd?.slice(0, 5)}</span>
-                                </>
-                              )}
-                            </div>
-                          )}
-
-                          {d.readinessStatus === 'BLOCKED' && d.issueLabels && d.issueLabels.length > 0 && (
-                            <div className='flex flex-wrap gap-1 mt-1'>
-                              {d.issueLabels.map((label, i) => (
-                                <span key={i} className='inline-flex items-center gap-0.5 bg-red-50 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-red-100'>
-                                  <XCircle className='h-2.5 w-2.5 shrink-0' /> {label}
-                                </span>
-                              ))}
                             </div>
                           )}
                         </div>
@@ -1448,14 +1282,14 @@ export function PlanningResultsPanel({
               );
             })()}
 
-            {/* Tab 3: Points List */}
+            {/* Tab: Points List */}
             {previewTab === 'points' && (() => {
               if (!preview) {
                 return (
                   <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
                     <MapPin className='h-8 w-8 text-slate-350 mb-2' />
                     <p className='text-xs font-bold text-slate-600'>No Preview Data</p>
-                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                    <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
                       Fill context on the left and click "Preview Demand" to load points.
                     </p>
                   </div>
@@ -1470,14 +1304,11 @@ export function PlanningResultsPanel({
                       {points.map(pp => (
                         <div
                           key={pp.pointId}
-                          className={cn(
-                            'rounded-xl border p-3 flex flex-col justify-between gap-1 shadow-sm bg-white transition-all',
-                            pp.readinessStatus === 'BLOCKED' ? 'border-red-200 bg-red-50/10' : 'border-slate-150'
-                          )}
+                          className='rounded-xl border border-slate-150 p-3 flex flex-col justify-between gap-1 shadow-sm bg-white transition-all'
                         >
                           <div className='min-w-0'>
                             <p className='text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate'>
-                              <MapPin className={cn('h-3.5 w-3.5 shrink-0', pp.readinessStatus === 'BLOCKED' ? 'text-red-500' : 'text-[#C81E3A]')} />
+                              <MapPin className='h-3.5 w-3.5 shrink-0 text-[#C81E3A]' />
                               {pp.pointName}
                             </p>
                             {pp.pointCode && (
@@ -1485,32 +1316,12 @@ export function PlanningResultsPanel({
                             )}
                           </div>
 
-                          {pp.windowStart && (
-                            <div className='flex items-center gap-1 text-[9px] text-slate-500 mt-1'>
-                              <Clock className='h-3 w-3 text-slate-400 shrink-0' />
-                              <span>{pp.windowStart.slice(0, 5)} - {pp.windowEnd?.slice(0, 5)}</span>
-                            </div>
-                          )}
-
                           <div className='flex items-center justify-between mt-2 pt-2 border-t border-slate-100/50 text-[10px] text-slate-500'>
                             <span className='font-bold'>{pp.studentCount} student(s)</span>
-                            <span className={cn(
-                              'inline-flex items-center rounded px-1.5 py-0.5 font-bold border',
-                              pp.readinessStatus === 'READY'
-                                ? 'bg-emerald-55/10 text-emerald-700 border-emerald-100'
-                                : 'bg-red-55/10 text-red-700 border-red-100'
-                            )}>
-                              {pp.readinessStatus === 'READY' ? '✅ Ready' : '⚠️ Blocked'}
-                            </span>
+                            {(!pp.latitude || !pp.longitude) && (
+                              <span className='text-[9px] font-bold text-amber-600'>No coordinates</span>
+                            )}
                           </div>
-
-                          {pp.readinessStatus === 'BLOCKED' && pp.issueLabels && pp.issueLabels.length > 0 && (
-                            <div className='flex flex-wrap gap-1 mt-1.5'>
-                              {pp.issueLabels.map((lbl, idx) => (
-                                <span key={idx} className='text-[8px] font-bold bg-red-55/10 text-red-700 px-1 py-0.5 rounded border border-red-100 truncate max-w-full'>{lbl}</span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1522,23 +1333,14 @@ export function PlanningResultsPanel({
             {/* Tab 4: Context */}
             {previewTab === 'context' && (() => {
               // 1. School Info
-              const schName = preview?.schoolName ?? currentSchool?.name ?? '—';
-              const schCode = preview?.schoolCode ?? currentSchool?.code ?? '—';
-              const schAddr = preview?.schoolAddress ?? currentSchool?.address ?? '—';
+              const schName = preview?.schoolName ?? currentSchool?.name ?? '-';
+              const schCode = preview?.schoolCode ?? currentSchool?.code ?? '-';
+              const schAddr = preview?.schoolAddress ?? currentSchool?.address ?? '-';
 
-              // 2. Schedule Info
-              const sName = preview?.scheduleName ?? currentSchedule?.scheduleName ?? '—';
-              const sCode = preview?.scheduleCode ?? currentSchedule?.scheduleCode ?? '—';
-              const sShift = preview?.shiftType ?? currentSchedule?.shiftType ?? '—';
-              const sArrival = preview?.arrivalDeadline ?? currentSchedule?.arrivalDeadline ?? '—';
-              const sDeparture = preview?.departureTime ?? currentSchedule?.departureTime ?? '—';
-              const effFrom = preview?.effectiveFrom ?? currentSchedule?.effectiveFrom;
-              const effTo = preview?.effectiveTo ?? currentSchedule?.effectiveTo;
-              const effRange = effFrom && effTo ? `${formatDate(effFrom)} - ${formatDate(effTo)}` : effFrom ? formatDate(effFrom) : '—';
 
               // 3. Active Days
               const pActiveDays = preview?.activeDays;
-              const rawActiveDays = pActiveDays ?? currentSchedule?.daysOfWeek ?? [];
+              const rawActiveDays = pActiveDays ?? [];
               const activeDaysSet = new Set(rawActiveDays.map((d: string) => d.toUpperCase()));
 
               const daysOfWeek = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
@@ -1564,21 +1366,16 @@ export function PlanningResultsPanel({
               }
 
               // 4. Planning Context
-              const serviceDateFormatted = sDate ? formatDate(sDate) : '—';
+              const serviceDateFormatted = sDate ? formatDate(sDate) : '-';
               const dirVal = preview?.direction ?? form?.routeDirection;
-              const dirLabel = dirVal === 'OUTBOUND' ? 'Home → School' : dirVal === 'RETURN' ? 'School → Home' : dirVal ?? '—';
-              const methodVal = preview?.planningMethod ?? form?.planningMethod;
-              const methodLabel = methodVal === 'MANUAL' ? 'Manual' : methodVal === 'GREEDY' ? 'Greedy auto-generate' : methodVal ?? '—';
-              const depName = preview?.depotName ?? selectedDepot?.name ?? '—';
-              const capVal = preview?.defaultBusCapacity ?? form?.defaultBusCapacity ?? '—';
-
+              const dirLabel = dirVal === 'OUTBOUND' ? 'Home ➔ School' : dirVal === 'RETURN' ? 'School ➔ Home' : dirVal ?? '-';
               const hasContext = !!(form?.schoolId || preview?.schoolId);
               if (!hasContext) {
                 return (
                   <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 w-full'>
-                    <Calendar className='h-8 w-8 text-slate-350 mb-2' />
+                    <Calendar className='h-8 w-8 text-slate-355 mb-2' />
                     <p className='text-xs font-bold text-slate-650'>Select Context</p>
-                    <p className='text-[10px] text-slate-450 mt-1 max-w-[200px]'>
+                    <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
                       Select planning context and preview demand.
                     </p>
                   </div>
@@ -1589,46 +1386,19 @@ export function PlanningResultsPanel({
                 <div className='space-y-3 pt-1 text-xs text-slate-700 w-full'>
                   {/* School Section */}
                   <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-1.5 shadow-sm'>
-                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>School</p>
+                    <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>School</p>
                     <div>
                       <p className='font-bold text-slate-800 text-sm leading-snug'>{schName}</p>
                       <p className='text-[10px] text-slate-400 font-semibold mt-0.5'>{schCode}</p>
-                      {schAddr && schAddr !== '—' && (
+                      {schAddr && schAddr !== '-' && (
                         <p className='text-[10px] text-slate-500 mt-1 truncate'>{schAddr}</p>
                       )}
                     </div>
                   </div>
 
-                  {/* Schedule Section */}
-                  <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2 shadow-sm'>
-                    <div className='flex items-start justify-between'>
-                      <div className='space-y-1'>
-                        <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Schedule</p>
-                        <p className='font-bold text-slate-800 leading-snug'>{sName}</p>
-                        <p className='text-[10px] text-slate-400 font-bold mt-0.5'>
-                          {sCode} <span className='text-slate-300 mx-1'>·</span> <span className='text-[#C81E3A]'>{sShift}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className='grid grid-cols-2 gap-2 text-[10px] pt-1.5 border-t border-slate-100/60 text-slate-500'>
-                      <div>
-                        <span className='font-semibold text-slate-400'>Arrival:</span>{' '}
-                        <span className='font-bold text-slate-700'>{sArrival ? sArrival.slice(0, 5) : '—'}</span>
-                      </div>
-                      <div>
-                        <span className='font-semibold text-slate-400'>Departure:</span>{' '}
-                        <span className='font-bold text-slate-700'>{sDeparture ? sDeparture.slice(0, 5) : '—'}</span>
-                      </div>
-                      <div className='col-span-2'>
-                        <span className='font-semibold text-slate-400'>Effective:</span>{' '}
-                        <span className='font-bold text-slate-700'>{effRange}</span>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Active Days Section */}
                   <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2.5 shadow-sm'>
-                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Active Days</p>
+                    <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>Active Days</p>
                     <div className='flex flex-wrap gap-1.5'>
                       {daysOfWeek.map(day => {
                         const isActive = activeDaysSet.has(day);
@@ -1660,7 +1430,7 @@ export function PlanningResultsPanel({
 
                   {/* Planning Section */}
                   <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2 shadow-sm'>
-                    <p className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider'>Planning</p>
+                    <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>Planning</p>
                     <div className='grid grid-cols-2 gap-x-3 gap-y-2 pt-1 text-[11px]'>
                       <div className='flex flex-col'>
                         <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Service Date</span>
@@ -1669,18 +1439,6 @@ export function PlanningResultsPanel({
                       <div className='flex flex-col'>
                         <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Direction</span>
                         <span className='font-bold text-slate-800 mt-0.5'>{dirLabel}</span>
-                      </div>
-                      <div className='flex flex-col'>
-                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Planning Method</span>
-                        <span className='font-bold text-slate-800 mt-0.5'>{methodLabel}</span>
-                      </div>
-                      <div className='flex flex-col'>
-                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Depot</span>
-                        <span className='font-bold text-slate-800 mt-0.5 truncate max-w-full'>{depName}</span>
-                      </div>
-                      <div className='flex flex-col col-span-2'>
-                        <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>Default Bus Capacity</span>
-                        <span className='font-bold text-slate-800 mt-0.5'>{capVal}</span>
                       </div>
                     </div>
                   </div>
@@ -1703,7 +1461,7 @@ export function PlanningResultsPanel({
                   <Route className='h-6 w-6' />
                 </div>
                 <p className='text-sm font-bold text-slate-700'>No planning session yet</p>
-                <p className='mt-1 text-xs text-slate-450 max-w-[240px] leading-relaxed'>
+                <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   Create a session before building routes.
                 </p>
               </div>
@@ -1712,30 +1470,24 @@ export function PlanningResultsPanel({
             {/* Case B: Active Session exists */}
             {activeSession && (
               <>
-                <div className="px-5 pt-4">
-                  <SessionObjectiveScoreWidget sessionId={activeSession.id} />
-                </div>
-                {/* MANUAL mode: Session routes from backend + create new route + demand assignment */}
-                {isManual && activeSession && (
         <div className='p-5 space-y-4'>
           <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
-            <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
+            <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
               <Route className='h-4 w-4 text-blue-600 shrink-0' />
-              Manual Routes ({sessionRoutes.length})
+              Routes ({sessionRoutes.length})
             </h3>
           </div>
           <CreateRoutePanel
             session={activeSession}
             onSubmit={onCreateManualRoute}
             submitting={creatingRoute}
-            contextDepotId={form?.depotId ? Number(form.depotId) : ''}
           />
           {creatingRoute ? (
             <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/50 border border-slate-200 rounded-2xl shadow-sm space-y-3 min-h-[160px] animate-pulse'>
               <Loader2 className='h-7 w-7 text-blue-600 animate-spin' />
               <div className='space-y-1'>
                 <p className='text-xs font-bold text-slate-700'>Creating route...</p>
-                <p className='text-[10px] text-slate-450 font-semibold'>Computing initial path and timeline...</p>
+                <p className='text-[10px] text-slate-455 font-semibold'>Computing initial path and timeline...</p>
               </div>
             </div>
           ) : sessionRoutes.length === 0 ? (
@@ -1752,102 +1504,46 @@ export function PlanningResultsPanel({
                   route={r}
                   onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
                   isSelected={selectedRouteId === r.id}
+                  onAddStudents={handleAddStudents}
+                  onDelete={() => {
+                    deleteConfirm.requestConfirm({
+                      title: 'Delete empty route?',
+                      description: 'Are you sure you want to delete this route? This action cannot be undone.',
+                      confirmLabel: 'Delete',
+                      variant: 'danger',
+                      payload: r.id,
+                    });
+                  }}
+                  deleting={deletingRoute && deleteConfirm.confirmState.payload === r.id}
+                  onGreedyFill={() => {
+                    greedyConfirm.requestConfirm({
+                      title: 'Greedy Fill this route?',
+                      description: 'Automatically assign eligible students to this route based on distance and remaining bus capacity?',
+                      confirmLabel: 'Greedy Fill',
+                      variant: 'primary',
+                      payload: r.id,
+                    });
+                  }}
+                  greedyFilling={greedyFilling && greedyConfirm.confirmState.payload === r.id}
                 />
               ))}
             </div>
           )}
         </div>
-      )}
 
-      {/* MANUAL mode: Demand assignment panel — shown when a route is selected */}
-      {isManual && activeSession && (
-        <ManualDemandAssignPanel
-          selectedRoute={sessionRoutes.find(r => r.id === selectedRouteId) ?? null}
-          eligibleStudents={eligibleStudents}
-          sessionId={activeSession.id}
-          loadingEligible={loadingEligible}
-        />
-      )}
-
-      {/* GREEDY mode: waiting for user to generate */}
-      {!isManual && activeSession && !greedyResult && sessionRoutes.length === 0 && (
-        <div className='p-5'>
-          <div className='rounded-2xl border border-sky-100 bg-sky-50/40 p-5 text-center shadow-sm'>
-            <p className='text-xs font-bold text-sky-700 flex items-center justify-center gap-1.5'>
-              <Info className='h-4 w-4' />
-              Ready to generate routes
-            </p>
-            <p className='mt-2 text-xs text-slate-550 leading-5'>
-              Click <span className='font-semibold text-slate-800'>"Generate"</span> in the session panel on the left to auto-generate routes using the greedy algorithm.
-            </p>
-          </div>
+      {/* Demand assignment panel - shown when a route is selected */}
+        <div
+          ref={manualAssignPanelRef}
+          id='manual-demand-assign-panel'
+          className='scroll-mt-4'
+        >
+          <ManualDemandAssignPanel
+            selectedRoute={sessionRoutes.find(r => r.id === selectedRouteId) ?? null}
+            eligibleStudents={eligibleStudents}
+            sessionId={activeSession.id}
+            loadingEligible={loadingEligible}
+          />
         </div>
-      )}
-
-      {/* GREEDY mode: show quality cards from greedyResult, or reload from sessionRoutes */}
-      {!isManual && greedyResult && (
-        <>
-          <div className='p-5 space-y-4'>
-            <div className='border-b border-slate-100 pb-2.5'>
-              <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
-                <Route className='h-4 w-4 text-emerald-600 shrink-0' />
-                Generated Routes ({greedyResult.routes.length})
-              </h3>
-            </div>
-            {greedyResult.sessionIssues.filter(i => i.severity !== 'INFO').length > 0 && (
-              <div className='mb-3 flex flex-wrap gap-1.5'>{greedyResult.sessionIssues.map((issue, i) => <IssueBadge key={i} issue={issue} />)}</div>
-            )}
-            <div className='space-y-3'>
-              {greedyResult.routes.map(r => (
-                <RouteCard key={r.routeId} route={r}
-                  onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
-                  isSelected={selectedRouteId === r.routeId} />
-              ))}
-            </div>
-          </div>
-
-          {greedyResult.totalUnassignedStudents > 0 && (
-            <div className='p-5 space-y-4'>
-              <div className='border-b border-slate-100 pb-2.5'>
-                <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
-                  <AlertTriangle className='h-4 w-4 text-amber-600 shrink-0' />
-                  Unassigned Students ({greedyResult.totalUnassignedStudents})
-                </h3>
-              </div>
-              <div className='space-y-1.5'>
-                {greedyResult.unassignedStudents.map(s => (
-                  <div key={s.studentId} className='flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-700 shadow-sm'>
-                    <span className='font-semibold text-slate-800'>{s.studentName}</span>
-                    <span className='text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border font-semibold'>{s.specialNote ?? 'No nearby stop'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* GREEDY mode: show session routes if no in-memory greedyResult (page refresh) */}
-      {!isManual && !greedyResult && sessionRoutes.length > 0 && (
-        <div className='p-5 space-y-4'>
-          <div className='border-b border-slate-100 pb-2.5'>
-            <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
-              <Route className='h-4 w-4 text-blue-600 shrink-0' />
-              Session Routes ({sessionRoutes.length})
-            </h3>
-          </div>
-          <div className='space-y-3'>
-            {sessionRoutes.map(r => (
-              <SessionRouteCard
-                key={r.id}
-                route={r}
-                onSelect={id => onSelectRoute(selectedRouteId === id ? null : id)}
-                isSelected={selectedRouteId === r.id}
-              />
-            ))}
-          </div>
-        </div>
-      )}
               </>
             )}
           </>
@@ -1857,6 +1553,8 @@ export function PlanningResultsPanel({
           <RouteDetailPanel routeId={selectedRouteId} sessionId={activeSession?.id ?? 0} />
         )}
       </div>
+      <SchoolBusConfirmDialog {...deleteConfirm.dialogProps} />
+      <SchoolBusConfirmDialog {...greedyConfirm.dialogProps} />
     </div>
   );
 }

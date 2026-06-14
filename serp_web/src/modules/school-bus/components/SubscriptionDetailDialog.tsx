@@ -1,7 +1,7 @@
 'use client';
 
 import { X, CalendarDays, User, School, MapPin, Clock, Hash, ExternalLink } from 'lucide-react';
-import { useGetSubscriptionByIdQuery } from '../api/schoolBusApi';
+import { useGetSchoolBusSubscriptionByIdQuery } from '../api/schoolBusApi';
 import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { cn } from '@/shared/utils';
@@ -57,7 +57,7 @@ interface Props {
 }
 
 export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
-  const { data, isLoading } = useGetSubscriptionByIdQuery(subscriptionId);
+  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
   const sub = data?.data;
 
   return (
@@ -122,8 +122,8 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               <Section title='Student & School' icon={User}>
                 <Field label='Student' value={sub.studentName} />
                 <Field label='School' value={sub.schoolName} />
-                <Field label='Schedule' value={sub.schoolScheduleName ?? '—'} />
                 <Field label='Trip Option' value={sub.tripOption} />
+                <div />
               </Section>
 
               {/* Pickup & Dropoff */}
@@ -138,8 +138,8 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                 />
               </Section>
 
-              {/* Schedule */}
-              <Section title='Schedule' icon={CalendarDays}>
+              {/* Active days */}
+              <Section title='Active Days' icon={CalendarDays}>
                 {/* Active days */}
                 <div className='col-span-2'>
                   <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>Active Days</span>

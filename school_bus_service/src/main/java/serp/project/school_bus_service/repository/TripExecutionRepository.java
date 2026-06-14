@@ -84,5 +84,89 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
     );
 
+    @Query("""
+        SELECT t FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT ts FROM TripStudentEntity ts
+              WHERE ts.trip.id = t.id
+                AND ts.student.parentProfile.id = :parentProfileId
+                AND ts.isDeleted = false
+          )
+    """)
+    List<TripExecutionEntity> findTripsByParentAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("parentProfileId") Long parentProfileId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT t.status, COUNT(t) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT ts FROM TripStudentEntity ts
+              WHERE ts.trip.id = t.id
+                AND ts.student.parentProfile.id = :parentProfileId
+                AND ts.isDeleted = false
+          )
+        GROUP BY t.status
+    """)
+    List<Object[]> countTripsByStatusForParent(
+        @Param("tenantId") Long tenantId,
+        @Param("parentProfileId") Long parentProfileId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT t FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.driver.id = :driverId
+    """)
+    List<TripExecutionEntity> findTripsByDriverAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("driverId") Long driverId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT t.status, COUNT(t) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.driver.id = :driverId
+        GROUP BY t.status
+    """)
+    List<Object[]> countTripsByStatusForDriver(
+        @Param("tenantId") Long tenantId,
+        @Param("driverId") Long driverId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT t FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.attendant.id = :attendantId
+    """)
+    List<TripExecutionEntity> findTripsByAttendantAndDate(
+        @Param("tenantId") Long tenantId,
+        @Param("attendantId") Long attendantId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
+
+    @Query("""
+        SELECT t.status, COUNT(t) FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.attendant.id = :attendantId
+        GROUP BY t.status
+    """)
+    List<Object[]> countTripsByStatusForAttendant(
+        @Param("tenantId") Long tenantId,
+        @Param("attendantId") Long attendantId,
+        @Param("serviceDate") LocalDate serviceDate
+    );
 }
 

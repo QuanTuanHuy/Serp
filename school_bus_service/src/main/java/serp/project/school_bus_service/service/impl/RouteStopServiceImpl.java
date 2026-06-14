@@ -19,16 +19,14 @@ import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.RoutePlanStudentAction;
+import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.repository.RouteStopRepository;
-import serp.project.school_bus_service.service.IAuditLogService;
-import serp.project.school_bus_service.service.domain.IRouteGeometryService;
-import serp.project.school_bus_service.service.domain.RouteStopFactory;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
+import serp.project.school_bus_service.service.IRouteGeometryService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
@@ -42,7 +40,6 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,77 +51,60 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     private final IRouteService routeService;
     private final IRoutePlanStudentService routePlanStudentService;
     private final IPickupPointService pickupPointService;
-    private final IRouteGeometryService routeGeometryService;
-    private final IAuditLogService auditLogService;
     private final IRoutePlanningSessionService planningSessionService;
     private final IStudentSubscriptionService subscriptionService;
-    private final RouteStopFactory routeStopFactory;
+    private final IRouteGeometryService routeGeometryService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
 
     public RouteStopServiceImpl(RouteStopRepository routeStopRepository,
-                                @Lazy IRouteService routeService,
-                                IRoutePlanStudentService routePlanStudentService,
-                                IPickupPointService pickupPointService,
-                                IRouteGeometryService routeGeometryService,
-                                IAuditLogService auditLogService,
-                                @Lazy IRoutePlanningSessionService planningSessionService,
-                                IStudentSubscriptionService subscriptionService,
-                                RouteStopFactory routeStopFactory,
-                                SchoolBusMapper mapper,
-                                MessageCommon messageCommon) {
+            @Lazy IRouteService routeService,
+            IRoutePlanStudentService routePlanStudentService,
+            IPickupPointService pickupPointService,
+            @Lazy IRoutePlanningSessionService planningSessionService,
+            IStudentSubscriptionService subscriptionService,
+            @Lazy IRouteGeometryService routeGeometryService,
+            SchoolBusMapper mapper,
+            MessageCommon messageCommon) {
         this.routeStopRepository = routeStopRepository;
         this.routeService = routeService;
         this.routePlanStudentService = routePlanStudentService;
         this.pickupPointService = pickupPointService;
-        this.routeGeometryService = routeGeometryService;
-        this.auditLogService = auditLogService;
         this.planningSessionService = planningSessionService;
         this.subscriptionService = subscriptionService;
-        this.routeStopFactory = routeStopFactory;
+        this.routeGeometryService = routeGeometryService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
-
 
     @Override
     protected BaseRepository<RouteStopEntity, Long> getRepository() {
         return routeStopRepository;
     }
 
-    // ── Reorder ───────────────────────────────────────────────────────────────
+    // Reorder
 
-    /**
-     * Reorders middle stops only. The request must contain exactly the IDs of the
-     * non-terminal stops in the desired order. Terminals are never included in the
-     * payload — the backend automatically pins START_TERMINAL at 0 and END_TERMINAL
-     * at N+1 after normalising.
-     */
     @Override
     @Transactional
     public List<RouteStopResponse> reorderRouteStops(Long routeId, ReorderStopsRequest request, Long tenantId,
             Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
-        requireSessionEditable(route);
 
         List<RouteStopEntity> allStops = routeStopRepository
                 .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
 
         List<RouteStopEntity> terminals = allStops.stream()
-                .filter(s -> s.getStopPurpose() != null && s.getStopPurpose().isTerminal())
-                .toList();
+                .filter(s -> s.getStopPurpose() != null && s.getStopPurpose().isTerminal()).toList();
         List<RouteStopEntity> middleStops = allStops.stream()
-                .filter(s -> s.getStopPurpose() == null || !s.getStopPurpose().isTerminal())
-                .toList();
+                .filter(s -> s.getStopPurpose() == null || !s.getStopPurpose().isTerminal()).toList();
 
         List<Long> ordered = request.getOrderedStopIds();
-        // Reject if payload contains terminal IDs
         List<Long> terminalIds = terminals.stream().map(RouteStopEntity::getId).toList();
         for (Long id : ordered) {
             if (terminalIds.contains(id)) {
                 throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
-                        "Terminal stops cannot be reordered — only supply middle stop IDs");
+                        messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
             }
         }
         if (ordered.size() != middleStops.size()) {
@@ -132,7 +112,6 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.COUNT_MISMATCH));
         }
 
-        // Apply new middle order and rebuild full ordered list
         List<RouteStopEntity> reorderedMiddle = new ArrayList<>(middleStops.size());
         for (Long stopId : ordered) {
             RouteStopEntity stop = middleStops.stream().filter(s -> s.getId().equals(stopId)).findFirst()
@@ -141,109 +120,92 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             reorderedMiddle.add(stop);
         }
 
-        // Rebuild full list: START_TERMINAL + reordered middle + END_TERMINAL
         RouteStopEntity startTerminal = terminals.stream()
                 .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL).findFirst().orElse(null);
         RouteStopEntity endTerminal = terminals.stream()
                 .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL).findFirst().orElse(null);
 
         List<RouteStopEntity> full = new ArrayList<>();
-        if (startTerminal != null) full.add(startTerminal);
+        if (startTerminal != null)
+            full.add(startTerminal);
         full.addAll(reorderedMiddle);
-        if (endTerminal != null) full.add(endTerminal);
+        if (endTerminal != null)
+            full.add(endTerminal);
 
         saveNormalizedStops(full);
-        recalculateGeometry(route, tenantId);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "REORDER_STOPS", "Reordered route stops");
+        recalculateRouteDistance(route, tenantId);
         return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId)
-                .stream()
-                .map(mapper::toRouteStopResponse)
-                .toList();
+                .stream().map(mapper::toRouteStopResponse).toList();
     }
 
-    // ── Add stop ──────────────────────────────────────────────────────────────
+    // Add stop
 
     @Override
     @Transactional
     public RouteStopResponse addStop(Long routeId, AddRouteStopRequest request, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
-        requireSessionEditable(route);
 
         PickupPointEntity pickupPoint = pickupPointService.getPickupPoint(request.getPickupPointId(), tenantId);
 
         List<RouteStopEntity> existingStops = routeStopRepository
                 .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
 
-        // Only middle stops (PICKUP/DROPOFF) may be added manually — terminals are auto-managed
         boolean duplicate = existingStops.stream()
                 .filter(s -> s.getPickupPoint() != null)
                 .anyMatch(s -> s.getPickupPoint().getId().equals(request.getPickupPointId()));
         if (duplicate) {
             throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
-                    "Pickup point already exists on this route");
+                    messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
 
-        // Build new middle stop using factory
-        RouteStopEntity stop = routeStopFactory.buildMiddleStop(route, pickupPoint, tenantId, actor(actorId));
-        stop.setEstimatedStudentCount(request.getEstimatedStudentCount() != null ? request.getEstimatedStudentCount() : 0);
+        RouteStopEntity stop = buildMiddleStop(route, pickupPoint, tenantId, actorId);
+        stop.setEstimatedStudentCount(
+                request.getEstimatedStudentCount() != null ? request.getEstimatedStudentCount() : 0);
 
-        // Insert before END_TERMINAL: gather existing middle stops + new stop, rebuild full list
         List<RouteStopEntity> middleStops = existingStops.stream()
                 .filter(s -> s.getStopPurpose() == null || !s.getStopPurpose().isTerminal())
-                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                .collect(Collectors.toCollection(ArrayList::new));
         middleStops.add(stop);
 
-        // Re-attach terminals
         RouteStopEntity startTerminal = existingStops.stream()
                 .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL).findFirst().orElse(null);
         RouteStopEntity endTerminal = existingStops.stream()
                 .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL).findFirst().orElse(null);
 
         List<RouteStopEntity> full = new ArrayList<>();
-        if (startTerminal != null) full.add(startTerminal);
+        if (startTerminal != null)
+            full.add(startTerminal);
         full.addAll(middleStops);
-        if (endTerminal != null) full.add(endTerminal);
+        if (endTerminal != null)
+            full.add(endTerminal);
 
-        // Two-phase save: avoids unique constraint violation on (route_id, stop_order)
         saveNormalizedStops(full);
-        // stop is in the full list — its id is set by JPA after saveAll above
-
-        recalculateGeometry(route, tenantId);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "ADD_STOP",
-                "Added stop: " + pickupPoint.getName());
+        recalculateRouteDistance(route, tenantId);
         return mapper.toRouteStopResponse(stop);
     }
 
-    // ── Assign student to route (auto-create stop if needed) ─────────────────
+    // Assign student to route (auto-create stop if needed)
 
     @Override
     @Transactional
-    public RoutePlanStudentResponse assignStudentToRoute(Long routeId,
-                                                         AddStudentToStopRequest request,
-                                                         Long tenantId, Long actorId) {
-        // 1. Load and validate route
+    public RoutePlanStudentResponse assignStudentToRoute(Long routeId, AddStudentToStopRequest request,
+            Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
 
-        // 2. Route must belong to a planning session
         RoutePlanningSessionEntity session = route.getPlanningSession();
         if (session == null) {
             throw new AppException(AppErrorCode.RouteStop.SESSION_NOT_LINKED,
                     messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_NOT_LINKED));
         }
-        if (session.getStatus() == PlanningSessionStatus.PUBLISHED
-                || session.getStatus() == PlanningSessionStatus.CANCELLED) {
-            throw new AppException(AppErrorCode.RouteStop.SESSION_FROZEN,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_FROZEN, session.getStatus()));
-        }
+        requireSessionEditable(route);
+        requireSelectedBusCapacity(route, routeId);
 
-        // 3. Load and validate subscription
         StudentSubscriptionEntity subscription = subscriptionService.getSubscriptionEntity(
                 request.getSubscriptionId(), tenantId);
         StudentEntity student = subscription.getStudent();
@@ -252,23 +214,9 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_MISMATCH));
         }
 
-        // 4. Determine relevant point for this direction
         RouteDirection direction = route.getRouteDirection();
-        PickupPointEntity relevantPoint = direction == RouteDirection.OUTBOUND
-                ? subscription.getPickupPoint()
-                : subscription.getDropoffPoint();
-        if (relevantPoint == null) {
-            throw new AppException(AppErrorCode.RouteStop.NO_PICKUP_POINT,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.NO_PICKUP_POINT,
-                            direction == RouteDirection.OUTBOUND ? "pickup" : "dropoff"));
-        }
 
-        // Determine action
-        RoutePlanStudentAction action = direction == RouteDirection.OUTBOUND
-                ? RoutePlanStudentAction.BOARD
-                : RoutePlanStudentAction.DROPOFF;
-
-        // 5. Duplicate guard
+        // Duplicate guard
         boolean assignedInOtherRoute = routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
                 session.getId(), routeId, student.getId(), direction);
         if (assignedInOtherRoute) {
@@ -276,86 +224,49 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
         }
 
-        boolean alreadyAssignedToMiddle = routePlanStudentService.existsByRouteAndStudentAndAction(
-                routeId, student.getId(), action);
-        if (alreadyAssignedToMiddle) {
-            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
-        }
+        // Determine pickup and dropoff points from subscription
+        PickupPointEntity pickupPoint = subscription.getPickupPoint();
+        PickupPointEntity dropoffPoint = subscription.getDropoffPoint();
 
-        // 6. Load current stops
+        // Load current stops
         List<RouteStopEntity> existingStops = routeStopRepository
                 .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
 
-        // 7. Find or auto-create middle stop for the relevant pickup/dropoff point
-        final Long relevantPointId = relevantPoint.getId();
-        RouteStopEntity stop = existingStops.stream()
-                .filter(s -> s.getPickupPoint() != null && s.getPickupPoint().getId().equals(relevantPointId))
-                .findFirst()
-                .orElse(null);
-
-        if (stop == null) {
-            // Auto-create a new middle stop using factory
-            stop = routeStopFactory.buildMiddleStop(route, relevantPoint, tenantId, actor(actorId));
-
-            // Insert before END_TERMINAL, normalize, save
-            List<RouteStopEntity> middleStops = existingStops.stream()
-                    .filter(s -> s.getStopPurpose() == null || !s.getStopPurpose().isTerminal())
-                    .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
-            middleStops.add(stop);
-
-            RouteStopEntity startTerminal = existingStops.stream()
-                    .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL).findFirst().orElse(null);
-            RouteStopEntity endTerminal = existingStops.stream()
-                    .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL).findFirst().orElse(null);
-
-            List<RouteStopEntity> full = new ArrayList<>();
-            if (startTerminal != null) full.add(startTerminal);
-            full.addAll(middleStops);
-            if (endTerminal != null) full.add(endTerminal);
-
-            // Two-phase save: avoids unique constraint violation on (route_id, stop_order)
-            saveNormalizedStops(full);
-            // stop is in the full list — its id is set by JPA after saveAll above
-
-            auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "AUTO_CREATE_STOP",
-                    "Auto-created stop at " + relevantPoint.getName());
+        // Find or auto-create the relevant stop (pickup for OUTBOUND, dropoff for
+        // RETURN)
+        PickupPointEntity relevantPoint = direction == RouteDirection.OUTBOUND ? pickupPoint : dropoffPoint;
+        if (relevantPoint == null) {
+            throw new AppException(AppErrorCode.RouteStop.NO_PICKUP_POINT,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.NO_PICKUP_POINT,
+                            direction == RouteDirection.OUTBOUND ? "pickup" : "dropoff"));
         }
 
-        // 9. Create RoutePlanStudentEntity — main action
+        RouteStopEntity stop = findOrCreateMiddleStop(route, relevantPoint, existingStops, tenantId, actorId);
+
+        // Find terminal stops for pickup/dropoff assignment
+        RouteStopEntity terminalStop = existingStops.stream()
+                .filter(s -> s.getStopPurpose() == (direction == RouteDirection.OUTBOUND
+                        ? RouteStopPurpose.END_TERMINAL
+                        : RouteStopPurpose.START_TERMINAL))
+                .findFirst().orElse(null);
+
+        // Create RoutePlanStudent (1 row per student)
         RoutePlanStudentEntity planStudent = new RoutePlanStudentEntity();
         planStudent.markCreated(tenantId, actor(actorId));
         planStudent.setRoute(route);
-        planStudent.setRouteStop(stop);
         planStudent.setStudent(student);
         planStudent.setSubscription(subscription);
-        planStudent.setServiceAction(action);
+        if (direction == RouteDirection.OUTBOUND) {
+            planStudent.setPickupStop(stop);
+            planStudent.setDropoffStop(terminalStop);
+        } else {
+            planStudent.setPickupStop(terminalStop);
+            planStudent.setDropoffStop(stop);
+        }
         RoutePlanStudentEntity saved = routePlanStudentService.save(planStudent);
 
-        // 9b. Create complementary terminal RoutePlanStudentEntity
-        //     OUTBOUND: DROPOFF at END_TERMINAL (school) | RETURN: BOARD at START_TERMINAL (school)
-        RouteStopPurpose terminalPurpose = direction == RouteDirection.OUTBOUND
-                ? RouteStopPurpose.END_TERMINAL
-                : RouteStopPurpose.START_TERMINAL;
-        RoutePlanStudentAction terminalAction = direction == RouteDirection.OUTBOUND
-                ? RoutePlanStudentAction.DROPOFF
-                : RoutePlanStudentAction.BOARD;
-        existingStops.stream()
-                .filter(s -> s.getStopPurpose() == terminalPurpose)
-                .findFirst()
-                .ifPresent(terminalStop -> {
-                    RoutePlanStudentEntity terminalEntry = new RoutePlanStudentEntity();
-                    terminalEntry.markCreated(tenantId, actor(actorId));
-                    terminalEntry.setRoute(route);
-                    terminalEntry.setRouteStop(terminalStop);
-                    terminalEntry.setStudent(student);
-                    terminalEntry.setSubscription(subscription);
-                    terminalEntry.setServiceAction(terminalAction);
-                    routePlanStudentService.save(terminalEntry);
-                });
-
-        // 10. Update stop counts (middle stop only)
-        if (action == RoutePlanStudentAction.BOARD) {
+        // Update stop counts
+        if (direction == RouteDirection.OUTBOUND) {
             stop.setPlannedBoardingCount(stop.getPlannedBoardingCount() + 1);
         } else {
             stop.setPlannedDropoffCount(stop.getPlannedDropoffCount() + 1);
@@ -363,53 +274,33 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
         routeStopRepository.save(stop);
 
-        // 11. Recompute route geometry
-        recalculateGeometry(route, tenantId);
-        route.markUpdated(actor(actorId));
-        routeService.saveRouteEntity(route);
-
-        // 12. Update route and session summary
+        // Update route and session summary
         updateRouteStudentCount(route, routeId, actorId);
+        recalculateRouteDistance(route, tenantId);
         planningSessionService.refreshSessionSummary(session.getId(), tenantId);
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "ASSIGN_STUDENT",
-                "Assigned student " + student.getFullName() + " at " + relevantPoint.getName());
 
         return mapper.toRoutePlanStudentResponse(saved);
     }
 
-    // ── Add student to stop ───────────────────────────────────────────────────
+    // Add student to stop
 
     @Override
     @Transactional
-    public RoutePlanStudentResponse addStudentToStop(Long routeId, Long stopId,
-                                                     AddStudentToStopRequest request,
-                                                     Long tenantId, Long actorId) {
-        // 1. Load and validate route
+    public RoutePlanStudentResponse addStudentToStop(Long routeId, Long stopId, AddStudentToStopRequest request,
+            Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
+        requireSessionEditable(route);
+        requireSelectedBusCapacity(route, routeId);
 
-        // 2. Route must belong to a planning session
-        RoutePlanningSessionEntity session = route.getPlanningSession();
-        if (session == null) {
-            throw new AppException(AppErrorCode.RouteStop.SESSION_NOT_LINKED,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_NOT_LINKED));
-        }
-        if (session.getStatus() == PlanningSessionStatus.PUBLISHED
-                || session.getStatus() == PlanningSessionStatus.CANCELLED) {
-            throw new AppException(AppErrorCode.RouteStop.SESSION_FROZEN,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_FROZEN, session.getStatus()));
-        }
-
-        // 3. Load and validate stop
-        RouteStopEntity stop = routeStopRepository
-                .findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
-                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
+        RouteStopEntity stop = routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
         if (!stop.getRoute().getId().equals(routeId)) {
-            throw new AppException(AppErrorCode.RouteStop.NOT_FOUND, messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND));
+            throw new AppException(AppErrorCode.RouteStop.NOT_FOUND,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND));
         }
 
-        // 4. Load and validate subscription
         StudentSubscriptionEntity subscription = subscriptionService.getSubscriptionEntity(
                 request.getSubscriptionId(), tenantId);
         StudentEntity student = subscription.getStudent();
@@ -418,76 +309,45 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_MISMATCH));
         }
 
-        // 5. Validate stop point matches student's relevant point for direction
+        RoutePlanningSessionEntity session = route.getPlanningSession();
         RouteDirection direction = route.getRouteDirection();
-        PickupPointEntity relevantPoint = direction == RouteDirection.OUTBOUND
-                ? subscription.getPickupPoint()
-                : subscription.getDropoffPoint();
-        if (relevantPoint == null) {
-            throw new AppException(AppErrorCode.RouteStop.NO_PICKUP_POINT,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.NO_PICKUP_POINT,
-                            direction == RouteDirection.OUTBOUND ? "pickup" : "dropoff"));
-        }
-        if (stop.getPickupPoint() == null || !stop.getPickupPoint().getId().equals(relevantPoint.getId())) {
-            throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
+
+        // Duplicate guard
+        if (session != null) {
+            boolean assignedInOtherRoute = routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
+                    session.getId(), routeId, student.getId(), direction);
+            if (assignedInOtherRoute) {
+                throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
+                        messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
+            }
         }
 
-        // 7. Determine serviceAction from direction
-        RoutePlanStudentAction action = direction == RouteDirection.OUTBOUND
-                ? RoutePlanStudentAction.BOARD
-                : RoutePlanStudentAction.DROPOFF;
+        // Find terminal stop
+        List<RouteStopEntity> existingStops = routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        RouteStopEntity terminalStop = existingStops.stream()
+                .filter(s -> s.getStopPurpose() == (direction == RouteDirection.OUTBOUND
+                        ? RouteStopPurpose.END_TERMINAL
+                        : RouteStopPurpose.START_TERMINAL))
+                .findFirst().orElse(null);
 
-        // 6. Duplicate guard
-        boolean assignedInOtherRoute = routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
-                session.getId(), routeId, student.getId(), direction);
-        if (assignedInOtherRoute) {
-            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
-        }
-
-        boolean alreadyAssignedToMiddle = routePlanStudentService.existsByRouteAndStudentAndAction(
-                routeId, student.getId(), action);
-        if (alreadyAssignedToMiddle) {
-            throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
-        }
-
-        // 8. Create RoutePlanStudentEntity — main action
+        // Create RoutePlanStudent
         RoutePlanStudentEntity planStudent = new RoutePlanStudentEntity();
         planStudent.markCreated(tenantId, actor(actorId));
         planStudent.setRoute(route);
-        planStudent.setRouteStop(stop);
         planStudent.setStudent(student);
         planStudent.setSubscription(subscription);
-        planStudent.setServiceAction(action);
+        if (direction == RouteDirection.OUTBOUND) {
+            planStudent.setPickupStop(stop);
+            planStudent.setDropoffStop(terminalStop);
+        } else {
+            planStudent.setPickupStop(terminalStop);
+            planStudent.setDropoffStop(stop);
+        }
         RoutePlanStudentEntity saved = routePlanStudentService.save(planStudent);
 
-        // 8b. Create complementary terminal RoutePlanStudentEntity
-        //     OUTBOUND: DROPOFF at END_TERMINAL (school) | RETURN: BOARD at START_TERMINAL (school)
-        RouteStopPurpose terminalPurpose2 = direction == RouteDirection.OUTBOUND
-                ? RouteStopPurpose.END_TERMINAL
-                : RouteStopPurpose.START_TERMINAL;
-        RoutePlanStudentAction terminalAction2 = direction == RouteDirection.OUTBOUND
-                ? RoutePlanStudentAction.DROPOFF
-                : RoutePlanStudentAction.BOARD;
-        routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId)
-                .stream()
-                .filter(s -> s.getStopPurpose() == terminalPurpose2)
-                .findFirst()
-                .ifPresent(terminalStop -> {
-                    RoutePlanStudentEntity terminalEntry = new RoutePlanStudentEntity();
-                    terminalEntry.markCreated(tenantId, actor(actorId));
-                    terminalEntry.setRoute(route);
-                    terminalEntry.setRouteStop(terminalStop);
-                    terminalEntry.setStudent(student);
-                    terminalEntry.setSubscription(subscription);
-                    terminalEntry.setServiceAction(terminalAction2);
-                    routePlanStudentService.save(terminalEntry);
-                });
-
-        // 9. Update stop boarding/dropoff counts and keep estimatedStudentCount in sync
-        if (action == RoutePlanStudentAction.BOARD) {
+        // Update stop counts
+        if (direction == RouteDirection.OUTBOUND) {
             stop.setPlannedBoardingCount(stop.getPlannedBoardingCount() + 1);
         } else {
             stop.setPlannedDropoffCount(stop.getPlannedDropoffCount() + 1);
@@ -495,315 +355,258 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
         routeStopRepository.save(stop);
 
-        // 10. Update route geometry, timeline and student count
-        recalculateGeometry(route, tenantId);
         updateRouteStudentCount(route, routeId, actorId);
-
-        // 11. Refresh session summary counters
-        planningSessionService.refreshSessionSummary(session.getId(), tenantId);
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "ADD_STUDENT_TO_STOP",
-                "Added student " + student.getFullName() + " to stop " + stop.getDisplayName());
+        recalculateRouteDistance(route, tenantId);
+        if (session != null) {
+            planningSessionService.refreshSessionSummary(session.getId(), tenantId);
+        }
 
         return mapper.toRoutePlanStudentResponse(saved);
     }
 
-    // ── Remove stop ───────────────────────────────────────────────────────────
+    // Remove stop
 
     @Override
     @Transactional
     public void removeStop(Long routeId, Long stopId, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
-        requireSessionEditable(route);
 
         RouteStopEntity stop = routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
-                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
-
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
         if (!stop.getRoute().getId().equals(routeId)) {
-            throw new AppException(AppErrorCode.RouteStop.NOT_FOUND, messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND));
+            throw new AppException(AppErrorCode.RouteStop.NOT_FOUND,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.NOT_FOUND));
         }
-
-        // Terminal stops may not be removed manually
         if (stop.getStopPurpose() != null && stop.getStopPurpose().isTerminal()) {
             throw new AppException(AppErrorCode.RouteStop.INVALID_REQUEST,
                     messageCommon.getMessage(AppErrorCode.RouteStop.INVALID_REQUEST));
         }
 
-        // Soft-delete the stop
-        stop.setIsDeleted(true);
-        stop.setIsActive(false);
-        stop.markUpdated(actor(actorId));
-        routeStopRepository.save(stop);
-
-        // Soft-delete all plan students linked to this stop, plus their complementary terminal entries
-        List<RoutePlanStudentEntity> linkedStudents = routePlanStudentService
-                .findByRouteStop(stopId);
-        if (!linkedStudents.isEmpty()) {
-            Set<String> affectedPairs = linkedStudents.stream()
-                    .map(ps -> ps.getStudent().getId() + ":" + ps.getSubscription().getId())
-                    .collect(Collectors.toSet());
-            List<RoutePlanStudentEntity> terminalEntries = routePlanStudentService.findByRoute(routeId)
-                    .stream()
-                    .filter(ps -> ps.getRouteStop() != null
-                            && ps.getRouteStop().getStopPurpose() != null
-                            && ps.getRouteStop().getStopPurpose().isTerminal()
-                            && affectedPairs.contains(ps.getStudent().getId() + ":" + ps.getSubscription().getId()))
-                    .collect(Collectors.toList());
-            List<RoutePlanStudentEntity> allToDelete = new ArrayList<>(linkedStudents);
-            allToDelete.addAll(terminalEntries);
-            for (RoutePlanStudentEntity ps : allToDelete) {
-                ps.setIsDeleted(true);
-                ps.setIsActive(false);
-                ps.markUpdated(actor(actorId));
-            }
-            routePlanStudentService.saveAll(allToDelete);
+        // Remove students assigned to this stop
+        List<RoutePlanStudentEntity> affected = routePlanStudentService.findByRoute(routeId).stream()
+                .filter(ps -> (ps.getPickupStop() != null && ps.getPickupStop().getId().equals(stopId))
+                        || (ps.getDropoffStop() != null && ps.getDropoffStop().getId().equals(stopId)))
+                .toList();
+        for (RoutePlanStudentEntity ps : affected) {
+            ps.markSoftDeleted(actor(actorId));
+            routePlanStudentService.save(ps);
         }
 
-        // Re-sequence remaining stops (two-phase to avoid unique constraint violation)
-        List<RouteStopEntity> remaining = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
-        saveNormalizedStops(remaining);
+        // Soft-delete stop
+        stop.markSoftDeleted(actor(actorId));
+        routeStopRepository.save(stop);
 
-        // Update route metadata and geometry
-        long studentCount = routePlanStudentService.countDistinctStudentsByRoute(routeId);
-        route.setPlannedStudentCount((int) studentCount);
-        recalculateGeometry(route, tenantId);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
+        recalculateRouteDistance(route, tenantId);
 
-        // Refresh session summary if route belongs to a session
         if (route.getPlanningSession() != null) {
             planningSessionService.refreshSessionSummary(route.getPlanningSession().getId(), tenantId);
         }
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "REMOVE_STOP",
-                "Removed stop #" + stopId);
     }
 
-    // ── Move student between routes ───────────────────────────────────────────
+    // Move student
 
     @Override
     @Transactional
     public void moveStudent(Long sourceRouteId, MoveStudentRequest request, Long tenantId, Long actorId) {
         RoutePlanEntity sourceRoute = routeService.getRouteEntity(sourceRouteId, tenantId);
-        requireEditable(sourceRoute);
-        requireSessionEditable(sourceRoute);
-
         RoutePlanEntity targetRoute = routeService.getRouteEntity(request.getTargetRouteId(), tenantId);
+        requireEditable(sourceRoute);
         requireEditable(targetRoute);
-        requireSessionEditable(targetRoute);
 
-        // Find the student entries in source route
-        List<RoutePlanStudentEntity> sourceEntries = routePlanStudentService
-                .findByRoute(sourceRouteId)
-                .stream()
+        // Find the student entry in source route
+        List<RoutePlanStudentEntity> sourceEntries = routePlanStudentService.findByRoute(sourceRouteId).stream()
                 .filter(ps -> ps.getStudent().getId().equals(request.getStudentId())
-                        && ps.getSubscription().getId().equals(request.getSubscriptionId()))
+                        && ps.getSubscription().getId().equals(request.getSubscriptionId())
+                        && !Boolean.TRUE.equals(ps.getIsDeleted()))
                 .toList();
 
         if (sourceEntries.isEmpty()) {
-            throw new AppException(AppErrorCode.NOT_FOUND, messageCommon.getMessage(AppErrorCode.NOT_FOUND));
+            throw new AppException(AppErrorCode.NOT_FOUND,
+                    messageCommon.getMessage(AppErrorCode.NOT_FOUND));
         }
 
         // Soft-delete from source
         for (RoutePlanStudentEntity entry : sourceEntries) {
-            entry.setIsDeleted(true);
-            entry.setIsActive(false);
-            entry.markUpdated(actor(actorId));
-        }
-        routePlanStudentService.saveAll(sourceEntries);
-
-        // Re-create in target (pick first matching stop if available)
-        List<RouteStopEntity> targetStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(request.getTargetRouteId(), tenantId);
-
-        for (RoutePlanStudentEntity original : sourceEntries) {
-            // Re-link: terminal entries → find matching terminal purpose in target;
-            //          middle stop entries → find matching pickup point in target.
-            RouteStopEntity matchStop = null;
-            if (original.getRouteStop() != null) {
-                if (original.getRouteStop().getStopPurpose() != null
-                        && original.getRouteStop().getStopPurpose().isTerminal()) {
-                    RouteStopPurpose targetPurpose = original.getRouteStop().getStopPurpose();
-                    matchStop = targetStops.stream()
-                            .filter(s -> s.getStopPurpose() == targetPurpose)
-                            .findFirst()
-                            .orElse(null);
-                } else if (original.getRouteStop().getPickupPoint() != null) {
-                    Long pointId = original.getRouteStop().getPickupPoint().getId();
-                    matchStop = targetStops.stream()
-                            .filter(s -> s.getPickupPoint() != null && s.getPickupPoint().getId().equals(pointId))
-                            .findFirst()
-                            .orElse(null);
-                }
-            }
-
-            RoutePlanStudentEntity newEntry = new RoutePlanStudentEntity();
-            newEntry.markCreated(tenantId, actor(actorId));
-            newEntry.setRoute(targetRoute);
-            newEntry.setRouteStop(matchStop);
-            newEntry.setStudent(original.getStudent());
-            newEntry.setSubscription(original.getSubscription());
-            newEntry.setServiceAction(original.getServiceAction());
-            newEntry.setPlannedTime(original.getPlannedTime());
-            routePlanStudentService.save(newEntry);
+            entry.markSoftDeleted(actor(actorId));
+            routePlanStudentService.save(entry);
         }
 
-        // Update counts and recalculate geometry/timeline/issues on both routes
-        recalculateGeometry(sourceRoute, tenantId);
+        // Re-create in target route using assign logic
+        AddStudentToStopRequest addReq = new AddStudentToStopRequest();
+        addReq.setStudentId(request.getStudentId());
+        addReq.setSubscriptionId(request.getSubscriptionId());
+        assignStudentToRoute(request.getTargetRouteId(), addReq, tenantId, actorId);
+
+        // Update source route
         updateRouteStudentCount(sourceRoute, sourceRouteId, actorId);
-
-        recalculateGeometry(targetRoute, tenantId);
-        updateRouteStudentCount(targetRoute, request.getTargetRouteId(), actorId);
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", sourceRouteId, "MOVE_STUDENT",
-                "Moved student #" + request.getStudentId() + " to route #" + request.getTargetRouteId());
+        if (sourceRoute.getPlanningSession() != null) {
+            planningSessionService.refreshSessionSummary(sourceRoute.getPlanningSession().getId(), tenantId);
+        }
     }
 
-    // ── Remove student from route ─────────────────────────────────────────────
+    // Remove student
 
     @Override
     @Transactional
     public void removeStudent(Long routeId, Long studentId, Long subscriptionId, Long tenantId, Long actorId) {
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
-        requireSessionEditable(route);
 
-        List<RoutePlanStudentEntity> entries = routePlanStudentService
-                .findByRoute(routeId)
-                .stream()
+        List<RoutePlanStudentEntity> entries = routePlanStudentService.findByRoute(routeId).stream()
                 .filter(ps -> ps.getStudent().getId().equals(studentId)
-                        && ps.getSubscription().getId().equals(subscriptionId))
+                        && ps.getSubscription().getId().equals(subscriptionId)
+                        && !Boolean.TRUE.equals(ps.getIsDeleted()))
                 .toList();
 
         if (entries.isEmpty()) {
-            throw new AppException(AppErrorCode.NOT_FOUND, messageCommon.getMessage(AppErrorCode.NOT_FOUND));
+            throw new AppException(AppErrorCode.NOT_FOUND,
+                    messageCommon.getMessage(AppErrorCode.NOT_FOUND));
         }
 
         for (RoutePlanStudentEntity entry : entries) {
-            entry.setIsDeleted(true);
-            entry.setIsActive(false);
-            entry.markUpdated(actor(actorId));
-
-            // Decrement middle-stop planned count (skip terminal stops — their counts are implicit)
-            RouteStopEntity stop = entry.getRouteStop();
-            if (stop != null && (stop.getStopPurpose() == null || !stop.getStopPurpose().isTerminal())) {
-                if (entry.getServiceAction() == RoutePlanStudentAction.BOARD) {
-                    stop.setPlannedBoardingCount(Math.max(0, stop.getPlannedBoardingCount() - 1));
-                } else {
-                    stop.setPlannedDropoffCount(Math.max(0, stop.getPlannedDropoffCount() - 1));
-                }
+            // Update stop counts
+            if (entry.getPickupStop() != null && entry.getPickupStop().getStopPurpose() != null
+                    && !entry.getPickupStop().getStopPurpose().isTerminal()) {
+                RouteStopEntity stop = entry.getPickupStop();
+                stop.setPlannedBoardingCount(Math.max(0, stop.getPlannedBoardingCount() - 1));
                 stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
+                softDeleteIfEmptyMiddleStop(stop, actorId);
                 routeStopRepository.save(stop);
             }
-        }
-        routePlanStudentService.saveAll(entries);
-
-        // Auto-remove middle stops that now have zero students
-        for (RoutePlanStudentEntity entry : entries) {
-            RouteStopEntity stop = entry.getRouteStop();
-            if (stop != null && stop.getStopPurpose() != null && !stop.getStopPurpose().isTerminal()) {
-                long remaining = routePlanStudentService.findByRouteStop(stop.getId())
-                        .stream().filter(ps -> !ps.getIsDeleted()).count();
-                if (remaining == 0) {
-                    stop.setIsDeleted(true);
-                    stop.setIsActive(false);
-                    stop.markUpdated(actor(actorId));
-                    routeStopRepository.save(stop);
-                    auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "AUTO_REMOVE_STOP",
-                            "Auto-removed empty stop: " + stop.getDisplayName());
-                }
+            if (entry.getDropoffStop() != null && entry.getDropoffStop().getStopPurpose() != null
+                    && !entry.getDropoffStop().getStopPurpose().isTerminal()) {
+                RouteStopEntity stop = entry.getDropoffStop();
+                stop.setPlannedDropoffCount(Math.max(0, stop.getPlannedDropoffCount() - 1));
+                stop.setEstimatedStudentCount(stop.getPlannedBoardingCount() + stop.getPlannedDropoffCount());
+                softDeleteIfEmptyMiddleStop(stop, actorId);
+                routeStopRepository.save(stop);
             }
+            entry.markSoftDeleted(actor(actorId));
+            routePlanStudentService.save(entry);
         }
 
-        // Re-normalize stop orders after possible stop removal (two-phase to avoid unique constraint violation)
-        List<RouteStopEntity> remaining = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
-        saveNormalizedStops(remaining);
-
-        recalculateGeometry(route, tenantId);
         updateRouteStudentCount(route, routeId, actorId);
 
-        // Refresh session summary if route belongs to a session
+        // Normalize remaining active stops to avoid gaps in stop order
+        List<RouteStopEntity> remainingStops = routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        saveNormalizedStops(remainingStops);
+
+        recalculateRouteDistance(route, tenantId);
         if (route.getPlanningSession() != null) {
             planningSessionService.refreshSessionSummary(route.getPlanningSession().getId(), tenantId);
         }
-
-        auditLogService.log(tenantId, actorId, "RoutePlan", routeId, "REMOVE_STUDENT",
-                "Removed student #" + studentId + " from route");
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    private void requireEditable(RoutePlanEntity route) {
-        if (route.getStatus() == RouteStatus.TRIP_CREATED
-                || route.getStatus() == RouteStatus.CANCELLED) {
-            throw new AppException(AppErrorCode.Route.INVALID_STATE,
-                    messageCommon.getMessage(AppErrorCode.Route.FIELD_INVALID, "route status", route.getStatus()));
-        }
+    private RouteStopEntity buildMiddleStop(RoutePlanEntity route, PickupPointEntity pickupPoint,
+            Long tenantId, Long actorId) {
+        RouteStopEntity stop = new RouteStopEntity();
+        stop.markCreated(tenantId, actor(actorId));
+        stop.setRoute(route);
+        stop.setPickupPoint(pickupPoint);
+        stop.setLocationType(RouteLocationType.PICKUP_POINT);
+        stop.setStopPurpose(route.getRouteDirection() == RouteDirection.OUTBOUND
+                ? RouteStopPurpose.PICKUP
+                : RouteStopPurpose.DROPOFF);
+        stop.setEstimatedStudentCount(0);
+        stop.setPlannedBoardingCount(0);
+        stop.setPlannedDropoffCount(0);
+        return stop;
     }
 
-    private void requireSessionEditable(RoutePlanEntity route) {
-        RoutePlanningSessionEntity session = route.getPlanningSession();
-        if (session != null
-                && (session.getStatus() == PlanningSessionStatus.PUBLISHED
-                || session.getStatus() == PlanningSessionStatus.CANCELLED)) {
-            throw new AppException(AppErrorCode.RouteStop.SESSION_FROZEN,
-                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_FROZEN, session.getStatus()));
+    private RouteStopEntity findOrCreateMiddleStop(RoutePlanEntity route, PickupPointEntity point,
+            List<RouteStopEntity> existingStops,
+            Long tenantId, Long actorId) {
+        return existingStops.stream()
+                .filter(s -> s.getPickupPoint() != null && s.getPickupPoint().getId().equals(point.getId()))
+                .findFirst()
+                .orElseGet(() -> {
+                    RouteStopEntity newStop = buildMiddleStop(route, point, tenantId, actorId);
+                    List<RouteStopEntity> middleStops = existingStops.stream()
+                            .filter(s -> s.getStopPurpose() == null || !s.getStopPurpose().isTerminal())
+                            .collect(Collectors.toCollection(ArrayList::new));
+                    middleStops.add(newStop);
+
+                    RouteStopEntity startTerminal = existingStops.stream()
+                            .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL).findFirst()
+                            .orElse(null);
+                    RouteStopEntity endTerminal = existingStops.stream()
+                            .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL).findFirst().orElse(null);
+
+                    List<RouteStopEntity> full = new ArrayList<>();
+                    if (startTerminal != null)
+                        full.add(startTerminal);
+                    full.addAll(middleStops);
+                    if (endTerminal != null)
+                        full.add(endTerminal);
+                    saveNormalizedStops(full);
+                    return newStop;
+                });
+    }
+
+    private List<RouteStopEntity> saveNormalizedStops(List<RouteStopEntity> fullOrderedList) {
+        List<RouteStopEntity> persisted = fullOrderedList.stream()
+                .filter(s -> s.getId() != null).collect(Collectors.toList());
+        for (int i = 0; i < persisted.size(); i++) {
+            persisted.get(i).setStopOrder(-(1000 + i));
         }
+        routeStopRepository.saveAllAndFlush(persisted);
+        for (int i = 0; i < fullOrderedList.size(); i++) {
+            fullOrderedList.get(i).setStopOrder(i);
+        }
+        return routeStopRepository.saveAll(fullOrderedList);
     }
 
     private void updateRouteStudentCount(RoutePlanEntity route, Long routeId, Long actorId) {
         long count = routePlanStudentService.countDistinctStudentsByRoute(routeId);
         route.setPlannedStudentCount((int) count);
+        route.setRequiredCapacity((int) count);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
     }
 
-    /**
-     * Two-phase safe save that avoids unique constraint violations on
-     * {@code (route_id, stop_order)} when renumbering stops.
-     *
-     * <p>Phase 1: parks all already-persisted stops at temporary negative orders
-     * and flushes, releasing their unique slots in the DB.
-     * <p>Phase 2: assigns final 0-based orders via {@link RouteStopFactory#normalizeStopOrders}
-     * and saves everything (including any new, unsaved stop in the list).
-     *
-     * @param fullOrderedList the complete, ordered stop list for the route
-     *                        (must be in desired final order; may include unsaved new stops)
-     * @return the saved entities in the same order
-     */
-    private List<RouteStopEntity> saveNormalizedStops(List<RouteStopEntity> fullOrderedList) {
-        // Phase 1: park persisted stops at temp negative orders to free unique slots
-        List<RouteStopEntity> persisted = fullOrderedList.stream()
-                .filter(s -> s.getId() != null)
-                .collect(Collectors.toList());
-        for (int i = 0; i < persisted.size(); i++) {
-            persisted.get(i).setStopOrder(-(1000 + i));
+    private void softDeleteIfEmptyMiddleStop(RouteStopEntity stop, Long actorId) {
+        int plannedCount = (stop.getPlannedBoardingCount() == null ? 0 : stop.getPlannedBoardingCount())
+                + (stop.getPlannedDropoffCount() == null ? 0 : stop.getPlannedDropoffCount());
+        if (plannedCount == 0 && stop.getStopPurpose() != null && !stop.getStopPurpose().isTerminal()) {
+            stop.markSoftDeleted(actor(actorId));
         }
-        routeStopRepository.saveAllAndFlush(persisted);
-
-        // Phase 2: assign final 0-based orders and save all (incl. newly created stops)
-        routeStopFactory.normalizeStopOrders(fullOrderedList);
-        return routeStopRepository.saveAll(fullOrderedList);
     }
 
-    /**
-     * Recomputes geometry for a route and mutates the entity in-place.
-     * Also updates per-stop distances on all active stops.
-     * Caller is responsible for calling {@code route.markUpdated()} and persisting.
-     */
-    private void recalculateGeometry(RoutePlanEntity route, Long tenantId) {
-        try {
-            List<RouteStopEntity> currentStops = routeStopRepository
-                    .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(route.getId(), tenantId);
-            routeGeometryService.computeAndUpdate(route, currentStops);
-            routeStopRepository.saveAll(currentStops);
-        } catch (Exception ex) {
-            log.warn("Geometry recomputation failed for route {}, geometry invalidated: {}",
-                    route.getId(), ex.getMessage());
-            route.setGeometryPath(null);
+    private void requireSelectedBusCapacity(RoutePlanEntity route, Long routeId) {
+        if (route.getSelectedBus() == null) {
+            throw new AppException(AppErrorCode.Bus.SELECTED_BUS_REQUIRED,
+                    messageCommon.getMessage(AppErrorCode.Bus.SELECTED_BUS_REQUIRED));
+        }
+        Integer capacity = route.getSelectedBus().getCapacity();
+        if (capacity == null) {
+            throw new AppException(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED,
+                    messageCommon.getMessage(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED));
+        }
+        long currentStudentCount = routePlanStudentService.countDistinctStudentsByRoute(routeId);
+        if (currentStudentCount + 1 > capacity) {
+            throw new AppException(AppErrorCode.Bus.CAPACITY_EXCEEDED,
+                    messageCommon.getMessage(AppErrorCode.Bus.CAPACITY_EXCEEDED, capacity, currentStudentCount));
+        }
+    }
+
+    private void requireEditable(RoutePlanEntity route) {
+        if (route.getStatus() == RouteStatus.TRIP_CREATED || route.getStatus() == RouteStatus.CANCELLED) {
+            throw new AppException(AppErrorCode.Route.INVALID_STATE,
+                    messageCommon.getMessage(AppErrorCode.Route.INVALID_STATE));
+        }
+    }
+
+    private void requireSessionEditable(RoutePlanEntity route) {
+        RoutePlanningSessionEntity session = route.getPlanningSession();
+        if (session != null && (session.getStatus() == PlanningSessionStatus.PUBLISHED
+                || session.getStatus() == PlanningSessionStatus.CANCELLED)) {
+            throw new AppException(AppErrorCode.RouteStop.SESSION_FROZEN,
+                    messageCommon.getMessage(AppErrorCode.RouteStop.SESSION_FROZEN, session.getStatus()));
         }
     }
 
@@ -831,5 +634,89 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     @Transactional
     public void deletePhysical(Long id) {
         routeStopRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void updateTerminalStops(RoutePlanEntity route, Long tenantId, Long actorId) {
+        List<RouteStopEntity> stops = routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(route.getId(), tenantId);
+
+        RouteStopEntity startTerminal = stops.stream()
+                .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL)
+                .findFirst()
+                .orElseGet(() -> {
+                    RouteStopEntity newStop = new RouteStopEntity();
+                    newStop.markCreated(tenantId, actor(actorId));
+                    newStop.setRoute(route);
+                    newStop.setStopPurpose(RouteStopPurpose.START_TERMINAL);
+                    newStop.setEstimatedStudentCount(0);
+                    newStop.setPlannedBoardingCount(0);
+                    newStop.setPlannedDropoffCount(0);
+                    return newStop;
+                });
+
+        RouteStopEntity endTerminal = stops.stream()
+                .filter(s -> s.getStopPurpose() == RouteStopPurpose.END_TERMINAL)
+                .findFirst()
+                .orElseGet(() -> {
+                    RouteStopEntity newStop = new RouteStopEntity();
+                    newStop.markCreated(tenantId, actor(actorId));
+                    newStop.setRoute(route);
+                    newStop.setStopPurpose(RouteStopPurpose.END_TERMINAL);
+                    newStop.setEstimatedStudentCount(0);
+                    newStop.setPlannedBoardingCount(0);
+                    newStop.setPlannedDropoffCount(0);
+                    return newStop;
+                });
+
+        // Update Start Terminal
+        startTerminal.setLocationType(route.getStartLocationType());
+        if (route.getStartLocationType() == RouteLocationType.SCHOOL) {
+            startTerminal.setSchool(route.getStartSchool());
+            startTerminal.setDepot(null);
+            startTerminal.setPickupPoint(null);
+        } else {
+            startTerminal.setDepot(route.getStartDepot());
+            startTerminal.setSchool(null);
+            startTerminal.setPickupPoint(null);
+        }
+        if (startTerminal.getId() != null) {
+            startTerminal.markUpdated(actor(actorId));
+        }
+
+        // Update End Terminal
+        endTerminal.setLocationType(route.getEndLocationType());
+        if (route.getEndLocationType() == RouteLocationType.SCHOOL) {
+            endTerminal.setSchool(route.getEndSchool());
+            endTerminal.setDepot(null);
+            endTerminal.setPickupPoint(null);
+        } else {
+            endTerminal.setDepot(route.getEndDepot());
+            endTerminal.setSchool(null);
+            endTerminal.setPickupPoint(null);
+        }
+        if (endTerminal.getId() != null) {
+            endTerminal.markUpdated(actor(actorId));
+        }
+
+        // Get all middle stops
+        List<RouteStopEntity> middleStops = stops.stream()
+                .filter(s -> s.getStopPurpose() != null && !s.getStopPurpose().isTerminal())
+                .collect(Collectors.toList());
+
+        List<RouteStopEntity> fullOrderedList = new java.util.ArrayList<>();
+        fullOrderedList.add(startTerminal);
+        fullOrderedList.addAll(middleStops);
+        fullOrderedList.add(endTerminal);
+
+        saveNormalizedStops(fullOrderedList);
+        recalculateRouteDistance(route, tenantId);
+    }
+
+    // Geometry: delegate to IRouteGeometryService (OSRM)
+
+    private void recalculateRouteDistance(RoutePlanEntity route, Long tenantId) {
+        routeGeometryService.recalculateGeometry(route, tenantId);
     }
 }

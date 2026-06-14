@@ -30,22 +30,27 @@ public class RoutePlanResponse extends BaseResponse {
     private String routeCode;
     private String routeName;
     private LocalDate serviceDate;
-    private Long schoolScheduleId;
-    private String schoolScheduleName;
     private String status;
     private Double plannedDistanceKm;
     private Integer plannedDurationMin;
+    private Integer plannedStudentCount;
+    private Integer assignedBusCapacity;
+    private Long busId;
+    private String busPlateNumber;
+    private String busName;
+    private Integer busCapacity;
+    private String busStatus;
+    private Integer stopsCount;
+    private Long driverId;
+    private String driverName;
+    private Long attendantId;
+    private String attendantName;
+    private String startDepotName;
     private String planningNotes;
     private String geometryPath;
-    /** Geometry source: ROAD_NETWORK | STRAIGHT_LINE_ESTIMATE | NONE */
     private String geometrySource;
-    /** True when OSRM was unavailable and straight-line geometry was used. */
-    private Boolean fallbackUsed;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
-    private Integer issueCount;
-    private Integer blockingIssueCount;
     private Integer requiredCapacity;
     private Long planningSessionId;
-    private String planningMethod;
 }

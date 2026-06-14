@@ -19,9 +19,10 @@ import {
   Play,
   SkipForward,
   User,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Client } from '@stomp/stompjs';
+import type { Client, StompSubscription } from '@stomp/stompjs';
 import {
   useArriveTripStopMutation,
   useCancelTripMutation,
@@ -29,20 +30,24 @@ import {
   useDepartTripStopMutation,
   useGetTripAttendanceManifestQuery,
   useGetTripAttendanceQuery,
-  useGetTripAttendanceSummaryQuery,
-  useGetTripsQuery,
+  useGetTripByIdQuery,
   useSkipTripStopMutation,
   useStartTripMutation,
   useStartBoardingTripStopMutation,
+  useGetRoutePathQuery,
+  useAbsentTripStudentMutation,
+  useBoardTripStudentMutation,
+  useDropoffTripStudentMutation,
+  useNoShowTripStudentMutation,
+  useNotServedTripStudentMutation,
 } from '../api/schoolBusApi';
-import { connectSchoolBusSocket, subscribeTripEvents } from '../api/schoolBusSocket';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { Button, Input, Badge } from '@/shared/components/ui';
+import { Button, Input, Badge, Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
-import type { TripAttendanceStopItem } from '../types';
+import type { TripAttendanceStopItem, TripAttendanceStudentItem } from '../types';
 import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
@@ -114,35 +119,67 @@ interface SchoolBusTripOperationDetailPageProps {
   tripId: number;
 }
 
+const ACTIVE_POLL_INTERVAL_MS = 10_000;
+const IDLE_POLL_INTERVAL_MS = 25_000;
+const ATTENDANCE_POLL_INTERVAL_MS = 30_000;
+const DEFAULT_RATE_LIMIT_BACKOFF_MS = 60_000;
+
+type PollingError = {
+  status?: number;
+  data?: {
+    retryAfterSeconds?: number;
+  };
+};
+
+function getRateLimitBackoffMs(error: PollingError | undefined): number | null {
+  if (error?.status !== 429) return null;
+
+  const retryAfterSeconds = error.data?.retryAfterSeconds;
+  return retryAfterSeconds && retryAfterSeconds > 0
+    ? retryAfterSeconds * 1000
+    : DEFAULT_RATE_LIMIT_BACKOFF_MS;
+}
+
 export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperationDetailPageProps) {
   const access = useSchoolBusAccess();
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(null);
+  const [isAttendanceDrawerOpen, setIsAttendanceDrawerOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [showSkipForm, setShowSkipForm] = React.useState(false);
   const [skipReason, setSkipReason] = React.useState('');
   const [showCancelForm, setShowCancelForm] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState('');
-  const [wsEvents, setWsEvents] = React.useState<any[]>([]);
-  const [wsState, setWsState] = React.useState<'Live' | 'Offline'>('Offline');
-  const clientRef = React.useRef<Client | null>(null);
+
+  const [lastUpdated, setLastUpdated] = React.useState<string>('');
+  const [isTabVisible, setIsTabVisible] = React.useState(true);
+  const [pollInterval, setPollInterval] = React.useState(IDLE_POLL_INTERVAL_MS);
+  const [isSyncDelayed, setIsSyncDelayed] = React.useState(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  const tripsQuery = useGetTripsQuery({ page: 0, size: 50, sortBy: 'serviceDate', sortDirection: 'DESC' });
+  const { data: tripData, isLoading: tripLoading } = useGetTripByIdQuery(tripId);
+
   const { data: manifestData, isLoading: manifestLoading, refetch: refetchManifest } =
     useGetTripAttendanceManifestQuery(tripId);
-  const { data: summaryData, refetch: refetchSummary } = useGetTripAttendanceSummaryQuery(tripId);
   const { data: eventsData, refetch: refetchEvents } = useGetTripAttendanceQuery(tripId);
+  // Parents do not have the planning.read permission required by the route path
+  // endpoint, so we skip the call entirely. The map falls back to the geometry
+  // embedded in the attendance manifest which contains the same road data.
+  const { data: routePathData } = useGetRoutePathQuery(
+    manifestData?.data?.routeId as number,
+    { skip: !manifestData?.data?.routeId || access.isParentOnly }
+  );
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const allTrips = getPageItems(tripsQuery.data?.data);
-  const trip = allTrips.find((t) => t.id === tripId) ?? null;
-
+  const trip = tripData?.data ?? null;
   const manifest = manifestData?.data ?? null;
-  const summary = summaryData?.data ?? manifest?.summary ?? null;
+  const summary = manifest?.summary ?? null;
   const restEvents = eventsData?.data ?? [];
 
   const tripStatus = manifest?.tripStatus ?? trip?.status ?? null;
-  const tripIsActive = tripStatus === 'IN_PROGRESS';
+  const tripIsActive = ['IN_PROGRESS', 'BOARDING', 'DROPOFF', 'ARRIVED'].includes(
+    tripStatus ?? ''
+  );
   const tripIsCompleted = tripStatus === 'COMPLETED';
   const tripIsCancelled = tripStatus === 'CANCELLED';
   const isOutbound = (manifest?.routeDirection ?? trip?.routeDirection) === 'OUTBOUND';
@@ -150,65 +187,95 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const routeCode = manifest?.routeCode ?? trip?.routeCode ?? '';
   const routeName = (manifest as any)?.routeName ?? trip?.routeName ?? '';
 
-  // ── WebSocket Real-time ───────────────────────────────────────────────────
-  React.useEffect(() => {
-    const client = connectSchoolBusSocket();
-    clientRef.current = client;
+  // ── Polling implementation ─────────────────────────────────────────────────
+  const isRefreshingRef = React.useRef(false);
+  const lastAttendanceRefreshRef = React.useRef(Date.now());
 
-    const originalOnConnect = client.onConnect;
-    client.onConnect = (frame) => {
-      originalOnConnect?.(frame);
-      setWsState('Live');
-    };
+  const refreshTripDetailData = React.useCallback(async (forceAttendance = false) => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    try {
+      const now = Date.now();
+      const shouldRefreshAttendance =
+        forceAttendance ||
+        now - lastAttendanceRefreshRef.current >= ATTENDANCE_POLL_INTERVAL_MS;
 
-    const originalOnWebSocketClose = client.onWebSocketClose;
-    client.onWebSocketClose = (evt) => {
-      originalOnWebSocketClose?.(evt);
-      setWsState('Offline');
-    };
+      const manifestResult = await refetchManifest();
+      const attendanceResult = shouldRefreshAttendance
+        ? await refetchEvents()
+        : undefined;
 
-    subscribeTripEvents(client, tripId, (msg) => {
-      setWsEvents((prev) => [msg, ...prev]);
-      // Refetch API queries to sync state instantly
-      refetchManifest();
-      refetchSummary();
-      refetchEvents();
-    });
-
-    return () => {
-      if (client.active) {
-        client.deactivate();
+      if (attendanceResult && !attendanceResult.error) {
+        lastAttendanceRefreshRef.current = now;
       }
-      clientRef.current = null;
-      setWsState('Offline');
-    };
-  }, [tripId, refetchManifest, refetchSummary, refetchEvents]);
 
-  // ── Merge & Sort Events ───────────────────────────────────────────────────
-  const mergedEvents = React.useMemo(() => {
-    if (wsEvents.length === 0) return restEvents;
-    const wsConverted = wsEvents.map((e, idx) => ({
-      id: -idx - 1,
-      studentName: e.studentName || 'System',
-      studentCode: e.studentCode || '',
-      eventType: e.eventType || e.action,
-      recordedAt: e.timestamp || new Date().toISOString(),
-      notes: e.reason || e.notes || '',
-      attendanceType: e.attendanceType || e.eventType || '',
-    }));
-    // Deduplicate
-    const eventKey = (e: any) =>
-      `${e.studentName}|${e.eventType}|${e.recordedAt}`;
-    const restKeys = new Set(restEvents.map(eventKey));
-    const newWs = wsConverted.filter((e) => !restKeys.has(eventKey(e)));
-    return [...newWs, ...restEvents];
-  }, [wsEvents, restEvents]);
+      const manifestBackoff = getRateLimitBackoffMs(
+        manifestResult.error as PollingError | undefined
+      );
+      const attendanceBackoff = getRateLimitBackoffMs(
+        attendanceResult?.error as PollingError | undefined
+      );
+      const backoffMs = Math.max(manifestBackoff ?? 0, attendanceBackoff ?? 0);
+
+      if (backoffMs > 0) {
+        setIsSyncDelayed(true);
+        setPollInterval(backoffMs);
+        return;
+      }
+
+      if (!manifestResult.error) {
+        setLastUpdated(new Date().toLocaleTimeString());
+        setIsSyncDelayed(false);
+        setPollInterval(tripIsActive ? ACTIVE_POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS);
+      }
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, [refetchManifest, refetchEvents, tripIsActive]);
+
+  // Track page visibility
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsTabVisible(visible);
+      if (visible) {
+        void refreshTripDetailData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshTripDetailData, tripIsCompleted, tripIsCancelled, tripIsActive]);
+
+  // Polling effect
+  React.useEffect(() => {
+    if (tripIsCompleted || tripIsCancelled || !isTabVisible) return;
+
+    const intervalId = setInterval(() => {
+      void refreshTripDetailData();
+    }, pollInterval);
+
+    return () => clearInterval(intervalId);
+  }, [refreshTripDetailData, isTabVisible, pollInterval, tripIsCompleted, tripIsCancelled]);
+
+  React.useEffect(() => {
+    if (tripData || manifestData) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [tripData, manifestData]);
+
+  React.useEffect(() => {
+    if (!isSyncDelayed && !tripIsCompleted && !tripIsCancelled) {
+      setPollInterval(tripIsActive ? ACTIVE_POLL_INTERVAL_MS : IDLE_POLL_INTERVAL_MS);
+    }
+  }, [isSyncDelayed, tripIsActive, tripIsCompleted, tripIsCancelled]);
 
   const sortedEvents = React.useMemo(() => {
-    return [...mergedEvents].sort(
+    return [...restEvents].sort(
       (a: any, b: any) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
     );
-  }, [mergedEvents]);
+  }, [restEvents]);
 
   // ── Auto-advance to current (first non-done) stop ─────────────────────────
   React.useEffect(() => {
@@ -235,9 +302,17 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     if (!manifest?.stops?.length) return null;
     const stops = manifest.stops;
     const total = stops.length;
-    const done = stops.filter(
-      (s) => s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED',
-    ).length;
+    const done = tripStatus === 'COMPLETED'
+      ? total
+      : stops.filter((s) => {
+          if (s.stopPurpose === 'START_TERMINAL') {
+            return s.stopStatus === 'DEPARTED';
+          }
+          if (s.stopPurpose === 'END_TERMINAL') {
+            return s.stopStatus === 'ARRIVED' || s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+          }
+          return s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+        }).length;
 
     let current = null;
     let next = null;
@@ -272,24 +347,72 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   }, [sortedStops]);
 
   const allStopsFinished = React.useMemo(() => {
-    return sortedStops.length > 0 && sortedStops.every(
-      (s) => s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED'
-    );
+    if (sortedStops.length === 0) return false;
+    return sortedStops.every((s, idx) => {
+      const isEndTerminal = idx === sortedStops.length - 1;
+      if (isEndTerminal) {
+        return s.stopStatus === 'ARRIVED' || s.stopStatus === 'BOARDING' || s.stopStatus === 'DEPARTED';
+      } else {
+        return s.stopStatus === 'DEPARTED' || s.stopStatus === 'SKIPPED';
+      }
+    });
   }, [sortedStops]);
 
   const hasPlannedStudents = React.useMemo(() => {
     return manifest?.students?.some((st) => st.status === 'PLANNED') ?? false;
   }, [manifest?.students]);
 
-  const hasBoardedStudents = React.useMemo(() => {
-    return manifest?.students?.some((st) => st.status === 'BOARDED') ?? false;
-  }, [manifest?.students]);
-
   const canCompleteTrip =
     tripStatus === 'IN_PROGRESS' &&
     allStopsFinished &&
-    !hasPlannedStudents &&
-    !hasBoardedStudents;
+    !hasPlannedStudents;
+
+  // ── Attendance Workspace Derived States ────────────────────────────────────
+  const selectedStop = React.useMemo(() => {
+    if (!manifest?.stops) return null;
+    return manifest.stops.find((s) => s.routeStopId === selectedStopId) ?? null;
+  }, [manifest?.stops, selectedStopId]);
+
+  const stopStatus = selectedStop?.stopStatus ?? null;
+  const isStopActionable = tripIsActive && stopStatus === 'BOARDING';
+  const isDepotStop = selectedStop?.locationType === 'DEPOT';
+  const isPickupActionStop =
+    selectedStop?.stopPurpose === 'PICKUP' ||
+    (selectedStop?.stopPurpose === 'START_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && !isOutbound);
+  const isDropoffActionStop =
+    selectedStop?.stopPurpose === 'DROPOFF' ||
+    (selectedStop?.stopPurpose === 'END_TERMINAL' && selectedStop?.locationType === 'SCHOOL' && isOutbound);
+
+  const studentsAtStop = React.useMemo<TripAttendanceStudentItem[]>(() => {
+    if (!manifest || !selectedStop) return [];
+    const { stopPurpose, locationType, routeStopId } = selectedStop;
+    if (locationType === 'DEPOT') return [];
+
+    let filtered: TripAttendanceStudentItem[] = [];
+
+    if (stopPurpose === 'PICKUP') {
+      filtered = manifest.students.filter((s) => s.pickupStopId === routeStopId);
+    } else if (stopPurpose === 'DROPOFF') {
+      filtered = manifest.students.filter((s) => s.dropoffStopId === routeStopId);
+    } else if (stopPurpose === 'END_TERMINAL' && locationType === 'SCHOOL' && isOutbound) {
+      filtered = manifest.students.filter(
+        (s) => s.status === 'BOARDED' || s.status === 'DROPPED_OFF'
+      );
+    } else if (stopPurpose === 'START_TERMINAL' && locationType === 'SCHOOL' && !isOutbound) {
+      filtered = manifest.students.filter((s) => s.status === 'PLANNED');
+    }
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          (s.studentName || '').toLowerCase().includes(q) ||
+          (s.studentCode || '').toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [manifest, selectedStop, isOutbound, searchQuery]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const [startTrip, { isLoading: starting }] = useStartTripMutation();
@@ -299,16 +422,37 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const [departStop, { isLoading: departing }] = useDepartTripStopMutation();
   const [skipStop, { isLoading: skipping }] = useSkipTripStopMutation();
   const [startBoardingStop, { isLoading: boarding }] = useStartBoardingTripStopMutation();
+  const [boardStudent, { isLoading: boardingStudent }] = useBoardTripStudentMutation();
+  const [dropoffStudent, { isLoading: droppingOffStudent }] = useDropoffTripStudentMutation();
+  const [absentStudent, { isLoading: markingAbsent }] = useAbsentTripStudentMutation();
+  const [noShowStudent, { isLoading: markingNoShow }] = useNoShowTripStudentMutation();
+  const [notServedStudent, { isLoading: markingNotServed }] = useNotServedTripStudentMutation();
 
-  const isActing = starting || completing || cancelling || arriving || departing || skipping || boarding;
+  const isActing =
+    starting ||
+    completing ||
+    cancelling ||
+    arriving ||
+    departing ||
+    skipping ||
+    boarding ||
+    boardingStudent ||
+    droppingOffStudent ||
+    markingAbsent ||
+    markingNoShow ||
+    markingNotServed;
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
       await fn();
       toast.success(`${label} completed`);
     } catch (e: unknown) {
-      const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? `${label} failed`);
+      const err = e as { status?: number; data?: { message?: string } };
+      toast.error(
+        err?.status === 429
+          ? 'System is busy. Please wait a few seconds and try again.'
+          : (err?.data?.message ?? `${label} failed`)
+      );
     }
   };
 
@@ -316,7 +460,11 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
   const handleStart = () => act('Start trip', () => startTrip(tripId).unwrap());
   const handleComplete = () => act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
   const handleStartBoarding = (stopId: number) => {
-    act('Start boarding', () => startBoardingStop({ tripId, routeStopId: stopId }).unwrap());
+    act('Start boarding', async () => {
+      await startBoardingStop({ tripId, routeStopId: stopId }).unwrap();
+      setSelectedStopId(stopId);
+      setIsAttendanceDrawerOpen(true);
+    });
   };
   const handleCancel = () => {
     if (!cancelReason.trim()) return;
@@ -342,18 +490,61 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
     setSkipReason('');
   };
 
+  const handleBoard = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Board ${s.studentName ?? ''}`, () =>
+      boardStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleDropoff = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Drop-off ${s.studentName ?? ''}`, () =>
+      dropoffStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleAbsent = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Absent ${s.studentName ?? ''}`, () =>
+      absentStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleNoShow = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`No-show ${s.studentName ?? ''}`, () =>
+      noShowStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+  const handleNotServed = (s: TripAttendanceStudentItem) => {
+    if (!selectedStopId) return;
+    act(`Mark not served for ${s.studentName ?? ''}`, () =>
+      notServedStudent({ tripId, body: { routeStopId: selectedStopId, studentId: s.studentId } }).unwrap()
+    );
+  };
+
   return (
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
         title={tripCode}
-        description='Real-time trip dispatch cockpit. Track stop execution lifecycle and review route operation logs.'
+        description={
+          access.isParentOnly
+            ? 'Track student trips and execution progress in real-time.'
+            : 'Real-time trip dispatch cockpit. Track stop execution lifecycle and review route operation logs.'
+        }
         breadcrumb={
           <SchoolBusBreadcrumb
-            items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Trips', href: '/school-bus/trips' },
-              { label: tripCode, current: true },
-            ]}
+            items={
+              access.isParentOnly
+                ? [
+                    { label: 'School Bus', href: '/school-bus/dashboard' },
+                    { label: 'Student Trip Tracking', href: '/school-bus/trips' },
+                    { label: tripCode, current: true },
+                  ]
+                : [
+                    { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                    { label: 'Trip Operations', href: '/school-bus/trips' },
+                    { label: tripCode, current: true },
+                  ]
+            }
           />
         }
       >
@@ -364,7 +555,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               <Button variant='outline' size='sm' className='rounded-full h-8 px-3 font-semibold' asChild>
                 <Link href='/school-bus/trips'>
                   <ArrowLeft className='h-3.5 w-3.5 mr-1.5' />
-                  Back to Trips list
+                  {access.isParentOnly ? 'Back to Trip Tracking' : 'Back to Trip Operations'}
                 </Link>
               </Button>
             </div>
@@ -380,6 +571,16 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               <div className='flex items-center gap-2.5 bg-red-50 border border-red-100 text-red-800 px-4 py-3 rounded-2xl text-xs font-semibold shadow-xs'>
                 <XCircle className='h-4.5 w-4.5 text-red-600 shrink-0' />
                 <span>Trip cancelled. Reason: {(manifest as any)?.cancellationReason || trip?.cancellationReason || 'N/A'}</span>
+              </div>
+            )}
+
+            {isSyncDelayed && (
+              <div className='flex items-center gap-2.5 bg-amber-50 border border-amber-100 text-amber-800 px-4 py-3 rounded-2xl text-xs font-semibold shadow-xs'>
+                <Clock className='h-4.5 w-4.5 text-amber-600 shrink-0' />
+                <span>
+                  Sync is delayed. Retrying automatically
+                  {lastUpdated ? ` - last updated: ${lastUpdated}` : '...'}
+                </span>
               </div>
             )}
           </div>
@@ -398,13 +599,23 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                   </div>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <span className={cn(
-                    'text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0',
-                    wsState === 'Live' ? 'bg-emerald-50 border-emerald-250 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-400'
-                  )}>
-                    {wsState} feed
-                  </span>
+                  {lastUpdated && (
+                    <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
+                      Last updated: {lastUpdated}
+                    </span>
+                  )}
                   {renderFriendlyBadge(tripStatus || '')}
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='h-7 rounded-lg text-[10px] font-bold border-slate-250 text-slate-700 hover:bg-slate-50 shadow-none'
+                    onClick={() => {
+                      setSelectedStopId(null);
+                      setIsAttendanceDrawerOpen(true);
+                    }}
+                  >
+                    {access.isParentOnly ? 'View Student Status' : 'View Attendance List'}
+                  </Button>
                 </div>
               </div>
 
@@ -609,7 +820,9 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
               {summary && (
                 <div className='bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between'>
                   <div>
-                    <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-3'>Students Attendance</p>
+                    <p className='text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-3'>
+                      {access.isParentOnly ? 'Student Transit Status' : 'Students Attendance'}
+                    </p>
                     <div className='grid grid-cols-6 gap-1 text-center divide-x divide-slate-100 mb-3'>
                       <div className='flex flex-col gap-1 min-w-0'>
                         <span className='text-base font-extrabold text-slate-800'>{summary.totalStudents}</span>
@@ -640,11 +853,12 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                   <Button
                     size='sm'
                     className='w-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-bold rounded-xl h-8 text-xs border-0 shadow-none'
-                    asChild
+                    onClick={() => {
+                      setSelectedStopId(null);
+                      setIsAttendanceDrawerOpen(true);
+                    }}
                   >
-                    <Link href={`/school-bus/attendance/${tripId}`}>
-                      Open Student Attendance Board
-                    </Link>
+                    {access.isParentOnly ? 'View Student Transit Status' : 'Open Student Attendance Board'}
                   </Button>
                 </div>
               )}
@@ -660,6 +874,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                 tripStatus={tripStatus || ''}
                 isOutbound={isOutbound}
                 routeGeometry={manifest?.routeGeometry}
+                routePath={routePathData?.data}
                 className='h-full w-full'
               />
             </div>
@@ -668,10 +883,12 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
             <div className='flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm max-h-[480px] overflow-y-auto'>
               <div>
                 <p className='text-[10px] font-extrabold uppercase tracking-wider text-slate-400'>
-                  Stop Operation Timeline
+                  {access.isParentOnly ? 'Trip Tracking Timeline' : 'Stop Operation Timeline'}
                 </p>
                 <p className='text-[10px] text-slate-450 mt-1 font-semibold leading-relaxed'>
-                  Execute arrivals, boarding periods, and departures sequentially along the path.
+                  {access.isParentOnly
+                    ? 'Track vehicle progress and stop arrivals sequentially.'
+                    : 'Execute arrivals, boarding periods, and departures sequentially along the path.'}
                 </p>
               </div>
 
@@ -698,14 +915,65 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                       // Control eligibility (sequential check)
                       const isNextActionableStop = firstUnfinishedStop && stop.routeStopId === firstUnfinishedStop.routeStopId;
 
-                      const showArrive = isPending;
-                      const canBoard =
-                        (isOutbound && stop.stopPurpose === 'PICKUP') ||
-                        (!isOutbound && stop.stopPurpose === 'START_TERMINAL' && stop.locationType === 'SCHOOL');
+                      const isStartTerminal = stop.stopPurpose === 'START_TERMINAL';
+                      const isEndTerminal = stop.stopPurpose === 'END_TERMINAL';
+                      const isServiceStop = !isStartTerminal && !isEndTerminal;
+
+                      // Check which students are assigned to this stop for boarding/drop-off
+                      const stopStudents = (() => {
+                        if (!manifest?.students) return [];
+                        const { stopPurpose: purpose, locationType: type, routeStopId: stopId } = stop;
+                        if (type === 'DEPOT') return [];
+                        if (purpose === 'PICKUP') {
+                          return manifest.students.filter((s) => s.pickupStopId === stopId);
+                        }
+                        if (purpose === 'DROPOFF') {
+                          return manifest.students.filter((s) => s.dropoffStopId === stopId);
+                        }
+                        if (purpose === 'END_TERMINAL' && type === 'SCHOOL' && isOutbound) {
+                          return manifest.students;
+                        }
+                        if (purpose === 'START_TERMINAL' && type === 'SCHOOL' && !isOutbound) {
+                          return manifest.students;
+                        }
+                        return [];
+                      })();
+
+                      const hasStudents = stopStudents.length > 0;
+
+                      // Count pending students requiring check at this stop
+                      const pendingStudents = stopStudents.filter((st) => {
+                        const { stopPurpose: purpose, locationType: type } = stop;
+                        if (purpose === 'PICKUP' || (purpose === 'START_TERMINAL' && type === 'SCHOOL' && !isOutbound)) {
+                          return st.status === 'PLANNED';
+                        }
+                        if (purpose === 'DROPOFF' || (purpose === 'END_TERMINAL' && type === 'SCHOOL' && isOutbound)) {
+                          return st.status === 'BOARDED';
+                        }
+                        return false;
+                      });
+                      const pendingCount = pendingStudents.length;
+                      const attendanceResolved = pendingCount === 0;
+
+                      const showArrive = isPending && !isStartTerminal;
+                      
+                      // For service stops with students, boarding/drop-off is needed
+                      const canBoard = isServiceStop && hasStudents;
                       const showStartBoarding = isArrived && canBoard;
-                      const showDepart = isArrived || isBoarding;
-                      const canSkip = stop.stopPurpose !== 'START_TERMINAL' && stop.stopPurpose !== 'END_TERMINAL';
+
+                      // Depart conditions:
+                      // - Start terminal: immediately from ARRIVED or BOARDING state
+                      // - Service stop with students: only from BOARDING state
+                      // - Service stop without students: from ARRIVED state
+                      // - End terminal never allows Depart Stop (only Complete Trip).
+                      const showDepart = (isStartTerminal && (isArrived || isBoarding)) ||
+                                         (!isStartTerminal && !isEndTerminal && ((isArrived && !canBoard) || (isBoarding && attendanceResolved)));
+
+                      const canSkip = isServiceStop;
                       const showSkip = (isPending || isArrived) && canSkip;
+
+                      // End terminal allows Complete Trip when arrived or boarding (during drop-off)
+                      const showCompleteTrip = isEndTerminal && (isArrived || isBoarding) && tripStatus === 'IN_PROGRESS';
 
                       return (
                         <div
@@ -789,6 +1057,28 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                )}
                              </div>
 
+                              {stopType !== 'DEPOT' && (
+                                <div className='pl-6 pt-1'>
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    className='h-7 rounded-lg text-[10px] font-bold border-slate-205 text-slate-650 hover:bg-slate-50 shadow-none'
+                                    onClick={() => {
+                                      setSelectedStopId(stop.routeStopId);
+                                      setIsAttendanceDrawerOpen(true);
+                                    }}
+                                  >
+                                    {isBoarding && tripIsActive && access.canOperateTrip
+                                      ? !isOutbound && isServiceStop
+                                        ? 'Mark Dropoff'
+                                        : 'Mark Attendance'
+                                      : access.isParentOnly
+                                      ? 'View Student Status'
+                                      : 'View Attendance'}
+                                  </Button>
+                                </div>
+                              )}
+
                              {/* Actual visits info */}
                              {(stop.actualBoardedCount > 0 || stop.actualDroppedCount > 0) && (
                                <p className='text-[10px] text-slate-500 pl-6 font-medium'>
@@ -809,7 +1099,13 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                      onClick={() => handleArrive(stop.routeStopId)}
                                      disabled={isActing || !isNextActionableStop}
                                    >
-                                     Arrive Stop
+                                     {stop.stopPurpose === 'END_TERMINAL'
+                                       ? stop.locationType === 'SCHOOL'
+                                         ? 'Arrive School'
+                                         : stop.locationType === 'DEPOT'
+                                         ? 'Arrive Depot'
+                                         : 'Arrive Stop'
+                                       : 'Arrive Stop'}
                                    </Button>
                                  )}
                                  {showStartBoarding && (
@@ -819,7 +1115,7 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                      onClick={() => handleStartBoarding(stop.routeStopId)}
                                      disabled={isActing || !isNextActionableStop}
                                    >
-                                     Start Boarding
+                                     {stop.stopPurpose === 'DROPOFF' ? 'Start Dropoff' : 'Start Boarding'}
                                    </Button>
                                  )}
                                  {showDepart && (
@@ -835,8 +1131,26 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
                                      onClick={() => handleDepart(stop.routeStopId)}
                                      disabled={isActing || !isNextActionableStop}
                                    >
-                                     Depart Stop
+                                      {isStartTerminal
+                                        ? stop.locationType === 'SCHOOL'
+                                          ? 'Depart School'
+                                          : stop.locationType === 'DEPOT'
+                                          ? 'Depart Depot'
+                                          : 'Depart Stop'
+                                        : 'Depart Stop'}
                                    </Button>
+                                 )}
+                                 {showCompleteTrip && (
+                                   <div title={!canCompleteTrip ? 'Complete all stops and resolve all student statuses before completing this trip.' : undefined}>
+                                     <Button
+                                       size='sm'
+                                       className='h-7 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-lg px-2.5 text-[10px] font-bold shadow-none disabled:opacity-50 disabled:cursor-not-allowed border-0'
+                                       onClick={handleComplete}
+                                       disabled={isActing || !canCompleteTrip}
+                                     >
+                                       Complete Trip
+                                     </Button>
+                                   </div>
                                  )}
                                  {showSkip && (
                                    <>
@@ -952,6 +1266,289 @@ export function SchoolBusTripOperationDetailPage({ tripId }: SchoolBusTripOperat
             )}
           </div>
         </div>
+
+        <Sheet open={isAttendanceDrawerOpen} onOpenChange={setIsAttendanceDrawerOpen}>
+          <SheetContent side="right" className="w-[100vw] sm:max-w-[550px] p-6 overflow-y-auto bg-white flex flex-col gap-6 h-full">
+            <SheetHeader className="border-b border-slate-100 pb-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-base font-extrabold text-slate-800">
+                  {access.isParentOnly
+                    ? (selectedStop ? `Stop Transit Status: ${selectedStop.displayName}` : 'Student Transit Status Directory')
+                    : (selectedStop ? `Attendance at Stop: ${selectedStop.displayName}` : 'Trip Attendance Directory')}
+                </SheetTitle>
+              </div>
+              <SheetDescription className="text-xs text-slate-400 mt-1 font-semibold">
+                {selectedStop
+                  ? `${stopTypeLabel(selectedStop)} • Status: ${selectedStop.stopStatus}`
+                  : (access.isParentOnly
+                      ? `Route: ${routeCode} · Student Details`
+                      : `Route: ${routeCode} • Direction: ${getFriendlyDirection(trip?.routeDirection)}`)}
+              </SheetDescription>
+            </SheetHeader>
+
+            {/* Stop Context Banner if stop selected */}
+            {selectedStop && !access.isParentOnly && (
+              <div className="space-y-3 shrink-0">
+                {tripStatus !== 'IN_PROGRESS' && tripStatus !== 'COMPLETED' && tripStatus !== 'CANCELLED' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Start the trip before logging attendance.
+                  </div>
+                ) : tripStatus === 'COMPLETED' || tripStatus === 'CANCELLED' ? (
+                  <div className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This trip is completed or cancelled. Attendance records are locked.
+                  </div>
+                ) : selectedStop.stopStatus === 'PENDING' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Arrive at this stop before logging attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'ARRIVED' ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-850 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    Start boarding/drop-off at this stop before marking attendance.
+                  </div>
+                ) : selectedStop.stopStatus === 'DEPARTED' || selectedStop.stopStatus === 'SKIPPED' ? (
+                  <div className="bg-slate-50 border border-slate-200 text-slate-600 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop has been departed or skipped. Attendance records are locked.
+                  </div>
+                ) : isStopActionable && isPickupActionStop ? (
+                  <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop is in boarding mode. Mark students as boarded, absent, or no-show.
+                  </div>
+                ) : isStopActionable && isDropoffActionStop ? (
+                  <div className="bg-emerald-50 border border-emerald-250 text-emerald-800 px-4 py-3 rounded-xl text-[11px] font-semibold">
+                    This stop is in drop-off mode. Mark students as dropped-off or not served.
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Search Box */}
+            <div className="relative shrink-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search student by name or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-9 text-xs rounded-xl border-slate-200 focus:border-slate-350 focus:ring-1 focus:ring-slate-200/50"
+              />
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+              {selectedStop ? (
+                /* Stop Specific Student List */
+                studentsAtStop.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 text-xs font-semibold">
+                    No students mapped to this stop direction matching your search.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentsAtStop.map((student) => {
+                      const stStatus = student.status || 'PLANNED';
+                      const stNormalized = stStatus.toUpperCase();
+
+                      const isPlanned = stNormalized === 'PLANNED';
+                      const isBoarded = stNormalized === 'BOARDED';
+
+                      const canBoard = isPickupActionStop && isPlanned;
+                      const canDrop = isDropoffActionStop && isBoarded;
+                      const canAbsent = isPickupActionStop && isPlanned;
+                      const canNotServed = isDropoffActionStop && isBoarded;
+
+                      return (
+                        <div
+                          key={student.tripStudentId}
+                          className="bg-white border border-slate-150 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-bold text-slate-800 text-xs truncate">{student.studentName}</p>
+                              {renderFriendlyBadge(stStatus)}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 font-semibold">
+                              <span>Code: {student.studentCode || 'N/A'}</span>
+                            </div>
+                            {student.note && (
+                              <p className="text-[10px] text-red-500 bg-red-50/50 border border-red-100/50 rounded px-2 py-0.5 mt-1 w-fit font-medium">
+                                Note: {student.note}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Attendance Actions */}
+                          {tripIsActive && isStopActionable && access.canMarkAttendance && (
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end sm:self-center">
+                              {canBoard && (
+                                <Button
+                                  size="sm"
+                                  className="h-7.5 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0"
+                                  onClick={() => handleBoard(student)}
+                                  disabled={isActing}
+                                >
+                                  Board
+                                </Button>
+                              )}
+                              {canDrop && (
+                                <Button
+                                  size="sm"
+                                  className="h-7.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0"
+                                  onClick={() => handleDropoff(student)}
+                                  disabled={isActing}
+                                >
+                                  Drop-off
+                                </Button>
+                              )}
+                              {canAbsent && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-amber-250 px-3 text-[10px] text-amber-700 hover:bg-amber-50 font-bold shadow-none"
+                                  onClick={() => handleAbsent(student)}
+                                  disabled={isActing}
+                                >
+                                  Absent
+                                </Button>
+                              )}
+                              {canBoard && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-red-250 px-3 text-[10px] text-red-650 hover:bg-red-50 font-bold shadow-none"
+                                  onClick={() => handleNoShow(student)}
+                                  disabled={isActing}
+                                >
+                                  No-show
+                                </Button>
+                              )}
+                              {canNotServed && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7.5 rounded-full border-slate-300 px-3 text-[10px] text-slate-650 hover:bg-slate-50 font-bold shadow-none"
+                                  onClick={() => handleNotServed(student)}
+                                  disabled={isActing}
+                                >
+                                  Not Served
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                /* Grouped All Students View */
+                (() => {
+                  const students = manifest?.students || [];
+                  const stops = manifest?.stops || [];
+
+                  // Group students by stop (either pickup or dropoff depending on the stop type)
+                  const filteredStudents = searchQuery.trim()
+                    ? students.filter(
+                        (s) =>
+                          (s.studentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (s.studentCode || '').toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                    : students;
+
+                  if (filteredStudents.length === 0) {
+                    return (
+                      <div className="py-12 text-center text-slate-400 text-xs font-semibold">
+                        No student records found.
+                      </div>
+                    );
+                  }
+
+                  // Group by stopId
+                  return (
+                    <div className="space-y-6">
+                      {stops
+                        .filter((stop) => stop.locationType !== 'DEPOT')
+                        .map((stop) => {
+                          const stopSts = filteredStudents.filter((s) =>
+                            isOutbound
+                              ? s.pickupStopId === stop.routeStopId
+                              : s.dropoffStopId === stop.routeStopId
+                          );
+
+                          if (stopSts.length === 0) return null;
+
+                          return (
+                            <div key={stop.routeStopId} className="space-y-2.5">
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                <h4 className="font-bold text-slate-800 text-xs">
+                                  {stop.stopOrder}. {stop.displayName}
+                                </h4>
+                                <span className="text-[9px] font-extrabold uppercase bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                                  {stopTypeLabel(stop)}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {stopSts.map((student) => (
+                                  <div
+                                    key={student.tripStudentId}
+                                    className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-3"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-slate-800 text-xs truncate">
+                                        {student.studentName}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                                        Code: {student.studentCode || 'N/A'}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {renderFriendlyBadge(student.status)}
+                                      {/* Quick Mark Attendance link if stop is boarding and active */}
+                                      {tripIsActive && stop.stopStatus === 'BOARDING' && access.canMarkAttendance && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-[10px] text-blue-650 hover:text-blue-700 font-extrabold px-1 rounded-md"
+                                          onClick={() => {
+                                            setSelectedStopId(stop.routeStopId);
+                                          }}
+                                        >
+                                          Mark
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+
+            {/* Sticky bottom panel */}
+            {selectedStop && (
+              <div className="border-t border-slate-100 pt-4 flex justify-between shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8.5 rounded-xl text-xs font-bold border-slate-200 text-slate-650 hover:bg-slate-50"
+                  onClick={() => setSelectedStopId(null)}
+                >
+                  Show All Students
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-650 border border-slate-200 hover:bg-slate-200"
+                  onClick={() => setIsAttendanceDrawerOpen(false)}
+                >
+                  Close Panel
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </SchoolBusPageShell>
     </MapMarkerVisibilityProvider>
   );

@@ -14,13 +14,10 @@ import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
-import serp.project.school_bus_service.service.ISchoolPickupPointWindowService;
-import serp.project.school_bus_service.service.ISchoolScheduleService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.enums.RequestStatus;
@@ -32,7 +29,6 @@ import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
-import serp.project.school_bus_service.entity.SchoolScheduleEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.entity.TransportRequestHistoryEntity;
 import serp.project.school_bus_service.entity.TransportRequestEntity;
@@ -47,6 +43,7 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -66,14 +63,12 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private final TransportRequestHistoryRepository transportRequestHistoryRepository;
     private final IMasterDataService masterDataService;
     private final IStudentSubscriptionService subscriptionService;
-    private final ISchoolScheduleService schoolScheduleService;
     private final ISchoolPickupPointService schoolPickupPointService;
-    private final ISchoolPickupPointWindowService windowService;
     private final ICodeGeneratorService codeGeneratorService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final SchoolBusSecurityService securityService;
 
 
     public TransportRequestServiceImpl(
@@ -82,27 +77,23 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             TransportRequestHistoryRepository transportRequestHistoryRepository,
             IMasterDataService masterDataService,
             IStudentSubscriptionService subscriptionService,
-            ISchoolScheduleService schoolScheduleService,
             ISchoolPickupPointService schoolPickupPointService,
-            ISchoolPickupPointWindowService windowService,
             ICodeGeneratorService codeGeneratorService,
-            IAuditLogService auditLogService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
-            ISchoolBusDataScopeService schoolBusDataScopeService) {
+            ISchoolBusDataScopeService schoolBusDataScopeService,
+            SchoolBusSecurityService securityService) {
         this.transportRequestRepository = transportRequestRepository;
         this.requestStudentRepository = requestStudentRepository;
         this.transportRequestHistoryRepository = transportRequestHistoryRepository;
         this.masterDataService = masterDataService;
         this.subscriptionService = subscriptionService;
-        this.schoolScheduleService = schoolScheduleService;
         this.schoolPickupPointService = schoolPickupPointService;
-        this.windowService = windowService;
         this.codeGeneratorService = codeGeneratorService;
-        this.auditLogService = auditLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.securityService = securityService;
     }
 
 
@@ -113,12 +104,33 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId) {
-        return PageResponse.from(transportRequestRepository.findAll(
-                spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
-                        "requestType", "status", "notes"),
+        // Parent data scope: filter by current parent profile
+        Specification<TransportRequestEntity> baseSpec = spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
+                        "requestType", "status", "notes");
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            baseSpec = baseSpec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), parentProfileId));
+        }
+
+        PageResponse<TransportRequestResponse> response = PageResponse.from(transportRequestRepository.findAll(
+                baseSpec,
                 pageable(params, Set.of("id", "requestType", "status", "effectiveFrom", "effectiveTo", "createdAt",
                         "updatedAt"), "createdAt")),
                 mapper::toTransportRequestResponse);
+
+        List<TransportRequestResponse> items = response.getItems();
+        if (items != null && !items.isEmpty()) {
+            List<Long> requestIds = items.stream().map(TransportRequestResponse::getId).toList();
+            List<Object[]> counts = requestStudentRepository.countStudentsByRequestIds(requestIds, tenantId);
+            Map<Long, Integer> countMap = counts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> ((Number) row[1]).intValue()
+                    ));
+            items.forEach(item -> item.setStudentCount(countMap.getOrDefault(item.getId(), 0)));
+        }
+
+        return response;
     }
 
     @Override
@@ -152,12 +164,18 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     @Transactional
     public TransportRequestResponse createTransportRequest(TransportRequestUpsertRequest request, Long tenantId, Long actorId) {
+        // Parent data scope: override parentProfileId from security context
+        if (securityService.isParentOnly()) {
+            Long currentParentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            request.setParentProfileId(currentParentProfileId);
+        }
+
         TransportRequestEntity entity = new TransportRequestEntity();
         entity.markCreated(tenantId, actor(actorId));
         applyTransportRequest(entity, request, tenantId);
         entity.setRequestCode(generateCode(SchoolBusCode.REQUEST, tenantId, actorId));
         entity.setRequestedAt(LocalDateTime.now());
-        entity.setRequestSource(RequestSource.ADMIN);
+        entity.setRequestSource(securityService.isParent() ? RequestSource.PARENT : RequestSource.ADMIN);
         entity.setChangeReason(request.getChangeReason());
         entity.setStatus(RequestStatus.SUBMITTED);
         entity.setApprovedAt(null);
@@ -166,8 +184,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, null, RequestStatus.SUBMITTED, actorId, null, "Created transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CREATE", "Created transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -178,6 +195,11 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity entity = findById(transportRequestRepository, id, tenantId);
         if (entity.getStatus() == RequestStatus.APPROVED || entity.getStatus() == RequestStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Request.CANNOT_EDIT, messageCommon.getMessage(AppErrorCode.Request.CANNOT_EDIT, entity.getStatus()));
+        }
+        // Parent data scope: override parentProfileId from security context
+        if (securityService.isParentOnly()) {
+            Long currentParentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            request.setParentProfileId(currentParentProfileId);
         }
         entity.markUpdated(actor(actorId));
         RequestStatus oldStatus = entity.getStatus();
@@ -191,8 +213,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
         recordHistory(saved, oldStatus, saved.getStatus(), actorId, request.getChangeReason(), "Updated transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "UPDATE", "Updated transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -213,17 +234,8 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         if (requiresRoutingValidation) {
             for (RequestStudentEntity rs : requestStudents) {
-                SchoolScheduleEntity schedule = rs.getSchoolSchedule();
-                if (schedule == null) {
-                    throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                            "Missing school schedule for student #" + rs.getStudent().getId()
-                                    + ". Please edit the request and select a schedule before approving.");
-                }
-
                 TripOption opt = rs.getTripOption();
                 if (opt == null) {
-                    // For routing types, tripOption must have been set at create/update time.
-                    // A null value here means the request was created before this rule was enforced.
                     throw new AppException(AppErrorCode.Request.INVALID_STATE,
                             "Missing trip option for student #" + rs.getStudent().getId()
                                     + ". Please edit the request and select a trip option before approving.");
@@ -244,15 +256,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Pickup point '" + pickup.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the pickup point before approving.");
                     }
-                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
                                     "Pickup point '" + pickup.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
-                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "PICKUP_TO_SCHOOL", tenantId)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                                "Pickup window is not configured for pickup point '" + pickup.getName()
-                                        + "' and schedule '" + schedule.getScheduleName()
-                                        + "'. Configure a PICKUP_TO_SCHOOL window before approving.");
-                    }
                 }
 
                 if (needsDropoff) {
@@ -267,15 +273,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Drop-off point '" + dropoff.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the drop-off point before approving.");
                     }
-                    SchoolPickupPointEntity spp = schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
                                     "Drop-off point '" + dropoff.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
-                    if (!windowService.hasWindow(spp.getId(), schedule.getId(), "DROPOFF_FROM_SCHOOL", tenantId)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_STATE,
-                                "Drop-off window is not configured for drop-off point '" + dropoff.getName()
-                                        + "' and schedule '" + schedule.getScheduleName()
-                                        + "'. Configure a DROPOFF_FROM_SCHOOL window before approving.");
-                    }
                 }
             }
         }
@@ -294,9 +294,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
         recordHistory(saved, oldStatus, RequestStatus.APPROVED, actorId, null,
                 "Approved transport request (" + saved.getRequestType().name() + ")");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "APPROVE",
-                "Approved " + saved.getRequestType().name());
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -316,8 +314,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setApprovedAt(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.REJECTED, actorId, request.getReason(), "Rejected transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "REJECT", "Rejected transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -335,8 +332,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setStatus(RequestStatus.CANCELLED);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         recordHistory(saved, oldStatus, RequestStatus.CANCELLED, actorId, null, "Cancelled transport request");
-        auditLogService.log(tenantId, actorId, "TransportRequest", saved.getId(), "CANCEL", "Cancelled transport request");
-        return mapper.toTransportRequestResponse(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -417,59 +413,18 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             }
             rs.setStudent(student);
 
-            // ── Routing requirement check: NEW/CHANGE/RENEW must supply schedule + tripOption ──
+            // ── Routing requirement check: NEW/CHANGE/RENEW must supply tripOption ──
             boolean requiresRouting = requestType == RequestType.NEW_SERVICE
                     || requestType == RequestType.CHANGE_SERVICE
                     || requestType == RequestType.RENEW_SERVICE;
 
-            if (requiresRouting && studentRequest.getSchoolScheduleId() == null) {
-                throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                        "School schedule is required for request type " + requestType
-                                + " (student #" + studentRequest.getStudentId() + ")");
-            }
             if (requiresRouting && (studentRequest.getTripOption() == null || studentRequest.getTripOption().isBlank())) {
                 throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
                         "Trip option is required for request type " + requestType
                                 + " (student #" + studentRequest.getStudentId() + ")");
             }
 
-            // ── Schedule validation ─────────────────────────────────────────
-            SchoolScheduleEntity schedule = null;
-            Set<String> scheduleDays = Set.of();
-            if (studentRequest.getSchoolScheduleId() != null) {
-                // Load schedule with days for day subset validation
-                schedule = schoolScheduleService.getScheduleWithDays(studentRequest.getSchoolScheduleId(), tenantId);
-
-                // Rule 2a: schedule must belong to the selected school
-                if (!schedule.getSchool().getId().equals(schoolId)) {
-                    throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                            "Schedule #" + studentRequest.getSchoolScheduleId()
-                                    + " does not belong to the selected school");
-                }
-
-                // Rule 2b: request effective range must overlap schedule effective range
-                if (requestFrom != null) {
-                    LocalDate schedFrom = schedule.getEffectiveFrom();
-                    LocalDate schedTo   = schedule.getEffectiveTo() != null ? schedule.getEffectiveTo() : LocalDate.MAX;
-                    LocalDate reqTo     = requestTo != null ? requestTo : LocalDate.MAX;
-                    if (requestFrom.isAfter(schedTo) || reqTo.isBefore(schedFrom)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                                "Request effective range [" + requestFrom + " – " + (requestTo != null ? requestTo : "∞")
-                                        + "] does not overlap schedule effective range ["
-                                        + schedFrom + " – " + (schedule.getEffectiveTo() != null ? schedule.getEffectiveTo() : "∞") + "]");
-                    }
-                }
-
-                // Build schedule days set (upper-cased)
-                scheduleDays = schedule.getScheduleDays().stream()
-                        .filter(d -> !Boolean.TRUE.equals(d.getIsDeleted()))
-                        .map(d -> d.getDayOfWeek().toUpperCase())
-                        .collect(Collectors.toSet());
-
-                rs.setSchoolSchedule(schedule);
-            }
-
-            // ── Days of week validation ─────────────────────────────────────
+            // ── Days of week ───────────────────────────────────────────────
             boolean mon = Boolean.TRUE.equals(studentRequest.getMonday());
             boolean tue = Boolean.TRUE.equals(studentRequest.getTuesday());
             boolean wed = Boolean.TRUE.equals(studentRequest.getWednesday());
@@ -482,22 +437,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             if (!mon && !tue && !wed && !thu && !fri && !sat && !sun) {
                 throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
                         "At least one day of week must be selected for student #" + studentRequest.getStudentId());
-            }
-
-            // Rule 1: selected days must be a subset of schedule days (if schedule chosen)
-            final Set<String> finalScheduleDays = scheduleDays;
-            if (schedule != null && !finalScheduleDays.isEmpty()) {
-                Map<String, Boolean> selectedDayMap = Map.of(
-                        "MONDAY", mon, "TUESDAY", tue, "WEDNESDAY", wed,
-                        "THURSDAY", thu, "FRIDAY", fri, "SATURDAY", sat, "SUNDAY", sun);
-                selectedDayMap.forEach((dayName, selected) -> {
-                    if (selected && !finalScheduleDays.contains(dayName)) {
-                        throw new AppException(AppErrorCode.Request.INVALID_REQUEST,
-                                "Day " + dayName + " is not part of schedule #"
-                                        + studentRequest.getSchoolScheduleId() + " for student #"
-                                        + studentRequest.getStudentId());
-                    }
-                });
             }
 
             rs.setMonday(mon);
@@ -546,20 +485,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                         });
 
                 rs.setPickupPoint(masterDataService.getPickupPoint(studentRequest.getPickupPointId(), tenantId));
-
-                // Rule 5: warn if no PICKUP_TO_SCHOOL window configured (non-blocking)
-                final SchoolScheduleEntity pickupSchedule = schedule;
-                if (pickupSchedule != null) {
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(schoolId, studentRequest.getPickupPointId(), tenantId)
-                            .ifPresent(spp -> {
-                                if (!windowService.hasWindow(spp.getId(), pickupSchedule.getId(), "PICKUP_TO_SCHOOL", tenantId)) {
-                                    // Non-blocking: log warning only – window may be configured later
-                                    auditLogService.log(tenantId, actorId, "TransportRequest", entity.getId(),
-                                            "WARN", "No PICKUP_TO_SCHOOL window configured for pickup point #"
-                                                    + studentRequest.getPickupPointId() + " + schedule #" + pickupSchedule.getId());
-                                }
-                            });
-                }
             } else {
                 rs.setPickupPoint(null);
             }
@@ -583,19 +508,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                         });
 
                 rs.setDropoffPoint(masterDataService.getPickupPoint(studentRequest.getDropoffPointId(), tenantId));
-
-                // Rule 5: warn if no DROPOFF_FROM_SCHOOL window configured (non-blocking)
-                final SchoolScheduleEntity dropoffSchedule = schedule;
-                if (dropoffSchedule != null) {
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(schoolId, studentRequest.getDropoffPointId(), tenantId)
-                            .ifPresent(spp -> {
-                                if (!windowService.hasWindow(spp.getId(), dropoffSchedule.getId(), "DROPOFF_FROM_SCHOOL", tenantId)) {
-                                    auditLogService.log(tenantId, actorId, "TransportRequest", entity.getId(),
-                                            "WARN", "No DROPOFF_FROM_SCHOOL window configured for drop-off point #"
-                                                    + studentRequest.getDropoffPointId() + " + schedule #" + dropoffSchedule.getId());
-                                }
-                            });
-                }
             } else {
                 rs.setDropoffPoint(null);
             }
@@ -720,5 +632,13 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     @Override
     public long countBySchoolAndTenant(Long schoolId, Long tenantId) {
         return transportRequestRepository.countBySchoolIdAndTenantIdAndIsDeletedFalse(schoolId, tenantId);
+    }
+
+    private TransportRequestResponse toResponse(TransportRequestEntity entity) {
+        TransportRequestResponse response = mapper.toTransportRequestResponse(entity);
+        if (response != null) {
+            response.setStudentCount(requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(entity.getId(), entity.getTenantId()).size());
+        }
+        return response;
     }
 }

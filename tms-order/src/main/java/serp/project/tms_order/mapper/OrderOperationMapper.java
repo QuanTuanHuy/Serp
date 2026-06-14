@@ -34,7 +34,6 @@ public final class OrderOperationMapper {
                 order.getTotalWeight(),
                 order.getTotalVolume(),
                 order.getDimensions(),
-                order.getOrderProductCategory(),
                 order.getOrderType(),
                 order.getNote(),
                 order.getPickupMethod(),

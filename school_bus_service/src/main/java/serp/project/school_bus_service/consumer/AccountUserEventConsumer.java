@@ -72,6 +72,7 @@ public class AccountUserEventConsumer {
             command.setPrimaryOrganizationId(eventMessage.getOrganizationId());
             command.setSyncSource("KAFKA");
             command.setRawPayloadJson(payload);
+            command.setRoles(eventMessage.getRoleNames());
 
             // Default fallback values since they are absent in SyncUserEvent
             command.setKeycloakId(null); // KeycloakId is not in the event payload

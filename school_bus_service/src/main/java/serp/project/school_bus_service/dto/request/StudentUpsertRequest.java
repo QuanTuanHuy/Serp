@@ -14,7 +14,6 @@ public class StudentUpsertRequest extends BaseCommandRequest {
     @NotNull
     private Long schoolId;
 
-    @NotNull
     private Long parentProfileId;
 
     /** Default pickup point (legacy field name) */
@@ -36,10 +35,6 @@ public class StudentUpsertRequest extends BaseCommandRequest {
     private java.time.LocalDate dateOfBirth;
 
     private String gender;
-
-    private String emergencyContactName;
-
-    private String emergencyContactPhone;
 
     private String specialNote;
 }

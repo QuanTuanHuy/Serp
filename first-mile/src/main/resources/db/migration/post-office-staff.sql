@@ -31,8 +31,6 @@ CREATE TABLE post_office_staff_assignments (
                                                staff_id BIGINT NOT NULL,
                                                assigned_from DATE NOT NULL,
                                                assigned_to DATE,
-                                               shift_start_time TIME,
-                                               shift_end_time TIME,
                                                is_primary BOOLEAN NOT NULL DEFAULT TRUE,
                                                notes TEXT,
                                                created_at TIMESTAMP WITHOUT TIME ZONE,
@@ -42,11 +40,7 @@ CREATE TABLE post_office_staff_assignments (
                                                tenant_id BIGINT,
     -- Giữ lại các ràng buộc kiểm tra logic dữ liệu (CHECK)
                                                CONSTRAINT ck_assignment_date_range
-                                                   CHECK (assigned_to IS NULL OR assigned_to >= assigned_from),
-                                               CONSTRAINT ck_assignment_shift_time
-                                                   CHECK ((shift_start_time IS NULL AND shift_end_time IS NULL)
-                                                       OR (shift_start_time IS NOT NULL AND shift_end_time IS NOT NULL
-                                                           AND shift_end_time > shift_start_time))
+                                                   CHECK (assigned_to IS NULL OR assigned_to >= assigned_from)
 );
 
 -- 3. Các Index thông thường (Không Unique)

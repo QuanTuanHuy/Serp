@@ -2,7 +2,6 @@
 
 import React, { useRef } from 'react';
 import {
-  DynamicSidebar,
   RouteGuard,
   SidebarProvider,
   useSidebarContext,
@@ -12,6 +11,7 @@ import { SchoolBusAuthGuard } from '../SchoolBusAuthGuard';
 import { schoolBusThemeStyle, schoolBusUi } from '../../theme';
 import { SchoolBusTopbar } from './SchoolBusTopbar';
 import { SchoolBusPathGuard } from './SchoolBusPathGuard';
+import { SchoolBusSidebar } from './SchoolBusSidebar';
 
 interface SchoolBusLayoutProps {
   children: React.ReactNode;
@@ -52,7 +52,7 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
           }
         `}
       </style>
-      <DynamicSidebar moduleCode='SCHOOLBUS' />
+      <SchoolBusSidebar />
       <div
         ref={containerRef}
         className={cn(
@@ -63,9 +63,9 @@ const SchoolBusLayoutContent: React.FC<SchoolBusLayoutProps> = ({
         <SchoolBusTopbar scrollContainerRef={containerRef} />
         <main className='flex-1'>
           <div className='container mx-auto p-6'>
-          <RouteGuard moduleCode='SCHOOLBUS'>
-            <SchoolBusPathGuard>{children}</SchoolBusPathGuard>
-          </RouteGuard>
+            <RouteGuard moduleCode='SCHOOLBUS'>
+              <SchoolBusPathGuard>{children}</SchoolBusPathGuard>
+            </RouteGuard>
           </div>
         </main>
       </div>

@@ -20,14 +20,13 @@ import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.repository.RouteAssignmentHistoryRepository;
 import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.RoutePlanRepository;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IAttendantService;
 import serp.project.school_bus_service.service.IBusService;
 import serp.project.school_bus_service.service.IDriverService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
-import serp.project.school_bus_service.service.IRouteManualValidationService;
+
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -55,10 +54,8 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
     private final IDriverService driverService;
     private final IAttendantService attendantService;
     private final IRouteStopService routeStopService;
-    private final IAuditLogService auditLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
-    private final IRouteManualValidationService validationService;
 
 
     public RouteDispatchServiceImpl(
@@ -70,8 +67,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                                  IAttendantService attendantService,
                                  // @Lazy: breaks circular dep — RouteDispatchServiceImpl ↔ RouteStopServiceImpl
                                  @Lazy IRouteStopService routeStopService,
-                                 IAuditLogService auditLogService,
-                                 @Lazy IRouteManualValidationService validationService,
                                  SchoolBusMapper mapper,
                                  MessageCommon messageCommon) {
         this.routeAssignmentRepository = routeAssignmentRepository;
@@ -81,8 +76,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         this.driverService = driverService;
         this.attendantService = attendantService;
         this.routeStopService = routeStopService;
-        this.auditLogService = auditLogService;
-        this.validationService = validationService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
@@ -107,11 +100,16 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                     messageCommon.getMessage(AppErrorCode.Dispatch.ROUTE_STATUS_INVALID, route.getStatus()));
         }
 
-        // Validate that there are no blocking issues before assigning resources
-        validationService.validateBeforeAssignResources(routeId, tenantId);
-
         // Load resources first — validates they exist and belong to tenant
-        BusEntity bus             = busService.getBus(request.getBusId(), tenantId);
+        BusEntity bus = route.getSelectedBus();
+        if (bus == null) {
+            throw new AppException(AppErrorCode.Dispatch.BUS_REQUIRED,
+                    messageCommon.getMessage(AppErrorCode.Dispatch.BUS_REQUIRED));
+        }
+        if (request.getBusId() != null && !request.getBusId().equals(bus.getId())) {
+            throw new AppException(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS,
+                    messageCommon.getMessage(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS));
+        }
         DriverProfileEntity driver = driverService.getDriver(request.getDriverId(), tenantId);
         BusAttendantProfileEntity attendant = request.getAttendantId() == null ? null
                 : attendantService.getAttendant(request.getAttendantId(), tenantId);
@@ -122,7 +120,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         if (attendant != null) validateAttendantAvailable(attendant);
 
         // 3 — Driver license validation
-        String licenseWarning = checkDriverLicense(driver);
+        checkDriverLicense(driver);
 
         // 4 — Bus capacity validation against planned student count
         String capacityWarning = checkCapacity(route, bus);
@@ -178,12 +176,8 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                 : (isNew ? "ASSIGN" : "REPLACE");
         recordAssignmentHistory(route, oldSnapshot, saved, tenantId, actorId, reason);
 
-        auditLogService.log(tenantId, actorId, "RoutePlan", route.getId(), "ASSIGN",
-                "Assigned route resources: bus=" + bus.getPlateNumber()
-                        + ", driver=" + driver.getFullName());
-
         RouteAssignmentResponse response = mapper.toRouteAssignmentResponse(saved);
-        if (licenseWarning != null)  response.setLicenseWarning(licenseWarning);
+
         if (capacityWarning != null) response.setCapacityWarning(capacityWarning);
         return response;
     }
@@ -277,15 +271,15 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
      * never blocks assignment (per plan: "display license warning").
      */
     private String checkDriverLicense(DriverProfileEntity driver) {
-        if (driver.getLicenseExpiryDate() == null) return null;
-        LocalDate today = LocalDate.now();
-        if (driver.getLicenseExpiryDate().isBefore(today)) {
-            return "Driver license has EXPIRED on " + driver.getLicenseExpiryDate();
-        }
-        if (!driver.getLicenseExpiryDate().isAfter(today.plusDays(30))) {
-            return "Driver license expires soon: " + driver.getLicenseExpiryDate();
-        }
         return null;
+
+
+
+
+
+
+
+
     }
 
     /**

@@ -20,7 +20,6 @@ public class PickupPointUpsertRequest extends BaseCommandRequest {
     private Double longitude;
 
     private String code;
-    private String zoneCode;
     private String usageType;
     private String pickupInstruction;
 }

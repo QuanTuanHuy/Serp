@@ -17,6 +17,16 @@ public interface RequestStudentRepository extends BaseRepository<RequestStudentE
     List<RequestStudentEntity> findByStudentIdAndTenantIdAndIsDeletedFalse(Long studentId, Long tenantId);
 
     @Query("""
+            select entity.request.id, count(entity)
+              from RequestStudentEntity entity
+             where entity.request.id in :requestIds
+               and entity.tenantId = :tenantId
+               and entity.isDeleted = false
+             group by entity.request.id
+            """)
+    List<Object[]> countStudentsByRequestIds(@Param("requestIds") List<Long> requestIds, @Param("tenantId") Long tenantId);
+
+    @Query("""
             select entity
               from RequestStudentEntity entity
               join fetch entity.request request

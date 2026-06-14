@@ -83,12 +83,68 @@ export function SchoolBusTripsPage() {
     sortBy: 'serviceDate',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetTripsQuery(pagination.params);
+  const { data, isLoading, refetch: refetchTrips } = useGetTripsQuery(pagination.params);
   const [startTrip] = useStartTripMutation();
   const [arriveTripStop] = useArriveTripStopMutation();
   const [departTripStop] = useDepartTripStopMutation();
   const [completeTrip] = useCompleteTripMutation();
   const trips = getPageItems(data?.data);
+
+  const [lastUpdated, setLastUpdated] = React.useState<string>('');
+  const [isTabVisible, setIsTabVisible] = React.useState(true);
+  const [pollInterval, setPollInterval] = React.useState(20000); // 20s default
+
+  // Track page visibility
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsTabVisible(visible);
+      if (visible) {
+        refetchTrips().then((result) => {
+          if (result.error) {
+            const err = result.error as any;
+            if (err?.status === 429) {
+              setPollInterval(60000);
+            }
+          } else {
+            setLastUpdated(new Date().toLocaleTimeString());
+            setPollInterval(20000);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetchTrips]);
+
+  // Polling effect
+  React.useEffect(() => {
+    if (!isTabVisible) return;
+
+    const intervalId = setInterval(() => {
+      refetchTrips().then((result) => {
+        if (result.error) {
+          const err = result.error as any;
+          if (err?.status === 429) {
+            setPollInterval(60000);
+          }
+        } else {
+          setLastUpdated(new Date().toLocaleTimeString());
+          setPollInterval(20000);
+        }
+      });
+    }, pollInterval);
+
+    return () => clearInterval(intervalId);
+  }, [refetchTrips, isTabVisible, pollInterval]);
+
+  React.useEffect(() => {
+    if (data) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [data]);
 
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -156,7 +212,11 @@ export function SchoolBusTripsPage() {
       const response = await action();
       toast.success(response.message || `${label} completed`);
     } catch (error: any) {
-      toast.error(error?.data?.message || `${label} failed`);
+      toast.error(
+        error?.status === 429
+          ? 'System is busy. Please wait a few seconds and try again.'
+          : (error?.data?.message ?? `${label} failed`)
+      );
     }
   };
 
@@ -284,7 +344,22 @@ export function SchoolBusTripsPage() {
       header: 'Stop Progress',
       render: (trip) => {
         const totalStops = trip.stops?.length ?? 0;
-        const completedStops = trip.stops?.filter((s: any) => s.status === 'DEPARTED' || s.status === 'SKIPPED').length ?? 0;
+        const completedStops = trip.status === 'COMPLETED'
+          ? totalStops
+          : trip.stops ? (() => {
+              const sortedStops = [...trip.stops].sort((a: any, b: any) => (a.stopOrder ?? 0) - (b.stopOrder ?? 0));
+              return sortedStops.filter((s: any, idx: number) => {
+                const isFirst = idx === 0;
+                const isLast = idx === sortedStops.length - 1;
+                if (isFirst) {
+                  return s.status === 'DEPARTED';
+                }
+                if (isLast) {
+                  return s.status === 'ARRIVED' || s.status === 'DEPARTED' || s.status === 'SKIPPED';
+                }
+                return s.status === 'DEPARTED' || s.status === 'SKIPPED';
+              }).length;
+            })() : 0;
         const nextStop = trip.stops?.find((s: any) =>
           ['PENDING', 'ARRIVED', 'BOARDING'].includes(s.status)
         );
@@ -336,14 +411,14 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'actions',
-      header: 'Operate',
+      header: access.isParentOnly ? 'Tracking' : 'Operate',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (trip) => {
         const normalized = trip.status.toUpperCase();
 
         // Non-operators (Attendant, Parent) see view-only link
-        if (!access.canOperateTrip) {
+        if (!access.canOperateTrip || access.isParentOnly) {
           return (
             <div className='flex items-center justify-end gap-1.5'>
               <Button
@@ -353,7 +428,7 @@ export function SchoolBusTripsPage() {
                 asChild
               >
                 <Link href={`/school-bus/trips/${trip.id}`}>
-                  View details
+                  {access.isParentOnly ? 'Track Trip' : 'View details'}
                 </Link>
               </Button>
             </div>
@@ -537,38 +612,59 @@ export function SchoolBusTripsPage() {
 
   return (
     <SchoolBusPageShell
-      title='Trip operations'
-      description='Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+      title={access.isParentOnly ? 'Student Trip Tracking' : 'Trip Operations'}
+      description={
+        access.isParentOnly
+          ? 'Track your student’s trips in real time.'
+          : 'Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+      }
       breadcrumb={
         <SchoolBusBreadcrumb
-          items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Trips', current: true },
-          ]}
+          items={
+            access.isParentOnly
+              ? [
+                  { label: 'School Bus', href: '/school-bus/dashboard' },
+                  { label: 'Student Trip Tracking', current: true },
+                ]
+              : [
+                  { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                  { label: 'Trip Operations', current: true },
+                ]
+          }
         />
       }
     >
       <div className='flex flex-col gap-6'>
+        {/* Polling connection indicator */}
+        {lastUpdated && (
+          <div className='flex items-center justify-end -mb-3'>
+            <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
+              <span className='inline-flex h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5 animate-pulse' />
+              Auto-refreshes every 20s • Last updated: {lastUpdated}
+            </span>
+          </div>
+        )}
+
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label='Trips'
+            label={access.isParentOnly ? 'Total Tracking Trips' : 'Trips'}
             value={data?.data?.totalElements ?? 0}
-            hint='Route execution records'
+            hint={access.isParentOnly ? 'All historical & current student trips' : 'Route execution records'}
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
             label='In progress'
             value={trips.filter((trip) => trip.status === 'IN_PROGRESS').length}
-            hint='Trips currently operating'
+            hint={access.isParentOnly ? 'Trips currently running' : 'Trips currently operating'}
             icon={PlayCircle}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Completed'
             value={trips.filter((trip) => trip.status === 'COMPLETED').length}
-            hint='Closed trip executions'
+            hint={access.isParentOnly ? 'Successfully ended trips' : 'Closed trip executions'}
             icon={CheckCircle2}
             tone='success'
           />
@@ -576,8 +672,12 @@ export function SchoolBusTripsPage() {
 
         {/* Data Table within Card */}
         <SchoolBusDataTable
-          title='Trip Operations Board'
-          description='For each trip, only the next pending stop can be processed by the backend.'
+          title={access.isParentOnly ? 'Student Trips' : 'Trip Operations Board'}
+          description={
+            access.isParentOnly
+              ? 'View and track current and past trips.'
+              : 'For each trip, only the next pending stop can be processed by the backend.'
+          }
           toolbar={tripToolbar}
           data={filteredTrips}
           columns={tripColumns}
@@ -586,10 +686,10 @@ export function SchoolBusTripsPage() {
           stickyFirstColumn
           stickyActionColumn
           emptyIcon={Route}
-          emptyTitle={trips.length === 0 ? 'No trips yet' : 'No trips match current filters'}
+          emptyTitle={trips.length === 0 ? (access.isParentOnly ? 'No trips found' : 'No trips yet') : 'No trips match current filters'}
           emptyDescription={
             trips.length === 0
-              ? 'Create a trip from a dispatched route before execution can start.'
+              ? (access.isParentOnly ? 'There are no active or scheduled trips for your children.' : 'Create a trip from a dispatched route before execution can start.')
               : 'Try adjusting your search query or clear the active filters.'
           }
         />

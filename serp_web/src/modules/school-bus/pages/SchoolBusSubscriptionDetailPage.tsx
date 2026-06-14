@@ -18,15 +18,14 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetSubscriptionByIdQuery,
-  useActivateSubscriptionMutation,
-  usePauseSubscriptionMutation,
-  useStopSubscriptionMutation,
-  useGetSubscriptionHistoryQuery,
-  useGetSubscriptionPausePeriodsQuery,
+  useGetSchoolBusSubscriptionByIdQuery,
+  useActivateSchoolBusSubscriptionMutation,
+  usePauseSchoolBusSubscriptionMutation,
+  useStopSchoolBusSubscriptionMutation,
+  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusTimeline } from '../components/history/SchoolBusTimeline';
-import { mapSubscriptionHistoryToTimeline, mapPausePeriodsToTimeline } from '../components/history/mappers';
+import { mapSubscriptionHistoryToTimeline } from '../components/history/mappers';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -34,6 +33,7 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import type { TimelineEvent } from '../components/history/SchoolBusTimeline';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
   MORNING: 'To school only (Morning)',
@@ -58,15 +58,14 @@ interface SchoolBusSubscriptionDetailPageProps {
 export function SchoolBusSubscriptionDetailPage({
   subscriptionId,
 }: SchoolBusSubscriptionDetailPageProps) {
-  const { data, isLoading } = useGetSubscriptionByIdQuery(subscriptionId);
-  const [activateSubscription, { isLoading: activating }] = useActivateSubscriptionMutation();
-  const [pauseSubscription, { isLoading: pausing }] = usePauseSubscriptionMutation();
-  const [stopSubscription, { isLoading: stopping }] = useStopSubscriptionMutation();
+  const access = useSchoolBusAccess();
+  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
+  const [activateSubscription, { isLoading: activating }] = useActivateSchoolBusSubscriptionMutation();
+  const [pauseSubscription, { isLoading: pausing }] = usePauseSchoolBusSubscriptionMutation();
+  const [stopSubscription, { isLoading: stopping }] = useStopSchoolBusSubscriptionMutation();
 
   const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSubscriptionHistoryQuery(subscriptionId);
-  const { data: pauseData, isLoading: pauseLoading } =
-    useGetSubscriptionPausePeriodsQuery(subscriptionId);
+    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId);
 
   const sub = data?.data;
 
@@ -86,11 +85,10 @@ export function SchoolBusSubscriptionDetailPage({
 
   const timelineEvents = React.useMemo<TimelineEvent[]>(() => {
     const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);
-    const pauseEvents = mapPausePeriodsToTimeline(pauseData?.data ?? []);
-    return [...historyEvents, ...pauseEvents].sort(
+    return historyEvents.sort(
       (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
-  }, [historyData, pauseData]);
+  }, [historyData]);
 
   if (isLoading) {
     return (
@@ -125,7 +123,7 @@ export function SchoolBusSubscriptionDetailPage({
     );
   }
 
-  // derive readiness checklist
+  // derive eligibility checklist
   const isStatusActive = sub.status === 'ACTIVE';
   const isDateValid = (() => {
     const now = new Date();
@@ -143,11 +141,9 @@ export function SchoolBusSubscriptionDetailPage({
   const pickupPointConfigured = !requiresPickup || !!sub.pickupPointId;
   const dropoffPointConfigured = !requiresDropoff || !!sub.dropoffPointId;
 
-  const hasSchedule = !!sub.schoolScheduleId;
+  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured;
 
-  const isEligible = isStatusActive && isDateValid && hasDays && pickupPointConfigured && dropoffPointConfigured && hasSchedule;
-
-  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured || !hasSchedule;
+  const isConfigurationIncomplete = !pickupPointConfigured || !dropoffPointConfigured;
 
   const descriptionNode = (
     <div className='space-y-1.5 mt-1'>
@@ -174,49 +170,54 @@ export function SchoolBusSubscriptionDetailPage({
         </Button>
       </Link>
 
-      {sub.status === 'ACTIVE' && (
+      {/* Admin/Dispatcher: lifecycle actions — Parent cannot write subscriptions directly */}
+      {!access.isParentOnly && (
         <>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('pause')}
-            disabled={pausing}
-            className='h-9 rounded-xl border-amber-200 hover:bg-amber-50 text-amber-700 font-bold gap-1.5'
-          >
-            <PauseCircle className='h-4 w-4' />
-            Pause
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('stop')}
-            disabled={stopping}
-            className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
-          >
-            <StopCircle className='h-4 w-4' />
-            Stop
-          </Button>
-        </>
-      )}
+          {sub.status === 'ACTIVE' && (
+            <>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('pause')}
+                disabled={pausing}
+                className='h-9 rounded-xl border-amber-200 hover:bg-amber-50 text-amber-700 font-bold gap-1.5'
+              >
+                <PauseCircle className='h-4 w-4' />
+                Pause
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('stop')}
+                disabled={stopping}
+                className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
+              >
+                <StopCircle className='h-4 w-4' />
+                Stop
+              </Button>
+            </>
+          )}
 
-      {sub.status === 'PAUSED' && (
-        <>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('activate')}
-            disabled={activating}
-            className='h-9 rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-bold gap-1.5'
-          >
-            <PlayCircle className='h-4 w-4' />
-            Resume
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => handleAction('stop')}
-            disabled={stopping}
-            className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
-          >
-            <StopCircle className='h-4 w-4' />
-            Stop
-          </Button>
+          {sub.status === 'PAUSED' && (
+            <>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('activate')}
+                disabled={activating}
+                className='h-9 rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-bold gap-1.5'
+              >
+                <PlayCircle className='h-4 w-4' />
+                Resume
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => handleAction('stop')}
+                disabled={stopping}
+                className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
+              >
+                <StopCircle className='h-4 w-4' />
+                Stop
+              </Button>
+            </>
+          )}
         </>
       )}
     </div>
@@ -226,12 +227,21 @@ export function SchoolBusSubscriptionDetailPage({
     <SchoolBusPageShell
       title={`Subscription ${sub.subscriptionCode}`}
       description={descriptionNode}
+      breadcrumb={
+        <SchoolBusBreadcrumb
+          items={[
+            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Subscriptions', href: '/school-bus/subscriptions' },
+            { label: sub.subscriptionCode || 'Detail', current: true },
+          ]}
+        />
+      }
       actions={actionsNode}
     >
       <div className='flex flex-col gap-6 mt-4'>
 
 
-        {/* Status / Readiness Banners */}
+        {/* Status / Eligibility Banners */}
         <div className='space-y-3'>
           {sub.status === 'ACTIVE' && (
             <div className='flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-emerald-800 shadow-sm'>
@@ -239,7 +249,7 @@ export function SchoolBusSubscriptionDetailPage({
               <div>
                 <h4 className='font-bold text-sm text-emerald-950'>Active subscription</h4>
                 <p className='text-xs text-emerald-850 mt-0.5 leading-relaxed font-medium'>
-                  This student is eligible for route planning when schedule, service date, active days and pickup/drop-off conditions match.
+                  This student is eligible for route planning when service date, active days, and pickup/drop-off conditions match.
                 </p>
               </div>
             </div>
@@ -315,10 +325,12 @@ export function SchoolBusSubscriptionDetailPage({
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>Student Code</span>
                     <span className='text-sm font-semibold text-slate-700 font-mono'>{sub.studentCode || 'N/A'}</span>
                   </div>
+                  {!access.isParentOnly && (
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>Parent</span>
                     <span className='text-sm font-semibold text-slate-700'>{sub.parentName || 'N/A'}</span>
                   </div>
+                  )}
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>School</span>
                     <div className='flex items-center gap-2'>
@@ -386,37 +398,10 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Schedule & active days */}
-            <SchoolBusSection title='Schedule & active days'>
+            {/* Active days */}
+            <SchoolBusSection title='Active days'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
-                {sub.schoolScheduleId ? (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 pb-3 border-b border-slate-105'>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Name</span>
-                      <span className='text-slate-900 font-semibold'>{sub.schoolScheduleName}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Schedule Code</span>
-                      <span className='text-slate-900 font-semibold font-mono text-xs'>{sub.scheduleCode || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Shift Type</span>
-                      <span className='text-slate-900 font-semibold'>{sub.shiftType || 'N/A'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm border-b border-slate-100/50 md:border-0'>
-                      <span className='text-slate-500 font-medium'>Arrival Deadline</span>
-                      <span className='text-slate-900 font-semibold'>{sub.arrivalDeadline || '—'}</span>
-                    </div>
-                    <div className='flex justify-between py-1.5 text-sm md:col-span-2'>
-                      <span className='text-slate-500 font-medium'>Departure Time</span>
-                      <span className='text-slate-900 font-semibold'>{sub.departureTime || '—'}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className='pb-3 border-b border-slate-100 text-sm text-amber-600 italic font-medium'>
-                    No schedule linked to this subscription contract.
-                  </div>
-                )}
+                
 
                 <div>
                   <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2'>Active Days</span>
@@ -442,8 +427,9 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Planning Readiness Checklist */}
-            <SchoolBusSection title='Route Planning Readiness'>
+            {/* Planning Eligibility Checklist — Admin/Dispatcher only */}
+            {!access.isParentOnly && (
+            <SchoolBusSection title='Route Planning Eligibility'>
               <div className={cn(
                 'p-5 rounded-2xl border shadow-sm space-y-4 transition-all',
                 isEligible
@@ -460,7 +446,7 @@ export function SchoolBusSubscriptionDetailPage({
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     )}
                   >
-                    {isEligible ? 'Yes (Ready)' : 'No (Blocked)'}
+                    {isEligible ? 'Yes (Eligible)' : 'No (Ineligible)'}
                   </span>
                 </div>
 
@@ -510,24 +496,14 @@ export function SchoolBusSubscriptionDetailPage({
                       {pickupPointConfigured && dropoffPointConfigured ? 'Configured' : 'Missing points'}
                     </span>
                   </div>
-
-                  {/* 5. Schedule linked */}
-                  <div className='flex items-center gap-2'>
-                    {hasSchedule ? (
-                      <span className='text-emerald-600 font-bold'>✓</span>
-                    ) : (
-                      <span className='text-amber-500 font-bold'>⚠</span>
-                    )}
-                    <span className='text-slate-500 font-medium'>School schedule linked</span>
-                    <span className='ml-auto text-slate-700'>{hasSchedule ? 'Linked' : 'Missing schedule'}</span>
-                  </div>
                 </div>
 
                 <div className='rounded-xl bg-slate-50 p-3 text-slate-500 text-[11px] font-semibold leading-relaxed border border-slate-200/60'>
-                  ⚠️ Detailed planning readiness (such as pickup windows, coordinates, and school link compatibility) will be evaluated during the route planning phase.
+                  ⚠️ Detailed route planning compatibility (such as coordinates and school link compatibility) will be evaluated during the route planning phase.
                 </div>
               </div>
             </SchoolBusSection>
+            )}
           </div>
 
           {/* Sidebar Column */}
@@ -583,28 +559,6 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             )}
 
-            {/* Pause Periods List */}
-            {pauseData?.data && pauseData.data.length > 0 && (
-              <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                  Pause Periods
-                </h3>
-                <div className='space-y-3'>
-                  {pauseData.data.map((p) => (
-                    <div key={p.id} className='rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs'>
-                      <div className='flex items-center justify-between gap-2 mb-1'>
-                        <span className='font-bold text-slate-800'>
-                          {p.pauseFrom} {p.pauseTo ? `→ ${p.pauseTo}` : ' (Indefinite)'}
-                        </span>
-                        <SchoolBusStatusBadge status={p.status} />
-                      </div>
-                      {p.reason && <p className='text-slate-500 font-medium'>Reason: {p.reason}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* History Event Log */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
@@ -614,7 +568,7 @@ export function SchoolBusSubscriptionDetailPage({
                 events={timelineEvents}
                 mode='compact'
                 groupByDate={false}
-                isLoading={historyLoading || pauseLoading}
+                isLoading={historyLoading}
                 isError={historyError}
                 maxHeight='320px'
               />

@@ -28,8 +28,6 @@ import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
   ORDER_PICKUP_METHOD_OPTIONS,
-  ORDER_PRODUCT_CATEGORY_OPTIONS,
-  ORDER_TYPE_OPTIONS,
   type CreateOrderFormState,
   type LocationTarget,
   type OrderFormMode,
@@ -137,10 +135,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
   const codOptions = [
     { value: 'false', label: 'No COD' },
     { value: 'true', label: 'COD' },
-  ];
-  const productCategoryOptions = [
-    { value: 'NONE', label: 'No category' },
-    ...ORDER_PRODUCT_CATEGORY_OPTIONS,
   ];
   const productTypeComboboxOptions = productTypeOptions.map((productType) => ({
     value: String(productType.id),
@@ -497,23 +491,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='orderType'>Order type *</Label>
-                <TmsCombobox
-                  id='orderType'
-                  value={createForm.orderType}
-                  onValueChange={(value) =>
-                    onFormChange(
-                      'orderType',
-                      value as CreateOrderFormState['orderType']
-                    )
-                  }
-                  options={ORDER_TYPE_OPTIONS}
-                  placeholder='Select order type'
-                  emptyText='No order types found'
-                />
-              </div>
-
-              <div className='space-y-2'>
                 <Label htmlFor='feePayer'>Fee payer *</Label>
                 <TmsCombobox
                   id='feePayer'
@@ -541,23 +518,6 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={codOptions}
                   placeholder='Select COD option'
                   emptyText='No COD options found'
-                />
-              </div>
-
-              <div className='space-y-2 md:col-span-2'>
-                <Label htmlFor='orderProductCategory'>Product category</Label>
-                <TmsCombobox
-                  id='orderProductCategory'
-                  value={createForm.orderProductCategory}
-                  onValueChange={(value) =>
-                    onFormChange(
-                      'orderProductCategory',
-                      value as CreateOrderFormState['orderProductCategory']
-                    )
-                  }
-                  options={productCategoryOptions}
-                  placeholder='Select category (optional)'
-                  emptyText='No categories found'
                 />
               </div>
             </div>

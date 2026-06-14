@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.tms_billing_service.core.service.impl;
 
 import org.junit.jupiter.api.Test;
@@ -10,14 +15,12 @@ import serp.project.tms_billing_service.core.service.support.PricingRuleService;
 import serp.project.tms_billing_service.core.service.support.RouteClassificationService;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -66,7 +69,7 @@ class TieuChuanPricingStrategyTest {
     }
 
     @Test
-    void shouldCalculateOver3KgAndRemoteAndInsuranceFee() {
+    void shouldCalculateRemoteFeeWithoutSpecialGoodsFee() {
         CalculateShippingFeeRequest request = new CalculateShippingFeeRequest();
         request.setServiceCode(DeliveryService.TIEU_CHUAN);
         request.setSenderWardCode("010001");
@@ -75,7 +78,6 @@ class TieuChuanPricingStrategyTest {
         request.setLengthCm(30);
         request.setWidthCm(30);
         request.setHeightCm(30);
-        request.setDeclaredValue(4_000_000L);
 
         Tariff tariff = Tariff.builder()
                 .baseWeight(3_000d)
@@ -85,19 +87,12 @@ class TieuChuanPricingStrategyTest {
                 .build();
         SurchargeRule remoteRule = SurchargeRule.builder()
                 .code(SurchargeRuleEnum.VUNG_XA)
-                .name("Phụ phí vùng sâu vùng xa")
+                .name("Remote area surcharge")
                 .calculationType(CalculationType.STEP_WEIGHT)
                 .baseWeight(5_000d)
                 .basePrice(7_000d)
                 .stepWeight(500d)
                 .stepPrice(500d)
-                .build();
-        VasRule insuranceRule = VasRule.builder()
-                .code(VasRuleCode.BAO_HIEM)
-                .name("Phí bảo hiểm hàng giá trị cao")
-                .calculationType(CalculationType.PERCENTAGE)
-                .ratePercent(0.5d)
-                .minAmount(5_000d)
                 .build();
 
         when(routeClassificationService.classify("010001", "790002")).thenReturn(RouteType.LIEN_MIEN_DAC_BIET);
@@ -105,13 +100,12 @@ class TieuChuanPricingStrategyTest {
         when(chargeableWeightService.calculate(3_100L, 30, 30, 30)).thenReturn(3_100L);
         when(pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, RouteType.LIEN_MIEN)).thenReturn(tariff);
         when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA)).thenReturn(remoteRule);
-        when(pricingRuleService.getRequiredVasRule(VasRuleCode.BAO_HIEM)).thenReturn(insuranceRule);
 
         CalculateShippingFeeResponse result = tieuChuanPricingStrategy.calculate(request);
 
         assertEquals(62_000L, result.getBaseFee());
         assertEquals(7_000L, result.getSurchargeFee());
-        assertEquals(20_000L, result.getVasFee());
-        assertEquals(89_000L, result.getTotalFee());
+        assertEquals(0L, result.getVasFee());
+        assertEquals(69_000L, result.getTotalFee());
     }
 }

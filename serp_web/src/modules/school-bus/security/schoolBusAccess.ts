@@ -60,6 +60,14 @@ export function isSchoolBusOperator(roles: string[]): boolean {
 }
 
 /**
+ * Returns true only when the user has the Parent role but does NOT have Admin or Dispatcher.
+ * Use this for data-scope / UI-mode decisions. Admin+Parent should behave as operator, not parent.
+ */
+export function isSchoolBusParentOnly(roles: string[]): boolean {
+  return isSchoolBusParent(roles) && !isSchoolBusOperator(roles);
+}
+
+/**
  * Returns true if the user has any recognized School Bus role.
  */
 export function hasAnySchoolBusAccess(roles: string[]): boolean {
@@ -280,7 +288,11 @@ export function canAccessReports(roles: string[]): boolean {
  * Backend permission: school-bus.student.write / school-bus.parent.write
  */
 export function canWriteStudentData(roles: string[]): boolean {
-  return hasAnySchoolBusRole(roles, [SCHOOL_BUS_ROLES.ADMIN, SCHOOL_BUS_ROLES.DISPATCHER]);
+  return hasAnySchoolBusRole(roles, [
+    SCHOOL_BUS_ROLES.ADMIN,
+    SCHOOL_BUS_ROLES.DISPATCHER,
+    SCHOOL_BUS_ROLES.PARENT,
+  ]);
 }
 
 /**
@@ -328,6 +340,7 @@ export function useSchoolBusAccess() {
       isAttendant: isSchoolBusAttendant(roles),
       isParent: isSchoolBusParent(roles),
       isOperator: isSchoolBusOperator(roles),
+      isParentOnly: isSchoolBusParentOnly(roles),
 
       // Action flags
       canOperateTrip: canOperateTrip(roles),

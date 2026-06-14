@@ -22,7 +22,7 @@ public interface IRouteStopService extends IBaseService<RouteStopEntity, Long> {
     void removeStop(Long routeId, Long stopId, Long tenantId, Long actorId);
 
     /**
-     * Manually assign a student to a route (MANUAL planning mode).
+     * Assign a student to a route.
      * Auto-finds an existing stop at the student's relevant pickup/dropoff point,
      * or creates a new stop at the end of the route if none exists.
      * Validates: route editable, student eligible for session, not duplicate in session.
@@ -32,7 +32,7 @@ public interface IRouteStopService extends IBaseService<RouteStopEntity, Long> {
                                                   Long tenantId, Long actorId);
 
     /**
-     * Manually add a student to a specific stop on a route (MANUAL planning mode).
+     * Add a student to a specific stop on a route.
      * Auto-infers serviceAction from route direction (OUTBOUND→BOARD, RETURN→DROPOFF).
      * Validates: route editable, stop belongs to route, stop pickupPoint matches student's
      * relevantPoint for the direction, student is eligible for the session,
@@ -61,5 +61,8 @@ public interface IRouteStopService extends IBaseService<RouteStopEntity, Long> {
 
     /** Internal: physically deletes a stop entity (used by greedy simulation). */
     void deletePhysical(Long id);
+
+    /** Create or update terminal stops for a route plan and recalculate OSRM geometry. */
+    void updateTerminalStops(serp.project.school_bus_service.entity.RoutePlanEntity route, Long tenantId, Long actorId);
 }
 

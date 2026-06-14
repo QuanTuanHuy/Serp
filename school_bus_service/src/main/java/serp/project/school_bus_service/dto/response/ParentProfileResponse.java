@@ -8,8 +8,11 @@ import lombok.Setter;
 public class ParentProfileResponse extends BaseResponse {
 
     private Long userId;
+    private Long schoolBusUserId;
+    private Long accountUserId;
     private String fullName;
     private String phone;
     private String email;
     private String address;
+    private SchoolBusUserResponse user;
 }

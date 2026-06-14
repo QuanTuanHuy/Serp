@@ -9,7 +9,6 @@ import serp.project.first_mile.enums.PostOfficeStaffRole;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 public record PostOfficeStaffAssignmentResponse(
         Long id,
@@ -22,8 +21,6 @@ public record PostOfficeStaffAssignmentResponse(
         PostOfficeStaffRole staffRole,
         LocalDate assignedFrom,
         LocalDate assignedTo,
-        LocalTime shiftStartTime,
-        LocalTime shiftEndTime,
         Boolean isPrimary,
         String notes,
         LocalDateTime createdAt,

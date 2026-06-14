@@ -152,12 +152,6 @@ export const normalizePostOfficeStaffAssignment = (
     staffRole: readField(record, 'staff_role', 'staffRole'),
     assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
     assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
-    shiftStartTime: readField<string>(
-      record,
-      'shift_start_time',
-      'shiftStartTime'
-    ),
-    shiftEndTime: readField<string>(record, 'shift_end_time', 'shiftEndTime'),
     isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),
     notes: readField<string>(record, 'notes', 'notes'),
     createdAt: readField<string>(record, 'created_at', 'createdAt'),

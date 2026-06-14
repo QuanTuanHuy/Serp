@@ -1,9 +1,9 @@
 package serp.project.school_bus_service.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.school_bus_service.dto.message.TripOperationEventMessage;
 import serp.project.school_bus_service.dto.request.CancelTripRequest;
 import serp.project.school_bus_service.dto.request.CompleteTripRequest;
 import serp.project.school_bus_service.dto.request.SkipStopRequest;
@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class TripOperationServiceImpl implements ITripOperationService {
 
     private final ITripExecutionService tripExecutionService;
@@ -38,10 +39,9 @@ public class TripOperationServiceImpl implements ITripOperationService {
     private final ITripStudentService tripStudentService;
     private final IRouteStopService routeStopService;
     private final IAttendanceService attendanceService;
-    private final IAuditLogService auditLogService;
-    private final ITripWebSocketPublisher webSocketPublisher;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDataScopeService schoolBusDataScopeService;
 
     public TripOperationServiceImpl(
             ITripExecutionService tripExecutionService,
@@ -49,19 +49,17 @@ public class TripOperationServiceImpl implements ITripOperationService {
             ITripStudentService tripStudentService,
             IRouteStopService routeStopService,
             @Lazy IAttendanceService attendanceService,
-            IAuditLogService auditLogService,
-            ITripWebSocketPublisher webSocketPublisher,
             SchoolBusMapper mapper,
-            MessageCommon messageCommon) {
+            MessageCommon messageCommon,
+            ISchoolBusDataScopeService schoolBusDataScopeService) {
         this.tripExecutionService = tripExecutionService;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
         this.routeStopService = routeStopService;
         this.attendanceService = attendanceService;
-        this.auditLogService = auditLogService;
-        this.webSocketPublisher = webSocketPublisher;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.schoolBusDataScopeService = schoolBusDataScopeService;
     }
 
     private String actor(Long actorId) {
@@ -87,6 +85,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse startTrip(Long tripId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.ASSIGNED && trip.getStatus() != TripStatus.PLANNED) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -102,16 +101,15 @@ public class TripOperationServiceImpl implements ITripOperationService {
         trip.markUpdated(actor(actorId));
         tripExecutionService.save(trip);
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "START", "Started trip");
-
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setAction("START");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(0.0);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
+        stops.stream()
+                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .ifPresent(startTerminal -> {
+                    boolean isReturn = trip.getRouteDirection() == RouteDirection.RETURN;
+                    startTerminal.setStatus(isReturn ? TripStopStatus.BOARDING : TripStopStatus.ARRIVED);
+                    startTerminal.setActualArrivalTime(LocalDateTime.now());
+                    startTerminal.markUpdated(actor(actorId));
+                    tripStopLogService.save(startTerminal);
+                });
 
         return toDetail(trip, tenantId);
     }
@@ -119,6 +117,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse arriveStop(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -143,31 +142,17 @@ public class TripOperationServiceImpl implements ITripOperationService {
         LocalDateTime now = LocalDateTime.now();
         stopLog.setStatus(TripStopStatus.ARRIVED);
         stopLog.setActualArrivalTime(now);
-
-        LocalTime plannedArrivalTime = stopLog.getRouteStop().getPlannedArrivalTime();
-        if (plannedArrivalTime != null) {
-            LocalDateTime planned = LocalDateTime.of(
-                    trip.getServiceDate() != null ? trip.getServiceDate() : LocalDate.now(),
-                    plannedArrivalTime);
-            long delayMin = Duration.between(planned, now).toMinutes();
-            stopLog.setDelayMinutes((int) delayMin);
-        }
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "ARRIVE_STOP",
-                "Arrived stop " + stopLog.getStopOrder());
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(tripId, tenantId).stream()
+                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .toList();
+        boolean isLastStop = !stops.isEmpty() && stops.get(stops.size() - 1).getId().equals(stopLog.getId());
 
-        double progress = calculateProgress(tripId, tenantId);
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setStopId(routeStopId);
-        msg.setAction("ARRIVE");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
+        if (isLastStop) {
+            return completeTrip(tripId, null, tenantId, actorId);
+        }
 
         return toDetail(trip, tenantId);
     }
@@ -175,6 +160,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse startBoarding(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -184,26 +170,40 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND));
 
         if (stopLog.getStatus() != TripStopStatus.ARRIVED) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Stop must be ARRIVED to start boarding");
+            throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING,
+                    messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED_BOARDING));
+        }
+
+        RouteStopEntity routeStop = stopLog.getRouteStop();
+        boolean isOutbound = trip.getRouteDirection() == RouteDirection.OUTBOUND;
+
+        if (isOutbound) {
+            if (routeStop == null || routeStop.getStopPurpose() != RouteStopPurpose.PICKUP) {
+                throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start boarding is only allowed at pickup stops.");
+            }
+        } else {
+            if (routeStop == null || routeStop.getStopPurpose() != RouteStopPurpose.DROPOFF) {
+                throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start dropoff is only allowed at dropoff stops.");
+            }
+        }
+
+        List<TripStudentEntity> allStudents = tripStudentService.findByTrip(tripId, tenantId);
+        List<TripStudentEntity> stopStudents = allStudents.stream()
+                .filter(ts -> {
+                    if (isOutbound) {
+                        return ts.getPickupStop() != null && ts.getPickupStop().getId().equals(routeStopId);
+                    } else {
+                        return ts.getDropoffStop() != null && ts.getDropoffStop().getId().equals(routeStopId);
+                    }
+                })
+                .toList();
+        if (stopStudents.isEmpty()) {
+            throw new AppException(AppErrorCode.Trip.INVALID_STATE, isOutbound ? "Start boarding is only allowed at pickup stops." : "Start dropoff is only allowed at dropoff stops.");
         }
 
         stopLog.setStatus(TripStopStatus.BOARDING);
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
-
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "START_BOARDING",
-                "Started boarding at stop " + stopLog.getStopOrder());
-
-        double progress = calculateProgress(tripId, tenantId);
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setStopId(routeStopId);
-        msg.setAction("START_BOARDING");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
 
         return toDetail(trip, tenantId);
     }
@@ -211,6 +211,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse departStop(Long tripId, Long routeStopId, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -226,24 +227,57 @@ public class TripOperationServiceImpl implements ITripOperationService {
             throw new AppException(AppErrorCode.Trip.STOP_NOT_ARRIVED, messageCommon.getMessage(AppErrorCode.Trip.STOP_NOT_ARRIVED));
         }
 
+        // Ensure next active/current stop
+        TripStopLogEntity firstUnfinished = tripStopLogService.findByTrip(tripId, tenantId).stream()
+                .filter(stop -> stop.getStatus() != TripStopStatus.DEPARTED && stop.getStatus() != TripStopStatus.SKIPPED)
+                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE, "No active stops to depart."));
+        if (!firstUnfinished.getId().equals(stopLog.getId())) {
+            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Cannot depart stop because there are earlier unfinished stops.");
+        }
+
+        RouteStopEntity routeStop = stopLog.getRouteStop();
+        boolean isTerminal = (routeStop != null && routeStop.getStopPurpose() != null && routeStop.getStopPurpose().isTerminal());
+
+        if (!isTerminal) {
+            List<TripStudentEntity> allStudents = tripStudentService.findByTrip(tripId, tenantId);
+            boolean isOutbound = (trip.getRouteDirection() == RouteDirection.OUTBOUND);
+
+            List<TripStudentEntity> stopStudents = allStudents.stream()
+                    .filter(ts -> {
+                        if (isOutbound) {
+                            return ts.getPickupStop() != null && ts.getPickupStop().getId().equals(routeStopId);
+                        } else {
+                            return ts.getDropoffStop() != null && ts.getDropoffStop().getId().equals(routeStopId);
+                        }
+                    })
+                    .toList();
+
+            if (!stopStudents.isEmpty()) {
+                if (stopLog.getStatus() != TripStopStatus.BOARDING) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start boarding/dropoff at this stop before departing.");
+                }
+
+                long pendingCount = stopStudents.stream()
+                        .filter(ts -> {
+                            if (isOutbound) {
+                                return ts.getStatus() == TripStudentStatus.PLANNED;
+                            } else {
+                                return ts.getStatus() == TripStudentStatus.BOARDED;
+                            }
+                        })
+                        .count();
+                if (pendingCount > 0) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                            "Cannot depart stop because some planned students have not been processed.");
+                }
+            }
+        }
+
         stopLog.setStatus(TripStopStatus.DEPARTED);
         stopLog.setActualDepartureTime(LocalDateTime.now());
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
-
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "DEPART_STOP",
-                "Departed stop " + stopLog.getStopOrder());
-
-        double progress = calculateProgress(tripId, tenantId);
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setStopId(routeStopId);
-        msg.setAction("DEPART");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
 
         return toDetail(trip, tenantId);
     }
@@ -251,6 +285,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     @Override
     @Transactional
     public TripExecutionResponse skipStop(Long tripId, Long routeStopId, SkipStopRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -298,37 +333,36 @@ public class TripOperationServiceImpl implements ITripOperationService {
                             "Stop skipped: " + request.getReason(), tenantId, actorId);
                 });
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "SKIP_STOP",
-                "Skipped stop " + stopLog.getStopOrder() + ": " + request.getReason());
-
-        double progress = calculateProgress(tripId, tenantId);
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setStopId(routeStopId);
-        msg.setAction("SKIP");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
-
         return toDetail(trip, tenantId);
     }
 
     @Override
     @Transactional
     public TripExecutionResponse completeTrip(Long tripId, CompleteTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
         }
 
-        // All stops must be DEPARTED or SKIPPED
-        boolean hasPendingStops = tripStopLogService.findByTrip(tripId, tenantId).stream()
-                .anyMatch(stop -> stop.getStatus() != TripStopStatus.DEPARTED
-                        && stop.getStatus() != TripStopStatus.SKIPPED);
-        if (hasPendingStops) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
+        // All stops except the last stop (end terminal) must be DEPARTED or SKIPPED.
+        // The last stop (end terminal) must be ARRIVED or DEPARTED.
+        List<TripStopLogEntity> stops = tripStopLogService.findByTrip(tripId, tenantId).stream()
+                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .toList();
+
+        for (int i = 0; i < stops.size(); i++) {
+            TripStopLogEntity stop = stops.get(i);
+            boolean isEndTerminal = (i == stops.size() - 1);
+            if (isEndTerminal) {
+                if (stop.getStatus() != TripStopStatus.ARRIVED && stop.getStatus() != TripStopStatus.BOARDING && stop.getStatus() != TripStopStatus.DEPARTED) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Complete all stops and resolve all student attendance before completing this trip.");
+                }
+            } else {
+                if (stop.getStatus() != TripStopStatus.DEPARTED && stop.getStatus() != TripStopStatus.SKIPPED) {
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Complete all stops and resolve all student attendance before completing this trip.");
+                }
+            }
         }
 
         // Auto-resolve PLANNED students whose stops were skipped
@@ -353,11 +387,22 @@ public class TripOperationServiceImpl implements ITripOperationService {
                     tripStudentService.save(ts);
                 });
 
+        // Auto-resolve BOARDED students to DROPPED_OFF for OUTBOUND trips upon completion
+        if (isOutboundComplete) {
+            tripStudentService.findByTrip(tripId, tenantId).stream()
+                    .filter(ts -> ts.getStatus() == TripStudentStatus.BOARDED)
+                    .forEach(ts -> {
+                        ts.setStatus(TripStudentStatus.DROPPED_OFF);
+                        ts.markUpdated(actor(actorId));
+                        tripStudentService.save(ts);
+                    });
+        }
+
         // Ensure all students are processed
         boolean hasUnprocessedStudents = tripStudentService.findByTrip(tripId, tenantId).stream()
                 .anyMatch(s -> s.getStatus() == TripStudentStatus.PLANNED);
         if (hasUnprocessedStudents) {
-            throw new AppException(AppErrorCode.Trip.UNPROCESSED_STUDENTS, messageCommon.getMessage(AppErrorCode.Trip.UNPROCESSED_STUDENTS));
+            throw new AppException(AppErrorCode.Trip.UNPROCESSED_STUDENTS, "Complete all stops and resolve all student attendance before completing this trip.");
         }
 
         LocalDateTime completedAt = LocalDateTime.now();
@@ -377,23 +422,13 @@ public class TripOperationServiceImpl implements ITripOperationService {
         trip.markUpdated(actor(actorId));
         tripExecutionService.save(trip);
 
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "COMPLETE", "Completed trip");
-
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setAction("COMPLETE");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(100.0);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
-
         return toDetail(trip, tenantId);
     }
 
     @Override
     @Transactional
     public TripExecutionResponse cancelTrip(Long tripId, CancelTripRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanOperateTrip(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() == TripStatus.COMPLETED) {
             throw new AppException(AppErrorCode.Trip.ALREADY_COMPLETED, messageCommon.getMessage(AppErrorCode.Trip.ALREADY_COMPLETED));
@@ -440,67 +475,42 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 });
 
         tripExecutionService.save(trip);
-        auditLogService.log(tenantId, actorId, "TripExecution", trip.getId(), "CANCEL",
-                "Cancelled trip: " + request.getReason());
-
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setAction("CANCEL");
-        msg.setTenantId(tenantId);
-        msg.setEventType("TRIP_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
 
         return toDetail(trip, tenantId);
-    }
-
-    private AttendanceResponse publishAttendanceEvent(Long tripId, Long routeStopId, Long studentId, String action, Long tenantId, AttendanceResponse response) {
-        double progress = calculateProgress(tripId, tenantId);
-        TripOperationEventMessage msg = new TripOperationEventMessage();
-        msg.setTripId(tripId);
-        msg.setStopId(routeStopId);
-        msg.setStudentId(studentId);
-        msg.setAction(action);
-        msg.setTenantId(tenantId);
-        msg.setEventType("ATTENDANCE_UPDATE");
-        msg.setProgressPercent(progress);
-        msg.setTimestamp(LocalDateTime.now());
-        webSocketPublisher.publish(msg);
-        return response;
     }
 
     @Override
     @Transactional
     public AttendanceResponse boardStudent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
-        AttendanceResponse res = attendanceService.boardTripStudent(tripId, request, tenantId, actorId);
-        return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "BOARDED", tenantId, res);
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        return attendanceService.boardTripStudent(tripId, request, tenantId, actorId);
     }
 
     @Override
     @Transactional
     public AttendanceResponse dropoffStudent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
-        AttendanceResponse res = attendanceService.dropoffTripStudent(tripId, request, tenantId, actorId);
-        return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "DROPPED_OFF", tenantId, res);
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        return attendanceService.dropoffTripStudent(tripId, request, tenantId, actorId);
     }
 
     @Override
     @Transactional
     public AttendanceResponse markStudentAbsent(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
-        AttendanceResponse res = attendanceService.markTripStudentAbsent(tripId, request, tenantId, actorId);
-        return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "ABSENT", tenantId, res);
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        return attendanceService.markTripStudentAbsent(tripId, request, tenantId, actorId);
     }
 
     @Override
     @Transactional
     public AttendanceResponse markStudentNoShow(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
-        AttendanceResponse res = attendanceService.markTripStudentNoShow(tripId, request, tenantId, actorId);
-        return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "NO_SHOW", tenantId, res);
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        return attendanceService.markTripStudentNoShow(tripId, request, tenantId, actorId);
     }
 
     @Override
     @Transactional
     public AttendanceResponse markStudentNotServed(Long tripId, TripAttendanceActionRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
         if (trip.getStatus() != TripStatus.IN_PROGRESS) {
             throw new AppException(AppErrorCode.Attendance.INVALID_STATE,
@@ -517,6 +527,13 @@ public class TripOperationServiceImpl implements ITripOperationService {
         if (!routeStop.getRoute().getId().equals(trip.getRoute().getId())) {
             throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+        }
+
+        TripStopLogEntity stopLog = tripStopLogService.findByTripAndRouteStop(tripId, request.getRouteStopId(), tenantId)
+                .orElse(null);
+        if (stopLog == null || stopLog.getStatus() != TripStopStatus.BOARDING) {
+            throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
+                    "Start boarding/dropoff at this stop before marking attendance.");
         }
 
         if (tripStudent.getStatus() != TripStudentStatus.PLANNED) {
@@ -546,8 +563,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         response.setRecordedBy(actorId);
         response.setNotes(request.getNotes());
 
-        auditLogService.log(tenantId, actorId, "TripAttendance", null, "NOT_SERVED", "Recorded student not served manually");
-
-        return publishAttendanceEvent(tripId, request.getRouteStopId(), request.getStudentId(), "NOT_SERVED", tenantId, response);
+        return response;
     }
 }

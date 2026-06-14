@@ -12,7 +12,8 @@ public enum ExternalServices {
     ACCOUNT("Serp Account Service", "serp-account"),
     DISCUSS("Serp Discuss Service", "serp-discuss"),
     PM("Project Management", "serp-pm"),
-    TTCRS("Truck Container Routing Service", "serp-ttcrs")
+    TTCRS("Truck Container Routing Service", "serp-ttcrs"),
+    SCHOOL_BUS("School Bus Service", "serp-school-bus"),
     ;
 
     private final String name;

@@ -94,6 +94,15 @@ export type {
   AdminDashboardStatusCount,
 } from './dashboard.types';
 
+// Global search types
+export type {
+  AdminGlobalSearchType,
+  AdminGlobalSearchItem,
+  AdminGlobalSearchGroup,
+  AdminGlobalSearchResponse,
+  AdminGlobalSearchParams,
+} from './global-search.types';
+
 // Menu Display types
 export type {
   MenuType,

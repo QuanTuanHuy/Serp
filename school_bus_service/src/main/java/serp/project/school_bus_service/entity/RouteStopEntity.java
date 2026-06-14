@@ -12,7 +12,6 @@ import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
 
-import java.time.LocalTime;
 
 @Entity
 @Table(name = "school_bus_route_stop")
@@ -65,11 +64,7 @@ public class RouteStopEntity extends BaseModel {
     @Column(name = "distance_from_previous_km")
     private Double distanceFromPreviousKm;
 
-    @Column(name = "planned_arrival_time")
-    private LocalTime plannedArrivalTime;
 
-    @Column(name = "planned_departure_time")
-    private LocalTime plannedDepartureTime;
 
     // ── Derived helpers ───────────────────────────────────────────────────────
 

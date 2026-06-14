@@ -7,6 +7,7 @@ import serp.project.school_bus_service.shared.base.BaseRepository;
 
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,9 @@ import java.util.Optional;
 public interface TripStudentRepository extends BaseRepository<TripStudentEntity, Long> {
 
     List<TripStudentEntity> findByTripIdAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Long tripId,
+            Long tenantId);
+
+    List<TripStudentEntity> findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Collection<Long> tripIds,
             Long tenantId);
 
     Optional<TripStudentEntity> findByTripIdAndStudentIdAndTenantIdAndIsDeletedFalse(
@@ -39,5 +43,46 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
         @Param("direction") serp.project.school_bus_service.enums.RouteDirection direction
     );
 
+    @Query("""
+        SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
+        JOIN ts.trip t
+        WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND ts.student.parentProfile.id = :parentProfileId
+        GROUP BY ts.status
+    """)
+    List<Object[]> countAttendanceByStatusForParent(
+        @Param("tenantId") Long tenantId,
+        @Param("serviceDate") LocalDate serviceDate,
+        @Param("parentProfileId") Long parentProfileId
+    );
+
+    @Query("""
+        SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
+        JOIN ts.trip t
+        WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.driver.id = :driverId
+        GROUP BY ts.status
+    """)
+    List<Object[]> countAttendanceByStatusForDriver(
+        @Param("tenantId") Long tenantId,
+        @Param("serviceDate") LocalDate serviceDate,
+        @Param("driverId") Long driverId
+    );
+
+    @Query("""
+        SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
+        JOIN ts.trip t
+        WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
+          AND t.serviceDate = :serviceDate
+          AND t.attendant.id = :attendantId
+        GROUP BY ts.status
+    """)
+    List<Object[]> countAttendanceByStatusForAttendant(
+        @Param("tenantId") Long tenantId,
+        @Param("serviceDate") LocalDate serviceDate,
+        @Param("attendantId") Long attendantId
+    );
 }
 

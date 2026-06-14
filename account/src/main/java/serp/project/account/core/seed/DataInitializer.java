@@ -45,7 +45,7 @@ public class DataInitializer implements CommandLineRunner {
     private static final String CLIENT_ID_PTM = "serp-ptm";
     private static final String CLIENT_ID_CRM = "serp-crm";
     private static final String CLIENT_ID_TMS = "serp-first-mile";
-    private static final String CLIENT_ID_SCHOOL_BUS = "serp-bds";
+    private static final String CLIENT_ID_SCHOOL_BUS = "serp-school-bus";
 
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
 

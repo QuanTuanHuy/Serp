@@ -16,7 +16,7 @@ import {
 import { Button } from '@/shared/components/ui';
 import {
   useGetOperationsDashboardQuery,
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -82,9 +82,9 @@ export function SchoolBusDashboardPage() {
     });
 
   // Fetch schools list for filter dropdown
-  const { data: schoolsData } = useGetSchoolsQuery({ size: 100 });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
-  const schools = schoolsData?.data?.items || [];
+  const schools = schoolsData?.data || [];
   const dashboard = operationsData?.data;
   const summary = dashboard?.summary;
 
@@ -92,6 +92,339 @@ export function SchoolBusDashboardPage() {
   const activeRoutes = dashboard?.activeRoutes || [];
   const pendingRequests = dashboard?.pendingApprovalQueue || [];
   const recentAttendance = dashboard?.recentAttendanceActivity || [];
+
+  if (access.isParentOnly) {
+    return (
+      <SchoolBusPageShell
+        title="Student Transit Dashboard"
+        description="View real-time status, upcoming trips, and attendance history of your students."
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dashboard' },
+              { label: 'Parent Dashboard', current: true },
+            ]}
+          />
+        }
+        actions={
+          <>
+            {access.canWriteRequest && (
+              <Button asChild className="rounded-full bg-red-800 hover:bg-red-900 text-white">
+                <Link href="/school-bus/requests/new">Create request</Link>
+              </Button>
+            )}
+          </>
+        }
+      >
+        {dashboardLoading || !dashboard || !summary ? (
+          <SchoolBusEmptyState
+            title="Dashboard is loading"
+            description="Fetching your students' transit information..."
+            icon={Route}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* Metric Cards for Parent */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <SchoolBusMetricCard
+                label="Student"
+                value={summary.studentCount}
+                hint="Registered student profiles"
+                icon={User}
+                tone="student"
+              />
+              <SchoolBusMetricCard
+                label="Active Subscriptions"
+                value={summary.assignedRouteCount}
+                hint="Active subscriptions currently routing"
+                icon={Calendar}
+                tone="success"
+              />
+              <SchoolBusMetricCard
+                label="Open Requests"
+                value={summary.pendingRequestCount}
+                hint="Requests awaiting dispatcher approval"
+                icon={FileText}
+                tone="warning"
+              />
+            </div>
+
+            {/* Attendance Chart (scoped to their children) */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
+                <DashboardDonutChart
+                  title="Student Attendance Status"
+                  data={dashboard.attendanceChart}
+                  colorMap={ATTENDANCE_COLORS}
+                />
+              </div>
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
+                <DashboardDonutChart
+                  title="Student Trip Status"
+                  data={dashboard.tripStatusChart}
+                  colorMap={TRIP_STATUS_COLORS}
+                />
+              </div>
+            </div>
+
+            {/* Trips & Attendance List */}
+            <div className="grid gap-6 xl:grid-cols-2">
+              <SchoolBusSection
+                title="Upcoming Trips of Students"
+                description="Status of routes assigned to your students today."
+              >
+                {activeRoutes.length === 0 ? (
+                  <SchoolBusEmptyState
+                    title="No upcoming trips today"
+                    description="No trips are scheduled for your students today."
+                    icon={Route}
+                    className="min-h-[180px]"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {activeRoutes.map((route) => (
+                      <div
+                        key={route.id}
+                        className={`${schoolBusUi.interactiveCard} border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-red-800 dark:hover:border-red-800 transition-all`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              {route.routeCode} - {route.routeName}
+                            </p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {route.schoolName} - {formatDate(route.serviceDate)}
+                            </p>
+                          </div>
+                          <SchoolBusStatusBadge status={route.status} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SchoolBusSection>
+
+              <SchoolBusSection
+                title="Latest Requests Status"
+                description="Your submitted transport request records."
+              >
+                {pendingRequests.length === 0 ? (
+                  <SchoolBusEmptyState
+                    title="No pending requests"
+                    description="You have no requests awaiting dispatcher approval."
+                    icon={FileText}
+                    className="min-h-[180px]"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {pendingRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className={`${schoolBusUi.interactiveCard} border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-red-800 dark:hover:border-red-800 transition-all`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{request.parentProfileName}</p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {request.schoolName} - {request.requestType} -{' '}
+                              {formatDate(request.effectiveFrom)}
+                            </p>
+                          </div>
+                          <SchoolBusStatusBadge status={request.status} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SchoolBusSection>
+            </div>
+
+            <SchoolBusSection
+              title="Latest Attendance of Students"
+              description="History of check-in and check-out events of your students."
+            >
+              {recentAttendance.length === 0 ? (
+                <SchoolBusEmptyState
+                  title="No attendance events recorded"
+                  description="No attendance details found for your students yet."
+                  icon={FileText}
+                  className="min-h-[180px]"
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                  {recentAttendance.map((event) => (
+                    <div
+                      key={event.id}
+                      className={`${schoolBusUi.interactiveCard} border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-red-800 dark:hover:border-red-800 transition-all`}
+                    >
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-100">{event.studentName}</p>
+                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                        {event.routeCode}
+                      </p>
+                      <p className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
+                        {formatDateTime(event.recordedAt)}
+                      </p>
+                      <div className="mt-3 flex items-center justify-between gap-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {event.attendanceType}
+                        </span>
+                        <SchoolBusStatusBadge status={event.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SchoolBusSection>
+          </div>
+        )}
+      </SchoolBusPageShell>
+    );
+  }
+
+  if (access.isDriver || access.isAttendant) {
+    return (
+      <SchoolBusPageShell
+        title={access.isDriver ? "Driver Dashboard" : "Attendant Dashboard"}
+        description={access.isDriver ? "Manage your assigned trips and execute routes." : "Manage student attendance manifest on assigned trips."}
+        breadcrumb={
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dashboard' },
+              { label: access.isDriver ? 'Driver Dashboard' : 'Attendant Dashboard', current: true },
+            ]}
+          />
+        }
+        actions={
+          <>
+            {access.isDriver && (
+              <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
+                <Link href="/school-bus/trips">
+                  Trips
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            )}
+            {access.isAttendant && (
+              <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
+                <Link href="/school-bus/attendance">
+                  Attendance
+                  <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            )}
+          </>
+        }
+      >
+        {dashboardLoading || !dashboard || !summary ? (
+          <SchoolBusEmptyState
+            title="Dashboard is loading"
+            description="Fetching your assigned trip data..."
+            icon={Route}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* Metric Cards for Driver/Attendant */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <SchoolBusMetricCard
+                label="Active Routes"
+                value={summary.inProgressRouteCount}
+                hint="Routes currently in execution"
+                icon={Route}
+                tone="warning"
+              />
+              <SchoolBusMetricCard
+                label="Completed trips today"
+                value={summary.completedTripCount}
+                hint="Finished trips in history today"
+                icon={Route}
+                tone="success"
+              />
+            </div>
+
+            {/* Attendance Chart (scoped to their trips) */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
+              <DashboardDonutChart
+                title="Student Attendance Status on Trips"
+                data={dashboard.attendanceChart}
+                colorMap={ATTENDANCE_COLORS}
+              />
+            </div>
+
+            {/* List of active routes and attendance logs */}
+            <div className="grid gap-6 xl:grid-cols-2">
+              <SchoolBusSection
+                title="Active Routes"
+                description="List of routes assigned to you today."
+              >
+                {activeRoutes.length === 0 ? (
+                  <SchoolBusEmptyState
+                    title="No active routes assigned"
+                    description="You have no active routes scheduled for today."
+                    icon={Route}
+                    className="min-h-[180px]"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {activeRoutes.map((route) => (
+                      <div
+                        key={route.id}
+                        className={`${schoolBusUi.interactiveCard} border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-red-800 dark:hover:border-red-800 transition-all`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              {route.routeCode} - {route.routeName}
+                            </p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {route.schoolName} - {formatDate(route.serviceDate)}
+                            </p>
+                          </div>
+                          <SchoolBusStatusBadge status={route.status} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SchoolBusSection>
+
+              <SchoolBusSection
+                title="Recent Attendance Activity"
+                description="Latest check-in/out logs on your routes."
+              >
+                {recentAttendance.length === 0 ? (
+                  <SchoolBusEmptyState
+                    title="No attendance events"
+                    description="No attendance activity logged on your routes today."
+                    icon={FileText}
+                    className="min-h-[180px]"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {recentAttendance.map((event) => (
+                      <div
+                        key={event.id}
+                        className={`${schoolBusUi.interactiveCard} border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-red-800 dark:hover:border-red-800 transition-all`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{event.studentName}</p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {event.routeCode} - {formatDateTime(event.recordedAt)}
+                            </p>
+                          </div>
+                          <SchoolBusStatusBadge status={event.status} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SchoolBusSection>
+            </div>
+          </div>
+        )}
+      </SchoolBusPageShell>
+    );
+  }
 
   return (
     <SchoolBusPageShell
@@ -123,7 +456,7 @@ export function SchoolBusDashboardPage() {
           {access.isDriver && (
             <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
               <Link href="/school-bus/trips">
-                My Trips
+                Trips
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
@@ -131,7 +464,7 @@ export function SchoolBusDashboardPage() {
           {access.isAttendant && (
             <Button asChild className="rounded-full bg-blue-700 hover:bg-blue-800 text-white">
               <Link href="/school-bus/attendance">
-                My Attendance
+                Attendance
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
@@ -167,7 +500,7 @@ export function SchoolBusDashboardPage() {
               <option value="">All Schools</option>
               {schools.map((school) => (
                 <option key={school.id} value={school.id}>
-                  {school.name}
+                  {school.label}
                 </option>
               ))}
             </select>
@@ -262,10 +595,10 @@ export function SchoolBusDashboardPage() {
               />
             </div>
 
-            {/* Route Readiness bar chart */}
+            {/* Route Assignment bar chart */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
               <DashboardBarChart
-                title="Route Readiness"
+                title="Route Assignment Status"
                 data={dashboard.routeReadinessChart}
                 colorMap={READINESS_COLORS}
               />
@@ -356,13 +689,13 @@ export function SchoolBusDashboardPage() {
                   // Driver quick action
                   ...(access.isDriver ? [{
                     href: '/school-bus/trips',
-                    title: 'My trips today',
+                    title: 'Trips Today',
                     description: 'View and operate trips assigned to you.',
                   }] : []),
                   // Parent quick action
                   ...(access.isParent ? [{
                     href: '/school-bus/students',
-                    title: 'My children',
+                    title: 'Students',
                     description: 'View student profiles and status.',
                   }] : []),
                 ].map((link) => (
@@ -446,8 +779,7 @@ export function SchoolBusDashboardPage() {
                             {route.routeCode} - {route.routeName}
                           </p>
                           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                            {route.schoolName} - {formatDate(route.serviceDate)} -{' '}
-                            {route.schoolScheduleName}
+                            {route.schoolName} - {formatDate(route.serviceDate)}
                           </p>
                         </div>
                         <SchoolBusStatusBadge status={route.status} />

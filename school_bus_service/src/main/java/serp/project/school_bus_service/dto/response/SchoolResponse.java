@@ -17,12 +17,8 @@ public class SchoolResponse extends BaseResponse {
     private Double latitude;
     private Double longitude;
 
-    private Integer scheduleCount = 0;
     private Integer pickupPointCount = 0;
-    private Long activeScheduleCount = 0L;
-    private Long pickupWindowCount = 0L;
     private Boolean hasCoordinates = false;
     private Boolean anyLinkedPointMissingCoordinates = false;
-    private List<SchoolScheduleSummaryResponse> schedules = new ArrayList<>();
     private List<LinkedPickupPointSummaryResponse> pickupPoints = new ArrayList<>();
 }

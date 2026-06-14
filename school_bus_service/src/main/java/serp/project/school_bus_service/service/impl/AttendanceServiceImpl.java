@@ -3,6 +3,7 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
@@ -13,7 +14,6 @@ import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.IAttendanceService;
-import serp.project.school_bus_service.service.IAuditLogService;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.ITripStopLogService;
@@ -34,6 +34,7 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
+import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
@@ -51,34 +52,34 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     private final AttendanceRepository attendanceRepository;
     private final ITripExecutionService tripExecutionService;
-    private final IAuditLogService auditLogService;
     private final IRouteStopService routeStopService;
     private final ITripStudentService tripStudentService;
     private final ITripStopLogService tripStopLogService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final SchoolBusSecurityService securityService;
 
 
     public AttendanceServiceImpl(
             AttendanceRepository attendanceRepository,
-            ITripExecutionService tripExecutionService,
-            IAuditLogService auditLogService,
+            @Lazy ITripExecutionService tripExecutionService,
             IRouteStopService routeStopService,
             ITripStudentService tripStudentService,
             ITripStopLogService tripStopLogService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
-            ISchoolBusDataScopeService schoolBusDataScopeService) {
+            ISchoolBusDataScopeService schoolBusDataScopeService,
+            SchoolBusSecurityService securityService) {
         this.attendanceRepository = attendanceRepository;
         this.tripExecutionService = tripExecutionService;
-        this.auditLogService = auditLogService;
         this.routeStopService = routeStopService;
         this.tripStudentService = tripStudentService;
         this.tripStopLogService = tripStopLogService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.securityService = securityService;
     }
 
 
@@ -101,8 +102,15 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     public List<AttendanceResponse> getTripAttendance(Long tripId, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
-        return attendanceRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(tripId, tenantId)
-                .stream()
+        List<AttendanceEntity> attendances = attendanceRepository.findByTripIdAndTenantIdAndIsDeletedFalseOrderByRecordedAtDesc(tripId, tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            attendances = attendances.stream()
+                    .filter(a -> a.getStudent() != null && a.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(a.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
+        return attendances.stream()
                 .map(mapper::toAttendanceResponse)
                 .toList();
     }
@@ -167,15 +175,13 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
         }
 
-        // Stop must be ARRIVED or BOARDING to record attendance
+        // Stop must have started boarding/dropoff (i.e. status is BOARDING) to record attendance
         TripStopLogEntity stopLog = tripStopLogService
                 .findByTripAndRouteStop(tripId, request.getRouteStopId(), tenantId)
                 .orElse(null);
-        if (stopLog == null
-                || (stopLog.getStatus() != TripStopStatus.ARRIVED
-                        && stopLog.getStatus() != TripStopStatus.BOARDING)) {
+        if (stopLog == null || stopLog.getStatus() != TripStopStatus.BOARDING) {
             throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
-                    messageCommon.getMessage(AppErrorCode.Attendance.STOP_NOT_ACTIVE));
+                    "Start boarding/dropoff at this stop before marking attendance.");
         }
 
         TripStudentStatus currentStatus = tripStudent.getStatus();
@@ -293,8 +299,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         }
 
         AttendanceEntity saved = attendanceRepository.save(attendance);
-        auditLogService.log(tenantId, actorId, "TripAttendance", saved.getId(), eventType.name(),
-                "Recorded trip attendance event");
         // TODO notification: notify parents/guardians of the attendance event (eventType).
         return mapper.toAttendanceResponse(saved);
     }
@@ -340,8 +344,14 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     public TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         tripExecutionService.getTripEntity(tripId, tenantId);
-        List<serp.project.school_bus_service.entity.TripStudentEntity> students =
-                tripStudentService.findByTrip(tripId, tenantId);
+        List<TripStudentEntity> students = tripStudentService.findByTrip(tripId, tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            students = students.stream()
+                    .filter(s -> s.getStudent() != null && s.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(s.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
         TripAttendanceSummaryResponse summary = new TripAttendanceSummaryResponse();
         summary.setTotalStudents(students.size());
         summary.setPlanned((int) students.stream().filter(s -> s.getStatus() == TripStudentStatus.PLANNED).count());
@@ -358,10 +368,16 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     public TripAttendanceManifestResponse getTripAttendanceManifest(Long tripId, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessAttendance(tripId);
         TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
-        List<serp.project.school_bus_service.entity.TripStudentEntity> tripStudents =
-                tripStudentService.findByTrip(tripId, tenantId);
-        List<serp.project.school_bus_service.entity.TripStopLogEntity> stopLogs =
-                tripStopLogService.findByTrip(tripId, tenantId);
+        List<TripStudentEntity> rawStudents = tripStudentService.findByTrip(tripId, tenantId);
+        if (securityService.isParentOnly()) {
+            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            rawStudents = rawStudents.stream()
+                    .filter(s -> s.getStudent() != null && s.getStudent().getParentProfile() != null 
+                            && parentProfileId.equals(s.getStudent().getParentProfile().getId()))
+                    .toList();
+        }
+        final List<TripStudentEntity> tripStudents = rawStudents;
+        List<TripStopLogEntity> stopLogs = tripStopLogService.findByTrip(tripId, tenantId);
 
         // Summary
         TripAttendanceSummaryResponse summary = new TripAttendanceSummaryResponse();
@@ -406,8 +422,6 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
                     item.setLatitude(rs.getLatitude());
                     item.setLongitude(rs.getLongitude());
-                    item.setPlannedArrivalTime(rs.getPlannedArrivalTime() != null ? rs.getPlannedArrivalTime().toString() : null);
-                    item.setPlannedDepartureTime(rs.getPlannedDepartureTime() != null ? rs.getPlannedDepartureTime().toString() : null);
                     item.setActualArrivalTime(sl.getActualArrivalTime() != null ? sl.getActualArrivalTime().toString() : null);
                     item.setActualDepartureTime(sl.getActualDepartureTime() != null ? sl.getActualDepartureTime().toString() : null);
 

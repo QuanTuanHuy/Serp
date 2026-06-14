@@ -1,6 +1,6 @@
 -- Author: Nguyen The Anh
 -- Description: Part of Serp Project
--- Purpose: TMS billing — pricing tables (tariffs, surcharges, VAS) and seed defaults.
+-- Purpose: TMS billing - pricing tables (tariffs, surcharges, VAS) and seed defaults.
 --          Seed amounts are placeholders; ops should tune via admin API or SQL.
 
 -- ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ CREATE TABLE surcharge_rules (
 COMMENT ON TABLE surcharge_rules IS 'Surcharge catalog; code matches SurchargeRuleEnum';
 
 -- ---------------------------------------------------------------------------
--- vas_rules: value-added services (COD, insurance, …)
+-- vas_rules: value-added services (COD, …)
 -- ---------------------------------------------------------------------------
 CREATE TABLE vas_rules (
     id BIGSERIAL PRIMARY KEY,
@@ -78,32 +78,15 @@ CREATE TABLE vas_rules (
 COMMENT ON TABLE vas_rules IS 'VAS catalog; code matches VasRuleCode';
 
 -- ---------------------------------------------------------------------------
--- Seed: HOA_TOC base tariffs (replace via admin API in production)
--- ---------------------------------------------------------------------------
-INSERT INTO tariffs (service_code, route_type_code, base_weight, base_price, step_weight, step_price, effective_date, expiration_date, created_at, updated_at)
-VALUES
-    ('HOA_TOC', 'NOI_TINH_NOI_CUM', 2000, 20000, 500, 4000, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('HOA_TOC', 'NOI_TINH_LIEN_CUM', 2000, 25000, 500, 5000, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('HOA_TOC', 'NOI_MIEN', 2000, 30000, 500, 6000, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('HOA_TOC', 'LIEN_MIEN', 2000, 45000, 500, 8000, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('HOA_TOC', 'LIEN_MIEN_DAC_BIET', 2000, 60000, 500, 10000, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-
--- ---------------------------------------------------------------------------
--- Seed: surcharges (aligns with nghiep_vu_hoa_toc.md defaults)
+-- Seed: surcharges
 -- ---------------------------------------------------------------------------
 INSERT INTO surcharge_rules (code, name, calculation_type, rate_percent, fixed_amount, min_amount, base_weight, base_price, step_weight, step_price, effective_date, expiration_date, created_at, updated_at)
 VALUES
-    ('VUNG_XA', 'Phụ phí vùng sâu vùng xa', 'STEP_WEIGHT', NULL, NULL, NULL, 5000, 7000, 500, 500, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('CHUNG_TU_QUAN_TRONG', 'Phụ phí chứng từ quan trọng', 'FIXED_PER_ORDER', NULL, 5000, NULL, NULL, NULL, NULL, NULL, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('DE_VO', 'Phụ phí hàng dễ vỡ', 'FIXED_PER_KG', NULL, 1000, NULL, NULL, NULL, NULL, NULL, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('CHAT_LONG', 'Phụ phí hàng chất lỏng', 'FIXED_PER_KG', NULL, 1000, NULL, NULL, NULL, NULL, NULL, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('QUA_KHO', 'Phụ phí hàng quá khổ', 'FIXED_PER_KG', NULL, 2000, NULL, NULL, NULL, NULL, NULL, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('HANG_GIA_TRI_CAO', 'Phụ phí hàng giá trị cao (catalog)', 'PERCENTAGE', 0.5, NULL, 5000, NULL, NULL, NULL, NULL, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+    ('VUNG_XA', 'Phụ phí vùng sâu vùng xa', 'STEP_WEIGHT', NULL, NULL, NULL, 5000, 7000, 500, 500, DATE '2020-01-01', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- ---------------------------------------------------------------------------
 -- Seed: VAS
 -- ---------------------------------------------------------------------------
 INSERT INTO vas_rules (code, name, calculation_type, rate_percent, fixed_amount, min_amount, created_at, updated_at)
 VALUES
-    ('COD', 'Phí COD', 'FIXED_PER_ORDER', NULL, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('BAO_HIEM', 'Phí bảo hiểm hàng giá trị cao', 'PERCENTAGE', 0.5, NULL, 5000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+    ('COD', 'Phí COD', 'FIXED_PER_ORDER', NULL, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

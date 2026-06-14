@@ -40,29 +40,29 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type { SchoolBusAccountUser, SchoolBusParent } from '../types';
 import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 
-// ── Contact readiness helpers ─────────────────────────────────────────────────
+// ── Contact completeness helpers ───────────────────────────────────────────────
 
-type ContactReadiness = 'reachable' | 'missing-phone' | 'missing-email' | 'no-linked-student';
+type ContactCompleteness = 'reachable' | 'missing-phone' | 'missing-email' | 'no-linked-student';
 
-function getContactReadiness(parent: SchoolBusParent, linkedStudentCount: number): ContactReadiness {
+function getContactCompleteness(parent: SchoolBusParent, linkedStudentCount: number): ContactCompleteness {
   if (linkedStudentCount === 0) return 'no-linked-student';
   if (!parent.phone) return 'missing-phone';
   if (!parent.email) return 'missing-email';
   return 'reachable';
 }
 
-const contactReadinessConfig: Record<ContactReadiness, { label: string; className: string }> = {
+const contactCompletenessConfig: Record<ContactCompleteness, { label: string; className: string }> = {
   reachable: { label: 'Reachable', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   'missing-phone': { label: 'Missing phone', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   'missing-email': { label: 'Missing email', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   'no-linked-student': { label: 'No linked student', className: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
-function ContactReadinessBadge({ readiness }: { readiness: ContactReadiness }) {
-  const cfg = contactReadinessConfig[readiness];
+function ContactCompletenessBadge({ completeness }: { completeness: ContactCompleteness }) {
+  const cfg = contactCompletenessConfig[completeness];
   return (
     <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1', cfg.className)}>
-      {readiness === 'reachable' ? <CheckCircle2 className='h-3 w-3' /> : <AlertTriangle className='h-3 w-3' />}
+      {completeness === 'reachable' ? <CheckCircle2 className='h-3 w-3' /> : <AlertTriangle className='h-3 w-3' />}
       {cfg.label}
     </span>
   );
@@ -181,7 +181,7 @@ export function SchoolBusParentsPage() {
           <div>
             <p className='font-semibold text-slate-900'>{parent.fullName}</p>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Linked account #{parent.userId}
+              {parent.user?.email || 'Local profile'}
             </p>
           </div>
         </div>
@@ -214,12 +214,12 @@ export function SchoolBusParentsPage() {
       },
     },
     {
-      key: 'readiness',
-      header: 'Contact readiness',
+      key: 'completeness',
+      header: 'Profile status',
       render: (parent) => {
         const studentCount = linkedStudentsMap.get(parent.id) || 0;
-        const readiness = getContactReadiness(parent, studentCount);
-        return <ContactReadinessBadge readiness={readiness} />;
+        const completeness = getContactCompleteness(parent, studentCount);
+        return <ContactCompletenessBadge completeness={completeness} />;
       },
     },
     {

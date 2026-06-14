@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Billing types for TMS shipping fee
  */
 
-export type BillingDeliveryService = 'HOA_TOC' | 'TIEU_CHUAN';
+export type BillingDeliveryService = 'TIEU_CHUAN';
 
 export type BillingRouteType =
   | 'NOI_TINH_NOI_CUM'
@@ -18,21 +18,9 @@ export type BillingCalculationType =
   | 'PERCENTAGE'
   | 'STEP_WEIGHT';
 
-export type BillingSurchargeRuleCode =
-  | 'VUNG_XA'
-  | 'HANG_GIA_TRI_CAO'
-  | 'CHUNG_TU_QUAN_TRONG'
-  | 'DE_VO'
-  | 'QUA_KHO'
-  | 'CHAT_LONG';
+export type BillingSurchargeRuleCode = 'VUNG_XA';
 
-export type BillingVasRuleCode = 'COD' | 'BAO_HIEM';
-
-export interface BillingSpecialCargoRequest {
-  importantDocument: boolean;
-  fragile: boolean;
-  liquid: boolean;
-}
+export type BillingVasRuleCode = 'COD';
 
 export interface CalculateShippingFeeRequest {
   serviceCode: BillingDeliveryService;
@@ -43,8 +31,6 @@ export interface CalculateShippingFeeRequest {
   widthCm: number;
   heightCm: number;
   codAmount?: number;
-  declaredValue?: number;
-  specialCargo?: BillingSpecialCargoRequest;
 }
 
 export interface FeeLineItemResponse {

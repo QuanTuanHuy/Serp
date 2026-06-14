@@ -138,13 +138,17 @@ export const evaluateManualAssignRisks = ({
   const normalizedPostOfficeCode = postOfficeCode?.trim().toLowerCase();
 
   if (!postOffice) {
-    pushRisk(risks, 'post-office-missing', 'Không tìm thấy bưu cục đã chọn.');
+    pushRisk(
+      risks,
+      'post-office-missing',
+      'The selected post office was not found.'
+    );
   } else {
     if (postOffice.status !== 'ACTIVE') {
       pushRisk(
         risks,
         'post-office-inactive',
-        `Bưu cục ${postOffice.code} đang ở trạng thái ${postOffice.status}, không phải ACTIVE.`
+        `Post office ${postOffice.code} is ${postOffice.status}, not ACTIVE.`
       );
     }
 
@@ -152,7 +156,7 @@ export const evaluateManualAssignRisks = ({
       pushRisk(
         risks,
         'post-office-no-geocode',
-        `Bưu cục ${postOffice.code} chưa có tọa độ (chưa geocode). Lộ trình tối ưu có thể không chạy được.`
+        `Post office ${postOffice.code} does not have coordinates yet. Optimized routing may fail.`
       );
     }
   }
@@ -164,7 +168,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'courier-inactive',
-      'Bưu tá đã chọn không còn active tại bưu cục/ca hiện tại.'
+      'The selected courier is no longer active for the current post office or shift.'
     );
   }
 
@@ -199,7 +203,7 @@ export const evaluateManualAssignRisks = ({
       orderOrigin !== normalizedPostOfficeCode
     ) {
       wrongPostOfficeOrders.push(
-        `${label} (BC gốc: ${order.originPostOfficeCode})`
+        `${label} (origin post office: ${order.originPostOfficeCode})`
       );
     }
 
@@ -207,7 +211,9 @@ export const evaluateManualAssignRisks = ({
       missingLocationOrders.push(label);
     }
 
-    if (isPickupWindowOutsidePlanning(order, planningStartTime, planningEndTime)) {
+    if (
+      isPickupWindowOutsidePlanning(order, planningStartTime, planningEndTime)
+    ) {
       pickupWindowOrders.push(label);
     }
   }
@@ -216,7 +222,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-not-loaded',
-      `${missingOrders.length} đơn không lấy được dữ liệu chi tiết từ danh sách hiện tại.`,
+      `${missingOrders.length} order(s) could not be loaded from the current list.`,
       missingOrders
     );
   }
@@ -225,7 +231,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-invalid-status',
-      'Một số đơn không ở trạng thái CREATED hoặc PICKUP_FAILED.',
+      'Some orders are not in CREATED or PICKUP_FAILED status.',
       invalidStatusOrders
     );
   }
@@ -234,7 +240,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-already-assigned',
-      'Một số đơn đã ở trạng thái ASSIGNED_TO_PICKUP (có thể đang thuộc chuyến khác).',
+      'Some orders are already ASSIGNED_TO_PICKUP and may belong to another trip.',
       alreadyAssignedOrders
     );
   }
@@ -243,7 +249,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-wrong-post-office',
-      'Một số đơn không thuộc bưu cục gốc đang chọn.',
+      'Some orders do not belong to the selected origin post office.',
       wrongPostOfficeOrders
     );
   }
@@ -252,7 +258,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-missing-location',
-      'Một số đơn chưa có tọa độ người gửi hợp lệ.',
+      'Some orders do not have valid sender coordinates.',
       missingLocationOrders
     );
   }
@@ -261,7 +267,7 @@ export const evaluateManualAssignRisks = ({
     pushRisk(
       risks,
       'orders-pickup-window',
-      'Khung giờ lấy hàng của một số đơn không khớp ca/ngày đang chọn.',
+      'Some order pickup windows do not match the selected shift or date.',
       pickupWindowOrders
     );
   }
@@ -280,7 +286,7 @@ export const formatManualAssignRiskLines = (
     const preview = risk.orderCodes.slice(0, 5).join(', ');
     const suffix =
       risk.orderCodes.length > 5
-        ? ` ... (+${risk.orderCodes.length - 5} đơn khác)`
+        ? ` ... (+${risk.orderCodes.length - 5} more)`
         : '';
 
     return [`${risk.message} ${preview}${suffix}`];
@@ -289,12 +295,12 @@ export const formatManualAssignRiskLines = (
 
 export const getManualShiftLabel = (shift: PickupShift): string => {
   if (shift === 'MORNING') {
-    return 'Ca sáng (07:30 - 12:00)';
+    return 'Morning (07:30 - 12:00)';
   }
 
   if (shift === 'AFTERNOON') {
-    return 'Ca chiều (13:30 - 18:00)';
+    return 'Afternoon (13:30 - 18:00)';
   }
 
-  return 'Ca tối (18:30 - 22:00)';
+  return 'Evening (18:30 - 22:00)';
 };

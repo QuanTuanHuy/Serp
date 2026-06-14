@@ -31,4 +31,11 @@ public interface SchoolPickupPointRepository extends BaseRepository<SchoolPickup
     @Query("SELECT s FROM SchoolPickupPointEntity s JOIN FETCH s.pickupPoint WHERE s.school.id IN :schoolIds AND s.tenantId = :tenantId AND s.isDeleted = false")
     List<SchoolPickupPointEntity> findBySchoolIdInAndTenantIdAndIsDeletedFalse(
             @Param("schoolIds") List<Long> schoolIds, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT s FROM SchoolPickupPointEntity s JOIN FETCH s.pickupPoint WHERE s.school.id = :schoolId AND s.tenantId = :tenantId AND s.isDeleted = false AND s.isActive = true AND s.pickupPoint.isDeleted = false AND s.pickupPoint.isActive = true")
+    List<SchoolPickupPointEntity> findActiveLinkedPickupPoints(@Param("schoolId") Long schoolId, @Param("tenantId") Long tenantId);
+
+    @Query("SELECT s FROM SchoolPickupPointEntity s JOIN FETCH s.school WHERE s.pickupPoint.id IN :pickupPointIds AND s.tenantId = :tenantId AND s.isDeleted = false AND s.isActive = true")
+    List<SchoolPickupPointEntity> findByPickupPointIdInAndTenantIdAndIsDeletedFalse(
+            @Param("pickupPointIds") List<Long> pickupPointIds, @Param("tenantId") Long tenantId);
 }

@@ -3,8 +3,6 @@ package serp.project.school_bus_service.dto.response;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalTime;
-
 @Getter
 @Setter
 public class RouteStopResponse extends BaseResponse {
@@ -17,6 +15,8 @@ public class RouteStopResponse extends BaseResponse {
     private String stopPurpose;
     /** Derived display name from pickupPoint / school / depot. */
     private String displayName;
+    private Double latitude;
+    private Double longitude;
 
     // Pickup-point specific fields (null for terminal stops)
     private Long pickupPointId;
@@ -35,8 +35,6 @@ public class RouteStopResponse extends BaseResponse {
 
     private Integer stopOrder;
     private Integer estimatedStudentCount;
-    private LocalTime plannedArrivalTime;
-    private LocalTime plannedDepartureTime;
     private Double distanceFromPreviousKm;
     private Integer estimatedTravelTimeFromPrevious;
 }

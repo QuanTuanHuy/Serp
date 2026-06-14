@@ -288,6 +288,7 @@ public class AccountUserSyncServiceImpl implements IAccountUserSyncService {
         command.setTimezone(user.getTimezone());
         command.setUserType(user.getUserType());
         command.setStatus(user.getStatus() != null ? user.getStatus() : "ACTIVE");
+        command.setRoles(user.getRoles());
 
         schoolBusUserService.upsertFromAccountUser(command);
         return true;

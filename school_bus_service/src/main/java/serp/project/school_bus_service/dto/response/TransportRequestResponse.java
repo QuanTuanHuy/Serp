@@ -28,4 +28,5 @@ public class TransportRequestResponse extends BaseResponse {
     private LocalDateTime approvedAt;
     private String rejectionReason;
     private String changeReason;
+    private Integer studentCount;
 }

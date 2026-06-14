@@ -3,7 +3,6 @@ package serp.project.school_bus_service.repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
-import serp.project.school_bus_service.enums.RoutePlanStudentAction;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
@@ -12,11 +11,6 @@ import java.util.List;
 public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStudentEntity, Long> {
 
     List<RoutePlanStudentEntity> findByRouteIdAndIsDeletedFalse(Long routeId);
-
-    List<RoutePlanStudentEntity> findByRouteStopIdAndIsDeletedFalse(Long routeStopId);
-
-    boolean existsByRouteIdAndStudentIdAndSubscriptionIdAndServiceActionAndIsDeletedFalse(
-            Long routeId, Long studentId, Long subscriptionId, RoutePlanStudentAction serviceAction);
 
     long countByRouteIdAndIsDeletedFalse(Long routeId);
 
@@ -98,13 +92,23 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
             WHERE ps.route.id = :routeId
               AND ps.student.id = :studentId
-              AND ps.serviceAction = :action
               AND ps.isDeleted = false
             """)
-    boolean existsByRouteAndStudentAndAction(
+    boolean existsByRouteAndStudent(
+            @Param("routeId") Long routeId,
+            @Param("studentId") Long studentId);
+
+    @Query("""
+            SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
+            WHERE ps.route.id = :routeId
+              AND ps.student.id = :studentId
+              AND ps.subscription.id = :subscriptionId
+              AND ps.isDeleted = false
+            """)
+    boolean existsByRouteStudentAndSubscription(
             @Param("routeId") Long routeId,
             @Param("studentId") Long studentId,
-            @Param("action") RoutePlanStudentAction action);
+            @Param("subscriptionId") Long subscriptionId);
 
     @Query("""
             SELECT ps FROM RoutePlanStudentEntity ps

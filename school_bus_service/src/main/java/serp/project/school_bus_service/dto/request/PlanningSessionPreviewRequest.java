@@ -17,8 +17,6 @@ public class PlanningSessionPreviewRequest {
     @NotNull
     private Long schoolId;
 
-    @NotNull
-    private Long schoolScheduleId;
 
     @NotNull
     private LocalDate serviceDate;
@@ -27,10 +25,4 @@ public class PlanningSessionPreviewRequest {
     @NotBlank
     private String routeDirection;
 
-    @NotBlank
-    private String planningMethod;
-
-    private Long depotId;
-
-    private Integer defaultBusCapacity;
 }

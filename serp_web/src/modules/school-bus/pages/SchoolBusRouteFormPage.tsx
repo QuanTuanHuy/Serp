@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   useGetDepotsQuery,
   useGetRouteByIdQuery,
-  useGetSchoolsQuery,
+  useGetSchoolDropdownOptionsQuery,
   useUpdateRouteMutation,
 } from '../api/schoolBusApi';
 import { RoutePlanForm } from '../components/SchoolBusWorkflowForms';
@@ -24,10 +24,7 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
     routeId as number,
     { skip: !routeId }
   );
-  const { data: schoolsData } = useGetSchoolsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'name',
-  });
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const { data: depotsData } = useGetDepotsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
     sortBy: 'name',
@@ -62,7 +59,7 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
     >
       <RoutePlanForm
         initialData={routeData?.data?.route}
-        schools={getPageItems(schoolsData?.data)}
+        schools={schoolsData?.data || []}
         depots={getPageItems(depotsData?.data)}
         isLoading={updating}
         submitLabel='Update route'

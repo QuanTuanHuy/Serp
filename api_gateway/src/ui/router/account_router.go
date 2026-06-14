@@ -74,12 +74,20 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		moduleV1.Use(middleware.AuthMiddleware()).GET("/my-modules", moduleController.GetMyModules)
 	}
 
-	adminSubscriptionV1 := group.Group("/api/v1/admin/subscriptions")
+	adminV1 := group.Group("/api/v1/admin")
 	{
-		adminSubscriptionV1.Use(middleware.AuthMiddleware()).GET("", subscriptionController.GetAllSubscriptions)
-		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/activate", subscriptionController.ActivateSubscription)
-		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/reject", subscriptionController.RejectSubscription)
-		adminSubscriptionV1.Use(middleware.AuthMiddleware()).PUT("/:subscriptionId/expire", subscriptionController.ExpireSubscription)
+		adminV1.Use(middleware.AuthMiddleware()).GET("/search", genericProxyController.ProxyHandler("account"))
+
+		adminV1.Use(middleware.AuthMiddleware()).GET("/dashboard", genericProxyController.ProxyHandler("account"))
+
+		adminV1.Use(middleware.AuthMiddleware()).GET("/subscriptions", subscriptionController.GetAllSubscriptions)
+		adminV1.Use(middleware.AuthMiddleware()).PUT("/subscriptions/:subscriptionId/activate", subscriptionController.ActivateSubscription)
+		adminV1.Use(middleware.AuthMiddleware()).PUT("/subscriptions/:subscriptionId/reject", subscriptionController.RejectSubscription)
+		adminV1.Use(middleware.AuthMiddleware()).PUT("/subscriptions/:subscriptionId/expire", subscriptionController.ExpireSubscription)
+
+		adminV1.Use(middleware.AuthMiddleware()).GET("/organizations", organizationController.GetOrganizations)
+		adminV1.Use(middleware.AuthMiddleware()).GET("/organizations/:organizationId", organizationController.GetOrganizationById)
+		adminV1.Use(middleware.AuthMiddleware()).PATCH("/organizations/:organizationId/status", genericProxyController.ProxyHandler("account"))
 	}
 
 	subscriptionV1 := group.Group("/api/v1/subscriptions")
@@ -109,18 +117,6 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).POST("/:planId/modules", subscriptionPlanController.AddModuleToPlan)
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).DELETE("/:planId/modules/:moduleId", subscriptionPlanController.RemoveModuleFromPlan)
 		subscriptionPlanV1.Use(middleware.AuthMiddleware()).GET("/:planId/modules", subscriptionPlanController.GetPlanModules)
-	}
-
-	adminDashboardV1 := group.Group("/api/v1/admin/dashboard")
-	{
-		adminDashboardV1.Use(middleware.AuthMiddleware()).GET("", genericProxyController.ProxyHandler("account"))
-	}
-
-	adminOrganizationsV1 := group.Group("/api/v1/admin/organizations")
-	{
-		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("", organizationController.GetOrganizations)
-		adminOrganizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId", organizationController.GetOrganizationById)
-		adminOrganizationsV1.Use(middleware.AuthMiddleware()).PATCH("/:organizationId/status", genericProxyController.ProxyHandler("account"))
 	}
 
 	organizationsV1 := group.Group("/api/v1/organizations")
