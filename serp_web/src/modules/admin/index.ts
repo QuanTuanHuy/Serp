@@ -106,6 +106,11 @@ export type {
   AdminDashboardMetrics,
   AdminDashboardRecentOrganization,
   AdminDashboardStatusCount,
+  AdminGlobalSearchGroup,
+  AdminGlobalSearchItem,
+  AdminGlobalSearchParams,
+  AdminGlobalSearchResponse,
+  AdminGlobalSearchType,
   MenuType,
   MenuRoleInfo,
   MenuDisplayDetail,
@@ -123,6 +128,10 @@ export {
   // Dashboard
   dashboardApi,
   useGetAdminDashboardQuery,
+
+  // Global Search
+  globalSearchApi,
+  useGetAdminGlobalSearchQuery,
 
   // Organizations
   organizationsApi,
