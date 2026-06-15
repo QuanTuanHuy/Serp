@@ -1,6 +1,7 @@
 package serp.project.logistics2.service;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -193,57 +194,82 @@ public class DeliveryPlanService {
                     log.info("Delivery plan {} is not found", deliveryPlanId);
                     return new AppException(AppErrorCode.NOT_FOUND);
                 });
-        if (PlanOptimizationStatus.valueOf(plan.getOptimizationStatus()).ordinal() >= PlanOptimizationStatus.OPTIMIZING
-                .ordinal()) {
-            log.info("Cannot update delivery plan {} with optimization status {}", deliveryPlanId,
-                    plan.getOptimizationStatus());
+
+        if (PlanOptimizationStatus.valueOf(plan.getOptimizationStatus()).ordinal() >= PlanOptimizationStatus.OPTIMIZING.ordinal()) {
+            log.info("Cannot update delivery plan {} with optimization status {}", deliveryPlanId, plan.getOptimizationStatus());
             throw new AppException(AppErrorCode.PLAN_IN_OPTIMIZATION);
         }
 
-        List<DeliverySlipEntity> additionalDeliverySlips = deliverySlipRepository
-                .findAllById(form.getAdditionalDeliverySlipIds());
-        if (additionalDeliverySlips.size() != form.getAdditionalDeliverySlipIds().size()) {
-            log.info("Some additional delivery slips have been missing");
-            throw new AppException(AppErrorCode.NOT_FOUND);
-        } else {
-            additionalDeliverySlips.forEach(slip -> {
-                if (!slip.getStatus().equals(DeliverySlipStatus.PENDING.name())) {
-                    log.info("Delivery slip {} is not available in {}", slip.getId(), plan.getDeliveryDate());
-                    throw new AppException(AppErrorCode.DELIVERY_SLIP_NOT_AVAILABLE);
-                }
-            });
+        // 1. Khởi tạo danh sách an toàn để tránh NullPointerException
+        List<String> additionalSlipIds = form.getAdditionalDeliverySlipIds() != null ? form.getAdditionalDeliverySlipIds() : Collections.emptyList();
+        List<String> additionalVehicleIds = form.getAdditionalVehicleShipperIds() != null ? form.getAdditionalVehicleShipperIds() : Collections.emptyList();
+        List<String> removedSlipIds = form.getRemovedDeliverySlipIds() != null ? form.getRemovedDeliverySlipIds() : Collections.emptyList();
+        List<String> removedVehicleIds = form.getRemovedVehicleShipperIds() != null ? form.getRemovedVehicleShipperIds() : Collections.emptyList();
+
+        // 2. Xử lý thêm Delivery Slips
+        if (!additionalSlipIds.isEmpty()) {
+            List<DeliverySlipEntity> additionalDeliverySlips = deliverySlipRepository.findAllById(additionalSlipIds);
+            if (additionalDeliverySlips.size() != additionalSlipIds.size()) {
+                log.info("Some additional delivery slips have been missing");
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            } else {
+                additionalDeliverySlips.forEach(slip -> {
+                    if (!slip.getStatus().equals(DeliverySlipStatus.PENDING.name())) {
+                        log.info("Delivery slip {} is not available in {}", slip.getId(), plan.getDeliveryDate());
+                        throw new AppException(AppErrorCode.DELIVERY_SLIP_NOT_AVAILABLE);
+                    }
+                });
+            }
+            plan.addSlips(additionalDeliverySlips);
+
+            deliverySlipRepository.updateStatusByIdInAndTenantId(DeliverySlipStatus.ASSIGNED.name(), additionalSlipIds, tenantId);
+            log.info("Additional delivery slips updated to ASSIGNED status for delivery plan: {}", deliveryPlanId);
         }
-        plan.addSlips(additionalDeliverySlips);
 
-        List<VehicleShipperEntity> additionalVehicleShippers = vehicleShipperRepository
-                .findAllById(form.getAdditionalVehicleShipperIds());
-        if (additionalVehicleShippers.size() != form.getAdditionalVehicleShipperIds().size()) {
-            log.info("Some additional vehicle-shipper assignments have been missing");
-            throw new AppException(AppErrorCode.NOT_FOUND);
-        } else {
-            additionalVehicleShippers.forEach(vs -> {
-                if (!vs.getStatus().equals(VehicleShipperStatus.ACTIVE.name())
-                        || !vs.getWorkingDate().isEqual(plan.getDeliveryDate())) {
-                    log.info("Vehicle-shipper assignment {} is not available in {}", vs.getId(),
-                            plan.getDeliveryDate());
-                    throw new AppException(AppErrorCode.VEHICLE_SHIPPER_NOT_AVAILABLE);
-                }
-            });
+        // 3. Xử lý thêm Vehicle Shippers
+        if (!additionalVehicleIds.isEmpty()) {
+            List<VehicleShipperEntity> additionalVehicleShippers = vehicleShipperRepository.findAllById(additionalVehicleIds);
+            if (additionalVehicleShippers.size() != additionalVehicleIds.size()) {
+                log.info("Some additional vehicle-shipper assignments have been missing");
+                throw new AppException(AppErrorCode.NOT_FOUND);
+            } else {
+                additionalVehicleShippers.forEach(vs -> {
+                    if (!vs.getStatus().equals(VehicleShipperStatus.ACTIVE.name())
+                            || !vs.getWorkingDate().isEqual(plan.getDeliveryDate())) {
+                        log.info("Vehicle-shipper assignment {} is not available in {}", vs.getId(), plan.getDeliveryDate());
+                        throw new AppException(AppErrorCode.VEHICLE_SHIPPER_NOT_AVAILABLE);
+                    }
+                });
+            }
+            plan.addVehicleShippers(additionalVehicleShippers);
         }
-        plan.addVehicleShippers(additionalVehicleShippers);
 
-        deliverySlipRepository.updateStatusByIdInAndTenantId(DeliverySlipStatus.ASSIGNED.name(),
-                form.getAdditionalDeliverySlipIds(), tenantId);
-        log.info("Additional delivery slips updated to ASSIGNED status for delivery plan: {}", deliveryPlanId);
+        // 4. Xử lý xóa Delivery Slips
+        if (!removedSlipIds.isEmpty()) {
+            deliverySlipRepository.updateStatusByIdInAndTenantId(DeliverySlipStatus.PENDING.name(), removedSlipIds, tenantId);
+            log.info("Removed delivery slips updated to PENDING status for delivery plan: {}", deliveryPlanId);
 
-        deliverySlipRepository.updateStatusByIdInAndTenantId(DeliverySlipStatus.PENDING.name(),
-                form.getRemovedDeliverySlipIds(), tenantId);
-        log.info("Removed delivery slips updated to PENDING status for delivery plan: {}", deliveryPlanId);
+            plan.removeSlips(plan.getSlips().stream()
+                    .filter(slip -> removedSlipIds.contains(slip.getId())).toList());
+        }
 
-        plan.removeSlips(plan.getSlips().stream()
-                .filter(slip -> form.getRemovedDeliverySlipIds().contains(slip.getId())).toList());
-        plan.removeVehicleShippers(plan.getVehicleShippers().stream()
-                .filter(vs -> form.getRemovedVehicleShipperIds().contains(vs.getId())).toList());
+        // 5. Xử lý xóa Vehicle Shippers
+        if (!removedVehicleIds.isEmpty()) {
+            plan.removeVehicleShippers(plan.getVehicleShippers().stream()
+                    .filter(vs -> removedVehicleIds.contains(vs.getId())).toList());
+        }
+
+        // 6. Phải có ít nhất 1 slip và 1 vehicle shipper sau khi update
+        if (plan.getSlips() == null || plan.getSlips().isEmpty()) {
+            log.warn("Cannot update: Delivery plan {} will have 0 delivery slips", deliveryPlanId);
+            throw new AppException(AppErrorCode.EMPTY_DELIVERY_SLIPS);
+        }
+
+        if (plan.getVehicleShippers() == null || plan.getVehicleShippers().isEmpty()) {
+            log.warn("Cannot update: Delivery plan {} will have 0 vehicle shippers", deliveryPlanId);
+            throw new AppException(AppErrorCode.EMPTY_VEHICLE_SHIPPERS);
+        }
+
         deliveryPlanRepository.save(plan);
         log.info("Delivery plan {} is updated successfully", deliveryPlanId);
     }
