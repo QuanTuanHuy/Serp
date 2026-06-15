@@ -46,13 +46,13 @@ export function MapToolbar({
   const dropdownContent = (
     <DropdownMenuContent
       align='end'
-      className='z-[1050] w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg'
+      className='z-[1050] w-48 rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-lg'
     >
       {onFitAll && (
         <DropdownMenuItem
           onClick={onFitAll}
           disabled={!canFitAll}
-          className='flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer disabled:pointer-events-none disabled:opacity-40'
+          className='flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted focus:bg-muted focus:text-foreground disabled:pointer-events-none disabled:opacity-40'
         >
           <Navigation className='h-3.5 w-3.5 text-slate-500' />
           <span>Fit All Markers</span>
@@ -62,7 +62,7 @@ export function MapToolbar({
         <DropdownMenuItem
           onClick={onFitRoute}
           disabled={!canFitRoute}
-          className='flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer disabled:pointer-events-none disabled:opacity-40'
+          className='flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted focus:bg-muted focus:text-foreground disabled:pointer-events-none disabled:opacity-40'
         >
           <RouteIcon className='h-3.5 w-3.5 text-slate-500' />
           <span>{fitRouteLabel}</span>
@@ -71,7 +71,7 @@ export function MapToolbar({
       {showExpand && (
         <DropdownMenuItem
           onClick={onToggleExpand}
-          className='flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:text-slate-900 cursor-pointer'
+          className='flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted focus:bg-muted focus:text-foreground'
         >
           {isExpanded ? (
             <>
@@ -99,7 +99,7 @@ export function MapToolbar({
               type='button'
               size='sm'
               variant='ghost'
-              className='h-8 gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-2.5 shadow-md hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-hidden text-xs font-semibold text-slate-700'
+              className='h-8 gap-1.5 rounded-xl border border-border bg-popover/95 px-2.5 text-xs font-semibold text-popover-foreground shadow-md hover:bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-hidden'
             >
               <Compass className='h-4 w-4 text-slate-600 animate-pulse' />
               <span>Map Actions</span>
@@ -113,7 +113,7 @@ export function MapToolbar({
       {!compact && (
         <div
           className={cn(
-            'hidden md:flex items-center gap-1 rounded-xl border border-slate-200 bg-white/90 px-2 py-1.5 shadow-md backdrop-blur-sm',
+            'hidden md:flex items-center gap-1 rounded-xl border border-border bg-popover/90 px-2 py-1.5 text-popover-foreground shadow-md backdrop-blur-sm',
             className
           )}
         >
@@ -141,7 +141,7 @@ export function MapToolbar({
           )}
           {showExpand && (
             <>
-              {hasFitButtons && <div className='mx-1 h-4 w-px bg-slate-200' />}
+              {hasFitButtons && <div className='mx-1 h-4 w-px bg-border' />}
               <ToolBtn
                 onClick={onToggleExpand}
                 icon={
@@ -187,8 +187,8 @@ function ToolBtn({
       disabled={disabled}
       title={title}
       className={cn(
-        'h-7 gap-1 rounded-lg px-2 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900',
-        active && 'bg-slate-100 text-slate-900',
+        'h-7 gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground',
+        active && 'bg-muted text-foreground',
         disabled && 'cursor-not-allowed opacity-40'
       )}
     >

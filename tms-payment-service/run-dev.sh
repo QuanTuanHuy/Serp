@@ -14,7 +14,7 @@ else
   echo "Warning: .env file not found; using application defaults."
 fi
 
-export PAYMENT_SERVICE_PORT="${PAYMENT_SERVICE_PORT:-${SERVER_PORT:-8096}}"
+export PAYMENT_SERVICE_PORT="${PAYMENT_SERVICE_PORT:-${SERVER_PORT:-8103}}"
 export SERVER_PORT="${SERVER_PORT:-$PAYMENT_SERVICE_PORT}"
 export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-${DB_URL:-jdbc:postgresql://localhost:5432/payment_service}}"
 export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-${DB_USERNAME:-serp}}"

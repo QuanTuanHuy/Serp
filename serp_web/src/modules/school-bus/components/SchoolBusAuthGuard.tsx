@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppSelector } from '@/lib/store';
+import { api, useAppDispatch, useAppSelector } from '@/lib/store';
 import { schoolBusThemeStyle, schoolBusUi } from '../theme';
 
 interface SchoolBusAuthGuardProps {
@@ -13,15 +13,24 @@ export const SchoolBusAuthGuard: React.FC<SchoolBusAuthGuardProps> = ({
   children,
 }) => {
   const router = useRouter();
-  const isAuthenticated = useAppSelector((state) => !!state.account.auth.token);
+  const dispatch = useAppDispatch();
+  const token = useAppSelector((state) => state.account.auth.token);
+  const [preparedToken, setPreparedToken] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!isAuthenticated) {
+    if (!token) {
+      setPreparedToken(null);
       router.push('/auth?redirect=/school-bus/dashboard');
+      return;
     }
-  }, [isAuthenticated, router]);
 
-  if (!isAuthenticated) {
+    dispatch(
+      api.util.invalidateTags(['account/menus', 'account/modules'])
+    );
+    setPreparedToken(token);
+  }, [dispatch, router, token]);
+
+  if (!token || preparedToken !== token) {
     return (
       <div
         className={`flex h-screen items-center justify-center ${schoolBusUi.pageGradient}`}

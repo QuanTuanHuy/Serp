@@ -15,7 +15,9 @@ import {
   Loader2,
   MapPinned,
   PencilLine,
+  Plus,
   Search,
+  X,
   Trash2,
   Undo2,
 } from 'lucide-react';
@@ -34,6 +36,12 @@ import {
   CardContent,
   CardHeader,
   Checkbox,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
   Input,
   Label,
   ScrollArea,
@@ -48,20 +56,17 @@ import { getErrorMessage } from '@/lib/store/api';
 import { useNotification } from '@/shared/hooks';
 import {
   useDeleteDeliveryPlanMutation,
+  useGetFacilityDetailQuery,
   useGetDeliveryPlanDetailQuery,
   useGetDeliverySlipsQuery,
-  useGetFacilitiesQuery,
-  useGetFacilityDetailQuery,
   useGetRoutesQuery,
   useGetVehicleShippersQuery,
   useOptimizeDeliveryPlanMutation,
   useRollbackDeliveryPlanMutation,
   useUpdateDeliveryPlanMutation,
 } from '../../api/logistics2Api';
-import { DeliverySlipCard } from '../../components/cards/DeliverySlipCard';
 import { RouteCard } from '../../components/cards/RouteCard';
 import { StatsCard } from '../../components/cards/StatsCard';
-import { VehicleShipperCard } from '../../components/cards/VehicleShipperCard';
 import type {
   DeliverySlipStatus,
   Facility,
@@ -188,6 +193,8 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
   const [selectedVehicleShipperIds, setSelectedVehicleShipperIds] = useState<
     string[]
   >([]);
+  const [showAddSlipDialog, setShowAddSlipDialog] = useState(false);
+  const [showAddVehicleDialog, setShowAddVehicleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const {
@@ -284,18 +291,31 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
   const facilityData =
     facilityResponse?.data || buildFallbackFacility(plan?.facilityId);
 
-  const slips = useMemo(() => {
-    const allSlips = slipsResponse?.data?.items || [];
-    return allSlips.filter(
-      (slip) => slip.status === 'ASSIGNED' || slip.status === 'PENDING'
-    );
-  }, [slipsResponse]);
+  const allSlips = useMemo(() => {
+    const planSlips = plan?.slips || [];
+    const querySlips = slipsResponse?.data?.items || [];
+    const slipMap = new Map<string, (typeof planSlips)[number]>();
+
+    [...planSlips, ...querySlips].forEach((slip) => {
+      slipMap.set(slip.id, slip);
+    });
+
+    return Array.from(slipMap.values());
+  }, [plan?.slips, slipsResponse?.data?.items]);
+
+  const selectedSlips = useMemo(
+    () => allSlips.filter((slip) => selectedSlipIds.includes(slip.id)),
+    [allSlips, selectedSlipIds]
+  );
 
   const availableSlips = useMemo(() => {
     const keyword = searchSlipValue.trim().toLowerCase();
 
-    return slips.filter((slip) => {
+    return allSlips.filter((slip) => {
+      if (slip.status !== 'PENDING') return false;
+      if (selectedSlipIds.includes(slip.id)) return false;
       if (!keyword) return true;
+
       const slipCode = slip.code || '';
       const customerName = slip.customerName || '';
 
@@ -304,17 +324,34 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
         customerName.toLowerCase().includes(keyword)
       );
     });
-  }, [searchSlipValue, slips]);
+  }, [allSlips, searchSlipValue, selectedSlipIds]);
 
-  const vehicleShippers = useMemo(() => {
-    const allItems = vehicleShippersResponse?.data?.items || [];
-    return allItems.filter((shipper) => shipper.status === 'ACTIVE');
-  }, [vehicleShippersResponse]);
+  const allVehicleShippers = useMemo(() => {
+    const planVehicleShippers = plan?.vehicleShippers || [];
+    const queryVehicleShippers = vehicleShippersResponse?.data?.items || [];
+    const shipperMap = new Map<string, (typeof planVehicleShippers)[number]>();
+
+    [...planVehicleShippers, ...queryVehicleShippers].forEach((shipper) => {
+      shipperMap.set(shipper.id, shipper);
+    });
+
+    return Array.from(shipperMap.values());
+  }, [plan?.vehicleShippers, vehicleShippersResponse?.data?.items]);
+
+  const selectedVehicleShippers = useMemo(
+    () =>
+      allVehicleShippers.filter((shipper) =>
+        selectedVehicleShipperIds.includes(shipper.id)
+      ),
+    [allVehicleShippers, selectedVehicleShipperIds]
+  );
 
   const availableVehicleShippers = useMemo(() => {
     const keyword = searchVehicleValue.trim().toLowerCase();
 
-    return vehicleShippers.filter((shipper) => {
+    return allVehicleShippers.filter((shipper) => {
+      if (shipper.status !== 'ACTIVE') return false;
+      if (selectedVehicleShipperIds.includes(shipper.id)) return false;
       if (!keyword) return true;
 
       const licensePlate = shipper.vehicle?.licensePlate || '';
@@ -325,7 +362,7 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
         vehicleId.toLowerCase().includes(keyword)
       );
     });
-  }, [vehicleShippers, searchVehicleValue]);
+  }, [allVehicleShippers, searchVehicleValue, selectedVehicleShipperIds]);
 
   const initialSlipIds = useMemo(
     () => plan?.slips?.map((slip) => slip.id) || [],
@@ -471,6 +508,109 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
 
   const handleOpenRouteDetail = (routeId: string) => {
     router.push(`/logistics2/routes/${routeId}`);
+  };
+
+  const renderSlipCard = (slip: (typeof allSlips)[number]) => {
+    const statusMeta =
+      SLIP_STATUS_META[slip.status] || SLIP_STATUS_META.PENDING;
+
+    return (
+      <div
+        key={slip.id}
+        role='button'
+        tabIndex={0}
+        onClick={() => router.push(`/logistics2/delivery-slips/${slip.id}`)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            router.push(`/logistics2/delivery-slips/${slip.id}`);
+          }
+        }}
+        className='group relative rounded-xl border bg-card p-4 pr-12 text-left transition hover:border-primary/40 hover:bg-muted/30'
+      >
+        {isDraft && (
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            className='absolute right-2 top-2 h-8 w-8 opacity-70 transition hover:opacity-100'
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleSlip(slip.id);
+            }}
+          >
+            <X className='h-4 w-4' />
+            <span className='sr-only'>Loại bỏ đơn hàng</span>
+          </Button>
+        )}
+
+        <div className='flex flex-wrap items-start gap-3'>
+          <div className='flex-1 space-y-1'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <p className='text-sm font-semibold'>
+                {slip.code || `Phiếu #${slip.id.slice(0, 6)}`}
+              </p>
+              <Badge variant='outline' className={statusMeta.badgeClass}>
+                {statusMeta.label}
+              </Badge>
+            </div>
+            <p className='text-xs text-muted-foreground'>
+              {slip.customerName || 'Chưa có khách hàng'}
+              {slip.totalWeightKg
+                ? ` · ${formatNumber(slip.totalWeightKg)} kg`
+                : ''}
+              {slip.totalVolumeCbm
+                ? ` · ${formatNumber(slip.totalVolumeCbm)} cbm`
+                : ''}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderVehicleShipperCard = (
+    shipper: (typeof allVehicleShippers)[number]
+  ) => {
+    const statusMeta =
+      VEHICLE_STATUS_META[shipper.status] || VEHICLE_STATUS_META.ACTIVE;
+
+    return (
+      <div
+        key={shipper.id}
+        className='group relative rounded-xl border bg-card p-4 pr-12 transition hover:border-primary/40 hover:bg-muted/30'
+      >
+        {isDraft && (
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            className='absolute right-2 top-2 h-8 w-8 opacity-70 transition hover:opacity-100'
+            onClick={() => toggleVehicleShipper(shipper.id)}
+          >
+            <X className='h-4 w-4' />
+            <span className='sr-only'>Loại bỏ xe giao</span>
+          </Button>
+        )}
+
+        <div className='space-y-2'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <p className='text-sm font-semibold'>
+              {shipper.vehicle?.licensePlate || shipper.vehicleId}
+            </p>
+            <Badge variant='outline' className={statusMeta.badgeClass}>
+              {statusMeta.label}
+            </Badge>
+          </div>
+          <p className='text-xs text-muted-foreground'>
+            {formatVehicleType(shipper.vehicle?.vehicleType)}
+            {shipper.workingDate
+              ? ` · ${formatDateVN(shipper.workingDate)}`
+              : ''}
+          </p>
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -716,142 +856,150 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               <CardHeader>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
                   <div>
-                    <h3 className='font-semibold'>Danh sách đơn hàng</h3>
+                    <h3 className='font-semibold'>Đơn hàng trong kế hoạch</h3>
                     <p className='text-sm text-muted-foreground'>
                       {isDraft
-                        ? 'Chọn đơn hàng thuộc kho đã chọn.'
+                        ? 'Rà soát danh sách đơn hàng trước khi tối ưu.'
                         : 'Danh sách đơn hàng của kế hoạch.'}
                     </p>
                   </div>
-                  <Badge variant='outline'>
-                    {selectedSlipIds.length} đơn hàng
-                  </Badge>
+                  <div className='flex items-center gap-2'>
+                    <Badge variant='outline'>
+                      {selectedSlips.length} đơn hàng
+                    </Badge>
+                    {isDraft && (
+                      <Dialog
+                        open={showAddSlipDialog}
+                        onOpenChange={setShowAddSlipDialog}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            className='gap-2'
+                          >
+                            <Plus className='h-4 w-4' />
+                            Thêm đơn hàng
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className='max-h-[85vh] sm:max-w-3xl'>
+                          <DialogHeader>
+                            <DialogTitle>
+                              Thêm đơn hàng vào kế hoạch
+                            </DialogTitle>
+                            <DialogDescription>
+                              Chọn các phiếu giao ở trạng thái chờ để đưa vào kế
+                              hoạch.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className='space-y-4'>
+                            <div className='relative'>
+                              <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                              <Input
+                                value={searchSlipValue}
+                                placeholder='Tìm theo mã phiếu, khách hàng...'
+                                onChange={(event) =>
+                                  setSearchSlipValue(event.target.value)
+                                }
+                                className='pl-10'
+                              />
+                            </div>
+
+                            <ScrollArea className='h-[50vh] rounded-lg border'>
+                              <div className='space-y-2 p-3'>
+                                {isLoadingSlips && (
+                                  <div className='space-y-2'>
+                                    {Array.from({ length: 4 }).map(
+                                      (_, index) => (
+                                        <div
+                                          key={index}
+                                          className='h-16 rounded-lg bg-muted/60 animate-pulse'
+                                        />
+                                      )
+                                    )}
+                                  </div>
+                                )}
+
+                                {!isLoadingSlips &&
+                                  availableSlips.length === 0 && (
+                                    <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                                      Không có phiếu giao phù hợp.
+                                    </div>
+                                  )}
+
+                                {!isLoadingSlips &&
+                                  availableSlips.map((slip) => {
+                                    const isSelected = selectedSlipIds.includes(
+                                      slip.id
+                                    );
+                                    const statusMeta =
+                                      SLIP_STATUS_META[slip.status] ||
+                                      SLIP_STATUS_META.PENDING;
+
+                                    return (
+                                      <label
+                                        key={slip.id}
+                                        className={cn(
+                                          'flex w-full items-start gap-3 rounded-lg border px-3 py-2 transition cursor-pointer',
+                                          isSelected
+                                            ? 'border-primary/60 bg-primary/5'
+                                            : 'hover:bg-muted/40'
+                                        )}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() =>
+                                            toggleSlip(slip.id)
+                                          }
+                                          className='mt-1'
+                                        />
+                                        <div className='flex-1 space-y-1'>
+                                          <div className='flex flex-wrap items-center gap-2'>
+                                            <p className='text-sm font-semibold'>
+                                              {slip.code ||
+                                                `Phiếu #${slip.id.slice(0, 6)}`}
+                                            </p>
+                                            <Badge
+                                              variant='outline'
+                                              className={statusMeta.badgeClass}
+                                            >
+                                              {statusMeta.label}
+                                            </Badge>
+                                          </div>
+                                          <p className='text-xs text-muted-foreground'>
+                                            {slip.customerName ||
+                                              'Chưa có khách hàng'}
+                                            {slip.totalWeightKg
+                                              ? ` · ${formatNumber(slip.totalWeightKg)} kg`
+                                              : ''}
+                                            {slip.totalVolumeCbm
+                                              ? ` · ${formatNumber(slip.totalVolumeCbm)} cbm`
+                                              : ''}
+                                          </p>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className='space-y-4'>
-                {isDraft && (
-                  <div className='relative'>
-                    <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                    <Input
-                      value={searchSlipValue}
-                      placeholder='Tìm theo mã phiếu, khách hàng...'
-                      onChange={(event) =>
-                        setSearchSlipValue(event.target.value)
-                      }
-                      className='pl-10'
-                    />
-                  </div>
-                )}
+                <div className='space-y-3'>
+                  {selectedSlips.length === 0 && (
+                    <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                      Chưa có đơn hàng nào trong kế hoạch.
+                    </p>
+                  )}
 
-                {isDraft ? (
-                  <ScrollArea className='h-[320px] rounded-lg border'>
-                    <div className='space-y-2 p-3'>
-                      {isLoadingSlips && (
-                        <div className='space-y-2'>
-                          {Array.from({ length: 4 }).map((_, index) => (
-                            <div
-                              key={index}
-                              className='h-16 rounded-lg bg-muted/60 animate-pulse'
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {!isLoadingSlips && availableSlips.length === 0 && (
-                        <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                          Không có phiếu giao phù hợp.
-                        </div>
-                      )}
-
-                      {!isLoadingSlips &&
-                        availableSlips.map((slip) => {
-                          const isSelected = selectedSlipIds.includes(slip.id);
-                          const statusMeta =
-                            SLIP_STATUS_META[slip.status] ||
-                            SLIP_STATUS_META.PENDING;
-
-                          return (
-                            <div
-                              role='button'
-                              key={slip.id}
-                              tabIndex={0}
-                              onClick={() => toggleSlip(slip.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  toggleSlip(slip.id);
-                                }
-                              }}
-                              className={cn(
-                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition cursor-pointer',
-                                isSelected
-                                  ? 'border-primary/60 bg-primary/5'
-                                  : 'hover:bg-muted/40'
-                              )}
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleSlip(slip.id)}
-                                className='mt-1'
-                              />
-                              <div className='flex-1 space-y-1'>
-                                <div className='flex flex-wrap items-center gap-2'>
-                                  <p className='text-sm font-semibold'>
-                                    {slip.code ||
-                                      `Phiếu #${slip.id.slice(0, 6)}`}
-                                  </p>
-                                  <Badge
-                                    variant='outline'
-                                    className={statusMeta.badgeClass}
-                                  >
-                                    {statusMeta.label}
-                                  </Badge>
-                                </div>
-                                <p className='text-xs text-muted-foreground'>
-                                  {slip.customerName || 'Chưa có khách hàng'}
-                                  {slip.totalWeightKg
-                                    ? ` · ${formatNumber(
-                                        slip.totalWeightKg
-                                      )} kg`
-                                    : ''}
-                                  {slip.totalVolumeCbm
-                                    ? ` · ${formatNumber(
-                                        slip.totalVolumeCbm
-                                      )} cbm`
-                                    : ''}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div
-                    className={cn(
-                      'gap-4',
-                      plan.slips?.length
-                        ? 'grid grid-cols-1 md:grid-cols-1'
-                        : 'flex flex-col'
-                    )}
-                  >
-                    {(plan.slips || []).length === 0 && (
-                      <p className='text-sm text-muted-foreground'>
-                        Chưa có phiếu giao nào.
-                      </p>
-                    )}
-                    {(plan.slips || []).map((slip) => (
-                      <DeliverySlipCard
-                        key={slip.id}
-                        slip={slip}
-                        viewMode='list'
-                        onClick={() =>
-                          router.push(`/logistics2/delivery-slips/${slip.id}`)
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
+                  {selectedSlips.map((slip) => renderSlipCard(slip))}
+                </div>
               </CardContent>
             </Card>
 
@@ -859,135 +1007,149 @@ export const DeliveryPlanDetailPage: React.FC<{ planId: string }> = ({
               <CardHeader>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
                   <div>
-                    <h3 className='font-semibold'>Danh sách xe giao</h3>
+                    <h3 className='font-semibold'>Xe giao trong kế hoạch</h3>
                     <p className='text-sm text-muted-foreground'>
                       {isDraft
-                        ? 'Chọn xe giao đang hoạt động trong ngày giao.'
+                        ? 'Rà soát danh sách xe giao trước khi tối ưu.'
                         : 'Danh sách xe đã phân công.'}
                     </p>
                   </div>
-                  <Badge variant='outline'>
-                    {selectedVehicleShipperIds.length} xe
-                  </Badge>
+                  <div className='flex items-center gap-2'>
+                    <Badge variant='outline'>
+                      {selectedVehicleShippers.length} xe
+                    </Badge>
+                    {isDraft && (
+                      <Dialog
+                        open={showAddVehicleDialog}
+                        onOpenChange={setShowAddVehicleDialog}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            className='gap-2'
+                          >
+                            <Plus className='h-4 w-4' />
+                            Thêm xe giao
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className='max-h-[85vh] sm:max-w-3xl'>
+                          <DialogHeader>
+                            <DialogTitle>Thêm xe giao vào kế hoạch</DialogTitle>
+                            <DialogDescription>
+                              Chọn các xe đang hoạt động để phân công cho ngày
+                              giao.
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className='space-y-4'>
+                            <div className='relative'>
+                              <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                              <Input
+                                value={searchVehicleValue}
+                                placeholder='Tìm theo biển số, xe...'
+                                onChange={(event) =>
+                                  setSearchVehicleValue(event.target.value)
+                                }
+                                className='pl-10'
+                              />
+                            </div>
+
+                            <ScrollArea className='h-[50vh] rounded-lg border'>
+                              <div className='space-y-2 p-3'>
+                                {isLoadingVehicleShippers && (
+                                  <div className='space-y-2'>
+                                    {Array.from({ length: 4 }).map(
+                                      (_, index) => (
+                                        <div
+                                          key={index}
+                                          className='h-16 rounded-lg bg-muted/60 animate-pulse'
+                                        />
+                                      )
+                                    )}
+                                  </div>
+                                )}
+
+                                {!isLoadingVehicleShippers &&
+                                  availableVehicleShippers.length === 0 && (
+                                    <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                                      Không có xe giao phù hợp.
+                                    </div>
+                                  )}
+
+                                {!isLoadingVehicleShippers &&
+                                  availableVehicleShippers.map((shipper) => {
+                                    const isSelected =
+                                      selectedVehicleShipperIds.includes(
+                                        shipper.id
+                                      );
+                                    const statusMeta =
+                                      VEHICLE_STATUS_META[shipper.status] ||
+                                      VEHICLE_STATUS_META.ACTIVE;
+
+                                    return (
+                                      <label
+                                        key={shipper.id}
+                                        className={cn(
+                                          'flex w-full items-start gap-3 rounded-lg border px-3 py-2 transition cursor-pointer',
+                                          isSelected
+                                            ? 'border-primary/60 bg-primary/5'
+                                            : 'hover:bg-muted/40'
+                                        )}
+                                      >
+                                        <Checkbox
+                                          checked={isSelected}
+                                          onCheckedChange={() =>
+                                            toggleVehicleShipper(shipper.id)
+                                          }
+                                          className='mt-1'
+                                        />
+                                        <div className='flex-1 space-y-1'>
+                                          <div className='flex flex-wrap items-center gap-2'>
+                                            <p className='text-sm font-semibold'>
+                                              {shipper.vehicle?.licensePlate ||
+                                                shipper.vehicleId}
+                                            </p>
+                                            <Badge
+                                              variant='outline'
+                                              className={statusMeta.badgeClass}
+                                            >
+                                              {statusMeta.label}
+                                            </Badge>
+                                          </div>
+                                          <p className='text-xs text-muted-foreground'>
+                                            {formatVehicleType(
+                                              shipper.vehicle?.vehicleType
+                                            )}
+                                            {shipper.workingDate
+                                              ? ` · ${formatDateVN(shipper.workingDate)}`
+                                              : ''}
+                                          </p>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className='space-y-4'>
-                {isDraft && (
-                  <div className='relative'>
-                    <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                    <Input
-                      value={searchVehicleValue}
-                      placeholder='Tìm theo biển số, xe...'
-                      onChange={(event) =>
-                        setSearchVehicleValue(event.target.value)
-                      }
-                      className='pl-10'
-                    />
-                  </div>
-                )}
+                <div className='space-y-3'>
+                  {selectedVehicleShippers.length === 0 && (
+                    <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                      Chưa có xe giao nào trong kế hoạch.
+                    </p>
+                  )}
 
-                {isDraft ? (
-                  <ScrollArea className='h-[320px] rounded-lg border'>
-                    <div className='space-y-2 p-3'>
-                      {isLoadingVehicleShippers && (
-                        <div className='space-y-2'>
-                          {Array.from({ length: 4 }).map((_, index) => (
-                            <div
-                              key={index}
-                              className='h-16 rounded-lg bg-muted/60 animate-pulse'
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {!isLoadingVehicleShippers &&
-                        availableVehicleShippers.length === 0 && (
-                          <div className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                            Không có xe giao phù hợp.
-                          </div>
-                        )}
-
-                      {!isLoadingVehicleShippers &&
-                        availableVehicleShippers.map((shipper) => {
-                          const isSelected = selectedVehicleShipperIds.includes(
-                            shipper.id
-                          );
-                          const statusMeta =
-                            VEHICLE_STATUS_META[shipper.status] ||
-                            VEHICLE_STATUS_META.ACTIVE;
-
-                          return (
-                            <div
-                              role='button'
-                              key={shipper.id}
-                              tabIndex={0}
-                              onClick={() => toggleVehicleShipper(shipper.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  toggleVehicleShipper(shipper.id);
-                                }
-                              }}
-                              className={cn(
-                                'flex w-full items-start gap-3 rounded-lg border px-3 py-2 text-left transition cursor-pointer',
-                                isSelected
-                                  ? 'border-primary/60 bg-primary/5'
-                                  : 'hover:bg-muted/40'
-                              )}
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() =>
-                                  toggleVehicleShipper(shipper.id)
-                                }
-                                className='mt-1'
-                              />
-                              <div className='flex-1 space-y-1'>
-                                <div className='flex flex-wrap items-center gap-2'>
-                                  <p className='text-sm font-semibold'>
-                                    {shipper.vehicle?.licensePlate ||
-                                      shipper.vehicleId}
-                                  </p>
-                                  <Badge
-                                    variant='outline'
-                                    className={statusMeta.badgeClass}
-                                  >
-                                    {statusMeta.label}
-                                  </Badge>
-                                </div>
-                                <p className='text-xs text-muted-foreground'>
-                                  {formatVehicleType(
-                                    shipper.vehicle?.vehicleType
-                                  )}
-                                  {shipper.workingDate
-                                    ? ` · ${formatDateVN(shipper.workingDate)}`
-                                    : ''}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div
-                    className={cn(
-                      'gap-4',
-                      plan.vehicleShippers?.length
-                        ? 'grid grid-cols-1'
-                        : 'flex flex-col'
-                    )}
-                  >
-                    {(plan.vehicleShippers || []).length === 0 && (
-                      <p className='text-sm text-muted-foreground'>
-                        Chưa có xe giao nào.
-                      </p>
-                    )}
-                    {(plan.vehicleShippers || []).map((shipper) => (
-                      <VehicleShipperCard key={shipper.id} shipper={shipper} />
-                    ))}
-                  </div>
-                )}
+                  {selectedVehicleShippers.map((shipper) =>
+                    renderVehicleShipperCard(shipper)
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

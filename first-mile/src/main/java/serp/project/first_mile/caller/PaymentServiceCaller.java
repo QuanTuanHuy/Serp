@@ -39,7 +39,7 @@ public class PaymentServiceCaller {
     public PaymentServiceCaller(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${payment.service.base-url:http://localhost:8096}") String paymentServiceBaseUrl
+            @Value("${payment.service.base-url:http://localhost:8103}") String paymentServiceBaseUrl
     ) {
         this.authUtils = authUtils;
         this.restClient = restClientBuilder.baseUrl(paymentServiceBaseUrl).build();

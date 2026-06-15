@@ -33,6 +33,7 @@ import serp.project.school_bus_service.enums.TripStudentStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
+import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
@@ -82,6 +83,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
     private final SchoolBusSecurityService securityService;
+    private final ISchoolBusDomainNotificationService domainNotificationService;
 
 
     public TripExecutionServiceImpl(TripExecutionRepository tripRepository,
@@ -96,7 +98,8 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                                      SchoolBusMapper mapper,
                                      MessageCommon messageCommon,
                                      ISchoolBusDataScopeService schoolBusDataScopeService,
-                                     SchoolBusSecurityService securityService) {
+                                     SchoolBusSecurityService securityService,
+                                     ISchoolBusDomainNotificationService domainNotificationService) {
         this.tripRepository = tripRepository;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
@@ -110,6 +113,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
         this.securityService = securityService;
+        this.domainNotificationService = domainNotificationService;
     }
 
 
@@ -280,6 +284,7 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
 
+        domainNotificationService.notifyTripCreated(saved, actorId);
         return toDetail(saved, tenantId);
     }
 
@@ -305,7 +310,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         // RoutePlan keeps TRIP_CREATED throughout trip execution.
         // Operational state is tracked exclusively by TripExecution.status.
         tripRepository.save(trip);
-        // TODO notification: notify parents/admins when trip starts.
         return toDetail(trip, tenantId);
     }
 
@@ -327,7 +331,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         stop.setActualArrivalTime(now);
         stop.markUpdated(actor(actorId));
         tripStopLogService.save(stop);
-        // TODO notification: notify parents/guardians when bus arrives at this stop.
         return toDetail(trip, tenantId);
     }
 
@@ -397,7 +400,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         stop.setActualDepartureTime(LocalDateTime.now());
         stop.markUpdated(actor(actorId));
         tripStopLogService.save(stop);
-        // TODO notification: notify parents/guardians when bus departs this stop.
         return toDetail(trip, tenantId);
     }
 
@@ -453,7 +455,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                             "Stop skipped: " + request.getReason(), tenantId, actorId);
                 });
 
-        // TODO notification: notify parents/guardians that this stop has been skipped.
         return toDetail(trip, tenantId);
     }
 
@@ -540,7 +541,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         // RoutePlan.status intentionally NOT mutated here.
         // RoutePlan keeps TRIP_CREATED; completion is recorded only on TripExecution.
         tripRepository.save(trip);
-        // TODO notification: notify parents/admins when trip is completed.
         return toDetail(trip, tenantId);
     }
 
@@ -597,7 +597,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                 });
 
         tripRepository.save(trip);
-        // TODO notification: notify parents/admins when trip is cancelled.
         return toDetail(trip, tenantId);
     }
 

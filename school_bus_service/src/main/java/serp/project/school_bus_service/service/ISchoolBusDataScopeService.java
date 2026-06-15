@@ -1,5 +1,7 @@
 package serp.project.school_bus_service.service;
 
+import serp.project.school_bus_service.service.model.DashboardDataScope;
+
 public interface ISchoolBusDataScopeService {
     void assertCanAccessTrip(Long tripId);
     void assertCanOperateTrip(Long tripId);
@@ -14,4 +16,8 @@ public interface ISchoolBusDataScopeService {
     Long getCurrentParentProfileIdRequired();
     Long getCurrentDriverProfileIdRequired();
     Long getCurrentAttendantProfileIdRequired();
+
+    DashboardDataScope getDashboardDataScope(Long tenantId);
+
+    void assertCanAccessDashboardSchool(DashboardDataScope scope, Long schoolId);
 }

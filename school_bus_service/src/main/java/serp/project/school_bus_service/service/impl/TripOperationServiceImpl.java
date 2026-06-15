@@ -42,6 +42,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
     private final ISchoolBusDataScopeService schoolBusDataScopeService;
+    private final ISchoolBusDomainNotificationService domainNotificationService;
 
     public TripOperationServiceImpl(
             ITripExecutionService tripExecutionService,
@@ -51,7 +52,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
             @Lazy IAttendanceService attendanceService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon,
-            ISchoolBusDataScopeService schoolBusDataScopeService) {
+            ISchoolBusDataScopeService schoolBusDataScopeService,
+            ISchoolBusDomainNotificationService domainNotificationService) {
         this.tripExecutionService = tripExecutionService;
         this.tripStopLogService = tripStopLogService;
         this.tripStudentService = tripStudentService;
@@ -60,6 +62,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         this.mapper = mapper;
         this.messageCommon = messageCommon;
         this.schoolBusDataScopeService = schoolBusDataScopeService;
+        this.domainNotificationService = domainNotificationService;
     }
 
     private String actor(Long actorId) {
@@ -111,6 +114,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
                     tripStopLogService.save(startTerminal);
                 });
 
+        domainNotificationService.notifyTripStarted(trip, actorId);
         return toDetail(trip, tenantId);
     }
 
@@ -315,7 +319,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
 
         // Mark PLANNED students as NOT_SERVED immediately
         boolean isOutbound = trip.getRouteDirection() == RouteDirection.OUTBOUND;
-        tripStudentService.findByTrip(tripId, tenantId).stream()
+        List<TripStudentEntity> affectedStudents = tripStudentService.findByTrip(tripId, tenantId).stream()
                 .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
                 .filter(ts -> {
                     if (isOutbound) {
@@ -324,7 +328,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
                         return ts.getDropoffStop() != null && ts.getDropoffStop().getId().equals(routeStopId);
                     }
                 })
-                .forEach(ts -> {
+                .toList();
+        affectedStudents.forEach(ts -> {
                     ts.setStatus(TripStudentStatus.NOT_SERVED);
                     ts.setNote("Stop skipped: " + request.getReason());
                     ts.markUpdated(actor(actorId));
@@ -333,6 +338,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
                             "Stop skipped: " + request.getReason(), tenantId, actorId);
                 });
 
+        domainNotificationService.notifyStopSkipped(trip, affectedStudents, request.getReason(), actorId);
         return toDetail(trip, tenantId);
     }
 
@@ -422,6 +428,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         trip.markUpdated(actor(actorId));
         tripExecutionService.save(trip);
 
+        domainNotificationService.notifyTripCompleted(trip, actorId);
         return toDetail(trip, tenantId);
     }
 
@@ -476,6 +483,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
 
         tripExecutionService.save(trip);
 
+        domainNotificationService.notifyTripCancelled(trip, actorId);
         return toDetail(trip, tenantId);
     }
 
@@ -547,6 +555,11 @@ public class TripOperationServiceImpl implements ITripOperationService {
         tripStudentService.save(tripStudent);
 
         attendanceService.recordNotServedEvent(trip, tripStudent, routeStop, request.getNotes(), tenantId, actorId);
+        domainNotificationService.notifyAttendanceRecorded(
+                trip,
+                tripStudent,
+                AttendanceEventType.NOT_SERVED,
+                actorId);
 
         AttendanceResponse response = new AttendanceResponse();
         response.setRouteId(trip.getRoute() != null ? trip.getRoute().getId() : null);

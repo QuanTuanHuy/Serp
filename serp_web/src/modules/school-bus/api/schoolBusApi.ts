@@ -3,9 +3,6 @@ import { createApiResponseTransform } from '@/lib/store/api/utils';
 import type { FetchBaseQueryMeta } from '@reduxjs/toolkit/query';
 import type {
   ApiResponse,
-  DashboardSummary,
-  DashboardOperationsResponse,
-  ChartItemDto,
   OperationalReport,
 
   PagedResponse,
@@ -119,32 +116,6 @@ export const schoolBusApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusMapLocation>(),
     }),
-    getSchoolBusSummary: builder.query<ApiResponse<DashboardSummary>, void>({
-      query: () => ({ url: '/dashboard/summary', method: 'GET' }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<DashboardSummary>(),
-      providesTags: [{ type: 'schoolBus/Dashboard', id: 'SUMMARY' }],
-    }),
-    getOperationsDashboard: builder.query<
-      ApiResponse<DashboardOperationsResponse>,
-      {
-        serviceDate?: string;
-        fromDate?: string;
-        toDate?: string;
-        schoolId?: number;
-        direction?: string;
-      } | void
-    >({
-      query: (params) => ({
-        url: '/dashboard/operations',
-        method: 'GET',
-        params: params || undefined,
-      }),
-      extraOptions: { service: 'school-bus' },
-      transformResponse: transformApiResponse<DashboardOperationsResponse>(),
-      providesTags: [{ type: 'schoolBus/Dashboard', id: 'OPERATIONS' }],
-    }),
-
     getSchoolBusReport: builder.query<
       ApiResponse<OperationalReport>,
       SchoolBusListParams | void
@@ -1799,9 +1770,6 @@ export const schoolBusApi = api.injectEndpoints({
 const {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
-  useGetSchoolBusSummaryQuery: useGetSchoolBusSummaryQueryOrig,
-  useGetOperationsDashboardQuery: useGetOperationsDashboardQueryOrig,
-  useLazyGetOperationsDashboardQuery,
   useGetSchoolBusReportQuery: useGetSchoolBusReportQueryOrig,
   useGetSchoolBusReportTripsQuery: useGetSchoolBusReportTripsQueryOrig,
 
@@ -1930,14 +1898,12 @@ function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
   }) as unknown as T;
 }
 
-export const useGetSchoolBusSummaryQuery = wrapQueryHook(useGetSchoolBusSummaryQueryOrig);
 export const useGetSchoolDropdownOptionsQuery = wrapQueryHook(useGetSchoolDropdownOptionsQueryOrig);
 export const useGetSchoolPickupPointDropdownOptionsQuery = wrapQueryHook(useGetSchoolPickupPointDropdownOptionsQueryOrig);
 export const useGetParentDropdownOptionsQuery = wrapQueryHook(useGetParentDropdownOptionsQueryOrig);
 export const useGetDriverDropdownOptionsQuery = wrapQueryHook(useGetDriverDropdownOptionsQueryOrig);
 export const useGetAttendantDropdownOptionsQuery = wrapQueryHook(useGetAttendantDropdownOptionsQueryOrig);
 export const useGetBusDropdownOptionsQuery = wrapQueryHook(useGetBusDropdownOptionsQueryOrig);
-export const useGetOperationsDashboardQuery = wrapQueryHook(useGetOperationsDashboardQueryOrig);
 export const useGetSchoolBusReportQuery = wrapQueryHook(useGetSchoolBusReportQueryOrig);
 
 export const useGetSchoolBusReportTripsQuery = wrapQueryHook(useGetSchoolBusReportTripsQueryOrig);
@@ -1991,7 +1957,6 @@ export const useGetSessionEligibleStudentsQuery = wrapQueryHook(useGetSessionEli
 export {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
-  useLazyGetOperationsDashboardQuery,
   useCreateSchoolMutation,
 
   useUpdateSchoolMutation,

@@ -7,7 +7,7 @@ For TMS UI work, see `serp_web/src/modules/first-mile/AGENTS.md`.
 ## Service Snapshot
 
 - **Module:** `first-mile` — Spring Boot, Java 21, package `serp.project.first_mile`.
-- **Default port:** `8093` (`SERVER_PORT`).
+- **Default port:** `8101` (`SERVER_PORT`).
 - **Database:** PostgreSQL `first-mile` (`DB_URL`).
 - **Auth:** OAuth2 resource server (Keycloak JWT). Role checks use `TMS_*` roles via `@PreAuthorize`.
 - **Integrations:** Kafka (user/order/hub sync, DLQ), Goong geocode/distance matrix, S3-compatible storage, optional payment caller.

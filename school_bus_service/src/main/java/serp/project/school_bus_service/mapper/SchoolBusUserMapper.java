@@ -34,7 +34,6 @@ public class SchoolBusUserMapper extends BaseMapper {
             return;
         }
         entity.setAccountUserId(command.getAccountUserId());
-        entity.setKeycloakId(command.getKeycloakId());
         entity.setEmail(command.getEmail());
         entity.setFirstName(command.getFirstName());
         entity.setLastName(command.getLastName());

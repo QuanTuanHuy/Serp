@@ -13,10 +13,6 @@ import { useModuleSidebar } from '@/shared/hooks';
 import { getModuleIcon } from '@/shared/constants/moduleIcons';
 import { useSidebarContext } from '@/shared/components';
 import { SidebarMenuItemComponent } from '@/shared/components/DynamicSidebar/SidebarMenuItem';
-import { useSchoolBusAccess, canAccessSchoolBusRoute } from '../../security/schoolBusAccess';
-
-
-
 interface SchoolBusSidebarProps {
   className?: string;
 }
@@ -26,8 +22,6 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
 }) => {
   const { isCollapsed, toggleSidebar } = useSidebarContext();
   const [isModuleHovered, setIsModuleHovered] = useState(false);
-  const { roles } = useSchoolBusAccess();
-
   const { menuItems, currentModule, isLoading, error, hasMenus, refetch } =
     useModuleSidebar('SCHOOLBUS');
 
@@ -164,15 +158,13 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
 
         {!isLoading && !error && hasMenus && (
           <>
-            {menuItems
-              .filter((item) => canAccessSchoolBusRoute(roles, item.href))
-              .map((item) => (
-                <SidebarMenuItemComponent
-                  key={item.id}
-                  item={item}
-                  isCollapsed={isCollapsed}
-                />
-              ))}
+            {menuItems.map((item) => (
+              <SidebarMenuItemComponent
+                key={item.id}
+                item={item}
+                isCollapsed={isCollapsed}
+              />
+            ))}
           </>
         )}
       </nav>

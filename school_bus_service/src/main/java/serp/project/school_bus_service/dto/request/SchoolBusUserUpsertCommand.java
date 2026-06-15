@@ -9,7 +9,6 @@ public class SchoolBusUserUpsertCommand extends BaseCommandRequest {
 
     private Long tenantId;
     private Long accountUserId;
-    private String keycloakId;
     private String email;
     private String firstName;
     private String lastName;

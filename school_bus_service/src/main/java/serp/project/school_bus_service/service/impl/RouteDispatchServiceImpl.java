@@ -26,6 +26,7 @@ import serp.project.school_bus_service.service.IDriverService;
 import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
+import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
 
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -56,6 +57,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
     private final IRouteStopService routeStopService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
+    private final ISchoolBusDomainNotificationService domainNotificationService;
 
 
     public RouteDispatchServiceImpl(
@@ -68,7 +70,8 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                                  // @Lazy: breaks circular dep — RouteDispatchServiceImpl ↔ RouteStopServiceImpl
                                  @Lazy IRouteStopService routeStopService,
                                  SchoolBusMapper mapper,
-                                 MessageCommon messageCommon) {
+                                 MessageCommon messageCommon,
+                                 ISchoolBusDomainNotificationService domainNotificationService) {
         this.routeAssignmentRepository = routeAssignmentRepository;
         this.routeAssignmentHistoryRepository = routeAssignmentHistoryRepository;
         this.routeService = routeService;
@@ -78,6 +81,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         this.routeStopService = routeStopService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
+        this.domainNotificationService = domainNotificationService;
     }
 
 
@@ -179,6 +183,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         RouteAssignmentResponse response = mapper.toRouteAssignmentResponse(saved);
 
         if (capacityWarning != null) response.setCapacityWarning(capacityWarning);
+        domainNotificationService.notifyRouteAssigned(saved, actorId);
         return response;
     }
 

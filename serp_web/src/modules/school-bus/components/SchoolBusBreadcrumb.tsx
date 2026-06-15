@@ -56,8 +56,8 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
             className={cn(
               'inline-flex items-center gap-1.5 max-w-[200px] text-[13px] leading-none select-none',
               item.current
-                ? 'font-semibold text-slate-900 cursor-default'
-                : 'font-medium text-slate-500 cursor-pointer transition-colors duration-150 hover:text-slate-900 active:text-slate-950'
+                ? 'cursor-default font-semibold text-foreground'
+                : 'cursor-pointer font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground active:text-foreground'
             )}
           >
             {item.icon ? (
@@ -66,7 +66,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
               <Home
                 className={cn(
                   'h-[14px] w-[14px] shrink-0',
-                  item.current ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                  item.current ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
                 )}
                 aria-hidden='true'
               />
@@ -83,7 +83,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
           crumb = (
             <button
               type='button'
-              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1'
+              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
               onClick={() => handleSectionScroll(item.sectionId!)}
             >
               {labelNode}
@@ -93,7 +93,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
           crumb = (
             <Link
               href={item.href}
-              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1'
+              className='group rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
             >
               {labelNode}
             </Link>
@@ -107,7 +107,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
             {crumb}
             {!isLast && (
               <ChevronRight
-                className='mx-1.5 h-3 w-3 shrink-0 text-slate-300'
+                className='mx-1.5 h-3 w-3 shrink-0 text-border'
                 aria-hidden='true'
               />
             )}

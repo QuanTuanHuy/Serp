@@ -17,7 +17,7 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration,classpath:db/migration-data
   security:
     oauth2:
       resourceserver:
@@ -26,6 +26,12 @@ spring:
           issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
     consumer:
       group-id: ${KAFKA_SCHOOL_BUS_GROUP_ID:school-bus-sync-user}
       auto-offset-reset: earliest
@@ -64,6 +70,9 @@ school-bus:
   kafka:
     topics:
       account-user-events: ${SYNC_USER_TOPIC:SYNC_USER}
+      user-notifications: ${NOTIFICATION_USER_TOPIC:serp.notification.user.events}
+  notification:
+    source-service: ${SCHOOL_BUS_NOTIFICATION_SOURCE:school-bus-service}
   account-sync:
     enabled: ${SCHOOL_BUS_ACCOUNT_SYNC_ENABLED:true}
     cron: ${SCHOOL_BUS_ACCOUNT_SYNC_CRON:0 */30 * * * *}

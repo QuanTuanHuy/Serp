@@ -36,7 +36,7 @@ public class SecondMileHandoverManifestClient {
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
             ObjectMapper objectMapper,
-            @Value("${second-mile.service.base-url:http://localhost:8095}") String secondMileBaseUrl,
+            @Value("${second-mile.service.base-url:http://localhost:8102}") String secondMileBaseUrl,
             @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;

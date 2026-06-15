@@ -6,6 +6,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusStatusBadge } from '../SchoolBusStatusBadge';
 import type { SchoolBusPlanningSession } from '../../types';
+import { schoolBusUi } from '../../theme';
 
 interface PlanningSessionPanelProps {
   activeSession: SchoolBusPlanningSession | null;
@@ -71,7 +72,10 @@ export function PlanningSessionPanel({
             <Button
               onClick={onPublish}
               disabled={!canPublish || publishing}
-              className={cn('flex-1 justify-center rounded-xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 font-semibold text-xs py-1.5 h-auto')}
+              className={cn(
+                schoolBusUi.primaryButton,
+                'flex-1 justify-center rounded-xl font-semibold text-xs py-1.5 h-auto'
+              )}
             >
               {publishing ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Rocket className='mr-1.5 h-3.5 w-3.5' />}
               Publish

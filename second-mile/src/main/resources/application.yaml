@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8095}
+  port: ${SERVER_PORT:8102}
 
 spring:
   servlet:
@@ -64,7 +64,7 @@ internal-api:
 
 tms-order:
   service:
-    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8099}
+    base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8105}
     lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
     status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
   transition-outbox:

@@ -66,11 +66,11 @@ export function SchoolBusMapWorkspace({
         <div
           className={cn(
             expanded
-              ? 'fixed inset-4 z-[900] flex flex-col bg-white shadow-[0_24px_60px_rgba(15,23,42,0.24)] border border-slate-300 rounded-[24px] overflow-hidden'
+              ? 'fixed inset-4 z-[900] flex flex-col bg-card text-card-foreground shadow-[0_24px_60px_rgba(15,23,42,0.24)] border border-border rounded-[24px] overflow-hidden'
               : cn(
                   flat
                     ? 'flex flex-col overflow-hidden w-full h-full'
-                    : 'rounded-[24px] border border-slate-200 bg-white overflow-hidden shadow-[0_14px_36px_rgba(15,23,42,0.05)] flex flex-col',
+                    : 'rounded-[24px] border border-border bg-card text-card-foreground overflow-hidden shadow-[0_14px_36px_rgba(15,23,42,0.05)] flex flex-col',
                   className
                 )
           )}
@@ -113,7 +113,7 @@ export function SchoolBusMapWorkspace({
             {panel && (
               <div
                 className={cn(
-                  'shrink-0 overflow-y-auto border-l border-slate-200 bg-white',
+                  'shrink-0 overflow-y-auto border-l border-border bg-card text-card-foreground',
                   panelClassName ?? 'w-[300px] p-4',
                   expanded ? 'h-full' : 'min-h-0'
                 )}

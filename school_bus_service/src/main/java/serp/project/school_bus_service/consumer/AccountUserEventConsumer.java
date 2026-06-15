@@ -75,7 +75,6 @@ public class AccountUserEventConsumer {
             command.setRoles(eventMessage.getRoleNames());
 
             // Default fallback values since they are absent in SyncUserEvent
-            command.setKeycloakId(null); // KeycloakId is not in the event payload
             command.setAvatarUrl(null); // AvatarUrl is not in the event payload
             command.setPreferredLanguage(null);
             command.setTimezone(null);

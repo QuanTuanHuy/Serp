@@ -51,7 +51,7 @@ public class TmsOrderClient {
     public TmsOrderClient(
             RestClient.Builder restClientBuilder,
             AuthUtils authUtils,
-            @Value("${tms-order.service.base-url:http://localhost:8099}") String tmsOrderBaseUrl,
+            @Value("${tms-order.service.base-url:http://localhost:8105}") String tmsOrderBaseUrl,
             @Value("${internal-api.api-key:}") String internalApiKey
     ) {
         this.authUtils = authUtils;

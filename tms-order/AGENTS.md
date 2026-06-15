@@ -7,7 +7,7 @@ Use it together with the repository-root `AGENTS.md`. For first-mile pickup oper
 
 - **Module:** `tms-order` - Spring Boot 3.5, Java 21, package `serp.project.tms_order`.
 - **Purpose:** canonical TMS order management service for order lifecycle, order identity, customer-facing order state, and cross-leg order status coordination.
-- **Default port:** `8098` (`SERVER_PORT`).
+- **Default port:** `8105` (`SERVER_PORT`).
 - **Database:** PostgreSQL `tms-order` (`DB_URL`).
 - **Auth:** OAuth2 resource server (Keycloak JWT), with method security enabled.
 - **Integrations:** Kafka order/handover/delivery-status topics, DLQ retry config, Goong geocode/distance matrix config, S3-compatible storage.
