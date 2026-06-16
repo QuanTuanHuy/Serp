@@ -115,3 +115,5 @@ Khi sửa pricing rule hoặc strategy, ưu tiên bổ sung test quanh case tín
 - Shared pricing helper đặt trong `core/service/support`.
 - Không hard-code magic number cho rule giá; ưu tiên enum/config/entity rõ nghĩa.
 - Khi thay đổi contract API, cập nhật frontend TMS trong `serp_web` nếu đang dùng.
+
+trigger build 1

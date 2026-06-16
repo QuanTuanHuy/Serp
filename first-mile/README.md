@@ -131,3 +131,5 @@ Khi sửa logic nghiệp vụ, ưu tiên chạy test gần phần vừa sửa tr
   `X-Internal-Service`.
 - Thêm bảng/cột bằng SQL trong `src/main/resources/db/migration/` và đăng ký
   trong `spring.sql.init.schema-locations` nếu muốn chạy qua init mode.
+
+trigger build 1
