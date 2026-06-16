@@ -133,3 +133,5 @@ Service nội bộ cũng có controller generic theo gateway code:
 - Webhook sang `tms-order` phải dùng secret nhất quán giữa hai service.
 - Retry webhook nằm trong `scheduler` và cấu hình `app.webhook.retry`.
 - Khi đổi event notification, kiểm tra topic Kafka trong `app.kafka.topics`.
+
+trigger build 1

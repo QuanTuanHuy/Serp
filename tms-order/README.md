@@ -134,3 +134,5 @@ nhất.
   `X-Internal-Service`.
 - Thêm SQL trong `src/main/resources/db.migration/` và đăng ký vào
   `spring.sql.init.schema-locations` nếu dùng init mode.
+
+trigger build 1

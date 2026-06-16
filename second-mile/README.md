@@ -120,3 +120,5 @@ mới cần đảm bảo môi trường local/dev đã apply script tương ứn
 - Internal call dùng `X-Internal-Api-Key`, `X-Tenant-Id`,
   `X-Internal-Service`.
 - Khi expose API mới, cập nhật type/transform tương ứng ở frontend TMS nếu cần.
+
+trigger build 1
