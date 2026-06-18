@@ -102,6 +102,11 @@ public class PresenceService implements IPresenceService {
                 .orElseGet(() -> UserPresenceEntity.offline(userId, tenantId));
         presence.setCustomStatus(status, statusMessage);
         cacheService.setUserPresence(presence);
+        if (presence.isOnline()) {
+            eventPublisher.publishUserOnline(userId);
+        } else {
+            eventPublisher.publishUserOffline(userId);
+        }
     }
 
     @Override

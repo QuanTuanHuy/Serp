@@ -14,6 +14,7 @@ import {
   Badge,
 } from '@/shared/components/ui';
 import { Hash, Users, Lock } from 'lucide-react';
+import { useAuth } from '@/modules/account';
 import type { Channel, ChannelType } from '../types';
 import { useGetChannelPresenceQuery } from '../api/discussApi';
 
@@ -71,16 +72,24 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
 }) => {
   const showAvatar = channel.type === 'DIRECT' || channel.avatarUrl;
   const icon = showAvatar ? null : getChannelIcon(channel.type);
+  const { user } = useAuth();
+  const currentUserId = user?.id != null ? String(user.id) : undefined;
 
   // Query presence for DIRECT channels to show online indicator
   const { data: presenceData } = useGetChannelPresenceQuery(channel.id, {
     skip: channel.type !== 'DIRECT',
   });
 
+  const directChannelUsers = presenceData?.data?.statusGroups
+    ? Object.values(presenceData.data.statusGroups).flat()
+    : [];
+  const otherDirectUser = currentUserId
+    ? directChannelUsers.find(
+        (presence) => String(presence.userId) !== currentUserId
+      )
+    : undefined;
   const isDmOnline =
-    channel.type === 'DIRECT' &&
-    presenceData?.data?.onlineCount != null &&
-    presenceData.data.onlineCount > 1; // >1 means the other user is also online
+    channel.type === 'DIRECT' && Boolean(otherDirectUser?.isOnline);
 
   return (
     <button

@@ -22,6 +22,9 @@ export interface WebSocketAPI {
       | ((userId: string, userName: string, isTyping: boolean) => void)
       | undefined
   ) => void;
+  setOnUserStatusUpdate: (
+    cb: ((userId: string, isOnline: boolean) => void) | undefined
+  ) => void;
   setOnError: (cb: ((error: any) => void) | undefined) => void;
 }
 

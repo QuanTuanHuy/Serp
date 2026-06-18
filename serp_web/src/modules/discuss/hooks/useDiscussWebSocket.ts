@@ -121,6 +121,13 @@ export const useDiscussWebSocket = () => {
     []
   );
 
+  const setOnUserStatusUpdate = useCallback(
+    (cb: ((userId: string, isOnline: boolean) => void) | undefined) => {
+      onUserStatusUpdateRef.current = cb;
+    },
+    []
+  );
+
   const setOnError = useCallback((cb: ((error: any) => void) | undefined) => {
     onErrorRef.current = cb;
   }, []);
@@ -448,22 +455,31 @@ export const useDiscussWebSocket = () => {
         case 'USER_ONLINE':
         case 'USER_OFFLINE': {
           console.log('[WebSocket] User status update:', type, data);
+          const userId = String(data.userId);
           if (onUserStatusUpdateRef.current) {
-            onUserStatusUpdateRef.current(
-              String(data.userId),
-              type === 'USER_ONLINE'
-            );
+            onUserStatusUpdateRef.current(userId, type === 'USER_ONLINE');
           }
-          dispatch(discussApi.util.invalidateTags(['Presence']));
+          dispatch(
+            discussApi.util.invalidateTags([
+              'Presence',
+              { type: 'Presence', id: `USER-${userId}` },
+            ])
+          );
           break;
         }
 
         case 'USER_PRESENCE_CHANGED': {
           console.log('[WebSocket] User presence changed:', data);
+          const userId = String(data.userId);
           if (onUserStatusUpdateRef.current) {
-            onUserStatusUpdateRef.current(String(data.userId), data.online);
+            onUserStatusUpdateRef.current(userId, Boolean(data.online));
           }
-          dispatch(discussApi.util.invalidateTags(['Presence']));
+          dispatch(
+            discussApi.util.invalidateTags([
+              'Presence',
+              { type: 'Presence', id: `USER-${userId}` },
+            ])
+          );
           break;
         }
 
@@ -674,6 +690,7 @@ export const useDiscussWebSocket = () => {
       setActiveChannel,
       setOnMessage,
       setOnTypingUpdate,
+      setOnUserStatusUpdate,
       setOnError,
     }),
     [
@@ -684,6 +701,7 @@ export const useDiscussWebSocket = () => {
       setActiveChannel,
       setOnMessage,
       setOnTypingUpdate,
+      setOnUserStatusUpdate,
       setOnError,
     ]
   );
