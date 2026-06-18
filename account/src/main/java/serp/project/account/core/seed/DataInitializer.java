@@ -25,9 +25,6 @@ import serp.project.account.core.usecase.RoleUseCase;
 import serp.project.account.core.service.IMenuDisplayService;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IRoleService;
-import serp.project.account.core.service.IUserService;
-import serp.project.account.core.service.IUserModuleAccessService;
-import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.infrastructure.store.mapper.RoleMapper;
 import serp.project.account.kernel.property.AdminProperties;
 import serp.project.account.kernel.utils.RoleEnumUtils;
@@ -53,9 +50,6 @@ public class DataInitializer implements CommandLineRunner {
     private final IModuleService moduleService;
     private final IRoleService roleService;
     private final IMenuDisplayService menuDisplayService;
-    private final IUserService userService;
-    private final IUserModuleAccessService userModuleAccessService;
-    private final ICombineRoleService combineRoleService;
 
     private final RoleMapper roleMapper;
 

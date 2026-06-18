@@ -73,7 +73,7 @@ export const settingsUsersApi = api.injectEndpoints({
           : [{ type: 'settings/User', id: 'LIST' }],
     }),
 
-    getOrganizationRoles: builder.query<
+    getSettingsOrganizationRoles: builder.query<
       ApiResponse<Role[]>,
       { organizationId: number }
     >({
@@ -85,7 +85,7 @@ export const settingsUsersApi = api.injectEndpoints({
       providesTags: [{ type: 'settings/User', id: 'ROLES' }],
     }),
 
-    getUserStats: builder.query<
+    getSettingsUserStats: builder.query<
       ApiResponse<UserStats>,
       { organizationId: number }
     >({
@@ -295,8 +295,8 @@ export const {
   // Users
   useGetOrganizationUsersQuery,
   useLazyGetOrganizationUsersQuery,
-  useGetOrganizationRolesQuery,
-  useGetUserStatsQuery,
+  useGetSettingsOrganizationRolesQuery: useGetOrganizationRolesQuery,
+  useGetSettingsUserStatsQuery: useGetUserStatsQuery,
   useGetUserDetailQuery,
   useLazyGetUserDetailQuery,
   useUpdateUserStatusMutation,
