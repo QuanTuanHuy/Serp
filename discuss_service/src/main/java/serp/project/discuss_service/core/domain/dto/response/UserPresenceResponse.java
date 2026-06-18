@@ -45,8 +45,8 @@ public class UserPresenceResponse {
     }
 
 
-    public static String formatLastSeen(long lastSeenAt, boolean isOnline) {
-        Instant lastSeen = lastSeenAt == 0 ? null : Instant.ofEpochMilli(lastSeenAt);
+    public static String formatLastSeen(Long lastSeenAt, boolean isOnline) {
+        Instant lastSeen = lastSeenAt == null || lastSeenAt == 0 ? null : Instant.ofEpochMilli(lastSeenAt);
         if (isOnline) {
             return "Active now";
         }
