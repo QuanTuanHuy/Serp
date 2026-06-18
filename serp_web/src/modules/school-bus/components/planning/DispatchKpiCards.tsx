@@ -80,7 +80,12 @@ function KpiItem({
     >
       <Icon className={cn('h-4 w-4 shrink-0', color)} />
       <div className='flex items-baseline gap-1.5 min-w-0'>
-        <span className={cn('text-sm font-extrabold leading-none tabular-nums', color)}>
+        <span
+          className={cn(
+            'text-sm font-extrabold leading-none tabular-nums',
+            color
+          )}
+        >
           {value}
         </span>
         <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate'>

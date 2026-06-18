@@ -113,16 +113,18 @@ export const billingApi = api.injectEndpoints({
             ]
           : [{ type: 'billing/VasRule', id: 'LIST' }],
     }),
-    upsertVasRule: builder.mutation<VasRuleAdminResponse, UpsertVasRuleRequest>({
-      query: (body) => ({
-        url: '/admin/pricing/vas-rules',
-        method: 'PUT',
-        body,
-      }),
-      extraOptions: BILLING_SERVICE,
-      transformResponse: unwrapFirstMileResult<VasRuleAdminResponse>,
-      invalidatesTags: [{ type: 'billing/VasRule', id: 'LIST' }],
-    }),
+    upsertVasRule: builder.mutation<VasRuleAdminResponse, UpsertVasRuleRequest>(
+      {
+        query: (body) => ({
+          url: '/admin/pricing/vas-rules',
+          method: 'PUT',
+          body,
+        }),
+        extraOptions: BILLING_SERVICE,
+        transformResponse: unwrapFirstMileResult<VasRuleAdminResponse>,
+        invalidatesTags: [{ type: 'billing/VasRule', id: 'LIST' }],
+      }
+    ),
   }),
   overrideExisting: false,
 });

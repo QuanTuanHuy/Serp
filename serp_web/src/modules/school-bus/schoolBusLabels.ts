@@ -60,7 +60,10 @@ export const usageTypeLabel: Record<string, string> = {
 };
 
 /* ── Generic helper ────────────────────────────────────────────── */
-export function getLabel(map: Record<string, string>, key?: string | null): string {
+export function getLabel(
+  map: Record<string, string>,
+  key?: string | null
+): string {
   if (!key) return '-';
   return map[key.toUpperCase()] ?? key;
 }

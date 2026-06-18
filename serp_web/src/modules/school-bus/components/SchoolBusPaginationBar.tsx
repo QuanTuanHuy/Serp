@@ -23,8 +23,9 @@ export function SchoolBusPaginationBar({
   return (
     <div className='flex flex-col gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
       <div>
-        Page <span className='font-semibold text-foreground'>{currentPage}</span>{' '}
-        of <span className='font-semibold text-foreground'>{totalPages}</span>
+        Page{' '}
+        <span className='font-semibold text-foreground'>{currentPage}</span> of{' '}
+        <span className='font-semibold text-foreground'>{totalPages}</span>
         {' · '}
         <span>{page.totalElements} records</span>
       </div>

@@ -50,13 +50,17 @@ function UnassignedBadge() {
 
 export function SchoolBusStudentsPage() {
   const access = useSchoolBusAccess();
-  const pagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
+  const pagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'fullName',
+    sortDirection: 'ASC',
+  });
   const { data, isLoading } = useGetStudentsQuery(pagination.params);
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
-  const { data: parentsData } = useGetParentDropdownOptionsQuery(
-    undefined,
-    { skip: access.isParentOnly }
-  );
+  const { data: parentsData } = useGetParentDropdownOptionsQuery(undefined, {
+    skip: access.isParentOnly,
+  });
   const [createStudent, { isLoading: creating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: updating }] = useUpdateStudentMutation();
   const [deleteStudent, { isLoading: deleting }] = useDeleteStudentMutation();
@@ -65,10 +69,13 @@ export function SchoolBusStudentsPage() {
   const schools = schoolsData?.data || [];
   const parents = parentsData?.data || [];
 
-
   // ─── Stats ───────────────────────────────────────────────────────
-  const uniqueSchools = new Set(students.map((s) => s.schoolName).filter(Boolean)).size;
-  const linkedParents = new Set(students.map((s) => s.parentProfileId).filter(Boolean)).size;
+  const uniqueSchools = new Set(
+    students.map((s) => s.schoolName).filter(Boolean)
+  ).size;
+  const linkedParents = new Set(
+    students.map((s) => s.parentProfileId).filter(Boolean)
+  ).size;
   const activeStudents = students.filter((s) => s.isActive !== false).length;
 
   // ─── Filter state ────────────────────────────────────────────────
@@ -82,25 +89,35 @@ export function SchoolBusStudentsPage() {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(t);
   }, [searchTerm]);
-  React.useEffect(() => { pagination.setKeyword(debouncedSearch || ''); // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    pagination.setKeyword(debouncedSearch || ''); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
   // Client-side filters
   const filteredStudents = React.useMemo(() => {
     let result = students;
-    if (filterSchool) result = result.filter((s) => s.schoolName === filterSchool);
-    if (filterStatus === 'active') result = result.filter((s) => s.isActive !== false);
-    if (filterStatus === 'inactive') result = result.filter((s) => s.isActive === false);
+    if (filterSchool)
+      result = result.filter((s) => s.schoolName === filterSchool);
+    if (filterStatus === 'active')
+      result = result.filter((s) => s.isActive !== false);
+    if (filterStatus === 'inactive')
+      result = result.filter((s) => s.isActive === false);
     return result;
   }, [students, filterSchool, filterStatus]);
 
   // Unique school names for filter
-  const schoolNames = React.useMemo(() => [...new Set(students.map((s) => s.schoolName).filter(Boolean))].sort(), [students]);
+  const schoolNames = React.useMemo(
+    () =>
+      [...new Set(students.map((s) => s.schoolName).filter(Boolean))].sort(),
+    [students]
+  );
 
   // ─── Dialog state ────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingStudent, setEditingStudent] = React.useState<SchoolBusStudent | null>(null);
-  const [deletingStudent, setDeletingStudent] = React.useState<SchoolBusStudent | null>(null);
+  const [editingStudent, setEditingStudent] =
+    React.useState<SchoolBusStudent | null>(null);
+  const [deletingStudent, setDeletingStudent] =
+    React.useState<SchoolBusStudent | null>(null);
 
   const handleSave = async (values: any) => {
     try {
@@ -110,7 +127,9 @@ export function SchoolBusStudentsPage() {
       toast.success(response.message || 'Student saved');
       setDialogOpen(false);
       setEditingStudent(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save student'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save student');
+    }
   };
 
   const handleDelete = async () => {
@@ -119,7 +138,9 @@ export function SchoolBusStudentsPage() {
       const response = await deleteStudent(deletingStudent.id).unwrap();
       toast.success(response.message || 'Student deleted');
       setDeletingStudent(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to delete student'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to delete student');
+    }
   };
 
   const studentColumns: SchoolBusTableColumn<SchoolBusStudent>[] = [
@@ -134,7 +155,9 @@ export function SchoolBusStudentsPage() {
             <User className='h-4.5 w-4.5' />
           </div>
           <div className='flex flex-col min-w-0'>
-            <p className='font-semibold text-slate-900 truncate'>{student.fullName}</p>
+            <p className='font-semibold text-slate-900 truncate'>
+              {student.fullName}
+            </p>
             <p className='text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-0.5'>
               {student.studentCode ? (
                 <span className='inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-700/10'>
@@ -144,7 +167,11 @@ export function SchoolBusStudentsPage() {
                 <span className='text-slate-400'>No code</span>
               )}
               <span className='text-slate-300'>•</span>
-              <span>{[student.grade, student.className].filter(Boolean).join(' / ') || 'No grade'}</span>
+              <span>
+                {[student.grade, student.className]
+                  .filter(Boolean)
+                  .join(' / ') || 'No grade'}
+              </span>
             </p>
           </div>
         </div>
@@ -158,7 +185,9 @@ export function SchoolBusStudentsPage() {
         const schoolCode = schoolObj?.code;
         return (
           <div className='flex flex-col gap-1 items-start'>
-            <span className='font-medium text-slate-700'>{student.schoolName || '—'}</span>
+            <span className='font-medium text-slate-700'>
+              {student.schoolName || '—'}
+            </span>
             {schoolCode && (
               <span className='inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-[#C81E3A]/10'>
                 {schoolCode}
@@ -173,8 +202,14 @@ export function SchoolBusStudentsPage() {
       header: 'Parent / Contact',
       render: (student) => (
         <div>
-          <p className='text-sm font-medium text-slate-700'>{student.parentProfileName || <UnassignedBadge />}</p>
-          {student.homeAddress && <p className='text-xs text-muted-foreground truncate max-w-[160px]'>{student.homeAddress}</p>}
+          <p className='text-sm font-medium text-slate-700'>
+            {student.parentProfileName || <UnassignedBadge />}
+          </p>
+          {student.homeAddress && (
+            <p className='text-xs text-muted-foreground truncate max-w-[160px]'>
+              {student.homeAddress}
+            </p>
+          )}
         </div>
       ),
     },
@@ -191,7 +226,11 @@ export function SchoolBusStudentsPage() {
     {
       key: 'status',
       header: 'Status',
-      render: (student) => <SchoolBusStatusBadge status={student.isActive ? 'ACTIVE' : 'INACTIVE'} />,
+      render: (student) => (
+        <SchoolBusStatusBadge
+          status={student.isActive ? 'ACTIVE' : 'INACTIVE'}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -206,7 +245,10 @@ export function SchoolBusStudentsPage() {
                 size='icon'
                 variant='outline'
                 className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-                onClick={() => { setEditingStudent(student); setDialogOpen(true); }}
+                onClick={() => {
+                  setEditingStudent(student);
+                  setDialogOpen(true);
+                }}
               >
                 <Pencil className='h-4 w-4' />
               </Button>
@@ -258,7 +300,7 @@ export function SchoolBusStudentsPage() {
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
                 {count}
               </span>
-            )
+            ),
           };
         })}
         clearable
@@ -276,7 +318,7 @@ export function SchoolBusStudentsPage() {
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
                 {students.filter((s) => s.isActive !== false).length}
               </span>
-            )
+            ),
           },
           {
             label: 'Inactive',
@@ -285,7 +327,7 @@ export function SchoolBusStudentsPage() {
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
                 {students.filter((s) => s.isActive === false).length}
               </span>
-            )
+            ),
           },
         ]}
         clearable
@@ -299,14 +341,22 @@ export function SchoolBusStudentsPage() {
         title='Students'
         description='Operational student directory powering route planning, requests, and attendance.'
         breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Students', current: true },
-          ]} />
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Students', current: true },
+            ]}
+          />
         }
         actions={
           access.canWriteStudentData ? (
-            <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingStudent(null); setDialogOpen(true); }}>
+            <Button
+              className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white'
+              onClick={() => {
+                setEditingStudent(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className='h-4 w-4' /> Add student
             </Button>
           ) : undefined
@@ -314,11 +364,33 @@ export function SchoolBusStudentsPage() {
       >
         <div className='flex flex-col gap-6'>
           {/* Stats */}
-          <div className={cn('grid gap-3', access.isParentOnly ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4')}>
-            <SchoolBusMetricCard label='Students' value={students.length} icon={User} tone='student' />
-            <SchoolBusMetricCard label='Schools' value={uniqueSchools} icon={GraduationCap} tone='school' />
+          <div
+            className={cn(
+              'grid gap-3',
+              access.isParentOnly
+                ? 'grid-cols-1 md:grid-cols-3'
+                : 'grid-cols-2 lg:grid-cols-4'
+            )}
+          >
+            <SchoolBusMetricCard
+              label='Students'
+              value={students.length}
+              icon={User}
+              tone='student'
+            />
+            <SchoolBusMetricCard
+              label='Schools'
+              value={uniqueSchools}
+              icon={GraduationCap}
+              tone='school'
+            />
             {!access.isParentOnly && (
-              <SchoolBusMetricCard label='Linked parents' value={linkedParents} icon={Users} tone='default' />
+              <SchoolBusMetricCard
+                label='Linked parents'
+                value={linkedParents}
+                icon={Users}
+                tone='default'
+              />
             )}
             <SchoolBusMetricCard
               label='Active students'
@@ -339,7 +411,11 @@ export function SchoolBusStudentsPage() {
             stickyFirstColumn
             stickyActionColumn
             emptyIcon={User}
-            emptyTitle={students.length === 0 ? 'No students yet' : 'No students match your filters'}
+            emptyTitle={
+              students.length === 0
+                ? 'No students yet'
+                : 'No students match your filters'
+            }
             emptyDescription={
               students.length === 0
                 ? 'Create students and link them to parents and transport defaults.'
@@ -351,7 +427,10 @@ export function SchoolBusStudentsPage() {
 
       <StudentFormDialog
         open={dialogOpen}
-        onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingStudent(null); }}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingStudent(null);
+        }}
         initialData={editingStudent}
         schools={schools}
         parents={parents}
@@ -362,7 +441,9 @@ export function SchoolBusStudentsPage() {
 
       <SchoolBusDeleteDialog
         open={Boolean(deletingStudent)}
-        onOpenChange={(open) => { if (!open) setDeletingStudent(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeletingStudent(null);
+        }}
         title='Delete student'
         description='This will soft-delete the student record from active school-bus operations.'
         isLoading={deleting}

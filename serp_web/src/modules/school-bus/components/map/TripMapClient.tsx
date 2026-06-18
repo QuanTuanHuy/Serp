@@ -61,9 +61,7 @@ export default function TripMapClient({
   // Filter stops that have coordinates
   const validStops = [...stops]
     .filter(
-      (s) =>
-        typeof s.latitude === 'number' &&
-        typeof s.longitude === 'number'
+      (s) => typeof s.latitude === 'number' && typeof s.longitude === 'number'
     )
     .sort((a, b) => a.stopOrder - b.stopOrder);
 
@@ -78,9 +76,12 @@ export default function TripMapClient({
 
   if (routePath?.coordinates && Array.isArray(routePath.coordinates)) {
     actualPathCoords = routePath.coordinates
-      .filter((c: any) => typeof c.latitude === 'number' && typeof c.longitude === 'number')
+      .filter(
+        (c: any) =>
+          typeof c.latitude === 'number' && typeof c.longitude === 'number'
+      )
       .map((c: any) => [c.latitude, c.longitude] as [number, number]);
-    
+
     if (actualPathCoords.length >= 2) {
       isFallback = false;
     }
@@ -93,19 +94,30 @@ export default function TripMapClient({
       if (parsed && Array.isArray(parsed.coordinates)) {
         // Wrapped format: { coordinates: [{latitude, longitude}, ...] }
         actualPathCoords = parsed.coordinates
-          .filter((c: any) => typeof c.latitude === 'number' && typeof c.longitude === 'number')
+          .filter(
+            (c: any) =>
+              typeof c.latitude === 'number' && typeof c.longitude === 'number'
+          )
           .map((c: any) => [c.latitude, c.longitude] as [number, number]);
-        
+
         if (actualPathCoords.length >= 2) {
-          isFallback = parsed.fallbackUsed === true || parsed.geometrySource === 'HAVERSINE_FALLBACK';
+          isFallback =
+            parsed.fallbackUsed === true ||
+            parsed.geometrySource === 'HAVERSINE_FALLBACK';
         }
       } else if (Array.isArray(parsed)) {
         // Raw OSRM GeoJSON coordinate array: [[lng, lat], [lng, lat], ...]
         // Note: OSRM returns [longitude, latitude], Leaflet needs [latitude, longitude]
         actualPathCoords = parsed
-          .filter((c: any) => Array.isArray(c) && c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number')
+          .filter(
+            (c: any) =>
+              Array.isArray(c) &&
+              c.length >= 2 &&
+              typeof c[0] === 'number' &&
+              typeof c[1] === 'number'
+          )
           .map((c: any) => [c[1], c[0]] as [number, number]); // swap: [lat, lng]
-        
+
         if (actualPathCoords.length >= 2) {
           isFallback = false;
         }
@@ -115,13 +127,15 @@ export default function TripMapClient({
     }
   }
 
-  const resolvedLine: [number, number][] = actualPathCoords.length >= 2 ? actualPathCoords : allPositions;
+  const resolvedLine: [number, number][] =
+    actualPathCoords.length >= 2 ? actualPathCoords : allPositions;
 
   // Determine current and next stop based on rules
   const normalizedStatus = (tripStatus || '').toUpperCase();
   const tripIsCompleted = normalizedStatus === 'COMPLETED';
   const tripIsActive = normalizedStatus === 'IN_PROGRESS';
-  const tripNotStarted = normalizedStatus === 'CREATED' || normalizedStatus === 'PLANNED';
+  const tripNotStarted =
+    normalizedStatus === 'CREATED' || normalizedStatus === 'PLANNED';
 
   let currentStopIndex = -1;
   let nextStopIndex = -1;
@@ -161,7 +175,9 @@ export default function TripMapClient({
   const initialCenter =
     allPositions.length > 0 ? allPositions[0] : defaultCenter;
   const initialZoom =
-    allPositions.length > 0 ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
+    allPositions.length > 0
+      ? SCHOOL_BUS_MAP_DETAIL_ZOOM
+      : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
 
   const lineColor = isOutbound ? '#0284c7' : '#059669';
 
@@ -170,7 +186,10 @@ export default function TripMapClient({
       <LeafletMapShell
         center={initialCenter}
         zoom={initialZoom}
-        className={className ?? 'h-[420px] w-full rounded-2xl overflow-hidden border border-slate-200'}
+        className={
+          className ??
+          'h-[420px] w-full rounded-2xl overflow-hidden border border-slate-200'
+        }
       >
         <FitBounds positions={allPositions} />
         <MapInvalidator trigger={isExpanded ? 1 : expandKey} />
@@ -210,12 +229,12 @@ export default function TripMapClient({
             stop.stopPurpose === 'START_TERMINAL'
               ? 'Start terminal'
               : stop.stopPurpose === 'END_TERMINAL'
-              ? 'End terminal'
-              : stop.stopPurpose === 'PICKUP'
-              ? 'Pickup stop'
-              : stop.stopPurpose === 'DROPOFF'
-              ? 'Drop-off stop'
-              : 'Stop';
+                ? 'End terminal'
+                : stop.stopPurpose === 'PICKUP'
+                  ? 'Pickup stop'
+                  : stop.stopPurpose === 'DROPOFF'
+                    ? 'Drop-off stop'
+                    : 'Stop';
 
           return (
             <Marker
@@ -235,13 +254,18 @@ export default function TripMapClient({
                     Order: #{stop.stopOrder} • {purposeLabel}
                   </p>
                   <p className='text-slate-500'>
-                    Status: <span className='font-semibold'>{stop.stopStatus}</span>
+                    Status:{' '}
+                    <span className='font-semibold'>{stop.stopStatus}</span>
                   </p>
                   {stop.plannedBoardingCount > 0 && (
-                    <p className='text-blue-600'>Planned board: {stop.plannedBoardingCount} students</p>
+                    <p className='text-blue-600'>
+                      Planned board: {stop.plannedBoardingCount} students
+                    </p>
                   )}
                   {stop.plannedDropoffCount > 0 && (
-                    <p className='text-emerald-600'>Planned drop-off: {stop.plannedDropoffCount} students</p>
+                    <p className='text-emerald-600'>
+                      Planned drop-off: {stop.plannedDropoffCount} students
+                    </p>
                   )}
                 </div>
               </Popup>

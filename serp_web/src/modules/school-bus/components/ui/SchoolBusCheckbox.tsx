@@ -5,7 +5,9 @@ import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
 import { CheckIcon } from 'lucide-react';
 import { cn } from '@/shared/utils';
 
-export type SchoolBusCheckboxProps = React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>;
+export type SchoolBusCheckboxProps = React.ComponentPropsWithoutRef<
+  typeof CheckboxPrimitive.Root
+>;
 
 export const SchoolBusCheckbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,

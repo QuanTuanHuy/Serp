@@ -34,7 +34,9 @@ export const useVasRuleForm = () => {
     event.preventDefault();
 
     try {
-      const response = await upsertVasRule(buildUpsertVasRuleRequest(form)).unwrap();
+      const response = await upsertVasRule(
+        buildUpsertVasRuleRequest(form)
+      ).unwrap();
       setLastSaved(response);
       notification.success('VAS rule saved successfully.');
       return true;

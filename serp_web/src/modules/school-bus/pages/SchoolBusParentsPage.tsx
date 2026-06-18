@@ -42,27 +42,62 @@ import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 
 // ── Contact completeness helpers ───────────────────────────────────────────────
 
-type ContactCompleteness = 'reachable' | 'missing-phone' | 'missing-email' | 'no-linked-student';
+type ContactCompleteness =
+  | 'reachable'
+  | 'missing-phone'
+  | 'missing-email'
+  | 'no-linked-student';
 
-function getContactCompleteness(parent: SchoolBusParent, linkedStudentCount: number): ContactCompleteness {
+function getContactCompleteness(
+  parent: SchoolBusParent,
+  linkedStudentCount: number
+): ContactCompleteness {
   if (linkedStudentCount === 0) return 'no-linked-student';
   if (!parent.phone) return 'missing-phone';
   if (!parent.email) return 'missing-email';
   return 'reachable';
 }
 
-const contactCompletenessConfig: Record<ContactCompleteness, { label: string; className: string }> = {
-  reachable: { label: 'Reachable', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  'missing-phone': { label: 'Missing phone', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'missing-email': { label: 'Missing email', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  'no-linked-student': { label: 'No linked student', className: 'bg-red-50 text-red-700 ring-red-200' },
+const contactCompletenessConfig: Record<
+  ContactCompleteness,
+  { label: string; className: string }
+> = {
+  reachable: {
+    label: 'Reachable',
+    className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  },
+  'missing-phone': {
+    label: 'Missing phone',
+    className: 'bg-amber-50 text-amber-700 ring-amber-200',
+  },
+  'missing-email': {
+    label: 'Missing email',
+    className: 'bg-amber-50 text-amber-700 ring-amber-200',
+  },
+  'no-linked-student': {
+    label: 'No linked student',
+    className: 'bg-red-50 text-red-700 ring-red-200',
+  },
 };
 
-function ContactCompletenessBadge({ completeness }: { completeness: ContactCompleteness }) {
+function ContactCompletenessBadge({
+  completeness,
+}: {
+  completeness: ContactCompleteness;
+}) {
   const cfg = contactCompletenessConfig[completeness];
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1', cfg.className)}>
-      {completeness === 'reachable' ? <CheckCircle2 className='h-3 w-3' /> : <AlertTriangle className='h-3 w-3' />}
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
+        cfg.className
+      )}
+    >
+      {completeness === 'reachable' ? (
+        <CheckCircle2 className='h-3 w-3' />
+      ) : (
+        <AlertTriangle className='h-3 w-3' />
+      )}
       {cfg.label}
     </span>
   );
@@ -73,22 +108,36 @@ function ContactCompletenessBadge({ completeness }: { completeness: ContactCompl
 export function SchoolBusParentsPage() {
   const currentUser = useAppSelector(selectUserProfile);
   const organizationId = currentUser?.organizationId;
-  const pagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
+  const pagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'fullName',
+    sortDirection: 'ASC',
+  });
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingParent, setEditingParent] = React.useState<SchoolBusParent | null>(null);
-  const [deletingParent, setDeletingParent] = React.useState<SchoolBusParent | null>(null);
+  const [editingParent, setEditingParent] =
+    React.useState<SchoolBusParent | null>(null);
+  const [deletingParent, setDeletingParent] =
+    React.useState<SchoolBusParent | null>(null);
 
   const { data, isLoading } = useGetParentsQuery(pagination.params);
   const { data: parentOptionsData } = useGetParentsQuery(
     { page: 0, size: 100, sortBy: 'fullName', sortDirection: 'ASC' },
-    { skip: !dialogOpen },
+    { skip: !dialogOpen }
   );
-  const { data: studentsData } = useGetStudentsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'fullName' });
-  const { data: accountUsersData, isFetching: loadingAccountUsers } = useGetSchoolBusModuleUsersQuery(
-    { organizationId: organizationId || 0, moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID },
-    { skip: !dialogOpen || !organizationId },
-  );
+  const { data: studentsData } = useGetStudentsQuery({
+    ...SCHOOL_BUS_OPTION_QUERY,
+    sortBy: 'fullName',
+  });
+  const { data: accountUsersData, isFetching: loadingAccountUsers } =
+    useGetSchoolBusModuleUsersQuery(
+      {
+        organizationId: organizationId || 0,
+        moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID,
+      },
+      { skip: !dialogOpen || !organizationId }
+    );
 
   const [createParent, { isLoading: creating }] = useCreateParentMutation();
   const [updateParent, { isLoading: updating }] = useUpdateParentMutation();
@@ -104,7 +153,10 @@ export function SchoolBusParentsPage() {
     const map = new Map<number, number>();
     for (const student of allStudents) {
       if (student.parentProfileId) {
-        map.set(student.parentProfileId, (map.get(student.parentProfileId) || 0) + 1);
+        map.set(
+          student.parentProfileId,
+          (map.get(student.parentProfileId) || 0) + 1
+        );
       }
     }
     return map;
@@ -113,7 +165,9 @@ export function SchoolBusParentsPage() {
   // ─── Stats ──────────────────────────────────────────────────────
   const withEmail = parents.filter((p) => p.email).length;
   const withPhone = parents.filter((p) => p.phone).length;
-  const noLinkedStudents = parents.filter((p) => !linkedStudentsMap.get(p.id)).length;
+  const noLinkedStudents = parents.filter(
+    (p) => !linkedStudentsMap.get(p.id)
+  ).length;
 
   // ─── Filter state ───────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -126,7 +180,8 @@ export function SchoolBusParentsPage() {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(t);
   }, [searchTerm]);
-  React.useEffect(() => { pagination.setKeyword(debouncedSearch || ''); // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    pagination.setKeyword(debouncedSearch || ''); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
   // Client-side filters
@@ -134,17 +189,26 @@ export function SchoolBusParentsPage() {
     let result = parents;
     if (filterContact === 'has-phone') result = result.filter((p) => p.phone);
     if (filterContact === 'has-email') result = result.filter((p) => p.email);
-    if (filterContact === 'missing-phone') result = result.filter((p) => !p.phone);
-    if (filterContact === 'missing-email') result = result.filter((p) => !p.email);
-    if (filterStatus === 'active') result = result.filter((p) => p.isActive !== false);
-    if (filterStatus === 'inactive') result = result.filter((p) => p.isActive === false);
+    if (filterContact === 'missing-phone')
+      result = result.filter((p) => !p.phone);
+    if (filterContact === 'missing-email')
+      result = result.filter((p) => !p.email);
+    if (filterStatus === 'active')
+      result = result.filter((p) => p.isActive !== false);
+    if (filterStatus === 'inactive')
+      result = result.filter((p) => p.isActive === false);
     return result;
   }, [parents, filterContact, filterStatus]);
 
   // ─── Dialog helpers ─────────────────────────────────────────────
   const parentDialogUsers = React.useMemo(
-    () => buildAvailableParentAccountUsers({ users: accountUsers, parentProfiles: parentOptions, editingParent }),
-    [accountUsers, parentOptions, editingParent],
+    () =>
+      buildAvailableParentAccountUsers({
+        users: accountUsers,
+        parentProfiles: parentOptions,
+        editingParent,
+      }),
+    [accountUsers, parentOptions, editingParent]
   );
 
   const handleSave = async (values: any) => {
@@ -155,7 +219,9 @@ export function SchoolBusParentsPage() {
       toast.success(response.message || 'Parent profile saved');
       setDialogOpen(false);
       setEditingParent(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save parent profile'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save parent profile');
+    }
   };
 
   const handleDelete = async () => {
@@ -164,7 +230,9 @@ export function SchoolBusParentsPage() {
       const response = await deleteParent(deletingParent.id).unwrap();
       toast.success(response.message || 'Parent profile deleted');
       setDeletingParent(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to delete parent profile'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to delete parent profile');
+    }
   };
 
   const parentColumns: SchoolBusTableColumn<SchoolBusParent>[] = [
@@ -192,8 +260,14 @@ export function SchoolBusParentsPage() {
       header: 'Contact',
       render: (parent) => (
         <div>
-          <p className='text-sm'>{parent.phone || <span className='text-slate-400 italic'>No phone</span>}</p>
-          <p className='text-xs text-muted-foreground'>{parent.email || <span className='italic'>No email</span>}</p>
+          <p className='text-sm'>
+            {parent.phone || (
+              <span className='text-slate-400 italic'>No phone</span>
+            )}
+          </p>
+          <p className='text-xs text-muted-foreground'>
+            {parent.email || <span className='italic'>No email</span>}
+          </p>
         </div>
       ),
     },
@@ -226,13 +300,21 @@ export function SchoolBusParentsPage() {
       key: 'address',
       header: 'Address',
       render: (parent) => (
-        <span className='text-sm'>{parent.address || <span className='text-slate-400 italic'>No address</span>}</span>
+        <span className='text-sm'>
+          {parent.address || (
+            <span className='text-slate-400 italic'>No address</span>
+          )}
+        </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (parent) => <SchoolBusStatusBadge status={parent.isActive ? 'ACTIVE' : 'INACTIVE'} />,
+      render: (parent) => (
+        <SchoolBusStatusBadge
+          status={parent.isActive ? 'ACTIVE' : 'INACTIVE'}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -245,7 +327,10 @@ export function SchoolBusParentsPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingParent(parent); setDialogOpen(true); }}
+            onClick={() => {
+              setEditingParent(parent);
+              setDialogOpen(true);
+            }}
           >
             <Pencil className='h-4 w-4' />
           </Button>
@@ -307,13 +392,21 @@ export function SchoolBusParentsPage() {
         title='Parent profiles'
         description='Operational parent directory — contact data powering notifications, escalation, and student linkage.'
         breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Parents', current: true },
-          ]} />
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Parents', current: true },
+            ]}
+          />
         }
         actions={
-          <Button className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white' onClick={() => { setEditingParent(null); setDialogOpen(true); }}>
+          <Button
+            className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white'
+            onClick={() => {
+              setEditingParent(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className='h-4 w-4' /> Add parent profile
           </Button>
         }
@@ -321,15 +414,37 @@ export function SchoolBusParentsPage() {
         <div className='flex flex-col gap-6'>
           {/* Stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-            <SchoolBusMetricCard label='Parent profiles' value={parents.length} icon={Users} tone='info' hint='Profiles linked to school-bus operations' />
-            <SchoolBusMetricCard label='With email' value={withEmail} icon={Mail} tone='success' hint='Ready for notification flows' />
-            <SchoolBusMetricCard label='With phone' value={withPhone} icon={Phone} tone='default' hint='Reachable for escalation' />
+            <SchoolBusMetricCard
+              label='Parent profiles'
+              value={parents.length}
+              icon={Users}
+              tone='info'
+              hint='Profiles linked to school-bus operations'
+            />
+            <SchoolBusMetricCard
+              label='With email'
+              value={withEmail}
+              icon={Mail}
+              tone='success'
+              hint='Ready for notification flows'
+            />
+            <SchoolBusMetricCard
+              label='With phone'
+              value={withPhone}
+              icon={Phone}
+              tone='default'
+              hint='Reachable for escalation'
+            />
             <SchoolBusMetricCard
               label='No linked student'
               value={noLinkedStudents}
               icon={AlertTriangle}
               tone={noLinkedStudents > 0 ? 'warning' : 'success'}
-              hint={noLinkedStudents > 0 ? 'Parents without any linked student' : 'All parents linked'}
+              hint={
+                noLinkedStudents > 0
+                  ? 'Parents without any linked student'
+                  : 'All parents linked'
+              }
             />
           </div>
 
@@ -344,7 +459,11 @@ export function SchoolBusParentsPage() {
             stickyFirstColumn
             stickyActionColumn
             emptyIcon={Users}
-            emptyTitle={parents.length === 0 ? 'No parent profiles found' : 'No parents match the current filters'}
+            emptyTitle={
+              parents.length === 0
+                ? 'No parent profiles found'
+                : 'No parents match the current filters'
+            }
             emptyDescription={
               parents.length === 0
                 ? 'Create parent profiles so requests and family linkage can be managed in the module.'
@@ -356,7 +475,10 @@ export function SchoolBusParentsPage() {
 
       <ParentFormDialog
         open={dialogOpen}
-        onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingParent(null); }}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingParent(null);
+        }}
         initialData={editingParent}
         accountUsers={parentDialogUsers}
         isLoadingAccountUsers={loadingAccountUsers}
@@ -366,7 +488,9 @@ export function SchoolBusParentsPage() {
 
       <SchoolBusDeleteDialog
         open={Boolean(deletingParent)}
-        onOpenChange={(open) => { if (!open) setDeletingParent(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeletingParent(null);
+        }}
         title='Delete parent profile'
         description='This will soft-delete the operational parent profile from school-bus use.'
         isLoading={deleting}
@@ -389,18 +513,22 @@ function buildAvailableParentAccountUsers({
     parentProfiles
       .filter((parent) => parent.id !== editingParent?.id)
       .filter((parent) => parent.isActive !== false)
-      .map((parent) => parent.userId),
+      .map((parent) => parent.userId)
   );
 
   const availableUsers = users.filter(
-    (user) => !linkedUserIds.has(user.id) || user.id === editingParent?.userId,
+    (user) => !linkedUserIds.has(user.id) || user.id === editingParent?.userId
   );
 
-  if (editingParent && !availableUsers.some((user) => user.id === editingParent.userId)) {
+  if (
+    editingParent &&
+    !availableUsers.some((user) => user.id === editingParent.userId)
+  ) {
     return [
       {
         id: editingParent.userId,
-        email: editingParent.email || `user-${editingParent.userId}@unknown.local`,
+        email:
+          editingParent.email || `user-${editingParent.userId}@unknown.local`,
         firstName: editingParent.fullName,
         lastName: '',
         phoneNumber: editingParent.phone || null,

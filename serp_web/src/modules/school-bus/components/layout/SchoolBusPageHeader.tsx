@@ -56,7 +56,7 @@ export function SchoolBusPageHeader({
             </div>
           )}
         </div>
-        
+
         {actions && (
           <div className='flex shrink-0 flex-wrap items-center gap-2.5 sm:gap-3'>
             {actions}

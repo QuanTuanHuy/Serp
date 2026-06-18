@@ -1,7 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Compass, Expand, Minimize2, Navigation, RouteIcon } from 'lucide-react';
+import {
+  Compass,
+  Expand,
+  Minimize2,
+  Navigation,
+  RouteIcon,
+} from 'lucide-react';
 import {
   Button,
   DropdownMenu,

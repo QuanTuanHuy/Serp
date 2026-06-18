@@ -72,9 +72,11 @@ const REQUEST_COLORS = {
 };
 
 function countActiveFilters(filters: DashboardFilters) {
-  return Number(Boolean(filters.serviceDate))
-    + Number(filters.schoolId !== undefined)
-    + Number(Boolean(filters.direction));
+  return (
+    Number(Boolean(filters.serviceDate)) +
+    Number(filters.schoolId !== undefined) +
+    Number(Boolean(filters.direction))
+  );
 }
 
 export function SchoolBusDashboardPage() {

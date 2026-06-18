@@ -6,22 +6,13 @@
 'use client';
 
 import React from 'react';
-import {
-  useBillingCalculator,
-  useBillingLocationOptions,
-} from '../hooks';
+import { useBillingCalculator, useBillingLocationOptions } from '../hooks';
 import { BillingCalculatorForm } from './BillingCalculatorForm';
 import { BillingCalculationResultCard } from './BillingCalculationResultCard';
 
 export const BillingCalculatorTab: React.FC = () => {
-  const {
-    formValues,
-    setFormValues,
-    result,
-    isLoading,
-    submit,
-    reset,
-  } = useBillingCalculator();
+  const { formValues, setFormValues, result, isLoading, submit, reset } =
+    useBillingCalculator();
 
   const senderProvinceCode = formValues.senderProvinceCode.trim();
   const receiverProvinceCode = formValues.receiverProvinceCode.trim();

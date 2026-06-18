@@ -18,7 +18,9 @@ interface SchoolBusRouteFormPageProps {
   routeId?: number;
 }
 
-export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps) {
+export function SchoolBusRouteFormPage({
+  routeId,
+}: SchoolBusRouteFormPageProps) {
   const router = useRouter();
   const { data: routeData, isLoading: loadingRoute } = useGetRouteByIdQuery(
     routeId as number,
@@ -33,7 +35,10 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
 
   const handleSubmit = async (values: SchoolBusRouteUpsertRequest) => {
     try {
-      const response = await updateRoute({ id: routeId as number, body: values }).unwrap();
+      const response = await updateRoute({
+        id: routeId as number,
+        body: values,
+      }).unwrap();
       toast.success(response.message || 'Route saved');
       router.push(`/school-bus/dispatch/${response.data.id}`);
     } catch (error: any) {
@@ -43,7 +48,10 @@ export function SchoolBusRouteFormPage({ routeId }: SchoolBusRouteFormPageProps)
 
   if (loadingRoute) {
     return (
-      <SchoolBusPageShell title='Edit route' description='Loading route detail...'>
+      <SchoolBusPageShell
+        title='Edit route'
+        description='Loading route detail...'
+      >
         <SchoolBusEmptyState
           title='Loading route'
           description='Fetching the route snapshot for editing.'

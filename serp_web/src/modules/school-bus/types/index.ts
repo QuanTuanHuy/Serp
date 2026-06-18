@@ -342,8 +342,8 @@ export interface SchoolBusRoutePath {
 
 export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   routeId: number;
-  locationType?: string | null;   // DEPOT | SCHOOL | PICKUP_POINT
-  stopPurpose?: string | null;    // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
+  locationType?: string | null; // DEPOT | SCHOOL | PICKUP_POINT
+  stopPurpose?: string | null; // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
   displayName?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -533,10 +533,10 @@ export interface SchoolBusCapacityUtilization {
 export interface TripAttendanceStopItem {
   routeStopId: number;
   stopOrder: number;
-  locationType?: string | null;   // DEPOT | SCHOOL | PICKUP_POINT
-  stopPurpose?: string | null;    // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
+  locationType?: string | null; // DEPOT | SCHOOL | PICKUP_POINT
+  stopPurpose?: string | null; // START_TERMINAL | PICKUP | DROPOFF | END_TERMINAL
   displayName?: string | null;
-  stopName?: string | null;       // legacy compat
+  stopName?: string | null; // legacy compat
   stopStatus: string;
   plannedBoardingCount: number;
   plannedDropoffCount: number;
@@ -787,7 +787,8 @@ export interface SchoolBusRouteAssignmentRequest {
   isActive?: boolean;
 }
 
-export interface SchoolBusManualDispatchRequest extends SchoolBusRouteAssignmentRequest {
+export interface SchoolBusManualDispatchRequest
+  extends SchoolBusRouteAssignmentRequest {
   orderedStopIds?: number[];
   notes?: string;
 }
@@ -832,7 +833,12 @@ export interface SchoolBusSchoolPickupPointUpsertRequest {
 
 // ── Planning Session ──────────────────────────────────────────────────────
 
-export type PlanningSessionStatus = 'DRAFT' | 'GENERATED' | 'REVIEWING' | 'PUBLISHED' | 'CANCELLED';
+export type PlanningSessionStatus =
+  | 'DRAFT'
+  | 'GENERATED'
+  | 'REVIEWING'
+  | 'PUBLISHED'
+  | 'CANCELLED';
 
 export interface SchoolBusPlanningSession extends SchoolBusBaseRecord {
   schoolId: number;
@@ -927,7 +933,7 @@ export interface SchoolBusPlanningPreview {
   totalEligiblePickupPoints: number;
   eligibleStudents: SchoolBusEligibleStudent[];
   eligiblePickupPoints: SchoolBusPlanningPickupPoint[];
-  
+
   schoolCode?: string;
   schoolAddress?: string;
   activeDays?: string[];
@@ -1024,6 +1030,3 @@ export interface SchoolBusDropdownOption {
   description?: string;
   metadata?: Record<string, any>;
 }
-
-
-

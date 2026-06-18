@@ -124,7 +124,9 @@ export function BillingPricingRulesTable<T>({
                   {columns.map((column) => (
                     <TableHead key={column.key}>{column.label}</TableHead>
                   ))}
-                  <TableHead className='w-[100px] text-right'>Actions</TableHead>
+                  <TableHead className='w-[100px] text-right'>
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { schoolBusUi } from '../theme';
 
@@ -80,7 +85,11 @@ export function SchoolBusTableTabs({
         {flatContent ? (
           <div className='mt-2'>
             {tabs.map((tab) => (
-              <TabsContent key={tab.value} value={tab.value} className='mt-0 p-0'>
+              <TabsContent
+                key={tab.value}
+                value={tab.value}
+                className='mt-0 p-0'
+              >
                 <div
                   key={`${tab.value}-${contentMotionKey}`}
                   className='school-bus-tab-panel-enter'
@@ -93,7 +102,11 @@ export function SchoolBusTableTabs({
         ) : (
           <div className={cn(schoolBusUi.card, 'mt-2 overflow-hidden p-0')}>
             {tabs.map((tab) => (
-              <TabsContent key={tab.value} value={tab.value} className='mt-0 p-0'>
+              <TabsContent
+                key={tab.value}
+                value={tab.value}
+                className='mt-0 p-0'
+              >
                 <div
                   key={`${tab.value}-${contentMotionKey}`}
                   className='school-bus-tab-panel-enter'

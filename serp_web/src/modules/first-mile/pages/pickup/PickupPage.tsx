@@ -574,11 +574,12 @@ export const PickupPage: React.FC = () => {
     useCompletePickupTripMutation();
   const [returnPickupTripToPostOffice, { isLoading: isReturningTrip }] =
     useReturnPickupTripToPostOfficeMutation();
-  const [confirmPostOfficeInbound, { isLoading: isConfirmingPostOfficeInbound }] =
-    useConfirmPickupTripPostOfficeInboundMutation();
-  const [inboundTrip, setInboundTrip] = React.useState<PickupTrackingTrip | null>(
-    null
-  );
+  const [
+    confirmPostOfficeInbound,
+    { isLoading: isConfirmingPostOfficeInbound },
+  ] = useConfirmPickupTripPostOfficeInboundMutation();
+  const [inboundTrip, setInboundTrip] =
+    React.useState<PickupTrackingTrip | null>(null);
 
   const applyValidCheckinCoordinates = React.useCallback(
     (order: PickupTrackingOrder) => {
@@ -977,7 +978,9 @@ export const PickupPage: React.FC = () => {
                 <CardHeader className='pb-2'>
                   <CardDescription>Pending post office inbound</CardDescription>
                   <CardTitle className='text-2xl'>
-                    {formatNumber(pickupOverview?.pendingPostOfficeInboundOrders)}
+                    {formatNumber(
+                      pickupOverview?.pendingPostOfficeInboundOrders
+                    )}
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -1077,7 +1080,9 @@ export const PickupPage: React.FC = () => {
                                     isReturningTrip ||
                                     isConfirmingPostOfficeInbound
                                   }
-                                  onClick={() => handleOpenPostOfficeInbound(trip)}
+                                  onClick={() =>
+                                    handleOpenPostOfficeInbound(trip)
+                                  }
                                 >
                                   Receive at post office
                                 </Button>

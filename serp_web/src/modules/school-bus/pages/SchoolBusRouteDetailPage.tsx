@@ -39,8 +39,12 @@ import { RouteMap } from '../components/map/RouteMap';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { schoolBusUi } from '../theme';
-import { formatDate, formatDateTime, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
-
+import {
+  formatDate,
+  formatDateTime,
+  getPageItems,
+  SCHOOL_BUS_OPTION_QUERY,
+} from '../utils';
 
 interface SchoolBusRouteDetailPageProps {
   routeId: number;
@@ -49,21 +53,22 @@ interface SchoolBusRouteDetailPageProps {
 export function SchoolBusRouteDetailPage({
   routeId,
 }: SchoolBusRouteDetailPageProps) {
-  const { data, isLoading, refetch: refetchRoute } = useGetRouteByIdQuery(routeId);
+  const {
+    data,
+    isLoading,
+    refetch: refetchRoute,
+  } = useGetRouteByIdQuery(routeId);
   const { data: driversData } = useGetDriverDropdownOptionsQuery();
 
-
-
   const { data: attendantsData } = useGetAttendantDropdownOptionsQuery();
-
-
 
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
   const [createTripFromRoute, { isLoading: creatingTrip }] =
     useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
   const [fitKey, setFitKey] = React.useState(0);
-  const { data: routePathData, refetch: refetchPath } = useGetRoutePathQuery(routeId);
+  const { data: routePathData, refetch: refetchPath } =
+    useGetRoutePathQuery(routeId);
 
   const detail = data?.data;
 
@@ -78,7 +83,10 @@ export function SchoolBusRouteDetailPage({
 
   const handleAssign = async (values: any) => {
     try {
-      const response = await assignRoute({ id: routeId, body: values }).unwrap();
+      const response = await assignRoute({
+        id: routeId,
+        body: values,
+      }).unwrap();
       toast.success(response.message || 'Route assigned');
       setAssignmentOpen(false);
     } catch (error: any) {
@@ -97,7 +105,10 @@ export function SchoolBusRouteDetailPage({
 
   if (isLoading || !detail) {
     return (
-      <SchoolBusPageShell title='Route detail' description='Loading route detail...'>
+      <SchoolBusPageShell
+        title='Route detail'
+        description='Loading route detail...'
+      >
         <SchoolBusEmptyState
           title='Loading route detail'
           description='Fetching route, stop, and assignment data.'
@@ -108,9 +119,14 @@ export function SchoolBusRouteDetailPage({
 
   const route = detail.route;
   const isAssigned = !!detail.assignment;
-  const selectedBusPlate = detail.assignment?.busPlateNumber ?? route.busPlateNumber;
-  const selectedBusCapacity = detail.assignment?.busCapacity ?? route.busCapacity ?? route.assignedBusCapacity;
-  const plannedStudentCount = route.plannedStudentCount ?? detail.students.length ?? 0;
+  const selectedBusPlate =
+    detail.assignment?.busPlateNumber ?? route.busPlateNumber;
+  const selectedBusCapacity =
+    detail.assignment?.busCapacity ??
+    route.busCapacity ??
+    route.assignedBusCapacity;
+  const plannedStudentCount =
+    route.plannedStudentCount ?? detail.students.length ?? 0;
   const stopsCount = route.stopsCount ?? detail.stops.length;
   const driverName = detail.assignment?.driverName ?? route.driverName;
   const attendantName = detail.assignment?.attendantName ?? route.attendantName;
@@ -125,7 +141,7 @@ export function SchoolBusRouteDetailPage({
       stop.stopPurpose !== 'START_TERMINAL' &&
       stop.stopPurpose !== 'END_TERMINAL' &&
       (typeof stop.pickupPointLatitude !== 'number' ||
-        typeof stop.pickupPointLongitude !== 'number'),
+        typeof stop.pickupPointLongitude !== 'number')
   ).length;
 
   const friendlyStatusLabel = (status: string) => {
@@ -159,7 +175,8 @@ export function SchoolBusRouteDetailPage({
               variant={isAssigned ? 'outline' : 'default'}
               className={cn(
                 'rounded-full font-semibold',
-                !isAssigned && 'bg-[#C81E3A] hover:bg-[#B31B34] text-white border-0'
+                !isAssigned &&
+                  'bg-[#C81E3A] hover:bg-[#B31B34] text-white border-0'
               )}
               onClick={() => setAssignmentOpen(true)}
             >
@@ -167,7 +184,9 @@ export function SchoolBusRouteDetailPage({
               {isAssigned ? 'Manage assignment' : 'Assign resources'}
             </Button>
             <Button variant='outline' className='rounded-full' asChild>
-              <Link href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId || ''}&routeId=${route.id || ''}`}>
+              <Link
+                href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId || ''}&routeId=${route.id || ''}`}
+              >
                 <Sparkles className='h-4 w-4' />
                 Plan workspace
               </Link>
@@ -188,69 +207,180 @@ export function SchoolBusRouteDetailPage({
         {/* Status Strip */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-6'>
           <StatusCard
-            label="Planning"
+            label='Planning'
             value={route.status === 'DRAFT' ? 'Draft' : 'Complete'}
             status={route.status === 'DRAFT' ? 'warning' : 'success'}
           />
           <StatusCard
-            label="Assignment"
+            label='Assignment'
             value={isAssigned ? 'Ready' : 'Missing'}
             status={isAssigned ? 'success' : 'warning'}
           />
           <StatusCard
-            label="Trip Snapshot"
-            value={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'Locked' : 'Not created'}
-            status={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'success' : 'muted'}
+            label='Trip Snapshot'
+            value={
+              ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(
+                route.status
+              )
+                ? 'Locked'
+                : 'Not created'
+            }
+            status={
+              ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(
+                route.status
+              )
+                ? 'success'
+                : 'muted'
+            }
           />
           <StatusCard
-            label="Attendance"
-            value={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'Available' : 'Locked'}
-            status={['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status) ? 'success' : 'muted'}
+            label='Attendance'
+            value={
+              ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(
+                route.status
+              )
+                ? 'Available'
+                : 'Locked'
+            }
+            status={
+              ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(
+                route.status
+              )
+                ? 'success'
+                : 'muted'
+            }
           />
         </div>
 
         {/* Main 2-column workspace */}
         <div className='grid gap-6 xl:grid-cols-[0.95fr_1.05fr] items-start'>
-          
           {/* Left Column */}
           <div className='flex flex-col gap-6'>
-            
             {/* Route Summary compact card */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <div className='flex items-center justify-between pb-2.5 border-b border-slate-100'>
                 <div className='flex items-center gap-2'>
                   <Route className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
-                  <h3 className='font-bold text-slate-900 text-sm'>Route Summary</h3>
+                  <h3 className='font-bold text-slate-900 text-sm'>
+                    Route Summary
+                  </h3>
                 </div>
                 <span className='rounded-full px-2.5 py-0.5 text-[10px] font-extrabold border shadow-none bg-slate-50 border-slate-200 text-slate-600 uppercase tracking-wider'>
                   {friendlyStatusLabel(route.status)}
                 </span>
               </div>
-              
+
               <div className='grid grid-cols-2 gap-y-4 gap-x-6 text-xs'>
-                <SummaryItem label="School" value={route.schoolName} icon={GraduationCap} />
                 <SummaryItem
-                  label="Direction"
-                  value={route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}
+                  label='School'
+                  value={route.schoolName}
+                  icon={GraduationCap}
+                />
+                <SummaryItem
+                  label='Direction'
+                  value={
+                    route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'
+                  }
                   icon={MapPinned}
                   isBadge
-                  badgeColor={route.routeDirection === 'RETURN' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}
+                  badgeColor={
+                    route.routeDirection === 'RETURN'
+                      ? 'bg-orange-50 text-orange-700 border-orange-100'
+                      : 'bg-blue-50 text-blue-700 border-blue-100'
+                  }
                 />
-                <SummaryItem label="Service Date" value={formatDate(route.serviceDate)} icon={Calendar} />
+                <SummaryItem
+                  label='Service Date'
+                  value={formatDate(route.serviceDate)}
+                  icon={Calendar}
+                />
 
-                <SummaryItem label="Start Terminal" value={`${route.startLocationName} (${route.startLocationType})`} icon={MapPin} />
-                <SummaryItem label="End Terminal" value={`${route.endLocationName} (${route.endLocationType})`} icon={MapPin} />
-                <SummaryItem label="Depot" value={route.startDepotName ?? (route.startLocationType === 'DEPOT' ? route.startLocationName : route.endLocationName)} icon={MapPin} />
-                <SummaryItem label="Planned Distance" value={route.plannedDistanceKm != null ? `${route.plannedDistanceKm} km` : 'N/A'} icon={Route} />
-                <SummaryItem label="Planned Duration" value={route.plannedDurationMin != null ? `${route.plannedDurationMin} mins` : 'N/A'} icon={Clock3} />
-                <SummaryItem label="Bus" value={selectedBusPlate || 'No bus selected'} icon={BusFront} />
-                <SummaryItem label="Capacity" value={selectedBusCapacity != null ? `${selectedBusCapacity} seats` : 'N/A'} icon={Users} />
-                <SummaryItem label="Students" value={selectedBusCapacity != null ? `${plannedStudentCount}/${selectedBusCapacity}` : String(plannedStudentCount)} icon={Users} />
-                <SummaryItem label="Stops" value={String(stopsCount)} icon={Route} />
-                <SummaryItem label="Driver" value={driverName || 'No driver'} icon={UserCog} />
-                <SummaryItem label="Attendant" value={attendantName || 'No attendant'} icon={UserCog} />
-                <SummaryItem label="Started At" value={formatDateTime(route.startedAt) || 'N/A'} icon={PlayCircle} />
-                <SummaryItem label="Completed At" value={formatDateTime(route.completedAt) || 'N/A'} icon={ClipboardCheck} />
+                <SummaryItem
+                  label='Start Terminal'
+                  value={`${route.startLocationName} (${route.startLocationType})`}
+                  icon={MapPin}
+                />
+                <SummaryItem
+                  label='End Terminal'
+                  value={`${route.endLocationName} (${route.endLocationType})`}
+                  icon={MapPin}
+                />
+                <SummaryItem
+                  label='Depot'
+                  value={
+                    route.startDepotName ??
+                    (route.startLocationType === 'DEPOT'
+                      ? route.startLocationName
+                      : route.endLocationName)
+                  }
+                  icon={MapPin}
+                />
+                <SummaryItem
+                  label='Planned Distance'
+                  value={
+                    route.plannedDistanceKm != null
+                      ? `${route.plannedDistanceKm} km`
+                      : 'N/A'
+                  }
+                  icon={Route}
+                />
+                <SummaryItem
+                  label='Planned Duration'
+                  value={
+                    route.plannedDurationMin != null
+                      ? `${route.plannedDurationMin} mins`
+                      : 'N/A'
+                  }
+                  icon={Clock3}
+                />
+                <SummaryItem
+                  label='Bus'
+                  value={selectedBusPlate || 'No bus selected'}
+                  icon={BusFront}
+                />
+                <SummaryItem
+                  label='Capacity'
+                  value={
+                    selectedBusCapacity != null
+                      ? `${selectedBusCapacity} seats`
+                      : 'N/A'
+                  }
+                  icon={Users}
+                />
+                <SummaryItem
+                  label='Students'
+                  value={
+                    selectedBusCapacity != null
+                      ? `${plannedStudentCount}/${selectedBusCapacity}`
+                      : String(plannedStudentCount)
+                  }
+                  icon={Users}
+                />
+                <SummaryItem
+                  label='Stops'
+                  value={String(stopsCount)}
+                  icon={Route}
+                />
+                <SummaryItem
+                  label='Driver'
+                  value={driverName || 'No driver'}
+                  icon={UserCog}
+                />
+                <SummaryItem
+                  label='Attendant'
+                  value={attendantName || 'No attendant'}
+                  icon={UserCog}
+                />
+                <SummaryItem
+                  label='Started At'
+                  value={formatDateTime(route.startedAt) || 'N/A'}
+                  icon={PlayCircle}
+                />
+                <SummaryItem
+                  label='Completed At'
+                  value={formatDateTime(route.completedAt) || 'N/A'}
+                  icon={ClipboardCheck}
+                />
               </div>
             </div>
 
@@ -259,33 +389,39 @@ export function SchoolBusRouteDetailPage({
               <div className='flex items-center justify-between pb-2.5 border-b border-slate-100'>
                 <div className='flex items-center gap-2'>
                   <UserCog className='h-4.5 w-4.5 text-emerald-600 shrink-0' />
-                  <h3 className='font-bold text-slate-900 text-sm'>Assignment Details</h3>
+                  <h3 className='font-bold text-slate-900 text-sm'>
+                    Assignment Details
+                  </h3>
                 </div>
-                <span className={cn(
-                  'rounded-full px-2.5 py-0.5 text-[10px] font-bold border shadow-none uppercase tracking-wider',
-                  isAssigned
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                    : 'bg-amber-50 text-amber-700 border-amber-250'
-                )}>
-                  {isAssigned ? 'Ready for execution' : `Missing ${missingResourceCount} resource(s)`}
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-bold border shadow-none uppercase tracking-wider',
+                    isAssigned
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                      : 'bg-amber-50 text-amber-700 border-amber-250'
+                  )}
+                >
+                  {isAssigned
+                    ? 'Ready for execution'
+                    : `Missing ${missingResourceCount} resource(s)`}
                 </span>
               </div>
 
               <div className='grid gap-3'>
                 <AssignmentRow
-                  label="Bus Vehicle"
+                  label='Bus Vehicle'
                   value={selectedBusPlate}
-                  type="bus"
+                  type='bus'
                 />
                 <AssignmentRow
-                  label="Driver"
+                  label='Driver'
                   value={driverName}
-                  type="driver"
+                  type='driver'
                 />
                 <AssignmentRow
-                  label="Attendant"
+                  label='Attendant'
                   value={attendantName}
-                  type="attendant"
+                  type='attendant'
                 />
               </div>
 
@@ -294,7 +430,8 @@ export function SchoolBusRouteDetailPage({
                   variant={isAssigned ? 'outline' : 'default'}
                   className={cn(
                     'w-full rounded-full text-xs font-semibold h-9',
-                    !isAssigned && 'bg-[#C81E3A] hover:bg-[#B31B34] text-white border-0'
+                    !isAssigned &&
+                      'bg-[#C81E3A] hover:bg-[#B31B34] text-white border-0'
                   )}
                   onClick={() => setAssignmentOpen(true)}
                 >
@@ -308,38 +445,49 @@ export function SchoolBusRouteDetailPage({
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <div className='flex items-center gap-2 pb-2.5 border-b border-slate-100'>
                 <ClipboardCheck className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
-                <h3 className='font-bold text-slate-900 text-sm'>Route Workflow</h3>
+                <h3 className='font-bold text-slate-900 text-sm'>
+                  Route Workflow
+                </h3>
               </div>
 
               <div className='relative pl-3.5 space-y-6 before:absolute before:left-[23px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100'>
                 {/* Step 1: Plan Route */}
                 <WorkflowStep
                   stepNumber={1}
-                  title="Plan Route"
-                  description="Define school, schedule, direction, and draft stops."
-                  status="completed"
+                  title='Plan Route'
+                  description='Define school, schedule, direction, and draft stops.'
+                  status='completed'
                 />
 
                 {/* Step 2: Assign Resources */}
                 <WorkflowStep
                   stepNumber={2}
-                  title="Assign Resources"
-                  description="Assign driver and attendant to execute this route."
+                  title='Assign Resources'
+                  description='Assign driver and attendant to execute this route.'
                   status={isAssigned ? 'completed' : 'current'}
-                  action={!isAssigned ? (
-                    <Button size='sm' variant='outline' className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none' onClick={() => setAssignmentOpen(true)}>
-                      Assign resources
-                    </Button>
-                  ) : null}
+                  action={
+                    !isAssigned ? (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none'
+                        onClick={() => setAssignmentOpen(true)}
+                      >
+                        Assign resources
+                      </Button>
+                    ) : null
+                  }
                 />
 
                 {/* Step 3: Create Trip Snapshot */}
                 <WorkflowStep
                   stepNumber={3}
-                  title="Create Trip Snapshot"
-                  description="Lock route structure into an active trip manifest."
+                  title='Create Trip Snapshot'
+                  description='Lock route structure into an active trip manifest.'
                   status={
-                    ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status)
+                    ['TRIP_CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(
+                      route.status
+                    )
                       ? 'completed'
                       : isAssigned
                         ? 'available'
@@ -347,7 +495,12 @@ export function SchoolBusRouteDetailPage({
                   }
                   action={
                     route.status === 'ASSIGNED' ? (
-                      <Button size='sm' className='h-7 text-[10px] rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white mt-2 font-semibold shadow-none' onClick={handleCreateTrip} disabled={creatingTrip}>
+                      <Button
+                        size='sm'
+                        className='h-7 text-[10px] rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white mt-2 font-semibold shadow-none'
+                        onClick={handleCreateTrip}
+                        disabled={creatingTrip}
+                      >
                         {creatingTrip ? 'Creating...' : 'Create trip'}
                       </Button>
                     ) : null
@@ -357,8 +510,8 @@ export function SchoolBusRouteDetailPage({
                 {/* Step 4: Run Attendance */}
                 <WorkflowStep
                   stepNumber={4}
-                  title="Run Attendance"
-                  description="Check-in and check-out students using manifest lists."
+                  title='Run Attendance'
+                  description='Check-in and check-out students using manifest lists.'
                   status={
                     ['IN_PROGRESS', 'COMPLETED'].includes(route.status)
                       ? 'completed'
@@ -368,7 +521,12 @@ export function SchoolBusRouteDetailPage({
                   }
                   action={
                     ['TRIP_CREATED', 'IN_PROGRESS'].includes(route.status) ? (
-                      <Button size='sm' variant='outline' className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none' asChild>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none'
+                        asChild
+                      >
                         <Link href='/school-bus/trips'>
                           Open Trip Operations
                         </Link>
@@ -380,8 +538,8 @@ export function SchoolBusRouteDetailPage({
                 {/* Step 5: Complete Journey */}
                 <WorkflowStep
                   stepNumber={5}
-                  title="Complete Trip"
-                  description="Mark trip execution as finished."
+                  title='Complete Trip'
+                  description='Mark trip execution as finished.'
                   status={
                     route.status === 'COMPLETED'
                       ? 'completed'
@@ -392,12 +550,10 @@ export function SchoolBusRouteDetailPage({
                 />
               </div>
             </div>
-
           </div>
 
           {/* Right Column */}
           <div className='flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start'>
-            
             {/* Route Map Card with Workspace Wrapper */}
             <div className='bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col'>
               <div className='p-4 border-b border-slate-100 flex items-center justify-between'>
@@ -437,9 +593,13 @@ export function SchoolBusRouteDetailPage({
               <div className='flex items-center justify-between pb-2.5 border-b border-slate-100'>
                 <div className='flex items-center gap-2'>
                   <Route className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
-                  <h3 className='font-bold text-slate-900 text-sm'>Stop Sequence Plan</h3>
+                  <h3 className='font-bold text-slate-900 text-sm'>
+                    Stop Sequence Plan
+                  </h3>
                 </div>
-                <span className='text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full'>{detail.stops.length} location(s)</span>
+                <span className='text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full'>
+                  {detail.stops.length} location(s)
+                </span>
               </div>
 
               {detail.stops.length === 0 ? (
@@ -454,37 +614,60 @@ export function SchoolBusRouteDetailPage({
                     const isStart = stop.stopPurpose === 'START_TERMINAL';
                     const isEnd = stop.stopPurpose === 'END_TERMINAL';
                     const isDropoff = stop.stopPurpose === 'DROPOFF';
-                    
+
                     return (
-                      <div key={stop.id} className='relative flex items-start gap-4 text-xs'>
+                      <div
+                        key={stop.id}
+                        className='relative flex items-start gap-4 text-xs'
+                      >
                         {/* Node */}
-                        <span className={cn(
-                          'absolute -left-[20px] top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full text-[9px] font-extrabold ring-4 ring-white border shadow-sm',
-                          isStart ? 'bg-orange-500 border-orange-655 text-white' :
-                          isEnd ? 'bg-red-500 border-red-655 text-white' :
-                          isDropoff ? 'bg-emerald-500 border-emerald-655 text-white' :
-                          'bg-blue-500 border-blue-655 text-white'
-                        )}>
+                        <span
+                          className={cn(
+                            'absolute -left-[20px] top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full text-[9px] font-extrabold ring-4 ring-white border shadow-sm',
+                            isStart
+                              ? 'bg-orange-500 border-orange-655 text-white'
+                              : isEnd
+                                ? 'bg-red-500 border-red-655 text-white'
+                                : isDropoff
+                                  ? 'bg-emerald-500 border-emerald-655 text-white'
+                                  : 'bg-blue-500 border-blue-655 text-white'
+                          )}
+                        >
                           {isStart ? 'S' : isEnd ? 'E' : stop.stopOrder}
                         </span>
 
                         <div className='min-w-0 flex-1 p-3 rounded-xl bg-slate-50/50 border border-slate-100 flex items-center justify-between gap-3'>
                           <div className='min-w-0'>
                             <p className='font-bold text-slate-800 truncate'>
-                              {stop.displayName ?? stop.pickupPointName ?? `Stop #${stop.id}`}
+                              {stop.displayName ??
+                                stop.pickupPointName ??
+                                `Stop #${stop.id}`}
                             </p>
                             <p className='text-[10px] text-slate-450 mt-1 flex items-center gap-1.5'>
-                              <span className={cn(
-                                'inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-extrabold border uppercase tracking-wider',
-                                isStart ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                isEnd ? 'bg-red-50 text-red-700 border-red-100' :
-                                isDropoff ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                'bg-blue-50 text-blue-700 border-blue-100'
-                              )}>
-                                {isStart ? 'Depot' : isEnd ? 'School' : isDropoff ? 'Drop-off' : 'Pickup'}
+                              <span
+                                className={cn(
+                                  'inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-extrabold border uppercase tracking-wider',
+                                  isStart
+                                    ? 'bg-orange-50 text-orange-700 border-orange-100'
+                                    : isEnd
+                                      ? 'bg-red-50 text-red-700 border-red-100'
+                                      : isDropoff
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                        : 'bg-blue-50 text-blue-700 border-blue-100'
+                                )}
+                              >
+                                {isStart
+                                  ? 'Depot'
+                                  : isEnd
+                                    ? 'School'
+                                    : isDropoff
+                                      ? 'Drop-off'
+                                      : 'Pickup'}
                               </span>
                               <span>•</span>
-                              <span>{stop.estimatedStudentCount ?? 0} student(s)</span>
+                              <span>
+                                {stop.estimatedStudentCount ?? 0} student(s)
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -494,9 +677,7 @@ export function SchoolBusRouteDetailPage({
                 </div>
               )}
             </div>
-
           </div>
-
         </div>
       </SchoolBusPageShell>
 
@@ -524,16 +705,28 @@ function StatusCard({
 }) {
   return (
     <div className='bg-white border border-slate-205 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-[80px]'>
-      <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>{label}</span>
-      <span className={cn(
-        'text-sm font-extrabold mt-1 inline-flex items-center gap-1.5',
-        status === 'success' ? 'text-emerald-700' :
-        status === 'warning' ? 'text-amber-700' :
-        status === 'danger' ? 'text-rose-700' : 'text-slate-400'
-      )}>
-        {status === 'success' ? '✓ ' : 
-         status === 'warning' ? '⚠ ' : 
-         status === 'danger' ? '✗ ' : '🔒 '}
+      <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+        {label}
+      </span>
+      <span
+        className={cn(
+          'text-sm font-extrabold mt-1 inline-flex items-center gap-1.5',
+          status === 'success'
+            ? 'text-emerald-700'
+            : status === 'warning'
+              ? 'text-amber-700'
+              : status === 'danger'
+                ? 'text-rose-700'
+                : 'text-slate-400'
+        )}
+      >
+        {status === 'success'
+          ? '✓ '
+          : status === 'warning'
+            ? '⚠ '
+            : status === 'danger'
+              ? '✗ '
+              : '🔒 '}
         {value}
       </span>
     </div>
@@ -561,13 +754,27 @@ function SummaryItem({
         <Icon className='h-3.5 w-3.5' />
       </div>
       <div className='min-w-0 flex-1'>
-        <p className='text-[10px] font-semibold text-slate-400 leading-none'>{label}</p>
+        <p className='text-[10px] font-semibold text-slate-400 leading-none'>
+          {label}
+        </p>
         {isBadge && !isNa ? (
-          <span className={cn('inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border mt-1', badgeColor)}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border mt-1',
+              badgeColor
+            )}
+          >
             {displayVal}
           </span>
         ) : (
-          <p className={cn('font-bold text-slate-705 truncate mt-1 text-[11px]', isNa && 'text-slate-400 italic font-medium')}>{displayVal}</p>
+          <p
+            className={cn(
+              'font-bold text-slate-705 truncate mt-1 text-[11px]',
+              isNa && 'text-slate-400 italic font-medium'
+            )}
+          >
+            {displayVal}
+          </p>
         )}
       </div>
     </div>
@@ -586,34 +793,47 @@ function AssignmentRow({
   const Icon = type === 'bus' ? BusFront : type === 'driver' ? UserCog : Users;
   const isMissing = !value;
   return (
-    <div className={cn(
-      'flex items-center justify-between p-3.5 rounded-xl border transition-all duration-155',
-      isMissing
-        ? 'bg-amber-50/20 border-amber-100 text-amber-800'
-        : 'bg-slate-50/50 border-slate-100 text-slate-800'
-    )}>
+    <div
+      className={cn(
+        'flex items-center justify-between p-3.5 rounded-xl border transition-all duration-155',
+        isMissing
+          ? 'bg-amber-50/20 border-amber-100 text-amber-800'
+          : 'bg-slate-50/50 border-slate-100 text-slate-800'
+      )}
+    >
       <div className='flex items-center gap-3.5 min-w-0'>
-        <div className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm',
-          isMissing
-            ? 'bg-amber-50 text-amber-500 border-amber-100'
-            : 'bg-indigo-50 text-indigo-650 border-indigo-100'
-        )}>
+        <div
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm',
+            isMissing
+              ? 'bg-amber-50 text-amber-500 border-amber-100'
+              : 'bg-indigo-50 text-indigo-650 border-indigo-100'
+          )}
+        >
           <Icon className='h-4 w-4' />
         </div>
         <div className='min-w-0'>
-          <p className='text-[10px] font-semibold text-slate-405 leading-none'>{label}</p>
-          <p className={cn('font-bold text-slate-800 mt-1 truncate text-xs', isMissing && 'text-amber-700 italic font-medium')}>
+          <p className='text-[10px] font-semibold text-slate-405 leading-none'>
+            {label}
+          </p>
+          <p
+            className={cn(
+              'font-bold text-slate-800 mt-1 truncate text-xs',
+              isMissing && 'text-amber-700 italic font-medium'
+            )}
+          >
             {value || `Missing ${type}`}
           </p>
         </div>
       </div>
-      <span className={cn(
-        'rounded-full px-2.5 py-0.5 text-[9px] font-extrabold border shadow-none shrink-0 uppercase tracking-wider',
-        isMissing
-          ? 'bg-amber-50 text-amber-750 border-amber-200'
-          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-      )}>
+      <span
+        className={cn(
+          'rounded-full px-2.5 py-0.5 text-[9px] font-extrabold border shadow-none shrink-0 uppercase tracking-wider',
+          isMissing
+            ? 'bg-amber-50 text-amber-750 border-amber-200'
+            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        )}
+      >
         {isMissing ? 'Missing' : 'Assigned'}
       </span>
     </div>
@@ -635,27 +855,39 @@ function WorkflowStep({
 }) {
   return (
     <div className='relative flex items-start gap-4'>
-      <span className={cn(
-        'z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white border shadow-sm',
-        status === 'completed' ? 'bg-emerald-500 border-emerald-600 text-white' :
-        status === 'current' ? 'bg-[#C81E3A] border-[#C81E3A] text-white animate-pulse' :
-        status === 'available' ? 'bg-indigo-50 border-indigo-400 text-indigo-755' :
-        'bg-slate-105 border-slate-200 text-slate-400'
-      )}>
+      <span
+        className={cn(
+          'z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white border shadow-sm',
+          status === 'completed'
+            ? 'bg-emerald-500 border-emerald-600 text-white'
+            : status === 'current'
+              ? 'bg-[#C81E3A] border-[#C81E3A] text-white animate-pulse'
+              : status === 'available'
+                ? 'bg-indigo-50 border-indigo-400 text-indigo-755'
+                : 'bg-slate-105 border-slate-200 text-slate-400'
+        )}
+      >
         {status === 'completed' ? '✓' : stepNumber}
       </span>
-      
+
       <div className='min-w-0 flex-1 bg-slate-50/30 border border-slate-100/60 rounded-xl p-3.5 shadow-sm'>
-        <p className={cn(
-          'text-xs font-bold leading-none',
-          status === 'completed' ? 'text-slate-800' :
-          status === 'current' ? 'text-[#C81E3A]' :
-          status === 'available' ? 'text-indigo-950 font-bold' :
-          'text-slate-400'
-        )}>
+        <p
+          className={cn(
+            'text-xs font-bold leading-none',
+            status === 'completed'
+              ? 'text-slate-800'
+              : status === 'current'
+                ? 'text-[#C81E3A]'
+                : status === 'available'
+                  ? 'text-indigo-950 font-bold'
+                  : 'text-slate-400'
+          )}
+        >
           {title}
         </p>
-        <p className='text-[10px] text-slate-500 mt-1.5 leading-relaxed'>{description}</p>
+        <p className='text-[10px] text-slate-500 mt-1.5 leading-relaxed'>
+          {description}
+        </p>
         {action}
       </div>
     </div>

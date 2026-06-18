@@ -18,8 +18,9 @@ import {
 
 export const useSurchargeRuleForm = () => {
   const notification = useNotification();
-  const [form, setForm] =
-    React.useState<SurchargeRuleFormState>(DEFAULT_SURCHARGE_FORM);
+  const [form, setForm] = React.useState<SurchargeRuleFormState>(
+    DEFAULT_SURCHARGE_FORM
+  );
   const [lastSaved, setLastSaved] =
     React.useState<SurchargeRuleAdminResponse | null>(null);
   const [upsertSurchargeRule, { isLoading }] = useUpsertSurchargeRuleMutation();

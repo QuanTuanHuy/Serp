@@ -90,8 +90,6 @@ function WarningBadge({ label }: { label: string }) {
   );
 }
 
-
-
 type FleetDeleteTarget =
   | { type: 'bus'; entity: SchoolBusBus }
   | { type: 'driver'; entity: SchoolBusDriver }
@@ -109,16 +107,43 @@ export function SchoolBusFleetPage() {
   const [activeTab, setActiveTab] = React.useState('buses');
 
   // ─── Pagination ─────────────────────────────────────────────────
-  const busPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'plateNumber', sortDirection: 'ASC' });
-  const driverPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
-  const attendantPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'fullName', sortDirection: 'ASC' });
-  const depotPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
+  const busPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'plateNumber',
+    sortDirection: 'ASC',
+  });
+  const driverPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'fullName',
+    sortDirection: 'ASC',
+  });
+  const attendantPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'fullName',
+    sortDirection: 'ASC',
+  });
+  const depotPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'name',
+    sortDirection: 'ASC',
+  });
 
   // ─── Queries ────────────────────────────────────────────────────
-  const { data: busesData, isLoading: loadingBuses } = useGetBusesQuery(busPagination.params);
-  const { data: driversData, isLoading: loadingDrivers } = useGetDriversQuery(driverPagination.params);
-  const { data: attendantsData, isLoading: loadingAttendants } = useGetAttendantsQuery(attendantPagination.params);
-  const { data: depotsPageData, isLoading: loadingDepots } = useGetDepotsQuery(depotPagination.params);
+  const { data: busesData, isLoading: loadingBuses } = useGetBusesQuery(
+    busPagination.params
+  );
+  const { data: driversData, isLoading: loadingDrivers } = useGetDriversQuery(
+    driverPagination.params
+  );
+  const { data: attendantsData, isLoading: loadingAttendants } =
+    useGetAttendantsQuery(attendantPagination.params);
+  const { data: depotsPageData, isLoading: loadingDepots } = useGetDepotsQuery(
+    depotPagination.params
+  );
 
   // ─── Dialog state ───────────────────────────────────────────────
   const [busDialogOpen, setBusDialogOpen] = React.useState(false);
@@ -127,34 +152,45 @@ export function SchoolBusFleetPage() {
   const [depotDialogOpen, setDepotDialogOpen] = React.useState(false);
   const accountUserDialogOpen = driverDialogOpen || attendantDialogOpen;
 
-  const { data: accountUsersData, isFetching: loadingAccountUsers } = useGetSchoolBusModuleUsersQuery(
-    { organizationId: organizationId || 0, moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID },
-    { skip: !accountUserDialogOpen || !organizationId },
-  );
+  const { data: accountUsersData, isFetching: loadingAccountUsers } =
+    useGetSchoolBusModuleUsersQuery(
+      {
+        organizationId: organizationId || 0,
+        moduleId: SCHOOL_BUS_ACCOUNT_MODULE_ID,
+      },
+      { skip: !accountUserDialogOpen || !organizationId }
+    );
   const { data: driverOptionsData } = useGetDriversQuery(
     { page: 0, size: 100, sortBy: 'fullName', sortDirection: 'ASC' },
-    { skip: !driverDialogOpen },
+    { skip: !driverDialogOpen }
   );
   const { data: attendantOptionsData } = useGetAttendantsQuery(
     { page: 0, size: 100, sortBy: 'fullName', sortDirection: 'ASC' },
-    { skip: !attendantDialogOpen },
+    { skip: !attendantDialogOpen }
   );
-  const { data: busTypesData, isFetching: loadingBusTypes } = useGetBusTypesQuery(undefined, { skip: !busDialogOpen });
+  const { data: busTypesData, isFetching: loadingBusTypes } =
+    useGetBusTypesQuery(undefined, { skip: !busDialogOpen });
   const { data: depotsData } = useGetDepotsQuery(
     { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' },
-    { skip: !busDialogOpen && !depotDialogOpen && activeTab !== 'buses' },
+    { skip: !busDialogOpen && !depotDialogOpen && activeTab !== 'buses' }
   );
 
   // ─── Mutations ──────────────────────────────────────────────────
   const [createBus, { isLoading: creatingBus }] = useCreateBusMutation();
   const [updateBus, { isLoading: updatingBus }] = useUpdateBusMutation();
   const [deleteBus, { isLoading: deletingBus }] = useDeleteBusMutation();
-  const [createDriver, { isLoading: creatingDriver }] = useCreateDriverMutation();
-  const [updateDriver, { isLoading: updatingDriver }] = useUpdateDriverMutation();
-  const [deleteDriver, { isLoading: deletingDriver }] = useDeleteDriverMutation();
-  const [createAttendant, { isLoading: creatingAttendant }] = useCreateAttendantMutation();
-  const [updateAttendant, { isLoading: updatingAttendant }] = useUpdateAttendantMutation();
-  const [deleteAttendant, { isLoading: deletingAttendant }] = useDeleteAttendantMutation();
+  const [createDriver, { isLoading: creatingDriver }] =
+    useCreateDriverMutation();
+  const [updateDriver, { isLoading: updatingDriver }] =
+    useUpdateDriverMutation();
+  const [deleteDriver, { isLoading: deletingDriver }] =
+    useDeleteDriverMutation();
+  const [createAttendant, { isLoading: creatingAttendant }] =
+    useCreateAttendantMutation();
+  const [updateAttendant, { isLoading: updatingAttendant }] =
+    useUpdateAttendantMutation();
+  const [deleteAttendant, { isLoading: deletingAttendant }] =
+    useDeleteAttendantMutation();
   const [createDepot, { isLoading: creatingDepot }] = useCreateDepotMutation();
   const [updateDepot, { isLoading: updatingDepot }] = useUpdateDepotMutation();
   const [deleteDepot, { isLoading: deletingDepot }] = useDeleteDepotMutation();
@@ -171,9 +207,15 @@ export function SchoolBusFleetPage() {
   const depots = getPageItems(depotsData?.data);
 
   // ─── Stats ──────────────────────────────────────────────────────
-  const availableBuses = buses.filter((b) => b.status === 'AVAILABLE' || b.status === 'ACTIVE').length;
-  const availableDrivers = drivers.filter((d) => d.isActive !== false && d.status !== 'ON_LEAVE').length;
-  const availableAttendants = attendants.filter((a) => a.isActive !== false && a.status !== 'ON_LEAVE').length;
+  const availableBuses = buses.filter(
+    (b) => b.status === 'AVAILABLE' || b.status === 'ACTIVE'
+  ).length;
+  const availableDrivers = drivers.filter(
+    (d) => d.isActive !== false && d.status !== 'ON_LEAVE'
+  ).length;
+  const availableAttendants = attendants.filter(
+    (a) => a.isActive !== false && a.status !== 'ON_LEAVE'
+  ).length;
 
   // ─── Filter state (per tab) ─────────────────────────────────────
   const [busSearch, setBusSearch] = React.useState('');
@@ -194,10 +236,16 @@ export function SchoolBusFleetPage() {
     let result = buses;
     if (busSearch) {
       const q = busSearch.toLowerCase();
-      result = result.filter((b) => b.plateNumber.toLowerCase().includes(q) || b.homeDepotName?.toLowerCase().includes(q));
+      result = result.filter(
+        (b) =>
+          b.plateNumber.toLowerCase().includes(q) ||
+          b.homeDepotName?.toLowerCase().includes(q)
+      );
     }
-    if (busStatusFilter) result = result.filter((b) => b.status === busStatusFilter);
-    if (busDepotFilter) result = result.filter((b) => b.homeDepotId === Number(busDepotFilter));
+    if (busStatusFilter)
+      result = result.filter((b) => b.status === busStatusFilter);
+    if (busDepotFilter)
+      result = result.filter((b) => b.homeDepotId === Number(busDepotFilter));
     return result;
   }, [buses, busSearch, busStatusFilter, busDepotFilter]);
 
@@ -205,10 +253,16 @@ export function SchoolBusFleetPage() {
     let result = drivers;
     if (driverSearch) {
       const q = driverSearch.toLowerCase();
-      result = result.filter((d) => d.fullName.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q));
+      result = result.filter(
+        (d) =>
+          d.fullName.toLowerCase().includes(q) ||
+          d.phone?.toLowerCase().includes(q)
+      );
     }
-    if (driverStatusFilter === 'active') result = result.filter((d) => d.isActive !== false);
-    if (driverStatusFilter === 'inactive') result = result.filter((d) => d.isActive === false);
+    if (driverStatusFilter === 'active')
+      result = result.filter((d) => d.isActive !== false);
+    if (driverStatusFilter === 'inactive')
+      result = result.filter((d) => d.isActive === false);
     return result;
   }, [drivers, driverSearch, driverStatusFilter]);
 
@@ -218,8 +272,10 @@ export function SchoolBusFleetPage() {
       const q = attendantSearch.toLowerCase();
       result = result.filter((a) => a.fullName.toLowerCase().includes(q));
     }
-    if (attendantStatusFilter === 'active') result = result.filter((a) => a.isActive !== false);
-    if (attendantStatusFilter === 'inactive') result = result.filter((a) => a.isActive === false);
+    if (attendantStatusFilter === 'active')
+      result = result.filter((a) => a.isActive !== false);
+    if (attendantStatusFilter === 'inactive')
+      result = result.filter((a) => a.isActive === false);
     return result;
   }, [attendants, attendantSearch, attendantStatusFilter]);
 
@@ -227,7 +283,11 @@ export function SchoolBusFleetPage() {
     let result = depotsPage;
     if (depotSearch) {
       const q = depotSearch.toLowerCase();
-      result = result.filter((d) => d.name.toLowerCase().includes(q) || d.address?.toLowerCase().includes(q));
+      result = result.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.address?.toLowerCase().includes(q)
+      );
     }
     if (depotCoordsFilter === 'set') {
       result = result.filter((d) => d.latitude && d.longitude);
@@ -240,18 +300,33 @@ export function SchoolBusFleetPage() {
 
   // ─── Editing state ──────────────────────────────────────────────
   const [editingBus, setEditingBus] = React.useState<SchoolBusBus | null>(null);
-  const [editingDriver, setEditingDriver] = React.useState<SchoolBusDriver | null>(null);
-  const [editingAttendant, setEditingAttendant] = React.useState<SchoolBusAttendant | null>(null);
-  const [editingDepot, setEditingDepot] = React.useState<SchoolBusDepot | null>(null);
-  const [deleteTarget, setDeleteTarget] = React.useState<FleetDeleteTarget>(null);
+  const [editingDriver, setEditingDriver] =
+    React.useState<SchoolBusDriver | null>(null);
+  const [editingAttendant, setEditingAttendant] =
+    React.useState<SchoolBusAttendant | null>(null);
+  const [editingDepot, setEditingDepot] = React.useState<SchoolBusDepot | null>(
+    null
+  );
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<FleetDeleteTarget>(null);
 
   const driverDialogUsers = React.useMemo(
-    () => buildAvailableCrewAccountUsers({ users: accountUsers, crewProfiles: driverOptions, editingProfile: editingDriver }),
-    [accountUsers, driverOptions, editingDriver],
+    () =>
+      buildAvailableCrewAccountUsers({
+        users: accountUsers,
+        crewProfiles: driverOptions,
+        editingProfile: editingDriver,
+      }),
+    [accountUsers, driverOptions, editingDriver]
   );
   const attendantDialogUsers = React.useMemo(
-    () => buildAvailableCrewAccountUsers({ users: accountUsers, crewProfiles: attendantOptions, editingProfile: editingAttendant }),
-    [accountUsers, attendantOptions, editingAttendant],
+    () =>
+      buildAvailableCrewAccountUsers({
+        users: accountUsers,
+        crewProfiles: attendantOptions,
+        editingProfile: editingAttendant,
+      }),
+    [accountUsers, attendantOptions, editingAttendant]
   );
 
   // ─── Handlers ───────────────────────────────────────────────────
@@ -261,8 +336,11 @@ export function SchoolBusFleetPage() {
         ? await updateBus({ id: editingBus.id, body: values }).unwrap()
         : await createBus(values).unwrap();
       toast.success(response.message || 'Bus saved');
-      setBusDialogOpen(false); setEditingBus(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save bus'); }
+      setBusDialogOpen(false);
+      setEditingBus(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save bus');
+    }
   };
 
   const handleSaveDriver = async (values: any) => {
@@ -271,18 +349,27 @@ export function SchoolBusFleetPage() {
         ? await updateDriver({ id: editingDriver.id, body: values }).unwrap()
         : await createDriver(values).unwrap();
       toast.success(response.message || 'Driver saved');
-      setDriverDialogOpen(false); setEditingDriver(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save driver'); }
+      setDriverDialogOpen(false);
+      setEditingDriver(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save driver');
+    }
   };
 
   const handleSaveAttendant = async (values: any) => {
     try {
       const response = editingAttendant
-        ? await updateAttendant({ id: editingAttendant.id, body: values }).unwrap()
+        ? await updateAttendant({
+            id: editingAttendant.id,
+            body: values,
+          }).unwrap()
         : await createAttendant(values).unwrap();
       toast.success(response.message || 'Attendant saved');
-      setAttendantDialogOpen(false); setEditingAttendant(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save attendant'); }
+      setAttendantDialogOpen(false);
+      setEditingAttendant(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save attendant');
+    }
   };
 
   const handleSaveDepot = async (values: any) => {
@@ -291,8 +378,11 @@ export function SchoolBusFleetPage() {
         ? await updateDepot({ id: editingDepot.id, body: values }).unwrap()
         : await createDepot(values).unwrap();
       toast.success(response.message || 'Depot saved');
-      setDepotDialogOpen(false); setEditingDepot(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save depot'); }
+      setDepotDialogOpen(false);
+      setEditingDepot(null);
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save depot');
+    }
   };
 
   const handleDelete = async () => {
@@ -312,7 +402,9 @@ export function SchoolBusFleetPage() {
         toast.success(response.message || 'Depot deleted');
       }
       setDeleteTarget(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Delete failed'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Delete failed');
+    }
   };
 
   // ─── Table definitions ──────────────────────────────────────────
@@ -349,21 +441,32 @@ export function SchoolBusFleetPage() {
     {
       key: 'type',
       header: 'Type',
-      render: (bus) => <span className='text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100'>{formatBusType(bus.busType)}</span>,
+      render: (bus) => (
+        <span className='text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100'>
+          {formatBusType(bus.busType)}
+        </span>
+      ),
     },
     {
       key: 'capacity',
       header: 'Capacity',
-      render: (bus) => <span className='text-xs text-slate-700 font-medium'>{bus.capacity} seats</span>,
+      render: (bus) => (
+        <span className='text-xs text-slate-700 font-medium'>
+          {bus.capacity} seats
+        </span>
+      ),
     },
     {
       key: 'depot',
       header: 'Home depot',
-      render: (bus) => bus.homeDepotName ? (
-        <span className='text-sm text-slate-700 font-semibold'>{bus.homeDepotName}</span>
-      ) : (
-        <UnassignedBadge label='No depot' />
-      ),
+      render: (bus) =>
+        bus.homeDepotName ? (
+          <span className='text-sm text-slate-700 font-semibold'>
+            {bus.homeDepotName}
+          </span>
+        ) : (
+          <UnassignedBadge label='No depot' />
+        ),
     },
     {
       key: 'assignment',
@@ -386,7 +489,10 @@ export function SchoolBusFleetPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingBus(bus); setBusDialogOpen(true); }}
+            onClick={() => {
+              setEditingBus(bus);
+              setBusDialogOpen(true);
+            }}
           >
             <Pencil className='h-4 w-4' />
           </Button>
@@ -457,11 +563,14 @@ export function SchoolBusFleetPage() {
     {
       key: 'phone',
       header: 'Phone',
-      render: (driver) => driver.phone ? (
-        <span className='text-sm text-slate-700 font-medium'>{driver.phone}</span>
-      ) : (
-        <span className='text-slate-400 italic text-xs'>No phone</span>
-      ),
+      render: (driver) =>
+        driver.phone ? (
+          <span className='text-sm text-slate-700 font-medium'>
+            {driver.phone}
+          </span>
+        ) : (
+          <span className='text-slate-400 italic text-xs'>No phone</span>
+        ),
     },
     {
       key: 'linkedUser',
@@ -475,7 +584,11 @@ export function SchoolBusFleetPage() {
     {
       key: 'status',
       header: 'Status',
-      render: (driver) => <SchoolBusStatusBadge status={driver.isActive === false ? 'INACTIVE' : driver.status} />,
+      render: (driver) => (
+        <SchoolBusStatusBadge
+          status={driver.isActive === false ? 'INACTIVE' : driver.status}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -488,7 +601,10 @@ export function SchoolBusFleetPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingDriver(driver); setDriverDialogOpen(true); }}
+            onClick={() => {
+              setEditingDriver(driver);
+              setDriverDialogOpen(true);
+            }}
           >
             <Pencil className='h-4 w-4' />
           </Button>
@@ -548,11 +664,14 @@ export function SchoolBusFleetPage() {
     {
       key: 'phone',
       header: 'Phone',
-      render: (attendant) => attendant.phone ? (
-        <span className='text-sm text-slate-700 font-medium'>{attendant.phone}</span>
-      ) : (
-        <span className='text-slate-400 italic text-xs'>No phone</span>
-      ),
+      render: (attendant) =>
+        attendant.phone ? (
+          <span className='text-sm text-slate-700 font-medium'>
+            {attendant.phone}
+          </span>
+        ) : (
+          <span className='text-slate-400 italic text-xs'>No phone</span>
+        ),
     },
     {
       key: 'assignment',
@@ -562,7 +681,11 @@ export function SchoolBusFleetPage() {
     {
       key: 'status',
       header: 'Status',
-      render: (attendant) => <SchoolBusStatusBadge status={attendant.isActive === false ? 'INACTIVE' : attendant.status} />,
+      render: (attendant) => (
+        <SchoolBusStatusBadge
+          status={attendant.isActive === false ? 'INACTIVE' : attendant.status}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -575,7 +698,10 @@ export function SchoolBusFleetPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingAttendant(attendant); setAttendantDialogOpen(true); }}
+            onClick={() => {
+              setEditingAttendant(attendant);
+              setAttendantDialogOpen(true);
+            }}
           >
             <Pencil className='h-4 w-4' />
           </Button>
@@ -583,7 +709,9 @@ export function SchoolBusFleetPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border-slate-200'
-            onClick={() => setDeleteTarget({ type: 'attendant', entity: attendant })}
+            onClick={() =>
+              setDeleteTarget({ type: 'attendant', entity: attendant })
+            }
           >
             <Trash2 className='h-4 w-4' />
           </Button>
@@ -630,7 +758,11 @@ export function SchoolBusFleetPage() {
           </div>
           <div>
             <p className='font-bold text-slate-900'>{depot.name}</p>
-            {depot.code && <p className='text-[10px] font-mono font-bold text-slate-500 mt-0.5 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 w-max'>{depot.code}</p>}
+            {depot.code && (
+              <p className='text-[10px] font-mono font-bold text-slate-500 mt-0.5 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 w-max'>
+                {depot.code}
+              </p>
+            )}
           </div>
         </div>
       ),
@@ -638,36 +770,45 @@ export function SchoolBusFleetPage() {
     {
       key: 'address',
       header: 'Address',
-      render: (depot) => depot.address ? (
-        <span className='text-sm text-slate-600 font-semibold'>{depot.address}</span>
-      ) : (
-        <span className='text-slate-400 italic text-xs'>No address</span>
-      ),
+      render: (depot) =>
+        depot.address ? (
+          <span className='text-sm text-slate-600 font-semibold'>
+            {depot.address}
+          </span>
+        ) : (
+          <span className='text-slate-400 italic text-xs'>No address</span>
+        ),
     },
     {
       key: 'phone',
       header: 'Contact phone',
-      render: (depot) => depot.contactPhone ? (
-        <span className='text-sm text-slate-700 font-medium'>{depot.contactPhone}</span>
-      ) : (
-        <span className='text-slate-400 italic text-xs'>No phone</span>
-      ),
+      render: (depot) =>
+        depot.contactPhone ? (
+          <span className='text-sm text-slate-700 font-medium'>
+            {depot.contactPhone}
+          </span>
+        ) : (
+          <span className='text-slate-400 italic text-xs'>No phone</span>
+        ),
     },
     {
       key: 'coordinates',
       header: 'Coordinates',
-      render: (depot) => depot.latitude && depot.longitude ? (
-        <span className='inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/15'>
-          <MapPin className='h-3.5 w-3.5' /> Set
-        </span>
-      ) : (
-        <WarningBadge label='Missing coordinates' />
-      ),
+      render: (depot) =>
+        depot.latitude && depot.longitude ? (
+          <span className='inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/15'>
+            <MapPin className='h-3.5 w-3.5' /> Set
+          </span>
+        ) : (
+          <WarningBadge label='Missing coordinates' />
+        ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (depot) => <SchoolBusStatusBadge status={depot.isActive ? 'ACTIVE' : 'INACTIVE'} />,
+      render: (depot) => (
+        <SchoolBusStatusBadge status={depot.isActive ? 'ACTIVE' : 'INACTIVE'} />
+      ),
     },
     {
       key: 'actions',
@@ -680,7 +821,10 @@ export function SchoolBusFleetPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
-            onClick={() => { setEditingDepot(depot); setDepotDialogOpen(true); }}
+            onClick={() => {
+              setEditingDepot(depot);
+              setDepotDialogOpen(true);
+            }}
           >
             <Pencil className='h-4 w-4' />
           </Button>
@@ -730,10 +874,12 @@ export function SchoolBusFleetPage() {
         title='Fleet & crew status'
         description='Operational fleet overview — vehicle availability, crew licensing, and depot configuration.'
         breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Fleet & Crew', current: true },
-          ]} />
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Fleet & Crew', current: true },
+            ]}
+          />
         }
         actions={
           <div className='flex items-center gap-2'>
@@ -746,18 +892,39 @@ export function SchoolBusFleetPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
-                <DropdownMenuItem onClick={() => { setEditingDriver(null); setDriverDialogOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingDriver(null);
+                    setDriverDialogOpen(true);
+                  }}
+                >
                   <UserCog className='h-4 w-4' /> Add driver
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setEditingAttendant(null); setAttendantDialogOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingAttendant(null);
+                    setAttendantDialogOpen(true);
+                  }}
+                >
                   <ShieldCheck className='h-4 w-4' /> Add attendant
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setEditingDepot(null); setDepotDialogOpen(true); }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingDepot(null);
+                    setDepotDialogOpen(true);
+                  }}
+                >
                   <Warehouse className='h-4 w-4' /> Add depot
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button className='rounded-full' onClick={() => { setEditingBus(null); setBusDialogOpen(true); }}>
+            <Button
+              className='rounded-full'
+              onClick={() => {
+                setEditingBus(null);
+                setBusDialogOpen(true);
+              }}
+            >
               <Plus className='h-4 w-4' /> Add bus
             </Button>
           </div>
@@ -801,7 +968,11 @@ export function SchoolBusFleetPage() {
             tabs={[
               { key: 'buses', label: 'Buses', count: buses.length },
               { key: 'drivers', label: 'Drivers', count: drivers.length },
-              { key: 'attendants', label: 'Attendants', count: attendants.length },
+              {
+                key: 'attendants',
+                label: 'Attendants',
+                count: attendants.length,
+              },
               { key: 'depots', label: 'Depots', count: depotsPage.length },
             ]}
             activeTab={activeTab}
@@ -846,11 +1017,20 @@ export function SchoolBusFleetPage() {
               activeTab === 'buses' && busesData
                 ? { page: busesData?.data, onPageChange: busPagination.setPage }
                 : activeTab === 'drivers' && driversData
-                  ? { page: driversData?.data, onPageChange: driverPagination.setPage }
+                  ? {
+                      page: driversData?.data,
+                      onPageChange: driverPagination.setPage,
+                    }
                   : activeTab === 'attendants' && attendantsData
-                    ? { page: attendantsData?.data, onPageChange: attendantPagination.setPage }
+                    ? {
+                        page: attendantsData?.data,
+                        onPageChange: attendantPagination.setPage,
+                      }
                     : activeTab === 'depots' && depotsPageData
-                      ? { page: depotsPageData?.data, onPageChange: depotPagination.setPage }
+                      ? {
+                          page: depotsPageData?.data,
+                          onPageChange: depotPagination.setPage,
+                        }
                       : undefined
             }
             stickyFirstColumn
@@ -866,21 +1046,37 @@ export function SchoolBusFleetPage() {
             }
             emptyTitle={
               activeTab === 'buses'
-                ? (buses.length === 0 ? 'No buses found' : 'No buses match current filters')
+                ? buses.length === 0
+                  ? 'No buses found'
+                  : 'No buses match current filters'
                 : activeTab === 'drivers'
-                  ? (drivers.length === 0 ? 'No drivers found' : 'No drivers match current filters')
+                  ? drivers.length === 0
+                    ? 'No drivers found'
+                    : 'No drivers match current filters'
                   : activeTab === 'attendants'
-                    ? (attendants.length === 0 ? 'No attendants found' : 'No attendants match current filters')
-                    : (depotsPage.length === 0 ? 'No depots found' : 'No depots match current search')
+                    ? attendants.length === 0
+                      ? 'No attendants found'
+                      : 'No attendants match current filters'
+                    : depotsPage.length === 0
+                      ? 'No depots found'
+                      : 'No depots match current search'
             }
             emptyDescription={
               activeTab === 'buses'
-                ? (buses.length === 0 ? 'Add the first bus to make assignment possible.' : 'Try adjusting your search query or clear the active filters.')
+                ? buses.length === 0
+                  ? 'Add the first bus to make assignment possible.'
+                  : 'Try adjusting your search query or clear the active filters.'
                 : activeTab === 'drivers'
-                  ? (drivers.length === 0 ? 'Create driver profiles to support route assignment.' : 'Try adjusting your search query or clear the active filters.')
+                  ? drivers.length === 0
+                    ? 'Create driver profiles to support route assignment.'
+                    : 'Try adjusting your search query or clear the active filters.'
                   : activeTab === 'attendants'
-                    ? (attendants.length === 0 ? 'Create attendant profiles to support attendance operations.' : 'Try adjusting your search query or clear the active filters.')
-                    : (depotsPage.length === 0 ? 'Create depots to model fixed route origins and destinations.' : 'Try adjusting your search query or clear the active filters.')
+                    ? attendants.length === 0
+                      ? 'Create attendant profiles to support attendance operations.'
+                      : 'Try adjusting your search query or clear the active filters.'
+                    : depotsPage.length === 0
+                      ? 'Create depots to model fixed route origins and destinations.'
+                      : 'Try adjusting your search query or clear the active filters.'
             }
           />
         </div>
@@ -890,7 +1086,10 @@ export function SchoolBusFleetPage() {
 
       <BusFormDialog
         open={busDialogOpen}
-        onOpenChange={(open) => { setBusDialogOpen(open); if (!open) setEditingBus(null); }}
+        onOpenChange={(open) => {
+          setBusDialogOpen(open);
+          if (!open) setEditingBus(null);
+        }}
         initialData={editingBus}
         busTypes={busTypes}
         isLoadingBusTypes={loadingBusTypes}
@@ -901,7 +1100,10 @@ export function SchoolBusFleetPage() {
 
       <DriverFormDialog
         open={driverDialogOpen}
-        onOpenChange={(open) => { setDriverDialogOpen(open); if (!open) setEditingDriver(null); }}
+        onOpenChange={(open) => {
+          setDriverDialogOpen(open);
+          if (!open) setEditingDriver(null);
+        }}
         initialData={editingDriver}
         accountUsers={driverDialogUsers}
         isLoadingAccountUsers={loadingAccountUsers}
@@ -911,7 +1113,10 @@ export function SchoolBusFleetPage() {
 
       <AttendantFormDialog
         open={attendantDialogOpen}
-        onOpenChange={(open) => { setAttendantDialogOpen(open); if (!open) setEditingAttendant(null); }}
+        onOpenChange={(open) => {
+          setAttendantDialogOpen(open);
+          if (!open) setEditingAttendant(null);
+        }}
         initialData={editingAttendant}
         accountUsers={attendantDialogUsers}
         isLoadingAccountUsers={loadingAccountUsers}
@@ -921,7 +1126,10 @@ export function SchoolBusFleetPage() {
 
       <DepotFormDialog
         open={depotDialogOpen}
-        onOpenChange={(open) => { setDepotDialogOpen(open); if (!open) setEditingDepot(null); }}
+        onOpenChange={(open) => {
+          setDepotDialogOpen(open);
+          if (!open) setEditingDepot(null);
+        }}
         initialData={editingDepot}
         isLoading={creatingDepot || updatingDepot}
         onSubmit={handleSaveDepot}
@@ -929,15 +1137,22 @@ export function SchoolBusFleetPage() {
 
       <SchoolBusDeleteDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title={
-          deleteTarget?.type === 'bus' ? 'Delete bus'
-            : deleteTarget?.type === 'driver' ? 'Delete driver'
-              : deleteTarget?.type === 'depot' ? 'Delete depot'
+          deleteTarget?.type === 'bus'
+            ? 'Delete bus'
+            : deleteTarget?.type === 'driver'
+              ? 'Delete driver'
+              : deleteTarget?.type === 'depot'
+                ? 'Delete depot'
                 : 'Delete attendant'
         }
         description='This will soft-delete the selected record from active fleet operations.'
-        isLoading={deletingBus || deletingDriver || deletingAttendant || deletingDepot}
+        isLoading={
+          deletingBus || deletingDriver || deletingAttendant || deletingDepot
+        }
         onConfirm={handleDelete}
       />
     </>
@@ -946,7 +1161,9 @@ export function SchoolBusFleetPage() {
 
 // ── Helper: filter account users for crew assignment ──────────────────────────
 
-function buildAvailableCrewAccountUsers<TProfile extends { id: number; userId: number; isActive?: boolean | null }>({
+function buildAvailableCrewAccountUsers<
+  TProfile extends { id: number; userId: number; isActive?: boolean | null },
+>({
   users,
   crewProfiles,
   editingProfile,
@@ -959,14 +1176,17 @@ function buildAvailableCrewAccountUsers<TProfile extends { id: number; userId: n
     crewProfiles
       .filter((profile) => profile.id !== editingProfile?.id)
       .filter((profile) => profile.isActive !== false)
-      .map((profile) => profile.userId),
+      .map((profile) => profile.userId)
   );
 
   const availableUsers = users.filter(
-    (user) => !linkedUserIds.has(user.id) || user.id === editingProfile?.userId,
+    (user) => !linkedUserIds.has(user.id) || user.id === editingProfile?.userId
   );
 
-  if (editingProfile && !availableUsers.some((user) => user.id === editingProfile.userId)) {
+  if (
+    editingProfile &&
+    !availableUsers.some((user) => user.id === editingProfile.userId)
+  ) {
     return [
       {
         id: editingProfile.userId,

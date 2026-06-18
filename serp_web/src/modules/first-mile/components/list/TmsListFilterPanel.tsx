@@ -16,7 +16,12 @@ import {
   CardTitle,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { ChevronDown, ChevronUp, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  SlidersHorizontal,
+} from 'lucide-react';
 
 export type TmsFilterMode = 'basic' | 'advanced';
 
@@ -85,7 +90,10 @@ export const TmsListFilterPanel: React.FC<TmsListFilterPanelProps> = ({
                 <SlidersHorizontal className='mr-1 h-3.5 w-3.5' />
                 Advanced
                 {advancedFieldCount > 0 ? (
-                  <Badge variant='outline' className='ml-1.5 h-5 px-1 text-[10px]'>
+                  <Badge
+                    variant='outline'
+                    className='ml-1.5 h-5 px-1 text-[10px]'
+                  >
                     {advancedFieldCount}
                   </Badge>
                 ) : null}

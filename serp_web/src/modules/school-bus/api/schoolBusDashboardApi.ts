@@ -40,8 +40,7 @@ export const schoolBusDashboardApi = api.injectEndpoints({
       ApiResponse<ChartItemDto[]>,
       SchoolBusDashboardQueryParams
     >({
-      query: (args) =>
-        dashboardQuery('/dashboard/charts/trip-status', args),
+      query: (args) => dashboardQuery('/dashboard/charts/trip-status', args),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<ChartItemDto[]>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'TRIP_STATUS' }],
@@ -70,8 +69,7 @@ export const schoolBusDashboardApi = api.injectEndpoints({
       ApiResponse<ChartItemDto[]>,
       SchoolBusDashboardQueryParams
     >({
-      query: (args) =>
-        dashboardQuery('/dashboard/charts/request-status', args),
+      query: (args) => dashboardQuery('/dashboard/charts/request-status', args),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<ChartItemDto[]>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'REQUEST_STATUS' }],
@@ -80,8 +78,7 @@ export const schoolBusDashboardApi = api.injectEndpoints({
       ApiResponse<ChartItemDto[]>,
       SchoolBusDashboardQueryParams
     >({
-      query: (args) =>
-        dashboardQuery('/dashboard/charts/trips-by-date', args),
+      query: (args) => dashboardQuery('/dashboard/charts/trips-by-date', args),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<ChartItemDto[]>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'TRIPS_BY_DATE' }],

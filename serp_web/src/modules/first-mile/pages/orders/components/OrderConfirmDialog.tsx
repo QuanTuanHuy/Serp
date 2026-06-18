@@ -64,7 +64,9 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
   const isSenderPayer = order?.feePayer === 'SENDER';
   const isShippingPaid = order?.paymentStatus === 'PAID';
   const paymentRequired = Boolean(isSenderPayer && !isShippingPaid);
-  const canConfirmOrder = Boolean(order && (!paymentRequired || isShippingPaid));
+  const canConfirmOrder = Boolean(
+    order && (!paymentRequired || isShippingPaid)
+  );
   const busy =
     isCalculatingFee ||
     isConfirmingOrder ||
@@ -122,7 +124,9 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
 
             <div className='rounded-md border p-3'>
               <div className='mb-3 flex items-center justify-between gap-2'>
-                <p className='font-semibold'>Shipping fee from billing service</p>
+                <p className='font-semibold'>
+                  Shipping fee from billing service
+                </p>
                 <Button
                   type='button'
                   variant='outline'
@@ -151,7 +155,9 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                     Route type: <strong>{shippingFee.routeType}</strong>
                   </p>
                   <p>Base fee: {formatCurrency(shippingFee.baseFee)}</p>
-                  <p>Surcharge fee: {formatCurrency(shippingFee.surchargeFee)}</p>
+                  <p>
+                    Surcharge fee: {formatCurrency(shippingFee.surchargeFee)}
+                  </p>
                   <p>VAS fee: {formatCurrency(shippingFee.vasFee)}</p>
                   <p className='font-semibold'>
                     Total fee: {formatCurrency(shippingFee.totalFee)}
@@ -168,7 +174,9 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
             <div className='rounded-md border p-3'>
               <div className='flex flex-wrap items-center gap-2'>
                 <Badge variant={isSenderPayer ? 'default' : 'secondary'}>
-                  {isSenderPayer ? 'Sender pays shipping fee' : 'Receiver pays shipping fee'}
+                  {isSenderPayer
+                    ? 'Sender pays shipping fee'
+                    : 'Receiver pays shipping fee'}
                 </Badge>
                 {order.codAmount && order.codAmount > 0 ? (
                   <Badge variant='outline'>
@@ -177,8 +185,8 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                 ) : null}
               </div>
               <p className='mt-2 text-xs text-muted-foreground'>
-                COD amount is always collected from receiver and is separate from
-                shipping fee.
+                COD amount is always collected from receiver and is separate
+                from shipping fee.
               </p>
             </div>
 

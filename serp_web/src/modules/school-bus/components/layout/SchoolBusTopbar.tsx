@@ -27,7 +27,10 @@ interface SchoolBusTopbarProps {
   scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function SchoolBusTopbar({ scrollContainerRef, className }: SchoolBusTopbarProps) {
+export function SchoolBusTopbar({
+  scrollContainerRef,
+  className,
+}: SchoolBusTopbarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -40,7 +43,9 @@ export function SchoolBusTopbar({ scrollContainerRef, className }: SchoolBusTopb
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/school-bus/trips?search=${encodeURIComponent(searchQuery)}`);
+      router.push(
+        `/school-bus/trips?search=${encodeURIComponent(searchQuery)}`
+      );
     }
   };
 
@@ -124,7 +129,9 @@ export function SchoolBusTopbar({ scrollContainerRef, className }: SchoolBusTopb
               <React.Fragment key={breadcrumb.href}>
                 {index > 0 && <span className='text-muted-foreground'>/</span>}
                 {breadcrumb.isLast ? (
-                  <span className='font-medium text-foreground'>{breadcrumb.name}</span>
+                  <span className='font-medium text-foreground'>
+                    {breadcrumb.name}
+                  </span>
                 ) : (
                   <Link
                     href={breadcrumb.href}
@@ -175,7 +182,9 @@ export function SchoolBusTopbar({ scrollContainerRef, className }: SchoolBusTopb
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
               <div className='hidden sm:block text-left'>
-                <p className='text-sm font-medium text-foreground'>{getDisplayName()}</p>
+                <p className='text-sm font-medium text-foreground'>
+                  {getDisplayName()}
+                </p>
                 <p className='text-xs text-muted-foreground'>{user?.email}</p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />
