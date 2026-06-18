@@ -93,7 +93,8 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
   className,
   onStageClick,
 }) => {
-  const maxCount = Math.max(...stages.map((s) => s.count));
+  const maxCount =
+    stages.length > 0 ? Math.max(...stages.map((s) => s.count)) : 0;
   const totalValue = stages.reduce((sum, s) => sum + s.value, 0);
 
   if (isLoading) {
@@ -107,6 +108,20 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
           {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className='h-14 rounded-lg' />
           ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (stages.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+          {subtitle && <CardDescription>{subtitle}</CardDescription>}
+        </CardHeader>
+        <CardContent className='py-10 text-center text-sm text-muted-foreground'>
+          No pipeline data available.
         </CardContent>
       </Card>
     );

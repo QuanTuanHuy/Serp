@@ -24,7 +24,6 @@ import type {
   ActivityStats,
   BulkActivityRequest,
   BulkActivityResult,
-  BulkOperationResult,
 } from '../types';
 
 export const activityApi = api.injectEndpoints({
@@ -261,19 +260,6 @@ export const activityApi = api.injectEndpoints({
         { type: 'Activity', id: 'STATS' },
       ],
     }),
-
-    bulkDeleteActivities: builder.mutation<
-      APIResponse<BulkOperationResult>,
-      string[]
-    >({
-      query: (ids) => ({
-        url: '/activities/bulk-delete',
-        method: 'POST',
-        body: { ids },
-      }),
-      extraOptions: { service: 'crm' },
-      invalidatesTags: [{ type: 'Activity', id: 'LIST' }],
-    }),
   }),
 });
 
@@ -293,5 +279,4 @@ export const {
   useRescheduleActivityMutation,
   useDeleteActivityMutation,
   useBulkActivityOperationsMutation,
-  useBulkDeleteActivitiesMutation,
 } = activityApi;
