@@ -8,7 +8,10 @@ import {
   normalizeFilterText,
   parseTriStateBoolean,
 } from '../../components/list/listFilterUtils';
-import type { FirstMileOrderListFilters, FirstMileOrderStatus } from '../../types';
+import type {
+  FirstMileOrderListFilters,
+  FirstMileOrderStatus,
+} from '../../types';
 import type { OrderStatusFilter } from './orderPageModels';
 
 export type TriStateFilter = 'ALL' | 'YES' | 'NO';
@@ -92,7 +95,9 @@ export const buildOrderListFilters = (
       values.destinationPostOfficeCode
     ),
     status:
-      values.status === 'ALL' ? undefined : (values.status as FirstMileOrderStatus),
+      values.status === 'ALL'
+        ? undefined
+        : (values.status as FirstMileOrderStatus),
     isConfirm: parseTriStateBoolean(values.isConfirm),
     createdFrom,
     createdTo,

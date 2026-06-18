@@ -138,7 +138,10 @@ export default function LocationPickerMapClient({
               .map((marker) => (
                 <Marker
                   key={marker.id}
-                  position={[marker.latitude as number, marker.longitude as number]}
+                  position={[
+                    marker.latitude as number,
+                    marker.longitude as number,
+                  ]}
                   icon={createSchoolBusMarkerIcon(
                     marker.type === 'school'
                       ? 'school'
@@ -149,7 +152,9 @@ export default function LocationPickerMapClient({
                 >
                   <Popup>
                     <div className='space-y-1'>
-                      <p className='font-medium text-slate-950'>{marker.name}</p>
+                      <p className='font-medium text-slate-950'>
+                        {marker.name}
+                      </p>
                       <p className='text-xs text-slate-500'>
                         {marker.address || 'No address'}
                       </p>

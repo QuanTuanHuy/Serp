@@ -5,9 +5,7 @@ import { Eye, Plus, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { schoolBusUi } from '../../theme';
-import {
-  useGetSchoolDropdownOptionsQuery,
-} from '../../api/schoolBusApi';
+import { useGetSchoolDropdownOptionsQuery } from '../../api/schoolBusApi';
 import { getPageItems } from '../../utils';
 import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import { SchoolBusDatePicker } from '../ui/SchoolBusDatePicker';
@@ -31,7 +29,8 @@ interface PlanningContextPanelProps {
   onNewSession?: () => void;
 }
 
-const fieldLabel = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 mt-3.5 first:mt-0';
+const fieldLabel =
+  'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 mt-3.5 first:mt-0';
 
 export function PlanningContextPanel({
   form,
@@ -56,7 +55,9 @@ export function PlanningContextPanel({
             <Settings className='h-4 w-4 text-[#C81E3A]' />
             Planning Context
           </h3>
-          <p className='text-[11px] text-slate-400 mt-0.5'>Select parameters to scope the planning session.</p>
+          <p className='text-[11px] text-slate-400 mt-0.5'>
+            Select parameters to scope the planning session.
+          </p>
         </div>
         {onNewSession && (
           <Button
@@ -76,9 +77,14 @@ export function PlanningContextPanel({
         <SchoolBusSelect
           fullWidth
           value={form.schoolId}
-          onChange={val => onFormChange(f => ({ ...f, schoolId: val || '' }))}
+          onChange={(val) =>
+            onFormChange((f) => ({ ...f, schoolId: val || '' }))
+          }
           placeholder='— Select school —'
-          options={schools.map(s => ({ label: s.label, value: String(s.id) }))}
+          options={schools.map((s) => ({
+            label: s.label,
+            value: String(s.id),
+          }))}
           searchable
         />
 
@@ -86,25 +92,38 @@ export function PlanningContextPanel({
         <SchoolBusDatePicker
           fullWidth
           value={form.serviceDate}
-          onChange={val => onFormChange(f => ({ ...f, serviceDate: val }))}
+          onChange={(val) => onFormChange((f) => ({ ...f, serviceDate: val }))}
         />
 
         <label className={fieldLabel}>Route Direction</label>
         <SchoolBusSelect
           fullWidth
           value={form.routeDirection}
-          onChange={val => onFormChange(f => ({ ...f, routeDirection: val as 'OUTBOUND' | 'RETURN' }))}
+          onChange={(val) =>
+            onFormChange((f) => ({
+              ...f,
+              routeDirection: val as 'OUTBOUND' | 'RETURN',
+            }))
+          }
           options={[
             { label: 'Outbound (To school)', value: 'OUTBOUND' },
-            { label: 'Return (From school)', value: 'RETURN' }
+            { label: 'Return (From school)', value: 'RETURN' },
           ]}
         />
-
       </div>
 
       <div className='mt-5 flex flex-wrap gap-2 pt-2 border-t border-slate-100'>
-        <Button onClick={onPreview} disabled={previewing} variant='outline' className={cn('flex-1 justify-center', schoolBusUi.outlineButton)}>
-          {previewing ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Eye className='mr-1.5 h-3.5 w-3.5' />}
+        <Button
+          onClick={onPreview}
+          disabled={previewing}
+          variant='outline'
+          className={cn('flex-1 justify-center', schoolBusUi.outlineButton)}
+        >
+          {previewing ? (
+            <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
+          ) : (
+            <Eye className='mr-1.5 h-3.5 w-3.5' />
+          )}
           Preview
         </Button>
         <Button
@@ -112,7 +131,11 @@ export function PlanningContextPanel({
           disabled={creating || !isPreviewContextMatch || !canCreate}
           className={cn('flex-1 justify-center', schoolBusUi.primaryButton)}
         >
-          {creating ? <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' /> : <Plus className='mr-1.5 h-3.5 w-3.5' />}
+          {creating ? (
+            <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
+          ) : (
+            <Plus className='mr-1.5 h-3.5 w-3.5' />
+          )}
           Create
         </Button>
       </div>

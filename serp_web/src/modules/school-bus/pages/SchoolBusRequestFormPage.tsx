@@ -36,10 +36,9 @@ export function SchoolBusRequestFormPage({
 
   // For Admin/Dispatcher: fetch all parents for the dropdown.
   // For Parent role: skip the query — backend resolves identity from token.
-  const { data: parentsData } = useGetParentDropdownOptionsQuery(
-    undefined,
-    { skip: access.isParentOnly }
-  );
+  const { data: parentsData } = useGetParentDropdownOptionsQuery(undefined, {
+    skip: access.isParentOnly,
+  });
 
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
@@ -64,7 +63,9 @@ export function SchoolBusRequestFormPage({
       ? (students[0].parentProfileId ?? undefined)
       : undefined;
 
-  const handleSubmit = async (values: SchoolBusTransportRequestUpsertRequest) => {
+  const handleSubmit = async (
+    values: SchoolBusTransportRequestUpsertRequest
+  ) => {
     try {
       const response = isEditMode
         ? await updateTransportRequest({
@@ -87,7 +88,10 @@ export function SchoolBusRequestFormPage({
           label: 'Transport Requests',
           href: '/school-bus/requests',
         },
-        { label: isEditMode ? `Edit #${requestId}` : 'New Request', current: true },
+        {
+          label: isEditMode ? `Edit #${requestId}` : 'New Request',
+          current: true,
+        },
       ]}
     />
   );

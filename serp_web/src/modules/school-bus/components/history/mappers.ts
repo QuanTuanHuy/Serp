@@ -28,12 +28,18 @@ export function mapRequestHistoryToTimeline(
 
 function buildRequestTitle(newStatus: string | null | undefined): string {
   switch (newStatus?.toUpperCase()) {
-    case 'SUBMITTED': return 'Request submitted';
-    case 'APPROVED':  return 'Request approved';
-    case 'REJECTED':  return 'Request rejected';
-    case 'CANCELLED': return 'Request cancelled';
-    case 'DRAFT':     return 'Draft created';
-    default:          return `Status: ${newStatus || 'N/A'}`;
+    case 'SUBMITTED':
+      return 'Request submitted';
+    case 'APPROVED':
+      return 'Request approved';
+    case 'REJECTED':
+      return 'Request rejected';
+    case 'CANCELLED':
+      return 'Request cancelled';
+    case 'DRAFT':
+      return 'Draft created';
+    default:
+      return `Status: ${newStatus || 'N/A'}`;
   }
 }
 
@@ -45,7 +51,7 @@ function buildStatusTransition(
   const meta: Record<string, string> = {};
   if (oldStatus) meta['Previous status'] = oldStatus;
   if (newStatus) meta['New status'] = newStatus;
-  if (reason)    meta['Reason'] = reason;
+  if (reason) meta['Reason'] = reason;
   return Object.keys(meta).length > 0 ? meta : undefined;
 }
 
@@ -69,18 +75,28 @@ export function mapSubscriptionHistoryToTimeline(
 
 function buildSubTitle(changeType: string): string {
   switch (changeType?.toUpperCase()) {
-    case 'CREATED':   return 'New subscription created';
-    case 'CHANGED':   return 'Subscription updated';
-    case 'PAUSED':    return 'Subscription paused';
-    case 'RESUMED':   return 'Subscription resumed';
-    case 'STOPPED':   return 'Subscription stopped';
-    case 'RENEWED':   return 'Subscription renewed';
-    case 'EXPIRED':   return 'Subscription expired';
-    default:          return `Change: ${changeType}`;
+    case 'CREATED':
+      return 'New subscription created';
+    case 'CHANGED':
+      return 'Subscription updated';
+    case 'PAUSED':
+      return 'Subscription paused';
+    case 'RESUMED':
+      return 'Subscription resumed';
+    case 'STOPPED':
+      return 'Subscription stopped';
+    case 'RENEWED':
+      return 'Subscription renewed';
+    case 'EXPIRED':
+      return 'Subscription expired';
+    default:
+      return `Change: ${changeType}`;
   }
 }
 
-function buildSubMeta(h: SchoolBusSubscriptionHistory): Record<string, string> | undefined {
+function buildSubMeta(
+  h: SchoolBusSubscriptionHistory
+): Record<string, string> | undefined {
   const meta: Record<string, string> = {};
   if (h.oldStatus) meta['Previous status'] = h.oldStatus;
   if (h.newStatus) meta['New status'] = h.newStatus;
@@ -121,9 +137,8 @@ export function mapTripHistoryToTimeline(
     badgeLabel: t.status,
     metadata: {
       'Service date': t.serviceDate || 'N/A',
-      'Status': t.status,
+      Status: t.status,
       ...(t.busPlateNumber ? { 'Plate number': t.busPlateNumber } : {}),
     },
   }));
 }
-

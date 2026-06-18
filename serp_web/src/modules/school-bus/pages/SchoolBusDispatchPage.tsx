@@ -38,13 +38,36 @@ import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
 
 const routeStatusMap: Record<string, { label: string; className: string }> = {
-  PUBLISHED: { label: 'Published', className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50' },
-  TRIP_CREATED: { label: 'Trip created', className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
-  PLANNED: { label: 'Planned', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
-  ASSIGNED: { label: 'Assigned', className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50' },
-  IN_PROGRESS: { label: 'In progress', className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50' },
-  COMPLETED: { label: 'Completed', className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
-  CANCELLED: { label: 'Cancelled', className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50' },
+  PUBLISHED: {
+    label: 'Published',
+    className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
+  },
+  TRIP_CREATED: {
+    label: 'Trip created',
+    className:
+      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
+  },
+  PLANNED: {
+    label: 'Planned',
+    className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
+  },
+  ASSIGNED: {
+    label: 'Assigned',
+    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
+  },
+  IN_PROGRESS: {
+    label: 'In progress',
+    className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
+  },
+  COMPLETED: {
+    label: 'Completed',
+    className:
+      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
+  },
 };
 
 function RouteStatusBadge({ status }: { status: string }) {
@@ -53,7 +76,12 @@ function RouteStatusBadge({ status }: { status: string }) {
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   };
   return (
-    <Badge className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-none', cfg.className)}>
+    <Badge
+      className={cn(
+        'rounded-full border px-2.5 py-0.5 text-[11px] font-semibold shadow-none',
+        cfg.className
+      )}
+    >
       {cfg.label}
     </Badge>
   );
@@ -97,7 +125,7 @@ export function SchoolBusDispatchPage() {
         stop.stopPurpose !== 'START_TERMINAL' &&
         stop.stopPurpose !== 'END_TERMINAL' &&
         (typeof stop.pickupPointLatitude !== 'number' ||
-          typeof stop.pickupPointLongitude !== 'number'),
+          typeof stop.pickupPointLongitude !== 'number')
     ).length || 0;
 
   React.useEffect(() => {
@@ -119,7 +147,10 @@ export function SchoolBusDispatchPage() {
         />
       }
       actions={
-        <Button asChild className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white'>
+        <Button
+          asChild
+          className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white'
+        >
           <Link href='/school-bus/dispatch/planning'>
             <Plus className='h-4 w-4' />
             Plan routes
@@ -156,19 +187,27 @@ export function SchoolBusDispatchPage() {
         {/* Dispatch Workspace */}
         <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-start'>
           {/* Left Column: Execution Board */}
-          <div className={cn(schoolBusUi.section, 'flex flex-col gap-4 bg-white p-5 xl:h-[calc(100vh-140px)] xl:overflow-y-auto')}>
+          <div
+            className={cn(
+              schoolBusUi.section,
+              'flex flex-col gap-4 bg-white p-5 xl:h-[calc(100vh-140px)] xl:overflow-y-auto'
+            )}
+          >
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Route className='h-5 w-5 text-indigo-600' />
                 Execution board
               </h2>
               <p className='text-xs text-slate-500'>
-                Quick actions remain on the list page, while detail pages cover assignment and deeper route inspection.
+                Quick actions remain on the list page, while detail pages cover
+                assignment and deeper route inspection.
               </p>
             </div>
 
             {isLoading ? (
-              <p className='text-sm text-slate-500 animate-pulse py-4'>Loading routes...</p>
+              <p className='text-sm text-slate-500 animate-pulse py-4'>
+                Loading routes...
+              </p>
             ) : prioritizedRoutes.length === 0 ? (
               <SchoolBusEmptyState
                 title='No routes available'
@@ -196,8 +235,12 @@ export function SchoolBusDispatchPage() {
                           R
                         </div>
                         <div className='min-w-0'>
-                          <span className='font-bold text-slate-950 text-sm mr-2 truncate block sm:inline-block'>{route.routeCode}</span>
-                          <span className='text-xs font-medium text-slate-500 truncate block sm:inline-block'>{route.routeName}</span>
+                          <span className='font-bold text-slate-950 text-sm mr-2 truncate block sm:inline-block'>
+                            {route.routeCode}
+                          </span>
+                          <span className='text-xs font-medium text-slate-500 truncate block sm:inline-block'>
+                            {route.routeName}
+                          </span>
                         </div>
                       </div>
                       <RouteStatusBadge status={route.status} />
@@ -207,7 +250,9 @@ export function SchoolBusDispatchPage() {
                     <div className='flex flex-wrap items-center gap-y-1.5 gap-x-3 text-xs text-slate-500'>
                       <div className='flex items-center gap-1'>
                         <GraduationCap className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-                        <span className='font-medium text-slate-700'>{route.schoolName}</span>
+                        <span className='font-medium text-slate-700'>
+                          {route.schoolName}
+                        </span>
                       </div>
                       <span className='text-slate-300 hidden sm:inline'>|</span>
                       <div className='flex items-center gap-1'>
@@ -217,13 +262,17 @@ export function SchoolBusDispatchPage() {
 
                       <span className='text-slate-300 hidden sm:inline'>|</span>
                       <div className='flex items-center gap-1.5'>
-                        <span className={cn(
-                          'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border',
-                          route.routeDirection === 'RETURN'
-                            ? 'bg-orange-50 text-orange-700 border-orange-100'
-                            : 'bg-blue-50 text-blue-700 border-blue-100'
-                        )}>
-                          {route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border',
+                            route.routeDirection === 'RETURN'
+                              ? 'bg-orange-50 text-orange-700 border-orange-100'
+                              : 'bg-blue-50 text-blue-700 border-blue-100'
+                          )}
+                        >
+                          {route.routeDirection === 'RETURN'
+                            ? 'Return'
+                            : 'Outbound'}
                         </span>
                       </div>
                     </div>
@@ -235,8 +284,12 @@ export function SchoolBusDispatchPage() {
                           <MapPin className='h-3 w-3' />
                         </div>
                         <div className='min-w-0'>
-                          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>Start Point</p>
-                          <p className='font-semibold text-slate-800 truncate mt-0.5'>{route.startLocationName || 'Not set'}</p>
+                          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
+                            Start Point
+                          </p>
+                          <p className='font-semibold text-slate-800 truncate mt-0.5'>
+                            {route.startLocationName || 'Not set'}
+                          </p>
                         </div>
                       </div>
                       <div className='flex items-start gap-2 min-w-0'>
@@ -244,41 +297,69 @@ export function SchoolBusDispatchPage() {
                           <MapPin className='h-3 w-3' />
                         </div>
                         <div className='min-w-0'>
-                          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>End Point</p>
-                          <p className='font-semibold text-slate-800 truncate mt-0.5'>{route.endLocationName || 'Not set'}</p>
+                          <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
+                            End Point
+                          </p>
+                          <p className='font-semibold text-slate-800 truncate mt-0.5'>
+                            {route.endLocationName || 'Not set'}
+                          </p>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Resource Assignment Status Strip */}
                     <div className='flex flex-wrap gap-2 text-xs'>
-                      <span className={cn(
-                        'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                        route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-100'
-                      )}>
-                        {route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
+                          route.status === 'ASSIGNED' ||
+                            route.status === 'TRIP_CREATED' ||
+                            route.status === 'IN_PROGRESS' ||
+                            route.status === 'COMPLETED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : 'bg-amber-50 text-amber-700 border-amber-100'
+                        )}
+                      >
+                        {route.status === 'ASSIGNED' ||
+                        route.status === 'TRIP_CREATED' ||
+                        route.status === 'IN_PROGRESS' ||
+                        route.status === 'COMPLETED'
                           ? '✓ Bus assigned'
                           : '⚠ Missing bus'}
                       </span>
-                      <span className={cn(
-                        'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                        route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-100'
-                      )}>
-                        {route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
+                          route.status === 'ASSIGNED' ||
+                            route.status === 'TRIP_CREATED' ||
+                            route.status === 'IN_PROGRESS' ||
+                            route.status === 'COMPLETED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : 'bg-amber-50 text-amber-700 border-amber-100'
+                        )}
+                      >
+                        {route.status === 'ASSIGNED' ||
+                        route.status === 'TRIP_CREATED' ||
+                        route.status === 'IN_PROGRESS' ||
+                        route.status === 'COMPLETED'
                           ? '✓ Driver assigned'
                           : '⚠ Missing driver'}
                       </span>
-                      <span className={cn(
-                        'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                        route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                          : 'bg-amber-50 text-amber-750 border-amber-100'
-                      )}>
-                        {route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED'
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
+                          route.status === 'ASSIGNED' ||
+                            route.status === 'TRIP_CREATED' ||
+                            route.status === 'IN_PROGRESS' ||
+                            route.status === 'COMPLETED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : 'bg-amber-50 text-amber-750 border-amber-100'
+                        )}
+                      >
+                        {route.status === 'ASSIGNED' ||
+                        route.status === 'TRIP_CREATED' ||
+                        route.status === 'IN_PROGRESS' ||
+                        route.status === 'COMPLETED'
                           ? '✓ Attendant assigned'
                           : '⚠ Missing attendant'}
                       </span>
@@ -288,35 +369,67 @@ export function SchoolBusDispatchPage() {
                     <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 pt-3'>
                       <div className='flex flex-wrap gap-4 text-xs text-slate-500'>
                         <span>
-                          Distance: <strong className='text-slate-700'>{route.plannedDistanceKm ?? 0} km</strong>
+                          Distance:{' '}
+                          <strong className='text-slate-700'>
+                            {route.plannedDistanceKm ?? 0} km
+                          </strong>
                         </span>
                         <span>
-                          Duration: <strong className='text-slate-700'>{route.plannedDurationMin ?? 0} mins</strong>
+                          Duration:{' '}
+                          <strong className='text-slate-700'>
+                            {route.plannedDurationMin ?? 0} mins
+                          </strong>
                         </span>
                         {route.startedAt && (
                           <span>
-                            Started: <strong className='text-slate-700'>{formatDateTime(route.startedAt)}</strong>
+                            Started:{' '}
+                            <strong className='text-slate-700'>
+                              {formatDateTime(route.startedAt)}
+                            </strong>
                           </span>
                         )}
                       </div>
 
-                      <div className='flex flex-wrap gap-1.5' onClick={(e) => e.stopPropagation()}>
-                        {!(route.status === 'ASSIGNED' || route.status === 'TRIP_CREATED' || route.status === 'IN_PROGRESS' || route.status === 'COMPLETED') ? (
-                          <Button className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white hover:text-white h-8 text-xs gap-1 font-semibold' asChild>
-                            <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
+                      <div
+                        className='flex flex-wrap gap-1.5'
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {!(
+                          route.status === 'ASSIGNED' ||
+                          route.status === 'TRIP_CREATED' ||
+                          route.status === 'IN_PROGRESS' ||
+                          route.status === 'COMPLETED'
+                        ) ? (
+                          <Button
+                            className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white hover:text-white h-8 text-xs gap-1 font-semibold'
+                            asChild
+                          >
+                            <Link
+                              href={`/school-bus/dispatch/${route.id}?assign=true`}
+                            >
                               <UserCog className='h-3.5 w-3.5' />
                               Assign
                             </Link>
                           </Button>
                         ) : (
-                          <Button variant='outline' className='rounded-full border-slate-200 text-slate-700 h-8 text-xs gap-1 font-semibold' asChild>
-                            <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
+                          <Button
+                            variant='outline'
+                            className='rounded-full border-slate-200 text-slate-700 h-8 text-xs gap-1 font-semibold'
+                            asChild
+                          >
+                            <Link
+                              href={`/school-bus/dispatch/${route.id}?assign=true`}
+                            >
                               <UserCog className='h-3.5 w-3.5' />
                               Manage assignment
                             </Link>
                           </Button>
                         )}
-                        <Button variant='outline' className='rounded-full border-slate-200 text-slate-700 h-8 text-xs gap-1 font-semibold' asChild>
+                        <Button
+                          variant='outline'
+                          className='rounded-full border-slate-200 text-slate-700 h-8 text-xs gap-1 font-semibold'
+                          asChild
+                        >
                           <Link href={`/school-bus/dispatch/${route.id}`}>
                             <Eye className='h-3.5 w-3.5' />
                             View details
@@ -327,7 +440,9 @@ export function SchoolBusDispatchPage() {
                           className='rounded-full border-red-200 text-[#C81E3A] hover:bg-[#FDECEF]/50 h-8 text-xs gap-1 font-semibold'
                           asChild
                         >
-                          <Link href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId}&routeId=${route.id}`}>
+                          <Link
+                            href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId}&routeId=${route.id}`}
+                          >
                             <Sparkles className='h-3.5 w-3.5' />
                             Open planning
                           </Link>
@@ -348,17 +463,20 @@ export function SchoolBusDispatchPage() {
           </div>
 
           {/* Right Column: Route Preview Map */}
-          <div className={cn(
-            schoolBusUi.section,
-            'flex flex-col gap-4 bg-white p-5 xl:sticky xl:top-[88px] xl:h-[calc(100vh-140px)] xl:min-h-[560px] xl:max-h-[850px]'
-          )}>
+          <div
+            className={cn(
+              schoolBusUi.section,
+              'flex flex-col gap-4 bg-white p-5 xl:sticky xl:top-[88px] xl:h-[calc(100vh-140px)] xl:min-h-[560px] xl:max-h-[850px]'
+            )}
+          >
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Map className='h-5 w-5 text-emerald-600' />
                 Route preview map
               </h2>
               <p className='text-xs text-slate-500'>
-                Selected route rendered with fixed start, stops, fixed end, and stop-order polyline.
+                Selected route rendered with fixed start, stops, fixed end, and
+                stop-order polyline.
               </p>
             </div>
 
@@ -381,16 +499,27 @@ export function SchoolBusDispatchPage() {
                     <div className='space-y-4 p-4 min-w-[280px]'>
                       {/* Route Summary */}
                       <div>
-                        <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>Route Summary</h3>
+                        <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>
+                          Route Summary
+                        </h3>
                         <div className='space-y-2 text-xs'>
                           <div className='flex items-start gap-2 min-w-0'>
                             <div className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 mt-0.5'>
                               <MapPin className='h-3 w-3' />
                             </div>
                             <div className='min-w-0'>
-                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>Start Location</p>
-                              <p className='font-medium text-slate-700 truncate mt-0.5' title={selectedRouteDetail.data.route.startLocationName}>
-                                {selectedRouteDetail.data.route.startLocationName || 'Not set'}
+                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>
+                                Start Location
+                              </p>
+                              <p
+                                className='font-medium text-slate-700 truncate mt-0.5'
+                                title={
+                                  selectedRouteDetail.data.route
+                                    .startLocationName
+                                }
+                              >
+                                {selectedRouteDetail.data.route
+                                  .startLocationName || 'Not set'}
                               </p>
                             </div>
                           </div>
@@ -400,9 +529,17 @@ export function SchoolBusDispatchPage() {
                               <MapPin className='h-3 w-3' />
                             </div>
                             <div className='min-w-0'>
-                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>End Location</p>
-                              <p className='font-medium text-slate-700 truncate mt-0.5' title={selectedRouteDetail.data.route.endLocationName}>
-                                {selectedRouteDetail.data.route.endLocationName || 'Not set'}
+                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>
+                                End Location
+                              </p>
+                              <p
+                                className='font-medium text-slate-700 truncate mt-0.5'
+                                title={
+                                  selectedRouteDetail.data.route.endLocationName
+                                }
+                              >
+                                {selectedRouteDetail.data.route
+                                  .endLocationName || 'Not set'}
                               </p>
                             </div>
                           </div>
@@ -412,7 +549,9 @@ export function SchoolBusDispatchPage() {
                               <Route className='h-3 w-3' />
                             </div>
                             <div>
-                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>Stops Count</p>
+                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>
+                                Stops Count
+                              </p>
                               <p className='font-medium text-slate-700 mt-0.5'>
                                 {selectedRouteDetail.data.stops.length} stop(s)
                               </p>
@@ -424,9 +563,13 @@ export function SchoolBusDispatchPage() {
                               <Clock3 className='h-3 w-3' />
                             </div>
                             <div>
-                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>Status</p>
+                              <p className='text-[10px] font-semibold text-slate-400 leading-none'>
+                                Status
+                              </p>
                               <div className='mt-0.5'>
-                                <RouteStatusBadge status={selectedRouteDetail.data.route.status} />
+                                <RouteStatusBadge
+                                  status={selectedRouteDetail.data.route.status}
+                                />
                               </div>
                             </div>
                           </div>
@@ -437,32 +580,47 @@ export function SchoolBusDispatchPage() {
 
                       {/* Route Metrics */}
                       <div>
-                        <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>Route Metrics</h3>
+                        <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>
+                          Route Metrics
+                        </h3>
                         <div className='grid grid-cols-2 gap-2 text-xs'>
                           <div className='p-2 rounded-lg bg-slate-50 border border-slate-100'>
-                            <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>Distance</p>
-                            <p className='font-bold text-slate-800 mt-0.5'>{selectedRouteDetail.data.route.plannedDistanceKm ?? 0} km</p>
+                            <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>
+                              Distance
+                            </p>
+                            <p className='font-bold text-slate-800 mt-0.5'>
+                              {selectedRouteDetail.data.route
+                                .plannedDistanceKm ?? 0}{' '}
+                              km
+                            </p>
                           </div>
                           <div className='p-2 rounded-lg bg-slate-50 border border-slate-100'>
-                            <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>Duration</p>
-                            <p className='font-bold text-slate-800 mt-0.5'>{selectedRouteDetail.data.route.plannedDurationMin ?? 0} mins</p>
+                            <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>
+                              Duration
+                            </p>
+                            <p className='font-bold text-slate-800 mt-0.5'>
+                              {selectedRouteDetail.data.route
+                                .plannedDurationMin ?? 0}{' '}
+                              mins
+                            </p>
                           </div>
                         </div>
                       </div>
 
                       <hr className='border-slate-100' />
 
-
-
                       {/* Missing coordinates warning */}
                       {selectedRouteMissingCoordinates > 0 && (
                         <div className='rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-700 leading-normal'>
-                          <p className='font-semibold'>⚠️ {selectedRouteMissingCoordinates} stop(s) missing coordinates.</p>
-                          <p className='text-[10px] text-amber-600 mt-0.5'>Route path renders only plotted segments.</p>
+                          <p className='font-semibold'>
+                            ⚠️ {selectedRouteMissingCoordinates} stop(s) missing
+                            coordinates.
+                          </p>
+                          <p className='text-[10px] text-amber-600 mt-0.5'>
+                            Route path renders only plotted segments.
+                          </p>
                         </div>
                       )}
-
-
                     </div>
                   }
                 />
@@ -470,7 +628,9 @@ export function SchoolBusDispatchPage() {
             ) : (
               <div className='flex flex-col items-center justify-center p-12 text-center flex-1 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 min-h-[400px]'>
                 <Map className='h-12 w-12 text-slate-300 stroke-[1.5] mb-3' />
-                <h3 className='text-sm font-semibold text-slate-800'>Select a route</h3>
+                <h3 className='text-sm font-semibold text-slate-800'>
+                  Select a route
+                </h3>
                 <p className='text-xs text-slate-500 max-w-[240px] mt-1'>
                   Choose a route from the execution board to preview its path.
                 </p>

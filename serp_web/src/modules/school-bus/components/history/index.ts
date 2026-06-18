@@ -1,5 +1,9 @@
 export { SchoolBusTimeline } from './SchoolBusTimeline';
-export type { TimelineEvent, TimelineMode, SchoolBusTimelineProps } from './SchoolBusTimeline';
+export type {
+  TimelineEvent,
+  TimelineMode,
+  SchoolBusTimelineProps,
+} from './SchoolBusTimeline';
 export {
   mapRequestHistoryToTimeline,
   mapSubscriptionHistoryToTimeline,

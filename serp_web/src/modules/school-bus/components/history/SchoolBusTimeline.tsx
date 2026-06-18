@@ -52,31 +52,156 @@ interface EventStyle {
 }
 
 const EVENT_STYLES: Record<string, EventStyle> = {
-  CREATE:  { icon: FilePlus,     ringColor: 'ring-blue-200 dark:ring-blue-900',       bgColor: 'bg-blue-50 dark:bg-blue-950/60',       iconColor: 'text-blue-600 dark:text-blue-300' },
-  CREATED: { icon: FilePlus,     ringColor: 'ring-blue-200 dark:ring-blue-900',       bgColor: 'bg-blue-50 dark:bg-blue-950/60',       iconColor: 'text-blue-600 dark:text-blue-300' },
-  UPDATE:  { icon: Pencil,       ringColor: 'ring-violet-200 dark:ring-violet-900',   bgColor: 'bg-violet-50 dark:bg-violet-950/60',   iconColor: 'text-violet-600 dark:text-violet-300' },
-  CHANGED: { icon: Pencil,       ringColor: 'ring-violet-200 dark:ring-violet-900',   bgColor: 'bg-violet-50 dark:bg-violet-950/60',   iconColor: 'text-violet-600 dark:text-violet-300' },
-  APPROVE: { icon: CheckCircle2, ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  APPROVED:{ icon: CheckCircle2, ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  REJECT:  { icon: XCircle,      ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  REJECTED:{ icon: XCircle,      ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  CANCEL:  { icon: XCircle,      ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  CANCELLED:{ icon: XCircle,     ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  PAUSE:   { icon: PauseCircle,  ringColor: 'ring-amber-200 dark:ring-amber-900',     bgColor: 'bg-amber-50 dark:bg-amber-950/60',     iconColor: 'text-amber-600 dark:text-amber-300' },
-  PAUSED:  { icon: PauseCircle,  ringColor: 'ring-amber-200 dark:ring-amber-900',     bgColor: 'bg-amber-50 dark:bg-amber-950/60',     iconColor: 'text-amber-600 dark:text-amber-300' },
-  RESUME:  { icon: PlayCircle,   ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  RESUMED: { icon: PlayCircle,   ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  STOP:    { icon: Ban,          ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  STOPPED: { icon: Ban,          ringColor: 'ring-red-200 dark:ring-red-900',         bgColor: 'bg-red-50 dark:bg-red-950/60',         iconColor: 'text-red-600 dark:text-red-300' },
-  RENEW:   { icon: RefreshCw,    ringColor: 'ring-blue-200 dark:ring-blue-900',       bgColor: 'bg-blue-50 dark:bg-blue-950/60',       iconColor: 'text-blue-600 dark:text-blue-300' },
-  RENEWED: { icon: RefreshCw,    ringColor: 'ring-blue-200 dark:ring-blue-900',       bgColor: 'bg-blue-50 dark:bg-blue-950/60',       iconColor: 'text-blue-600 dark:text-blue-300' },
-  ASSIGN:  { icon: BusFront,     ringColor: 'ring-sky-200 dark:ring-sky-900',         bgColor: 'bg-sky-50 dark:bg-sky-950/60',         iconColor: 'text-sky-600 dark:text-sky-300' },
-  ASSIGNED:{ icon: BusFront,     ringColor: 'ring-sky-200 dark:ring-sky-900',         bgColor: 'bg-sky-50 dark:bg-sky-950/60',         iconColor: 'text-sky-600 dark:text-sky-300' },
-  COMPLETE:{ icon: Flag,         ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  COMPLETED:{ icon: Flag,        ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  TRIP:    { icon: MapPinned,    ringColor: 'ring-emerald-200 dark:ring-emerald-900', bgColor: 'bg-emerald-50 dark:bg-emerald-950/60', iconColor: 'text-emerald-600 dark:text-emerald-300' },
-  ROUTE:   { icon: Route,        ringColor: 'ring-sky-200 dark:ring-sky-900',         bgColor: 'bg-sky-50 dark:bg-sky-950/60',         iconColor: 'text-sky-600 dark:text-sky-300' },
-  SYSTEM:  { icon: Settings,     ringColor: 'ring-border',                              bgColor: 'bg-muted',                              iconColor: 'text-muted-foreground' },
+  CREATE: {
+    icon: FilePlus,
+    ringColor: 'ring-blue-200 dark:ring-blue-900',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/60',
+    iconColor: 'text-blue-600 dark:text-blue-300',
+  },
+  CREATED: {
+    icon: FilePlus,
+    ringColor: 'ring-blue-200 dark:ring-blue-900',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/60',
+    iconColor: 'text-blue-600 dark:text-blue-300',
+  },
+  UPDATE: {
+    icon: Pencil,
+    ringColor: 'ring-violet-200 dark:ring-violet-900',
+    bgColor: 'bg-violet-50 dark:bg-violet-950/60',
+    iconColor: 'text-violet-600 dark:text-violet-300',
+  },
+  CHANGED: {
+    icon: Pencil,
+    ringColor: 'ring-violet-200 dark:ring-violet-900',
+    bgColor: 'bg-violet-50 dark:bg-violet-950/60',
+    iconColor: 'text-violet-600 dark:text-violet-300',
+  },
+  APPROVE: {
+    icon: CheckCircle2,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  APPROVED: {
+    icon: CheckCircle2,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  REJECT: {
+    icon: XCircle,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  REJECTED: {
+    icon: XCircle,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  CANCEL: {
+    icon: XCircle,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  CANCELLED: {
+    icon: XCircle,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  PAUSE: {
+    icon: PauseCircle,
+    ringColor: 'ring-amber-200 dark:ring-amber-900',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/60',
+    iconColor: 'text-amber-600 dark:text-amber-300',
+  },
+  PAUSED: {
+    icon: PauseCircle,
+    ringColor: 'ring-amber-200 dark:ring-amber-900',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/60',
+    iconColor: 'text-amber-600 dark:text-amber-300',
+  },
+  RESUME: {
+    icon: PlayCircle,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  RESUMED: {
+    icon: PlayCircle,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  STOP: {
+    icon: Ban,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  STOPPED: {
+    icon: Ban,
+    ringColor: 'ring-red-200 dark:ring-red-900',
+    bgColor: 'bg-red-50 dark:bg-red-950/60',
+    iconColor: 'text-red-600 dark:text-red-300',
+  },
+  RENEW: {
+    icon: RefreshCw,
+    ringColor: 'ring-blue-200 dark:ring-blue-900',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/60',
+    iconColor: 'text-blue-600 dark:text-blue-300',
+  },
+  RENEWED: {
+    icon: RefreshCw,
+    ringColor: 'ring-blue-200 dark:ring-blue-900',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/60',
+    iconColor: 'text-blue-600 dark:text-blue-300',
+  },
+  ASSIGN: {
+    icon: BusFront,
+    ringColor: 'ring-sky-200 dark:ring-sky-900',
+    bgColor: 'bg-sky-50 dark:bg-sky-950/60',
+    iconColor: 'text-sky-600 dark:text-sky-300',
+  },
+  ASSIGNED: {
+    icon: BusFront,
+    ringColor: 'ring-sky-200 dark:ring-sky-900',
+    bgColor: 'bg-sky-50 dark:bg-sky-950/60',
+    iconColor: 'text-sky-600 dark:text-sky-300',
+  },
+  COMPLETE: {
+    icon: Flag,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  COMPLETED: {
+    icon: Flag,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  TRIP: {
+    icon: MapPinned,
+    ringColor: 'ring-emerald-200 dark:ring-emerald-900',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-300',
+  },
+  ROUTE: {
+    icon: Route,
+    ringColor: 'ring-sky-200 dark:ring-sky-900',
+    bgColor: 'bg-sky-50 dark:bg-sky-950/60',
+    iconColor: 'text-sky-600 dark:text-sky-300',
+  },
+  SYSTEM: {
+    icon: Settings,
+    ringColor: 'ring-border',
+    bgColor: 'bg-muted',
+    iconColor: 'text-muted-foreground',
+  },
 };
 
 const DEFAULT_STYLE: EventStyle = {
@@ -87,7 +212,9 @@ const DEFAULT_STYLE: EventStyle = {
 };
 
 function resolveStyle(event: TimelineEvent): EventStyle {
-  const key = (event.category || event.status || event.title || '').toUpperCase().replace(/[\s_-]+/g, '_');
+  const key = (event.category || event.status || event.title || '')
+    .toUpperCase()
+    .replace(/[\s_-]+/g, '_');
   // Try exact match first, then try each word
   if (EVENT_STYLES[key]) return EVENT_STYLES[key];
   for (const word of key.split('_')) {
@@ -100,7 +227,10 @@ function resolveStyle(event: TimelineEvent): EventStyle {
 
 function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -109,8 +239,11 @@ function formatTime(iso: string): string {
 function formatFullDateTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString('en-US', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return iso;
@@ -126,13 +259,20 @@ function dayLabel(iso: string): string {
     const diff = (today.getTime() - target.getTime()) / 86400000;
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Yesterday';
-    return d.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   } catch {
     return iso;
   }
 }
 
-function groupByDay(events: TimelineEvent[]): { label: string; events: TimelineEvent[] }[] {
+function groupByDay(
+  events: TimelineEvent[]
+): { label: string; events: TimelineEvent[] }[] {
   const groups: Record<string, TimelineEvent[]> = {};
   for (const e of events) {
     const key = new Date(e.occurredAt).toDateString();
@@ -150,7 +290,9 @@ function groupByDay(events: TimelineEvent[]): { label: string; events: TimelineE
 function TimelineNode({ style }: { style: EventStyle }) {
   const Icon = style.icon;
   return (
-    <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ${style.ringColor} ${style.bgColor} shadow-sm`}>
+    <div
+      className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ${style.ringColor} ${style.bgColor} shadow-sm`}
+    >
       <Icon className={`h-4.5 w-4.5 ${style.iconColor}`} />
     </div>
   );
@@ -173,12 +315,20 @@ function TimelineCard({
         <TimelineNode style={style} />
         <div className='min-w-0 flex-1 pt-1'>
           <div className='flex flex-wrap items-center gap-2'>
-            <span className='text-sm font-semibold text-foreground'>{event.title}</span>
-            {event.badgeLabel && <SchoolBusStatusBadge status={event.badgeLabel} />}
-            {event.status && !event.badgeLabel && <SchoolBusStatusBadge status={event.status} />}
+            <span className='text-sm font-semibold text-foreground'>
+              {event.title}
+            </span>
+            {event.badgeLabel && (
+              <SchoolBusStatusBadge status={event.badgeLabel} />
+            )}
+            {event.status && !event.badgeLabel && (
+              <SchoolBusStatusBadge status={event.status} />
+            )}
           </div>
           {event.description && (
-            <p className='mt-0.5 text-xs leading-5 text-muted-foreground'>{event.description}</p>
+            <p className='mt-0.5 text-xs leading-5 text-muted-foreground'>
+              {event.description}
+            </p>
           )}
           <p className='mt-1 text-[11px] text-muted-foreground'>
             {formatFullDateTime(event.occurredAt)}
@@ -193,7 +343,9 @@ function TimelineCard({
     <div className='group flex gap-4'>
       {/* Time column — hidden on mobile */}
       <div className='hidden w-[100px] shrink-0 pt-2.5 text-right md:block'>
-        <p className='text-xs font-medium text-muted-foreground'>{formatTime(event.occurredAt)}</p>
+        <p className='text-xs font-medium text-muted-foreground'>
+          {formatTime(event.occurredAt)}
+        </p>
       </div>
 
       {/* Node */}
@@ -207,15 +359,25 @@ function TimelineCard({
         <div className='rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition group-hover:border-foreground/20 group-hover:shadow-[0_12px_32px_rgba(15,23,42,0.06)]'>
           <div className='flex flex-wrap items-start justify-between gap-2'>
             <div className='flex flex-wrap items-center gap-2'>
-              <span className='text-sm font-semibold text-foreground'>{event.title}</span>
-              {event.badgeLabel && <SchoolBusStatusBadge status={event.badgeLabel} />}
-              {event.status && !event.badgeLabel && <SchoolBusStatusBadge status={event.status} />}
+              <span className='text-sm font-semibold text-foreground'>
+                {event.title}
+              </span>
+              {event.badgeLabel && (
+                <SchoolBusStatusBadge status={event.badgeLabel} />
+              )}
+              {event.status && !event.badgeLabel && (
+                <SchoolBusStatusBadge status={event.status} />
+              )}
             </div>
-            <p className='text-[11px] text-muted-foreground md:hidden'>{formatFullDateTime(event.occurredAt)}</p>
+            <p className='text-[11px] text-muted-foreground md:hidden'>
+              {formatFullDateTime(event.occurredAt)}
+            </p>
           </div>
 
           {event.description && (
-            <p className='mt-1.5 text-sm leading-6 text-muted-foreground'>{event.description}</p>
+            <p className='mt-1.5 text-sm leading-6 text-muted-foreground'>
+              {event.description}
+            </p>
           )}
 
           <div className='mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground'>
@@ -236,15 +398,23 @@ function TimelineCard({
                 className='inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:text-foreground/80'
               >
                 {expanded ? 'Hide details' : 'Show details'}
-                {expanded ? <ChevronUp className='h-3 w-3' /> : <ChevronDown className='h-3 w-3' />}
+                {expanded ? (
+                  <ChevronUp className='h-3 w-3' />
+                ) : (
+                  <ChevronDown className='h-3 w-3' />
+                )}
               </button>
               {expanded && (
                 <div className='mt-2 space-y-1 rounded-xl border border-border bg-muted/60 p-3'>
                   {Object.entries(event.metadata!).map(([k, v]) =>
                     v != null ? (
                       <div key={k} className='flex gap-2 text-xs'>
-                        <span className='font-medium text-foreground'>{k}:</span>
-                        <span className='text-muted-foreground'>{String(v)}</span>
+                        <span className='font-medium text-foreground'>
+                          {k}:
+                        </span>
+                        <span className='text-muted-foreground'>
+                          {String(v)}
+                        </span>
                       </div>
                     ) : null
                   )}
@@ -266,8 +436,12 @@ function TimelineEmpty() {
       <div className='flex h-14 w-14 items-center justify-center rounded-full bg-muted'>
         <Settings className='h-6 w-6 text-muted-foreground' />
       </div>
-      <p className='mt-4 text-sm font-semibold text-foreground'>No history available</p>
-      <p className='mt-1 text-xs text-muted-foreground'>Events will appear when changes occur.</p>
+      <p className='mt-4 text-sm font-semibold text-foreground'>
+        No history available
+      </p>
+      <p className='mt-1 text-xs text-muted-foreground'>
+        Events will appear when changes occur.
+      </p>
     </div>
   );
 }
@@ -302,8 +476,12 @@ function TimelineError({ message }: { message?: string }) {
       <div className='flex h-14 w-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/60'>
         <XCircle className='h-6 w-6 text-red-500 dark:text-red-300' />
       </div>
-      <p className='mt-4 text-sm font-semibold text-red-700 dark:text-red-300'>Failed to load history</p>
-      <p className='mt-1 text-xs text-muted-foreground'>{message || 'Please try again later.'}</p>
+      <p className='mt-4 text-sm font-semibold text-red-700 dark:text-red-300'>
+        Failed to load history
+      </p>
+      <p className='mt-1 text-xs text-muted-foreground'>
+        {message || 'Please try again later.'}
+      </p>
     </div>
   );
 }
@@ -337,7 +515,9 @@ export function SchoolBusTimeline({
   if (events.length === 0) return <TimelineEmpty />;
 
   const shouldGroup = groupByDate ?? mode === 'full';
-  const containerStyle = maxHeight ? { maxHeight, overflowY: 'auto' as const } : {};
+  const containerStyle = maxHeight
+    ? { maxHeight, overflowY: 'auto' as const }
+    : {};
 
   if (mode === 'compact') {
     return (

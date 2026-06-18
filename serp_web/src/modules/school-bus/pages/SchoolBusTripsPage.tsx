@@ -39,11 +39,27 @@ import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
 
 const statusMap: Record<string, { label: string; className: string }> = {
-  CREATED: { label: 'Created', className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50' },
-  IN_PROGRESS: { label: 'In progress', className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50' },
-  COMPLETED: { label: 'Completed', className: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50' },
-  CANCELLED: { label: 'Cancelled', className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50' },
-  PAUSED: { label: 'Paused', className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50' },
+  CREATED: {
+    label: 'Created',
+    className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
+  },
+  IN_PROGRESS: {
+    label: 'In progress',
+    className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
+  },
+  COMPLETED: {
+    label: 'Completed',
+    className:
+      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
+  },
+  PAUSED: {
+    label: 'Paused',
+    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
+  },
 };
 
 const renderTripStatus = (status: string) => {
@@ -53,7 +69,12 @@ const renderTripStatus = (status: string) => {
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   };
   return (
-    <Badge className={cn('rounded-full px-3 py-0.5 text-xs font-semibold shadow-none border', config.className)}>
+    <Badge
+      className={cn(
+        'rounded-full px-3 py-0.5 text-xs font-semibold shadow-none border',
+        config.className
+      )}
+    >
       {config.label}
     </Badge>
   );
@@ -84,7 +105,11 @@ export function SchoolBusTripsPage() {
     sortBy: 'serviceDate',
     sortDirection: 'DESC',
   });
-  const { data, isLoading, refetch: refetchTrips } = useGetTripsQuery(pagination.params);
+  const {
+    data,
+    isLoading,
+    refetch: refetchTrips,
+  } = useGetTripsQuery(pagination.params);
   const [startTrip] = useStartTripMutation();
   const [arriveTripStop] = useArriveTripStopMutation();
   const [departTripStop] = useDepartTripStopMutation();
@@ -233,9 +258,12 @@ export function SchoolBusTripsPage() {
             <Route className='h-4.5 w-4.5' />
           </div>
           <div className='flex flex-col min-w-0'>
-            <span className='font-bold text-slate-950 truncate'>{trip.tripCode}</span>
+            <span className='font-bold text-slate-950 truncate'>
+              {trip.tripCode}
+            </span>
             <span className='text-[10px] text-slate-400 font-normal mt-0.5'>
-              {getFriendlyDirection(trip.routeDirection)} · {formatDate(trip.serviceDate)}
+              {getFriendlyDirection(trip.routeDirection)} ·{' '}
+              {formatDate(trip.serviceDate)}
             </span>
           </div>
         </div>
@@ -246,8 +274,12 @@ export function SchoolBusTripsPage() {
       header: 'Route',
       render: (trip) => (
         <div className='flex flex-col min-w-0'>
-          <span className='font-bold text-slate-900 truncate'>{trip.routeCode}</span>
-          <span className='text-xs text-slate-500 truncate mt-0.5'>{trip.routeName}</span>
+          <span className='font-bold text-slate-900 truncate'>
+            {trip.routeCode}
+          </span>
+          <span className='text-xs text-slate-500 truncate mt-0.5'>
+            {trip.routeName}
+          </span>
         </div>
       ),
     },
@@ -256,7 +288,9 @@ export function SchoolBusTripsPage() {
       header: 'Service',
       render: (trip) => (
         <div className='flex flex-col text-slate-700 gap-0.5'>
-          <span className='font-semibold text-xs'>{formatDate(trip.serviceDate)}</span>
+          <span className='font-semibold text-xs'>
+            {formatDate(trip.serviceDate)}
+          </span>
           <span className='inline-flex items-center text-[9px] font-extrabold text-slate-500 bg-slate-100 rounded px-1.5 py-0.5 w-fit uppercase tracking-wider'>
             {getFriendlyDirection(trip.routeDirection)}
           </span>
@@ -267,26 +301,59 @@ export function SchoolBusTripsPage() {
       key: 'startEnd',
       header: 'Start → End',
       render: (trip) => {
-        const StartIcon = trip.startLocationType === 'SCHOOL' ? GraduationCap : trip.startLocationType === 'DEPOT' ? Warehouse : MapPin;
-        const EndIcon = trip.endLocationType === 'SCHOOL' ? GraduationCap : trip.endLocationType === 'DEPOT' ? Warehouse : MapPin;
-        const startColor = trip.startLocationType === 'SCHOOL' ? 'text-red-500 bg-red-50 border-red-100' : 'text-orange-500 bg-orange-50 border-orange-100';
-        const endColor = trip.endLocationType === 'SCHOOL' ? 'text-red-500 bg-red-50 border-red-100' : 'text-orange-500 bg-orange-50 border-orange-100';
+        const StartIcon =
+          trip.startLocationType === 'SCHOOL'
+            ? GraduationCap
+            : trip.startLocationType === 'DEPOT'
+              ? Warehouse
+              : MapPin;
+        const EndIcon =
+          trip.endLocationType === 'SCHOOL'
+            ? GraduationCap
+            : trip.endLocationType === 'DEPOT'
+              ? Warehouse
+              : MapPin;
+        const startColor =
+          trip.startLocationType === 'SCHOOL'
+            ? 'text-red-500 bg-red-50 border-red-100'
+            : 'text-orange-500 bg-orange-50 border-orange-100';
+        const endColor =
+          trip.endLocationType === 'SCHOOL'
+            ? 'text-red-500 bg-red-50 border-red-100'
+            : 'text-orange-500 bg-orange-50 border-orange-100';
 
         return (
           <div className='flex flex-col gap-1 text-slate-700 max-w-[240px]'>
             <div className='flex items-center gap-1.5 text-xs font-semibold text-slate-900 truncate'>
-              <div className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px]', startColor)}>
+              <div
+                className={cn(
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px]',
+                  startColor
+                )}
+              >
                 <StartIcon className='h-3 w-3' />
               </div>
-              <span className='truncate' title={trip.startLocationName}>{trip.startLocationName || 'N/A'}</span>
-              <span className='text-slate-400 font-normal shrink-0 mx-0.5'>→</span>
-              <div className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px]', endColor)}>
+              <span className='truncate' title={trip.startLocationName}>
+                {trip.startLocationName || 'N/A'}
+              </span>
+              <span className='text-slate-400 font-normal shrink-0 mx-0.5'>
+                →
+              </span>
+              <div
+                className={cn(
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[10px]',
+                  endColor
+                )}
+              >
                 <EndIcon className='h-3 w-3' />
               </div>
-              <span className='truncate' title={trip.endLocationName}>{trip.endLocationName || 'N/A'}</span>
+              <span className='truncate' title={trip.endLocationName}>
+                {trip.endLocationName || 'N/A'}
+              </span>
             </div>
             <span className='text-[10px] text-slate-500 font-medium'>
-              {formatLocationType(trip.startLocationType)} → {formatLocationType(trip.endLocationType)}
+              {formatLocationType(trip.startLocationType)} →{' '}
+              {formatLocationType(trip.endLocationType)}
             </span>
           </div>
         );
@@ -305,7 +372,9 @@ export function SchoolBusTripsPage() {
             {hasBus ? (
               <div className='flex items-center gap-1 font-medium text-slate-700'>
                 <BusFront className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-                <span className='font-bold bg-slate-50 border border-slate-200/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-slate-800'>{trip.busPlateNumber}</span>
+                <span className='font-bold bg-slate-50 border border-slate-200/60 rounded px-1.5 py-0.5 text-[10px] font-mono text-slate-800'>
+                  {trip.busPlateNumber}
+                </span>
               </div>
             ) : (
               <span className='inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5 w-fit'>
@@ -316,7 +385,12 @@ export function SchoolBusTripsPage() {
             {hasDriver ? (
               <div className='flex items-center gap-1 text-slate-600'>
                 <User className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-                <span className='truncate max-w-[120px]' title={trip.driverName}>{trip.driverName}</span>
+                <span
+                  className='truncate max-w-[120px]'
+                  title={trip.driverName}
+                >
+                  {trip.driverName}
+                </span>
               </div>
             ) : (
               <span className='inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5 w-fit'>
@@ -327,7 +401,12 @@ export function SchoolBusTripsPage() {
             {hasAttendant ? (
               <div className='flex items-center gap-1 text-slate-500'>
                 <Users className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-                <span className='truncate max-w-[120px]' title={trip.attendantName}>{trip.attendantName}</span>
+                <span
+                  className='truncate max-w-[120px]'
+                  title={trip.attendantName}
+                >
+                  {trip.attendantName}
+                </span>
               </div>
             ) : null}
 
@@ -345,33 +424,47 @@ export function SchoolBusTripsPage() {
       header: 'Stop Progress',
       render: (trip) => {
         const totalStops = trip.stops?.length ?? 0;
-        const completedStops = trip.status === 'COMPLETED'
-          ? totalStops
-          : trip.stops ? (() => {
-              const sortedStops = [...trip.stops].sort((a: any, b: any) => (a.stopOrder ?? 0) - (b.stopOrder ?? 0));
-              return sortedStops.filter((s: any, idx: number) => {
-                const isFirst = idx === 0;
-                const isLast = idx === sortedStops.length - 1;
-                if (isFirst) {
-                  return s.status === 'DEPARTED';
-                }
-                if (isLast) {
-                  return s.status === 'ARRIVED' || s.status === 'DEPARTED' || s.status === 'SKIPPED';
-                }
-                return s.status === 'DEPARTED' || s.status === 'SKIPPED';
-              }).length;
-            })() : 0;
+        const completedStops =
+          trip.status === 'COMPLETED'
+            ? totalStops
+            : trip.stops
+              ? (() => {
+                  const sortedStops = [...trip.stops].sort(
+                    (a: any, b: any) => (a.stopOrder ?? 0) - (b.stopOrder ?? 0)
+                  );
+                  return sortedStops.filter((s: any, idx: number) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === sortedStops.length - 1;
+                    if (isFirst) {
+                      return s.status === 'DEPARTED';
+                    }
+                    if (isLast) {
+                      return (
+                        s.status === 'ARRIVED' ||
+                        s.status === 'DEPARTED' ||
+                        s.status === 'SKIPPED'
+                      );
+                    }
+                    return s.status === 'DEPARTED' || s.status === 'SKIPPED';
+                  }).length;
+                })()
+              : 0;
         const nextStop = trip.stops?.find((s: any) =>
           ['PENDING', 'ARRIVED', 'BOARDING'].includes(s.status)
         );
-        const percent = totalStops > 0 ? (completedStops / totalStops) * 100 : 0;
+        const percent =
+          totalStops > 0 ? (completedStops / totalStops) * 100 : 0;
 
         return (
           <div className='flex flex-col gap-1 min-w-[120px] max-w-[160px] text-xs'>
             <div className='flex items-center justify-between font-semibold text-slate-700'>
-              <span>{completedStops} / {totalStops} stops</span>
+              <span>
+                {completedStops} / {totalStops} stops
+              </span>
               {completedStops === totalStops && totalStops > 0 && (
-                <span className='text-[9px] bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded font-bold border border-emerald-100'>Done</span>
+                <span className='text-[9px] bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded font-bold border border-emerald-100'>
+                  Done
+                </span>
               )}
             </div>
             {totalStops > 0 ? (
@@ -379,16 +472,23 @@ export function SchoolBusTripsPage() {
                 <div
                   className={cn(
                     'h-full transition-all duration-300 rounded-full',
-                    completedStops === totalStops ? 'bg-emerald-500' : 'bg-blue-500'
+                    completedStops === totalStops
+                      ? 'bg-emerald-500'
+                      : 'bg-blue-500'
                   )}
                   style={{ width: `${percent}%` }}
                 />
               </div>
             ) : (
-              <span className='text-[10px] text-slate-400 italic'>No stops</span>
+              <span className='text-[10px] text-slate-400 italic'>
+                No stops
+              </span>
             )}
             {nextStop && (
-              <span className='text-[10px] text-slate-500 truncate mt-0.5' title={nextStop.stopName}>
+              <span
+                className='text-[10px] text-slate-500 truncate mt-0.5'
+                title={nextStop.stopName}
+              >
                 Next: {nextStop.stopName}
               </span>
             )}
@@ -403,7 +503,10 @@ export function SchoolBusTripsPage() {
         <div className='space-y-1.5'>
           {renderTripStatus(trip.status)}
           {trip.status === 'CANCELLED' && trip.cancellationReason && (
-            <p className='text-[10px] text-red-600 bg-red-50 border border-red-100 rounded px-1.5 py-0.5 max-w-[140px] truncate' title={trip.cancellationReason}>
+            <p
+              className='text-[10px] text-red-600 bg-red-50 border border-red-100 rounded px-1.5 py-0.5 max-w-[140px] truncate'
+              title={trip.cancellationReason}
+            >
               Reason: {trip.cancellationReason}
             </p>
           )}
@@ -469,7 +572,9 @@ export function SchoolBusTripsPage() {
           );
 
           if (nextStop) {
-            const isArrivedOrBoarding = ['ARRIVED', 'BOARDING'].includes(nextStop.status);
+            const isArrivedOrBoarding = ['ARRIVED', 'BOARDING'].includes(
+              nextStop.status
+            );
             return (
               <div className='flex items-center justify-end gap-1.5'>
                 {isArrivedOrBoarding ? (
@@ -559,9 +664,7 @@ export function SchoolBusTripsPage() {
               className='rounded-full h-8 text-xs font-semibold px-3'
               asChild
             >
-              <Link href={`/school-bus/trips/${trip.id}`}>
-                Open details
-              </Link>
+              <Link href={`/school-bus/trips/${trip.id}`}>Open details</Link>
             </Button>
             <Button
               size='sm'
@@ -657,21 +760,33 @@ export function SchoolBusTripsPage() {
           <SchoolBusMetricCard
             label={access.isParentOnly ? 'Total Tracking Trips' : 'Trips'}
             value={data?.data?.totalElements ?? 0}
-            hint={access.isParentOnly ? 'All historical & current student trips' : 'Route execution records'}
+            hint={
+              access.isParentOnly
+                ? 'All historical & current student trips'
+                : 'Route execution records'
+            }
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
             label='In progress'
             value={trips.filter((trip) => trip.status === 'IN_PROGRESS').length}
-            hint={access.isParentOnly ? 'Trips currently running' : 'Trips currently operating'}
+            hint={
+              access.isParentOnly
+                ? 'Trips currently running'
+                : 'Trips currently operating'
+            }
             icon={PlayCircle}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Completed'
             value={trips.filter((trip) => trip.status === 'COMPLETED').length}
-            hint={access.isParentOnly ? 'Successfully ended trips' : 'Closed trip executions'}
+            hint={
+              access.isParentOnly
+                ? 'Successfully ended trips'
+                : 'Closed trip executions'
+            }
             icon={CheckCircle2}
             tone='success'
           />
@@ -679,7 +794,9 @@ export function SchoolBusTripsPage() {
 
         {/* Data Table within Card */}
         <SchoolBusDataTable
-          title={access.isParentOnly ? 'Student Trips' : 'Trip Operations Board'}
+          title={
+            access.isParentOnly ? 'Student Trips' : 'Trip Operations Board'
+          }
           description={
             access.isParentOnly
               ? 'View and track current and past trips.'
@@ -693,10 +810,18 @@ export function SchoolBusTripsPage() {
           stickyFirstColumn
           stickyActionColumn
           emptyIcon={Route}
-          emptyTitle={trips.length === 0 ? (access.isParentOnly ? 'No trips found' : 'No trips yet') : 'No trips match current filters'}
+          emptyTitle={
+            trips.length === 0
+              ? access.isParentOnly
+                ? 'No trips found'
+                : 'No trips yet'
+              : 'No trips match current filters'
+          }
           emptyDescription={
             trips.length === 0
-              ? (access.isParentOnly ? 'There are no active or scheduled trips for your children.' : 'Create a trip from a dispatched route before execution can start.')
+              ? access.isParentOnly
+                ? 'There are no active or scheduled trips for your children.'
+                : 'Create a trip from a dispatched route before execution can start.'
               : 'Try adjusting your search query or clear the active filters.'
           }
         />

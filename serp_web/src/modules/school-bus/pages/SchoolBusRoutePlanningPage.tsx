@@ -5,7 +5,10 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { PlanningContextPanel, type ContextFormState } from '../components/planning/PlanningContextPanel';
+import {
+  PlanningContextPanel,
+  type ContextFormState,
+} from '../components/planning/PlanningContextPanel';
 import { PlanningSessionPanel } from '../components/planning/PlanningSessionPanel';
 import { PlanningResultsPanel } from '../components/planning/PlanningResultsPanel';
 import { DispatchKpiCards } from '../components/planning/DispatchKpiCards';
@@ -54,15 +57,28 @@ type MapEmptyStep = 'pick-school' | 'preview' | 'no-coords' | null;
 
 function MapEmptyState({ step }: { step: MapEmptyStep }) {
   const steps: { label: string; done: boolean }[] = [
-    { label: 'Select a school in Planning Context', done: step !== 'pick-school' },
-    { label: 'Click Preview Demand to load pickup points', done: step === null },
+    {
+      label: 'Select a school in Planning Context',
+      done: step !== 'pick-school',
+    },
+    {
+      label: 'Click Preview Demand to load pickup points',
+      done: step === null,
+    },
   ];
 
   return (
     <div className='flex h-full flex-col items-center justify-center gap-5 bg-[#f8fafc] px-6'>
       {/* Map pin icon */}
       <div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white'>
-        <svg xmlns='http://www.w3.org/2000/svg' className='h-8 w-8 text-slate-300' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5'>
+        <svg
+          xmlns='http://www.w3.org/2000/svg'
+          className='h-8 w-8 text-slate-300'
+          viewBox='0 0 24 24'
+          fill='none'
+          stroke='currentColor'
+          strokeWidth='1.5'
+        >
           <path d='M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0' />
           <circle cx='12' cy='10' r='3' />
         </svg>
@@ -91,7 +107,9 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
               >
                 {s.done ? '✓' : i + 1}
               </span>
-              <span className={`text-xs leading-5 ${s.done ? 'text-slate-400 line-through' : 'font-medium text-slate-600'}`}>
+              <span
+                className={`text-xs leading-5 ${s.done ? 'text-slate-400 line-through' : 'font-medium text-slate-600'}`}
+              >
                 {s.label}
               </span>
             </li>
@@ -121,7 +139,9 @@ export default function SchoolBusRoutePlanningPage() {
 
   const [isHydrated, setIsHydrated] = useState(false);
   const [preview, setPreview] = useState<SchoolBusPlanningPreview | null>(null);
-  const [rightPanelTab, setRightPanelTab] = useState<'demand-preview' | 'route-builder'>('demand-preview');
+  const [rightPanelTab, setRightPanelTab] = useState<
+    'demand-preview' | 'route-builder'
+  >('demand-preview');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
@@ -142,41 +162,56 @@ export default function SchoolBusRoutePlanningPage() {
   }, []);
 
   // ── API mutations ──────────────────────────────────────────────────────────
-  const [previewMutation, { isLoading: previewing }] = usePreviewPlanningDemandMutation();
-  const [createSession, { isLoading: creating }] = useCreatePlanningSessionMutation();
-  const [publishSession, { isLoading: publishing }] = usePublishPlanningSessionMutation();
-  const [cancelSession, { isLoading: cancelling }] = useCancelPlanningSessionMutation();
-  const [createRouteInSession, { isLoading: creatingRoute }] = useCreateRouteInSessionMutation();
+  const [previewMutation, { isLoading: previewing }] =
+    usePreviewPlanningDemandMutation();
+  const [createSession, { isLoading: creating }] =
+    useCreatePlanningSessionMutation();
+  const [publishSession, { isLoading: publishing }] =
+    usePublishPlanningSessionMutation();
+  const [cancelSession, { isLoading: cancelling }] =
+    useCancelPlanningSessionMutation();
+  const [createRouteInSession, { isLoading: creatingRoute }] =
+    useCreateRouteInSessionMutation();
 
   // ── Session queries ────────────────────────────────────────────────────────
   const { data: sessionsData } = useGetPlanningSessionsQueryQuery();
   const sessions = sessionsData?.data ?? [];
 
-  const { data: liveSessionData, refetch: refetchSession } = useGetPlanningSessionQuery(
-    activeSessionId ?? 0,
-    { skip: !activeSessionId, pollingInterval: 0 }
-  );
+  const { data: liveSessionData, refetch: refetchSession } =
+    useGetPlanningSessionQuery(activeSessionId ?? 0, {
+      skip: !activeSessionId,
+      pollingInterval: 0,
+    });
   const activeSession: SchoolBusPlanningSession | null =
-    liveSessionData?.data ?? sessions.find(s => s.id === activeSessionId) ?? null;
+    liveSessionData?.data ??
+    sessions.find((s) => s.id === activeSessionId) ??
+    null;
 
-  const { data: sessionRoutesData, isFetching: fetchingRoutes, refetch: refetchRoutes } = useGetSessionRoutesQuery(
-    activeSessionId ?? 0,
-    { skip: !activeSessionId }
-  );
+  const {
+    data: sessionRoutesData,
+    isFetching: fetchingRoutes,
+    refetch: refetchRoutes,
+  } = useGetSessionRoutesQuery(activeSessionId ?? 0, {
+    skip: !activeSessionId,
+  });
   const sessionRoutes = sessionRoutesData?.data ?? [];
 
-  const { data: eligibleStudentsData, isFetching: fetchingEligible } = useGetSessionEligibleStudentsQuery(
-    activeSessionId ?? 0,
-    { skip: !activeSessionId }
-  );
+  const { data: eligibleStudentsData, isFetching: fetchingEligible } =
+    useGetSessionEligibleStudentsQuery(activeSessionId ?? 0, {
+      skip: !activeSessionId,
+    });
   const eligibleStudents = eligibleStudentsData?.data ?? [];
 
   // ── School + depots for map ────────────────────────────────────────────────
   const schoolIdNum = Number(form.schoolId) || 0;
-  const { data: schoolData } = useGetSchoolByIdQuery(schoolIdNum, { skip: !schoolIdNum });
+  const { data: schoolData } = useGetSchoolByIdQuery(schoolIdNum, {
+    skip: !schoolIdNum,
+  });
   const school = schoolData?.data ?? null;
 
-  const { data: depotsData } = useGetDepotsQuery({ ...SCHOOL_BUS_OPTION_QUERY });
+  const { data: depotsData } = useGetDepotsQuery({
+    ...SCHOOL_BUS_OPTION_QUERY,
+  });
   const depots = depotsData?.data?.items ?? [];
 
   // ── Route detail for map (stops + polyline) ────────────────────────────────
@@ -220,7 +255,7 @@ export default function SchoolBusRoutePlanningPage() {
         Number(form.schoolId) === activeSession.schoolId &&
         form.serviceDate === activeSession.serviceDate &&
         form.routeDirection === activeSession.routeDirection;
- 
+
       if (!isContextMatch) {
         setActiveSessionId(null);
         setSelectedRouteId(null);
@@ -231,7 +266,17 @@ export default function SchoolBusRoutePlanningPage() {
       clearSessionQueryParams();
       setPreview(null);
     }
-  }, [form.schoolId, form.serviceDate, form.routeDirection, activeSession, activeSessionId, isHydrated, clearSessionQueryParams, querySessionId, queryRouteId]);
+  }, [
+    form.schoolId,
+    form.serviceDate,
+    form.routeDirection,
+    activeSession,
+    activeSessionId,
+    isHydrated,
+    clearSessionQueryParams,
+    querySessionId,
+    queryRouteId,
+  ]);
 
   // Reset selected route when active session changes
   React.useEffect(() => {
@@ -243,7 +288,7 @@ export default function SchoolBusRoutePlanningPage() {
     if (sessions.length > 0) {
       if (querySessionId) {
         const sessionIdNum = Number(querySessionId);
-        const matchedSession = sessions.find(s => s.id === sessionIdNum);
+        const matchedSession = sessions.find((s) => s.id === sessionIdNum);
         if (matchedSession) {
           setActiveSessionId(sessionIdNum);
           setRightPanelTab('route-builder');
@@ -266,7 +311,7 @@ export default function SchoolBusRoutePlanningPage() {
     if (queryRouteId && activeSessionId) {
       if (!fetchingRoutes) {
         const routeIdNum = Number(queryRouteId);
-        const matchedRoute = sessionRoutes.find(r => r.id === routeIdNum);
+        const matchedRoute = sessionRoutes.find((r) => r.id === routeIdNum);
         if (matchedRoute) {
           setSelectedRouteId(routeIdNum);
           setRightPanelTab('route-builder');
@@ -275,15 +320,25 @@ export default function SchoolBusRoutePlanningPage() {
             const cardEl = document.getElementById(`route-card-${routeIdNum}`);
             if (cardEl) {
               cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              cardEl.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2');
+              cardEl.classList.add(
+                'ring-2',
+                'ring-indigo-500',
+                'ring-offset-2'
+              );
               setTimeout(() => {
-                cardEl.classList.remove('ring-2', 'ring-indigo-500', 'ring-offset-2');
+                cardEl.classList.remove(
+                  'ring-2',
+                  'ring-indigo-500',
+                  'ring-offset-2'
+                );
               }, 3000);
             }
           }, 300);
           setRouteError(null);
         } else {
-          setRouteError('Route does not belong to the selected planning session.');
+          setRouteError(
+            'Route does not belong to the selected planning session.'
+          );
         }
       }
     } else {
@@ -294,7 +349,8 @@ export default function SchoolBusRoutePlanningPage() {
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handlePreview = useCallback(async () => {
     if (!form.schoolId || !form.serviceDate) {
-      toast.error('Please fill School and Service Date'); return;
+      toast.error('Please fill School and Service Date');
+      return;
     }
     try {
       const res = await previewMutation({
@@ -308,14 +364,17 @@ export default function SchoolBusRoutePlanningPage() {
       setFitTarget('all');
       setFitKey((k) => k + 1);
       toast.success('Demand preview loaded');
-    } catch { toast.error('Failed to load preview'); }
+    } catch {
+      toast.error('Failed to load preview');
+    }
   }, [form, previewMutation]);
 
   const handleCreateSession = useCallback(async () => {
     try {
       const res = await createSession({
         schoolId: Number(form.schoolId),
-        serviceDate: form.serviceDate, routeDirection: form.routeDirection,
+        serviceDate: form.serviceDate,
+        routeDirection: form.routeDirection,
       }).unwrap();
       setActiveSessionId(res.data.id);
       setRightPanelTab('route-builder');
@@ -326,26 +385,32 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, [form, createSession]);
 
-  const handleCreateManualRoute = useCallback(async (req: CreateRouteInSessionRequest) => {
-    if (!activeSession) return;
-    try {
-      const res = await createRouteInSession({ sessionId: activeSession.id, body: req }).unwrap();
-      toast.success('Route created');
-      
-      // Invalidate/refetch session summary and routes list to reflect changes immediately
-      refetchSession();
-      refetchRoutes();
+  const handleCreateManualRoute = useCallback(
+    async (req: CreateRouteInSessionRequest) => {
+      if (!activeSession) return;
+      try {
+        const res = await createRouteInSession({
+          sessionId: activeSession.id,
+          body: req,
+        }).unwrap();
+        toast.success('Route created');
 
-      if (res.data?.id) {
-        setSelectedRouteId(res.data.id);
-        setFitTarget('route');
-        setFitKey((k) => k + 1);
+        // Invalidate/refetch session summary and routes list to reflect changes immediately
+        refetchSession();
+        refetchRoutes();
+
+        if (res.data?.id) {
+          setSelectedRouteId(res.data.id);
+          setFitTarget('route');
+          setFitKey((k) => k + 1);
+        }
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string } };
+        toast.error(err?.data?.message ?? 'Failed to create route');
       }
-    } catch (e: unknown) {
-      const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? 'Failed to create route');
-    }
-  }, [activeSession, createRouteInSession, refetchSession, refetchRoutes]);
+    },
+    [activeSession, createRouteInSession, refetchSession, refetchRoutes]
+  );
 
   const handlePublish = useCallback(async () => {
     if (!activeSession) return;
@@ -353,8 +418,8 @@ export default function SchoolBusRoutePlanningPage() {
       await publishSession(activeSession.id).unwrap();
       toast.success('Session published!');
     } catch (e: unknown) {
-      const err = e as { 
-        data?: { 
+      const err = e as {
+        data?: {
           message?: string;
           code?: string;
           data?: {
@@ -373,7 +438,7 @@ export default function SchoolBusRoutePlanningPage() {
               }>;
             }>;
           };
-        } 
+        };
       };
 
       const publishVal = err.data?.data;
@@ -382,21 +447,27 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='flex flex-col gap-2 max-w-[380px] text-xs leading-normal'>
             <div className='font-bold text-slate-900 flex items-center gap-1.5'>
               <span className='h-2 w-2 rounded-full bg-rose-600' />
-              Publish Blocked: {publishVal.blockingRouteCount} route(s) failed validation
+              Publish Blocked: {publishVal.blockingRouteCount} route(s) failed
+              validation
             </div>
             <p className='text-[11px] text-slate-500 font-semibold'>
               Total {publishVal.totalBlockingIssues} blocking issue(s) detected:
             </p>
             <div className='max-h-[220px] overflow-y-auto space-y-2.5 pr-1 border-t border-slate-100 pt-2'>
-              {publishVal.blockingRoutes.map(route => (
+              {publishVal.blockingRoutes.map((route) => (
                 <div key={route.routeId} className='space-y-1'>
                   <div className='font-bold text-rose-800 flex items-center justify-between'>
-                    <span>{route.routeCode} - {route.routeName}</span>
+                    <span>
+                      {route.routeCode} - {route.routeName}
+                    </span>
                   </div>
                   <ul className='space-y-1.5 pl-3 list-disc text-[11px] text-slate-700 font-medium'>
                     {route.issues.map((issue, idx) => (
                       <li key={idx} className='leading-relaxed'>
-                        <span className='font-bold text-slate-800'>{issue.issueType}:</span> {issue.message}
+                        <span className='font-bold text-slate-800'>
+                          {issue.issueType}:
+                        </span>{' '}
+                        {issue.message}
                         {issue.suggestedFix && (
                           <div className='text-rose-900 font-bold mt-0.5 bg-rose-50/50 px-1.5 py-0.5 rounded border border-rose-100/45'>
                             💡 Fix: {issue.suggestedFix}
@@ -426,9 +497,12 @@ export default function SchoolBusRoutePlanningPage() {
     if (!activeSession) return;
     try {
       await cancelSession(activeSession.id).unwrap();
-      setActiveSessionId(null); setPreview(null);
+      setActiveSessionId(null);
+      setPreview(null);
       toast.success('Session cancelled');
-    } catch { toast.error('Failed to cancel session'); } finally {
+    } catch {
+      toast.error('Failed to cancel session');
+    } finally {
       setCancelDialogOpen(false);
     }
   }, [activeSession, cancelSession]);
@@ -442,44 +516,50 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, []);
 
-  const handleSelectSession = useCallback((s: SchoolBusPlanningSession) => {
-    setActiveSessionId(s.id);
-    setRightPanelTab('route-builder');
-    setForm({
-      schoolId: String(s.schoolId),
-      serviceDate: s.serviceDate,
-      routeDirection: s.routeDirection,
-    });
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('sessionId', String(s.id));
-    params.delete('routeId');
-    const queryString = params.toString();
-    router.push(queryString ? `${pathname}?${queryString}` : pathname);
-  }, [router, pathname, searchParams]);
-
-  const handleOpenSession = useCallback((id: number) => {
-    setActiveSessionId(id);
-    setRightPanelTab('route-builder');
-    
-    const matchedSession = sessions.find(s => s.id === id);
-    if (matchedSession) {
+  const handleSelectSession = useCallback(
+    (s: SchoolBusPlanningSession) => {
+      setActiveSessionId(s.id);
+      setRightPanelTab('route-builder');
       setForm({
-        schoolId: String(matchedSession.schoolId),
-        serviceDate: matchedSession.serviceDate,
-        routeDirection: matchedSession.routeDirection,
+        schoolId: String(s.schoolId),
+        serviceDate: s.serviceDate,
+        routeDirection: s.routeDirection,
       });
-    }
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('sessionId', String(s.id));
+      params.delete('routeId');
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    },
+    [router, pathname, searchParams]
+  );
 
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('sessionId', String(id));
-    params.delete('routeId');
-    const queryString = params.toString();
-    router.push(queryString ? `${pathname}?${queryString}` : pathname);
-  }, [sessions, router, pathname, searchParams]);
+  const handleOpenSession = useCallback(
+    (id: number) => {
+      setActiveSessionId(id);
+      setRightPanelTab('route-builder');
+
+      const matchedSession = sessions.find((s) => s.id === id);
+      if (matchedSession) {
+        setForm({
+          schoolId: String(matchedSession.schoolId),
+          serviceDate: matchedSession.serviceDate,
+          routeDirection: matchedSession.routeDirection,
+        });
+      }
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('sessionId', String(id));
+      params.delete('routeId');
+      const queryString = params.toString();
+      router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    },
+    [sessions, router, pathname, searchParams]
+  );
 
   const handleNewSession = useCallback(() => {
     // Reset service date to today, keep schoolId and routeDirection
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       serviceDate: new Date().toISOString().slice(0, 10),
     }));
@@ -507,7 +587,10 @@ export default function SchoolBusRoutePlanningPage() {
     unassignedStudents === 0;
 
   // Map pickup points from preview (or from greedy result when preview was skipped)
-  const rawPickupPoints: (PlanningPointResponse | SchoolBusPlanningPickupPoint)[] = preview?.points
+  const rawPickupPoints: (
+    | PlanningPointResponse
+    | SchoolBusPlanningPickupPoint
+  )[] = preview?.points
     ? preview.points
     : (preview?.eligiblePickupPoints ?? []);
   const mapPickupPoints = rawPickupPoints.map((pp) => ({
@@ -526,18 +609,19 @@ export default function SchoolBusRoutePlanningPage() {
 
   // Enable Fit All only when there are actual coordinate-bearing markers
   const canFitAll =
-    (typeof school?.latitude === 'number') ||
+    typeof school?.latitude === 'number' ||
     mapPickupPoints.some((pp) => typeof pp.latitude === 'number') ||
     depots.some((d) => typeof d.latitude === 'number');
 
   // Map empty-state context
-  const mapEmptyStep: 'pick-school' | 'preview' | 'no-coords' | null = !hasMapData
-    ? !form.schoolId
-      ? 'pick-school'
-      : school && typeof school.latitude !== 'number'
-        ? 'no-coords'
-        : 'preview'
-    : null;
+  const mapEmptyStep: 'pick-school' | 'preview' | 'no-coords' | null =
+    !hasMapData
+      ? !form.schoolId
+        ? 'pick-school'
+        : school && typeof school.latitude !== 'number'
+          ? 'no-coords'
+          : 'preview'
+      : null;
 
   const cancelDialog = (
     <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -545,7 +629,8 @@ export default function SchoolBusRoutePlanningPage() {
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel Session?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to cancel this session? Draft routes will be soft-deleted. This action cannot be undone.
+            Are you sure you want to cancel this session? Draft routes will be
+            soft-deleted. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -571,8 +656,12 @@ export default function SchoolBusRoutePlanningPage() {
           {/* Left panel — own scroll, no page scroll */}
           <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-border bg-card text-card-foreground shadow-xl'>
             <div className='shrink-0 border-b border-border bg-muted/40 px-4 py-3'>
-              <p className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>School Bus Platform</p>
-              <h2 className='mt-0.5 text-base font-bold text-foreground'>Route Planning</h2>
+              <p className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
+                School Bus Platform
+              </p>
+              <h2 className='mt-0.5 text-base font-bold text-foreground'>
+                Route Planning
+              </h2>
             </div>
             {/* Scrollable inner area */}
             <div className='flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4'>
@@ -584,16 +673,23 @@ export default function SchoolBusRoutePlanningPage() {
                 previewing={previewing}
                 creating={creating}
                 canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
-                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                createDisabledReason={
+                  isPreviewContextMatch
+                    ? preview?.createDisabledReason || undefined
+                    : undefined
+                }
                 isPreviewContextMatch={isPreviewContextMatch}
                 onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
-                activeSession={activeSession} sessions={sessions}
+                activeSession={activeSession}
+                sessions={sessions}
                 blockingTotal={blockingTotal}
-                canPublish={canPublish} publishing={publishing}
+                canPublish={canPublish}
+                publishing={publishing}
                 cancelling={cancelling}
-                onPublish={handlePublish} onCancel={handleCancel}
+                onPublish={handlePublish}
+                onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
                 hidePastSessions
               />
@@ -630,7 +726,11 @@ export default function SchoolBusRoutePlanningPage() {
                   className='h-full w-full'
                 />
               }
-              legend={hasMapData ? <SchoolBusMapLegend defaultCollapsed={false} /> : undefined}
+              legend={
+                hasMapData ? (
+                  <SchoolBusMapLegend defaultCollapsed={false} />
+                ) : undefined
+              }
               onFitAll={handleFitAll}
               onFitRoute={handleFitRoute}
               canFitAll={canFitAll}
@@ -665,13 +765,17 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='mb-4 flex flex-col gap-2'>
             {sessionError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800 shadow-sm'>
-                <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-[10px] font-extrabold border border-red-200'>⚠️</span>
+                <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-[10px] font-extrabold border border-red-200'>
+                  ⚠️
+                </span>
                 <span>{sessionError}</span>
               </div>
             )}
             {routeError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-850 shadow-sm'>
-                <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold border border-amber-200'>⚠️</span>
+                <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold border border-amber-200'>
+                  ⚠️
+                </span>
                 <span>{routeError}</span>
               </div>
             )}
@@ -700,16 +804,23 @@ export default function SchoolBusRoutePlanningPage() {
                 previewing={previewing}
                 creating={creating}
                 canCreate={isPreviewContextMatch ? !!preview?.canCreate : false}
-                createDisabledReason={isPreviewContextMatch ? (preview?.createDisabledReason || undefined) : undefined}
+                createDisabledReason={
+                  isPreviewContextMatch
+                    ? preview?.createDisabledReason || undefined
+                    : undefined
+                }
                 isPreviewContextMatch={isPreviewContextMatch}
                 onNewSession={handleNewSession}
               />
               <PlanningSessionPanel
-                activeSession={activeSession} sessions={sessions}
+                activeSession={activeSession}
+                sessions={sessions}
                 blockingTotal={blockingTotal}
-                canPublish={canPublish} publishing={publishing}
+                canPublish={canPublish}
+                publishing={publishing}
                 cancelling={cancelling}
-                onPublish={handlePublish} onCancel={handleCancel}
+                onPublish={handlePublish}
+                onCancel={handleCancel}
                 onSelectSession={handleSelectSession}
               />
             </div>
@@ -749,7 +860,11 @@ export default function SchoolBusRoutePlanningPage() {
                     className='h-full w-full'
                   />
                 }
-                legend={hasMapData ? <SchoolBusMapLegend defaultCollapsed={true} /> : undefined}
+                legend={
+                  hasMapData ? (
+                    <SchoolBusMapLegend defaultCollapsed={true} />
+                  ) : undefined
+                }
                 onFitAll={handleFitAll}
                 onFitRoute={handleFitRoute}
                 canFitAll={canFitAll}

@@ -6,7 +6,12 @@
 'use client';
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui';
 import { Calculator, Settings2 } from 'lucide-react';
 import {
   BillingCalculatorTab,

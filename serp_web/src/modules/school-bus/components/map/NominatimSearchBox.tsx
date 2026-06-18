@@ -18,7 +18,8 @@ export function NominatimSearchBox({
   onSelect,
 }: NominatimSearchBoxProps) {
   const [query, setQuery] = React.useState('');
-  const [searchLocations, { data, isFetching }] = useLazySearchMapLocationsQuery();
+  const [searchLocations, { data, isFetching }] =
+    useLazySearchMapLocationsQuery();
 
   const results = data?.data || [];
 

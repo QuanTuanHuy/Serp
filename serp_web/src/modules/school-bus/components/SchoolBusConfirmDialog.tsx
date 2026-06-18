@@ -90,7 +90,9 @@ export function SchoolBusConfirmDialog({
               {typeof description === 'string' ? (
                 description
               ) : (
-                <div className='text-sm text-muted-foreground'>{description}</div>
+                <div className='text-sm text-muted-foreground'>
+                  {description}
+                </div>
               )}
             </AlertDialogDescription>
           )}
@@ -162,8 +164,14 @@ export interface ConfirmState extends ConfirmRequest {
   payload?: unknown;
 }
 
-export function useSchoolBusConfirm({ onConfirm, isLoading }: UseConfirmOptions) {
-  const [state, setState] = React.useState<ConfirmState>({ open: false, title: '' });
+export function useSchoolBusConfirm({
+  onConfirm,
+  isLoading,
+}: UseConfirmOptions) {
+  const [state, setState] = React.useState<ConfirmState>({
+    open: false,
+    title: '',
+  });
 
   const requestConfirm = React.useCallback((req: ConfirmRequest) => {
     setState({ ...req, open: true });

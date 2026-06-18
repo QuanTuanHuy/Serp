@@ -13,16 +13,26 @@ interface MapMarkerVisibilityContextValue {
 }
 
 const ALL_KINDS: MarkerKind[] = [
-  'school', 'depot', 'pickup', 'dropoff', 'bus', 'student',
+  'school',
+  'depot',
+  'pickup',
+  'dropoff',
+  'bus',
+  'student',
 ];
 
-const MapMarkerVisibilityContext = React.createContext<MapMarkerVisibilityContextValue>({
-  visibleKinds: new Set(ALL_KINDS),
-  toggleKind: () => {},
-  isVisible: () => true,
-});
+const MapMarkerVisibilityContext =
+  React.createContext<MapMarkerVisibilityContextValue>({
+    visibleKinds: new Set(ALL_KINDS),
+    toggleKind: () => {},
+    isVisible: () => true,
+  });
 
-export function MapMarkerVisibilityProvider({ children }: { children: React.ReactNode }) {
+export function MapMarkerVisibilityProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [visibleKinds, setVisibleKinds] = React.useState<Set<MarkerKind>>(
     () => new Set(ALL_KINDS)
   );

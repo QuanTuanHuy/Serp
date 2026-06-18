@@ -41,7 +41,9 @@ export function SchoolBusSubscriptionsPage() {
     sortBy: 'createdAt',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(pagination.params);
+  const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(
+    pagination.params
+  );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
   const schools = schoolsData?.data || [];
@@ -136,7 +138,9 @@ export function SchoolBusSubscriptionsPage() {
           <div className='flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600 border border-violet-100/40'>
             <User className='h-4 w-4' />
           </div>
-          <span className='font-semibold text-slate-800 truncate'>{subscription.studentName}</span>
+          <span className='font-semibold text-slate-800 truncate'>
+            {subscription.studentName}
+          </span>
         </div>
       ),
     },
@@ -146,7 +150,9 @@ export function SchoolBusSubscriptionsPage() {
       render: (subscription) => (
         <div className='flex items-center gap-2'>
           <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
-          <span className='text-slate-700 font-medium truncate'>{subscription.schoolName}</span>
+          <span className='text-slate-700 font-medium truncate'>
+            {subscription.schoolName}
+          </span>
         </div>
       ),
     },
@@ -164,10 +170,18 @@ export function SchoolBusSubscriptionsPage() {
           MORNING: 'bg-sky-50/50 text-sky-700 border-sky-100/50',
           AFTERNOON: 'bg-indigo-50/50 text-indigo-700 border-indigo-100/50',
         };
-        const label = labels[subscription.tripOption] || subscription.tripOption;
-        const colorClass = colors[subscription.tripOption] || 'bg-slate-50 text-slate-600 border-slate-100';
+        const label =
+          labels[subscription.tripOption] || subscription.tripOption;
+        const colorClass =
+          colors[subscription.tripOption] ||
+          'bg-slate-50 text-slate-600 border-slate-100';
         return (
-          <span className={cn('inline-flex items-center rounded-lg border px-2 py-0.5 text-xs font-semibold', colorClass)}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-lg border px-2 py-0.5 text-xs font-semibold',
+              colorClass
+            )}
+          >
             {label}
           </span>
         );
@@ -179,23 +193,37 @@ export function SchoolBusSubscriptionsPage() {
       render: (subscription) => (
         <div className='flex flex-col gap-1.5 text-xs'>
           <div className='flex items-center gap-1.5'>
-            <span className='text-[10px] font-bold text-blue-600 uppercase tracking-wide bg-blue-50 px-1 py-0.5 rounded shrink-0'>P</span>
+            <span className='text-[10px] font-bold text-blue-600 uppercase tracking-wide bg-blue-50 px-1 py-0.5 rounded shrink-0'>
+              P
+            </span>
             {subscription.pickupPointName ? (
-              <span className='font-medium text-slate-700 truncate max-w-[180px]' title={subscription.pickupPointName}>
+              <span
+                className='font-medium text-slate-700 truncate max-w-[180px]'
+                title={subscription.pickupPointName}
+              >
                 {subscription.pickupPointName}
               </span>
             ) : (
-              <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>Missing</span>
+              <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
+                Missing
+              </span>
             )}
           </div>
           <div className='flex items-center gap-1.5'>
-            <span className='text-[10px] font-bold text-emerald-600 uppercase tracking-wide bg-emerald-50 px-1 py-0.5 rounded shrink-0'>D</span>
+            <span className='text-[10px] font-bold text-emerald-600 uppercase tracking-wide bg-emerald-50 px-1 py-0.5 rounded shrink-0'>
+              D
+            </span>
             {subscription.dropoffPointName ? (
-              <span className='font-medium text-slate-700 truncate max-w-[180px]' title={subscription.dropoffPointName}>
+              <span
+                className='font-medium text-slate-700 truncate max-w-[180px]'
+                title={subscription.dropoffPointName}
+              >
                 {subscription.dropoffPointName}
               </span>
             ) : (
-              <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>Missing</span>
+              <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
+                Missing
+              </span>
             )}
           </div>
         </div>
@@ -206,15 +234,24 @@ export function SchoolBusSubscriptionsPage() {
       header: 'Effective',
       render: (subscription) => (
         <div className='flex flex-col text-xs text-slate-600 gap-0.5'>
-          <span className='font-medium text-slate-700'>{formatDate(subscription.effectiveFrom)}</span>
-          <span className='text-[10px] text-slate-400'>to {subscription.effectiveTo ? formatDate(subscription.effectiveTo) : 'Ongoing'}</span>
+          <span className='font-medium text-slate-700'>
+            {formatDate(subscription.effectiveFrom)}
+          </span>
+          <span className='text-[10px] text-slate-400'>
+            to{' '}
+            {subscription.effectiveTo
+              ? formatDate(subscription.effectiveTo)
+              : 'Ongoing'}
+          </span>
         </div>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (subscription) => <SchoolBusStatusBadge status={subscription.status} />,
+      render: (subscription) => (
+        <SchoolBusStatusBadge status={subscription.status} />
+      ),
     },
     {
       key: 'actions',
@@ -222,7 +259,10 @@ export function SchoolBusSubscriptionsPage() {
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (subscription) => (
-        <div className='flex justify-end gap-2' onClick={(e) => e.stopPropagation()}>
+        <div
+          className='flex justify-end gap-2'
+          onClick={(e) => e.stopPropagation()}
+        >
           <Link href={`/school-bus/subscriptions/${subscription.id}`}>
             <Button
               size='sm'
@@ -285,9 +325,10 @@ export function SchoolBusSubscriptionsPage() {
   return (
     <SchoolBusPageShell
       title='Subscriptions'
-      description={access.isParentOnly
-        ? 'Track active transport services and subscription history for your children.'
-        : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
+      description={
+        access.isParentOnly
+          ? 'Track active transport services and subscription history for your children.'
+          : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
       }
     >
       <div className='flex flex-col gap-6'>
@@ -296,21 +337,37 @@ export function SchoolBusSubscriptionsPage() {
           <SchoolBusMetricCard
             label='Subscriptions'
             value={data?.data?.totalElements ?? 0}
-            hint={access.isParentOnly ? 'Transport services for your children' : 'Active and historical service contracts'}
+            hint={
+              access.isParentOnly
+                ? 'Transport services for your children'
+                : 'Active and historical service contracts'
+            }
             icon={Repeat}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Active'
-            value={subscriptions.filter((item) => item.status === 'ACTIVE').length}
-            hint={access.isParentOnly ? 'Currently active services' : 'Visible in route planning'}
+            value={
+              subscriptions.filter((item) => item.status === 'ACTIVE').length
+            }
+            hint={
+              access.isParentOnly
+                ? 'Currently active services'
+                : 'Visible in route planning'
+            }
             icon={PlayCircle}
             tone='success'
           />
           <SchoolBusMetricCard
             label='Paused or stopped'
-            value={subscriptions.filter((item) => item.status !== 'ACTIVE').length}
-            hint={access.isParentOnly ? 'Paused or stopped services' : 'Excluded from route generation'}
+            value={
+              subscriptions.filter((item) => item.status !== 'ACTIVE').length
+            }
+            hint={
+              access.isParentOnly
+                ? 'Paused or stopped services'
+                : 'Excluded from route generation'
+            }
             icon={PauseCircle}
             tone='warning'
           />
@@ -319,9 +376,10 @@ export function SchoolBusSubscriptionsPage() {
         {/* Data Table */}
         <SchoolBusDataTable
           title='Subscription directory'
-          description={access.isParentOnly
-            ? 'View subscription details and history for your children.'
-            : 'Use status actions to control whether a student is eligible for daily routing.'
+          description={
+            access.isParentOnly
+              ? 'View subscription details and history for your children.'
+              : 'Use status actions to control whether a student is eligible for daily routing.'
           }
           toolbar={subscriptionToolbar}
           data={filteredSubscriptions}
@@ -330,9 +388,15 @@ export function SchoolBusSubscriptionsPage() {
           pagination={{ page: data?.data, onPageChange: pagination.setPage }}
           stickyFirstColumn
           stickyActionColumn
-          onRowDoubleClick={(row) => router.push(`/school-bus/subscriptions/${row.id}`)}
+          onRowDoubleClick={(row) =>
+            router.push(`/school-bus/subscriptions/${row.id}`)
+          }
           emptyIcon={Repeat}
-          emptyTitle={subscriptions.length === 0 ? 'No subscriptions yet' : 'No subscriptions match current filters'}
+          emptyTitle={
+            subscriptions.length === 0
+              ? 'No subscriptions yet'
+              : 'No subscriptions match current filters'
+          }
           emptyDescription={
             subscriptions.length === 0
               ? 'Approve a transport request to create subscriptions automatically, or create subscriptions through the API.'

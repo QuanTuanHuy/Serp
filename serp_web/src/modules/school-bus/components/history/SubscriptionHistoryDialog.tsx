@@ -10,9 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/shared/components/ui';
-import {
-  useGetSchoolBusSubscriptionHistoryQuery,
-} from '../../api/schoolBusApi';
+import { useGetSchoolBusSubscriptionHistoryQuery } from '../../api/schoolBusApi';
 import { SchoolBusTimeline } from './SchoolBusTimeline';
 import { mapSubscriptionHistoryToTimeline } from './mappers';
 import type { TimelineEvent } from './SchoolBusTimeline';
@@ -27,13 +25,19 @@ export function SubscriptionHistoryDialog({
   subscriptionCode,
 }: SubscriptionHistoryDialogProps) {
   const [open, setOpen] = React.useState(false);
-  const { data: historyData, isLoading: historyLoading, isError: historyError } =
-    useGetSchoolBusSubscriptionHistoryQuery(subscriptionId, { skip: !open });
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+    isError: historyError,
+  } = useGetSchoolBusSubscriptionHistoryQuery(subscriptionId, { skip: !open });
 
   const events = React.useMemo<TimelineEvent[]>(() => {
-    const historyEvents = mapSubscriptionHistoryToTimeline(historyData?.data ?? []);
+    const historyEvents = mapSubscriptionHistoryToTimeline(
+      historyData?.data ?? []
+    );
     return historyEvents.sort(
-      (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+      (a, b) =>
+        new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
     );
   }, [historyData]);
 
@@ -53,7 +57,8 @@ export function SubscriptionHistoryDialog({
           <DialogHeader>
             <DialogTitle>Subscription History — {subscriptionCode}</DialogTitle>
             <DialogDescription>
-              Complete history of changes and pause periods for this subscription.
+              Complete history of changes and pause periods for this
+              subscription.
             </DialogDescription>
           </DialogHeader>
           <SchoolBusTimeline

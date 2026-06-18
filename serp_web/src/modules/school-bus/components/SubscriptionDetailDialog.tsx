@@ -1,6 +1,15 @@
 'use client';
 
-import { X, CalendarDays, User, School, MapPin, Clock, Hash, ExternalLink } from 'lucide-react';
+import {
+  X,
+  CalendarDays,
+  User,
+  School,
+  MapPin,
+  Clock,
+  Hash,
+  ExternalLink,
+} from 'lucide-react';
 import { useGetSchoolBusSubscriptionByIdQuery } from '../api/schoolBusApi';
 import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
@@ -8,13 +17,13 @@ import { cn } from '@/shared/utils';
 
 /* ── Day chip helpers ─────────────────────────────────────────────────────── */
 const DAYS: { key: keyof DayFields; label: string }[] = [
-  { key: 'monday',    label: 'Mon' },
-  { key: 'tuesday',  label: 'Tue' },
-  { key: 'wednesday',label: 'Wed' },
+  { key: 'monday', label: 'Mon' },
+  { key: 'tuesday', label: 'Tue' },
+  { key: 'wednesday', label: 'Wed' },
   { key: 'thursday', label: 'Thu' },
-  { key: 'friday',   label: 'Fri' },
+  { key: 'friday', label: 'Fri' },
   { key: 'saturday', label: 'Sat' },
-  { key: 'sunday',   label: 'Sun' },
+  { key: 'sunday', label: 'Sun' },
 ];
 
 interface DayFields {
@@ -28,22 +37,44 @@ interface DayFields {
 }
 
 /* ── Field row ────────────────────────────────────────────────────────────── */
-function Field({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function Field({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
   return (
     <div className='flex flex-col gap-0.5'>
-      <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>{label}</span>
-      <span className={cn('text-sm text-foreground', mono && 'font-mono')}>{value || '—'}</span>
+      <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>
+        {label}
+      </span>
+      <span className={cn('text-sm text-foreground', mono && 'font-mono')}>
+        {value || '—'}
+      </span>
     </div>
   );
 }
 
 /* ── Section ──────────────────────────────────────────────────────────────── */
-function Section({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   return (
     <div className='rounded-2xl border border-border bg-muted/40 p-4'>
       <div className='mb-3 flex items-center gap-2'>
         <Icon className='h-4 w-4 text-muted-foreground' />
-        <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>{title}</p>
+        <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+          {title}
+        </p>
       </div>
       <div className='grid grid-cols-2 gap-x-6 gap-y-3'>{children}</div>
     </div>
@@ -57,7 +88,8 @@ interface Props {
 }
 
 export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
-  const { data, isLoading } = useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
+  const { data, isLoading } =
+    useGetSchoolBusSubscriptionByIdQuery(subscriptionId);
   const sub = data?.data;
 
   return (
@@ -78,9 +110,13 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               <CalendarDays className='h-4 w-4 text-muted-foreground' />
             </div>
             <div>
-              <h2 className='text-base font-bold text-foreground'>Subscription Detail</h2>
+              <h2 className='text-base font-bold text-foreground'>
+                Subscription Detail
+              </h2>
               {sub && (
-                <p className='text-xs font-mono text-slate-400'>{sub.subscriptionCode}</p>
+                <p className='text-xs font-mono text-slate-400'>
+                  {sub.subscriptionCode}
+                </p>
               )}
             </div>
           </div>
@@ -105,16 +141,28 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
           )}
 
           {!isLoading && !sub && (
-            <p className='py-8 text-center text-sm text-slate-400'>Could not load subscription detail.</p>
+            <p className='py-8 text-center text-sm text-slate-400'>
+              Could not load subscription detail.
+            </p>
           )}
 
           {!isLoading && sub && (
             <>
               {/* Identity */}
               <Section title='Identity' icon={Hash}>
-                <Field label='Subscription Code' value={sub.subscriptionCode} mono />
-                <Field label='Status' value={<SchoolBusStatusBadge status={sub.status} />} />
-                <Field label='Source Request ID' value={sub.sourceRequestId ?? '—'} />
+                <Field
+                  label='Subscription Code'
+                  value={sub.subscriptionCode}
+                  mono
+                />
+                <Field
+                  label='Status'
+                  value={<SchoolBusStatusBadge status={sub.status} />}
+                />
+                <Field
+                  label='Source Request ID'
+                  value={sub.sourceRequestId ?? '—'}
+                />
                 <div /> {/* spacer */}
               </Section>
 
@@ -142,7 +190,9 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               <Section title='Active Days' icon={CalendarDays}>
                 {/* Active days */}
                 <div className='col-span-2'>
-                  <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>Active Days</span>
+                  <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>
+                    Active Days
+                  </span>
                   <div className='mt-1.5 flex flex-wrap gap-1.5'>
                     {DAYS.map(({ key, label }) => (
                       <span
@@ -164,7 +214,12 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               {/* Effective Period */}
               <Section title='Effective Period' icon={Clock}>
                 <Field label='From' value={formatDate(sub.effectiveFrom)} />
-                <Field label='To' value={sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Indefinite'} />
+                <Field
+                  label='To'
+                  value={
+                    sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Indefinite'
+                  }
+                />
               </Section>
             </>
           )}

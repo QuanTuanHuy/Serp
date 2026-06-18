@@ -20,10 +20,7 @@ interface PickupCheckinLocationMapProps {
   className?: string;
 }
 
-const hasValidCoordinate = (
-  latitude?: number,
-  longitude?: number
-): boolean =>
+const hasValidCoordinate = (latitude?: number, longitude?: number): boolean =>
   latitude !== undefined &&
   longitude !== undefined &&
   Number.isFinite(latitude) &&

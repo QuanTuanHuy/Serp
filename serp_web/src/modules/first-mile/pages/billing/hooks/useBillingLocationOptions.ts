@@ -4,17 +4,24 @@
  */
 
 import React from 'react';
-import { useGetProvincesQuery, useGetWardsByProvinceCodeQuery } from '../../../api';
+import {
+  useGetProvincesQuery,
+  useGetWardsByProvinceCodeQuery,
+} from '../../../api';
 import type { Province, Ward } from '../../../types';
 import type { BillingSelectOption } from '../billingPageModels';
 
-const mapProvinceOptions = (items: Province[] | undefined): BillingSelectOption[] => {
+const mapProvinceOptions = (
+  items: Province[] | undefined
+): BillingSelectOption[] => {
   return (items ?? [])
     .filter((province): province is Province => Boolean(province?.provinceCode))
     .map((province) => ({
       value: province.provinceCode,
       label:
-        province.shortName?.trim() || province.name?.trim() || province.provinceCode,
+        province.shortName?.trim() ||
+        province.name?.trim() ||
+        province.provinceCode,
     }))
     .sort((a, b) =>
       a.label.localeCompare(b.label, 'en-US', { sensitivity: 'base' })
