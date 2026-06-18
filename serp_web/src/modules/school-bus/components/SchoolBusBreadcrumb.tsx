@@ -33,7 +33,10 @@ interface SchoolBusBreadcrumbProps {
  * - Current item is bolder/darker, non-clickable
  * - Truncation for long labels
  */
-export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbProps) {
+export function SchoolBusBreadcrumb({
+  items,
+  className,
+}: SchoolBusBreadcrumbProps) {
   const handleSectionScroll = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (el) {
@@ -44,7 +47,10 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
   return (
     <nav
       aria-label='Breadcrumb'
-      className={cn('flex h-6 items-center gap-0 flex-wrap overflow-hidden', className)}
+      className={cn(
+        'flex h-6 items-center gap-0 flex-wrap overflow-hidden',
+        className
+      )}
     >
       {items.map((item, index) => {
         const isFirst = index === 0;
@@ -66,7 +72,9 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
               <Home
                 className={cn(
                   'h-[14px] w-[14px] shrink-0',
-                  item.current ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+                  item.current
+                    ? 'text-foreground'
+                    : 'text-muted-foreground group-hover:text-foreground'
                 )}
                 aria-hidden='true'
               />
@@ -74,7 +82,7 @@ export function SchoolBusBreadcrumb({ items, className }: SchoolBusBreadcrumbPro
             <span className='truncate'>{item.label}</span>
           </span>
         );
- 
+
         // Choose appropriate wrapper
         let crumb: ReactNode;
         if (item.current) {

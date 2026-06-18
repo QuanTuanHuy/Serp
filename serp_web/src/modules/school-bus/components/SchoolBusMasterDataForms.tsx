@@ -22,7 +22,11 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { BUS_STATUS_OPTIONS, PROFILE_STATUS_OPTIONS, STAFF_STATUS_OPTIONS } from '../constants';
+import {
+  BUS_STATUS_OPTIONS,
+  PROFILE_STATUS_OPTIONS,
+  STAFF_STATUS_OPTIONS,
+} from '../constants';
 import { schoolBusUi } from '../theme';
 import { SchoolBusSelect } from './ui/SchoolBusSelect';
 import { SchoolBusDatePicker } from './ui/SchoolBusDatePicker';
@@ -56,10 +60,12 @@ const schoolSchema = z.object({
   name: z.string().min(1, 'School name is required'),
   address: z.string().optional(),
   contactPhone: z.string().optional(),
-  contactEmail: z.string().optional().refine(
-    (v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v),
-    { message: 'Invalid email format' }
-  ),
+  contactEmail: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v), {
+      message: 'Invalid email format',
+    }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
   isActive: z.boolean().default(true),
@@ -89,10 +95,12 @@ const parentSchema = z.object({
   accountUserId: z.coerce.number().min(1, 'User ID is required'),
   fullName: z.string().min(1, 'Full name is required'),
   phone: z.string().min(1, 'Phone is required'),
-  email: z.string().optional().refine(
-    (v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v),
-    { message: 'Invalid email format' }
-  ),
+  email: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v), {
+      message: 'Invalid email format',
+    }),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
 });
@@ -215,14 +223,33 @@ export function SchoolFormDialog({
         stickyFooter
       >
         <FormSectionHeader title='1. School information' />
-        <TextField form={form} name='name' label='School name *' className='md:col-span-2' />
+        <TextField
+          form={form}
+          name='name'
+          label='School name *'
+          className='md:col-span-2'
+        />
         {initialData?.code ? (
-          <ReadOnlyField label='School code' value={initialData.code} className='md:col-span-1' />
+          <ReadOnlyField
+            label='School code'
+            value={initialData.code}
+            className='md:col-span-1'
+          />
         ) : null}
 
         <FormSectionHeader title='2. Contact details' />
-        <TextField form={form} name='contactPhone' label='Contact phone' className='md:col-span-1' />
-        <TextField form={form} name='contactEmail' label='Contact email' className='md:col-span-1' />
+        <TextField
+          form={form}
+          name='contactPhone'
+          label='Contact phone'
+          className='md:col-span-1'
+        />
+        <TextField
+          form={form}
+          name='contactEmail'
+          label='Contact email'
+          className='md:col-span-1'
+        />
         <TextareaField form={form} name='address' label='Address' />
 
         <FormSectionHeader title='3. Coordinates' />
@@ -241,7 +268,13 @@ export function SchoolFormDialog({
                 ? Number(form.watch('longitude'))
                 : null,
             }}
-            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
+            onChange={({
+              latitude,
+              longitude,
+            }: {
+              latitude: number;
+              longitude: number;
+            }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -338,7 +371,11 @@ export function PickupPointFormDialog({
       >
         <FormSectionHeader title='1. Pickup point information' />
         {initialData?.code && (
-          <ReadOnlyField label='Pickup point code' value={initialData.code} className='md:col-span-1' />
+          <ReadOnlyField
+            label='Pickup point code'
+            value={initialData.code}
+            className='md:col-span-1'
+          />
         )}
         <TextField
           form={form}
@@ -361,7 +398,11 @@ export function PickupPointFormDialog({
           ]}
           className='md:col-span-1'
         />
-        <TextareaField form={form} name='pickupInstruction' label='Pickup instruction' />
+        <TextareaField
+          form={form}
+          name='pickupInstruction'
+          label='Pickup instruction'
+        />
         <TextareaField form={form} name='address' label='Address *' />
 
         <FormSectionHeader title='3. Coordinates' />
@@ -380,23 +421,27 @@ export function PickupPointFormDialog({
                 ? Number(form.watch('longitude'))
                 : null,
             }}
-            referenceMarkers={
-              schools
-                .filter(
-                  (school) =>
-                    typeof school.latitude === 'number' &&
-                    typeof school.longitude === 'number'
-                )
-                .map((school) => ({
-                  id: `school-${school.id}`,
-                  name: school.name,
-                  address: school.address,
-                  latitude: school.latitude,
-                  longitude: school.longitude,
-                  type: 'school' as const,
-                }))
-            }
-            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
+            referenceMarkers={schools
+              .filter(
+                (school) =>
+                  typeof school.latitude === 'number' &&
+                  typeof school.longitude === 'number'
+              )
+              .map((school) => ({
+                id: `school-${school.id}`,
+                name: school.name,
+                address: school.address,
+                latitude: school.latitude,
+                longitude: school.longitude,
+                type: 'school' as const,
+              }))}
+            onChange={({
+              latitude,
+              longitude,
+            }: {
+              latitude: number;
+              longitude: number;
+            }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -503,7 +548,13 @@ export function DepotFormDialog({
                 ? Number(form.watch('longitude'))
                 : null,
             }}
-            onChange={({ latitude, longitude }: { latitude: number; longitude: number }) => {
+            onChange={({
+              latitude,
+              longitude,
+            }: {
+              latitude: number;
+              longitude: number;
+            }) => {
               form.setValue('latitude', latitude.toFixed(6), {
                 shouldDirty: true,
               });
@@ -613,7 +664,9 @@ export function ParentFormDialog({
           name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
-          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          disabled={
+            isLoadingAccountUsers || isEditMode || accountUsers.length === 0
+          }
           description={
             isEditMode
               ? 'Account user is locked after the profile is linked.'
@@ -624,7 +677,9 @@ export function ParentFormDialog({
                   : 'This links the parent profile to a platform login account.'
           }
           placeholder={
-            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+            isLoadingAccountUsers
+              ? 'Loading account users...'
+              : 'Select account user'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -652,7 +707,8 @@ function getAccountUserFullName(user: SchoolBusAccountUser) {
 }
 
 function getAccountUserOptionLabel(user: SchoolBusAccountUser) {
-  const fullName = getAccountUserFullName(user) || user.email || `User #${user.id}`;
+  const fullName =
+    getAccountUserFullName(user) || user.email || `User #${user.id}`;
   return `${fullName} - ${user.email} - #${user.id}`;
 }
 
@@ -678,13 +734,17 @@ export function StudentFormDialog({
     resolver: zodResolver(studentSchema) as any,
     defaultValues: {
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
-      parentProfileId: initialData?.parentProfileId ?? (isParent ? 999999 : (parents[0]?.id ?? 0)),
+      parentProfileId:
+        initialData?.parentProfileId ??
+        (isParent ? 999999 : (parents[0]?.id ?? 0)),
       pickupPointId:
-        initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
+        initialData?.pickupPointId === null ||
+        initialData?.pickupPointId === undefined
           ? ''
           : String(initialData.pickupPointId),
       defaultDropoffPointId:
-        initialData?.defaultDropoffPointId === null || initialData?.defaultDropoffPointId === undefined
+        initialData?.defaultDropoffPointId === null ||
+        initialData?.defaultDropoffPointId === undefined
           ? ''
           : String(initialData.defaultDropoffPointId),
       fullName: initialData?.fullName || '',
@@ -701,13 +761,17 @@ export function StudentFormDialog({
   React.useEffect(() => {
     form.reset({
       schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
-      parentProfileId: initialData?.parentProfileId ?? (isParent ? 999999 : (parents[0]?.id ?? 0)),
+      parentProfileId:
+        initialData?.parentProfileId ??
+        (isParent ? 999999 : (parents[0]?.id ?? 0)),
       pickupPointId:
-        initialData?.pickupPointId === null || initialData?.pickupPointId === undefined
+        initialData?.pickupPointId === null ||
+        initialData?.pickupPointId === undefined
           ? ''
           : String(initialData.pickupPointId),
       defaultDropoffPointId:
-        initialData?.defaultDropoffPointId === null || initialData?.defaultDropoffPointId === undefined
+        initialData?.defaultDropoffPointId === null ||
+        initialData?.defaultDropoffPointId === undefined
           ? ''
           : String(initialData.defaultDropoffPointId),
       fullName: initialData?.fullName || '',
@@ -728,7 +792,10 @@ export function StudentFormDialog({
   // When school changes, clear pickup/dropoff selections
   const prevSchoolRef = React.useRef(numericSchoolId);
   React.useEffect(() => {
-    if (prevSchoolRef.current !== numericSchoolId && prevSchoolRef.current !== 0) {
+    if (
+      prevSchoolRef.current !== numericSchoolId &&
+      prevSchoolRef.current !== 0
+    ) {
       form.setValue('pickupPointId', '');
       form.setValue('defaultDropoffPointId', '');
     }
@@ -736,10 +803,10 @@ export function StudentFormDialog({
   }, [numericSchoolId, form]);
 
   // Fetch active school pickup point links from backend dynamically when school changes using the dropdown API
-  const { data: dropdownPointsData, isFetching } = useGetSchoolPickupPointDropdownOptionsQuery(
-    numericSchoolId,
-    { skip: !numericSchoolId }
-  );
+  const { data: dropdownPointsData, isFetching } =
+    useGetSchoolPickupPointDropdownOptionsQuery(numericSchoolId, {
+      skip: !numericSchoolId,
+    });
   const schoolDropdownPoints = dropdownPointsData?.data ?? [];
 
   // Pickup options: options with usage PICKUP_ONLY or PICKUP_DROPOFF
@@ -748,7 +815,8 @@ export function StudentFormDialog({
     return schoolDropdownPoints
       .filter(
         (sp) =>
-          sp.metadata?.usageType === 'PICKUP_ONLY' || sp.metadata?.usageType === 'PICKUP_DROPOFF'
+          sp.metadata?.usageType === 'PICKUP_ONLY' ||
+          sp.metadata?.usageType === 'PICKUP_DROPOFF'
       )
       .map((sp) => ({ value: String(sp.id), label: sp.label }));
   }, [schoolDropdownPoints, numericSchoolId]);
@@ -759,7 +827,8 @@ export function StudentFormDialog({
     return schoolDropdownPoints
       .filter(
         (sp) =>
-          sp.metadata?.usageType === 'DROPOFF_ONLY' || sp.metadata?.usageType === 'PICKUP_DROPOFF'
+          sp.metadata?.usageType === 'DROPOFF_ONLY' ||
+          sp.metadata?.usageType === 'PICKUP_DROPOFF'
       )
       .map((sp) => ({ value: String(sp.id), label: sp.label }));
   }, [schoolDropdownPoints, numericSchoolId]);
@@ -783,8 +852,12 @@ export function StudentFormDialog({
           onSubmit({
             schoolId: values.schoolId,
             parentProfileId: values.parentProfileId,
-            pickupPointId: values.pickupPointId ? Number(values.pickupPointId) : null,
-            defaultDropoffPointId: values.defaultDropoffPointId ? Number(values.defaultDropoffPointId) : null,
+            pickupPointId: values.pickupPointId
+              ? Number(values.pickupPointId)
+              : null,
+            defaultDropoffPointId: values.defaultDropoffPointId
+              ? Number(values.defaultDropoffPointId)
+              : null,
             fullName: values.fullName,
             grade: values.grade || undefined,
             className: values.className || undefined,
@@ -803,51 +876,56 @@ export function StudentFormDialog({
             form={form}
             name='schoolId'
             label='School *'
-             options={schools.map((school) => ({
-               value: String(school.id),
-               label: school.label,
-             }))}
-           />
-           <TextField form={form} name='fullName' label='Student name *' />
-         </div>
-         {initialData?.studentCode ? (
-           <ReadOnlyField label='Student code' value={initialData.studentCode} />
-         ) : null}
-         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-           <TextField form={form} name='grade' label='Grade' />
-           <TextField form={form} name='className' label='Class name' />
-         </div>
-         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-           <TextField form={form} name='dateOfBirth' label='Date of birth' type='date' />
-           <SelectField
-             form={form}
-             name='gender'
-             label='Gender'
-             allowEmpty
-             emptyLabel='Not specified'
-             options={[
-               { value: 'MALE', label: 'Male' },
-               { value: 'FEMALE', label: 'Female' },
-               { value: 'OTHER', label: 'Other' },
-             ]}
-           />
-         </div>
- 
-         {/* ── Section: Parent & contact ── */}
-         {!isParent && (
-           <>
-             <FormSectionHeader title='Parent & contact' />
-             <SelectField
-               form={form}
-               name='parentProfileId'
-               label='Parent *'
-               options={parents.map((parent) => ({
-                 value: String(parent.id),
-                 label: parent.label,
-               }))}
-             />
-           </>
-         )}
+            options={schools.map((school) => ({
+              value: String(school.id),
+              label: school.label,
+            }))}
+          />
+          <TextField form={form} name='fullName' label='Student name *' />
+        </div>
+        {initialData?.studentCode ? (
+          <ReadOnlyField label='Student code' value={initialData.studentCode} />
+        ) : null}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <TextField form={form} name='grade' label='Grade' />
+          <TextField form={form} name='className' label='Class name' />
+        </div>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <TextField
+            form={form}
+            name='dateOfBirth'
+            label='Date of birth'
+            type='date'
+          />
+          <SelectField
+            form={form}
+            name='gender'
+            label='Gender'
+            allowEmpty
+            emptyLabel='Not specified'
+            options={[
+              { value: 'MALE', label: 'Male' },
+              { value: 'FEMALE', label: 'Female' },
+              { value: 'OTHER', label: 'Other' },
+            ]}
+          />
+        </div>
+
+        {/* ── Section: Parent & contact ── */}
+        {!isParent && (
+          <>
+            <FormSectionHeader title='Parent & contact' />
+            <SelectField
+              form={form}
+              name='parentProfileId'
+              label='Parent *'
+              options={parents.map((parent) => ({
+                value: String(parent.id),
+                label: parent.label,
+              }))}
+            />
+          </>
+        )}
 
         {/* ── Section: Transport defaults ── */}
         <FormSectionHeader title='Transport defaults' />
@@ -926,7 +1004,9 @@ export function BusFormDialog({
           ? defaultBusTypeMeta.value
           : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
-      homeDepotId: initialData?.homeDepotId ? String(initialData.homeDepotId) : '',
+      homeDepotId: initialData?.homeDepotId
+        ? String(initialData.homeDepotId)
+        : '',
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -945,7 +1025,9 @@ export function BusFormDialog({
           ? nextBusTypeMeta.value
           : 1),
       status: initialData?.status || BUS_STATUS_OPTIONS[0].value,
-      homeDepotId: initialData?.homeDepotId ? String(initialData.homeDepotId) : '',
+      homeDepotId: initialData?.homeDepotId
+        ? String(initialData.homeDepotId)
+        : '',
       isActive: initialData?.isActive ?? true,
     });
   }, [form, initialData, busTypes]);
@@ -1032,7 +1114,9 @@ export function BusFormDialog({
                 ? `${selectedBusType.description} - capacity ${selectedBusType.value || 'custom'}`
                 : 'Select a bus type.'
           }
-          placeholder={isLoadingBusTypes ? 'Loading bus types...' : 'Select bus type'}
+          placeholder={
+            isLoadingBusTypes ? 'Loading bus types...' : 'Select bus type'
+          }
           options={busTypeOptions.map((busType) => ({
             value: busType.code,
             label: `${busType.description} (${busType.code})`,
@@ -1168,7 +1252,9 @@ export function DriverFormDialog({
           name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
-          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          disabled={
+            isLoadingAccountUsers || isEditMode || accountUsers.length === 0
+          }
           description={
             isEditMode
               ? 'Account user is locked after the driver profile is linked.'
@@ -1179,7 +1265,9 @@ export function DriverFormDialog({
                   : 'Choose an existing user account if this driver can log in.'
           }
           placeholder={
-            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+            isLoadingAccountUsers
+              ? 'Loading account users...'
+              : 'Select account user'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1295,7 +1383,9 @@ export function AttendantFormDialog({
           name='accountUserId'
           label='Linked account user *'
           className='md:col-span-2'
-          disabled={isLoadingAccountUsers || isEditMode || accountUsers.length === 0}
+          disabled={
+            isLoadingAccountUsers || isEditMode || accountUsers.length === 0
+          }
           description={
             isEditMode
               ? 'Account user is locked after the attendant profile is linked.'
@@ -1306,7 +1396,9 @@ export function AttendantFormDialog({
                   : 'Choose an existing user account if this attendant can log in.'
           }
           placeholder={
-            isLoadingAccountUsers ? 'Loading account users...' : 'Select account user'
+            isLoadingAccountUsers
+              ? 'Loading account users...'
+              : 'Select account user'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1356,7 +1448,10 @@ function SimpleForm({
   if (stickyFooter) {
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className='flex-1 flex flex-col min-h-0 overflow-hidden'
+        >
           {/* Form Body - Scrollable */}
           <div className='flex-1 overflow-y-auto px-6 py-2 sm:px-8 min-h-0'>
             <div className='grid gap-4 md:grid-cols-2 pb-4'>{children}</div>
@@ -1426,7 +1521,12 @@ function TextField({
   disabled = false,
   description,
   className,
-}: FieldProps & { type?: string; disabled?: boolean; description?: string; className?: string }) {
+}: FieldProps & {
+  type?: string;
+  disabled?: boolean;
+  description?: string;
+  className?: string;
+}) {
   return (
     <FormField
       control={form.control}
@@ -1464,12 +1564,22 @@ function TextField({
 function FormSectionHeader({ title }: { title: string }) {
   return (
     <div className='col-span-full border-b border-slate-100 pb-1 pt-2'>
-      <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>{title}</p>
+      <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+        {title}
+      </p>
     </div>
   );
 }
 
-function ReadOnlyField({ label, value, className }: { label: string; value: string; className?: string }) {
+function ReadOnlyField({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
     <div className={cn('space-y-2', className)}>
       <FormLabel>{label}</FormLabel>
@@ -1480,11 +1590,7 @@ function ReadOnlyField({ label, value, className }: { label: string; value: stri
   );
 }
 
-function TextareaField({
-  form,
-  name,
-  label,
-}: FieldProps) {
+function TextareaField({ form, name, label }: FieldProps) {
   return (
     <FormField
       control={form.control}
@@ -1536,7 +1642,7 @@ function SelectField({
     return list;
   }, [options, allowEmpty, emptyLabel, emptyValue]);
 
-  const isSearchable = searchable ?? (options.length > 6);
+  const isSearchable = searchable ?? options.length > 6;
 
   return (
     <FormField

@@ -48,7 +48,10 @@ export function SchoolBusMapWorkspace({
 }: SchoolBusMapWorkspaceProps) {
   const [internalExpanded, setInternalExpanded] = React.useState(false);
   const expanded = isExpanded !== undefined ? isExpanded : internalExpanded;
-  const toggleExpand = onToggleExpand !== undefined ? onToggleExpand : () => setInternalExpanded((v) => !v);
+  const toggleExpand =
+    onToggleExpand !== undefined
+      ? onToggleExpand
+      : () => setInternalExpanded((v) => !v);
   const [expandKey, setExpandKey] = React.useState(0);
 
   React.useEffect(() => {

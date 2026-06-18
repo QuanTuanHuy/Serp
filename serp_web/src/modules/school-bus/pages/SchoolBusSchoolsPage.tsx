@@ -1,7 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
+import {
+  useRouter,
+  usePathname,
+  useSearchParams,
+  useParams,
+} from 'next/navigation';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   AlertTriangle,
@@ -23,7 +28,13 @@ import {
   Unlink,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/shared/components/ui';
+import {
+  Button,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/shared/components/ui';
 import { SchoolBusSchoolDetailPage } from './SchoolBusSchoolDetailPage';
 import { cn } from '@/shared/utils';
 import {
@@ -62,7 +73,11 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { LinkPickupPointDialog } from '../components/forms/LinkPickupPointDialog';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusDepot, SchoolBusPickupPoint, SchoolBusSchool } from '../types';
+import type {
+  SchoolBusDepot,
+  SchoolBusPickupPoint,
+  SchoolBusSchool,
+} from '../types';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
 import {
   Table,
@@ -91,7 +106,7 @@ const formatDaysCompact = (days: string[] | undefined | null) => {
     SATURDAY: 'Sat',
     SUNDAY: 'Sun',
   };
-  return days.map(d => dayMap[d.toUpperCase()] || d).join(', ');
+  return days.map((d) => dayMap[d.toUpperCase()] || d).join(', ');
 };
 
 const formatUsageType = (type: string | undefined | null) => {
@@ -102,19 +117,36 @@ const formatUsageType = (type: string | undefined | null) => {
 };
 
 const getUsageTypeBadgeClasses = (type: string | undefined | null) => {
-  if (type === 'PICKUP' || type === 'PICKUP_ONLY') return 'bg-blue-50 text-blue-700 border border-blue-200';
-  if (type === 'DROPOFF' || type === 'DROPOFF_ONLY') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  if (type === 'PICKUP' || type === 'PICKUP_ONLY')
+    return 'bg-blue-50 text-blue-700 border border-blue-200';
+  if (type === 'DROPOFF' || type === 'DROPOFF_ONLY')
+    return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
   return 'bg-indigo-50 text-indigo-700 border border-indigo-200';
 };
 
 // ── Shared InfoRow ────────────────────────────────────────────────────────────
 
 // ── DetailField Helper ────────────────────────────────────────────────────────
-function DetailField({ label, value, warn = false }: { label: string; value: React.ReactNode; warn?: boolean }) {
+function DetailField({
+  label,
+  value,
+  warn = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  warn?: boolean;
+}) {
   return (
     <div className='flex flex-col gap-0.5'>
-      <span className='text-[10px] font-semibold text-slate-400 uppercase tracking-wider'>{label}</span>
-      <div className={cn('text-xs font-medium text-slate-700', warn && 'text-amber-600 font-semibold')}>
+      <span className='text-[10px] font-semibold text-slate-400 uppercase tracking-wider'>
+        {label}
+      </span>
+      <div
+        className={cn(
+          'text-xs font-medium text-slate-700',
+          warn && 'text-amber-600 font-semibold'
+        )}
+      >
         {value}
       </div>
     </div>
@@ -147,7 +179,9 @@ function NetworkDetailPanel({
           <MapPin className='h-5 w-5' />
         </div>
         <div className='space-y-1.5'>
-          <p className='text-sm font-semibold text-slate-800'>Select school or pickup</p>
+          <p className='text-sm font-semibold text-slate-800'>
+            Select school or pickup
+          </p>
           <p className='max-w-[240px] text-xs leading-5 text-slate-400'>
             Click a marker on the map or a list item to inspect network details.
           </p>
@@ -165,8 +199,13 @@ function NetworkDetailPanel({
             <GraduationCap className='h-4.5 w-4.5 text-[#C81E3A]' />
           </div>
           <div className='min-w-0 flex-1'>
-            <p className='text-[10px] font-bold uppercase tracking-widest text-[#C81E3A]'>School</p>
-            <h4 className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate' title={selectedSchool.name}>
+            <p className='text-[10px] font-bold uppercase tracking-widest text-[#C81E3A]'>
+              School
+            </p>
+            <h4
+              className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate'
+              title={selectedSchool.name}
+            >
               {selectedSchool.name}
             </h4>
           </div>
@@ -176,7 +215,9 @@ function NetworkDetailPanel({
         <div className='flex-1 overflow-y-auto p-5 space-y-4 min-h-0'>
           {/* Identity Section */}
           <div className='space-y-1.5'>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Identity</p>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>
+              Identity
+            </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField label='Code' value={selectedSchool.code ?? '—'} />
               <DetailField
@@ -198,13 +239,19 @@ function NetworkDetailPanel({
 
           {/* Location Section */}
           <div className='space-y-1.5'>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Location</p>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>
+              Location
+            </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
-              <DetailField label='Address' value={selectedSchool.address ?? '—'} />
+              <DetailField
+                label='Address'
+                value={selectedSchool.address ?? '—'}
+              />
               <DetailField
                 label='Coordinates'
                 value={
-                  typeof selectedSchool.latitude === 'number' && typeof selectedSchool.longitude === 'number'
+                  typeof selectedSchool.latitude === 'number' &&
+                  typeof selectedSchool.longitude === 'number'
                     ? `${selectedSchool.latitude.toFixed(5)}, ${selectedSchool.longitude.toFixed(5)}`
                     : '⚠ Not set'
                 }
@@ -215,10 +262,18 @@ function NetworkDetailPanel({
 
           {/* Operations Section */}
           <div className='space-y-1.5'>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Operations</p>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>
+              Operations
+            </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
-              <DetailField label='Contact' value={selectedSchool.contactPhone ?? '—'} />
-              <DetailField label='Linked pickups' value={String(linkedPickupCount)} />
+              <DetailField
+                label='Contact'
+                value={selectedSchool.contactPhone ?? '—'}
+              />
+              <DetailField
+                label='Linked pickups'
+                value={String(linkedPickupCount)}
+              />
             </div>
           </div>
         </div>
@@ -239,7 +294,8 @@ function NetworkDetailPanel({
             className='w-full justify-start border-red-200 text-[#C81E3A] bg-red-50/10 hover:bg-red-50 hover:border-red-300 hover:text-[#99182D]'
             onClick={onLinkPickup}
           >
-            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link pickup point
+            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link
+            pickup point
           </Button>
         </div>
       </div>
@@ -247,10 +303,14 @@ function NetworkDetailPanel({
   }
 
   if (selectedPickup) {
-    const isPickup = selectedPickup.usageType === 'PICKUP' || selectedPickup.usageType === 'PICKUP_ONLY';
-    const isDropoff = selectedPickup.usageType === 'DROPOFF' || selectedPickup.usageType === 'DROPOFF_ONLY';
+    const isPickup =
+      selectedPickup.usageType === 'PICKUP' ||
+      selectedPickup.usageType === 'PICKUP_ONLY';
+    const isDropoff =
+      selectedPickup.usageType === 'DROPOFF' ||
+      selectedPickup.usageType === 'DROPOFF_ONLY';
     const PickupIcon = isDropoff ? MapPinCheck : MapPin;
-    
+
     const iconColor = isDropoff
       ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
       : isPickup
@@ -273,12 +333,27 @@ function NetworkDetailPanel({
       <div className='flex h-full flex-col overflow-hidden min-h-0 bg-white'>
         {/* Header */}
         <div className='flex items-start gap-3 p-5 border-b border-slate-100 bg-white shrink-0'>
-          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border', iconColor)}>
+          <div
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border',
+              iconColor
+            )}
+          >
             <PickupIcon className='h-4.5 w-4.5' />
           </div>
           <div className='min-w-0 flex-1'>
-            <p className={cn('text-[10px] font-bold uppercase tracking-widest', labelColor)}>{labelText}</p>
-            <h4 className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate' title={selectedPickup.name}>
+            <p
+              className={cn(
+                'text-[10px] font-bold uppercase tracking-widest',
+                labelColor
+              )}
+            >
+              {labelText}
+            </p>
+            <h4
+              className='mt-0.5 text-sm font-bold leading-snug text-slate-900 truncate'
+              title={selectedPickup.name}
+            >
               {selectedPickup.name}
             </h4>
           </div>
@@ -288,21 +363,32 @@ function NetworkDetailPanel({
         <div className='flex-1 overflow-y-auto p-5 space-y-4 min-h-0'>
           {/* Identity Section */}
           <div className='space-y-1.5'>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Identity</p>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>
+              Identity
+            </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
-              <DetailField label='Usage type' value={formatUsageType(selectedPickup.usageType)} />
+              <DetailField
+                label='Usage type'
+                value={formatUsageType(selectedPickup.usageType)}
+              />
             </div>
           </div>
 
           {/* Location Section */}
           <div className='space-y-1.5'>
-            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>Location</p>
+            <p className='text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1'>
+              Location
+            </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
-              <DetailField label='Address' value={selectedPickup.address ?? '—'} />
+              <DetailField
+                label='Address'
+                value={selectedPickup.address ?? '—'}
+              />
               <DetailField
                 label='Coordinates'
                 value={
-                  typeof selectedPickup.latitude === 'number' && typeof selectedPickup.longitude === 'number'
+                  typeof selectedPickup.latitude === 'number' &&
+                  typeof selectedPickup.longitude === 'number'
                     ? `${selectedPickup.latitude.toFixed(5)}, ${selectedPickup.longitude.toFixed(5)}`
                     : '⚠ Not set'
                 }
@@ -320,7 +406,8 @@ function NetworkDetailPanel({
             className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
             onClick={() => onEditPickup(selectedPickup)}
           >
-            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Edit pickup point
+            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Edit pickup
+            point
           </Button>
           <Button
             size='sm'
@@ -328,7 +415,8 @@ function NetworkDetailPanel({
             className='w-full justify-start border-red-200 text-[#C81E3A] bg-red-50/10 hover:bg-red-50 hover:border-red-300 hover:text-[#99182D]'
             onClick={onLinkPickup}
           >
-            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link to school
+            <Link2 className='mr-2.5 h-3.5 w-3.5 text-[#C81E3A]/70' /> Link to
+            school
           </Button>
         </div>
       </div>
@@ -338,19 +426,22 @@ function NetworkDetailPanel({
   return null;
 }
 
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function SchoolBusSchoolsPage() {
   return (
-    <React.Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]" />
-          <p className="text-sm font-semibold">Loading schools workspace...</p>
+    <React.Suspense
+      fallback={
+        <div className='flex h-screen items-center justify-center bg-slate-50 text-slate-500'>
+          <div className='flex flex-col items-center gap-3'>
+            <div className='h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]' />
+            <p className='text-sm font-semibold'>
+              Loading schools workspace...
+            </p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SchoolBusSchoolsPageContent />
     </React.Suspense>
   );
@@ -391,7 +482,7 @@ function SchoolBusSchoolsPageContent() {
     }
   }
 
-  const selectedDetailSchoolId = (schoolId && !isNaN(schoolId)) ? schoolId : null;
+  const selectedDetailSchoolId = schoolId && !isNaN(schoolId) ? schoolId : null;
   const viewMode = viewParam === 'directory' ? 'directory' : 'network';
 
   const setViewMode = (mode: ViewMode) => {
@@ -403,34 +494,71 @@ function SchoolBusSchoolsPageContent() {
 
   // ─── Directory search & filter states ────────────────────────────
   const [schoolSearchValue, setSchoolSearchValue] = React.useState('');
-  const [schoolStatusFilter, setSchoolStatusFilter] = React.useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-  const [schoolCoordsFilter, setSchoolCoordsFilter] = React.useState<'ALL' | 'MISSING'>('ALL');
+  const [schoolStatusFilter, setSchoolStatusFilter] = React.useState<
+    'ALL' | 'ACTIVE' | 'INACTIVE'
+  >('ALL');
+  const [schoolCoordsFilter, setSchoolCoordsFilter] = React.useState<
+    'ALL' | 'MISSING'
+  >('ALL');
 
   const [pickupSearchValue, setPickupSearchValue] = React.useState('');
-  const [pickupUsageFilter, setPickupUsageFilter] = React.useState<'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'>('ALL');
-  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<'ALL' | 'MISSING'>('ALL');
+  const [pickupUsageFilter, setPickupUsageFilter] = React.useState<
+    'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'
+  >('ALL');
+  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<
+    'ALL' | 'MISSING'
+  >('ALL');
   const [linkedSearch, setLinkedSearch] = React.useState('');
-  const schoolsPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
-  const pickupPagination = useSchoolBusPagination({ page: 0, size: 10, sortBy: 'name', sortDirection: 'ASC' });
+  const schoolsPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'name',
+    sortDirection: 'ASC',
+  });
+  const pickupPagination = useSchoolBusPagination({
+    page: 0,
+    size: 10,
+    sortBy: 'name',
+    sortDirection: 'ASC',
+  });
 
-  const { data, isLoading: loadingSchools, refetch: refetchSchools } = useGetSchoolsQuery(schoolsPagination.params);
-  const { data: allSchoolsData, refetch: refetchAllSchools } = useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: pickupPointsData, isLoading: loadingPickups, refetch: refetchPickups } = useGetPickupPointsQuery(pickupPagination.params);
-  const { data: depotsData, refetch: refetchDepots } = useGetDepotsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
-  const { data: allLinksData, refetch: refetchLinks } = useGetAllActiveSchoolPickupLinksQuery();
+  const {
+    data,
+    isLoading: loadingSchools,
+    refetch: refetchSchools,
+  } = useGetSchoolsQuery(schoolsPagination.params);
+  const { data: allSchoolsData, refetch: refetchAllSchools } =
+    useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+  const {
+    data: pickupPointsData,
+    isLoading: loadingPickups,
+    refetch: refetchPickups,
+  } = useGetPickupPointsQuery(pickupPagination.params);
+  const { data: depotsData, refetch: refetchDepots } = useGetDepotsQuery({
+    ...SCHOOL_BUS_OPTION_QUERY,
+    sortBy: 'name',
+  });
+  const { data: allLinksData, refetch: refetchLinks } =
+    useGetAllActiveSchoolPickupLinksQuery();
 
-  const [createSchool, { isLoading: creatingSchool }] = useCreateSchoolMutation();
-  const [updateSchool, { isLoading: updatingSchool }] = useUpdateSchoolMutation();
-  const [deleteSchool, { isLoading: deletingSchool }] = useDeleteSchoolMutation();
-  const [createPickupPoint, { isLoading: creatingPickup }] = useCreatePickupPointMutation();
-  const [updatePickupPoint, { isLoading: updatingPickup }] = useUpdatePickupPointMutation();
-  const [deletePickupPoint, { isLoading: deletingPickup }] = useDeletePickupPointMutation();
+  const [createSchool, { isLoading: creatingSchool }] =
+    useCreateSchoolMutation();
+  const [updateSchool, { isLoading: updatingSchool }] =
+    useUpdateSchoolMutation();
+  const [deleteSchool, { isLoading: deletingSchool }] =
+    useDeleteSchoolMutation();
+  const [createPickupPoint, { isLoading: creatingPickup }] =
+    useCreatePickupPointMutation();
+  const [updatePickupPoint, { isLoading: updatingPickup }] =
+    useUpdatePickupPointMutation();
+  const [deletePickupPoint, { isLoading: deletingPickup }] =
+    useDeletePickupPointMutation();
   // createSchedule removed (Phase 3)
   // updateSchedule removed
   // deleteSchedule removed
-  const [linkPickupPoint, { isLoading: linkingPickup }] = useLinkSchoolPickupPointMutation();
+  const [linkPickupPoint, { isLoading: linkingPickup }] =
+    useLinkSchoolPickupPointMutation();
   const [unlinkPickupPoint] = useUnlinkSchoolPickupPointMutation();
-
 
   const schools = getPageItems(data?.data);
   const allSchools = getPageItems(allSchoolsData?.data);
@@ -439,15 +567,21 @@ function SchoolBusSchoolsPageContent() {
   const allLinks = allLinksData?.data ?? [];
 
   // ─── Selection state ─────────────────────────────────────────────
-  const [selectedSchoolId, setSelectedSchoolId] = React.useState<number | null>(null);
-  const [selectedPickupPointId, setSelectedPickupPointId] = React.useState<number | null>(null);
+  const [selectedSchoolId, setSelectedSchoolId] = React.useState<number | null>(
+    null
+  );
+  const [selectedPickupPointId, setSelectedPickupPointId] = React.useState<
+    number | null
+  >(null);
 
   // ─── Dialog state ────────────────────────────────────────────────
   const [schoolDialogOpen, setSchoolDialogOpen] = React.useState(false);
   const [pickupDialogOpen, setPickupDialogOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
-  const [editingSchool, setEditingSchool] = React.useState<SchoolBusSchool | null>(null);
-  const [editingPickup, setEditingPickup] = React.useState<SchoolBusPickupPoint | null>(null);
+  const [editingSchool, setEditingSchool] =
+    React.useState<SchoolBusSchool | null>(null);
+  const [editingPickup, setEditingPickup] =
+    React.useState<SchoolBusPickupPoint | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget>(null);
   const isMountedRef = React.useRef(false);
   React.useEffect(() => {
@@ -462,16 +596,27 @@ function SchoolBusSchoolsPageContent() {
       refetchLinks?.();
       refetchDepots?.();
     }
-  }, [selectedDetailSchoolId, refetchSchools, refetchAllSchools, refetchPickups, refetchLinks, refetchDepots]);
+  }, [
+    selectedDetailSchoolId,
+    refetchSchools,
+    refetchAllSchools,
+    refetchPickups,
+    refetchLinks,
+    refetchDepots,
+  ]);
 
   // ─── Map fit controls ────────────────────────────────────────────
   const [fitAllKey, setFitAllKey] = React.useState(0);
   const [fitSelectedKey, setFitSelectedKey] = React.useState(0);
   const handleFitAll = React.useCallback(() => setFitAllKey((k) => k + 1), []);
-  const handleFitSelected = React.useCallback(() => setFitSelectedKey((k) => k + 1), []);
+  const handleFitSelected = React.useCallback(
+    () => setFitSelectedKey((k) => k + 1),
+    []
+  );
 
   React.useEffect(() => {
-    if (!selectedSchoolId && schools.length > 0) setSelectedSchoolId(schools[0].id);
+    if (!selectedSchoolId && schools.length > 0)
+      setSelectedSchoolId(schools[0].id);
   }, [schools, selectedSchoolId]);
 
   // ─── Linked data ─────────────────────────────────────────────────
@@ -485,35 +630,38 @@ function SchoolBusSchoolsPageContent() {
   // ─── Memoized directory filtered tables ──────────────────────────
   const filteredSchoolsTable = React.useMemo(() => {
     return schools.filter((school) => {
-      const matchesStatus = schoolStatusFilter === 'ALL'
-        ? true
-        : schoolStatusFilter === 'ACTIVE'
-          ? school.isActive
-          : !school.isActive;
-      const matchesCoords = schoolCoordsFilter === 'ALL'
-        ? true
-        : typeof school.latitude !== 'number' || typeof school.longitude !== 'number';
+      const matchesStatus =
+        schoolStatusFilter === 'ALL'
+          ? true
+          : schoolStatusFilter === 'ACTIVE'
+            ? school.isActive
+            : !school.isActive;
+      const matchesCoords =
+        schoolCoordsFilter === 'ALL'
+          ? true
+          : typeof school.latitude !== 'number' ||
+            typeof school.longitude !== 'number';
       return matchesStatus && matchesCoords;
     });
   }, [schools, schoolStatusFilter, schoolCoordsFilter]);
 
   const filteredPickupsTable = React.useMemo(() => {
     return pickupPoints.filter((pp) => {
-      const matchesUsage = pickupUsageFilter === 'ALL'
-        ? true
-        : pickupUsageFilter === 'PICKUP'
-          ? (pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY')
-          : pickupUsageFilter === 'DROPOFF'
-            ? (pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY')
-            : pp.usageType === 'PICKUP_DROPOFF';
-      const matchesCoords = pickupCoordsFilter === 'ALL'
-        ? true
-        : typeof pp.latitude !== 'number' || typeof pp.longitude !== 'number';
+      const matchesUsage =
+        pickupUsageFilter === 'ALL'
+          ? true
+          : pickupUsageFilter === 'PICKUP'
+            ? pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY'
+            : pickupUsageFilter === 'DROPOFF'
+              ? pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY'
+              : pp.usageType === 'PICKUP_DROPOFF';
+      const matchesCoords =
+        pickupCoordsFilter === 'ALL'
+          ? true
+          : typeof pp.latitude !== 'number' || typeof pp.longitude !== 'number';
       return matchesUsage && matchesCoords;
     });
   }, [pickupPoints, pickupUsageFilter, pickupCoordsFilter]);
-
-
 
   const filteredLinkedPickupsTable = React.useMemo(() => {
     if (!linkedSearch) return linkedPickupPoints;
@@ -535,11 +683,17 @@ function SchoolBusSchoolsPageContent() {
     pickupPoints.some((p) => typeof p.latitude === 'number') ||
     depots.some((d) => typeof d.latitude === 'number');
 
-  const selectedSchoolObj = schools.find((s) => s.id === selectedSchoolId) ?? allSchools.find((s) => s.id === selectedSchoolId) ?? null;
-  const selectedPickupObj = pickupPoints.find((p) => p.id === selectedPickupPointId) ?? null;
+  const selectedSchoolObj =
+    schools.find((s) => s.id === selectedSchoolId) ??
+    allSchools.find((s) => s.id === selectedSchoolId) ??
+    null;
+  const selectedPickupObj =
+    pickupPoints.find((p) => p.id === selectedPickupPointId) ?? null;
   const canFitSelected =
-    (selectedSchoolObj != null && typeof selectedSchoolObj.latitude === 'number') ||
-    (selectedPickupObj != null && typeof selectedPickupObj.latitude === 'number');
+    (selectedSchoolObj != null &&
+      typeof selectedSchoolObj.latitude === 'number') ||
+    (selectedPickupObj != null &&
+      typeof selectedPickupObj.latitude === 'number');
 
   // ─── Handlers ────────────────────────────────────────────────────
   const handleSaveSchool = async (values: any) => {
@@ -550,18 +704,25 @@ function SchoolBusSchoolsPageContent() {
       toast.success(response.message || 'School saved');
       setSchoolDialogOpen(false);
       setEditingSchool(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save school'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save school');
+    }
   };
 
   const handleSavePickupPoint = async (values: any) => {
     try {
       const response = editingPickup
-        ? await updatePickupPoint({ id: editingPickup.id, body: values }).unwrap()
+        ? await updatePickupPoint({
+            id: editingPickup.id,
+            body: values,
+          }).unwrap()
         : await createPickupPoint(values).unwrap();
       toast.success(response.message || 'Pickup point saved');
       setPickupDialogOpen(false);
       setEditingPickup(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to save pickup point'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to save pickup point');
+    }
   };
 
   const handleDelete = async () => {
@@ -571,44 +732,63 @@ function SchoolBusSchoolsPageContent() {
         const response = await deleteSchool(deleteTarget.entity.id).unwrap();
         toast.success(response.message || 'School deleted');
       } else {
-        const response = await deletePickupPoint(deleteTarget.entity.id).unwrap();
+        const response = await deletePickupPoint(
+          deleteTarget.entity.id
+        ).unwrap();
         toast.success(response.message || 'Pickup point deleted');
       }
       setDeleteTarget(null);
-    } catch (error: any) { toast.error(error?.data?.message || 'Delete failed'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Delete failed');
+    }
   };
-
-
 
   const handleLinkPickupPoint = async (values: any) => {
     if (!selectedSchoolId) return;
     try {
-      const r = await linkPickupPoint({ schoolId: selectedSchoolId, body: values }).unwrap();
+      const r = await linkPickupPoint({
+        schoolId: selectedSchoolId,
+        body: values,
+      }).unwrap();
       toast.success(r.message || 'Pickup point linked');
       setLinkDialogOpen(false);
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to link pickup point'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to link pickup point');
+    }
   };
 
   const handleUnlinkPickupPoint = async (pickupPointId: number) => {
     if (!selectedSchoolId) return;
     try {
-      const r = await unlinkPickupPoint({ schoolId: selectedSchoolId, pickupPointId }).unwrap();
+      const r = await unlinkPickupPoint({
+        schoolId: selectedSchoolId,
+        pickupPointId,
+      }).unwrap();
       toast.success(r.message || 'Pickup point unlinked');
-    } catch (error: any) { toast.error(error?.data?.message || 'Failed to unlink pickup point'); }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to unlink pickup point');
+    }
   };
-
 
   // ─── Network list filtering ──────────────────────────────────────
   const filteredSchools = React.useMemo(() => {
     if (!networkFilter) return allSchools;
     const q = networkFilter.toLowerCase();
-    return allSchools.filter((s) => s.name.toLowerCase().includes(q) || (s.code ?? '').toLowerCase().includes(q));
+    return allSchools.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.code ?? '').toLowerCase().includes(q)
+    );
   }, [allSchools, networkFilter]);
 
   const filteredPickups = React.useMemo(() => {
     if (!networkFilter) return pickupPoints;
     const q = networkFilter.toLowerCase();
-    return pickupPoints.filter((p) => p.name.toLowerCase().includes(q) || (p.address ?? '').toLowerCase().includes(q));
+    return pickupPoints.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.address ?? '').toLowerCase().includes(q)
+    );
   }, [pickupPoints, networkFilter]);
 
   // ─── View mode toggle ───────────────────────────────────────────
@@ -618,7 +798,9 @@ function SchoolBusSchoolsPageContent() {
         type='button'
         className={cn(
           'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-          viewMode === 'directory' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          viewMode === 'directory'
+            ? 'bg-white text-slate-900 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700'
         )}
         onClick={() => setViewMode('directory')}
       >
@@ -628,7 +810,9 @@ function SchoolBusSchoolsPageContent() {
         type='button'
         className={cn(
           'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-          viewMode === 'network' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          viewMode === 'network'
+            ? 'bg-white text-slate-900 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700'
         )}
         onClick={() => setViewMode('network')}
       >
@@ -653,230 +837,306 @@ function SchoolBusSchoolsPageContent() {
           title='School Network Workspace'
           description='Inspect and manage schools, pickup points, and depot locations on the map.'
           breadcrumb={
-            <SchoolBusBreadcrumb items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Schools', current: true },
-            ]} />
+            <SchoolBusBreadcrumb
+              items={[
+                { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+                { label: 'Schools', current: true },
+              ]}
+            />
           }
           actions={
             <div className='flex items-center gap-3'>
               {viewModeToggle}
-              <Button variant='outline' className='rounded-full' onClick={() => { setEditingPickup(null); setPickupDialogOpen(true); }}>
+              <Button
+                variant='outline'
+                className='rounded-full'
+                onClick={() => {
+                  setEditingPickup(null);
+                  setPickupDialogOpen(true);
+                }}
+              >
                 <Plus className='h-4 w-4' /> Add pickup
               </Button>
-              <Button className='rounded-full' onClick={() => { setEditingSchool(null); setSchoolDialogOpen(true); }}>
+              <Button
+                className='rounded-full'
+                onClick={() => {
+                  setEditingSchool(null);
+                  setSchoolDialogOpen(true);
+                }}
+              >
                 <Plus className='h-4 w-4' /> Add school
               </Button>
             </div>
           }
         >
           <div className='flex flex-col gap-6'>
-          {/* Stats row */}
-          <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-            <SchoolBusMetricCard label='Schools' value={allSchools.length} icon={GraduationCap} tone='school' variant='compact' />
-            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPin} tone='pickup' variant='compact' />
-            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='linked' variant='compact' />
-            <SchoolBusMetricCard
-              label='Missing coords'
-              value={missingCoordsCount}
-              icon={AlertTriangle}
-              tone={missingCoordsCount > 0 ? 'warning' : 'success'}
-              variant='compact'
-            />
-          </div>
-
-          {/* 3-column workspace */}
-          <div
-            className='flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
-            style={{ height: 'calc(100vh - 225px)', minHeight: '520px' }}
-          >
-            {/* ── Left panel: list ──────────────────────────────── */}
-            <div className='flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
-              <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3'>
-                <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>Network Directory</p>
-              </div>
-              {/* Search */}
-              <div className='shrink-0 border-b border-slate-100 px-3.5 py-2.5'>
-                <div className='relative'>
-                  <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
-                  <input
-                    type='text'
-                    placeholder='Filter schools or pickup points...'
-                    value={networkFilter}
-                    onChange={(e) => setNetworkFilter(e.target.value)}
-                    className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
-                  />
-                </div>
-              </div>
-              {/* Scrollable list */}
-              <div className='flex-1 overflow-y-auto divide-y divide-slate-100/50'>
-                {/* Schools group */}
-                <div>
-                  <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
-                    <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>Schools</span>
-                    <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
-                      {filteredSchools.length}
-                    </span>
-                  </div>
-                  <div className='pb-2'>
-                    {filteredSchools.length === 0 ? (
-                      <p className='px-3.5 py-3 text-xs text-slate-400 italic'>No schools found</p>
-                    ) : (
-                      filteredSchools.map((s) => {
-                        const isSelected = selectedSchoolId === s.id && !selectedPickupPointId;
-                        return (
-                          <button
-                            key={s.id}
-                            type='button'
-                            onClick={() => {
-                              setSelectedSchoolId(s.id);
-                              setSelectedPickupPointId(null);
-                              // Fit map to selected school
-                              setFitSelectedKey((k) => k + 1);
-                            }}
-                            className={cn(
-                              'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
-                              isSelected
-                                ? 'bg-red-50/20 font-semibold border-l-[#C81E3A] text-[#A61B31]'
-                                : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
-                            )}
-                          >
-                            <div className='flex items-center justify-between w-full gap-2'>
-                              <span className='truncate text-xs font-semibold text-slate-900'>{s.name}</span>
-                              {s.code && (
-                                <span className='shrink-0 rounded bg-red-50 px-1 text-[9px] font-bold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
-                                  {s.code}
-                                </span>
-                              )}
-                            </div>
-                            <span className='truncate text-[10px] text-slate-400 mt-0.5'>{s.address || 'No address'}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Pickup points group */}
-                <div>
-                  <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
-                    <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>Pickup Points</span>
-                    <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
-                      {filteredPickups.length}
-                    </span>
-                  </div>
-                  <div className='pb-2'>
-                    {filteredPickups.length === 0 ? (
-                      <p className='px-3.5 py-3 text-xs text-slate-400 italic'>No pickup points found</p>
-                    ) : (
-                      filteredPickups.map((p) => {
-                        const isSelected = selectedPickupPointId === p.id;
-                        const isPickup = p.usageType === 'PICKUP' || p.usageType === 'PICKUP_ONLY';
-                        const isDropoff = p.usageType === 'DROPOFF' || p.usageType === 'DROPOFF_ONLY';
-                        const leftBorderClass = isPickup
-                          ? 'border-l-blue-600 text-blue-700'
-                          : isDropoff
-                            ? 'border-l-emerald-600 text-emerald-700'
-                            : 'border-l-indigo-600 text-indigo-700';
-                        const activeBg = isPickup
-                          ? 'bg-blue-50/20'
-                          : isDropoff
-                            ? 'bg-emerald-50/20'
-                            : 'bg-indigo-50/20';
-
-                        return (
-                          <button
-                            key={p.id}
-                            type='button'
-                            onClick={() => {
-                              setSelectedPickupPointId(p.id);
-                              // Select school of this pickup if it exists in the linked list
-                              const schoolLink = allLinks.find((l) => l.pickupPointId === p.id);
-                              if (schoolLink) {
-                                setSelectedSchoolId(schoolLink.schoolId);
-                              }
-                              // Fit map to selected pickup
-                              setFitSelectedKey((k) => k + 1);
-                            }}
-                            className={cn(
-                              'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
-                              isSelected
-                                ? cn('font-semibold', activeBg, leftBorderClass)
-                                : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
-                            )}
-                          >
-                            <div className='flex items-center justify-between w-full gap-2'>
-                              <span className='truncate text-xs font-semibold text-slate-900'>{p.name}</span>
-                              {p.code && (
-                                <span className='shrink-0 rounded bg-blue-50 px-1 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
-                                  {p.code}
-                                </span>
-                              )}
-                            </div>
-                            <span className='truncate text-[10px] text-slate-400 mt-0.5'>{p.address || 'No address'}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Stats row */}
+            <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
+              <SchoolBusMetricCard
+                label='Schools'
+                value={allSchools.length}
+                icon={GraduationCap}
+                tone='school'
+                variant='compact'
+              />
+              <SchoolBusMetricCard
+                label='Pickup points'
+                value={pickupPoints.length}
+                icon={MapPin}
+                tone='pickup'
+                variant='compact'
+              />
+              <SchoolBusMetricCard
+                label='Linked pickups'
+                value={allLinks.length}
+                icon={Link2}
+                tone='linked'
+                variant='compact'
+              />
+              <SchoolBusMetricCard
+                label='Missing coords'
+                value={missingCoordsCount}
+                icon={AlertTriangle}
+                tone={missingCoordsCount > 0 ? 'warning' : 'success'}
+                variant='compact'
+              />
             </div>
 
-            {/* ── Right side: Map + Detail Panel ────────────────── */}
-            <SchoolBusMapWorkspace
-              flat
-              className='flex-1 min-h-0'
-              mapHeightClassName='h-full'
-              panelClassName='w-[340px] p-0 flex flex-col h-full min-h-0 bg-white'
-              map={
-                canFitAll ? (
-                  <OperationsMap
-                    schools={allSchools}
-                    depots={depots}
-                    pickupPoints={pickupPoints}
-                    selectedSchoolId={selectedSchoolId}
-                    selectedPickupPointId={selectedPickupPointId}
-                    selectedDepotId={null}
-                    onSchoolSelect={(id) => { setSelectedSchoolId(id); setSelectedPickupPointId(null); }}
-                    onPickupPointSelect={(id) => { setSelectedPickupPointId(id); }}
-                    onDepotSelect={() => {}}
-                    fitAllKey={fitAllKey}
-                    fitSelectedKey={fitSelectedKey}
-                    className='h-full w-full'
-                  />
-                ) : (
-                  <div className='flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6'>
-                    <div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white'>
-                      <MapPin className='h-8 w-8 text-slate-300' />
+            {/* 3-column workspace */}
+            <div
+              className='flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
+              style={{ height: 'calc(100vh - 225px)', minHeight: '520px' }}
+            >
+              {/* ── Left panel: list ──────────────────────────────── */}
+              <div className='flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
+                <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3'>
+                  <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>
+                    Network Directory
+                  </p>
+                </div>
+                {/* Search */}
+                <div className='shrink-0 border-b border-slate-100 px-3.5 py-2.5'>
+                  <div className='relative'>
+                    <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
+                    <input
+                      type='text'
+                      placeholder='Filter schools or pickup points...'
+                      value={networkFilter}
+                      onChange={(e) => setNetworkFilter(e.target.value)}
+                      className='w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
+                    />
+                  </div>
+                </div>
+                {/* Scrollable list */}
+                <div className='flex-1 overflow-y-auto divide-y divide-slate-100/50'>
+                  {/* Schools group */}
+                  <div>
+                    <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
+                      <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>
+                        Schools
+                      </span>
+                      <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
+                        {filteredSchools.length}
+                      </span>
                     </div>
-                    <div className='text-center'>
-                      <p className='text-sm font-semibold text-slate-600'>No map data yet</p>
-                      <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
-                        Add coordinates to schools, depots, or pickup points to view them on the map.
-                      </p>
+                    <div className='pb-2'>
+                      {filteredSchools.length === 0 ? (
+                        <p className='px-3.5 py-3 text-xs text-slate-400 italic'>
+                          No schools found
+                        </p>
+                      ) : (
+                        filteredSchools.map((s) => {
+                          const isSelected =
+                            selectedSchoolId === s.id && !selectedPickupPointId;
+                          return (
+                            <button
+                              key={s.id}
+                              type='button'
+                              onClick={() => {
+                                setSelectedSchoolId(s.id);
+                                setSelectedPickupPointId(null);
+                                // Fit map to selected school
+                                setFitSelectedKey((k) => k + 1);
+                              }}
+                              className={cn(
+                                'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
+                                isSelected
+                                  ? 'bg-red-50/20 font-semibold border-l-[#C81E3A] text-[#A61B31]'
+                                  : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
+                              )}
+                            >
+                              <div className='flex items-center justify-between w-full gap-2'>
+                                <span className='truncate text-xs font-semibold text-slate-900'>
+                                  {s.name}
+                                </span>
+                                {s.code && (
+                                  <span className='shrink-0 rounded bg-red-50 px-1 text-[9px] font-bold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
+                                    {s.code}
+                                  </span>
+                                )}
+                              </div>
+                              <span className='truncate text-[10px] text-slate-400 mt-0.5'>
+                                {s.address || 'No address'}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
-                )
-              }
-              legend={<SchoolBusMapLegend showRouteLines={false} />}
-              onFitAll={handleFitAll}
-              onFitRoute={handleFitSelected}
-              canFitAll={canFitAll}
-              canFitRoute={canFitSelected}
-              fitRouteLabel='Fit Selected'
-              panel={
-                <NetworkDetailPanel
-                  selectedSchool={selectedSchoolObj}
-                  selectedPickup={selectedPickupObj}
-                  linkedPickupCount={linkedPickupPoints.length}
-                  onEditSchool={(s) => { setEditingSchool(s); setSchoolDialogOpen(true); }}
-                  onEditPickup={(p) => { setEditingPickup(p); setPickupDialogOpen(true); }}
-                  onLinkPickup={() => setLinkDialogOpen(true)}
-                />
-              }
-            />
-          </div>
+
+                  {/* Pickup points group */}
+                  <div>
+                    <div className='flex items-center justify-between px-3.5 pt-4 pb-2'>
+                      <span className='text-[10px] font-bold uppercase tracking-widest text-slate-400'>
+                        Pickup Points
+                      </span>
+                      <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500'>
+                        {filteredPickups.length}
+                      </span>
+                    </div>
+                    <div className='pb-2'>
+                      {filteredPickups.length === 0 ? (
+                        <p className='px-3.5 py-3 text-xs text-slate-400 italic'>
+                          No pickup points found
+                        </p>
+                      ) : (
+                        filteredPickups.map((p) => {
+                          const isSelected = selectedPickupPointId === p.id;
+                          const isPickup =
+                            p.usageType === 'PICKUP' ||
+                            p.usageType === 'PICKUP_ONLY';
+                          const isDropoff =
+                            p.usageType === 'DROPOFF' ||
+                            p.usageType === 'DROPOFF_ONLY';
+                          const leftBorderClass = isPickup
+                            ? 'border-l-blue-600 text-blue-700'
+                            : isDropoff
+                              ? 'border-l-emerald-600 text-emerald-700'
+                              : 'border-l-indigo-600 text-indigo-700';
+                          const activeBg = isPickup
+                            ? 'bg-blue-50/20'
+                            : isDropoff
+                              ? 'bg-emerald-50/20'
+                              : 'bg-indigo-50/20';
+
+                          return (
+                            <button
+                              key={p.id}
+                              type='button'
+                              onClick={() => {
+                                setSelectedPickupPointId(p.id);
+                                // Select school of this pickup if it exists in the linked list
+                                const schoolLink = allLinks.find(
+                                  (l) => l.pickupPointId === p.id
+                                );
+                                if (schoolLink) {
+                                  setSelectedSchoolId(schoolLink.schoolId);
+                                }
+                                // Fit map to selected pickup
+                                setFitSelectedKey((k) => k + 1);
+                              }}
+                              className={cn(
+                                'flex w-full flex-col gap-0.5 border-b border-slate-100/40 px-3.5 py-2.5 text-left transition-colors border-l-4',
+                                isSelected
+                                  ? cn(
+                                      'font-semibold',
+                                      activeBg,
+                                      leftBorderClass
+                                    )
+                                  : 'text-slate-700 border-l-transparent hover:bg-slate-50/50'
+                              )}
+                            >
+                              <div className='flex items-center justify-between w-full gap-2'>
+                                <span className='truncate text-xs font-semibold text-slate-900'>
+                                  {p.name}
+                                </span>
+                                {p.code && (
+                                  <span className='shrink-0 rounded bg-blue-50 px-1 text-[9px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10'>
+                                    {p.code}
+                                  </span>
+                                )}
+                              </div>
+                              <span className='truncate text-[10px] text-slate-400 mt-0.5'>
+                                {p.address || 'No address'}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Right side: Map + Detail Panel ────────────────── */}
+              <SchoolBusMapWorkspace
+                flat
+                className='flex-1 min-h-0'
+                mapHeightClassName='h-full'
+                panelClassName='w-[340px] p-0 flex flex-col h-full min-h-0 bg-white'
+                map={
+                  canFitAll ? (
+                    <OperationsMap
+                      schools={allSchools}
+                      depots={depots}
+                      pickupPoints={pickupPoints}
+                      selectedSchoolId={selectedSchoolId}
+                      selectedPickupPointId={selectedPickupPointId}
+                      selectedDepotId={null}
+                      onSchoolSelect={(id) => {
+                        setSelectedSchoolId(id);
+                        setSelectedPickupPointId(null);
+                      }}
+                      onPickupPointSelect={(id) => {
+                        setSelectedPickupPointId(id);
+                      }}
+                      onDepotSelect={() => {}}
+                      fitAllKey={fitAllKey}
+                      fitSelectedKey={fitSelectedKey}
+                      className='h-full w-full'
+                    />
+                  ) : (
+                    <div className='flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6'>
+                      <div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white'>
+                        <MapPin className='h-8 w-8 text-slate-300' />
+                      </div>
+                      <div className='text-center'>
+                        <p className='text-sm font-semibold text-slate-600'>
+                          No map data yet
+                        </p>
+                        <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
+                          Add coordinates to schools, depots, or pickup points
+                          to view them on the map.
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
+                legend={<SchoolBusMapLegend showRouteLines={false} />}
+                onFitAll={handleFitAll}
+                onFitRoute={handleFitSelected}
+                canFitAll={canFitAll}
+                canFitRoute={canFitSelected}
+                fitRouteLabel='Fit Selected'
+                panel={
+                  <NetworkDetailPanel
+                    selectedSchool={selectedSchoolObj}
+                    selectedPickup={selectedPickupObj}
+                    linkedPickupCount={linkedPickupPoints.length}
+                    onEditSchool={(s) => {
+                      setEditingSchool(s);
+                      setSchoolDialogOpen(true);
+                    }}
+                    onEditPickup={(p) => {
+                      setEditingPickup(p);
+                      setPickupDialogOpen(true);
+                    }}
+                    onLinkPickup={() => setLinkDialogOpen(true)}
+                  />
+                }
+              />
+            </div>
           </div>
         </SchoolBusPageShell>
 
@@ -891,7 +1151,9 @@ function SchoolBusSchoolsPageContent() {
 
   const schoolScopeSelector = (
     <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm'>
-      <label className='text-xs font-semibold text-slate-500 whitespace-nowrap uppercase tracking-wider'>School:</label>
+      <label className='text-xs font-semibold text-slate-500 whitespace-nowrap uppercase tracking-wider'>
+        School:
+      </label>
       <SchoolBusSelect
         value={selectedSchoolId ?? ''}
         onChange={(val) => {
@@ -919,7 +1181,9 @@ function SchoolBusSchoolsPageContent() {
       headerClassName: 'pl-6',
       render: (school) => {
         const isSelected = selectedSchoolId === school.id;
-        const hasCoords = typeof school.latitude === 'number' && typeof school.longitude === 'number';
+        const hasCoords =
+          typeof school.latitude === 'number' &&
+          typeof school.longitude === 'number';
         return (
           <div className='flex items-center gap-3'>
             <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#C81E3A] border border-red-100/50'>
@@ -935,10 +1199,16 @@ function SchoolBusSchoolsPageContent() {
                 }}
               >
                 <div className='flex items-center gap-1.5'>
-                  <p className={cn(
-                    'font-bold text-sm transition-colors',
-                    isSelected ? 'text-[#C81E3A]' : 'text-slate-900 hover:text-[#C81E3A]'
-                  )}>{school.name}</p>
+                  <p
+                    className={cn(
+                      'font-bold text-sm transition-colors',
+                      isSelected
+                        ? 'text-[#C81E3A]'
+                        : 'text-slate-900 hover:text-[#C81E3A]'
+                    )}
+                  >
+                    {school.name}
+                  </p>
                   {!hasCoords && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -950,14 +1220,17 @@ function SchoolBusSchoolsPageContent() {
                     </Tooltip>
                   )}
                 </div>
-                <p className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate' title={school.address || undefined}>
+                <p
+                  className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate'
+                  title={school.address || undefined}
+                >
                   {school.address || 'No address'}
                 </p>
               </button>
             </div>
           </div>
         );
-      }
+      },
     },
     {
       key: 'network',
@@ -967,12 +1240,14 @@ function SchoolBusSchoolsPageContent() {
         const missingLinked = school.anyLinkedPointMissingCoordinates;
         return (
           <div className='flex items-center gap-2'>
-            <span className={cn(
-              'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset',
-              missingLinked
-                ? 'bg-amber-50 text-amber-800 ring-amber-600/15'
-                : 'bg-slate-100 text-slate-700 ring-slate-600/10'
-            )}>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset',
+                missingLinked
+                  ? 'bg-amber-50 text-amber-800 ring-amber-600/15'
+                  : 'bg-slate-100 text-slate-700 ring-slate-600/10'
+              )}
+            >
               {linkedCount} linked pickups
               {missingLinked && (
                 <Tooltip>
@@ -981,14 +1256,16 @@ function SchoolBusSchoolsPageContent() {
                   </TooltipTrigger>
                   <TooltipContent className='bg-white text-slate-800 border border-slate-200 p-2.5 rounded-xl text-xs max-w-[220px] shadow-lg font-medium leading-normal flex items-start gap-2'>
                     <AlertTriangle className='h-4 w-4 text-amber-500 shrink-0 mt-0.5' />
-                    <span>Some linked pickup points are missing coordinates.</span>
+                    <span>
+                      Some linked pickup points are missing coordinates.
+                    </span>
                   </TooltipContent>
                 </Tooltip>
               )}
             </span>
           </div>
         );
-      }
+      },
     },
 
     {
@@ -996,7 +1273,8 @@ function SchoolBusSchoolsPageContent() {
       header: 'Pickup points',
       render: (school) => {
         const points = school.pickupPoints || [];
-        if (points.length === 0) return <span className='text-slate-400 font-medium text-xs'>—</span>;
+        if (points.length === 0)
+          return <span className='text-slate-400 font-medium text-xs'>—</span>;
 
         const limit = 2;
         const visible = points.slice(0, limit);
@@ -1007,31 +1285,43 @@ function SchoolBusSchoolsPageContent() {
             <div className='flex flex-col gap-1 items-start py-1'>
               {visible.map((pt) => {
                 const hasCoords = !!pt.hasCoordinates;
-                const isPickup = pt.usageType === 'PICKUP' || pt.usageType === 'PICKUP_ONLY';
-                const isDropoff = pt.usageType === 'DROPOFF' || pt.usageType === 'DROPOFF_ONLY';
+                const isPickup =
+                  pt.usageType === 'PICKUP' || pt.usageType === 'PICKUP_ONLY';
+                const isDropoff =
+                  pt.usageType === 'DROPOFF' || pt.usageType === 'DROPOFF_ONLY';
 
                 return (
                   <Tooltip key={pt.code}>
                     <TooltipTrigger asChild>
-                      <span className={cn(
-                        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
-                        !hasCoords
-                          ? 'bg-amber-50 text-amber-800 border-amber-200'
-                          : isPickup
-                          ? 'bg-blue-50 text-blue-700 border-blue-150'
-                          : isDropoff
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
-                          : 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                      )}>
-                        {!hasCoords && <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />}
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
+                          !hasCoords
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : isPickup
+                              ? 'bg-blue-50 text-blue-700 border-blue-150'
+                              : isDropoff
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                                : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                        )}
+                      >
+                        {!hasCoords && (
+                          <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />
+                        )}
                         {pt.code}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className='p-3.5 max-w-[280px] bg-white text-slate-900 rounded-[16px] shadow-xl border border-slate-200 space-y-2 text-xs'>
                       <div className='flex items-center justify-between gap-3 border-b border-slate-100 pb-2 mb-2'>
                         <div className='min-w-0'>
-                          <p className='font-bold text-slate-900 truncate'>{pt.name}</p>
-                          {pt.code && <p className='text-[10px] text-slate-500 font-mono font-semibold mt-0.5'>{pt.code}</p>}
+                          <p className='font-bold text-slate-900 truncate'>
+                            {pt.name}
+                          </p>
+                          {pt.code && (
+                            <p className='text-[10px] text-slate-500 font-mono font-semibold mt-0.5'>
+                              {pt.code}
+                            </p>
+                          )}
                         </div>
                         <div className='flex items-center gap-1.5 shrink-0'>
                           {pt.isDefault && (
@@ -1039,20 +1329,30 @@ function SchoolBusSchoolsPageContent() {
                               Default
                             </span>
                           )}
-                          <span className={cn(
-                            'px-1.5 py-0.5 rounded border text-[8px] font-bold font-sans',
-                            isPickup ? 'bg-blue-50 text-blue-700 border-blue-100'
-                              : isDropoff ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                          )}>
-                            {isPickup ? 'Pickup' : isDropoff ? 'Drop-off' : 'Both'}
+                          <span
+                            className={cn(
+                              'px-1.5 py-0.5 rounded border text-[8px] font-bold font-sans',
+                              isPickup
+                                ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                : isDropoff
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                            )}
+                          >
+                            {isPickup
+                              ? 'Pickup'
+                              : isDropoff
+                                ? 'Drop-off'
+                                : 'Both'}
                           </span>
                         </div>
                       </div>
                       <div className='space-y-1.5 text-slate-600 font-medium'>
                         <p className='truncate' title={pt.address || ''}>
                           <span className='text-slate-400'>Addr:</span>{' '}
-                          <span className='text-slate-800 font-semibold'>{pt.address || 'N/A'}</span>
+                          <span className='text-slate-800 font-semibold'>
+                            {pt.address || 'N/A'}
+                          </span>
                         </p>
                       </div>
                     </TooltipContent>
@@ -1067,32 +1367,37 @@ function SchoolBusSchoolsPageContent() {
             </div>
           </TooltipProvider>
         );
-      }
+      },
     },
     {
       key: 'code',
       header: 'Code',
-      render: (school) => (
+      render: (school) =>
         school.code ? (
           <span className='inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
             {school.code}
           </span>
         ) : (
           <span className='text-slate-400 font-medium'>—</span>
-        )
-      )
+        ),
     },
     {
       key: 'contact',
       header: 'Contact',
       render: (school) => (
-        <span className='text-xs font-medium text-slate-600'>{school.contactPhone || '—'}</span>
-      )
+        <span className='text-xs font-medium text-slate-600'>
+          {school.contactPhone || '—'}
+        </span>
+      ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (school) => <SchoolBusStatusBadge status={school.isActive ? 'ACTIVE' : 'INACTIVE'} />
+      render: (school) => (
+        <SchoolBusStatusBadge
+          status={school.isActive ? 'ACTIVE' : 'INACTIVE'}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -1106,7 +1411,9 @@ function SchoolBusSchoolsPageContent() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              router.push(`/school-bus/schools/${school.id}&tab=general&view=directory`);
+              router.push(
+                `/school-bus/schools/${school.id}&tab=general&view=directory`
+              );
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -1131,8 +1438,8 @@ function SchoolBusSchoolsPageContent() {
             <Trash2 className='h-3.5 w-3.5' />
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   // Columns definition for pickup-points
@@ -1143,19 +1450,27 @@ function SchoolBusSchoolsPageContent() {
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (pp) => {
-        const isDropoff = pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY';
-        const isPickup = pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY';
+        const isDropoff =
+          pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY';
+        const isPickup =
+          pp.usageType === 'PICKUP' || pp.usageType === 'PICKUP_ONLY';
         const cellIconWrapper = isDropoff
           ? 'bg-emerald-50 text-emerald-700 border-emerald-100/50'
           : isPickup
             ? 'bg-blue-50 text-blue-700 border-blue-100/50'
             : 'bg-indigo-50 text-indigo-700 border-indigo-100/50';
         const PickupIcon = isDropoff ? MapPinCheck : MapPin;
-        const hasCoords = typeof pp.latitude === 'number' && typeof pp.longitude === 'number';
+        const hasCoords =
+          typeof pp.latitude === 'number' && typeof pp.longitude === 'number';
 
         return (
           <div className='flex items-center gap-3'>
-            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border', cellIconWrapper)}>
+            <div
+              className={cn(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border',
+                cellIconWrapper
+              )}
+            >
               <PickupIcon className='h-4.5 w-4.5' />
             </div>
             <div className='min-w-0'>
@@ -1167,9 +1482,14 @@ function SchoolBusSchoolsPageContent() {
                   setSelectedSchoolId(pp.schools?.[0]?.id ?? null);
                 }}
               >
-                <p className='font-bold text-slate-900 hover:text-[#C81E3A] text-sm transition-colors'>{pp.name}</p>
+                <p className='font-bold text-slate-900 hover:text-[#C81E3A] text-sm transition-colors'>
+                  {pp.name}
+                </p>
                 <div className='flex flex-wrap items-center gap-2 mt-0.5'>
-                  <span className='text-[11px] text-slate-400 truncate max-w-xs' title={pp.address || undefined}>
+                  <span
+                    className='text-[11px] text-slate-400 truncate max-w-xs'
+                    title={pp.address || undefined}
+                  >
                     {pp.address || 'No address'}
                   </span>
                   {!hasCoords && (
@@ -1182,27 +1502,31 @@ function SchoolBusSchoolsPageContent() {
             </div>
           </div>
         );
-      }
+      },
     },
     {
       key: 'code',
       header: 'Code',
-      render: (pp) => (
+      render: (pp) =>
         pp.code ? (
           <span className='inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-[#C81E3A] ring-1 ring-inset ring-red-600/10'>
             {pp.code}
           </span>
         ) : (
           <span className='text-slate-400 font-medium'>—</span>
-        )
-      )
+        ),
     },
     {
       key: 'school',
       header: 'Schools',
       render: (pp) => {
         const schools = pp.schools || [];
-        if (schools.length === 0) return <span className='text-xs text-slate-400 italic font-medium'>Unlinked</span>;
+        if (schools.length === 0)
+          return (
+            <span className='text-xs text-slate-400 italic font-medium'>
+              Unlinked
+            </span>
+          );
 
         const limit = 2;
         const visible = schools.slice(0, limit);
@@ -1219,16 +1543,27 @@ function SchoolBusSchoolsPageContent() {
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className='p-2.5 max-w-[220px] bg-white text-slate-900 rounded-xl shadow-lg border border-slate-200 text-xs'>
-                    <p className='font-bold text-slate-900 truncate'>{s.name}</p>
-                    <p className='text-slate-500 font-medium mt-0.5'>Code: <span className='text-slate-700 font-semibold'>{s.code}</span></p>
+                    <p className='font-bold text-slate-900 truncate'>
+                      {s.name}
+                    </p>
+                    <p className='text-slate-500 font-medium mt-0.5'>
+                      Code:{' '}
+                      <span className='text-slate-700 font-semibold'>
+                        {s.code}
+                      </span>
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               ))}
-              {extra > 0 && <span className='text-[10px] font-semibold text-slate-400 pl-1'>+{extra} more</span>}
+              {extra > 0 && (
+                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
+                  +{extra} more
+                </span>
+              )}
             </div>
           </TooltipProvider>
         );
-      }
+      },
     },
     {
       key: 'usage',
@@ -1240,7 +1575,10 @@ function SchoolBusSchoolsPageContent() {
               Pickup
             </span>
           );
-        } else if (pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY') {
+        } else if (
+          pp.usageType === 'DROPOFF' ||
+          pp.usageType === 'DROPOFF_ONLY'
+        ) {
           return (
             <span className='inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/15'>
               Drop-off
@@ -1253,7 +1591,7 @@ function SchoolBusSchoolsPageContent() {
             </span>
           );
         }
-      }
+      },
     },
     {
       key: 'actions',
@@ -1282,10 +1620,9 @@ function SchoolBusSchoolsPageContent() {
             <Trash2 className='h-3.5 w-3.5' />
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
-
 
   // Toolbars definition
   const schoolToolbar = (
@@ -1325,7 +1662,10 @@ function SchoolBusSchoolsPageContent() {
       <Button
         variant='outline'
         className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
-        onClick={() => { setEditingSchool(null); setSchoolDialogOpen(true); }}
+        onClick={() => {
+          setEditingSchool(null);
+          setSchoolDialogOpen(true);
+        }}
       >
         <Plus className='h-4 w-4 mr-1.5' /> Add school
       </Button>
@@ -1370,14 +1710,15 @@ function SchoolBusSchoolsPageContent() {
       <Button
         variant='outline'
         className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
-        onClick={() => { setEditingPickup(null); setPickupDialogOpen(true); }}
+        onClick={() => {
+          setEditingPickup(null);
+          setPickupDialogOpen(true);
+        }}
       >
         <Plus className='h-4 w-4 mr-1.5' /> Add pickup point
       </Button>
     </div>
   );
-
-
 
   const linkedPickupToolbar = (
     <div className='flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between'>
@@ -1408,12 +1749,15 @@ function SchoolBusSchoolsPageContent() {
     </div>
   );
 
-  const selectedSchoolName = schools.find((s) => s.id === selectedSchoolId)?.name;
+  const selectedSchoolName = schools.find(
+    (s) => s.id === selectedSchoolId
+  )?.name;
 
   const renderDayChips = (days: string | string[]) => {
-    const daysArr = typeof days === 'string'
-      ? days.split(',').map((d) => d.trim().toUpperCase())
-      : (days || []).map((d) => d.toUpperCase());
+    const daysArr =
+      typeof days === 'string'
+        ? days.split(',').map((d) => d.trim().toUpperCase())
+        : (days || []).map((d) => d.toUpperCase());
     const allWeekdays = [
       { key: 'MONDAY', label: 'M' },
       { key: 'TUESDAY', label: 'T' },
@@ -1460,8 +1804,16 @@ function SchoolBusSchoolsPageContent() {
       ) : filteredLinkedPickupsTable.length === 0 ? (
         <div className='px-6 py-8'>
           <SchoolBusEmptyState
-            title={linkedPickupPoints.length === 0 ? 'No pickup points linked yet' : 'No matching linked pickup points'}
-            description={linkedPickupPoints.length === 0 ? 'Link a pickup point to this school to make request planning actionable.' : 'Try adjusting your search criteria.'}
+            title={
+              linkedPickupPoints.length === 0
+                ? 'No pickup points linked yet'
+                : 'No matching linked pickup points'
+            }
+            description={
+              linkedPickupPoints.length === 0
+                ? 'Link a pickup point to this school to make request planning actionable.'
+                : 'Try adjusting your search criteria.'
+            }
             icon={Link2}
             className='min-h-[220px]'
           />
@@ -1470,38 +1822,51 @@ function SchoolBusSchoolsPageContent() {
         <div className='px-6 py-5 space-y-3 bg-slate-50/20 border-b border-slate-100 rounded-b-2xl'>
           {filteredLinkedPickupsTable.map((link) => {
             return (
-              <div key={link.id} className='rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-sm hover:shadow-md/5 transition-all duration-200'>
+              <div
+                key={link.id}
+                className='rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-sm hover:shadow-md/5 transition-all duration-200'
+              >
                 {/* Header */}
-                <div
-                  className='flex items-center justify-between px-5 py-4 cursor-pointer select-none transition hover:bg-slate-50/50'
-                >
+                <div className='flex items-center justify-between px-5 py-4 cursor-pointer select-none transition hover:bg-slate-50/50'>
                   <div className='flex items-center gap-3 min-w-0'>
                     <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/40 text-slate-500'>
                       <MapPin className='h-4 w-4' />
                     </div>
                     <div className='min-w-0'>
-                      <p className='text-sm font-bold text-slate-800'>{link.pickupPointName}</p>
-                      <p className='text-[11px] text-slate-400 mt-0.5 truncate max-w-md' title={link.pickupPointAddress || undefined}>
+                      <p className='text-sm font-bold text-slate-800'>
+                        {link.pickupPointName}
+                      </p>
+                      <p
+                        className='text-[11px] text-slate-400 mt-0.5 truncate max-w-md'
+                        title={link.pickupPointAddress || undefined}
+                      >
                         {link.pickupPointAddress || 'No address'}
                       </p>
                     </div>
                   </div>
                   <div className='flex items-center gap-3 shrink-0'>
-                    <span className={cn(
-                      'rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset',
-                      link.pickupPointUsageType === 'PICKUP' || link.pickupPointUsageType === 'PICKUP_ONLY'
-                        ? 'bg-blue-50 text-blue-700 ring-blue-600/15'
-                        : link.pickupPointUsageType === 'DROPOFF' || link.pickupPointUsageType === 'DROPOFF_ONLY'
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'
-                          : 'bg-indigo-50 text-indigo-700 ring-indigo-600/15'
-                    )}>
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset',
+                        link.pickupPointUsageType === 'PICKUP' ||
+                          link.pickupPointUsageType === 'PICKUP_ONLY'
+                          ? 'bg-blue-50 text-blue-700 ring-blue-600/15'
+                          : link.pickupPointUsageType === 'DROPOFF' ||
+                              link.pickupPointUsageType === 'DROPOFF_ONLY'
+                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/15'
+                            : 'bg-indigo-50 text-indigo-700 ring-indigo-600/15'
+                      )}
+                    >
                       {formatUsageType(link.pickupPointUsageType)}
                     </span>
                     <Button
                       size='sm'
                       variant='outline'
                       className='h-8 px-3 rounded-lg border-red-200 text-[#C81E3A] hover:bg-red-50 hover:text-[#99182D] hover:border-red-300 gap-1.5'
-                      onClick={(e) => { e.stopPropagation(); handleUnlinkPickupPoint(link.pickupPointId); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnlinkPickupPoint(link.pickupPointId);
+                      }}
                     >
                       <Unlink className='h-3.5 w-3.5' /> Unlink
                     </Button>
@@ -1532,18 +1897,33 @@ function SchoolBusSchoolsPageContent() {
         title='Schools and pickup network'
         description='Manage school entities and the pickup-point network that powers request intake and routing.'
         breadcrumb={
-          <SchoolBusBreadcrumb items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Schools', current: true },
-          ]} />
+          <SchoolBusBreadcrumb
+            items={[
+              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Schools', current: true },
+            ]}
+          />
         }
         actions={
           <div className='flex items-center gap-3'>
             {viewModeToggle}
-            <Button variant='outline' className='rounded-full' onClick={() => { setEditingPickup(null); setPickupDialogOpen(true); }}>
+            <Button
+              variant='outline'
+              className='rounded-full'
+              onClick={() => {
+                setEditingPickup(null);
+                setPickupDialogOpen(true);
+              }}
+            >
               <Plus className='h-4 w-4' /> Add pickup point
             </Button>
-            <Button className='rounded-full' onClick={() => { setEditingSchool(null); setSchoolDialogOpen(true); }}>
+            <Button
+              className='rounded-full'
+              onClick={() => {
+                setEditingSchool(null);
+                setSchoolDialogOpen(true);
+              }}
+            >
               <Plus className='h-4 w-4' /> Add school
             </Button>
           </div>
@@ -1552,9 +1932,24 @@ function SchoolBusSchoolsPageContent() {
         <div className='flex flex-col gap-6'>
           {/* Stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
-            <SchoolBusMetricCard label='Schools' value={schools.length} icon={GraduationCap} tone='school' />
-            <SchoolBusMetricCard label='Pickup points' value={pickupPoints.length} icon={MapPin} tone='pickup' />
-            <SchoolBusMetricCard label='Linked pickups' value={allLinks.length} icon={Link2} tone='linked' />
+            <SchoolBusMetricCard
+              label='Schools'
+              value={schools.length}
+              icon={GraduationCap}
+              tone='school'
+            />
+            <SchoolBusMetricCard
+              label='Pickup points'
+              value={pickupPoints.length}
+              icon={MapPin}
+              tone='pickup'
+            />
+            <SchoolBusMetricCard
+              label='Linked pickups'
+              value={allLinks.length}
+              icon={Link2}
+              tone='linked'
+            />
             <SchoolBusMetricCard
               label='Missing coords'
               value={missingCoordsCount}
@@ -1567,7 +1962,11 @@ function SchoolBusSchoolsPageContent() {
           <SchoolBusDataTable<any>
             tabs={[
               { key: 'schools', label: 'Schools', count: schools.length },
-              { key: 'pickup-points', label: 'Pickup points', count: pickupPoints.length },
+              {
+                key: 'pickup-points',
+                label: 'Pickup points',
+                count: pickupPoints.length,
+              },
             ]}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -1603,7 +2002,10 @@ function SchoolBusSchoolsPageContent() {
               activeTab === 'schools' && data
                 ? { page: data?.data, onPageChange: schoolsPagination.setPage }
                 : activeTab === 'pickup-points' && pickupPointsData
-                  ? { page: pickupPointsData?.data, onPageChange: pickupPagination.setPage }
+                  ? {
+                      page: pickupPointsData?.data,
+                      onPageChange: pickupPagination.setPage,
+                    }
                   : undefined
             }
           >
@@ -1622,14 +2024,20 @@ function SchoolBusSchoolsPageContent() {
       <>
         <SchoolFormDialog
           open={schoolDialogOpen}
-          onOpenChange={(open) => { setSchoolDialogOpen(open); if (!open) setEditingSchool(null); }}
+          onOpenChange={(open) => {
+            setSchoolDialogOpen(open);
+            if (!open) setEditingSchool(null);
+          }}
           initialData={editingSchool}
           isLoading={creatingSchool || updatingSchool}
           onSubmit={handleSaveSchool}
         />
         <PickupPointFormDialog
           open={pickupDialogOpen}
-          onOpenChange={(open) => { setPickupDialogOpen(open); if (!open) setEditingPickup(null); }}
+          onOpenChange={(open) => {
+            setPickupDialogOpen(open);
+            if (!open) setEditingPickup(null);
+          }}
           initialData={editingPickup}
           schools={allSchools.length > 0 ? allSchools : schools}
           isLoading={creatingPickup || updatingPickup}
@@ -1637,9 +2045,19 @@ function SchoolBusSchoolsPageContent() {
         />
         <SchoolBusDeleteDialog
           open={Boolean(deleteTarget)}
-          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-          title={deleteTarget?.type === 'school' ? 'Delete school' : 'Delete pickup point'}
-          description={deleteTarget?.type === 'school' ? 'This will soft-delete the school record.' : 'This will soft-delete the pickup point.'}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          title={
+            deleteTarget?.type === 'school'
+              ? 'Delete school'
+              : 'Delete pickup point'
+          }
+          description={
+            deleteTarget?.type === 'school'
+              ? 'This will soft-delete the school record.'
+              : 'This will soft-delete the pickup point.'
+          }
           isLoading={deletingSchool || deletingPickup}
           onConfirm={handleDelete}
         />

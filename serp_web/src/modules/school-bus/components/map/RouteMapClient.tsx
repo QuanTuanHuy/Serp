@@ -15,7 +15,11 @@ import type {
   SchoolBusRoutePath,
   SchoolBusRouteStop,
 } from '../../types';
-import { createSchoolBusMarkerIcon, createStopNumberIcon, type MarkerKind } from './mapIcons';
+import {
+  createSchoolBusMarkerIcon,
+  createStopNumberIcon,
+  type MarkerKind,
+} from './mapIcons';
 
 // ── Auto-fit bounds ───────────────────────────────────────────────────────────
 
@@ -91,7 +95,7 @@ export default function RouteMapClient({
     .filter(
       (s) =>
         typeof s.pickupPointLatitude === 'number' &&
-        typeof s.pickupPointLongitude === 'number',
+        typeof s.pickupPointLongitude === 'number'
     )
     .sort((a, b) => a.stopOrder - b.stopOrder);
 
@@ -103,12 +107,14 @@ export default function RouteMapClient({
         [s.pickupPointLatitude as number, s.pickupPointLongitude as number] as [
           number,
           number,
-        ],
+        ]
     ),
     ...(endCoord ? [endCoord] : []),
   ];
 
-  const parseGeometryPath = (geometryPathStr?: string | null): [number, number][] => {
+  const parseGeometryPath = (
+    geometryPathStr?: string | null
+  ): [number, number][] => {
     if (!geometryPathStr) return [];
     try {
       const parsed = JSON.parse(geometryPathStr);
@@ -125,29 +131,35 @@ export default function RouteMapClient({
 
   // Real road geometry when available
   const actualPathCoords: [number, number][] =
-    (routePath?.coordinates
-      ?.filter(
-        (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
-      )
-      .map((p) => [p.latitude, p.longitude] as [number, number]) ?? [])
-      .length >= 2
-        ? (routePath?.coordinates
-            ?.filter(
-              (p) => typeof p.latitude === 'number' && typeof p.longitude === 'number',
-            )
-            .map((p) => [p.latitude, p.longitude] as [number, number]) as [number, number][])
-        : parseGeometryPath(route.geometryPath);
+    (
+      routePath?.coordinates
+        ?.filter(
+          (p) =>
+            typeof p.latitude === 'number' && typeof p.longitude === 'number'
+        )
+        .map((p) => [p.latitude, p.longitude] as [number, number]) ?? []
+    ).length >= 2
+      ? (routePath?.coordinates
+          ?.filter(
+            (p) =>
+              typeof p.latitude === 'number' && typeof p.longitude === 'number'
+          )
+          .map((p) => [p.latitude, p.longitude] as [number, number]) as [
+          number,
+          number,
+        ][])
+      : parseGeometryPath(route.geometryPath);
 
   // Fallback: straight lines depot/school → middle stops → school/depot
   const fallbackPositions: [number, number][] = [
     ...(startCoord ? [startCoord] : []),
-    ...sortedMiddleStops.map(
-      (s) => {
-        const lat = typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
-        const lon = typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
-        return [lat as number, lon as number] as [number, number];
-      }
-    ),
+    ...sortedMiddleStops.map((s) => {
+      const lat =
+        typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+      const lon =
+        typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
+      return [lat as number, lon as number] as [number, number];
+    }),
     ...(endCoord ? [endCoord] : []),
   ];
 
@@ -166,7 +178,9 @@ export default function RouteMapClient({
   const initialCenter =
     allPositions.length > 0 ? allPositions[0] : defaultCenter;
   const initialZoom =
-    allPositions.length > 0 ? SCHOOL_BUS_MAP_DETAIL_ZOOM : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
+    allPositions.length > 0
+      ? SCHOOL_BUS_MAP_DETAIL_ZOOM
+      : SCHOOL_BUS_MAP_DEFAULT_ZOOM;
 
   const startIcon: MarkerKind =
     route.startLocationType === 'DEPOT' ? 'depot' : 'school';
@@ -228,8 +242,14 @@ export default function RouteMapClient({
 
       {/* Numbered middle-stop markers (indigo, size 26 — consistent with planning map) */}
       {sortedMiddleStops.map((stop, idx) => {
-        const lat = typeof stop.latitude === 'number' ? stop.latitude : stop.pickupPointLatitude;
-        const lon = typeof stop.longitude === 'number' ? stop.longitude : stop.pickupPointLongitude;
+        const lat =
+          typeof stop.latitude === 'number'
+            ? stop.latitude
+            : stop.pickupPointLatitude;
+        const lon =
+          typeof stop.longitude === 'number'
+            ? stop.longitude
+            : stop.pickupPointLongitude;
         return (
           <Marker
             key={`stop-${stop.id}`}
@@ -237,21 +257,24 @@ export default function RouteMapClient({
             icon={createStopNumberIcon(idx + 1, 26)}
             zIndexOffset={500}
           >
-          <Popup>
-            <div className='space-y-1'>
-              <p className='text-xs font-semibold text-indigo-700'>
-                Stop {idx + 1}
-              </p>
-              <p className='font-medium'>
-                {stop.displayName ?? stop.pickupPointName ?? `Stop #${stop.id}`}
-              </p>
-              <p className='text-xs text-slate-500'>
-                {stop.estimatedStudentCount ?? 0} student(s)
-              </p>
-            </div>
-          </Popup>
-        </Marker>
-      );})}
+            <Popup>
+              <div className='space-y-1'>
+                <p className='text-xs font-semibold text-indigo-700'>
+                  Stop {idx + 1}
+                </p>
+                <p className='font-medium'>
+                  {stop.displayName ??
+                    stop.pickupPointName ??
+                    `Stop #${stop.id}`}
+                </p>
+                <p className='text-xs text-slate-500'>
+                  {stop.estimatedStudentCount ?? 0} student(s)
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {/* Route polyline — real road geometry if available, else straight-line fallback */}
       {resolvedLine.length >= 2 && (

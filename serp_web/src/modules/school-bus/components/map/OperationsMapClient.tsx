@@ -90,7 +90,10 @@ export default function OperationsMapClient({
 
     if (isVisible('school')) {
       schools
-        .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
+        .filter(
+          (s) =>
+            typeof s.latitude === 'number' && typeof s.longitude === 'number'
+        )
         .forEach((s) =>
           items.push({
             kind: 'school',
@@ -100,9 +103,13 @@ export default function OperationsMapClient({
             onClick: () => onSchoolSelect?.(s.id),
             popup: (
               <div className='space-y-0.5'>
-                <p className='text-xs font-semibold text-slate-700'>🎓 School</p>
+                <p className='text-xs font-semibold text-slate-700'>
+                  🎓 School
+                </p>
                 <p className='font-medium text-slate-950'>{s.name}</p>
-                <p className='text-xs text-slate-500'>{s.address || 'No address'}</p>
+                <p className='text-xs text-slate-500'>
+                  {s.address || 'No address'}
+                </p>
               </div>
             ),
           })
@@ -111,7 +118,10 @@ export default function OperationsMapClient({
 
     if (isVisible('depot')) {
       depots
-        .filter((d) => typeof d.latitude === 'number' && typeof d.longitude === 'number')
+        .filter(
+          (d) =>
+            typeof d.latitude === 'number' && typeof d.longitude === 'number'
+        )
         .forEach((d) =>
           items.push({
             kind: 'depot',
@@ -123,7 +133,9 @@ export default function OperationsMapClient({
               <div className='space-y-0.5'>
                 <p className='text-xs font-semibold text-amber-700'>🏭 Depot</p>
                 <p className='font-medium text-slate-950'>{d.name}</p>
-                <p className='text-xs text-slate-500'>{d.address || 'No address'}</p>
+                <p className='text-xs text-slate-500'>
+                  {d.address || 'No address'}
+                </p>
               </div>
             ),
           })
@@ -132,7 +144,10 @@ export default function OperationsMapClient({
 
     if (isVisible('pickup')) {
       pickupPoints
-        .filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number')
+        .filter(
+          (p) =>
+            typeof p.latitude === 'number' && typeof p.longitude === 'number'
+        )
         .forEach((p) =>
           items.push({
             kind: 'pickup',
@@ -142,7 +157,9 @@ export default function OperationsMapClient({
             onClick: () => onPickupPointSelect?.(p.id),
             popup: (
               <div className='space-y-0.5'>
-                <p className='text-xs font-semibold text-sky-700'>📍 Pickup point</p>
+                <p className='text-xs font-semibold text-sky-700'>
+                  📍 Pickup point
+                </p>
                 <p className='font-medium text-slate-950'>{p.name}</p>
                 <p className='text-xs text-slate-500'>{p.address}</p>
               </div>
@@ -194,8 +211,14 @@ export default function OperationsMapClient({
       return { key, primary, group, onClick: firstClick };
     });
   }, [
-    schools, pickupPoints, depots, studentMarkers,
-    isVisible, onSchoolSelect, onPickupPointSelect, onDepotSelect,
+    schools,
+    pickupPoints,
+    depots,
+    studentMarkers,
+    isVisible,
+    onSchoolSelect,
+    onPickupPointSelect,
+    onDepotSelect,
   ]);
 
   const { isExpanded, expandKey } = useMapExpand();
@@ -247,11 +270,7 @@ export default function OperationsMapClient({
               {group.map((item, idx) => (
                 <div
                   key={idx}
-                  className={
-                    idx > 0
-                      ? 'border-t border-slate-100 pt-2'
-                      : ''
-                  }
+                  className={idx > 0 ? 'border-t border-slate-100 pt-2' : ''}
                 >
                   {item.popup}
                 </div>
@@ -338,24 +357,39 @@ function OperationsViewport({
             typeof school.latitude === 'number' &&
             typeof school.longitude === 'number'
         )
-        .map((school) => [school.latitude as number, school.longitude as number] as [number, number]),
+        .map(
+          (school) =>
+            [school.latitude as number, school.longitude as number] as [
+              number,
+              number,
+            ]
+        ),
       ...pickupPoints
         .filter(
           (pickupPoint) =>
             typeof pickupPoint.latitude === 'number' &&
             typeof pickupPoint.longitude === 'number'
         )
-        .map((pickupPoint) => [
-          pickupPoint.latitude as number,
-          pickupPoint.longitude as number,
-        ] as [number, number]),
+        .map(
+          (pickupPoint) =>
+            [
+              pickupPoint.latitude as number,
+              pickupPoint.longitude as number,
+            ] as [number, number]
+        ),
       ...depots
         .filter(
           (depot) =>
             typeof depot.latitude === 'number' &&
             typeof depot.longitude === 'number'
         )
-        .map((depot) => [depot.latitude as number, depot.longitude as number] as [number, number]),
+        .map(
+          (depot) =>
+            [depot.latitude as number, depot.longitude as number] as [
+              number,
+              number,
+            ]
+        ),
     ];
 
     if (coordinates.length === 0) {
@@ -372,21 +406,48 @@ function OperationsViewport({
     }
 
     map.fitBounds(latLngBounds(coordinates), { padding: [32, 32] });
-  }, [depots, fitSelectedKey, map, pickupPoints, schools, selectedDepotId, selectedPickupPointId, selectedSchoolId]);
+  }, [
+    depots,
+    fitSelectedKey,
+    map,
+    pickupPoints,
+    schools,
+    selectedDepotId,
+    selectedPickupPointId,
+    selectedSchoolId,
+  ]);
 
   // Fit All: triggered by button — always fits all markers regardless of selection.
   React.useEffect(() => {
     if (!fitAllKey) return;
     const coordinates: [number, number][] = [
       ...schools
-        .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
-        .map((s) => [s.latitude as number, s.longitude as number] as [number, number]),
+        .filter(
+          (s) =>
+            typeof s.latitude === 'number' && typeof s.longitude === 'number'
+        )
+        .map(
+          (s) =>
+            [s.latitude as number, s.longitude as number] as [number, number]
+        ),
       ...pickupPoints
-        .filter((p) => typeof p.latitude === 'number' && typeof p.longitude === 'number')
-        .map((p) => [p.latitude as number, p.longitude as number] as [number, number]),
+        .filter(
+          (p) =>
+            typeof p.latitude === 'number' && typeof p.longitude === 'number'
+        )
+        .map(
+          (p) =>
+            [p.latitude as number, p.longitude as number] as [number, number]
+        ),
       ...depots
-        .filter((d) => typeof d.latitude === 'number' && typeof d.longitude === 'number')
-        .map((d) => [d.latitude as number, d.longitude as number] as [number, number]),
+        .filter(
+          (d) =>
+            typeof d.latitude === 'number' && typeof d.longitude === 'number'
+        )
+        .map(
+          (d) =>
+            [d.latitude as number, d.longitude as number] as [number, number]
+        ),
     ];
     if (coordinates.length === 0) {
       map.setView(

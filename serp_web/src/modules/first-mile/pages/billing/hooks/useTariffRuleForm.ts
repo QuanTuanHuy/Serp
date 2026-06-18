@@ -27,7 +27,9 @@ export const useTariffRuleForm = () => {
     event.preventDefault();
 
     try {
-      const response = await upsertTariff(buildUpsertTariffRequest(form)).unwrap();
+      const response = await upsertTariff(
+        buildUpsertTariffRequest(form)
+      ).unwrap();
       setLastSaved(response);
       notification.success('Tariff rule saved successfully.');
       return true;

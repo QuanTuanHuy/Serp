@@ -2,10 +2,7 @@
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  useFieldArray,
-  useForm,
-} from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { cn } from '@/shared/utils';
 import { Plus, User } from 'lucide-react';
@@ -76,11 +73,18 @@ export function SchoolBusFormSection({
   className,
 }: SchoolBusFormSectionProps) {
   return (
-    <div className={cn('space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm', className)}>
+    <div
+      className={cn(
+        'space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm',
+        className
+      )}
+    >
       <div className='flex items-start justify-between gap-4 border-b border-slate-100 pb-3.5'>
         <div>
           <h4 className='text-sm font-semibold text-slate-900'>{title}</h4>
-          {description && <p className='mt-0.5 text-xs text-slate-500'>{description}</p>}
+          {description && (
+            <p className='mt-0.5 text-xs text-slate-500'>{description}</p>
+          )}
         </div>
         {action && <div className='shrink-0'>{action}</div>}
       </div>
@@ -103,140 +107,202 @@ type RowReadiness =
 function getRowReadiness(
   sv: any,
   needsTarget: boolean,
-  requiresRouting: boolean,
+  requiresRouting: boolean
 ): RowReadiness {
   // ── Blocking checks ────────────────────────────────────────────────
   if (!sv.studentId || Number(sv.studentId) === 0) return 'missing-student';
 
   if (!requiresRouting) {
-    if (needsTarget && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
+    if (
+      needsTarget &&
+      (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')
+    )
+      return 'missing-target';
     return 'ready';
   }
 
   const opt = (sv.tripOption || '').toUpperCase();
   if (!opt || opt === '__NONE__') return 'missing-tripopt';
 
-  const needsPickup  = opt === 'MORNING'   || opt === 'ROUND_TRIP';
+  const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
   const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
 
-  if (needsPickup  && (!sv.pickupPointId  || sv.pickupPointId  === '__none__')) return 'missing-pickup';
-  if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__')) return 'missing-dropoff';
-  if (needsTarget  && (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')) return 'missing-target';
+  if (needsPickup && (!sv.pickupPointId || sv.pickupPointId === '__none__'))
+    return 'missing-pickup';
+  if (needsDropoff && (!sv.dropoffPointId || sv.dropoffPointId === '__none__'))
+    return 'missing-dropoff';
+  if (
+    needsTarget &&
+    (!sv.targetSubscriptionId || sv.targetSubscriptionId === '__none__')
+  )
+    return 'missing-target';
 
   return 'ready';
 }
 
 function RowStatusBadge({ readiness }: { readiness: RowReadiness }) {
   const configs: Record<string, { label: string; className: string }> = {
-    'missing-student': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-tripopt': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-pickup': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-dropoff': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    'missing-target': { label: 'Missing required fields', className: 'bg-red-50 text-red-700 ring-red-200' },
-    ready: { label: 'Complete', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+    'missing-student': {
+      label: 'Missing required fields',
+      className: 'bg-red-50 text-red-700 ring-red-200',
+    },
+    'missing-tripopt': {
+      label: 'Missing required fields',
+      className: 'bg-red-50 text-red-700 ring-red-200',
+    },
+    'missing-pickup': {
+      label: 'Missing required fields',
+      className: 'bg-red-50 text-red-700 ring-red-200',
+    },
+    'missing-dropoff': {
+      label: 'Missing required fields',
+      className: 'bg-red-50 text-red-700 ring-red-200',
+    },
+    'missing-target': {
+      label: 'Missing required fields',
+      className: 'bg-red-50 text-red-700 ring-red-200',
+    },
+    ready: {
+      label: 'Complete',
+      className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    },
   };
   const cfg = configs[readiness] ?? configs.ready;
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ring-1', cfg.className)}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ring-1',
+        cfg.className
+      )}
+    >
       {cfg.label}
     </span>
   );
 }
 
+const transportRequestSchema = z
+  .object({
+    parentProfileId: z.coerce.number().min(1, 'Parent is required'),
+    schoolId: z.coerce.number().min(1, 'School is required'),
+    requestType: z.string().min(1, 'Request type is required'),
+    effectiveFrom: z.string().min(1, 'Effective from is required'),
+    effectiveTo: z.string().optional(),
+    notes: z.string().optional(),
+    changeReason: z.string().optional(),
+    students: z
+      .array(
+        z.object({
+          studentId: z.coerce.number().min(1, 'Student is required'),
+          pickupPointId: z.string().optional(),
+          dropoffPointId: z.string().optional(),
+          tripOption: z.string().optional(),
+          monday: z.boolean().default(true),
+          tuesday: z.boolean().default(true),
+          wednesday: z.boolean().default(true),
+          thursday: z.boolean().default(true),
+          friday: z.boolean().default(true),
+          saturday: z.boolean().default(false),
+          sunday: z.boolean().default(false),
+          targetSubscriptionId: z.string().optional(),
+          studentNote: z.string().optional(),
+        })
+      )
+      .min(1, 'At least one student is required'),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    const reqType = data.requestType;
+    const isNewOrChangeOrRenew =
+      reqType === 'NEW_SERVICE' ||
+      reqType === 'CHANGE_SERVICE' ||
+      reqType === 'RENEW_SERVICE';
+    const requiresTarget = reqType !== 'NEW_SERVICE';
 
-const transportRequestSchema = z.object({
-  parentProfileId: z.coerce.number().min(1, 'Parent is required'),
-  schoolId: z.coerce.number().min(1, 'School is required'),
-  requestType: z.string().min(1, 'Request type is required'),
-  effectiveFrom: z.string().min(1, 'Effective from is required'),
-  effectiveTo: z.string().optional(),
-  notes: z.string().optional(),
-  changeReason: z.string().optional(),
-  students: z
-    .array(
-      z.object({
-        studentId: z.coerce.number().min(1, 'Student is required'),
-        pickupPointId: z.string().optional(),
-        dropoffPointId: z.string().optional(),
-        tripOption: z.string().optional(),
-        monday: z.boolean().default(true),
-        tuesday: z.boolean().default(true),
-        wednesday: z.boolean().default(true),
-        thursday: z.boolean().default(true),
-        friday: z.boolean().default(true),
-        saturday: z.boolean().default(false),
-        sunday: z.boolean().default(false),
-        targetSubscriptionId: z.string().optional(),
-        studentNote: z.string().optional(),
-      })
-    )
-    .min(1, 'At least one student is required'),
-  isActive: z.boolean().default(true),
-}).superRefine((data, ctx) => {
-  const reqType = data.requestType;
-  const isNewOrChangeOrRenew = reqType === 'NEW_SERVICE' || reqType === 'CHANGE_SERVICE' || reqType === 'RENEW_SERVICE';
-  const requiresTarget = reqType !== 'NEW_SERVICE';
-
-  data.students.forEach((student, index) => {
-    if (!student.studentId || Number(student.studentId) === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Student is required',
-        path: ['students', index, 'studentId'],
-      });
-      return;
-    }
-
-    if (requiresTarget) {
-      if (!student.targetSubscriptionId || student.targetSubscriptionId === '' || student.targetSubscriptionId === '__none__') {
+    data.students.forEach((student, index) => {
+      if (!student.studentId || Number(student.studentId) === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Target subscription is required for request type ${reqType}`,
-          path: ['students', index, 'targetSubscriptionId'],
+          message: 'Student is required',
+          path: ['students', index, 'studentId'],
         });
-      }
-    }
-
-    if (isNewOrChangeOrRenew) {
-      if (!student.tripOption || student.tripOption === '' || student.tripOption === '__none__') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Trip option is required',
-          path: ['students', index, 'tripOption'],
-        });
+        return;
       }
 
-      const opt = student.tripOption || '';
-      const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
-      const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
-
-      if (needsPickup && (!student.pickupPointId || student.pickupPointId === '' || student.pickupPointId === '__none__')) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Pickup point is required',
-          path: ['students', index, 'pickupPointId'],
-        });
+      if (requiresTarget) {
+        if (
+          !student.targetSubscriptionId ||
+          student.targetSubscriptionId === '' ||
+          student.targetSubscriptionId === '__none__'
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Target subscription is required for request type ${reqType}`,
+            path: ['students', index, 'targetSubscriptionId'],
+          });
+        }
       }
 
-      if (needsDropoff && (!student.dropoffPointId || student.dropoffPointId === '' || student.dropoffPointId === '__none__')) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Drop-off point is required',
-          path: ['students', index, 'dropoffPointId'],
-        });
-      }
+      if (isNewOrChangeOrRenew) {
+        if (
+          !student.tripOption ||
+          student.tripOption === '' ||
+          student.tripOption === '__none__'
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Trip option is required',
+            path: ['students', index, 'tripOption'],
+          });
+        }
 
-      const hasDays = student.monday || student.tuesday || student.wednesday || student.thursday || student.friday || student.saturday || student.sunday;
-      if (!hasDays) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'At least one day must be selected',
-          path: ['students', index, 'monday'],
-        });
+        const opt = student.tripOption || '';
+        const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
+        const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
+
+        if (
+          needsPickup &&
+          (!student.pickupPointId ||
+            student.pickupPointId === '' ||
+            student.pickupPointId === '__none__')
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Pickup point is required',
+            path: ['students', index, 'pickupPointId'],
+          });
+        }
+
+        if (
+          needsDropoff &&
+          (!student.dropoffPointId ||
+            student.dropoffPointId === '' ||
+            student.dropoffPointId === '__none__')
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Drop-off point is required',
+            path: ['students', index, 'dropoffPointId'],
+          });
+        }
+
+        const hasDays =
+          student.monday ||
+          student.tuesday ||
+          student.wednesday ||
+          student.thursday ||
+          student.friday ||
+          student.saturday ||
+          student.sunday;
+        if (!hasDays) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'At least one day must be selected',
+            path: ['students', index, 'monday'],
+          });
+        }
       }
-    }
+    });
   });
-});
 
 const routeSchema = z.object({
   schoolId: z.coerce.number().min(1, 'School is required'),
@@ -303,18 +369,20 @@ function PickupDropoffPointsFields({
   dropoffRequired,
 }: PickupDropoffPointsFieldsProps) {
   const makePickupOptions = React.useMemo(
-    () => pickupCapablePoints.map((pp) => {
-      const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
-      return { value: String(pp.pickupPointId), label: name };
-    }),
+    () =>
+      pickupCapablePoints.map((pp) => {
+        const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+        return { value: String(pp.pickupPointId), label: name };
+      }),
     [pickupCapablePoints]
   );
 
   const makeDropoffOptions = React.useMemo(
-    () => dropoffCapablePoints.map((pp) => {
-      const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
-      return { value: String(pp.pickupPointId), label: name };
-    }),
+    () =>
+      dropoffCapablePoints.map((pp) => {
+        const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+        return { value: String(pp.pickupPointId), label: name };
+      }),
     [dropoffCapablePoints]
   );
 
@@ -347,7 +415,6 @@ function PickupDropoffPointsFields({
   );
 }
 
-
 const EMPTY_STUDENT = {
   studentId: 0,
   pickupPointId: '',
@@ -376,22 +443,27 @@ export function TransportRequestForm({
   isParentRole = false,
   currentParentId,
 }: TransportRequestFormProps) {
-  const mapStudentDefaults = React.useCallback((items: any[]) =>
-    items.map((item) => ({
-      studentId: item.studentId,
-      pickupPointId: item.pickupPointId ? String(item.pickupPointId) : '',
-      dropoffPointId: item.dropoffPointId ? String(item.dropoffPointId) : '',
-      tripOption: item.tripOption || '',
-      monday: item.monday ?? true,
-      tuesday: item.tuesday ?? true,
-      wednesday: item.wednesday ?? true,
-      thursday: item.thursday ?? true,
-      friday: item.friday ?? true,
-      saturday: item.saturday ?? false,
-      sunday: item.sunday ?? false,
-      targetSubscriptionId: item.targetSubscriptionId ? String(item.targetSubscriptionId) : '',
-      studentNote: item.studentNote || '',
-    })), []);
+  const mapStudentDefaults = React.useCallback(
+    (items: any[]) =>
+      items.map((item) => ({
+        studentId: item.studentId,
+        pickupPointId: item.pickupPointId ? String(item.pickupPointId) : '',
+        dropoffPointId: item.dropoffPointId ? String(item.dropoffPointId) : '',
+        tripOption: item.tripOption || '',
+        monday: item.monday ?? true,
+        tuesday: item.tuesday ?? true,
+        wednesday: item.wednesday ?? true,
+        thursday: item.thursday ?? true,
+        friday: item.friday ?? true,
+        saturday: item.saturday ?? false,
+        sunday: item.sunday ?? false,
+        targetSubscriptionId: item.targetSubscriptionId
+          ? String(item.targetSubscriptionId)
+          : '',
+        studentNote: item.studentNote || '',
+      })),
+    []
+  );
 
   const form = useForm<TransportRequestFormValues>({
     resolver: zodResolver(transportRequestSchema) as any,
@@ -433,7 +505,7 @@ export function TransportRequestForm({
         : [EMPTY_STUDENT],
       isActive: initialData?.request.isActive ?? true,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const { fields, append, remove } = useFieldArray({
@@ -453,25 +525,41 @@ export function TransportRequestForm({
     requestType === 'RENEW_SERVICE';
 
   // Dynamically load students based on selected school and parent (to support pagination limits)
-  const { data: dynamicStudentsData, isFetching: isFetchingStudents } = useGetStudentsQuery(
-    {
-      ...SCHOOL_BUS_OPTION_QUERY,
-      schoolId: Number(schoolId) || undefined,
-      parentProfileId: Number(parentProfileId) || undefined,
-      sortBy: 'fullName',
-    },
-    {
-      // Skip query if school or parent isn't selected yet
-      skip: !schoolId || Number(schoolId) === 0 || !parentProfileId || Number(parentProfileId) === 0,
-    }
-  );
+  const { data: dynamicStudentsData, isFetching: isFetchingStudents } =
+    useGetStudentsQuery(
+      {
+        ...SCHOOL_BUS_OPTION_QUERY,
+        schoolId: Number(schoolId) || undefined,
+        parentProfileId: Number(parentProfileId) || undefined,
+        sortBy: 'fullName',
+      },
+      {
+        // Skip query if school or parent isn't selected yet
+        skip:
+          !schoolId ||
+          Number(schoolId) === 0 ||
+          !parentProfileId ||
+          Number(parentProfileId) === 0,
+      }
+    );
 
   const students = React.useMemo(() => {
-    if (!schoolId || Number(schoolId) === 0 || !parentProfileId || Number(parentProfileId) === 0) {
+    if (
+      !schoolId ||
+      Number(schoolId) === 0 ||
+      !parentProfileId ||
+      Number(parentProfileId) === 0
+    ) {
       return isParentRole ? initialStudents : [];
     }
     return getPageItems(dynamicStudentsData?.data);
-  }, [dynamicStudentsData, schoolId, parentProfileId, isParentRole, initialStudents]);
+  }, [
+    dynamicStudentsData,
+    schoolId,
+    parentProfileId,
+    isParentRole,
+    initialStudents,
+  ]);
 
   const filteredStudents = React.useMemo(() => {
     return students.filter(
@@ -493,7 +581,8 @@ export function TransportRequestForm({
   React.useEffect(() => {
     const prev = prevSchoolParentRef.current;
     if (
-      (prev.schoolId !== schoolId || prev.parentProfileId !== parentProfileId) &&
+      (prev.schoolId !== schoolId ||
+        prev.parentProfileId !== parentProfileId) &&
       prev.schoolId !== 0 &&
       prev.parentProfileId !== 0
     ) {
@@ -505,7 +594,8 @@ export function TransportRequestForm({
 
   // ── Load linked pickup points reactively per school ───────────────
   const { data: linkedPPData } = useGetActiveSchoolPickupPointsQuery(
-    Number(schoolId), { skip: !schoolId || Number(schoolId) === 0 }
+    Number(schoolId),
+    { skip: !schoolId || Number(schoolId) === 0 }
   );
   const linkedPickupPoints = React.useMemo(
     () => linkedPPData?.data ?? [],
@@ -513,23 +603,25 @@ export function TransportRequestForm({
   );
   // Map to SchoolBusPickupPoint-compatible format for the map component
   const mapPickupPoints = React.useMemo<SchoolBusPickupPoint[]>(
-    () => linkedPickupPoints
-      .filter((lp) =>
-        typeof lp.pickupPointLatitude === 'number' &&
-        typeof lp.pickupPointLongitude === 'number'
-      )
-      .map((lp) => ({
-        id: lp.pickupPointId,
-        name: lp.pickupPointName,
-        address: lp.pickupPointAddress || '',
-        latitude: lp.pickupPointLatitude,
-        longitude: lp.pickupPointLongitude,
-        usageType: lp.pickupPointUsageType || null,
-        isActive: true,
-        isDeleted: false,
-        createdAt: '',
-        updatedAt: '',
-      })),
+    () =>
+      linkedPickupPoints
+        .filter(
+          (lp) =>
+            typeof lp.pickupPointLatitude === 'number' &&
+            typeof lp.pickupPointLongitude === 'number'
+        )
+        .map((lp) => ({
+          id: lp.pickupPointId,
+          name: lp.pickupPointName,
+          address: lp.pickupPointAddress || '',
+          latitude: lp.pickupPointLatitude,
+          longitude: lp.pickupPointLongitude,
+          usageType: lp.pickupPointUsageType || null,
+          isActive: true,
+          isDeleted: false,
+          createdAt: '',
+          updatedAt: '',
+        })),
     [linkedPickupPoints]
   );
 
@@ -546,7 +638,10 @@ export function TransportRequestForm({
   // ── Reset school-dependent fields when school changes ─────────────
   const prevSchoolIdRef = React.useRef(schoolId);
   React.useEffect(() => {
-    if (prevSchoolIdRef.current !== schoolId && prevSchoolIdRef.current !== undefined) {
+    if (
+      prevSchoolIdRef.current !== schoolId &&
+      prevSchoolIdRef.current !== undefined
+    ) {
       const currentStudents = form.getValues('students');
       currentStudents.forEach((_, idx) => {
         form.setValue(`students.${idx}.studentId`, 0);
@@ -590,7 +685,9 @@ export function TransportRequestForm({
       const st =
         students.find((s) => s.id === Number(rawId)) ||
         (() => {
-          const found = initialData?.students?.find((s) => s.studentId === Number(rawId));
+          const found = initialData?.students?.find(
+            (s) => s.studentId === Number(rawId)
+          );
           if (!found) return undefined;
           return {
             id: found.studentId,
@@ -606,7 +703,10 @@ export function TransportRequestForm({
       // Auto-fill pickup from student default (entity field: pickup_point_id)
       const defaultPickup = st.pickupPointId ?? null;
       const currentPickup = sv.pickupPointId;
-      if (defaultPickup && (!currentPickup || currentPickup === '' || currentPickup === '__none__')) {
+      if (
+        defaultPickup &&
+        (!currentPickup || currentPickup === '' || currentPickup === '__none__')
+      ) {
         form.setValue(`students.${idx}.pickupPointId`, String(defaultPickup), {
           shouldDirty: true,
           shouldValidate: false,
@@ -616,35 +716,60 @@ export function TransportRequestForm({
       // Auto-fill dropoff from student default (entity field: default_dropoff_point_id)
       const defaultDropoff = st.defaultDropoffPointId ?? null;
       const currentDropoff = sv.dropoffPointId;
-      if (defaultDropoff && (!currentDropoff || currentDropoff === '' || currentDropoff === '__none__')) {
-        form.setValue(`students.${idx}.dropoffPointId`, String(defaultDropoff), {
-          shouldDirty: true,
-          shouldValidate: false,
-        });
+      if (
+        defaultDropoff &&
+        (!currentDropoff ||
+          currentDropoff === '' ||
+          currentDropoff === '__none__')
+      ) {
+        form.setValue(
+          `students.${idx}.dropoffPointId`,
+          String(defaultDropoff),
+          {
+            shouldDirty: true,
+            shouldValidate: false,
+          }
+        );
       }
     });
-  // Rerun when any studentId in any row changes, or when student list (option data) updates
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(allStudentValues.map((s) => String(s.studentId ?? ''))), students]);
+    // Rerun when any studentId in any row changes, or when student list (option data) updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(allStudentValues.map((s) => String(s.studentId ?? ''))),
+    students,
+  ]);
 
-
-  const selectedPickupPointId = form.watch(`students.${activeStudentIndex}.pickupPointId`);
-  const selectedDropoffPointId = form.watch(`students.${activeStudentIndex}.dropoffPointId`);
-  const activeStudentId = form.watch(`students.${activeStudentIndex}.studentId`);
-  const activeTripOption = form.watch(`students.${activeStudentIndex}.tripOption`);
+  const selectedPickupPointId = form.watch(
+    `students.${activeStudentIndex}.pickupPointId`
+  );
+  const selectedDropoffPointId = form.watch(
+    `students.${activeStudentIndex}.dropoffPointId`
+  );
+  const activeStudentId = form.watch(
+    `students.${activeStudentIndex}.studentId`
+  );
+  const activeTripOption = form.watch(
+    `students.${activeStudentIndex}.tripOption`
+  );
   const selectedSchool = React.useMemo(
     () => schools.find((school) => school.id === Number(schoolId)),
     [schoolId, schools]
   );
   const selectedSchoolLat = selectedSchool
-    ? ('latitude' in selectedSchool ? selectedSchool.latitude : (selectedSchool as any).metadata?.latitude)
+    ? 'latitude' in selectedSchool
+      ? selectedSchool.latitude
+      : (selectedSchool as any).metadata?.latitude
     : undefined;
   const selectedSchoolLng = selectedSchool
-    ? ('longitude' in selectedSchool ? selectedSchool.longitude : (selectedSchool as any).metadata?.longitude)
+    ? 'longitude' in selectedSchool
+      ? selectedSchool.longitude
+      : (selectedSchool as any).metadata?.longitude
     : undefined;
   const activeStudent = React.useMemo(
     () =>
-      filteredStudents.find((student) => student.id === Number(activeStudentId)),
+      filteredStudents.find(
+        (student) => student.id === Number(activeStudentId)
+      ),
     [activeStudentId, filteredStudents]
   );
 
@@ -654,20 +779,21 @@ export function TransportRequestForm({
   const handleFitAll = () => setFitAllKey((k) => k + 1);
   const handleFitSelected = () => setFitSelectedKey((k) => k + 1);
 
-
   // ── Filter linked pickup points by usage type per trip option ─────
   const pickupCapablePoints = React.useMemo(
-    () => linkedPickupPoints.filter((lp) => {
-      const ut = lp.pickupPointUsageType?.toUpperCase();
-      return !ut || ut === 'PICKUP_ONLY' || ut === 'PICKUP_DROPOFF';
-    }),
+    () =>
+      linkedPickupPoints.filter((lp) => {
+        const ut = lp.pickupPointUsageType?.toUpperCase();
+        return !ut || ut === 'PICKUP_ONLY' || ut === 'PICKUP_DROPOFF';
+      }),
     [linkedPickupPoints]
   );
   const dropoffCapablePoints = React.useMemo(
-    () => linkedPickupPoints.filter((lp) => {
-      const ut = lp.pickupPointUsageType?.toUpperCase();
-      return !ut || ut === 'DROPOFF_ONLY' || ut === 'PICKUP_DROPOFF';
-    }),
+    () =>
+      linkedPickupPoints.filter((lp) => {
+        const ut = lp.pickupPointUsageType?.toUpperCase();
+        return !ut || ut === 'DROPOFF_ONLY' || ut === 'PICKUP_DROPOFF';
+      }),
     [linkedPickupPoints]
   );
 
@@ -678,8 +804,13 @@ export function TransportRequestForm({
       const st = filteredStudents.find((s) => s.id === Number(sv.studentId));
       const name = st?.fullName || `Student ${idx + 1}`;
       if (sv.pickupPointId) {
-        const pp = linkedPickupPoints.find((lp) => lp.pickupPointId === Number(sv.pickupPointId));
-        if (pp?.pickupPointLatitude != null && pp?.pickupPointLongitude != null) {
+        const pp = linkedPickupPoints.find(
+          (lp) => lp.pickupPointId === Number(sv.pickupPointId)
+        );
+        if (
+          pp?.pickupPointLatitude != null &&
+          pp?.pickupPointLongitude != null
+        ) {
           markers.push({
             key: `student-pickup-${idx}`,
             studentName: name,
@@ -691,8 +822,13 @@ export function TransportRequestForm({
         }
       }
       if (sv.dropoffPointId && sv.dropoffPointId !== sv.pickupPointId) {
-        const dp = linkedPickupPoints.find((lp) => lp.pickupPointId === Number(sv.dropoffPointId));
-        if (dp?.pickupPointLatitude != null && dp?.pickupPointLongitude != null) {
+        const dp = linkedPickupPoints.find(
+          (lp) => lp.pickupPointId === Number(sv.dropoffPointId)
+        );
+        if (
+          dp?.pickupPointLatitude != null &&
+          dp?.pickupPointLongitude != null
+        ) {
           markers.push({
             key: `student-dropoff-${idx}`,
             studentName: name,
@@ -707,19 +843,34 @@ export function TransportRequestForm({
     return markers;
   }, [allStudentValues, filteredStudents, linkedPickupPoints]);
 
-  const canFitAll = Boolean(selectedSchool || mapPickupPoints.length > 0 || studentMarkers.length > 0);
-  const canFitSelected = Boolean(selectedSchool?.id || selectedPickupPointId || selectedDropoffPointId);
+  const canFitAll = Boolean(
+    selectedSchool || mapPickupPoints.length > 0 || studentMarkers.length > 0
+  );
+  const canFitSelected = Boolean(
+    selectedSchool?.id || selectedPickupPointId || selectedDropoffPointId
+  );
 
   // ── Smart point selection handler from map click ──────────────────
-  const handleMapPointSelect = React.useCallback((pickupPointId: number) => {
-    const opt = (activeTripOption || '').toUpperCase();
-    if (opt === 'AFTERNOON') {
-      form.setValue(`students.${activeStudentIndex}.dropoffPointId`, String(pickupPointId), { shouldDirty: true });
-    } else {
-      // MORNING, ROUND_TRIP, or default — set pickup
-      form.setValue(`students.${activeStudentIndex}.pickupPointId`, String(pickupPointId), { shouldDirty: true });
-    }
-  }, [form, activeStudentIndex, activeTripOption]);
+  const handleMapPointSelect = React.useCallback(
+    (pickupPointId: number) => {
+      const opt = (activeTripOption || '').toUpperCase();
+      if (opt === 'AFTERNOON') {
+        form.setValue(
+          `students.${activeStudentIndex}.dropoffPointId`,
+          String(pickupPointId),
+          { shouldDirty: true }
+        );
+      } else {
+        // MORNING, ROUND_TRIP, or default — set pickup
+        form.setValue(
+          `students.${activeStudentIndex}.pickupPointId`,
+          String(pickupPointId),
+          { shouldDirty: true }
+        );
+      }
+    },
+    [form, activeStudentIndex, activeTripOption]
+  );
 
   // ── Single source of truth: compute readiness for each student row ──
   // MUST NOT be wrapped in useMemo — form.watch('students') can return the same
@@ -736,7 +887,8 @@ export function TransportRequestForm({
 
   allStudentValues.forEach((sv, idx) => {
     const studentName =
-      students.find((s) => s.id === Number(sv.studentId))?.fullName || `Student ${idx + 1}`;
+      students.find((s) => s.id === Number(sv.studentId))?.fullName ||
+      `Student ${idx + 1}`;
     const state = rowReadinessList[idx];
 
     switch (state) {
@@ -744,16 +896,24 @@ export function TransportRequestForm({
         _blockingMessages.push(`${studentName}: Student selection is required`);
         break;
       case 'missing-tripopt':
-        _blockingMessages.push(`${studentName}: Trip option is required (Morning / Afternoon / Round trip)`);
+        _blockingMessages.push(
+          `${studentName}: Trip option is required (Morning / Afternoon / Round trip)`
+        );
         break;
       case 'missing-pickup':
-        _blockingMessages.push(`${studentName}: Pickup point is required for the selected trip option`);
+        _blockingMessages.push(
+          `${studentName}: Pickup point is required for the selected trip option`
+        );
         break;
       case 'missing-dropoff':
-        _blockingMessages.push(`${studentName}: Drop-off point is required for the selected trip option`);
+        _blockingMessages.push(
+          `${studentName}: Drop-off point is required for the selected trip option`
+        );
         break;
       case 'missing-target':
-        _blockingMessages.push(`${studentName}: Target subscription is required`);
+        _blockingMessages.push(
+          `${studentName}: Target subscription is required`
+        );
         break;
       case 'ready':
         _readyCount++;
@@ -770,7 +930,6 @@ export function TransportRequestForm({
     totalCount: allStudentValues.length,
   };
 
-
   return (
     <Form {...form}>
       <form
@@ -785,8 +944,12 @@ export function TransportRequestForm({
             changeReason: values.changeReason || undefined,
             students: values.students.map((item) => ({
               studentId: item.studentId,
-              pickupPointId: item.pickupPointId ? Number(item.pickupPointId) : null,
-              dropoffPointId: item.dropoffPointId ? Number(item.dropoffPointId) : null,
+              pickupPointId: item.pickupPointId
+                ? Number(item.pickupPointId)
+                : null,
+              dropoffPointId: item.dropoffPointId
+                ? Number(item.dropoffPointId)
+                : null,
               tripOption: item.tripOption || null,
               monday: item.monday,
               tuesday: item.tuesday,
@@ -795,7 +958,9 @@ export function TransportRequestForm({
               friday: item.friday,
               saturday: item.saturday,
               sunday: item.sunday,
-              targetSubscriptionId: item.targetSubscriptionId ? Number(item.targetSubscriptionId) : null,
+              targetSubscriptionId: item.targetSubscriptionId
+                ? Number(item.targetSubscriptionId)
+                : null,
               studentNote: item.studentNote || null,
             })),
             isActive: values.isActive,
@@ -810,7 +975,14 @@ export function TransportRequestForm({
               title='Request Information'
               description='Effective dates define when this demand can be used for planning.'
             >
-              <div className={cn('grid gap-4', isParentRole ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+              <div
+                className={cn(
+                  'grid gap-4',
+                  isParentRole
+                    ? 'grid-cols-1 md:grid-cols-2'
+                    : 'grid-cols-1 md:grid-cols-3'
+                )}
+              >
                 {/* Parent dropdown — hidden for SCHOOL_BUS_PARENT role (backend resolves from token) */}
                 {!isParentRole && (
                   <SelectField
@@ -866,7 +1038,12 @@ export function TransportRequestForm({
                     <FormItem>
                       <FormLabel>Notes</FormLabel>
                       <FormControl>
-                        <Textarea {...field} value={field.value ?? ''} rows={2} className='text-sm' />
+                        <Textarea
+                          {...field}
+                          value={field.value ?? ''}
+                          rows={2}
+                          className='text-sm'
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -907,8 +1084,14 @@ export function TransportRequestForm({
                         <span className='inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700'>
                           {index + 1}
                         </span>
-                        <span className='font-semibold text-slate-800 text-xs'>Student details</span>
-                        <RowStatusBadge readiness={rowReadinessList[index] ?? 'missing-student'} />
+                        <span className='font-semibold text-slate-800 text-xs'>
+                          Student details
+                        </span>
+                        <RowStatusBadge
+                          readiness={
+                            rowReadinessList[index] ?? 'missing-student'
+                          }
+                        />
                       </div>
                       <Button
                         type='button'
@@ -937,10 +1120,11 @@ export function TransportRequestForm({
                           isFetchingStudents
                             ? 'Loading students...'
                             : !schoolId || Number(schoolId) === 0
-                            ? 'Please select a school first'
-                            : !parentProfileId || Number(parentProfileId) === 0
-                            ? 'Please select a parent first'
-                            : 'No students found matching this school and parent'
+                              ? 'Please select a school first'
+                              : !parentProfileId ||
+                                  Number(parentProfileId) === 0
+                                ? 'Please select a parent first'
+                                : 'No students found matching this school and parent'
                         }
                         options={filteredStudents.map((student) => ({
                           value: String(student.id),
@@ -950,7 +1134,9 @@ export function TransportRequestForm({
                       <SelectField
                         form={form}
                         name={`students.${index}.tripOption`}
-                        label={requiresRouting ? 'Trip option *' : 'Trip option'}
+                        label={
+                          requiresRouting ? 'Trip option *' : 'Trip option'
+                        }
                         allowEmpty
                         emptyValue='__none__'
                         emptyLabel='Select trip option'
@@ -963,10 +1149,14 @@ export function TransportRequestForm({
 
                     <div className='grid gap-4 md:grid-cols-1'>
                       {(() => {
-                        const rowOpt = (form.watch(`students.${index}.tripOption`) || '').toUpperCase();
+                        const rowOpt = (
+                          form.watch(`students.${index}.tripOption`) || ''
+                        ).toUpperCase();
                         // Only mark required when tripOption is explicitly set to a value needing that direction
-                        const pickupRequired = rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP';
-                        const dropoffRequired = rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
+                        const pickupRequired =
+                          rowOpt === 'MORNING' || rowOpt === 'ROUND_TRIP';
+                        const dropoffRequired =
+                          rowOpt === 'AFTERNOON' || rowOpt === 'ROUND_TRIP';
                         return (
                           <PickupDropoffPointsFields
                             index={index}
@@ -1005,13 +1195,13 @@ export function TransportRequestForm({
                         </FormLabel>
                         <div className='flex flex-wrap gap-1.5'>
                           {[
-                            { field: 'monday'    as const, label: 'Mon' },
-                            { field: 'tuesday'   as const, label: 'Tue' },
+                            { field: 'monday' as const, label: 'Mon' },
+                            { field: 'tuesday' as const, label: 'Tue' },
                             { field: 'wednesday' as const, label: 'Wed' },
-                            { field: 'thursday'  as const, label: 'Thu' },
-                            { field: 'friday'    as const, label: 'Fri' },
-                            { field: 'saturday'  as const, label: 'Sat' },
-                            { field: 'sunday'    as const, label: 'Sun' },
+                            { field: 'thursday' as const, label: 'Thu' },
+                            { field: 'friday' as const, label: 'Fri' },
+                            { field: 'saturday' as const, label: 'Sat' },
+                            { field: 'sunday' as const, label: 'Sun' },
                           ].map(({ field, label }) => (
                             <FormField
                               key={field}
@@ -1022,7 +1212,8 @@ export function TransportRequestForm({
                                   className={cn(
                                     'inline-flex select-none items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-medium cursor-pointer transition-colors',
                                     'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
-                                    dayField.value && 'border-[#C81E3A] bg-[#FDECEF]/60 text-[#C81E3A] font-semibold'
+                                    dayField.value &&
+                                      'border-[#C81E3A] bg-[#FDECEF]/60 text-[#C81E3A] font-semibold'
                                   )}
                                 >
                                   <SchoolBusCheckbox
@@ -1046,7 +1237,12 @@ export function TransportRequestForm({
                         <FormItem>
                           <FormLabel>Student note</FormLabel>
                           <FormControl>
-                            <Input {...noteField} value={noteField.value ?? ''} placeholder='Optional note for this student' className='text-xs' />
+                            <Input
+                              {...noteField}
+                              value={noteField.value ?? ''}
+                              placeholder='Optional note for this student'
+                              className='text-xs'
+                            />
                           </FormControl>
                         </FormItem>
                       )}
@@ -1056,24 +1252,30 @@ export function TransportRequestForm({
               </div>
 
               {/* Validation Summary */}
-              <div className={cn(
-                'rounded-xl p-4 text-xs border mt-4 space-y-3',
-                validationSummary.blockingMessages.length > 0
-                  ? 'bg-red-50/60 border-red-200 text-red-900'
-                  : validationSummary.approvalBlockerMessages.length > 0
-                  ? 'bg-amber-50/60 border-amber-200 text-amber-900'
-                  : 'bg-emerald-50/50 border-emerald-100 text-emerald-800'
-              )}>
+              <div
+                className={cn(
+                  'rounded-xl p-4 text-xs border mt-4 space-y-3',
+                  validationSummary.blockingMessages.length > 0
+                    ? 'bg-red-50/60 border-red-200 text-red-900'
+                    : validationSummary.approvalBlockerMessages.length > 0
+                      ? 'bg-amber-50/60 border-amber-200 text-amber-900'
+                      : 'bg-emerald-50/50 border-emerald-100 text-emerald-800'
+                )}
+              >
                 <div className='flex items-center justify-between font-semibold border-b pb-2 border-slate-100/60'>
                   <span>Validation summary</span>
                   <span>
-                    {validationSummary.readyCount} / {validationSummary.totalCount}
-                    {validationSummary.readyCount === validationSummary.totalCount && validationSummary.isAllReady
+                    {validationSummary.readyCount} /{' '}
+                    {validationSummary.totalCount}
+                    {validationSummary.readyCount ===
+                      validationSummary.totalCount &&
+                    validationSummary.isAllReady
                       ? ' · All ready'
                       : validationSummary.needsConfigCount > 0
-                      ? ' ready · ' + validationSummary.needsConfigCount + ' need config'
-                      : ' ready'
-                    }
+                        ? ' ready · ' +
+                          validationSummary.needsConfigCount +
+                          ' need config'
+                        : ' ready'}
                   </span>
                 </div>
 
@@ -1098,30 +1300,37 @@ export function TransportRequestForm({
                       Configuration required — can save but cannot approve:
                     </p>
                     <ul className='list-disc list-inside space-y-1 text-[11px] font-medium text-amber-800'>
-                      {validationSummary.approvalBlockerMessages.map((msg, i) => (
-                        <li key={i}>{msg}</li>
-                      ))}
+                      {validationSummary.approvalBlockerMessages.map(
+                        (msg, i) => (
+                          <li key={i}>{msg}</li>
+                        )
+                      )}
                     </ul>
                   </div>
                 )}
 
                 {/* All clear */}
-                {validationSummary.isAllReady && validationSummary.blockingMessages.length === 0 && validationSummary.approvalBlockerMessages.length === 0 && (
-                  <p className='text-[11px] font-medium text-emerald-700'>
-                    ✓ All students are fully configured and ready for transport planning.
-                  </p>
-                )}
+                {validationSummary.isAllReady &&
+                  validationSummary.blockingMessages.length === 0 &&
+                  validationSummary.approvalBlockerMessages.length === 0 && (
+                    <p className='text-[11px] font-medium text-emerald-700'>
+                      ✓ All students are fully configured and ready for
+                      transport planning.
+                    </p>
+                  )}
               </div>
-
             </SchoolBusFormSection>
           </div>
 
           {/* Right panel: Map & Active Context */}
           <div className='space-y-4 lg:sticky lg:top-6 lg:self-start'>
             <div className='space-y-1.5 px-1'>
-              <h4 className='text-sm font-semibold text-slate-900'>Pickup point map</h4>
+              <h4 className='text-sm font-semibold text-slate-900'>
+                Pickup point map
+              </h4>
               <p className='text-xs text-slate-500 leading-relaxed'>
-                Select a student row on the left, then click a map marker to assign that point.
+                Select a student row on the left, then click a map marker to
+                assign that point.
                 {activeTripOption?.toUpperCase() === 'AFTERNOON'
                   ? ' Click sets drop-off point.'
                   : ' Click sets pickup point.'}
@@ -1158,31 +1367,46 @@ export function TransportRequestForm({
                       <User className='h-4 w-4 text-slate-400' />
                       Active student row context
                     </p>
-                    {activeStudentIndex !== null && activeStudentIndex >= 0 && activeStudentIndex < allStudentValues.length ? (
+                    {activeStudentIndex !== null &&
+                    activeStudentIndex >= 0 &&
+                    activeStudentIndex < allStudentValues.length ? (
                       <div className='space-y-3.5 bg-slate-50/40 p-4 rounded-xl border border-slate-100'>
                         <div>
-                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Selected student</span>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
+                            Selected student
+                          </span>
                           {activeStudent ? (
                             <span className='inline-flex items-center gap-1.5 font-semibold text-slate-800 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
                               <User className='h-3.5 w-3.5 text-slate-400' />
                               {activeStudent.fullName}
                             </span>
                           ) : (
-                            <span className='inline-flex items-center text-amber-600 italic font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100/50'>Not selected</span>
+                            <span className='inline-flex items-center text-amber-600 italic font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100/50'>
+                              Not selected
+                            </span>
                           )}
                         </div>
                         <div>
-                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Trip option</span>
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
+                            Trip option
+                          </span>
                           <span className='inline-flex items-center font-semibold text-slate-700 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
                             {activeTripOption || 'ROUND_TRIP (Default)'}
                           </span>
                         </div>
                         <div>
-                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Pickup point</span>
-                          {selectedPickupPointId && selectedPickupPointId !== '__none__' ? (
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
+                            Pickup point
+                          </span>
+                          {selectedPickupPointId &&
+                          selectedPickupPointId !== '__none__' ? (
                             <span className='inline-flex items-center gap-1.5 font-semibold text-sky-700 text-xs bg-sky-50 px-2.5 py-1 rounded-md border border-sky-100'>
                               <span className='h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse' />
-                              {linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedPickupPointId)?.pickupPointName || 'Selected'}
+                              {linkedPickupPoints.find(
+                                (lp) =>
+                                  String(lp.pickupPointId) ===
+                                  selectedPickupPointId
+                              )?.pickupPointName || 'Selected'}
                             </span>
                           ) : (
                             <span className='inline-flex items-center gap-1 text-amber-600 italic font-medium bg-amber-50 px-2 py-1 rounded-md border border-amber-100/50'>
@@ -1191,11 +1415,18 @@ export function TransportRequestForm({
                           )}
                         </div>
                         <div>
-                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>Drop-off point</span>
-                          {selectedDropoffPointId && selectedDropoffPointId !== '__none__' ? (
+                          <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
+                            Drop-off point
+                          </span>
+                          {selectedDropoffPointId &&
+                          selectedDropoffPointId !== '__none__' ? (
                             <span className='inline-flex items-center gap-1.5 font-semibold text-emerald-700 text-xs bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100'>
                               <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse' />
-                              {linkedPickupPoints.find((lp) => String(lp.pickupPointId) === selectedDropoffPointId)?.pickupPointName || 'Selected'}
+                              {linkedPickupPoints.find(
+                                (lp) =>
+                                  String(lp.pickupPointId) ===
+                                  selectedDropoffPointId
+                              )?.pickupPointName || 'Selected'}
                             </span>
                           ) : (
                             <span className='inline-flex items-center gap-1 text-slate-400 italic font-medium bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
@@ -1205,13 +1436,18 @@ export function TransportRequestForm({
                         </div>
                         <div className='pt-2.5 border-t border-slate-100'>
                           <p className='text-[10px] text-slate-400 italic leading-relaxed'>
-                            💡 Click a map marker to assign it to this row as {activeTripOption === 'AFTERNOON' ? 'Drop-off' : 'Pickup'}.
+                            💡 Click a map marker to assign it to this row as{' '}
+                            {activeTripOption === 'AFTERNOON'
+                              ? 'Drop-off'
+                              : 'Pickup'}
+                            .
                           </p>
                         </div>
                       </div>
                     ) : (
                       <div className='py-8 text-center text-slate-400 italic bg-slate-50/50 rounded-xl border border-slate-100 border-dashed'>
-                        Select a student row on the left to assign points using the map.
+                        Select a student row on the left to assign points using
+                        the map.
                       </div>
                     )}
                   </div>
@@ -1221,7 +1457,8 @@ export function TransportRequestForm({
 
             {!selectedSchoolLat || !selectedSchoolLng ? (
               <div className='rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 leading-relaxed shadow-sm'>
-                ⚠️ Missing coordinates: this school is not pinned yet, so only pickup points with coordinates will appear on the map.
+                ⚠️ Missing coordinates: this school is not pinned yet, so only
+                pickup points with coordinates will appear on the map.
               </div>
             ) : null}
           </div>
@@ -1396,7 +1633,8 @@ export function RoutePlanForm({
               Fixed start and end points
             </p>
             <p className='mt-1 text-xs text-slate-500'>
-              Routes must explicitly model where the bus starts and where it ends.
+              Routes must explicitly model where the bus starts and where it
+              ends.
             </p>
           </div>
           <div className='grid gap-4 md:grid-cols-2'>
@@ -1423,14 +1661,12 @@ export function RoutePlanForm({
             ) : (
               <ReadOnlyField
                 label='Start school'
-                value={
-                  (() => {
-                    const found = schools.find((school) => school.id === schoolId);
-                    return found
-                      ? found.label
-                      : 'Select a school';
-                  })()
-                }
+                value={(() => {
+                  const found = schools.find(
+                    (school) => school.id === schoolId
+                  );
+                  return found ? found.label : 'Select a school';
+                })()}
               />
             )}
 
@@ -1457,21 +1693,20 @@ export function RoutePlanForm({
             ) : (
               <ReadOnlyField
                 label='End school'
-                value={
-                  (() => {
-                    const found = schools.find((school) => school.id === schoolId);
-                    return found
-                      ? found.label
-                      : 'Select a school';
-                  })()
-                }
+                value={(() => {
+                  const found = schools.find(
+                    (school) => school.id === schoolId
+                  );
+                  return found ? found.label : 'Select a school';
+                })()}
               />
             )}
           </div>
           {depots.length === 0 &&
           (startLocationType === 'DEPOT' || endLocationType === 'DEPOT') ? (
             <p className='mt-3 text-xs font-medium text-amber-700'>
-              No depots available. Create a depot from Schools / Depots before saving this route.
+              No depots available. Create a depot from Schools / Depots before
+              saving this route.
             </p>
           ) : null}
         </div>
@@ -1613,7 +1848,9 @@ export function RouteAssignmentDialog({
     resolver: zodResolver(assignmentSchema) as any,
     defaultValues: {
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
-      attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
+      attendantId: initialData?.attendantId
+        ? String(initialData.attendantId)
+        : '',
       assignmentNote: '',
       reason: '',
       isActive: true,
@@ -1623,7 +1860,9 @@ export function RouteAssignmentDialog({
   React.useEffect(() => {
     form.reset({
       driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
-      attendantId: initialData?.attendantId ? String(initialData.attendantId) : '',
+      attendantId: initialData?.attendantId
+        ? String(initialData.attendantId)
+        : '',
       assignmentNote: '',
       reason: '',
       isActive: true,
@@ -1642,7 +1881,9 @@ export function RouteAssignmentDialog({
           onSubmit={form.handleSubmit(async (values) =>
             onSubmit({
               driverId: values.driverId,
-              attendantId: values.attendantId ? Number(values.attendantId) : null,
+              attendantId: values.attendantId
+                ? Number(values.attendantId)
+                : null,
               assignmentNote: values.assignmentNote || null,
               reason: values.reason || null,
               isActive: values.isActive,
@@ -1680,11 +1921,7 @@ export function RouteAssignmentDialog({
               name='assignmentNote'
               label='Assignment Note'
             />
-            <TextField
-              form={form}
-              name='reason'
-              label='Reason for change'
-            />
+            <TextField form={form} name='reason' label='Reason for change' />
           </div>
 
           <div className='flex justify-end gap-2 border-t pt-4'>
@@ -1736,7 +1973,11 @@ function TextField({
                 onChange={field.onChange}
               />
             ) : (
-              <Input {...field} type={type} value={(field.value as string) ?? ''} />
+              <Input
+                {...field}
+                type={type}
+                value={(field.value as string) ?? ''}
+              />
             )}
           </FormControl>
           <FormMessage />
@@ -1791,14 +2032,22 @@ function SelectField({
 }) {
   const selectOptions = React.useMemo(() => {
     // Pass through description so SchoolBusSelect renders it as a second line in the dropdown
-    const list = options.map((opt) => ({ label: opt.label, value: opt.value, description: opt.description }));
+    const list = options.map((opt) => ({
+      label: opt.label,
+      value: opt.value,
+      description: opt.description,
+    }));
     if (allowEmpty) {
-      list.unshift({ label: emptyLabel, value: emptyValue, description: undefined });
+      list.unshift({
+        label: emptyLabel,
+        value: emptyValue,
+        description: undefined,
+      });
     }
     return list;
   }, [options, allowEmpty, emptyLabel, emptyValue]);
 
-  const isSearchable = searchable ?? (options.length > 6);
+  const isSearchable = searchable ?? options.length > 6;
 
   return (
     <FormField

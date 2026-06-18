@@ -74,8 +74,9 @@ export const getStatusBadgeVariant = (
 export const formatStatusLabel = (status: SecondMileVehicleStatus): string =>
   status.replaceAll('_', ' ');
 
-export const formatVehicleType = (vehicleType: SecondMileVehicleType): string =>
-  vehicleType === 'TRUCK' ? 'Truck' : 'Van';
+export const formatVehicleType = (
+  vehicleType: SecondMileVehicleType
+): string => (vehicleType === 'TRUCK' ? 'Truck' : 'Van');
 
 export const formatDateTime = (value?: string): string => {
   if (!value) {
@@ -200,7 +201,10 @@ export const validateVehicleForm = (
     return 'Max volume must be a number greater than 0.';
   }
 
-  if (!values.hubId.trim() || parseOptionalPositiveInteger(values.hubId) === undefined) {
+  if (
+    !values.hubId.trim() ||
+    parseOptionalPositiveInteger(values.hubId) === undefined
+  ) {
     return 'Hub is required.';
   }
 

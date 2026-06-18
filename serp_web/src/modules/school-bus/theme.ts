@@ -31,12 +31,10 @@ export const schoolBusUi = {
     'bg-background text-foreground dark:bg-[radial-gradient(circle_at_top_left,rgba(200,30,58,0.06),transparent_34%)]',
   header:
     'border-b border-border bg-background/90 shadow-[0_4px_20px_rgba(15,23,42,0.04)] backdrop-blur-xl',
-  hero:
-    'relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm',
+  hero: 'relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm',
   section:
     'rounded-[28px] border border-border bg-card p-5 text-card-foreground shadow-[0_18px_50px_rgba(15,23,42,0.06)]',
-  card:
-    'rounded-[28px] border border-border bg-card text-card-foreground shadow-[0_18px_50px_rgba(15,23,42,0.06)]',
+  card: 'rounded-[28px] border border-border bg-card text-card-foreground shadow-[0_18px_50px_rgba(15,23,42,0.06)]',
   interactiveCard:
     'rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-[0_12px_32px_rgba(15,23,42,0.04)] transition hover:bg-muted/40 hover:shadow-sm',
   primaryButton:
@@ -57,6 +55,5 @@ export const schoolBusUi = {
     'overflow-hidden rounded-[24px] border border-border bg-card text-card-foreground shadow-[0_14px_36px_rgba(15,23,42,0.05)]',
   mapFrame:
     'overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm',
-  subtlePanel:
-    'rounded-2xl border border-border bg-muted/40 p-4',
+  subtlePanel: 'rounded-2xl border border-border bg-muted/40 p-4',
 } as const;

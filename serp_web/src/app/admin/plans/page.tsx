@@ -132,8 +132,9 @@ export default function PlansPage() {
   ];
 
   const organizationLabel =
-    organizations.find((organization) => organization.id === filters.organizationId)
-      ?.name ??
+    organizations.find(
+      (organization) => organization.id === filters.organizationId
+    )?.name ??
     (filters.organizationId ? `Organization #${filters.organizationId}` : '');
 
   const filterChips = [

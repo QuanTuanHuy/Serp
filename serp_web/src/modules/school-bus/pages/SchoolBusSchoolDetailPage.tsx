@@ -22,10 +22,26 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRouter, useSearchParams, useParams, usePathname } from 'next/navigation';
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import {
+  useRouter,
+  useSearchParams,
+  useParams,
+  usePathname,
+} from 'next/navigation';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
-import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolByIdQuery,
@@ -83,7 +99,9 @@ export function SchoolBusSchoolDetailPage({
   const router = useRouter();
 
   // Ensure we extract the pure numeric ID for display/fetching if a string was passed at runtime
-  let rawId = params?.id ? decodeURIComponent(String(params.id)) : String(propSchoolId);
+  let rawId = params?.id
+    ? decodeURIComponent(String(params.id))
+    : String(propSchoolId);
   if ((!rawId || !rawId.includes('&')) && typeof window !== 'undefined') {
     const windowPath = window.location.pathname;
     const match = windowPath.match(/\/school-bus\/schools\/(.+)$/);
@@ -114,19 +132,25 @@ export function SchoolBusSchoolDetailPage({
 
   const setActiveTab = (newTab: 'general' | 'pickups') => {
     const urlTab = newTab === 'pickups' ? 'linked-pickups' : newTab;
-    router.push(`/school-bus/schools/${cleanSchoolId}&tab=${urlTab}&view=${viewParam}`);
+    router.push(
+      `/school-bus/schools/${cleanSchoolId}&tab=${urlTab}&view=${viewParam}`
+    );
   };
 
   // --- RTK queries & mutations ---
-  const { data: schoolDetailData, isLoading: loadingSchool, refetch: refetchSchool } =
-    useGetSchoolByIdQuery(cleanSchoolId);
+  const {
+    data: schoolDetailData,
+    isLoading: loadingSchool,
+    refetch: refetchSchool,
+  } = useGetSchoolByIdQuery(cleanSchoolId);
   const school = schoolDetailData?.data;
 
-  const { data: linkedPickupData, refetch: refetchLinkedPickups } = useGetSchoolPickupPointsQuery({
-    schoolId: cleanSchoolId,
-    page: 0,
-    size: 100,
-  });
+  const { data: linkedPickupData, refetch: refetchLinkedPickups } =
+    useGetSchoolPickupPointsQuery({
+      schoolId: cleanSchoolId,
+      page: 0,
+      size: 100,
+    });
   const linkedPickupPoints = getPageItems(linkedPickupData?.data);
 
   const { data: allPickupPointsData } = useGetPickupPointsQuery({
@@ -137,9 +161,12 @@ export function SchoolBusSchoolDetailPage({
   });
   const allPickupPoints = getPageItems(allPickupPointsData?.data);
 
-  const [updateSchool, { isLoading: updatingSchool }] = useUpdateSchoolMutation();
-  const [linkPickupPoint, { isLoading: linkingPickup }] = useLinkSchoolPickupPointMutation();
-  const [unlinkPickupPoint, { isLoading: unlinkingPickup }] = useUnlinkSchoolPickupPointMutation();
+  const [updateSchool, { isLoading: updatingSchool }] =
+    useUpdateSchoolMutation();
+  const [linkPickupPoint, { isLoading: linkingPickup }] =
+    useLinkSchoolPickupPointMutation();
+  const [unlinkPickupPoint, { isLoading: unlinkingPickup }] =
+    useUnlinkSchoolPickupPointMutation();
 
   // --- Dialog states ---
   const [schoolDialogOpen, setSchoolDialogOpen] = React.useState(false);
@@ -153,15 +180,24 @@ export function SchoolBusSchoolDetailPage({
 
   // --- Filters ---
   const [pickupSearch, setPickupSearch] = React.useState('');
-  const [pickupUsageFilter, setPickupUsageFilter] = React.useState<'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'>('ALL');
-  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<'ALL' | 'CONFIGURED' | 'MISSING'>('ALL');
+  const [pickupUsageFilter, setPickupUsageFilter] = React.useState<
+    'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'
+  >('ALL');
+  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<
+    'ALL' | 'CONFIGURED' | 'MISSING'
+  >('ALL');
 
   // --- Map fit control key ---
   const [fitAllKey, setFitAllKey] = React.useState(0);
   const [fitSelectedKey, setFitSelectedKey] = React.useState(0);
   const handleFitAll = React.useCallback(() => setFitAllKey((k) => k + 1), []);
-  const handleFitSelected = React.useCallback(() => setFitSelectedKey((k) => k + 1), []);
-  const [selectedPickupPointId, setSelectedPickupPointId] = React.useState<number | null>(null);
+  const handleFitSelected = React.useCallback(
+    () => setFitSelectedKey((k) => k + 1),
+    []
+  );
+  const [selectedPickupPointId, setSelectedPickupPointId] = React.useState<
+    number | null
+  >(null);
 
   // --- Handlers ---
   const refetchAll = React.useCallback(async () => {
@@ -170,7 +206,10 @@ export function SchoolBusSchoolDetailPage({
 
   const handleEditSchool = async (values: any) => {
     try {
-      const response = await updateSchool({ id: cleanSchoolId, body: values }).unwrap();
+      const response = await updateSchool({
+        id: cleanSchoolId,
+        body: values,
+      }).unwrap();
       toast.success(response.message || 'School details updated');
       setSchoolDialogOpen(false);
       refetchSchool();
@@ -181,7 +220,10 @@ export function SchoolBusSchoolDetailPage({
 
   const handleLinkPickupPoint = async (values: any) => {
     try {
-      const response = await linkPickupPoint({ schoolId: cleanSchoolId, body: values }).unwrap();
+      const response = await linkPickupPoint({
+        schoolId: cleanSchoolId,
+        body: values,
+      }).unwrap();
       toast.success(response.message || 'Pickup point linked successfully');
       setLinkDialogOpen(false);
       refetchAll();
@@ -194,7 +236,10 @@ export function SchoolBusSchoolDetailPage({
     if (!deleteTarget) return;
     try {
       if (deleteTarget.type === 'link') {
-        const response = await unlinkPickupPoint({ schoolId: cleanSchoolId, pickupPointId: deleteTarget.id }).unwrap();
+        const response = await unlinkPickupPoint({
+          schoolId: cleanSchoolId,
+          pickupPointId: deleteTarget.id,
+        }).unwrap();
         toast.success(response.message || 'Pickup point unlinked');
       }
       setDeleteTarget(null);
@@ -206,13 +251,22 @@ export function SchoolBusSchoolDetailPage({
 
   // --- Derived maps data ---
   const mapSchools = React.useMemo(() => {
-    if (!school || typeof school.latitude !== 'number' || typeof school.longitude !== 'number') return [];
+    if (
+      !school ||
+      typeof school.latitude !== 'number' ||
+      typeof school.longitude !== 'number'
+    )
+      return [];
     return [school];
   }, [school]);
 
   const mapPickupPoints = React.useMemo(() => {
     return linkedPickupPoints
-      .filter((lp) => typeof lp.pickupPointLatitude === 'number' && typeof lp.pickupPointLongitude === 'number')
+      .filter(
+        (lp) =>
+          typeof lp.pickupPointLatitude === 'number' &&
+          typeof lp.pickupPointLongitude === 'number'
+      )
       .map((lp) => ({
         id: lp.pickupPointId,
         name: lp.pickupPointName,
@@ -233,13 +287,22 @@ export function SchoolBusSchoolDetailPage({
       const matchSearch =
         !pickupSearch ||
         lp.pickupPointName.toLowerCase().includes(pickupSearch.toLowerCase()) ||
-        (lp.pickupPointAddress ?? '').toLowerCase().includes(pickupSearch.toLowerCase());
+        (lp.pickupPointAddress ?? '')
+          .toLowerCase()
+          .includes(pickupSearch.toLowerCase());
       const matchUsage =
         pickupUsageFilter === 'ALL' ||
-        (pickupUsageFilter === 'PICKUP' && (lp.pickupPointUsageType === 'PICKUP' || lp.pickupPointUsageType === 'PICKUP_ONLY')) ||
-        (pickupUsageFilter === 'DROPOFF' && (lp.pickupPointUsageType === 'DROPOFF' || lp.pickupPointUsageType === 'DROPOFF_ONLY')) ||
-        (pickupUsageFilter === 'PICKUP_DROPOFF' && lp.pickupPointUsageType === 'PICKUP_DROPOFF');
-      const hasCoords = typeof lp.pickupPointLatitude === 'number' && typeof lp.pickupPointLongitude === 'number';
+        (pickupUsageFilter === 'PICKUP' &&
+          (lp.pickupPointUsageType === 'PICKUP' ||
+            lp.pickupPointUsageType === 'PICKUP_ONLY')) ||
+        (pickupUsageFilter === 'DROPOFF' &&
+          (lp.pickupPointUsageType === 'DROPOFF' ||
+            lp.pickupPointUsageType === 'DROPOFF_ONLY')) ||
+        (pickupUsageFilter === 'PICKUP_DROPOFF' &&
+          lp.pickupPointUsageType === 'PICKUP_DROPOFF');
+      const hasCoords =
+        typeof lp.pickupPointLatitude === 'number' &&
+        typeof lp.pickupPointLongitude === 'number';
       const matchCoords =
         pickupCoordsFilter === 'ALL' ||
         (pickupCoordsFilter === 'CONFIGURED' && hasCoords) ||
@@ -250,10 +313,10 @@ export function SchoolBusSchoolDetailPage({
 
   if (loadingSchool) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]" />
-          <p className="text-sm font-semibold">Loading school workspace...</p>
+      <div className='flex h-screen items-center justify-center bg-slate-50 text-slate-500'>
+        <div className='flex flex-col items-center gap-3'>
+          <div className='h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]' />
+          <p className='text-sm font-semibold'>Loading school workspace...</p>
         </div>
       </div>
     );
@@ -261,69 +324,93 @@ export function SchoolBusSchoolDetailPage({
 
   if (!school) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 text-center">
-        <GraduationCap className="h-12 w-12 text-slate-300 animate-bounce" />
+      <div className='flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 text-center'>
+        <GraduationCap className='h-12 w-12 text-slate-300 animate-bounce' />
         <div>
-          <h3 className="text-lg font-bold text-slate-800">School Not Found</h3>
-          <p className="text-sm text-slate-400">The requested school details could not be loaded.</p>
+          <h3 className='text-lg font-bold text-slate-800'>School Not Found</h3>
+          <p className='text-sm text-slate-400'>
+            The requested school details could not be loaded.
+          </p>
         </div>
-        <Button onClick={onClose} variant="outline" className="rounded-full">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Go back
+        <Button onClick={onClose} variant='outline' className='rounded-full'>
+          <ArrowLeft className='mr-2 h-4 w-4' /> Go back
         </Button>
       </div>
     );
   }
 
-  const schoolPickupPointCount = school.pickupPointCount ?? linkedPickupPoints?.length ?? 0;
-  const hasMissingCoords = school.anyLinkedPointMissingCoordinates ||
-    (linkedPickupPoints && linkedPickupPoints.some((lp) => typeof lp.pickupPointLatitude !== 'number' || typeof lp.pickupPointLongitude !== 'number'));
+  const schoolPickupPointCount =
+    school.pickupPointCount ?? linkedPickupPoints?.length ?? 0;
+  const hasMissingCoords =
+    school.anyLinkedPointMissingCoordinates ||
+    (linkedPickupPoints &&
+      linkedPickupPoints.some(
+        (lp) =>
+          typeof lp.pickupPointLatitude !== 'number' ||
+          typeof lp.pickupPointLongitude !== 'number'
+      ));
 
   return (
     <>
       <SchoolBusPageShell
         title={school.name}
-        description={school.address || 'Manage school profiles and associated pickup points.'}
+        description={
+          school.address ||
+          'Manage school profiles and associated pickup points.'
+        }
         actions={
-          <div className="flex items-center gap-2">
-            <Button onClick={onClose} variant="outline" className="rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to directory
-            </Button>
-            <Button onClick={() => setSchoolDialogOpen(true)} variant="outline" className="rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200">
-              <Edit2 className="mr-2 h-3.5 w-3.5" /> Edit Profile
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={onClose}
+              variant='outline'
+              className='rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
+            >
+              <ArrowLeft className='mr-2 h-4 w-4' /> Back to directory
             </Button>
             <Button
-              className="rounded-full bg-[#C81E3A] hover:bg-[#A6172D] text-white"
+              onClick={() => setSchoolDialogOpen(true)}
+              variant='outline'
+              className='rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
+            >
+              <Edit2 className='mr-2 h-3.5 w-3.5' /> Edit Profile
+            </Button>
+            <Button
+              className='rounded-full bg-[#C81E3A] hover:bg-[#A6172D] text-white'
               onClick={() => {
                 setLinkDialogOpen(true);
               }}
             >
-              <Plus className="mr-1.5 h-4 w-4" />
+              <Plus className='mr-1.5 h-4 w-4' />
               Link Pickup
             </Button>
           </div>
         }
       >
-        <div className="flex flex-col gap-6">
+        <div className='flex flex-col gap-6'>
           {/* Summary metrics bar */}
-          <div className="grid gap-3 grid-cols-2">
+          <div className='grid gap-3 grid-cols-2'>
             <SchoolBusMetricCard
-              label="Linked Pickups"
+              label='Linked Pickups'
               value={schoolPickupPointCount}
               icon={MapPin}
-              tone="pickup"
-              variant="compact"
+              tone='pickup'
+              variant='compact'
             />
             <SchoolBusMetricCard
-              label="Coordinated points"
-              value={schoolPickupPointCount && hasMissingCoords ? 'Warning' : 'Configured'}
+              label='Coordinated points'
+              value={
+                schoolPickupPointCount && hasMissingCoords
+                  ? 'Warning'
+                  : 'Configured'
+              }
               icon={AlertTriangle}
               tone={hasMissingCoords ? 'warning' : 'success'}
-              variant="compact"
+              variant='compact'
             />
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-slate-200">
+          <div className='flex border-b border-slate-200'>
             <button
               onClick={() => setActiveTab('general')}
               className={cn(
@@ -349,7 +436,7 @@ export function SchoolBusSchoolDetailPage({
           </div>
 
           {/* Tab contents */}
-          <div className="bg-white rounded-[24px] border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-[500px]">
+          <div className='bg-white rounded-[24px] border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-[500px]'>
             {activeTab === 'general' && renderGeneralTab(school)}
             {activeTab === 'pickups' && renderPickupsTab(school)}
           </div>
@@ -363,43 +450,67 @@ export function SchoolBusSchoolDetailPage({
   // --- Sub-renderer: General Tab ---
   function renderGeneralTab(school: SchoolBusSchool) {
     return (
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      <div className='flex flex-col lg:flex-row flex-1 min-h-0'>
         {/* Left Column: Details & Warnings */}
-        <div className="w-full lg:w-[380px] shrink-0 border-r border-slate-200 p-6 space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">School Profile</h3>
-            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 space-y-4">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Identity Code</span>
-                <span className="text-sm font-mono font-bold text-slate-800">{school.code || '—'}</span>
+        <div className='w-full lg:w-[380px] shrink-0 border-r border-slate-200 p-6 space-y-6'>
+          <div className='space-y-4'>
+            <h3 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
+              School Profile
+            </h3>
+            <div className='bg-slate-50/50 border border-slate-100 rounded-2xl p-5 space-y-4'>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Identity Code
+                </span>
+                <span className='text-sm font-mono font-bold text-slate-800'>
+                  {school.code || '—'}
+                </span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Operational Status</span>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Operational Status
+                </span>
                 <div>
-                  <SchoolBusStatusBadge status={school.isActive ? 'ACTIVE' : 'INACTIVE'} />
+                  <SchoolBusStatusBadge
+                    status={school.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  />
                 </div>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Phone</span>
-                <span className="text-xs font-semibold text-slate-700">{school.contactPhone || '—'}</span>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Contact Phone
+                </span>
+                <span className='text-xs font-semibold text-slate-700'>
+                  {school.contactPhone || '—'}
+                </span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Email</span>
-                <span className="text-xs font-semibold text-slate-700">{school.contactEmail || '—'}</span>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Contact Email
+                </span>
+                <span className='text-xs font-semibold text-slate-700'>
+                  {school.contactEmail || '—'}
+                </span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Address</span>
-                <span className="text-xs leading-relaxed text-slate-600">{school.address || '—'}</span>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Address
+                </span>
+                <span className='text-xs leading-relaxed text-slate-600'>
+                  {school.address || '—'}
+                </span>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Coordinates</span>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
+                  Coordinates
+                </span>
                 {school.latitude != null ? (
-                  <span className="text-xs font-mono font-medium text-slate-700">
+                  <span className='text-xs font-mono font-medium text-slate-700'>
                     {school.latitude.toFixed(6)}, {school.longitude?.toFixed(6)}
                   </span>
                 ) : (
-                  <span className="text-xs text-amber-600 font-semibold flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Coords missing
+                  <span className='text-xs text-amber-600 font-semibold flex items-center gap-1'>
+                    <AlertTriangle className='h-3.5 w-3.5' /> Coords missing
                   </span>
                 )}
               </div>
@@ -408,16 +519,23 @@ export function SchoolBusSchoolDetailPage({
 
           {/* Warnings Panel */}
           {(!school.latitude || school.anyLinkedPointMissingCoordinates) && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 space-y-3">
-              <h4 className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" /> Network Warnings
+            <div className='rounded-2xl border border-amber-200 bg-amber-50/50 p-5 space-y-3'>
+              <h4 className='text-xs font-bold text-amber-800 flex items-center gap-1.5'>
+                <AlertTriangle className='h-4 w-4 shrink-0 text-amber-600' />{' '}
+                Network Warnings
               </h4>
-              <div className="text-xs text-amber-700 space-y-1.5 leading-relaxed">
+              <div className='text-xs text-amber-700 space-y-1.5 leading-relaxed'>
                 {!school.latitude && (
-                  <p>• The school itself is missing coordinates, preventing it from showing on map overlays.</p>
+                  <p>
+                    • The school itself is missing coordinates, preventing it
+                    from showing on map overlays.
+                  </p>
                 )}
                 {school.anyLinkedPointMissingCoordinates && (
-                  <p>• One or more linked pickup points do not have coordinates set. Check Linked Pickups list.</p>
+                  <p>
+                    • One or more linked pickup points do not have coordinates
+                    set. Check Linked Pickups list.
+                  </p>
                 )}
               </div>
             </div>
@@ -425,12 +543,12 @@ export function SchoolBusSchoolDetailPage({
         </div>
 
         {/* Right Column: Operations Map */}
-        <div className="flex-1 min-h-[400px] flex flex-col bg-slate-50 relative p-4">
+        <div className='flex-1 min-h-[400px] flex flex-col bg-slate-50 relative p-4'>
           <SchoolBusMapWorkspace
             flat
-            className="flex-1 rounded-2xl overflow-hidden border border-slate-200 shadow-sm"
-            mapHeightClassName="h-full"
-            panelClassName="w-[300px] p-0 flex flex-col h-full min-h-0 bg-white"
+            className='flex-1 rounded-2xl overflow-hidden border border-slate-200 shadow-sm'
+            mapHeightClassName='h-full'
+            panelClassName='w-[300px] p-0 flex flex-col h-full min-h-0 bg-white'
             map={
               hasMapData ? (
                 <OperationsMap
@@ -443,17 +561,20 @@ export function SchoolBusSchoolDetailPage({
                   onPickupPointSelect={(id) => setSelectedPickupPointId(id)}
                   fitAllKey={fitAllKey}
                   fitSelectedKey={fitSelectedKey}
-                  className="h-full w-full"
+                  className='h-full w-full'
                 />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white shadow-sm">
-                    <MapPin className="h-8 w-8 text-slate-300" />
+                <div className='flex h-full flex-col items-center justify-center gap-4 bg-[#f8fafc] px-6 text-center'>
+                  <div className='flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white shadow-sm'>
+                    <MapPin className='h-8 w-8 text-slate-300' />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-600">No map markers yet</p>
-                    <p className="mt-1 max-w-[240px] text-xs leading-5 text-slate-400">
-                      Map markers will appear once coordinates are configured for the school or linked points.
+                    <p className='text-sm font-semibold text-slate-600'>
+                      No map markers yet
+                    </p>
+                    <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
+                      Map markers will appear once coordinates are configured
+                      for the school or linked points.
                     </p>
                   </div>
                 </div>
@@ -464,7 +585,7 @@ export function SchoolBusSchoolDetailPage({
             onFitRoute={handleFitSelected}
             canFitAll={hasMapData}
             canFitRoute={!!cleanSchoolId || !!selectedPickupPointId}
-            fitRouteLabel="Fit Selected"
+            fitRouteLabel='Fit Selected'
           />
         </div>
       </div>
@@ -474,29 +595,35 @@ export function SchoolBusSchoolDetailPage({
   // --- Sub-renderer: Linked Pickups Tab ---
   function renderPickupsTab(school: SchoolBusSchool) {
     return (
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      <div className='flex flex-col lg:flex-row flex-1 min-h-0'>
         {/* Left rail filter panel */}
-        <div className="w-full lg:w-[280px] shrink-0 border-r border-slate-200 p-5 space-y-5 bg-slate-50/40">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Network Filter</h3>
+        <div className='w-full lg:w-[280px] shrink-0 border-r border-slate-200 p-5 space-y-5 bg-slate-50/40'>
+          <h3 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
+            Network Filter
+          </h3>
 
-          <div className="space-y-4">
+          <div className='space-y-4'>
             {/* Search */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Search Point</label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <div className='space-y-1.5'>
+              <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
+                Search Point
+              </label>
+              <div className='relative'>
+                <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
                 <input
-                  type="text"
-                  placeholder="Search name, code..."
+                  type='text'
+                  placeholder='Search name, code...'
                   value={pickupSearch}
                   onChange={(e) => setPickupSearch(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 shadow-sm"
+                  className='w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 shadow-sm'
                 />
               </div>
             </div>
             {/* Usage Filter */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Usage Type</label>
+            <div className='space-y-1.5'>
+              <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
+                Usage Type
+              </label>
               <SchoolBusSelect
                 value={pickupUsageFilter}
                 onChange={(val) => setPickupUsageFilter(val as any)}
@@ -506,15 +633,17 @@ export function SchoolBusSchoolDetailPage({
                   { label: 'Drop-off only', value: 'DROPOFF' },
                   { label: 'Pickup & Drop-off', value: 'PICKUP_DROPOFF' },
                 ]}
-                placeholder="Select usage type"
+                placeholder='Select usage type'
                 fullWidth
-                className="border-slate-200 hover:border-slate-350 rounded-lg text-xs"
+                className='border-slate-200 hover:border-slate-350 rounded-lg text-xs'
               />
             </div>
             {/* Coordinate filter */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coordinates</label>
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
+            <div className='space-y-1.5'>
+              <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
+                Coordinates
+              </label>
+              <div className='grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1'>
                 {(['ALL', 'CONFIGURED', 'MISSING'] as const).map((mode) => (
                   <button
                     key={mode}
@@ -535,77 +664,92 @@ export function SchoolBusSchoolDetailPage({
         </div>
 
         {/* Right main workspace */}
-        <div className="flex-1 overflow-auto p-6 min-h-0 space-y-4">
+        <div className='flex-1 overflow-auto p-6 min-h-0 space-y-4'>
           {filteredPickups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-              <Link2 className="h-10 w-10 text-slate-300 animate-pulse" />
+            <div className='flex flex-col items-center justify-center h-full gap-4 text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200'>
+              <Link2 className='h-10 w-10 text-slate-300 animate-pulse' />
               <div>
-                <p className="text-sm font-semibold text-slate-600">No linked pickup points found</p>
-                <p className="text-xs text-slate-400 max-w-xs mt-1">
-                  Connect pickup points from the network database to establish routing paths.
+                <p className='text-sm font-semibold text-slate-600'>
+                  No linked pickup points found
+                </p>
+                <p className='text-xs text-slate-400 max-w-xs mt-1'>
+                  Connect pickup points from the network database to establish
+                  routing paths.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className='space-y-3'>
               {filteredPickups.map((lp) => {
-                const hasCoords = typeof lp.pickupPointLatitude === 'number' && typeof lp.pickupPointLongitude === 'number';
+                const hasCoords =
+                  typeof lp.pickupPointLatitude === 'number' &&
+                  typeof lp.pickupPointLongitude === 'number';
 
                 return (
                   <div
                     key={lp.id}
-                    className="border border-slate-200 hover:border-slate-300 rounded-[20px] bg-white transition-shadow shadow-sm overflow-hidden"
+                    className='border border-slate-200 hover:border-slate-300 rounded-[20px] bg-white transition-shadow shadow-sm overflow-hidden'
                   >
                     {/* Header info */}
-                    <div className="flex items-center justify-between p-4 flex-wrap gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 text-slate-500">
-                          <MapPin className="h-4.5 w-4.5" />
+                    <div className='flex items-center justify-between p-4 flex-wrap gap-3'>
+                      <div className='flex items-center gap-3'>
+                        <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 text-slate-500'>
+                          <MapPin className='h-4.5 w-4.5' />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-slate-900">{lp.pickupPointName}</h4>
+                          <div className='flex items-center gap-2'>
+                            <h4 className='text-sm font-bold text-slate-900'>
+                              {lp.pickupPointName}
+                            </h4>
                             {lp.isDefault && (
-                              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-bold border border-indigo-100">
+                              <span className='bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-bold border border-indigo-100'>
                                 Default
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 mt-0.5 max-w-xl truncate">{lp.pickupPointAddress || 'No address'}</p>
+                          <p className='text-xs text-slate-400 mt-0.5 max-w-xl truncate'>
+                            {lp.pickupPointAddress || 'No address'}
+                          </p>
                         </div>
                       </div>
 
                       {/* Detail metrics and badges */}
-                      <div className="flex items-center gap-3">
-                        <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold', getUsageTypeBadgeClasses(lp.pickupPointUsageType))}>
+                      <div className='flex items-center gap-3'>
+                        <span
+                          className={cn(
+                            'px-2.5 py-0.5 rounded-full text-[10px] font-bold',
+                            getUsageTypeBadgeClasses(lp.pickupPointUsageType)
+                          )}
+                        >
                           {formatUsageType(lp.pickupPointUsageType)}
                         </span>
 
                         {hasCoords ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
-                            <MapPinCheck className="h-3 w-3" /> Coords
+                          <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10'>
+                            <MapPinCheck className='h-3 w-3' /> Coords
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15">
-                            <AlertTriangle className="h-3 w-3" /> No coords
+                          <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
+                            <AlertTriangle className='h-3 w-3' /> No coords
                           </span>
                         )}
 
-                        <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+                        <div className='flex items-center gap-1 border-l border-slate-200 pl-3'>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:text-[#C81E3A] text-xs font-semibold"
+                            variant='outline'
+                            size='sm'
+                            className='h-8 rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:text-[#C81E3A] text-xs font-semibold'
                             onClick={() =>
                               setDeleteTarget({
                                 type: 'link',
                                 id: lp.pickupPointId,
                                 title: 'Unlink Pickup Point',
-                                description: 'Unlink this pickup point? Associated time windows will also be deleted.',
+                                description:
+                                  'Unlink this pickup point? Associated time windows will also be deleted.',
                               })
                             }
                           >
-                            <Unlink className="h-3.5 w-3.5" />
+                            <Unlink className='h-3.5 w-3.5' />
                           </Button>
                         </div>
                       </div>
@@ -651,7 +795,9 @@ export function SchoolBusSchoolDetailPage({
             if (!open) setDeleteTarget(null);
           }}
           title={deleteTarget?.title || 'Delete confirmation'}
-          description={deleteTarget?.description || 'This operation is permanent.'}
+          description={
+            deleteTarget?.description || 'This operation is permanent.'
+          }
           isLoading={linkingPickup || unlinkingPickup}
           onConfirm={handleConfirmDelete}
         />

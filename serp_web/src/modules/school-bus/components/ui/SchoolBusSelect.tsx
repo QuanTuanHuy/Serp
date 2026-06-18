@@ -135,7 +135,7 @@ export function SchoolBusSelect({
             size === 'sm' && 'h-9 px-3 text-xs rounded-lg',
             size === 'md' && 'h-10 px-4.5 text-sm rounded-xl',
             fullWidth && 'w-full',
-            'overflow-hidden',  // prevent content from stretching outside container
+            'overflow-hidden', // prevent content from stretching outside container
             className
           )}
         >
@@ -275,12 +275,16 @@ export function SchoolBusSelect({
                       {opt.badge}
                     </div>
                     {opt.description && (
-                      <p className={cn(
-                        'truncate text-[10px] mt-0.5 font-normal',
-                        opt.description === 'Ready' ? 'text-emerald-600' :
-                        opt.description?.toLowerCase().includes('missing') ? 'text-amber-600' :
-                        'text-muted-foreground'
-                      )}>
+                      <p
+                        className={cn(
+                          'truncate text-[10px] mt-0.5 font-normal',
+                          opt.description === 'Ready'
+                            ? 'text-emerald-600'
+                            : opt.description?.toLowerCase().includes('missing')
+                              ? 'text-amber-600'
+                              : 'text-muted-foreground'
+                        )}
+                      >
                         {opt.description}
                       </p>
                     )}

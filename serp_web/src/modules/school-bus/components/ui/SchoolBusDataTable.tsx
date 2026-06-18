@@ -105,8 +105,12 @@ export function SchoolBusDataTable<T>({
     if (hasTabs || (!title && !description)) return null;
     return (
       <div className='px-6 pt-5 pb-4'>
-        {title && <h3 className='text-base font-semibold text-foreground'>{title}</h3>}
-        {description && <p className='mt-1 text-xs text-muted-foreground'>{description}</p>}
+        {title && (
+          <h3 className='text-base font-semibold text-foreground'>{title}</h3>
+        )}
+        {description && (
+          <p className='mt-1 text-xs text-muted-foreground'>{description}</p>
+        )}
       </div>
     );
   };
@@ -160,10 +164,12 @@ export function SchoolBusDataTable<T>({
   const renderToolbar = () => {
     if (!toolbar) return null;
     return (
-      <div className={cn(
-        'flex flex-wrap items-center justify-between gap-4 bg-muted/20 px-6 py-3',
-        hasTabs ? 'border-b border-border' : 'border-t border-b border-border'
-      )}>
+      <div
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-4 bg-muted/20 px-6 py-3',
+          hasTabs ? 'border-b border-border' : 'border-t border-b border-border'
+        )}
+      >
         {toolbar}
       </div>
     );
@@ -189,7 +195,9 @@ export function SchoolBusDataTable<T>({
         <div className='px-6 py-12'>
           <SchoolBusEmptyState
             title={emptyTitle || 'No items found'}
-            description={emptyDescription || 'Try adjusting your filters or search query.'}
+            description={
+              emptyDescription || 'Try adjusting your filters or search query.'
+            }
             icon={emptyIcon}
             className='min-h-[220px]'
           />
@@ -203,16 +211,21 @@ export function SchoolBusDataTable<T>({
           <TableHeader className='border-b border-border bg-muted/40 hover:bg-muted/40'>
             <TableRow className='border-b border-border'>
               {columns.map((col, index) => {
-                const isLeftSticky = col.sticky === 'left' || (index === 0 && stickyFirstColumn);
-                const isRightSticky = col.sticky === 'right' || (index === columns.length - 1 && stickyActionColumn);
+                const isLeftSticky =
+                  col.sticky === 'left' || (index === 0 && stickyFirstColumn);
+                const isRightSticky =
+                  col.sticky === 'right' ||
+                  (index === columns.length - 1 && stickyActionColumn);
                 return (
                   <TableHead
                     key={col.key}
                     className={cn(
                       'h-10 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap',
                       col.headerClassName,
-                      isLeftSticky && 'sticky left-0 z-20 border-r border-border bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]',
-                      isRightSticky && 'sticky right-0 z-20 border-l border-border bg-muted shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'
+                      isLeftSticky &&
+                        'sticky left-0 z-20 border-r border-border bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]',
+                      isRightSticky &&
+                        'sticky right-0 z-20 border-l border-border bg-muted shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]'
                     )}
                     style={{ width: col.width }}
                   >
@@ -233,16 +246,22 @@ export function SchoolBusDataTable<T>({
                 onDoubleClick={() => onRowDoubleClick?.(row)}
               >
                 {columns.map((col, colIndex) => {
-                  const isLeftSticky = col.sticky === 'left' || (colIndex === 0 && stickyFirstColumn);
-                  const isRightSticky = col.sticky === 'right' || (colIndex === columns.length - 1 && stickyActionColumn);
+                  const isLeftSticky =
+                    col.sticky === 'left' ||
+                    (colIndex === 0 && stickyFirstColumn);
+                  const isRightSticky =
+                    col.sticky === 'right' ||
+                    (colIndex === columns.length - 1 && stickyActionColumn);
                   return (
                     <TableCell
                       key={col.key}
                       className={cn(
                         'py-3.5 text-sm text-foreground whitespace-nowrap align-middle',
                         col.className,
-                        isLeftSticky && 'sticky left-0 z-10 border-r border-border bg-card shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted',
-                        isRightSticky && 'sticky right-0 z-10 border-l border-border bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted'
+                        isLeftSticky &&
+                          'sticky left-0 z-10 border-r border-border bg-card shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted',
+                        isRightSticky &&
+                          'sticky right-0 z-10 border-l border-border bg-card shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors group-hover:bg-muted'
                       )}
                     >
                       {col.render(row)}
@@ -269,7 +288,13 @@ export function SchoolBusDataTable<T>({
   };
 
   return (
-    <div className={cn(schoolBusUi.card, 'flex flex-col overflow-hidden p-0', className)}>
+    <div
+      className={cn(
+        schoolBusUi.card,
+        'flex flex-col overflow-hidden p-0',
+        className
+      )}
+    >
       {renderHeader()}
       {renderTabs()}
       {renderToolbar()}

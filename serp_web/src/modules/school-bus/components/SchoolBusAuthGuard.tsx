@@ -24,9 +24,7 @@ export const SchoolBusAuthGuard: React.FC<SchoolBusAuthGuardProps> = ({
       return;
     }
 
-    dispatch(
-      api.util.invalidateTags(['account/menus', 'account/modules'])
-    );
+    dispatch(api.util.invalidateTags(['account/menus', 'account/modules']));
     setPreparedToken(token);
   }, [dispatch, router, token]);
 

@@ -401,7 +401,9 @@ function FilterOption({
       }`}
     >
       <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+      {selected ? (
+        <CheckCircle className='h-4 w-4 shrink-0 text-primary' />
+      ) : null}
     </button>
   );
 }

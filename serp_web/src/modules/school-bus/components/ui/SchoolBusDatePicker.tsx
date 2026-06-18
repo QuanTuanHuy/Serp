@@ -1,8 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { Calendar as CalendarIcon, X, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover';
+import {
+  Calendar as CalendarIcon,
+  X,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/utils';
@@ -41,7 +51,10 @@ const formatDateToString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBusDatePickerProps>(
+export const SchoolBusDatePicker = React.forwardRef<
+  HTMLButtonElement,
+  SchoolBusDatePickerProps
+>(
   (
     {
       value,
@@ -62,11 +75,13 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
   ) => {
     const [open, setOpen] = React.useState(false);
     const [isPickingMonthYear, setIsPickingMonthYear] = React.useState(false);
-    
+
     const dateValue = React.useMemo(() => parseDateString(value), [value]);
-    
+
     // Controlled month state for Calendar view
-    const [currentMonth, setCurrentMonth] = React.useState<Date>(() => dateValue || new Date());
+    const [currentMonth, setCurrentMonth] = React.useState<Date>(
+      () => dateValue || new Date()
+    );
 
     // Synchronize currentMonth when value changes
     React.useEffect(() => {
@@ -140,8 +155,10 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
     };
 
     // Browsing year state inside Month/Year selection panel
-    const [browsingYear, setBrowsingYear] = React.useState(() => currentMonth.getFullYear());
-    
+    const [browsingYear, setBrowsingYear] = React.useState(() =>
+      currentMonth.getFullYear()
+    );
+
     // Sync browsingYear when currentMonth changes
     React.useEffect(() => {
       setBrowsingYear(currentMonth.getFullYear());
@@ -169,14 +186,20 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
     };
 
     return (
-      <div className={cn('flex flex-col gap-1.5', fullWidth ? 'w-full' : 'w-auto', className)}>
+      <div
+        className={cn(
+          'flex flex-col gap-1.5',
+          fullWidth ? 'w-full' : 'w-auto',
+          className
+        )}
+      >
         {label && (
           <label className='text-xs font-semibold text-foreground'>
             {label}
             {required && <span className='text-red-500 ml-0.5'>*</span>}
           </label>
         )}
-        
+
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -186,15 +209,20 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
               disabled={disabled}
               className={cn(
                 'relative flex items-center justify-between border border-border bg-background text-left font-medium text-foreground shadow-sm outline-none transition-all hover:bg-muted/40',
-                size === 'sm' ? 'h-9 px-3 rounded-lg text-xs' : 'h-11 px-4 rounded-xl text-sm',
+                size === 'sm'
+                  ? 'h-9 px-3 rounded-lg text-xs'
+                  : 'h-11 px-4 rounded-xl text-sm',
                 fullWidth && 'w-full',
-                error && 'border-rose-500 ring-rose-500/20 focus-visible:ring-rose-500/20',
+                error &&
+                  'border-rose-500 ring-rose-500/20 focus-visible:ring-rose-500/20',
                 !value && 'text-muted-foreground font-normal',
                 'focus-visible:ring-2 focus-visible:ring-[#C81E3A]/20 focus-visible:ring-offset-0 focus-visible:border-[#C81E3A]'
               )}
             >
-              <span className='truncate'>{formattedDisplayValue || placeholder}</span>
-              
+              <span className='truncate'>
+                {formattedDisplayValue || placeholder}
+              </span>
+
               <div className='ml-2 flex shrink-0 items-center gap-1.5 text-muted-foreground'>
                 {clearable && value && !disabled && (
                   <button
@@ -205,11 +233,16 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                     <X className='h-3.5 w-3.5' />
                   </button>
                 )}
-                <CalendarIcon className={cn('text-muted-foreground', size === 'sm' ? 'h-4 w-4' : 'h-4.5 w-4.5')} />
+                <CalendarIcon
+                  className={cn(
+                    'text-muted-foreground',
+                    size === 'sm' ? 'h-4 w-4' : 'h-4.5 w-4.5'
+                  )}
+                />
               </div>
             </Button>
           </PopoverTrigger>
-          <PopoverContent 
+          <PopoverContent
             className='z-50 w-auto origin-top-left rounded-2xl border border-border bg-popover p-0 text-popover-foreground shadow-xl'
             align='start'
             sideOffset={6}
@@ -226,7 +259,9 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                     >
                       <ArrowLeft className='h-4 w-4' />
                     </button>
-                    <span className='text-xs font-bold text-foreground uppercase tracking-wider'>Select Month & Year</span>
+                    <span className='text-xs font-bold text-foreground uppercase tracking-wider'>
+                      Select Month & Year
+                    </span>
                     <div className='w-6 h-6' />
                   </div>
 
@@ -234,15 +269,17 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                   <div className='mb-4 flex items-center justify-between rounded-xl border border-border bg-muted/40 p-2'>
                     <button
                       type='button'
-                      onClick={() => setBrowsingYear(prev => prev - 1)}
+                      onClick={() => setBrowsingYear((prev) => prev - 1)}
                       className='cursor-pointer rounded-lg p-1 text-muted-foreground transition-all hover:bg-background hover:text-foreground hover:shadow-sm active:scale-95'
                     >
                       <ChevronLeft className='h-4 w-4' />
                     </button>
-                    <span className='text-sm font-bold text-foreground'>{browsingYear}</span>
+                    <span className='text-sm font-bold text-foreground'>
+                      {browsingYear}
+                    </span>
                     <button
                       type='button'
-                      onClick={() => setBrowsingYear(prev => prev + 1)}
+                      onClick={() => setBrowsingYear((prev) => prev + 1)}
                       className='cursor-pointer rounded-lg p-1 text-muted-foreground transition-all hover:bg-background hover:text-foreground hover:shadow-sm active:scale-95'
                     >
                       <ChevronRight className='h-4 w-4' />
@@ -252,7 +289,9 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                   {/* Months selection grid */}
                   <div className='grid grid-cols-3 gap-2'>
                     {monthsList.map((m) => {
-                      const isCurrent = currentMonth.getMonth() === m.value && currentMonth.getFullYear() === browsingYear;
+                      const isCurrent =
+                        currentMonth.getMonth() === m.value &&
+                        currentMonth.getFullYear() === browsingYear;
                       return (
                         <button
                           key={m.value}
@@ -295,7 +334,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                             {props.children}
                           </button>
                         );
-                      }
+                      },
                     }}
                     className={cn(
                       'p-0',
@@ -308,7 +347,7 @@ export const SchoolBusDatePicker = React.forwardRef<HTMLButtonElement, SchoolBus
                       '[&_button]:rounded-lg [&_button]:transition-all'
                     )}
                   />
-                  
+
                   <div className='flex items-center justify-between gap-2 border-t border-border px-1 pt-2'>
                     <Button
                       type='button'

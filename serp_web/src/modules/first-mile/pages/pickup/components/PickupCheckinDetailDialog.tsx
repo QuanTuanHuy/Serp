@@ -69,9 +69,8 @@ const DetailField: React.FC<{
 export const PickupCheckinDetailDialog: React.FC<
   PickupCheckinDetailDialogProps
 > = ({ open, orderId, orderCode, onOpenChange }) => {
-  const [detail, setDetail] = React.useState<PickupCheckinDetailResponse | null>(
-    null
-  );
+  const [detail, setDetail] =
+    React.useState<PickupCheckinDetailResponse | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const [loadPickupCheckinDetail, { isFetching }] =

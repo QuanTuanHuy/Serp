@@ -25,11 +25,7 @@ export const SchoolBusSection: React.FC<SchoolBusSectionProps> = ({
   return (
     <section
       id={id}
-      className={cn(
-        'space-y-4',
-        schoolBusUi.section,
-        className
-      )}
+      className={cn('space-y-4', schoolBusUi.section, className)}
     >
       <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
         <div>

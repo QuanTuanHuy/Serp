@@ -5,12 +5,7 @@
 
 import { PackageCheck, Scale, Boxes, ListChecks } from 'lucide-react';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components';
 
 import type { SecondMileBaggingKpi } from '../../../types';
 import { formatNumber, formatPercent } from '../bagPageModels';
