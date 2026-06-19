@@ -18,27 +18,21 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-  Badge,
   Button,
 } from '@/shared/components/ui';
 import {
   Hash,
   Users,
   MessageSquare,
-  Phone,
-  Video,
   Info,
-  Settings,
-  Pin,
   Search,
-  MoreVertical,
   ArrowDown,
 } from 'lucide-react';
 import { MessageList, type MessageListRef } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 import { SearchDialog } from './SearchDialog';
-import { ChannelMembersPanel } from './ChannelMembersPanel';
+import { ConversationDetailsSidebar } from './ConversationDetailsSidebar';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
 import { useWebSocket } from '../context/WebSocketContext';
 import {
@@ -94,7 +88,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [membersPanelOpen, setMembersPanelOpen] = useState(false);
+  const [detailsSidebarOpen, setDetailsSidebarOpen] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(
     new Map()
   );
@@ -662,12 +656,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, []);
 
   return (
-    <div
-      className={cn(
-        'flex flex-col h-full bg-slate-50 dark:bg-slate-900',
-        className
-      )}
-    >
+    <div className={cn('flex h-full min-w-0 bg-slate-50 dark:bg-slate-900', className)}>
+      <div className='flex min-w-0 flex-1 flex-col'>
       {/* Header */}
       <div className='flex-shrink-0 px-6 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700'>
         <div className='flex items-center justify-between'>
@@ -764,25 +754,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           {/* Action buttons */}
           <div className='flex items-center gap-2'>
-            {channel.type === 'DIRECT' && (
-              <>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                >
-                  <Phone className='h-5 w-5' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                >
-                  <Video className='h-5 w-5' />
-                </Button>
-              </>
-            )}
-
             <Button
               variant='ghost'
               size='sm'
@@ -795,19 +766,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <Button
               variant='ghost'
               size='sm'
-              onClick={() => setMembersPanelOpen(true)}
+              onClick={() => setDetailsSidebarOpen((open) => !open)}
               className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              title='View members'
+              title='View conversation details'
             >
               <Info className='h-5 w-5' />
-            </Button>
-
-            <Button
-              variant='ghost'
-              size='sm'
-              className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            >
-              <MoreVertical className='h-5 w-5' />
             </Button>
           </div>
         </div>
@@ -909,13 +872,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onResultClick={handleJumpToMessage}
       />
 
-      {/* Channel Members Panel */}
-      <ChannelMembersPanel
-        open={membersPanelOpen}
-        onOpenChange={setMembersPanelOpen}
-        channelId={channel.id}
-        channelName={channel.name}
+      </div>
+
+      <ConversationDetailsSidebar
+        channel={channel}
         currentUserId={currentUserId}
+        open={detailsSidebarOpen}
+        onOpenChange={setDetailsSidebarOpen}
       />
     </div>
   );
