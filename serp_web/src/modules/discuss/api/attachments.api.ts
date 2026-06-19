@@ -103,5 +103,6 @@ export const {
   useGetMessageAttachmentsQuery,
   useGetChannelAttachmentsQuery,
   useGetAttachmentDownloadUrlQuery,
+  useLazyGetAttachmentDownloadUrlQuery,
   useDeleteAttachmentMutation,
 } = attachmentApi;
