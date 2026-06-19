@@ -33,7 +33,7 @@ export const transformMessage = (backendMsg: any): Message => {
     messageType: backendMsg.messageType,
     type: mapMessageTypeFromBackend(
       backendMsg.messageType,
-      backendMsg.attachments?.length > 0
+      (backendMsg.attachments?.length ?? 0) > 0
     ),
     reactions: transformReactionsFromBackend(backendMsg.reactions),
     attachments: backendMsg.attachments?.map(transformAttachment) || [],
@@ -87,10 +87,37 @@ export const transformChannelMember = (backendMember: any): ChannelMember => {
  * Transform backend attachment to frontend format
  */
 export const transformAttachment = (backendAttachment: any): Attachment => {
+  if (!backendAttachment) {
+    return {
+      id: '',
+      messageId: '',
+      channelId: '',
+      fileName: 'Unknown File',
+      fileType: '',
+      fileSize: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
+  }
+
+  const storageKey = backendAttachment.storageKey ?? backendAttachment.s3Key;
+  const storageBucket =
+    backendAttachment.storageBucket ?? backendAttachment.s3Bucket;
+
   return {
     ...backendAttachment,
-    id: String(backendAttachment.id),
-    messageId: String(backendAttachment.messageId),
+    id: backendAttachment.id ? String(backendAttachment.id) : '',
+    messageId: backendAttachment.messageId ? String(backendAttachment.messageId) : '',
+    channelId: backendAttachment.channelId
+      ? String(backendAttachment.channelId)
+      : '',
+    tenantId: backendAttachment.tenantId
+      ? String(backendAttachment.tenantId)
+      : undefined,
+    storageKey,
+    storageBucket,
+    s3Key: storageKey,
+    s3Bucket: storageBucket,
   };
 };
 
