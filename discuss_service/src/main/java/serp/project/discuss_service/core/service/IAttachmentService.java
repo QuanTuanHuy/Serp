@@ -5,6 +5,8 @@
 
 package serp.project.discuss_service.core.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 public interface IAttachmentService {
+
+    Page<AttachmentEntity> getAttachmentsByChannel(Long channelId, Long tenantId, Pageable pageable);
 
     AttachmentEntity uploadAttachment(MultipartFile file, Long messageId, Long channelId, Long tenantId);
 

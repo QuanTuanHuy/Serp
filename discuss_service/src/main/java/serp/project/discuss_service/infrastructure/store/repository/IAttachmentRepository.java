@@ -5,6 +5,8 @@
 
 package serp.project.discuss_service.infrastructure.store.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import serp.project.discuss_service.infrastructure.store.model.AttachmentModel;
 
@@ -15,7 +17,7 @@ public interface IAttachmentRepository extends IBaseRepository<AttachmentModel> 
 
     List<AttachmentModel> findByMessageId(Long messageId);
 
-    List<AttachmentModel> findByChannelId(Long channelId);
+    Page<AttachmentModel> findByChannelIdAndTenantIdOrderByCreatedAtDesc(Long channelId, Long tenantId, Pageable pageable);
 
     List<AttachmentModel> findByMessageIdIn(List<Long> messageIds);
 
