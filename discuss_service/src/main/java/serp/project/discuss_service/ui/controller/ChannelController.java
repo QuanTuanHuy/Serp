@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.discuss_service.core.domain.constant.RestConstants;
 import serp.project.discuss_service.core.domain.dto.GeneralResponse;
 import serp.project.discuss_service.core.domain.dto.request.*;
+import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelResponse;
 import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
@@ -26,6 +27,7 @@ import serp.project.discuss_service.core.domain.enums.ChannelType;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IUserInfoService;
+import serp.project.discuss_service.core.usecase.AttachmentUseCase;
 import serp.project.discuss_service.core.usecase.ChannelUseCase;
 import serp.project.discuss_service.kernel.utils.ResponseUtils;
 
@@ -38,6 +40,7 @@ import java.util.List;
 public class ChannelController {
 
     private final ChannelUseCase channelUseCase;
+    private final AttachmentUseCase attachmentUseCase;
     private final SerpAuthContext authContext;
     private final ResponseUtils responseUtils;
     private final IUserInfoService userInfoService;
@@ -138,6 +141,29 @@ public class ChannelController {
         List<ChannelMemberResponse> responses = userInfoService.enrichMembersWithUserInfo(members);
 
         return ResponseEntity.ok(responseUtils.success(responses));
+    }
+
+    @GetMapping("/{channelId}/attachments")
+    public ResponseEntity<GeneralResponse<PaginatedResponse<AttachmentResponse>>> getChannelAttachments(
+            @PathVariable Long channelId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer pageSize) {
+        Long userId = authContext.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        Long tenantId = authContext.getCurrentTenantId()
+                .orElseThrow(() -> new AppException(ErrorCode.TENANT_ID_REQUIRED));
+
+        log.debug("User {} getting attachments for channel {}", userId, channelId);
+
+        PaginatedResponse<AttachmentResponse> response = attachmentUseCase.getAttachmentsByChannel(
+                channelId,
+                userId,
+                tenantId,
+                page,
+                pageSize
+        );
+
+        return ResponseEntity.ok(responseUtils.success(response));
     }
 
     @GetMapping
