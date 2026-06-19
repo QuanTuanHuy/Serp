@@ -21,8 +21,6 @@ import {
   Target,
   FileText,
   Calendar,
-  Mail,
-  Phone,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -100,20 +98,6 @@ const DEFAULT_ACTIONS: QuickActionItem[] = [
     icon: Calendar,
     variant: 'default',
     href: '/crm/meeting-requests',
-  },
-  {
-    id: 'send-email',
-    label: 'Send Email',
-    description: 'Compose email to contact',
-    icon: Mail,
-    variant: 'default',
-  },
-  {
-    id: 'log-call',
-    label: 'Log Call',
-    description: 'Record phone conversation',
-    icon: Phone,
-    variant: 'default',
   },
 ];
 

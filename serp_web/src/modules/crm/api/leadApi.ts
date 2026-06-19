@@ -20,7 +20,6 @@ import type {
   APIResponse,
   PaginatedResponse,
   LeadStatusTransitionResult,
-  BulkOperationResult,
 } from '../types';
 
 export const leadApi = api.injectEndpoints({
@@ -163,19 +162,6 @@ export const leadApi = api.injectEndpoints({
       extraOptions: { service: 'crm' },
       invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
     }),
-
-    bulkDeleteLeads: builder.mutation<
-      APIResponse<BulkOperationResult>,
-      string[]
-    >({
-      query: (ids) => ({
-        url: '/leads/bulk-delete',
-        method: 'POST',
-        body: { ids },
-      }),
-      extraOptions: { service: 'crm' },
-      invalidatesTags: [{ type: 'Lead', id: 'LIST' }],
-    }),
   }),
 });
 
@@ -189,5 +175,4 @@ export const {
   useDeleteLeadMutation,
   useAssignLeadMutation,
   useBulkAssignLeadsMutation,
-  useBulkDeleteLeadsMutation,
 } = leadApi;

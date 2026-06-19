@@ -12,6 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.vo.FileUploadResult;
@@ -357,6 +361,79 @@ class AttachmentServiceTest {
 
             // Then
             assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("getAttachmentsByChannel")
+    class GetAttachmentsByChannelTests {
+
+        @Test
+        @DisplayName("should return tenant scoped channel attachments page")
+        void testGetAttachmentsByChannel_HasAttachments_ReturnsTenantScopedPage() {
+            // Given
+            AttachmentEntity image = TestDataFactory.createImageAttachment();
+            image.setId(1L);
+
+            AttachmentEntity document = TestDataFactory.createDocumentAttachment();
+            document.setId(2L);
+
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<AttachmentEntity> page = new PageImpl<>(
+                    List.of(image, document),
+                    pageable,
+                    2
+            );
+
+            when(attachmentPort.findByChannelId(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            )).thenReturn(page);
+
+            // When
+            Page<AttachmentEntity> result = attachmentService.getAttachmentsByChannel(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            );
+
+            // Then
+            assertEquals(2, result.getContent().size());
+            assertEquals(2, result.getTotalElements());
+            verify(attachmentPort).findByChannelId(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            );
+        }
+
+        @Test
+        @DisplayName("should return empty page when channel has no attachments")
+        void testGetAttachmentsByChannel_NoAttachments_ReturnsEmptyPage() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            when(attachmentPort.findByChannelId(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            )).thenReturn(Page.empty(pageable));
+
+            // When
+            Page<AttachmentEntity> result = attachmentService.getAttachmentsByChannel(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            );
+
+            // Then
+            assertTrue(result.isEmpty());
+            assertEquals(0, result.getTotalElements());
+            verify(attachmentPort).findByChannelId(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            );
         }
     }
 

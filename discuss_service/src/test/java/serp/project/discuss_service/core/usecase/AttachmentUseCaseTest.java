@@ -14,10 +14,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentService;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
@@ -42,6 +50,9 @@ class AttachmentUseCaseTest {
 
     @Mock
     private IDiscussCacheService cacheService;
+
+    @Mock
+    private IChannelMemberService channelMemberService;
 
     @InjectMocks
     private AttachmentUseCase attachmentUseCase;
@@ -197,6 +208,79 @@ class AttachmentUseCaseTest {
             // Then
             assertNotNull(results);
             assertTrue(results.isEmpty());
+        }
+    }
+
+    @Nested
+    @DisplayName("getAttachmentsByChannel")
+    class GetAttachmentsByChannelTests {
+
+        @Test
+        @DisplayName("should return paginated attachment history for channel member")
+        void testGetAttachmentsByChannel_ChannelMember_ReturnsPaginatedResponses() {
+            // Given
+            AttachmentEntity image = TestDataFactory.createImageAttachment();
+            image.setId(1L);
+            AttachmentEntity document = TestDataFactory.createDocumentAttachment();
+            document.setId(2L);
+
+            PageRequest pageable = PageRequest.of(0, 20);
+            Page<AttachmentEntity> attachmentPage = new PageImpl<>(
+                    List.of(image, document),
+                    pageable,
+                    2
+            );
+
+            when(channelMemberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1))
+                    .thenReturn(true);
+            when(attachmentService.getAttachmentsByChannel(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            )).thenReturn(attachmentPage);
+
+            // When
+            PaginatedResponse<AttachmentResponse> result = attachmentUseCase.getAttachmentsByChannel(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.TENANT_ID,
+                    0,
+                    20
+            );
+
+            // Then
+            assertEquals(2, result.getItems().size());
+            assertEquals(0, result.getPage());
+            assertEquals(20, result.getPageSize());
+            assertEquals(2, result.getTotalItems());
+            verify(channelMemberService).isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1);
+            verify(attachmentService).getAttachmentsByChannel(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.TENANT_ID,
+                    pageable
+            );
+            verify(attachmentUrlService, never()).enrichWithUrls(anyList());
+        }
+
+        @Test
+        @DisplayName("should reject non members")
+        void testGetAttachmentsByChannel_NotMember_ThrowsNotChannelMember() {
+            // Given
+            when(channelMemberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2))
+                    .thenReturn(false);
+
+            // When/Then
+            AppException exception = assertThrows(AppException.class,
+                    () -> attachmentUseCase.getAttachmentsByChannel(
+                            TestDataFactory.CHANNEL_ID,
+                            TestDataFactory.USER_ID_2,
+                            TestDataFactory.TENANT_ID,
+                            0,
+                            20
+                    ));
+
+            assertEquals(ErrorCode.NOT_CHANNEL_MEMBER.getMessage(), exception.getMessage());
+            verify(attachmentService, never()).getAttachmentsByChannel(anyLong(), anyLong(), any());
         }
     }
 

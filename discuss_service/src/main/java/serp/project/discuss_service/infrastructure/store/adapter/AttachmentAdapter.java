@@ -6,6 +6,8 @@
 package serp.project.discuss_service.infrastructure.store.adapter;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.port.store.IAttachmentPort;
@@ -56,9 +58,10 @@ public class AttachmentAdapter implements IAttachmentPort {
     }
 
     @Override
-    public List<AttachmentEntity> findByChannelId(Long channelId) {
-        return attachmentMapper.toEntityList(
-                attachmentRepository.findByChannelId(channelId));
+    public Page<AttachmentEntity> findByChannelId(Long channelId, Long tenantId, Pageable pageable) {
+        return attachmentRepository
+                .findByChannelIdAndTenantIdOrderByCreatedAtDesc(channelId, tenantId, pageable)
+                .map(attachmentMapper::toEntity);
     }
 
     @Override

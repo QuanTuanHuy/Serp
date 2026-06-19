@@ -5,7 +5,6 @@ export * from './customerApi';
 export * from './leadApi';
 export * from './opportunityApi';
 export * from './activityApi';
-export * from './analyticsApi';
 export * from './teamApi';
 export * from './territoryApi';
 export * from './meetingRequestApi';

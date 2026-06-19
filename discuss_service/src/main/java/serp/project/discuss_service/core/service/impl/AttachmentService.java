@@ -7,6 +7,8 @@ package serp.project.discuss_service.core.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -206,6 +208,11 @@ public class AttachmentService implements IAttachmentService {
         }
 
         return attachment;
+    }
+
+    @Override
+    public Page<AttachmentEntity> getAttachmentsByChannel(Long channelId, Long tenantId, Pageable pageable) {
+        return attachmentPort.findByChannelId(channelId, tenantId, pageable);
     }
 
     @Override

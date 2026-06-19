@@ -36,7 +36,7 @@ export const messageApi = api.injectEndpoints({
         ...response,
         data: {
           ...response.data,
-          items: response.data.items.map(transformMessage),
+          items: response.data?.items?.map(transformMessage) || [],
         },
       }),
       providesTags: (result, error, { channelId }) => [
@@ -59,7 +59,7 @@ export const messageApi = api.injectEndpoints({
       extraOptions: { service: 'discuss' },
       transformResponse: (response: any) => ({
         ...response,
-        data: response.data.map(transformMessage),
+        data: response.data?.map(transformMessage) || [],
       }),
     }),
 
@@ -147,6 +147,7 @@ export const messageApi = api.injectEndpoints({
       }),
       invalidatesTags: (result, error, { channelId }) => [
         { type: 'Message', id: `CHANNEL-${channelId}` },
+        { type: 'Message', id: `CHANNEL-FILES-${channelId}` },
         { type: 'Channel', id: channelId },
         { type: 'Channel', id: 'LIST' },
       ],
@@ -247,6 +248,7 @@ export const messageApi = api.injectEndpoints({
       extraOptions: { service: 'discuss' },
       invalidatesTags: (result, error, { channelId }) => [
         { type: 'Message', id: `CHANNEL-${channelId}` },
+        { type: 'Message', id: `CHANNEL-FILES-${channelId}` },
         { type: 'Channel', id: channelId },
       ],
     }),

@@ -24,3 +24,4 @@ export {
   OnlineStatusBadge,
 } from './OnlineStatusIndicator';
 export type { OnlineStatus } from './OnlineStatusIndicator';
+export { ConversationDetailsSidebar } from './ConversationDetailsSidebar';

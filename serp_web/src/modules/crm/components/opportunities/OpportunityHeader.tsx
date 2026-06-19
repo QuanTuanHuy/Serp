@@ -9,8 +9,6 @@ import {
   Trash2,
   RefreshCw,
   TrendingUp,
-  MessageSquare,
-  ExternalLink,
 } from 'lucide-react';
 import {
   Avatar,
@@ -20,7 +18,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui';
 import { Building2, Calendar, CalendarClock, User } from 'lucide-react';
@@ -128,16 +125,6 @@ export const OpportunityHeader: React.FC<OpportunityHeaderProps> = ({
                 Request meeting
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem disabled>
-              <MessageSquare className='mr-2 h-4 w-4' />
-              Notes are currently read-only
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <ExternalLink className='mr-2 h-4 w-4' />
-              Export PDF
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem className='text-red-600' onClick={onDelete}>
               <Trash2 className='mr-2 h-4 w-4' />
               Delete Opportunity

@@ -8,12 +8,18 @@ package serp.project.discuss_service.core.usecase;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.dto.response.PaginatedResponse;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
+import serp.project.discuss_service.core.exception.AppException;
+import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IAttachmentService;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IChannelMemberService;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 
 import java.util.List;
@@ -26,6 +32,7 @@ public class AttachmentUseCase {
     private final IAttachmentService attachmentService;
     private final IAttachmentUrlService attachmentUrlService;
     private final IDiscussCacheService cacheService;
+    private final IChannelMemberService channelMemberService;
 
     @Transactional
     public AttachmentResponse uploadAttachment(Long channelId, Long messageId,
@@ -51,6 +58,38 @@ public class AttachmentUseCase {
     public List<AttachmentResponse> getAttachmentsByMessage(Long messageId, Long tenantId) {
         List<AttachmentEntity> attachments = attachmentService.getAttachmentsByMessage(messageId, tenantId);
         return attachmentUrlService.enrichWithUrls(attachments);
+    }
+
+    public PaginatedResponse<AttachmentResponse> getAttachmentsByChannel(
+            Long channelId,
+            Long userId,
+            Long tenantId,
+            Integer page,
+            Integer pageSize) {
+        if (!channelMemberService.isMember(channelId, userId)) {
+            throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
+        }
+
+        int safePage = page == null || page < 0 ? 0 : page;
+        int safePageSize = pageSize == null || pageSize < 1 ? 20 : Math.min(pageSize, 100);
+        PageRequest pageable = PageRequest.of(safePage, safePageSize);
+
+        Page<AttachmentEntity> attachments = attachmentService.getAttachmentsByChannel(
+                channelId,
+                tenantId,
+                pageable
+        );
+
+        List<AttachmentResponse> responses = attachments.getContent().stream()
+                .map(AttachmentResponse::fromEntity)
+                .toList();
+
+        return PaginatedResponse.of(
+                responses,
+                attachments.getNumber(),
+                attachments.getSize(),
+                attachments.getTotalElements()
+        );
     }
 
     public String getDownloadUrl(Long attachmentId, Long tenantId, int expirationMinutes) {

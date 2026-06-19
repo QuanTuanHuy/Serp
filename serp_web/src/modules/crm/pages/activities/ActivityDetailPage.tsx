@@ -35,7 +35,6 @@ import {
   Flag,
   RefreshCw,
   MoreHorizontal,
-  Copy,
   ExternalLink,
   Bell,
 } from 'lucide-react';
@@ -53,7 +52,6 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/shared/components/ui/tabs';
-import { Textarea } from '@/shared/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -66,7 +64,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import {
@@ -206,10 +203,8 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   const [activeTab, setActiveTab] = useState('details');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditStatusDialog, setShowEditStatusDialog] = useState(false);
-  const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<ActivityStatus | ''>('');
-  const [newNote, setNewNote] = useState('');
   const [rescheduleData, setRescheduleData] = useState({
     dueDate: '',
     reminderDate: '',
@@ -395,11 +390,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
     }
   };
 
-  const handleAddNote = () => {
-    setShowAddNoteDialog(false);
-    setNewNote('');
-  };
-
   const handleDelete = async () => {
     try {
       await deleteActivity(activityId).unwrap();
@@ -476,19 +466,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem>
-                <Copy className='mr-2 h-4 w-4' />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell className='mr-2 h-4 w-4' />
-                Set reminder
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <ExternalLink className='mr-2 h-4 w-4' />
-                Export PDF
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className='text-red-600'
                 onClick={() => setShowDeleteDialog(true)}
@@ -666,13 +643,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                           Follow-up date: {formatDate(activity.followUpDate)}
                         </p>
                       </div>
-                      <Button
-                        size='sm'
-                        className='bg-amber-600 hover:bg-amber-700'
-                      >
-                        <Calendar className='mr-2 h-4 w-4' />
-                        Create follow-up activity
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -700,13 +670,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             </TabsContent>
 
             <TabsContent value='notes' className='mt-4 space-y-4'>
-              <div className='flex justify-end'>
-                <Button onClick={() => setShowAddNoteDialog(true)}>
-                  <MessageSquare className='mr-2 h-4 w-4' />
-                  Add Note
-                </Button>
-              </div>
-
               {activityNotes.length > 0 ? (
                 <div className='space-y-4'>
                   {activityNotes.map((note) => (
@@ -928,10 +891,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
                   Mark as completed
                 </Button>
               )}
-              <Button className='w-full justify-start' variant='outline'>
-                <Copy className='mr-2 h-4 w-4' />
-                Duplicate activity
-              </Button>
               <Button
                 className='w-full justify-start'
                 variant='outline'
@@ -1014,37 +973,6 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             </Button>
             <Button onClick={handleStatusChange} disabled={!newStatus}>
               Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Note Dialog */}
-      <Dialog open={showAddNoteDialog} onOpenChange={setShowAddNoteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add note</DialogTitle>
-            <DialogDescription>
-              Add a new note for this activity
-            </DialogDescription>
-          </DialogHeader>
-          <div className='py-4'>
-            <Textarea
-              placeholder='Enter note content...'
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowAddNoteDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleAddNote} disabled={!newNote.trim()}>
-              Add note
             </Button>
           </DialogFooter>
         </DialogContent>
