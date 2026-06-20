@@ -10,7 +10,7 @@ import {
 } from '@hello-pangea/dnd';
 import { cn } from '@/shared/utils';
 import { OpportunityCard } from '../cards';
-import { PIPELINE_STAGES_FOR_LIST } from '../../utils';
+import { PIPELINE_STAGES_FOR_LIST, formatCurrency } from '../../utils';
 import type { Opportunity, OpportunityStage } from '../../types';
 
 interface OpportunityPipelineViewProps {
@@ -65,7 +65,7 @@ export const OpportunityPipelineView: React.FC<
                       </span>
                     </div>
                     <p className='text-sm font-medium text-muted-foreground'>
-                      ${stageValues[stage as OpportunityStage].toLocaleString()}
+                      {formatCurrency(stageValues[stage as OpportunityStage], true)}
                     </p>
                   </div>
 
