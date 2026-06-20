@@ -178,7 +178,7 @@ public class DeliverySlipService {
                 .countPendingSlipByOutboundShipmentId(slip.getOutboundShipmentId());
 
         if (pendingSlipsCount == 0) {
-            shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.DELIVERED.name(), slipId, tenantId);
+            shipmentRepository.updateStatusByIdAndTenantId(ShipmentStatus.DELIVERED.name(), slip.getOutboundShipmentId(), tenantId);
             log.info("[DeliverySlipService] Marked shipment {} as DELIVERED for tenant {}", slip.getOutboundShipmentId(), tenantId);
         } else {
             log.info("[DeliverySlipService] Shipment {} has {} pending delivery slips for tenant {}",
