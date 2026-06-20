@@ -43,6 +43,7 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { LeadCard } from '../../components/cards';
+import { formatCurrency } from '../../utils';
 import { StatsCard } from '../../components/dashboard';
 import { QuickAddLeadDialog } from '../../components/dialogs';
 import { ExportDropdown } from '../../components/shared';
@@ -570,7 +571,7 @@ export const LeadListPage: React.FC<LeadListPageProps> = ({ className }) => {
           />
           <StatsCard
             title='Avg. Value'
-            value={`$${stats.avgValue.toLocaleString()}`}
+            value={formatCurrency(stats.avgValue)}
             icon={Target}
             variant='danger'
           />
