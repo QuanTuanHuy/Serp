@@ -52,6 +52,7 @@ import serp.project.pmcore.infrastructure.store.repository.IWorkItemRepository;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -1275,6 +1276,119 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
 
     @Override
     public List<WorkItemEntity> searchVisibleWorkItems(VisibleWorkItemSearchCriteria criteria) {
-        return List.of();
+        if (criteria == null || criteria.keyword() == null || criteria.keyword().trim().length() < 2) {
+            return List.of();
+        }
+        String sql = """
+                SELECT
+                    w.id, w.tenant_id, w.project_id, w.issue_type_id,
+                    w.issue_no, w.key, w.summary, w.description,
+                    w.workflow_step_id, w.status_id, w.priority_id, w.resolution_id,
+                    w.assignee_id, w.reporter_id, w.parent_id,
+                    w.security_level_id, w.start_date, w.due_date, w.rank,
+                    w.time_original_estimate, w.time_remaining_estimate, w.time_spent,
+                    w.created_at, w.updated_at, w.created_by, w.updated_by,
+                    it.name AS issue_type_name, it.icon_url AS issue_type_icon_url,
+                    it.hierarchy_level AS issue_type_hierarchy_level,
+                    pr.name AS priority_name, pr.icon_url AS priority_icon_url,
+                    pr.color AS priority_color, pr.sequence AS priority_sequence,
+                    st.status_key AS status_key, st.name AS status_name,
+                    st.icon_url AS status_icon_url,
+                    sc.key AS status_category_key, sc.name AS status_category_name
+                FROM work_items w
+                JOIN projects p ON p.id = w.project_id
+                    AND p.tenant_id = w.tenant_id
+                    AND p.deleted_at IS NULL
+                    AND p.archived = false
+                LEFT JOIN issue_types it ON w.issue_type_id = it.id
+                    AND it.tenant_id = w.tenant_id
+                    AND it.deleted_at IS NULL
+                LEFT JOIN priorities pr ON w.priority_id = pr.id
+                    AND pr.tenant_id = w.tenant_id
+                    AND pr.deleted_at IS NULL
+                LEFT JOIN statuses st ON w.status_id = st.id
+                    AND st.tenant_id = w.tenant_id
+                    AND st.deleted_at IS NULL
+                LEFT JOIN status_categories sc ON st.category_id = sc.id
+                    AND sc.tenant_id = w.tenant_id
+                    AND sc.deleted_at IS NULL
+                WHERE w.tenant_id = :tenantId
+                  AND w.deleted_at IS NULL
+                  AND (:excludedProjectId IS NULL OR w.project_id <> :excludedProjectId)
+                  AND (w.key ILIKE CONCAT('%', :keyword, '%') OR w.summary ILIKE CONCAT('%', :keyword, '%'))
+                  AND EXISTS (
+                        SELECT 1
+                        FROM permission_scheme_entries pse
+                        WHERE pse.scheme_id = p.permission_scheme_id
+                          AND pse.tenant_id = p.tenant_id
+                          AND pse.deleted_at IS NULL
+                          AND UPPER(TRIM(pse.permission_key)) = 'BROWSE_PROJECTS'
+                          AND (
+                                (UPPER(TRIM(pse.grantee_type)) = 'USER' AND CAST(:userId AS TEXT) = pse.grantee_ref)
+                                OR (
+                                    UPPER(TRIM(pse.grantee_type)) = 'PROJECT_LEAD'
+                                    AND p.lead_user_id = :userId
+                                )
+                                OR (
+                                    UPPER(TRIM(pse.grantee_type)) = 'GROUP'
+                                    AND :groupKeysCsv <> ''
+                                    AND POSITION(CONCAT(',', LOWER(TRIM(pse.grantee_ref)), ',') IN :groupKeysCsv) > 0
+                                )
+                                OR (
+                                    UPPER(TRIM(pse.grantee_type)) IN ('ANY_LOGGED_IN_USER', 'LOGGED_IN_USER', 'AUTHENTICATED')
+                                    AND :userId IS NOT NULL
+                                )
+                                OR (
+                                    UPPER(TRIM(pse.grantee_type)) = 'PROJECT_ROLE'
+                                    AND EXISTS (
+                                        SELECT 1
+                                        FROM project_roles prj
+                                        JOIN project_role_actors pra ON pra.project_role_id = prj.id
+                                        WHERE pra.project_id = p.id
+                                          AND pra.tenant_id = p.tenant_id
+                                          AND pra.deleted_at IS NULL
+                                          AND prj.deleted_at IS NULL
+                                          AND (prj.tenant_id = p.tenant_id OR prj.tenant_id = 0)
+                                          AND prj.name = pse.grantee_ref
+                                          AND (
+                                                (UPPER(TRIM(pra.subject_type)) = 'USER' AND CAST(:userId AS TEXT) = pra.subject_id)
+                                                OR (
+                                                    UPPER(TRIM(pra.subject_type)) = 'GROUP'
+                                                    AND :groupKeysCsv <> ''
+                                                    AND POSITION(CONCAT(',', LOWER(TRIM(pra.subject_id)), ',') IN :groupKeysCsv) > 0
+                                                )
+                                          )
+                                    )
+                                )
+                          )
+                  )
+                ORDER BY
+                    CASE WHEN LOWER(w.key) = LOWER(:keyword) THEN 0 ELSE 1 END,
+                    CASE WHEN LOWER(w.key) LIKE LOWER(CONCAT(:keyword, '%')) THEN 0 ELSE 1 END,
+                    CASE WHEN LOWER(w.summary) LIKE LOWER(CONCAT(:keyword, '%')) THEN 0 ELSE 1 END,
+                    COALESCE(w.updated_at, w.created_at) DESC NULLS LAST,
+                    w.id DESC
+                LIMIT :limit
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("tenantId", criteria.tenantId())
+                .addValue("userId", criteria.userId())
+                .addValue("groupKeysCsv", toNormalizedCsv(criteria.groupKeys()))
+                .addValue("keyword", criteria.keyword().trim())
+                .addValue("excludedProjectId", criteria.excludedProjectId())
+                .addValue("limit", Math.max(1, Math.min(criteria.limit(), 10)));
+        return jdbcTemplate.query(sql, params, rowMapper);
+    }
+
+    private String toNormalizedCsv(Set<String> groupKeys) {
+        if (groupKeys == null || groupKeys.isEmpty()) {
+            return "";
+        }
+        return groupKeys.stream()
+                .filter(groupKey -> groupKey != null && !groupKey.isBlank())
+                .map(groupKey -> groupKey.trim().toLowerCase())
+                .distinct()
+                .sorted()
+                .reduce(",", (csv, groupKey) -> csv + groupKey + ",");
     }
 }
