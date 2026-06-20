@@ -31,6 +31,7 @@ import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.port.read.IWorkItemReadPort;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemLinkProjection;
+import serp.project.pmcore.domain.workitem.dto.VisibleWorkItemSearchCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 import serp.project.pmcore.infrastructure.store.mapper.ProjectComponentMapper;
 import serp.project.pmcore.infrastructure.store.mapper.WorkItemActivityRowMapper;
@@ -1270,5 +1271,10 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
 
     private Timestamp toTimestamp(Long epochMillis) {
         return epochMillis == null ? null : new Timestamp(epochMillis);
+    }
+
+    @Override
+    public List<WorkItemEntity> searchVisibleWorkItems(VisibleWorkItemSearchCriteria criteria) {
+        return List.of();
     }
 }
