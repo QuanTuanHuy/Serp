@@ -102,6 +102,11 @@ public class PresenceService implements IPresenceService {
                 .orElseGet(() -> UserPresenceEntity.offline(userId, tenantId));
         presence.setCustomStatus(status, statusMessage);
         cacheService.setUserPresence(presence);
+        if (presence.isOnline()) {
+            eventPublisher.publishUserOnline(userId);
+        } else {
+            eventPublisher.publishUserOffline(userId);
+        }
     }
 
     @Override
@@ -114,7 +119,7 @@ public class PresenceService implements IPresenceService {
         Map<Long, UserPresenceEntity> presenceMap = cacheService.getUserPresenceBatch(userIds);
         Map<Long, UserPresenceEntity> result = new HashMap<>();
         userIds.forEach(userId ->
-                result.put(userId, presenceMap.getOrDefault(userId, UserPresenceEntity.offline(userId))));
+                result.put(userId, presenceMap.getOrDefault(userId, UserPresenceEntity.unknownOffline(userId))));
         return result;
     }
 

@@ -11,10 +11,12 @@ import org.springframework.stereotype.Service;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.dto.websocket.*;
+import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.service.*;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -197,7 +199,22 @@ public class DeliveryService implements IDeliveryService {
 
                     log.debug("Presence change for user {}: {}", userId, payload);
 
-                    // TODO: Fan-out to specific users
+                    Set<Long> recipientIds = memberService.getUserChannels(userId).stream()
+                            .map(ChannelMemberEntity::getChannelId)
+                            .filter(Objects::nonNull)
+                            .flatMap(channelId -> memberService.getMemberIds(channelId).stream())
+                            .filter(memberId -> !memberId.equals(userId))
+                            .collect(Collectors.toSet());
+
+                    Set<Long> onlineRecipientIds = presenceService.getOnlineUsers(recipientIds);
+                    if (onlineRecipientIds.isEmpty()) {
+                        log.debug("No online recipients for presence change of user {}", userId);
+                        return;
+                    }
+
+                    sendToUsers(onlineRecipientIds, event);
+                    log.debug("Notified {} users about presence change for user {}",
+                            onlineRecipientIds.size(), userId);
                 });
     }
 

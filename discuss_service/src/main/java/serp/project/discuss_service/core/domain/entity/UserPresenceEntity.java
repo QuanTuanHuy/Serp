@@ -60,6 +60,13 @@ public class UserPresenceEntity {
                 .build();
     }
 
+    public static UserPresenceEntity unknownOffline(Long userId) {
+        return UserPresenceEntity.builder()
+                .userId(userId)
+                .status(UserStatus.OFFLINE)
+                .build();
+    }
+
 
     public void goOnline() {
         long now = Instant.now().toEpochMilli();

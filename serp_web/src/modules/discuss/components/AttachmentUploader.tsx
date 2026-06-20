@@ -146,6 +146,7 @@ export function AttachmentUploader({
       const mockAttachment: Attachment = {
         id: String(Date.now()),
         messageId: '',
+        channelId: channelId,
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,

@@ -53,13 +53,25 @@ export interface MessageReaction {
 
 export interface Attachment extends BaseEntity {
   messageId: string;
+  channelId: string;
+  tenantId?: string;
   fileName: string;
   fileType: string;
   fileSize: number;
-  s3Key: string;
-  s3Bucket: string;
-  downloadUrl: string;
+  fileExtension?: string;
+  storageProvider?: string;
+  storageBucket?: string;
+  storageKey?: string;
+  storageUrl?: string;
+  s3Key?: string;
+  s3Bucket?: string;
+  downloadUrl?: string;
   thumbnailUrl?: string;
+  width?: number;
+  height?: number;
+  metadata?: Record<string, any>;
+  fileSizeFormatted?: string;
+  urlExpiresAt?: string;
 }
 
 // ==================== Request Types ====================

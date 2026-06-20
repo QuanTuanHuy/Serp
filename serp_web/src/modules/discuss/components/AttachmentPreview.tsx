@@ -64,7 +64,7 @@ export function AttachmentPreview({
   const handleDownload = () => {
     // In real app, this would download from S3 using presigned URL
     const link = document.createElement('a');
-    link.href = attachment.downloadUrl;
+    link.href = attachment.downloadUrl || '';
     link.download = attachment.fileName;
     document.body.appendChild(link);
     link.click();

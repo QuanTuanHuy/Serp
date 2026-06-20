@@ -25,6 +25,9 @@ export interface Channel extends BaseEntity {
   lastMessage?: string;
   unreadCount: number;
   memberCount: number;
+  messageCount?: number;
+  isPrivate?: boolean;
+  createdBy?: string;
   isArchived: boolean;
   tenantId: string;
   members?: ChannelMember[];

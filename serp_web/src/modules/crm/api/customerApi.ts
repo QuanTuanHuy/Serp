@@ -20,7 +20,6 @@ import type {
   PaginationParams,
   APIResponse,
   PaginatedResponse,
-  BulkOperationResult,
 } from '../types';
 
 export const customerApi = api.injectEndpoints({
@@ -225,19 +224,6 @@ export const customerApi = api.injectEndpoints({
         { type: 'Activity', id: `${accountId}-ACCOUNT` },
       ],
     }),
-
-    bulkDeleteCustomers: builder.mutation<
-      APIResponse<BulkOperationResult>,
-      string[]
-    >({
-      query: (ids) => ({
-        url: '/customers/bulk-delete',
-        method: 'POST',
-        body: { ids },
-      }),
-      extraOptions: { service: 'crm' },
-      invalidatesTags: [{ type: 'Customer', id: 'LIST' }],
-    }),
   }),
 });
 
@@ -257,7 +243,6 @@ export const {
   useSetPrimaryContactMutation,
   useDeactivateContactMutation,
   useGetAccountActivitiesQuery,
-  useBulkDeleteCustomersMutation,
 } = customerApi;
 
 export const useGetAccountsQuery = useGetCustomersQuery;

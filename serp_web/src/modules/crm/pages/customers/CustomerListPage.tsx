@@ -479,8 +479,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
               onClick={() => handleViewCustomer(customer.id)}
               onEdit={() => handleEditCustomer(customer)}
               onDelete={() => handleDeleteCustomer(customer.id)}
-              onEmailClick={() => console.log('Email:', customer.email)}
-              onCallClick={() => console.log('Call:', customer.phone)}
             />
           ))}
         </div>

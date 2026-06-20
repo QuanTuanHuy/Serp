@@ -5,6 +5,8 @@
 
 package serp.project.discuss_service.core.port.store;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 
 import java.util.List;
@@ -40,7 +42,7 @@ public interface IAttachmentPort {
     /**
      * Find attachments by channel ID
      */
-    List<AttachmentEntity> findByChannelId(Long channelId);
+    Page<AttachmentEntity> findByChannelId(Long channelId, Long tenantId, Pageable pageable);
 
     /**
      * Count attachments by channel

@@ -29,8 +29,6 @@ import {
   MessageSquare,
   Activity,
   MoreHorizontal,
-  Copy,
-  ExternalLink,
   UserPlus,
   DollarSign,
   FileText,
@@ -62,7 +60,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Avatar,
   AvatarFallback,
@@ -418,24 +415,6 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              <DropdownMenuItem disabled>
-                <Mail className='mr-2 h-4 w-4' />
-                Send Email
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Phone className='mr-2 h-4 w-4' />
-                Make Call
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                <Copy className='mr-2 h-4 w-4' />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <ExternalLink className='mr-2 h-4 w-4' />
-                Export PDF
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className='text-red-600'
                 onClick={() => setShowDeleteDialog(true)}
@@ -819,22 +798,6 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               <Button
                 className='w-full justify-start'
                 variant='outline'
-                disabled
-              >
-                <Mail className='mr-2 h-4 w-4 text-blue-600' />
-                Send Email
-              </Button>
-              <Button
-                className='w-full justify-start'
-                variant='outline'
-                disabled
-              >
-                <Phone className='mr-2 h-4 w-4 text-green-600' />
-                Make Call
-              </Button>
-              <Button
-                className='w-full justify-start'
-                variant='outline'
                 disabled={!linkedAccountId}
                 title={
                   linkedAccountId
@@ -847,14 +810,6 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               >
                 <Calendar className='mr-2 h-4 w-4 text-purple-600' />
                 Request meeting
-              </Button>
-              <Button
-                className='w-full justify-start'
-                variant='outline'
-                disabled
-              >
-                <Activity className='mr-2 h-4 w-4 text-orange-600' />
-                Log Activity
               </Button>
               {leadStatus === 'QUALIFIED' && (
                 <Button
