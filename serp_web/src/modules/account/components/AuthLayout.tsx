@@ -114,7 +114,7 @@ export const AuthLayout = ({
                 />
               ) : (
                 <RegisterForm
-                  onSuccess={handleAuthSuccess}
+                  onSuccess={() => handleModeChange('login')}
                   onSwitchToLogin={() => handleModeChange('login')}
                 />
               )}

@@ -204,7 +204,7 @@ export const RegisterForm = ({
 
       <Button
         type='submit'
-        className='h-12 w-full rounded-2xl bg-[linear-gradient(135deg,_rgb(8,145,178)_0%,_rgb(14,165,233)_55%,_rgb(245,158,11)_100%)] text-slate-950 shadow-[0_24px_40px_-24px_rgba(14,165,233,0.9)] hover:opacity-95'
+        className='h-12 w-full rounded-2xl bg-slate-950 text-white shadow-[0_24px_40px_-24px_rgba(15,23,42,0.8)] hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'
         disabled={isBusy}
       >
         {isBusy ? (
@@ -213,10 +213,7 @@ export const RegisterForm = ({
             Creating workspace...
           </>
         ) : (
-          <>
-            Create account
-            <Wand2 className='h-4 w-4' />
-          </>
+          <>Create account</>
         )}
       </Button>
 

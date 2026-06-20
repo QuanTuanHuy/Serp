@@ -121,10 +121,7 @@ export const LoginForm = ({
             Signing in...
           </>
         ) : (
-          <>
-            Sign in to SERP
-            <Sparkles className='h-4 w-4' />
-          </>
+          <>Sign in</>
         )}
       </Button>
 
