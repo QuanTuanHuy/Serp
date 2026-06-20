@@ -5,9 +5,12 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, Plus, Search, User } from 'lucide-react';
+import { useLazyGetPmGlobalSearchQuery } from '@/modules/pm/api';
+import type { PMGlobalSearchItem } from '@/modules/pm/types/api';
+import { PMGlobalSearchDropdown } from '../search';
 import { useUser } from '@/modules/account';
 import { NotificationButton } from '@/modules/notifications';
 import {
@@ -45,6 +48,10 @@ export function PMHeader({ className }: PMHeaderProps) {
   const [isCreateWorkItemOpen, setIsCreateWorkItemOpen] = useState(false);
   const { getDisplayName, getInitials, user } = useUser();
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [triggerSearch, searchResult] = useLazyGetPmGlobalSearchQuery();
+  const trimmedSearchQuery = searchQuery.trim();
+
   const initialProjectId = useMemo(() => {
     const match = pathname.match(/^\/pm\/projects\/(\d+)/);
     if (!match) {
@@ -55,9 +62,52 @@ export function PMHeader({ className }: PMHeaderProps) {
     return Number.isNaN(projectId) ? undefined : projectId;
   }, [pathname]);
 
+  useEffect(() => {
+    if (trimmedSearchQuery.length < 2) {
+      setIsSearchOpen(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      triggerSearch({
+        q: trimmedSearchQuery,
+        limit: 5,
+        currentProjectId: initialProjectId,
+      });
+      setIsSearchOpen(true);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [initialProjectId, triggerSearch, trimmedSearchQuery]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!trimmedSearchQuery) return;
+
+    const firstResult = searchResult.data?.groups
+      .flatMap((group) => group.items)
+      .at(0);
+
+    if (firstResult) {
+      router.push(firstResult.url);
+      setIsSearchOpen(false);
+      return;
+    }
+
+    router.push(`/pm/search?q=${encodeURIComponent(trimmedSearchQuery)}`);
+    setIsSearchOpen(false);
+  };
+
+  const handleSearchItemSelect = (item: PMGlobalSearchItem) => {
+    router.push(item.url);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+  };
+
+  const handleViewAllSearchResults = () => {
+    if (!trimmedSearchQuery) return;
+    router.push(`/pm/search?q=${encodeURIComponent(trimmedSearchQuery)}`);
+    setIsSearchOpen(false);
   };
 
   const handleProfileClick = () => {
@@ -96,9 +146,29 @@ export function PMHeader({ className }: PMHeaderProps) {
             placeholder='Search by name or key...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              if (trimmedSearchQuery.length >= 2) {
+                setIsSearchOpen(true);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setIsSearchOpen(false);
+              }
+            }}
             className='border-muted-foreground/20 bg-muted/40 pl-9'
             aria-label='Search projects'
           />
+          {isSearchOpen && trimmedSearchQuery.length >= 2 && (
+            <PMGlobalSearchDropdown
+              groups={searchResult.data?.groups ?? []}
+              isLoading={searchResult.isFetching}
+              isError={searchResult.isError}
+              query={trimmedSearchQuery}
+              onSelect={handleSearchItemSelect}
+              onViewAll={handleViewAllSearchResults}
+            />
+          )}
         </form>
       </div>
 
