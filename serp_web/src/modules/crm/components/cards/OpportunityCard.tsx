@@ -301,7 +301,9 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
 
         {/* Value */}
         <div className='text-right shrink-0'>
-          <p className='font-bold text-sm'>{formatCurrency(displayValue, true)}</p>
+          <p className='font-bold text-sm'>
+            {formatCurrency(displayValue, true)}
+          </p>
           <p className='text-xs text-muted-foreground'>{probability}%</p>
         </div>
       </Card>

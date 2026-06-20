@@ -84,8 +84,8 @@ export default function ModulesPage() {
       ? {
           id: 'status',
           label: `Status: ${
-            statusOptions.find((item) => item.value === filters.status)?.label ??
-            filters.status
+            statusOptions.find((item) => item.value === filters.status)
+              ?.label ?? filters.status
           }`,
           onRemove: () => handleFilterChange('status', undefined),
         }
@@ -433,7 +433,9 @@ function FilterOption({
       }`}
     >
       <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {selected ? <CheckCircle className='h-4 w-4 shrink-0 text-primary' /> : null}
+      {selected ? (
+        <CheckCircle className='h-4 w-4 shrink-0 text-primary' />
+      ) : null}
     </button>
   );
 }

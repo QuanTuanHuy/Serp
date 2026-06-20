@@ -65,7 +65,10 @@ export const OpportunityPipelineView: React.FC<
                       </span>
                     </div>
                     <p className='text-sm font-medium text-muted-foreground'>
-                      {formatCurrency(stageValues[stage as OpportunityStage], true)}
+                      {formatCurrency(
+                        stageValues[stage as OpportunityStage],
+                        true
+                      )}
                     </p>
                   </div>
 

@@ -514,7 +514,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           <div>
             <p className='text-xs text-muted-foreground'>Est. Value</p>
             <p className='text-lg font-bold text-foreground'>
-              {lead.estimatedValue ? formatCurrency(lead.estimatedValue, true) : '-'}
+              {lead.estimatedValue
+                ? formatCurrency(lead.estimatedValue, true)
+                : '-'}
             </p>
           </div>
 

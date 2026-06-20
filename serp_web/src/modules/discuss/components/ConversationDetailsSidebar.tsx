@@ -89,7 +89,8 @@ function FileRow({ attachment }: { attachment: Attachment }) {
           {attachment.fileName}
         </p>
         <p className='text-xs text-slate-500 dark:text-slate-400'>
-          {formatFileSize(attachment.fileSize)} · {formatDate(attachment.createdAt)}
+          {formatFileSize(attachment.fileSize)} ·{' '}
+          {formatDate(attachment.createdAt)}
         </p>
       </div>
       <Button
@@ -140,7 +141,12 @@ export const ConversationDetailsSidebar: React.FC<
               {channel.name}
             </p>
           </div>
-          <Button aria-label="Close conversation details" variant='ghost' size='sm' onClick={() => onOpenChange(false)}>
+          <Button
+            aria-label='Close conversation details'
+            variant='ghost'
+            size='sm'
+            onClick={() => onOpenChange(false)}
+          >
             <X className='h-5 w-5' />
           </Button>
         </div>
