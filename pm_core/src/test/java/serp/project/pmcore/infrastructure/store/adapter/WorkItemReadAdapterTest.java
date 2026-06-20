@@ -18,8 +18,12 @@ import serp.project.pmcore.domain.shared.pagination.PageResult;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryActivityProjection;
 import serp.project.pmcore.domain.workitem.dto.ProjectSummaryCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemScheduleCalendarCriteria;
+import serp.project.pmcore.domain.workitem.dto.VisibleWorkItemSearchCriteria;
+import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
+import serp.project.pmcore.infrastructure.store.mapper.WorkItemRowMapper;
 
 import java.sql.Timestamp;
+import java.util.Set;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,6 +42,9 @@ class WorkItemReadAdapterTest {
     @Mock
     private NamedParameterJdbcTemplate jdbcTemplate;
 
+    @Mock
+    private WorkItemRowMapper rowMapper;
+
     private WorkItemReadAdapter adapter;
 
     @BeforeEach
@@ -49,7 +56,7 @@ class WorkItemReadAdapterTest {
                 null,
                 jdbcTemplate,
                 null,
-                null,
+                rowMapper,
                 null,
                 null,
                 null,
@@ -140,6 +147,46 @@ class WorkItemReadAdapterTest {
         assertFalse(dataSql.contains("w.assignee_id IN (:assigneeIds)"));
         assertEquals(new Timestamp(1000L), params.getValue("scheduleViewportStart"));
         assertEquals(new Timestamp(2000L), params.getValue("scheduleViewportEnd"));
+    }
+
+    @Test
+    void searchVisibleWorkItemsShouldUseVisibleProjectPermissionFilterAndExcludeCurrentProject() {
+        VisibleWorkItemSearchCriteria criteria = new VisibleWorkItemSearchCriteria(
+                1L,
+                2L,
+                Set.of("dev-team"),
+                "serp",
+                10L,
+                5
+        );
+
+        when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), eq(rowMapper)))
+                .thenReturn(List.of(WorkItemEntity.builder()
+                        .id(100L)
+                        .projectId(11L)
+                        .key("SERP-1")
+                        .summary("Cross project search")
+                        .build()));
+
+        List<WorkItemEntity> result = adapter.searchVisibleWorkItems(criteria);
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<MapSqlParameterSource> paramsCaptor = ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(jdbcTemplate).query(sqlCaptor.capture(), paramsCaptor.capture(), eq(rowMapper));
+
+        String sql = sqlCaptor.getValue().replaceAll("\\s+", " ");
+        MapSqlParameterSource params = paramsCaptor.getValue();
+        assertTrue(sql.contains("FROM work_items w"));
+        assertTrue(sql.contains("JOIN projects p ON p.id = w.project_id"));
+        assertTrue(sql.contains("UPPER(TRIM(pse.permission_key)) = 'BROWSE_PROJECTS'"));
+        assertTrue(sql.contains("w.project_id <> CAST(:excludedProjectId AS bigint)"));
+        assertEquals(1L, params.getValue("tenantId"));
+        assertEquals(2L, params.getValue("userId"));
+        assertEquals(",dev-team,", params.getValue("groupKeysCsv"));
+        assertEquals("serp", params.getValue("keyword"));
+        assertEquals(10L, params.getValue("excludedProjectId"));
+        assertEquals(5, params.getValue("limit"));
+        assertEquals("SERP-1", result.getFirst().getKey());
     }
 
     private String normalizeSql(String sql) {

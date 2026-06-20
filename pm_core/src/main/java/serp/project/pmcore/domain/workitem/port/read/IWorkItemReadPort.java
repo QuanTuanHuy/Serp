@@ -25,6 +25,7 @@ import serp.project.pmcore.domain.workitem.dto.WorkItemChildProjection;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.domain.workitem.dto.WorkItemDetailProjection;
 import serp.project.pmcore.domain.workitem.dto.WorkItemLinkProjection;
+import serp.project.pmcore.domain.workitem.dto.VisibleWorkItemSearchCriteria;
 import serp.project.pmcore.domain.workitem.dto.WorkItemSearchCriteria;
 
 import java.util.List;
@@ -52,6 +53,8 @@ public interface IWorkItemReadPort {
     Optional<String> getLastRankByProjectId(Long projectId, Long tenantId);
 
     PageResult<WorkItemEntity> searchWorkItems(Long tenantId, WorkItemSearchCriteria criteria);
+
+    List<WorkItemEntity> searchVisibleWorkItems(VisibleWorkItemSearchCriteria criteria);
 
     Optional<WorkItemDetailProjection> getWorkItemDetailById(Long projectId, Long id, Long tenantId);
 

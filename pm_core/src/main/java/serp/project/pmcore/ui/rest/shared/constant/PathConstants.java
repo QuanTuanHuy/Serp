@@ -5,6 +5,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class PathConstants {
     public static final String API_BASE_PATH = "/api/v1";
+    public static final String SEARCH = API_BASE_PATH + "/search";
 
     public static final String PROJECTS = API_BASE_PATH + "/projects";
     public static final String PROJECT_OPTIMIZATION_RUNS = PROJECTS + "/{projectId}/optimization-runs";
