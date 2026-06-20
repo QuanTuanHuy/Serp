@@ -1,12 +1,13 @@
 // Author: QuanTuanHuy, Description: Part of Serp Project
 
-export const formatCurrency = (value?: number): string => {
+export const formatCurrency = (value?: number, compact = false): string => {
   if (value === undefined) return 'Not available';
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'VND',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
+    ...(compact ? { notation: 'compact', maximumFractionDigits: 1 } : {}),
   }).format(value);
 };
 
