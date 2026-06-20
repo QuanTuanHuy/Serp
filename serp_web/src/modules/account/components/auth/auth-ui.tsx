@@ -38,7 +38,7 @@ import {
 interface AuthInputFieldProps extends ComponentPropsWithoutRef<typeof Input> {
   label: string;
   error?: string;
-  hint?: string;
+  hint?: React.ReactNode;
   leadingIcon?: LucideIcon;
   containerClassName?: string;
 }

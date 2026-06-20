@@ -23,6 +23,7 @@ import {
 import { cn } from '@/shared/utils';
 import { AccountCard } from '../../components/cards';
 import { AccountForm } from '../../components/forms';
+import { formatCurrency } from '../../utils';
 import { StatsCard } from '../../components/dashboard';
 import { ExportDropdown } from '../../components/shared';
 import { QuickAddAccountDialog } from '../../components/dialogs';
@@ -271,7 +272,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
         />
         <StatsCard
           title='Total Value'
-          value={`$${stats.totalValue.toLocaleString()}`}
+          value={formatCurrency(stats.totalValue)}
           icon={Building2}
           variant='warning'
         />

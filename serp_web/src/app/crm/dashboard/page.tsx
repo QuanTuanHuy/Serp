@@ -38,6 +38,7 @@ import type {
   ActivityType,
   OpportunityStage,
 } from '@/modules/crm/types';
+import { formatCurrency } from '@/modules/crm/utils';
 
 const stageColors: Record<OpportunityStage, PipelineStage['color']> = {
   PROSPECTING: 'blue',
@@ -59,12 +60,7 @@ const activityTypeMap: Record<ActivityType, ActivityItem['type']> = {
   FOLLOW_UP: 'task_completed',
 };
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
+// Using centralized formatCurrency from utils
 
 const toLocalDateTimeParam = (date: Date) => date.toISOString().slice(0, 19);
 

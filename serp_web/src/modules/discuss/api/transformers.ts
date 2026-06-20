@@ -107,7 +107,9 @@ export const transformAttachment = (backendAttachment: any): Attachment => {
   return {
     ...backendAttachment,
     id: backendAttachment.id ? String(backendAttachment.id) : '',
-    messageId: backendAttachment.messageId ? String(backendAttachment.messageId) : '',
+    messageId: backendAttachment.messageId
+      ? String(backendAttachment.messageId)
+      : '',
     channelId: backendAttachment.channelId
       ? String(backendAttachment.channelId)
       : '',
