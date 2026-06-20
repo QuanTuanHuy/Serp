@@ -35,6 +35,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Lead, LeadStatus, LeadSource, Priority } from '../../types';
+import { formatCurrency } from '../../utils';
 
 export interface LeadCardProps {
   lead: Lead;
@@ -131,11 +132,7 @@ const priorityStyles: Record<Priority, { bg: string; text: string }> = {
   },
 };
 
-const formatCurrency = (value: number): string => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-  return `$${value.toLocaleString()}`;
-};
+// Local compact formatter removed, using central utility
 
 const getDisplayName = (lead: Lead): string => {
   const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
@@ -291,7 +288,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           </span>
           {lead.estimatedValue && (
             <span className='text-xs font-semibold'>
-              {formatCurrency(lead.estimatedValue)}
+              {formatCurrency(lead.estimatedValue, true)}
             </span>
           )}
         </div>
@@ -517,7 +514,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           <div>
             <p className='text-xs text-muted-foreground'>Est. Value</p>
             <p className='text-lg font-bold text-foreground'>
-              {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
+              {lead.estimatedValue ? formatCurrency(lead.estimatedValue, true) : '-'}
             </p>
           </div>
 

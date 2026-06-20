@@ -36,6 +36,7 @@ import type {
   OpportunityStage,
   OpportunityType,
 } from '../../types';
+import { formatCurrency } from '../../utils';
 
 export interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -95,11 +96,7 @@ const typeStyles: Record<OpportunityType, { label: string; color: string }> = {
   RENEWAL: { label: 'Renewal', color: 'text-purple-600' },
 };
 
-const formatCurrency = (value: number): string => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-  return `$${value.toLocaleString()}`;
-};
+// Local compact formatter removed, using central utility
 
 const getDisplayAccountName = (opportunity: Opportunity): string => {
   return (
@@ -246,7 +243,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             {opportunity.name}
           </h4>
           <span className='text-sm font-bold ml-2'>
-            {formatCurrency(displayValue)}
+            {formatCurrency(displayValue, true)}
           </span>
         </div>
 
@@ -304,7 +301,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
 
         {/* Value */}
         <div className='text-right shrink-0'>
-          <p className='font-bold text-sm'>{formatCurrency(displayValue)}</p>
+          <p className='font-bold text-sm'>{formatCurrency(displayValue, true)}</p>
           <p className='text-xs text-muted-foreground'>{probability}%</p>
         </div>
       </Card>
@@ -423,13 +420,13 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             <div>
               <p className='text-xs text-muted-foreground'>Deal Value</p>
               <p className='text-xl font-bold'>
-                {formatCurrency(displayValue)}
+                {formatCurrency(displayValue, true)}
               </p>
             </div>
             <div className='text-right'>
               <p className='text-xs text-muted-foreground'>Weighted</p>
               <p className='text-lg font-semibold text-muted-foreground'>
-                {formatCurrency((displayValue * probability) / 100)}
+                {formatCurrency((displayValue * probability) / 100, true)}
               </p>
             </div>
           </div>
