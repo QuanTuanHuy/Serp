@@ -23,9 +23,7 @@ export const pmGlobalSearchApi = api.injectEndpoints({
         params: {
           q,
           limit,
-          ...(typeof currentProjectId === 'number'
-            ? { currentProjectId }
-            : {}),
+          ...(typeof currentProjectId === 'number' ? { currentProjectId } : {}),
         },
       }),
       extraOptions: { service: 'pm' },

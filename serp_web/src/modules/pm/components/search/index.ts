@@ -4,3 +4,4 @@
  */
 
 export { PMGlobalSearchDropdown } from './PMGlobalSearchDropdown';
+export { PMGlobalSearchResults } from './PMGlobalSearchResults';

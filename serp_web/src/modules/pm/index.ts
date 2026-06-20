@@ -16,3 +16,4 @@ export { PMProjectsPage } from './pages/PMProjectsPage';
 export { PMProjectSettingsPage } from './pages/PMProjectSettingsPage';
 export { PMSettingsPage } from './pages/PMSettingsPage';
 export { PMWorkflowEditorPage } from './pages/PMWorkflowEditorPage';
+export { PMGlobalSearchPage } from './pages/PMGlobalSearchPage';
