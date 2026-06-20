@@ -1314,7 +1314,7 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                     AND sc.deleted_at IS NULL
                 WHERE w.tenant_id = :tenantId
                   AND w.deleted_at IS NULL
-                  AND (:excludedProjectId IS NULL OR w.project_id <> :excludedProjectId)
+                  AND (CAST(:excludedProjectId AS bigint) IS NULL OR w.project_id <> CAST(:excludedProjectId AS bigint))
                   AND (w.key ILIKE CONCAT('%', :keyword, '%') OR w.summary ILIKE CONCAT('%', :keyword, '%'))
                   AND EXISTS (
                         SELECT 1
@@ -1331,12 +1331,12 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                                 )
                                 OR (
                                     UPPER(TRIM(pse.grantee_type)) = 'GROUP'
-                                    AND :groupKeysCsv <> ''
-                                    AND POSITION(CONCAT(',', LOWER(TRIM(pse.grantee_ref)), ',') IN :groupKeysCsv) > 0
+                                    AND CAST(:groupKeysCsv AS varchar) <> ''
+                                    AND POSITION(CONCAT(',', LOWER(TRIM(pse.grantee_ref)), ',') IN CAST(:groupKeysCsv AS varchar)) > 0
                                 )
                                 OR (
                                     UPPER(TRIM(pse.grantee_type)) IN ('ANY_LOGGED_IN_USER', 'LOGGED_IN_USER', 'AUTHENTICATED')
-                                    AND :userId IS NOT NULL
+                                    AND CAST(:userId AS bigint) IS NOT NULL
                                 )
                                 OR (
                                     UPPER(TRIM(pse.grantee_type)) = 'PROJECT_ROLE'
@@ -1354,8 +1354,8 @@ public class WorkItemReadAdapter implements IWorkItemReadPort {
                                                 (UPPER(TRIM(pra.subject_type)) = 'USER' AND CAST(:userId AS TEXT) = pra.subject_id)
                                                 OR (
                                                     UPPER(TRIM(pra.subject_type)) = 'GROUP'
-                                                    AND :groupKeysCsv <> ''
-                                                    AND POSITION(CONCAT(',', LOWER(TRIM(pra.subject_id)), ',') IN :groupKeysCsv) > 0
+                                                    AND CAST(:groupKeysCsv AS varchar) <> ''
+                                                    AND POSITION(CONCAT(',', LOWER(TRIM(pra.subject_id)), ',') IN CAST(:groupKeysCsv AS varchar)) > 0
                                                 )
                                           )
                                     )

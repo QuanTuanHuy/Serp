@@ -179,7 +179,7 @@ class WorkItemReadAdapterTest {
         assertTrue(sql.contains("FROM work_items w"));
         assertTrue(sql.contains("JOIN projects p ON p.id = w.project_id"));
         assertTrue(sql.contains("UPPER(TRIM(pse.permission_key)) = 'BROWSE_PROJECTS'"));
-        assertTrue(sql.contains("w.project_id <> :excludedProjectId"));
+        assertTrue(sql.contains("w.project_id <> CAST(:excludedProjectId AS bigint)"));
         assertEquals(1L, params.getValue("tenantId"));
         assertEquals(2L, params.getValue("userId"));
         assertEquals(",dev-team,", params.getValue("groupKeysCsv"));
