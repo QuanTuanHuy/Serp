@@ -220,6 +220,7 @@ export const getModuleRoute = (moduleCode: string): string => {
 
   if (canonicalCode === 'ADMIN') return '/admin';
   if (canonicalCode === 'SETTINGS') return '/settings';
+  if (canonicalCode === 'DISCUSSION') return '/discuss';
   if (canonicalCode === 'PTM') return '/ptm/dashboard';
   if (canonicalCode === 'CRM') return '/crm/dashboard';
   if (canonicalCode === 'TMS') {
