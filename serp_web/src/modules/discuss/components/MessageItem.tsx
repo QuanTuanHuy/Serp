@@ -17,6 +17,47 @@ import { Edit2, Trash2, Reply, MoreVertical, Check } from 'lucide-react';
 import type { Message } from '../types';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentPreview } from './AttachmentPreview';
+import ReactMarkdown from 'react-markdown';
+
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+const AutolinkText: React.FC<{ text: string; isOwn: boolean }> = ({ text, isOwn }) => {
+  if (!text) return null;
+  const parts = text.split(URL_REGEX);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.match(URL_REGEX)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "underline font-medium hover:opacity-90 transition-opacity break-all",
+                isOwn ? "text-white" : "text-violet-600 dark:text-violet-400"
+              )}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+};
+
+const linkifyChildren = (children: React.ReactNode, isOwn: boolean): React.ReactNode => {
+  return React.Children.map(children, (child) => {
+    if (typeof child === 'string') {
+      return <AutolinkText text={child} isOwn={isOwn} />;
+    }
+    return child;
+  });
+};
 
 interface MessageItemProps {
   message: Message;
