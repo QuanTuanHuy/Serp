@@ -130,7 +130,7 @@ export default function AppsPage() {
       {/* Footer */}
       <footer className='border-t py-12'>
         <div className='container mx-auto px-4'>
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
+          {/* <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
             <div>
               <div className='flex items-center space-x-2 mb-4'>
                 <div className='h-8 w-8 bg-primary rounded-md flex items-center justify-center'>
@@ -207,10 +207,10 @@ export default function AppsPage() {
                 </li>
               </ul>
             </div>
-          </div>
+          </div> */}
 
           <div className='border-t mt-8 pt-8 text-center text-sm text-muted-foreground'>
-            <p>&copy; 2025 SERP. All rights reserved.</p>
+            <p>&copy; 2026 SERP. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -125,24 +125,24 @@ export function Header() {
                 <NavigationMenuLink href='/apps'>Apps</NavigationMenuLink>
               )}
             </NavigationMenuItem>
-            <NavigationMenuItem>
+            {/* <NavigationMenuItem>
               <NavigationMenuLink href='/industries'>
                 Industries
               </NavigationMenuLink>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
+            </NavigationMenuItem> */}
+            {/* <NavigationMenuItem>
               <NavigationMenuLink href='/community'>
                 Community
               </NavigationMenuLink>
-            </NavigationMenuItem>
+            </NavigationMenuItem> */}
             <NavigationMenuItem>
               <NavigationMenuLink href='/subscription'>
                 Pricing
               </NavigationMenuLink>
             </NavigationMenuItem>
-            <NavigationMenuItem>
+            {/* <NavigationMenuItem>
               <NavigationMenuLink href='/help'>Help</NavigationMenuLink>
-            </NavigationMenuItem>
+            </NavigationMenuItem> */}
           </NavigationMenuList>
         </NavigationMenu>
 

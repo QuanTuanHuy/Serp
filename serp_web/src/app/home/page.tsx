@@ -340,7 +340,7 @@ export default function HomePage() {
             />
           </section>
 
-          <section className='mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]'>
+          {/* <section className='mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]'>
             <Card className='border-border/60 bg-background/90 shadow-sm'>
               <CardContent className='p-6'>
                 <p className='text-sm font-medium text-primary'>Next actions</p>
@@ -402,7 +402,7 @@ export default function HomePage() {
                 ) : null}
               </CardContent>
             </Card>
-          </section>
+          </section> */}
         </div>
       </main>
     </div>

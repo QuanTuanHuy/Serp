@@ -40,7 +40,7 @@ export default function LandingPage() {
         <FeaturedAppsShowcase />
 
         {/* Features Section */}
-        <section className='py-20 bg-muted/30 w-full'>
+        {/* <section className='py-20 bg-muted/30 w-full'>
           <div className='container mx-auto px-4'>
             <div className='text-center mb-16'>
               <h2 className='text-3xl font-bold mb-4'>Why Choose SERP?</h2>
@@ -91,13 +91,13 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
       </main>
 
       {/* Footer */}
       <footer className='border-t py-12 w-full'>
         <div className='container mx-auto px-4'>
-          <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
+          {/* <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
             <div>
               <div className='flex items-center space-x-2 mb-4'>
                 <div className='h-8 w-8 bg-primary rounded-md flex items-center justify-center'>
@@ -174,10 +174,10 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
-          </div>
+          </div> */}
 
           <div className='border-t mt-8 pt-8 text-center text-sm text-muted-foreground'>
-            <p>&copy; 2025 SERP. All rights reserved.</p>
+            <p>&copy; 2026 SERP. All rights reserved.</p>
           </div>
         </div>
       </footer>
