@@ -56,12 +56,12 @@ public class StorageProperties {
         /**
          * Bucket name for storing attachments
          */
-        private String bucket = "discuss-attachments";
+        private String bucket = "datn-tms";
 
         /**
          * AWS region (required for SDK, use us-east-1 for MinIO)
          */
-        private String region = "us-east-1";
+        private String region = "sgp1";
 
         /**
          * URL expiry duration for presigned URLs in minutes (for on-demand requests)
