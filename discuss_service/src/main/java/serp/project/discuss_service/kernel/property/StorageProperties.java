@@ -64,6 +64,11 @@ public class StorageProperties {
         private String region = "sgp1";
 
         /**
+         * Whether to use path-style access (endpoint/bucket/key) instead of virtual-hosted style.
+         */
+        private boolean pathStyleAccessEnabled = false;
+
+        /**
          * URL expiry duration for presigned URLs in minutes (for on-demand requests)
          */
         private int presignedUrlExpiryMinutes = 60;

@@ -136,6 +136,7 @@ discuss:
       secret-key: ${STORAGE_SECRET_KEY}
       bucket: ${STORAGE_BUCKET}
       region: ${STORAGE_REGION}
+      path-style-access-enabled: ${STORAGE_S3_PATH_STYLE_ACCESS_ENABLED:false}
       presigned-url-expiry-minutes: ${PRESIGNED_URL_EXPIRY_MINUTES}
       download-url-expiry-days: ${DOWNLOAD_URL_EXPIRY_DAYS}
     upload:
