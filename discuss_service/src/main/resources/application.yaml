@@ -158,5 +158,5 @@ services:
 logging:
   level:
     root: INFO
-    serp.project.discuss_service.ui: DEBUG
+    # serp.project.discuss_service.ui: DEBUG
     serp.project.discuss_service.core: DEBUG
