@@ -126,17 +126,32 @@ export const transformReactionsToBackend = (
 };
 
 /**
- * Transform backend Map<String, List<Long>> to frontend MessageReaction[]
+ * Transform backend Map<String, List<Long>> or List<ReactionResponse> to frontend MessageReaction[]
  */
 export const transformReactionsFromBackend = (
-  reactions: Record<string, number[]> | null | undefined
+  reactions: any
 ): MessageReaction[] => {
   if (!reactions) return [];
 
+  // If backend returns a list of reaction objects
+  if (Array.isArray(reactions)) {
+    return reactions.map((r: any) => ({
+      emoji: r?.emoji || '',
+      userIds: Array.isArray(r?.userIds) ? r.userIds.map(String) : [],
+      count:
+        typeof r?.count === 'number'
+          ? r.count
+          : Array.isArray(r?.userIds)
+            ? r.userIds.length
+            : 0,
+    }));
+  }
+
+  // Fallback for Record<string, number[]> format
   return Object.entries(reactions).map(([emoji, userIds]) => ({
     emoji,
-    userIds: Array.isArray(userIds) ? userIds.map(String) : [],
-    count: Array.isArray(userIds) ? userIds.length : 0,
+    userIds: Array.isArray(userIds) ? (userIds as any).map(String) : [],
+    count: Array.isArray(userIds) ? (userIds as any).length : 0,
   }));
 };
 
