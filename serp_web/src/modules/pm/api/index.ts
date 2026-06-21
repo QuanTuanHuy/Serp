@@ -122,6 +122,11 @@ export {
   useUpdatePmIssueTypeSchemeMutation,
   useValidatePmWorkflowMutation,
 } from './settingsApi';
+export {
+  pmGlobalSearchApi,
+  useGetPmGlobalSearchQuery,
+  useLazyGetPmGlobalSearchQuery,
+} from './globalSearchApi';
 export type {
   PMAddWorkflowStepRequest,
   PMAddWorkflowTransitionRequest,
@@ -138,6 +143,11 @@ export type {
   PMCreateWorkItemResponse,
   PMDeleteWorkItemLinkResponse,
   PMGenerateOptimizationRunRequest,
+  PMGlobalSearchGroup,
+  PMGlobalSearchItem,
+  PMGlobalSearchParams,
+  PMGlobalSearchResponse,
+  PMGlobalSearchType,
   PMGetWorkItemBoardParams,
   PMGetWorkItemDependenciesParams,
   PMGetWorkItemTimelineParams,

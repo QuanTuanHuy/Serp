@@ -17,6 +17,7 @@ import {
   Skeleton,
 } from '@/shared/components/ui';
 import { ArrowRight, TrendingUp } from 'lucide-react';
+import { formatCurrency } from '../../utils';
 
 export interface PipelineStage {
   name: string;
@@ -76,14 +77,7 @@ const stageColors: Record<
   },
 };
 
-const formatCurrency = (value: number): string => {
-  if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(1)}M`;
-  } else if (value >= 1000) {
-    return `$${(value / 1000).toFixed(0)}K`;
-  }
-  return `$${value.toLocaleString()}`;
-};
+// Local compact formatter removed, using central utility
 
 export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
   stages,
@@ -191,7 +185,7 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
                     )}
                     <div className='text-right'>
                       <p className={cn('font-semibold', colors.text)}>
-                        {formatCurrency(stage.value)}
+                        {formatCurrency(stage.value, true)}
                       </p>
                       <p className='text-xs text-muted-foreground'>
                         {totalValue > 0
@@ -220,7 +214,7 @@ export const PipelineFunnel: React.FC<PipelineFunnelProps> = ({
             Total Pipeline Value
           </span>
           <span className='text-xl font-bold text-foreground'>
-            {formatCurrency(totalValue)}
+            {formatCurrency(totalValue, true)}
           </span>
         </div>
       </CardContent>

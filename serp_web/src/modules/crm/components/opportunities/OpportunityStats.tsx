@@ -4,6 +4,7 @@
 
 import { TrendingUp, DollarSign, Trophy, Target } from 'lucide-react';
 import { StatsCard } from '../dashboard';
+import { formatCurrency } from '../../utils';
 
 interface OpportunityStatsProps {
   totalValue: number;
@@ -22,13 +23,13 @@ export const OpportunityStats: React.FC<OpportunityStatsProps> = ({
     <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
       <StatsCard
         title='Total Pipeline'
-        value={`$${Math.round(totalValue).toLocaleString()}`}
+        value={formatCurrency(totalValue)}
         icon={TrendingUp}
         variant='primary'
       />
       <StatsCard
         title='Weighted Value'
-        value={`$${Math.round(weightedValue).toLocaleString()}`}
+        value={formatCurrency(weightedValue)}
         icon={DollarSign}
         variant='warning'
       />
@@ -40,7 +41,7 @@ export const OpportunityStats: React.FC<OpportunityStatsProps> = ({
       />
       <StatsCard
         title='Avg. Deal Size'
-        value={`$${Math.round(avgDealSize).toLocaleString()}`}
+        value={formatCurrency(avgDealSize)}
         icon={Target}
         variant='default'
       />

@@ -31,6 +31,7 @@ import {
   Globe,
 } from 'lucide-react';
 import type { Customer, CustomerStatus, CustomerType } from '../../types';
+import { formatCurrency } from '../../utils';
 
 export interface CustomerCardProps {
   customer: Customer;
@@ -67,11 +68,7 @@ const typeStyles: Record<
   CUSTOMER: { icon: Building2, label: 'Customer' },
 };
 
-const formatCurrency = (value: number): string => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-  return `$${value.toLocaleString()}`;
-};
+// Local compact formatter removed, using central utility
 
 const getInitials = (name: string): string => {
   return name
@@ -287,7 +284,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
           <div>
             <p className='text-xs text-muted-foreground'>Total Value</p>
             <p className='text-lg font-bold text-foreground'>
-              {formatCurrency(customer.totalValue || 0)}
+              {formatCurrency(customer.totalValue || 0, true)}
             </p>
           </div>
 

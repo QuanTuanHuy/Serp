@@ -18,7 +18,7 @@ import {
   BarChart3,
   type LucideIcon,
 } from 'lucide-react';
-
+import { formatCurrency } from '../../utils';
 export interface StatsCardProps {
   title: string;
   value: string | number;
@@ -225,7 +225,7 @@ export const RevenueStats: React.FC<{
 }> = ({ value, trend, isLoading }) => (
   <StatsCard
     title='Revenue'
-    value={`$${value.toLocaleString()}`}
+    value={formatCurrency(value)}
     icon={DollarSign}
     trend={trend}
     variant='success'

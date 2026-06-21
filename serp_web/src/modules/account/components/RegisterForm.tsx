@@ -122,16 +122,6 @@ export const RegisterForm = ({
 
   return (
     <form onSubmit={onSubmit} className='space-y-5'>
-      <div className='space-y-1'>
-        <h3 className='text-xl font-semibold tracking-[-0.03em] text-slate-950 dark:text-slate-50'>
-          Start a new operational workspace
-        </h3>
-        <p className='text-sm leading-6 text-muted-foreground'>
-          Set up your owner account, create your organization, and move straight
-          into SERP with a secure onboarding flow.
-        </p>
-      </div>
-
       <div className='grid gap-4 sm:grid-cols-2'>
         <AuthInputField
           id='register-first-name'
@@ -208,29 +198,13 @@ export const RegisterForm = ({
 
       <PasswordStrengthPanel password={passwordValue} rules={passwordRules} />
 
-      <div className='rounded-2xl border border-border/60 bg-muted/30 p-4'>
-        <p className='text-sm font-semibold text-foreground'>
-          What happens next
-        </p>
-        <div className='mt-3 grid gap-2'>
-          {REGISTRATION_BENEFITS.map((benefit) => (
-            <div
-              key={benefit}
-              className='rounded-xl bg-background/70 px-3 py-2 text-sm text-muted-foreground'
-            >
-              {benefit}
-            </div>
-          ))}
-        </div>
-      </div>
-
       {error ? (
         <AuthErrorAlert title='Could not create your account' message={error} />
       ) : null}
 
       <Button
         type='submit'
-        className='h-12 w-full rounded-2xl bg-[linear-gradient(135deg,_rgb(8,145,178)_0%,_rgb(14,165,233)_55%,_rgb(245,158,11)_100%)] text-slate-950 shadow-[0_24px_40px_-24px_rgba(14,165,233,0.9)] hover:opacity-95'
+        className='h-12 w-full rounded-2xl bg-slate-950 text-white shadow-[0_24px_40px_-24px_rgba(15,23,42,0.8)] hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'
         disabled={isBusy}
       >
         {isBusy ? (
@@ -239,30 +213,23 @@ export const RegisterForm = ({
             Creating workspace...
           </>
         ) : (
-          <>
-            Create account
-            <Wand2 className='h-4 w-4' />
-          </>
+          <>Create account</>
         )}
       </Button>
 
-      <div className='space-y-3 text-center'>
-        <p className='text-sm text-muted-foreground'>
-          Already have access to a workspace? Use your existing credentials.
-        </p>
-
-        {onSwitchToLogin ? (
-          <Button
+      {onSwitchToLogin ? (
+        <p className='text-center text-sm text-muted-foreground mt-4'>
+          Already have access to a workspace?{' '}
+          <button
             type='button'
-            variant='ghost'
-            className='h-auto rounded-full px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/8'
+            className='font-semibold text-primary hover:underline hover:cursor-pointer'
             onClick={onSwitchToLogin}
             disabled={isBusy}
           >
-            Back to sign in
-          </Button>
-        ) : null}
-      </div>
+            Sign in
+          </button>
+        </p>
+      ) : null}
     </form>
   );
 };

@@ -127,6 +127,11 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
       });
     }
 
+    // Allow search path (e.g., /pm/search) if user has access to the module
+    if (currentPath === `${normalizedModuleRootPath}/search`) {
+      return true;
+    }
+
     return false;
   }, [currentPath, menuDisplays, moduleCode, moduleRootPath]);
 

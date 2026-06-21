@@ -20,6 +20,7 @@ import {
   Area,
 } from 'recharts';
 import type { SalesMetrics } from '../../types';
+import { formatCurrency } from '../../utils';
 
 interface SalesChartProps {
   data: SalesMetrics[];
@@ -39,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className='space-y-1'>
           {payload.map((entry: any, index: number) => (
             <p key={index} className='text-sm' style={{ color: entry.color }}>
-              {entry.name}: ${entry.value?.toLocaleString()}
+              {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
         </div>
@@ -157,7 +158,7 @@ export const SalesChart: React.FC<SalesChartProps> = ({
                 <CartesianGrid strokeDasharray='3 3' />
                 <XAxis dataKey='period' tick={{ fontSize: 12 }} />
                 <YAxis
-                  tickFormatter={(value) => `$${value / 1000}K`}
+                  tickFormatter={(value) => formatCurrency(value, true)}
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -189,7 +190,7 @@ export const SalesChart: React.FC<SalesChartProps> = ({
                 <CartesianGrid strokeDasharray='3 3' />
                 <XAxis dataKey='period' tick={{ fontSize: 12 }} />
                 <YAxis
-                  tickFormatter={(value) => `$${value / 1000}K`}
+                  tickFormatter={(value) => formatCurrency(value, true)}
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip content={<CustomTooltip />} />

@@ -656,222 +656,226 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, []);
 
   return (
-    <div className={cn('flex h-full min-w-0 bg-slate-50 dark:bg-slate-900', className)}>
+    <div
+      className={cn(
+        'flex h-full min-w-0 bg-slate-50 dark:bg-slate-900',
+        className
+      )}
+    >
       <div className='flex min-w-0 flex-1 flex-col'>
-      {/* Header */}
-      <div className='flex-shrink-0 px-6 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700'>
-        <div className='flex items-center justify-between'>
-          {/* Channel info */}
-          <div className='flex items-center gap-3'>
-            {/* Avatar/Icon */}
-            {channel.type === 'DIRECT' || channel.avatarUrl ? (
-              <Avatar className='h-11 w-11 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-                {channel.avatarUrl && (
-                  <AvatarImage src={channel.avatarUrl} alt={channel.name} />
-                )}
-                <AvatarFallback
-                  className={cn(
-                    'text-sm font-semibold text-white bg-gradient-to-br',
-                    getAvatarColor(channel.name)
+        {/* Header */}
+        <div className='flex-shrink-0 px-6 py-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700'>
+          <div className='flex items-center justify-between'>
+            {/* Channel info */}
+            <div className='flex items-center gap-3'>
+              {/* Avatar/Icon */}
+              {channel.type === 'DIRECT' || channel.avatarUrl ? (
+                <Avatar className='h-11 w-11 ring-2 ring-white dark:ring-slate-900 shadow-sm'>
+                  {channel.avatarUrl && (
+                    <AvatarImage src={channel.avatarUrl} alt={channel.name} />
                   )}
-                >
-                  {getUserInitials(channel.name)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <div className='h-11 w-11 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-sm'>
-                {getChannelIcon(channel.type)}
-              </div>
-            )}
+                  <AvatarFallback
+                    className={cn(
+                      'text-sm font-semibold text-white bg-gradient-to-br',
+                      getAvatarColor(channel.name)
+                    )}
+                  >
+                    {getUserInitials(channel.name)}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <div className='h-11 w-11 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-sm'>
+                  {getChannelIcon(channel.type)}
+                </div>
+              )}
 
-            {/* Name & description */}
-            <div className='flex flex-col'>
-              <div className='flex items-center gap-2'>
-                <h2 className='text-lg font-bold text-slate-900 dark:text-slate-100'>
-                  {channel.name}
-                </h2>
-              </div>
-              <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400'>
-                {channel.type === 'DIRECT' ? (
-                  (() => {
-                    // Find the other user's presence from channel presence data
-                    const presence = presenceData?.data;
-                    const allUsers = presence?.statusGroups
-                      ? Object.values(presence.statusGroups).flat()
-                      : [];
-                    const otherUser = allUsers.find(
-                      (u) => String(u.userId) !== currentUserId
-                    );
-                    const status = otherUser
-                      ? mapUserStatus(otherUser.status)
-                      : 'offline';
-                    const statusText = otherUser?.isOnline
-                      ? status === 'busy'
-                        ? 'Busy'
-                        : 'Online'
-                      : otherUser?.lastSeenText || 'Offline';
+              {/* Name & description */}
+              <div className='flex flex-col'>
+                <div className='flex items-center gap-2'>
+                  <h2 className='text-lg font-bold text-slate-900 dark:text-slate-100'>
+                    {channel.name}
+                  </h2>
+                </div>
+                <div className='flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400'>
+                  {channel.type === 'DIRECT' ? (
+                    (() => {
+                      // Find the other user's presence from channel presence data
+                      const presence = presenceData?.data;
+                      const allUsers = presence?.statusGroups
+                        ? Object.values(presence.statusGroups).flat()
+                        : [];
+                      const otherUser = allUsers.find(
+                        (u) => String(u.userId) !== currentUserId
+                      );
+                      const status = otherUser
+                        ? mapUserStatus(otherUser.status)
+                        : 'offline';
+                      const statusText = otherUser?.isOnline
+                        ? status === 'busy'
+                          ? 'Busy'
+                          : 'Online'
+                        : otherUser?.lastSeenText || 'Offline';
 
-                    return (
-                      <span className='flex items-center gap-1.5'>
-                        <OnlineStatusIndicator status={status} size='sm' />
-                        <span
-                          className={cn(
-                            'font-medium',
-                            status === 'online'
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : status === 'busy'
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-slate-500 dark:text-slate-400'
-                          )}
-                        >
-                          {statusText}
+                      return (
+                        <span className='flex items-center gap-1.5'>
+                          <OnlineStatusIndicator status={status} size='sm' />
+                          <span
+                            className={cn(
+                              'font-medium',
+                              status === 'online'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : status === 'busy'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-slate-500 dark:text-slate-400'
+                            )}
+                          >
+                            {statusText}
+                          </span>
                         </span>
+                      );
+                    })()
+                  ) : (
+                    <>
+                      <Users className='h-3.5 w-3.5' />
+                      <span>
+                        {presenceData?.data?.onlineCount != null
+                          ? `${presenceData.data.onlineCount} online · `
+                          : ''}
+                        {channel.memberCount} members
                       </span>
-                    );
-                  })()
-                ) : (
-                  <>
-                    <Users className='h-3.5 w-3.5' />
-                    <span>
-                      {presenceData?.data?.onlineCount != null
-                        ? `${presenceData.data.onlineCount} online · `
-                        : ''}
-                      {channel.memberCount} members
-                    </span>
-                  </>
-                )}
-                {channel.description && (
-                  <>
-                    <span>•</span>
-                    <span className='truncate max-w-md'>
-                      {channel.description}
-                    </span>
-                  </>
-                )}
+                    </>
+                  )}
+                  {channel.description && (
+                    <>
+                      <span>•</span>
+                      <span className='truncate max-w-md'>
+                        {channel.description}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setSearchOpen(true)}
+                className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              >
+                <Search className='h-5 w-5' />
+              </Button>
+
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setDetailsSidebarOpen((open) => !open)}
+                className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                title='View conversation details'
+              >
+                <Info className='h-5 w-5' />
+              </Button>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => setSearchOpen(true)}
-              className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            >
-              <Search className='h-5 w-5' />
-            </Button>
-
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => setDetailsSidebarOpen((open) => !open)}
-              className='text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-              title='View conversation details'
-            >
-              <Info className='h-5 w-5' />
-            </Button>
-          </div>
+          {/* Typing indicator - removed from header, now above input */}
         </div>
 
-        {/* Typing indicator - removed from header, now above input */}
-      </div>
+        {/* Messages */}
+        <div className='flex-1 overflow-hidden relative'>
+          <MessageList
+            ref={messageListRef}
+            messages={messages}
+            currentUserId={currentUserId}
+            isLoading={isLoading}
+            isError={isError}
+            hasMore={hasMore}
+            onLoadMore={handleLoadMore}
+            lastReadMessageId={lastReadMessageId}
+            onScrollPositionChange={setIsNearBottom}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+            onReplyMessage={handleReplyMessage}
+            onReaction={handleReaction}
+            onRemoveReaction={handleRemoveReaction}
+          />
 
-      {/* Messages */}
-      <div className='flex-1 overflow-hidden relative'>
-        <MessageList
-          ref={messageListRef}
-          messages={messages}
-          currentUserId={currentUserId}
-          isLoading={isLoading}
-          isError={isError}
-          hasMore={hasMore}
-          onLoadMore={handleLoadMore}
-          lastReadMessageId={lastReadMessageId}
-          onScrollPositionChange={setIsNearBottom}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onReplyMessage={handleReplyMessage}
-          onReaction={handleReaction}
-          onRemoveReaction={handleRemoveReaction}
-        />
+          <ScrollToBottomButton
+            visible={!isNearBottom}
+            unreadCount={unreadCount}
+            onClick={scrollToBottom}
+          />
 
-        <ScrollToBottomButton
-          visible={!isNearBottom}
-          unreadCount={unreadCount}
-          onClick={scrollToBottom}
-        />
+          {/* Jump mode: return to latest messages */}
+          {isJumpMode && (
+            <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10'>
+              <Button
+                onClick={handleReturnToLatest}
+                size='sm'
+                className='shadow-lg gap-2'
+              >
+                <ArrowDown className='h-4 w-4' />
+                Jump to latest messages
+              </Button>
+            </div>
+          )}
+        </div>
 
-        {/* Jump mode: return to latest messages */}
-        {isJumpMode && (
-          <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10'>
-            <Button
-              onClick={handleReturnToLatest}
-              size='sm'
-              className='shadow-lg gap-2'
-            >
-              <ArrowDown className='h-4 w-4' />
-              Jump to latest messages
-            </Button>
+        {/* Typing indicator - positioned above input */}
+        {typingUsers.size > 0 && (
+          <div className='flex-shrink-0 px-6 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800'>
+            <div className='flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400'>
+              <span className='flex gap-0.5'>
+                <span
+                  className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                  style={{ animationDelay: '0ms' }}
+                />
+                <span
+                  className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
+                  style={{ animationDelay: '300ms' }}
+                />
+              </span>
+              <span className='italic'>
+                {(() => {
+                  const names = Array.from(typingUsers.values());
+                  if (names.length === 1) return `${names[0]} is typing...`;
+                  if (names.length === 2)
+                    return `${names[0]} and ${names[1]} are typing...`;
+                  return 'Several people are typing...';
+                })()}
+              </span>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Typing indicator - positioned above input */}
-      {typingUsers.size > 0 && (
-        <div className='flex-shrink-0 px-6 py-1.5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800'>
-          <div className='flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400'>
-            <span className='flex gap-0.5'>
-              <span
-                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
-                style={{ animationDelay: '0ms' }}
-              />
-              <span
-                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
-                style={{ animationDelay: '150ms' }}
-              />
-              <span
-                className='w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce'
-                style={{ animationDelay: '300ms' }}
-              />
-            </span>
-            <span className='italic'>
-              {(() => {
-                const names = Array.from(typingUsers.values());
-                if (names.length === 1) return `${names[0]} is typing...`;
-                if (names.length === 2)
-                  return `${names[0]} and ${names[1]} are typing...`;
-                return 'Several people are typing...';
-              })()}
-            </span>
-          </div>
+        {/* Input */}
+        <div className='flex-shrink-0'>
+          <MessageInput
+            channelId={channel.id}
+            onSendMessage={handleSendMessage}
+            replyingTo={replyingTo}
+            onCancelReply={handleCancelReply}
+            editingMessage={editingMessage}
+            onCancelEdit={handleCancelEdit}
+            placeholder={`Message ${channel.type === 'DIRECT' ? channel.name : `#${channel.name}`}`}
+            onTypingStart={() => wsApi.sendTypingIndicator(true)}
+            onTypingStop={() => wsApi.sendTypingIndicator(false)}
+          />
         </div>
-      )}
 
-      {/* Input */}
-      <div className='flex-shrink-0'>
-        <MessageInput
+        {/* Search Dialog */}
+        <SearchDialog
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
           channelId={channel.id}
-          onSendMessage={handleSendMessage}
-          replyingTo={replyingTo}
-          onCancelReply={handleCancelReply}
-          editingMessage={editingMessage}
-          onCancelEdit={handleCancelEdit}
-          placeholder={`Message ${channel.type === 'DIRECT' ? channel.name : `#${channel.name}`}`}
-          onTypingStart={() => wsApi.sendTypingIndicator(true)}
-          onTypingStop={() => wsApi.sendTypingIndicator(false)}
+          onResultClick={handleJumpToMessage}
         />
-      </div>
-
-      {/* Search Dialog */}
-      <SearchDialog
-        open={searchOpen}
-        onOpenChange={setSearchOpen}
-        channelId={channel.id}
-        onResultClick={handleJumpToMessage}
-      />
-
       </div>
 
       <ConversationDetailsSidebar

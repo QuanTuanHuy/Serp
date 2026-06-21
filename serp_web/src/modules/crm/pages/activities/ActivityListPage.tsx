@@ -283,14 +283,14 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
           </p>
         </div>
         <div className='flex items-center gap-2'>
-          <ExportDropdown
+          {/* <ExportDropdown
             data={activities}
             columns={ACTIVITY_EXPORT_COLUMNS}
             filename='activities'
             onExportComplete={(format, count) => {
               console.log(`Exported ${count} activities as ${format}`);
             }}
-          />
+          /> */}
           <Button
             variant='outline'
             onClick={() => setShowQuickAdd(true)}
@@ -298,10 +298,6 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
           >
             <Plus className='h-4 w-4 mr-2' />
             Quick Add
-          </Button>
-          <Button className='gap-2'>
-            <Plus className='h-4 w-4' />
-            Log Activity
           </Button>
         </div>
       </div>

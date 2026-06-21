@@ -176,28 +176,9 @@ export const useAuth = () => {
         const result = await registerMutation(userData).unwrap();
 
         if (isSuccessResponse(result)) {
-          dispatch(
-            setTokens({
-              token: result.data.accessToken,
-              refreshToken: result.data.refreshToken,
-            })
-          );
-
-          await hydrateCurrentUser(
-            createFallbackUser({
-              email: userData.email,
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              organizationName: userData.organization.name,
-            }),
-            'registration'
-          );
-
           notification.success('Registration successful!', {
-            description: `Welcome to SERP, ${userData.firstName} ${userData.lastName}.`,
+            description: 'Your workspace has been created. Please sign in.',
           });
-
-          router.replace('/home');
 
           return { success: true, data: result.data };
         } else {
@@ -214,7 +195,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [dispatch, hydrateCurrentUser, notification, registerMutation, router]
+    [dispatch, notification, registerMutation]
   );
 
   const logout = useCallback(
