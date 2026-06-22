@@ -111,6 +111,14 @@ export const useUser = () => {
     return 'U';
   }, [user]);
 
+  const getUserRole = useCallback(() => {
+    if (!user || !user.roles || user.roles.length === 0) {
+      return 'User';
+    }
+    // Return first role, or join all roles separated by comma
+    return user.roles[1];
+  }, [user]);
+
   const clearUserProfile = useCallback(() => {
     dispatch(clearProfile());
   }, [dispatch]);
@@ -128,6 +136,7 @@ export const useUser = () => {
     // Utility functions
     getDisplayName: getUserDisplayName,
     getInitials: getUserInitials,
+    getUserRole,
 
     // Refetch functions
     refetchProfile,

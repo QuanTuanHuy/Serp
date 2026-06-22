@@ -66,7 +66,18 @@ const DISPATCHER_SECTIONS: NavSection[] = [
 const DRIVER_SECTIONS: NavSection[] = [
   {
     heading: 'My Work',
-    items: [{ name: 'My Routes', href: '/ttcrs/driver/routes', icon: Route }],
+    items: [
+      { name: 'My Routes', href: '/ttcrs/driver/routes', icon: Route },
+    ],
+  },
+];
+
+const CUSTOMER_SECTIONS: NavSection[] = [
+  {
+    heading: 'My Requests',
+    items: [
+      { name: 'Requests', href: '/ttcrs/customer/requests', icon: FileText },
+    ],
   },
 ];
 
@@ -81,11 +92,13 @@ export const TtcrsSidebar: React.FC = () => {
 
   const user = useAppSelector(selectUserProfile);
   const isDispatcher = user?.roles?.includes('TTCRS_DISPATCHER') ?? false;
-  const isDriver = user?.roles?.includes('TTCRS_DRIVER') ?? false;
+  const isDriver     = user?.roles?.includes('TTCRS_DRIVER')     ?? false;
+  const isCustomer   = user?.roles?.includes('TTCRS_CUSTOMER')   ?? false;
 
   const navSections: NavSection[] = [
     ...(isDispatcher ? DISPATCHER_SECTIONS : []),
-    ...(isDriver ? DRIVER_SECTIONS : []),
+    ...(isDriver     ? DRIVER_SECTIONS     : []),
+    ...(isCustomer   ? CUSTOMER_SECTIONS   : []),
   ];
 
   const isActive = (item: NavItem) =>
@@ -205,11 +218,7 @@ export const TtcrsSidebar: React.FC = () => {
         <div className='border-t p-4'>
           <div className='rounded-lg bg-orange-50 p-3 text-xs text-muted-foreground dark:bg-orange-950'>
             <p className='font-medium text-orange-900 dark:text-orange-100'>
-              {isDispatcher && !isDriver
-                ? 'Dispatcher Console'
-                : isDriver && !isDispatcher
-                  ? 'Driver Console'
-                  : 'TTCRS Console'}
+              {isDispatcher ? 'Dispatcher Console' : isDriver ? 'Driver Console' : isCustomer ? 'Customer Portal' : 'TTCRS Console'}
             </p>
             <p className='mt-1'>Truck Trailer Container Routing</p>
           </div>

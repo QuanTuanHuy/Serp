@@ -1,5 +1,6 @@
 package com.example.ttcrs.algorithm.models.routing;
 
+//Route Element là một stop trên route. Nó chứa thông tin về mã địa điểm, hành động (lấy hàng, giao hàng), thời gian đến, thời gian rời đi, thời gian di chuyển và ID yêu cầu (nếu có).
 public class RouteElement {
     private String locationCode;
 	private String action;

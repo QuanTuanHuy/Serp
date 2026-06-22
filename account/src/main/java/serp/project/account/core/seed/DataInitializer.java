@@ -37,12 +37,10 @@ public class DataInitializer implements CommandLineRunner {
     private static final String MODULE_CODE_PTM = "PTM";
     private static final String MODULE_CODE_CRM = "CRM";
     private static final String MODULE_CODE_TMS = "TMS";
-    private static final String MODULE_CODE_SCHOOL_BUS = "SCHOOLBUS";
 
     private static final String CLIENT_ID_PTM = "serp-ptm";
     private static final String CLIENT_ID_CRM = "serp-crm";
     private static final String CLIENT_ID_TMS = "serp-first-mile";
-    private static final String CLIENT_ID_SCHOOL_BUS = "serp-school-bus";
 
     private static final String ROLE_TMS_ADMIN = "TMS_ADMIN";
 
@@ -102,7 +100,6 @@ public class DataInitializer implements CommandLineRunner {
         createRoleBatch(RoleEnumUtils.getPtmRoles(), MODULE_CODE_PTM, CLIENT_ID_PTM, "PTM module roles");
         createRoleBatch(RoleEnumUtils.getCrmRoles(), MODULE_CODE_CRM, CLIENT_ID_CRM, "CRM module roles");
         createRoleBatch(RoleEnumUtils.getTmsRoles(), MODULE_CODE_TMS, CLIENT_ID_TMS, "TMS module roles");
-        createRoleBatch(RoleEnumUtils.getSchoolBusRoles(), MODULE_CODE_SCHOOL_BUS, CLIENT_ID_SCHOOL_BUS, "School Bus module roles");
     }
 
     private void createRoleBatch(List<RoleEnum> roleEnums, String moduleCode,

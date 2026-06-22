@@ -7,6 +7,7 @@ export interface EditableStop {
   departureTime: string;
   travelTime: number;
   requestId: number | null;
+  trailerId?: number | null;
 }
 
 export interface EditableRoute {
@@ -70,6 +71,7 @@ export function initEditableRoutes(
       departureTime: node.departureTime ?? '',
       travelTime: node.travelTime ?? 0,
       requestId: node.requestId ?? null,
+      trailerId: node.trailerId ?? null,
     })),
   }));
 }

@@ -24,6 +24,8 @@ public interface RequestRepository
         extends JpaRepository<RequestEntity, Long>,
                 JpaSpecificationExecutor<RequestEntity> {
 
+    List<RequestEntity> findAllByTransportPlanId(Long transportPlanId);
+
     // =========================================================================
     // Inner class chứa các Specification tĩnh — tái sử dụng linh hoạt
     // =========================================================================
@@ -102,6 +104,28 @@ public interface RequestRepository
                                     cb.lower(root.get("destLocationCode")),
                                     destLocationCode.toLowerCase()
                               );
+        }
+
+        /**
+         * Lọc theo customer_id.
+         * Nếu null → không áp dụng.
+         */
+        public static Specification<RequestEntity> withCustomerId(Long customerId) {
+            return (root, query, cb) ->
+                    customerId == null
+                            ? cb.conjunction()
+                            : cb.equal(root.get("customerId"), customerId);
+        }
+
+        /**
+         * Lọc theo created_by (userId của người tạo).
+         * Nếu null → không áp dụng.
+         */
+        public static Specification<RequestEntity> withCreatedBy(Long createdBy) {
+            return (root, query, cb) ->
+                    createdBy == null
+                            ? cb.conjunction()
+                            : cb.equal(root.get("createdBy"), createdBy);
         }
 
         /**

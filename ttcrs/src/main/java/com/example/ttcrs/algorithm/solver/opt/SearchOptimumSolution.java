@@ -55,15 +55,16 @@ public class SearchOptimumSolution {
 		int groupTruck = tcs.point2Group.get(tcs.XR.getStartingPointOfRoute(k));
 		tcs.group2marked.put(groupTruck, 0);
 	}
-
+	// toán tử R1
 	public void randomRequestRemoval(){
-		if (tcs.pickupPoints.isEmpty()) return;
+		if (tcs.pickupPoints.isEmpty()) return; // nếu không có điểm đón nào thì không thể thực hiện loại bỏ yêu cầu ngẫu nhiên
 		Random R = new Random();
 		int range = Math.max(1, tcs.upper_removal - tcs.lower_removal + 1);
 		int n = R.nextInt(range) + tcs.lower_removal;
 		System.out.println("randomReqRemoval:number of removed request = " + n);
 		if(n >= tcs.pickupPoints.size()){
 			tcs.mgr.performRemoveAllClientPoints();
+			// thêm tất cả các điểm đón và điểm giao hàng vào danh sách từ chối
 			for(int i = 0; i < tcs.pickupPoints.size(); i++){
 				Point pickup = tcs.pickupPoints.get(i);
 				if(!tcs.rejectPickupPoints.contains(pickup)){
@@ -71,21 +72,25 @@ public class SearchOptimumSolution {
 					tcs.rejectDeliveryPoints.add(tcs.pickup2Delivery.get(pickup));
 				}
 			}
+			// đánh dấu tất cả các nhóm là chưa được chọn
 			for(int k : tcs.group2marked.keySet())
 				tcs.group2marked.put(k, 0);
 		}
 		else{
-			int i = 0;
-			int c = 0;
+			int i = 0; // đếm số lượng yêu cầu đã bị loại bỏ
+			int c = 0; // đếm số lần thử loại bỏ yêu cầu ngẫu nhiên để tránh vòng lặp vô hạn
 			while(i < n && c++ < tcs.pickupPoints.size()){
+				// nếu tất cả các điểm đón đã bị từ chối thì dừng lại
 				if(tcs.rejectPickupPoints.size() == tcs.pickupPoints.size())
 					break;
-
+				// rand là chỉ số ngẫu nhiên của một điểm đón trong danh sách các điểm đón
 				int rand = R.nextInt(tcs.pickupPoints.size());
 				Point pickup = tcs.pickupPoints.get(rand);
 				int ridx = tcs.XR.route(pickup);
+				// nếu điểm đón hiện không nằm trên route (đã bị loại trước đó hoặc chưa gán) → continue (bỏ lượt).
 				if(ridx == Constants.NULL_POINT)
 					continue;
+				// nếu điểm đón không được phép loại bỏ (theo tcs.removeAllowed) → continue (bỏ lượt).
 				if(!tcs.removeAllowed.get(pickup))
 					continue;
 				Point delivery = tcs.pickup2Delivery.get(tcs.pickupPoints.get(rand));
@@ -94,17 +99,19 @@ public class SearchOptimumSolution {
 				tcs.rejectDeliveryPoints.add(delivery);
 				tcs.group2marked.put(tcs.point2Group.get(pickup), 0);
 				tcs.group2marked.put(tcs.point2Group.get(delivery), 0);
+				// nếu sau khi loại bỏ, route chỉ còn lại điểm đầu và điểm cuối → đánh dấu nhóm của route đó là chưa được chọn (group2marked = 0).
 				if(tcs.XR.index(tcs.XR.getTerminatingPointOfRoute(ridx)) <= 1){
 					int groupTruck = tcs.point2Group.get(tcs.XR.getStartingPointOfRoute(ridx));
 					tcs.group2marked.put(groupTruck, 0);
 				}
 				i++;
+				// tăng số lần bị chọn của điểm đón và điểm giao hàng lên 1 để theo dõi tần suất bị loại bỏ của từng yêu cầu
 				tcs.nChosed.put(pickup, tcs.nChosed.get(pickup)+1);
 				tcs.nChosed.put(delivery, tcs.nChosed.get(delivery)+1);
 			}
 		}
 	}
-	
+	// Chọn 1 request ngẫu nhiên, sau đó loại bỏ request có liên quan nhất với request đó, lặp lại cho đến khi đạt được số lượng yêu cầu cần loại bỏ.
 	public void shaw_removal(){
 		if (tcs.pickupPoints.isEmpty()) return;
 		Random R = new Random();
@@ -466,7 +473,7 @@ public class SearchOptimumSolution {
 		}
 		initialSolutionBuilder.insertMoocForAllRoutes(tcs);
 	}
-	
+	// regret có nghĩa là khi chèn một yêu cầu vào route, chúng ta sẽ tính toán chi phí của việc chèn yêu cầu đó vào route và so sánh với chi phí của việc chèn yêu cầu đó vào các route khác. Sau đó, chúng ta sẽ chọn route có chi phí cao nhất để chèn yêu cầu đó vào, vì điều này sẽ tạo ra sự "hối tiếc" lớn nhất nếu chúng ta không chọn route đó.
 	public void regret_n_insertion(int n){
 		System.out.println("regret insertion n = " + n);
 		

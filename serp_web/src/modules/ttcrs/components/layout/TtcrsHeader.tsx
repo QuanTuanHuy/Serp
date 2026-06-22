@@ -58,7 +58,7 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
-  const { getDisplayName, user } = useUser();
+  const { getDisplayName, user, getUserRole } = useUser();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -170,7 +170,7 @@ export const TtcrsHeader: React.FC<TtcrsHeaderProps> = ({
                   {getDisplayName()}
                 </p>
                 <p className='mt-0.5 text-xs text-muted-foreground'>
-                  Dispatcher
+                  {getUserRole()}
                 </p>
               </div>
               <ChevronDown className='h-4 w-4 text-muted-foreground' />

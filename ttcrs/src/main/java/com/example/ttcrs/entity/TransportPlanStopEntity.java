@@ -66,6 +66,11 @@ public class TransportPlanStopEntity {
     @Column(name = "actual_arrival_time")
     private LocalDateTime actualArrivalTime;
 
+    /** True sau khi tài xế ấn "Complete Stop & Continue" */
+    @Column(name = "is_completed", nullable = false)
+    @Builder.Default
+    private Boolean isCompleted = false;
+
     @CreationTimestamp
     @Column(name = "created_stamp")
     private LocalDateTime createdStamp;

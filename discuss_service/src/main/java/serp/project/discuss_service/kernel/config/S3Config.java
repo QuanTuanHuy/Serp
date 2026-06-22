@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
@@ -42,8 +43,10 @@ public class S3Config {
 
         // For MinIO or custom S3-compatible endpoint
         if (StringUtils.hasText(s3Props.getEndpoint())) {
-            builder.endpointOverride(URI.create(s3Props.getEndpoint()))
-                    .forcePathStyle(true);  // Required for MinIO
+            builder.endpointOverride(URI.create(s3Props.getEndpoint()));
+            if (s3Props.isPathStyleAccessEnabled()) {
+                builder.forcePathStyle(true);
+            }
             log.info("Configured S3 client with custom endpoint: {}", s3Props.getEndpoint());
         } else {
             log.info("Configured S3 client for AWS S3 in region: {}", s3Props.getRegion());
@@ -65,12 +68,12 @@ public class S3Config {
         // For MinIO or custom S3-compatible endpoint
         if (StringUtils.hasText(s3Props.getEndpoint())) {
             builder.endpointOverride(URI.create(s3Props.getEndpoint()));
-            // Use path-style URLs for MinIO (bucket in path, not subdomain)
-            // e.g., http://localhost:9000/bucket/key instead of http://bucket.localhost:9000/key
-            builder.serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
-                    .pathStyleAccessEnabled(true)
-                    .build());
-            log.info("Configured S3 presigner with path-style access for endpoint: {}", s3Props.getEndpoint());
+            if (s3Props.isPathStyleAccessEnabled()) {
+                builder.serviceConfiguration(S3Configuration.builder()
+                        .pathStyleAccessEnabled(true)
+                        .build());
+                log.info("Configured S3 presigner with path-style access for endpoint: {}", s3Props.getEndpoint());
+            }
         }
 
         return builder.build();

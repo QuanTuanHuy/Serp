@@ -3,7 +3,17 @@ package com.example.ttcrs.algorithm.vrp;
 import java.util.ArrayList;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Interface này định nghĩa các phương thức để đánh giá các 
+// ràng buộc trong bài toán VRP. Nó mở rộng từ InvariantVR, 
+// có nghĩa là nó cũng bao gồm các phương thức để kiểm tra 
+// tính bất biến của giải pháp. Các phương thức trong 
+// IConstraintVR cho phép đánh giá số lượng vi phạm của một 
+// giải pháp hiện tại, cũng như đánh giá tác động của các 
+// loại di chuyển khác nhau (ví dụ: di chuyển một điểm, di 
+// chuyển hai điểm, di chuyển ba điểm, v.v.) đối với số 
+// lượng vi phạm. Điều này rất hữu ích trong quá trình tìm
+//  kiếm cục bộ (local search) để xác định xem một di chuyển 
+// cụ thể có cải thiện giải pháp hay không.
 public interface IConstraintVR extends InvariantVR {
 	/*
 	 * return the value of the function

@@ -4,7 +4,7 @@ package com.example.ttcrs.algorithm.models.places;
 public class DepotMooc{
 	private String code;
 	private String locationCode;
-	private int pickupMoocDuration;
+	private int pickupMoocDuration; // thời gian lấy mooc tại depot
 	private int deliveryMoocDuration;
 	public String getCode() {
 		return code;

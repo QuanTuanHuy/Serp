@@ -4,7 +4,14 @@ import com.example.ttcrs.algorithm.models.places.*;
 import com.example.ttcrs.algorithm.models.requests.*;
 import com.example.ttcrs.algorithm.models.equipments.*;;
 
-
+// ContainerTruckMoocInput là một lớp dữ liệu đầu vào cho thuật 
+// toán giải quyết bài toán vận tải container, xe tải và mooc. Nó 
+// chứa thông tin về các yêu cầu vận chuyển (xuất khẩu, nhập khẩu, 
+// kho bãi), các công ty vận tải, các điểm xuất phát và điểm đến 
+// (depot, warehouse, port), các thiết bị vận chuyển (container, 
+// truck, mooc) và các tham số cấu hình khác. Lớp này được sử dụng 
+// để truyền dữ liệu từ bên ngoài vào thuật toán để giải quyết bài 
+// toán tối ưu hóa tuyến đường và phân bổ tài nguyên.
 public class ContainerTruckMoocInput {
 	private ExportContainerTruckMoocRequest[] exRequests;
 	private ImportContainerTruckMoocRequest[] imRequests;

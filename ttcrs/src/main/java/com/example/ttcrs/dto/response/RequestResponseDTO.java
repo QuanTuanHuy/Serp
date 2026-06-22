@@ -38,6 +38,12 @@ public class RequestResponseDTO {
     /** Lý do huỷ hoặc ghi chú bổ sung */
     private String reason;
 
+    /** URL ảnh bằng chứng tại điểm đầu (nguồn) */
+    private String evidenceAtSrc;
+
+    /** URL ảnh bằng chứng tại điểm đích */
+    private String evidenceAtDest;
+
     private RequestStatus status;
     private RequestType type;
 
@@ -75,6 +81,8 @@ public class RequestResponseDTO {
                 .containerSize(entity.getContainerSize())
                 .dropTrailerRequired(entity.getDropTrailerRequired())
                 .reason(entity.getReason())
+                .evidenceAtSrc(entity.getEvidenceAtSrc())
+                .evidenceAtDest(entity.getEvidenceAtDest())
                 .status(entity.getStatus())
                 .type(entity.getType())
                 .transportPlanId(entity.getTransportPlanId())

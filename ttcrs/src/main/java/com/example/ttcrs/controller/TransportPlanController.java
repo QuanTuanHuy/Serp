@@ -1,5 +1,6 @@
 package com.example.ttcrs.controller;
 
+import com.example.ttcrs.dto.request.driver.CancelRouteRequest;
 import com.example.ttcrs.dto.request.transportplan.SaveTransportPlanDTO;
 import com.example.ttcrs.dto.response.ApiResponse;
 import com.example.ttcrs.dto.response.TransportPlanDetailDTO;
@@ -52,5 +53,33 @@ public class TransportPlanController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Transport plans saved successfully", result));
+    }
+
+    /** PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/cancel — CREATED → CANCELLED */
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<TransportPlanDetailDTO>> cancelRoute(
+            @PathVariable Long id,
+            @Valid @RequestBody CancelRouteRequest body) {
+        log.info("PATCH /ttcrs/api/v1/dispatcher/transport-plans/{}/cancel", id);
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(transportPlanService.cancelRoute(id, body.getReason())));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /** PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/restore — CANCELLED → CREATED */
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<TransportPlanDetailDTO>> restoreRoute(@PathVariable Long id) {
+        log.info("PATCH /ttcrs/api/v1/dispatcher/transport-plans/{}/restore", id);
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(transportPlanService.restoreRoute(id)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+        }
     }
 }
