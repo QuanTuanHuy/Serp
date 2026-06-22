@@ -85,7 +85,7 @@ export function Header() {
                         <DropdownMenuItem
                           key={module.code}
                           onClick={() =>
-                            router.push(getModuleRoute(module.code, user?.roles ?? []))
+                            router.push(getModuleRoute(module.code))
                           }
                           className='cursor-pointer'
                         >

@@ -20,8 +20,6 @@ import { getModuleIcon, getModuleRoute } from '@/shared/constants/moduleIcons';
 import { CheckCircle2 } from 'lucide-react';
 import type { Module } from '../types';
 import { useAuth } from '@/modules/account';
-import { useAppSelector } from '@/shared/hooks';
-import { selectUserProfile } from '@/modules/account/store';
 
 interface ModuleCardProps {
   module: Module;
@@ -36,7 +34,7 @@ export function ModuleCard({
 }: ModuleCardProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const userProfile = useAppSelector(selectUserProfile);
+
   const iconConfig = getModuleIcon(module.code);
 
   const isAvailable = module.status === 'ACTIVE';
@@ -58,12 +56,12 @@ export function ModuleCard({
 
     if (!isAuthenticated) {
       router.push(
-        `/auth?redirect=${encodeURIComponent(getModuleRoute(module.code, userProfile?.roles ?? []))}`
+        `/auth?redirect=${encodeURIComponent(getModuleRoute(module.code))}`
       );
       return;
     }
 
-    router.push(getModuleRoute(module.code, userProfile?.roles ?? []));
+    router.push(getModuleRoute(module.code));
   };
 
   const IconComponent = iconConfig?.icon;
