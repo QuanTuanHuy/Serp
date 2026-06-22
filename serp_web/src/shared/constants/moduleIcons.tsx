@@ -222,7 +222,7 @@ export const getModuleIcon = (moduleCode: string): ModuleIconConfig | null => {
 /**
  * Get module route path
  */
-export const getModuleRoute = (moduleCode: string, roles?: string[]): string => {
+export const getModuleRoute = (moduleCode: string): string => {
   const canonicalCode = toCanonicalModuleCode(moduleCode);
 
   if (canonicalCode === 'ADMIN') return '/admin';
@@ -231,12 +231,6 @@ export const getModuleRoute = (moduleCode: string, roles?: string[]): string => 
   if (canonicalCode === 'PTM') return '/ptm/dashboard';
   if (canonicalCode === 'CRM') return '/crm/dashboard';
   if (canonicalCode === 'TMS') return '/first-mile';
-  if (canonicalCode === 'TTCRS') {
-    if (roles?.includes('TTCRS_CUSTOMER'))   return '/ttcrs/customer/requests';
-    if (roles?.includes('TTCRS_DRIVER'))     return '/ttcrs/driver/routes';
-    if (roles?.includes('TTCRS_DISPATCHER')) return '/ttcrs/dispatcher/requests';
-    return '/ttcrs/dispatcher/requests';
-  }
   if (canonicalCode === 'SCHOOLBUS') {
     return '/school-bus';
   }
