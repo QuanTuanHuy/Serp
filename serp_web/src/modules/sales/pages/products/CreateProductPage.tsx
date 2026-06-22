@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Create Product Page
-*/
-
 'use client';
 
 import React, { useState } from 'react';

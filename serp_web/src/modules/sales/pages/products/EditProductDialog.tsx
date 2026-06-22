@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Edit Product Dialog
-*/
-
 'use client';
 
 import React, { useState, useEffect } from 'react';

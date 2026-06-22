@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Vehicle registration status card
-*/
-
 import { Badge } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { VehicleDetailTooltip } from './VehicleDetailTooltip';

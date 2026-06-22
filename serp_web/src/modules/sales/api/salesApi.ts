@@ -1,5 +1,3 @@
-// Sales API Endpoints (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { api } from '@/lib/store/api';
 import type {
   Address,

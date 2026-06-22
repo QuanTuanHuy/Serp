@@ -1,5 +1,3 @@
-// FacilityForm Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useState } from 'react';

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 API endpoints
-*/
-
 import { api } from '@/lib/store/api';
 import type {
   Address,

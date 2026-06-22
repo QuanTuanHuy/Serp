@@ -1,10 +1,3 @@
-/**
- * Create Inventory Item Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Form to add new inventory items
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';

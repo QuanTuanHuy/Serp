@@ -1,10 +1,3 @@
-/**
- * Inventory List Page - Enhanced
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Inventory management with modern UI
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';

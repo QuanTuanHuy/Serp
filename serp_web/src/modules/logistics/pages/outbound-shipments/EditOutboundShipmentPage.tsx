@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Edit outbound shipment page
-*/
-
 'use client';
 
 import { useEffect, useState } from 'react';

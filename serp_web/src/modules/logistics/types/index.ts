@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Module Types
-*/
-
 // Constants
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';

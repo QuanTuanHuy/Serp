@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Shipment Form Component
-*/
-
 'use client';
 
 import { useMemo, useState } from 'react';

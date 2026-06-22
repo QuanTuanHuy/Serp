@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 selectors
-*/
-
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/lib/store';
 

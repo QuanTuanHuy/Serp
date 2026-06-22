@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 store slice
-*/
-
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type {
   DeliveryPlanFilters,
