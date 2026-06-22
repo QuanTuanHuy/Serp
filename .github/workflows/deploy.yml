@@ -42,6 +42,7 @@ jobs:
       tms-payment-service: ${{ steps.changes.outputs.tms-payment-service }}
       pm-core: ${{ steps.changes.outputs.pm-core }}
       school-bus-service: ${{ steps.changes.outputs.school-bus-service }}
+      ttcrs: ${{ steps.changes.outputs.ttcrs }}
     steps:
       - name: Download changes artifact
 
@@ -75,6 +76,7 @@ jobs:
           echo "tms-payment-service=$(jq -r '."tms-payment-service"' changes.json)" >> $GITHUB_OUTPUT
           echo "pm-core=$(jq -r '."pm-core"' changes.json)" >> $GITHUB_OUTPUT
           echo "school-bus-service=$(jq -r '."school-bus-service"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ttcrs=$(jq -r .ttcrs changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
     needs: check-changes
@@ -475,6 +477,25 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-ttcrs:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.ttcrs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy TTCRS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_ttcrs
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
   notify-deployment:
     needs: check-changes
     if: always()
@@ -497,6 +518,7 @@ jobs:
           echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
           echo "- Discuss Service: ${{ needs.check-changes.outputs.discuss-service }}" >> $GITHUB_STEP_SUMMARY
           echo "- PM Core: ${{ needs.check-changes.outputs.pm-core }}" >> $GITHUB_STEP_SUMMARY
+          echo "- TTCRS: ${{ needs.check-changes.outputs.ttcrs }}" >> $GITHUB_STEP_SUMMARY
           echo "- Logistics 2: ${{ needs.check-changes.outputs.logistics2 }}" >> $GITHUB_STEP_SUMMARY
           echo "- Logistics: ${{ needs.check-changes.outputs.logistics }}" >> $GITHUB_STEP_SUMMARY
           echo "- Sales: ${{ needs.check-changes.outputs.sales }}" >> $GITHUB_STEP_SUMMARY
