@@ -41,7 +41,6 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 | `/first-mile/vehicles/second-mile`   | Hub vehicles                  |
 | `/first-mile/billing`                | Billing calculator & rules    |
 | `/first-mile/product-types`          | Product types                 |
-| `/first-mile/import-history`         | Import jobs                   |
 
 Legacy redirects (e.g. `/billing` → `/first-mile/billing`) live under `src/app/`; prefer new links under `/first-mile/`.
 
