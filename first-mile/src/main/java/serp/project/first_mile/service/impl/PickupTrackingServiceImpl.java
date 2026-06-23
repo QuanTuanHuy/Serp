@@ -32,6 +32,7 @@ import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
@@ -123,8 +124,9 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         List<Trip> allTrips = tripRepository
-                .findByTenantIdAndTripDateAndStatusInOrderByPlannedStartTimeAscIdAsc(
+                .findByTenantIdAndTripTypeAndTripDateAndStatusInOrderByPlannedStartTimeAscIdAsc(
                         tenantId,
+                        TripType.PICKUP,
                         effectiveTripDate,
                         TRACKABLE_TRIP_STATUSES
                 );
@@ -359,9 +361,10 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         var tripOrder = tripOrderRepository
-                .findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
+                .findFirstByTenantIdAndOrderIdAndTrip_TripTypeAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
                         tenantId,
                         orderId,
+                        TripType.PICKUP,
                         courierStaffId,
                         List.of(TripStatus.PLANNED, TripStatus.IN_PROGRESS)
                 )
@@ -468,6 +471,9 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
 
         Trip trip = tripRepository.findByIdAndTenantId(pickupCheckin.getTripId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip is invalid."));
+        if (!TripType.PICKUP.equals(trip.getTripType())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip is invalid.");
+        }
 
         ensureCanViewPickupCheckin(tenantId, trip, pickupCheckin);
 
@@ -911,6 +917,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "tripId must be greater than 0.");
         }
         return tripRepository.findByIdAndTenantIdForUpdate(tripId, tenantId)
+                .filter(trip -> TripType.PICKUP.equals(trip.getTripType()))
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip not found."));
     }
 

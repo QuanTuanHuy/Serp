@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
@@ -5,6 +10,7 @@ import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +43,11 @@ public class Trip extends AbstractAudit {
     @Enumerated(EnumType.STRING)
     @Column(name = "shift", nullable = false, length = 20)
     private PickupShift shift;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trip_type", nullable = false, length = 20)
+    @Builder.Default
+    private TripType tripType = TripType.PICKUP;
 
     @Column(name = "trip_date", nullable = false)
     private LocalDate tripDate;

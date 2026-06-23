@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.domain;
 
 import jakarta.persistence.*;
@@ -46,4 +51,7 @@ public class TripOrder extends AbstractAudit {
 
     @Column(name = "lateness_minutes")
     private Long latenessMinutes;
+
+    @Column(name = "scan_out_time")
+    private LocalDateTime scanOutTime;
 }
