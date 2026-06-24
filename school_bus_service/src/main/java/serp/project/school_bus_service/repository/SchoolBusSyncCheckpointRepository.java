@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public interface SchoolBusSyncCheckpointRepository extends BaseRepository<SchoolBusSyncCheckpointEntity, Long> {
 
-    Optional<SchoolBusSyncCheckpointEntity> findBySyncCodeAndIsDeletedFalse(String syncCode);
+    Optional<SchoolBusSyncCheckpointEntity> findFirstBySyncCodeAndIsDeletedFalseOrderByUpdatedAtDescIdDesc(
+            String syncCode);
 
 }

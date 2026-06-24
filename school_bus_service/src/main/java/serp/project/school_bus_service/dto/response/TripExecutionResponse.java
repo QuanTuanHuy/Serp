@@ -21,10 +21,6 @@ public class TripExecutionResponse extends BaseResponse {
     private LocalDateTime plannedEndAt;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
-    private Double plannedDistanceKm;
-    private Integer plannedDurationMin;
-    private Double actualDistanceKm;
-    private Integer actualDurationMin;
     private String completionNote;
     private LocalDateTime cancelledAt;
     private Long cancelledBy;

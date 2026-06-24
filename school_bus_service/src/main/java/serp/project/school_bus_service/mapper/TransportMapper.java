@@ -117,41 +117,4 @@ public class TransportMapper extends BaseMapper {
         return r;
     }
 
-    public TransportRequestHistoryResponse toTransportRequestHistoryResponse(TransportRequestHistoryEntity entity) {
-        TransportRequestHistoryResponse r = enrich(new TransportRequestHistoryResponse(), entity);
-        r.setRequestId(entity.getRequest().getId());
-        r.setOldStatus(entity.getOldStatus());
-        r.setNewStatus(entity.getNewStatus());
-        r.setChangedBy(entity.getChangedBy());
-        r.setChangedAt(entity.getChangedAt());
-        r.setReason(entity.getReason());
-        r.setNotes(entity.getNotes());
-        return r;
-    }
-
-    public StudentSubscriptionHistoryResponse toStudentSubscriptionHistoryResponse(
-            StudentSubscriptionHistoryEntity entity) {
-        StudentSubscriptionHistoryResponse r = enrich(new StudentSubscriptionHistoryResponse(), entity);
-        r.setSubscriptionId(entity.getSubscription() == null ? null : entity.getSubscription().getId());
-        r.setSourceRequestId(entity.getSourceRequest() == null ? null : entity.getSourceRequest().getId());
-        r.setRequestStudentId(entity.getRequestStudent() == null ? null : entity.getRequestStudent().getId());
-        r.setChangeType(entity.getChangeType().name());
-        r.setOldStatus(entity.getOldStatus());
-        r.setNewStatus(entity.getNewStatus());
-        r.setOldPickupPointId(entity.getOldPickupPointId());
-        r.setNewPickupPointId(entity.getNewPickupPointId());
-        r.setOldDropoffPointId(entity.getOldDropoffPointId());
-        r.setNewDropoffPointId(entity.getNewDropoffPointId());
-        r.setOldTripOption(entity.getOldTripOption());
-        r.setNewTripOption(entity.getNewTripOption());
-        r.setOldEffectiveFrom(entity.getOldEffectiveFrom());
-        r.setNewEffectiveFrom(entity.getNewEffectiveFrom());
-        r.setOldEffectiveTo(entity.getOldEffectiveTo());
-        r.setNewEffectiveTo(entity.getNewEffectiveTo());
-        r.setChangedBy(entity.getChangedBy());
-        r.setChangedAt(entity.getChangedAt());
-        r.setReason(entity.getReason());
-        r.setNotes(entity.getNotes());
-        return r;
-    }
 }

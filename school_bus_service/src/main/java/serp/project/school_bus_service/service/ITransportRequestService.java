@@ -8,7 +8,6 @@ import serp.project.school_bus_service.dto.request.RejectRequest;
 import serp.project.school_bus_service.dto.request.TransportRequestUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RequestStudentResponse;
-import serp.project.school_bus_service.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.entity.RequestStudentEntity;
@@ -24,8 +23,6 @@ public interface ITransportRequestService extends IBaseService<TransportRequestE
     TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId);
 
     List<RequestStudentResponse> getRequestStudents(Long requestId, Long tenantId);
-
-    List<TransportRequestHistoryResponse> getTransportRequestHistory(Long requestId, Long tenantId);
 
     TransportRequestResponse createTransportRequest(TransportRequestUpsertRequest request, Long tenantId, Long actorId);
 

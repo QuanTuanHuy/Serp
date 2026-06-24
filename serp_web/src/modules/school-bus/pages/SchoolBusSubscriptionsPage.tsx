@@ -29,7 +29,6 @@ import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
-import { SubscriptionHistoryDialog } from '../components/history';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 export function SchoolBusSubscriptionsPage() {
@@ -265,18 +264,13 @@ export function SchoolBusSubscriptionsPage() {
         >
           <Link href={`/school-bus/subscriptions/${subscription.id}`}>
             <Button
-              size='sm'
+              size='icon'
               variant='outline'
-              className='h-8 rounded-full border-slate-200 hover:bg-slate-50 text-slate-700 gap-1'
+              className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             >
               <Eye className='h-3.5 w-3.5' />
-              Detail
             </Button>
           </Link>
-          <SubscriptionHistoryDialog
-            subscriptionId={subscription.id}
-            subscriptionCode={subscription.subscriptionCode}
-          />
         </div>
       ),
     },
@@ -327,7 +321,7 @@ export function SchoolBusSubscriptionsPage() {
       title='Subscriptions'
       description={
         access.isParentOnly
-          ? 'Track active transport services and subscription history for your children.'
+          ? 'Track active transport services for your children.'
           : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
       }
     >
@@ -378,7 +372,7 @@ export function SchoolBusSubscriptionsPage() {
           title='Subscription directory'
           description={
             access.isParentOnly
-              ? 'View subscription details and history for your children.'
+              ? 'View subscription details for your children.'
               : 'Use status actions to control whether a student is eligible for daily routing.'
           }
           toolbar={subscriptionToolbar}

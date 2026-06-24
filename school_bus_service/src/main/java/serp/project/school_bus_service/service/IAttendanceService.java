@@ -3,8 +3,10 @@ package serp.project.school_bus_service.service;
 import serp.project.school_bus_service.shared.base.IBaseService;
 
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
+import serp.project.school_bus_service.dto.request.BatchAttendanceRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
+import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
@@ -44,6 +46,9 @@ public interface IAttendanceService extends IBaseService<AttendanceEntity, Long>
 
     /** Internal: returns raw entities ordered by recordedAt desc, used for manifest building. */
     List<AttendanceEntity> findAttendancesByRoute(Long routeId, Long tenantId);
+
+    BatchAttendanceResponse batchUpdateAttendance(Long tripId, Long routeStopId,
+            BatchAttendanceRequest request, Long tenantId, Long actorId);
 
     long countByTenant(Long tenantId);
 }

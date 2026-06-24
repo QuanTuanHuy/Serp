@@ -12,7 +12,6 @@ DECLARE
     v_pickup_point_id bigint;
     v_dropoff_point_id bigint;
     v_request_id bigint;
-    v_request_student_id bigint;
     v_subscription_id bigint;
 
     v_full_name text;
@@ -199,9 +198,6 @@ BEGIN
     DELETE FROM public.school_bus_trip_execution
     WHERE created_by = v_seed_by;
 
-    DELETE FROM public.school_bus_route_assignment_history
-    WHERE created_by = v_seed_by;
-
     DELETE FROM public.school_bus_route_assignment
     WHERE created_by = v_seed_by;
 
@@ -215,12 +211,6 @@ BEGIN
     WHERE created_by = v_seed_by;
 
     DELETE FROM public.school_bus_route_planning_session
-    WHERE created_by = v_seed_by;
-
-    DELETE FROM public.school_bus_student_subscription_history
-    WHERE created_by = v_seed_by;
-
-    DELETE FROM public.school_bus_transport_request_history
     WHERE created_by = v_seed_by;
 
     DELETE FROM public.school_bus_request_student
@@ -1019,38 +1009,7 @@ BEGIN
         );
     END LOOP;
 
-    -- One lifecycle history row for every request.
-    INSERT INTO public.school_bus_transport_request_history (
-        tenant_id, request_id, old_status, new_status,
-        changed_by, changed_at, reason, notes,
-        is_active, is_deleted, created_at, created_by, updated_at, updated_by
-    )
-    SELECT
-        v_tenant_id,
-        request.id,
-        'DRAFT',
-        request.status,
-        request.approved_by,
-        COALESCE(request.approved_at, request.requested_at),
-        CASE request.status
-            WHEN 'APPROVED' THEN 'Transport registration approved.'
-            WHEN 'SUBMITTED' THEN 'Transport registration submitted for review.'
-            WHEN 'REJECTED' THEN request.rejection_reason
-            ELSE 'Transport registration status recorded.'
-        END,
-        'Foundation transport registration history.',
-        true,
-        false,
-        CURRENT_TIMESTAMP,
-        v_seed_by,
-        CURRENT_TIMESTAMP,
-        v_seed_by
-    FROM public.school_bus_transport_request request
-    WHERE request.tenant_id = v_tenant_id
-      AND request.created_by = v_seed_by
-      AND request.is_deleted = false;
-
-    -- Active subscriptions and corresponding CREATED history.
+    -- Active subscriptions.
     FOR i IN 1..120 LOOP
         SELECT
             student.id,
@@ -1122,55 +1081,6 @@ BEGIN
           AND created_by = v_seed_by
           AND is_deleted = false;
 
-        SELECT id
-        INTO STRICT v_request_student_id
-        FROM public.school_bus_request_student
-        WHERE tenant_id = v_tenant_id
-          AND request_id = v_request_id
-          AND student_id = v_record.id
-          AND created_by = v_seed_by
-          AND is_deleted = false;
-
-        INSERT INTO public.school_bus_student_subscription_history (
-            tenant_id, subscription_id, source_request_id, request_student_id,
-            change_type, old_status, new_status,
-            old_pickup_point_id, new_pickup_point_id,
-            old_dropoff_point_id, new_dropoff_point_id,
-            old_trip_option, new_trip_option,
-            old_effective_from, new_effective_from,
-            old_effective_to, new_effective_to,
-            changed_by, changed_at, reason, notes,
-            is_active, is_deleted, created_at, created_by, updated_at, updated_by
-        )
-        VALUES (
-            v_tenant_id,
-            v_subscription_id,
-            v_request_id,
-            v_request_student_id,
-            'CREATED',
-            NULL,
-            'ACTIVE',
-            NULL,
-            v_record.pickup_point_id,
-            NULL,
-            v_record.default_dropoff_point_id,
-            NULL,
-            v_trip_option,
-            NULL,
-            CURRENT_DATE - 30,
-            NULL,
-            NULL,
-            NULL,
-            CURRENT_TIMESTAMP,
-            'Created from an approved new service registration.',
-            'Weekday transport service activated.',
-            true,
-            false,
-            CURRENT_TIMESTAMP,
-            v_seed_by,
-            CURRENT_TIMESTAMP,
-            v_seed_by
-        );
     END LOOP;
 
     -- Keep exactly one active sequence row per key and never decrease a real sequence.
@@ -1283,14 +1193,11 @@ END $$;
 -- UNION ALL SELECT 'students', count(*) FROM public.school_bus_student WHERE created_by = 'SEED_DATA'
 -- UNION ALL SELECT 'requests', count(*) FROM public.school_bus_transport_request WHERE created_by = 'SEED_DATA'
 -- UNION ALL SELECT 'request_students', count(*) FROM public.school_bus_request_student WHERE created_by = 'SEED_DATA'
--- UNION ALL SELECT 'request_history', count(*) FROM public.school_bus_transport_request_history WHERE created_by = 'SEED_DATA'
 -- UNION ALL SELECT 'subscriptions', count(*) FROM public.school_bus_student_subscription WHERE created_by = 'SEED_DATA'
--- UNION ALL SELECT 'subscription_history', count(*) FROM public.school_bus_student_subscription_history WHERE created_by = 'SEED_DATA';
 --
 -- Expected: schools=3, depots=2, users=105, buses=15, parents=75, drivers=18,
 -- attendants=12, pickup_points=24, school_pickup_links=58, students=120,
--- requests=90, request_students=135, request_history=90,
--- subscriptions=120, subscription_history=120.
+-- requests=90, request_students=135, subscriptions=120.
 --
 -- SELECT
 --     school.name AS school,

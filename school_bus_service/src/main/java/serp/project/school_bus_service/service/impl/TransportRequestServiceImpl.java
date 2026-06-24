@@ -12,7 +12,6 @@ import serp.project.school_bus_service.dto.request.TransportRequestUpsertRequest
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
-import serp.project.school_bus_service.dto.response.TransportRequestHistoryResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
@@ -31,10 +30,8 @@ import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
-import serp.project.school_bus_service.entity.TransportRequestHistoryEntity;
 import serp.project.school_bus_service.entity.TransportRequestEntity;
 import serp.project.school_bus_service.repository.RequestStudentRepository;
-import serp.project.school_bus_service.repository.TransportRequestHistoryRepository;
 import serp.project.school_bus_service.repository.TransportRequestRepository;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -61,7 +58,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     private final TransportRequestRepository transportRequestRepository;
     private final RequestStudentRepository requestStudentRepository;
-    private final TransportRequestHistoryRepository transportRequestHistoryRepository;
     private final IMasterDataService masterDataService;
     private final IStudentSubscriptionService subscriptionService;
     private final ISchoolPickupPointService schoolPickupPointService;
@@ -76,7 +72,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     public TransportRequestServiceImpl(
             TransportRequestRepository transportRequestRepository,
             RequestStudentRepository requestStudentRepository,
-            TransportRequestHistoryRepository transportRequestHistoryRepository,
             IMasterDataService masterDataService,
             IStudentSubscriptionService subscriptionService,
             ISchoolPickupPointService schoolPickupPointService,
@@ -88,7 +83,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             ISchoolBusDomainNotificationService domainNotificationService) {
         this.transportRequestRepository = transportRequestRepository;
         this.requestStudentRepository = requestStudentRepository;
-        this.transportRequestHistoryRepository = transportRequestHistoryRepository;
         this.masterDataService = masterDataService;
         this.subscriptionService = subscriptionService;
         this.schoolPickupPointService = schoolPickupPointService;
@@ -155,17 +149,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     }
 
     @Override
-    public List<TransportRequestHistoryResponse> getTransportRequestHistory(Long requestId, Long tenantId) {
-        schoolBusDataScopeService.assertCanAccessTransportRequest(requestId);
-        findById(transportRequestRepository, requestId, tenantId);
-        return transportRequestHistoryRepository
-                .findByRequestIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(requestId, tenantId)
-                .stream()
-                .map(mapper::toTransportRequestHistoryResponse)
-                .toList();
-    }
-
-    @Override
     @Transactional
     public TransportRequestResponse createTransportRequest(TransportRequestUpsertRequest request, Long tenantId, Long actorId) {
         // Parent data scope: override parentProfileId from security context
@@ -187,7 +170,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setRejectionReason(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
-        recordHistory(saved, null, RequestStatus.SUBMITTED, actorId, null, "Created transport request");
         domainNotificationService.notifyTransportRequestSubmitted(saved, actorId);
         return toResponse(saved);
     }
@@ -217,7 +199,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         }
         TransportRequestEntity saved = transportRequestRepository.save(entity);
         replaceRequestStudents(saved, request.getStudents(), tenantId, actorId);
-        recordHistory(saved, oldStatus, saved.getStatus(), actorId, request.getChangeReason(), "Updated transport request");
         if (oldStatus == RequestStatus.REJECTED && saved.getStatus() == RequestStatus.SUBMITTED) {
             domainNotificationService.notifyTransportRequestSubmitted(saved, actorId);
         }
@@ -300,8 +281,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             dispatchApprove(saved, requestStudent, tenantId, actorId);
         }
 
-        recordHistory(saved, oldStatus, RequestStatus.APPROVED, actorId, null,
-                "Approved transport request (" + saved.getRequestType().name() + ")");
         domainNotificationService.notifyTransportRequestApproved(saved, actorId);
         return toResponse(saved);
     }
@@ -322,7 +301,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         entity.setApprovedBy(null);
         entity.setApprovedAt(null);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
-        recordHistory(saved, oldStatus, RequestStatus.REJECTED, actorId, request.getReason(), "Rejected transport request");
         domainNotificationService.notifyTransportRequestRejected(saved, actorId);
         return toResponse(saved);
     }
@@ -341,7 +319,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         RequestStatus oldStatus = entity.getStatus();
         entity.setStatus(RequestStatus.CANCELLED);
         TransportRequestEntity saved = transportRequestRepository.save(entity);
-        recordHistory(saved, oldStatus, RequestStatus.CANCELLED, actorId, null, "Cancelled transport request");
         domainNotificationService.notifyTransportRequestCancelled(saved, actorId);
         return toResponse(saved);
     }
@@ -604,20 +581,6 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
             Set<String> allowedSorts,
             String defaultSortBy) {
         return PageableUtils.from(params, allowedSorts, defaultSortBy);
-    }
-
-    private void recordHistory(TransportRequestEntity request, RequestStatus oldStatus, RequestStatus newStatus,
-            Long actorId, String reason, String notes) {
-        TransportRequestHistoryEntity history = new TransportRequestHistoryEntity();
-        history.markCreated(request.getTenantId(), actor(actorId));
-        history.setRequest(request);
-        history.setOldStatus(oldStatus == null ? null : oldStatus.name());
-        history.setNewStatus(newStatus.name());
-        history.setChangedBy(actorId);
-        history.setChangedAt(LocalDateTime.now());
-        history.setReason(reason);
-        history.setNotes(notes);
-        transportRequestHistoryRepository.save(history);
     }
 
     private String generateCode(SchoolBusCode code, Long tenantId, Long actorId) {

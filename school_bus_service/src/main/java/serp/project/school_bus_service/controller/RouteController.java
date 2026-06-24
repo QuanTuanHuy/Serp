@@ -21,7 +21,6 @@ import serp.project.school_bus_service.dto.request.MoveStudentRequest;
 import serp.project.school_bus_service.dto.request.ReorderStopsRequest;
 import serp.project.school_bus_service.dto.request.RouteAssignmentRequest;
 import serp.project.school_bus_service.dto.request.RoutePlanUpsertRequest;
-import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
@@ -98,13 +97,6 @@ public class RouteController extends AbstractBaseController {
             @Valid @RequestBody ReorderStopsRequest request) {
         return ok("Reordered route stops",
                 routeService.reorderRouteStops(id, request, getCurrentTenantId(), getCurrentUserId()));
-    }
-
-    @GetMapping("/{id}/assignment-history")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
-    public ResponseEntity<GeneralResponse<List<AssignmentHistoryResponse>>> getAssignmentHistory(
-            @PathVariable Long id) {
-        return ok("Fetched assignment history", routeService.getAssignmentHistory(id, getCurrentTenantId()));
     }
 
     // ── Manual editing endpoints ─────────────────────────────────────────

@@ -16,7 +16,6 @@ import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequ
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
-import serp.project.school_bus_service.dto.response.StudentSubscriptionHistoryResponse;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -83,11 +82,4 @@ public class SubscriptionController extends AbstractBaseController {
                 subscriptionService.stopSubscription(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
-    @GetMapping("/{id}/history")
-    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
-    public ResponseEntity<GeneralResponse<java.util.List<StudentSubscriptionHistoryResponse>>> getSubscriptionHistory(
-            @PathVariable Long id) {
-        return ok("Fetched subscription history",
-                subscriptionService.getSubscriptionHistory(id, getCurrentTenantId()));
-    }
 }

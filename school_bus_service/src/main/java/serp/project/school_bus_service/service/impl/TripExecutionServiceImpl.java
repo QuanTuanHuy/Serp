@@ -53,7 +53,6 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -256,8 +255,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         trip.setServiceDate(route.getServiceDate());
         trip.setRouteDirection(route.getRouteDirection());
         trip.setStatus(TripStatus.ASSIGNED);
-        trip.setPlannedDistanceKm(route.getPlannedDistanceKm());
-        trip.setPlannedDurationMin(route.getPlannedDurationMin());
         trip.setRouteGeometryPath(route.getGeometryPath());
 
         // Snapshot assignment resources into trip
@@ -522,16 +519,6 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         LocalDateTime completedAt = LocalDateTime.now();
         trip.setStatus(TripStatus.COMPLETED);
         trip.setCompletedAt(completedAt);
-
-        // Calculate actual duration from startedAt to completedAt
-        if (trip.getStartedAt() != null) {
-            trip.setActualDurationMin((int) Duration.between(trip.getStartedAt(), completedAt).toMinutes());
-        }
-
-        // Fallback: actual GPS distance not available; using planned distance.
-        if (trip.getActualDistanceKm() == null && trip.getPlannedDistanceKm() != null) {
-            trip.setActualDistanceKm(trip.getPlannedDistanceKm());
-        }
 
         if (request != null && request.getNote() != null && !request.getNote().isBlank()) {
             trip.setCompletionNote(request.getNote());
