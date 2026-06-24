@@ -247,7 +247,7 @@ export const api = createApi({
     'schoolBus/TransportRequest',
     'schoolBus/Route',
     'schoolBus/Attendance',
-    'schoolBus/TripHistory',
+    'schoolBus/TripExecution',
     'schoolBus/Dashboard',
     'schoolBus/Report',
     // Sales tags
