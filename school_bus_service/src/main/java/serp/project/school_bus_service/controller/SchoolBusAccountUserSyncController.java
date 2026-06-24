@@ -50,7 +50,8 @@ public class SchoolBusAccountUserSyncController {
      */
     @GetMapping("/sync/checkpoint")
     public GeneralResponse<SchoolBusSyncCheckpointEntity> getSyncCheckpoint() {
-        SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository.findBySyncCodeAndIsDeletedFalse("ACCOUNT_USER_SYNC")
+        SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository
+                .findFirstBySyncCodeAndIsDeletedFalseOrderByUpdatedAtDescIdDesc("ACCOUNT_USER_SYNC")
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "Sync checkpoint not found"));
         return GeneralResponse.success("Sync checkpoint retrieved successfully", checkpoint);
     }

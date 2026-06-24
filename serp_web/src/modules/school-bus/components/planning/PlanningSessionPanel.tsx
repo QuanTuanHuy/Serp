@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Rocket, X, Loader2, Activity, History } from 'lucide-react';
+import { Rocket, X, Loader2, Activity, Clock3 } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusStatusBadge } from '../SchoolBusStatusBadge';
@@ -148,7 +148,7 @@ export function PlanningSessionPanel({
             onClick={() => setIsCollapsed((c) => !c)}
           >
             <h3 className='text-sm font-bold text-slate-900 flex items-center gap-2'>
-              <History className='h-4 w-4 text-slate-500' />
+              <Clock3 className='h-4 w-4 text-slate-500' />
               Past Sessions ({sessions.length})
             </h3>
             <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-650 transition-colors'>

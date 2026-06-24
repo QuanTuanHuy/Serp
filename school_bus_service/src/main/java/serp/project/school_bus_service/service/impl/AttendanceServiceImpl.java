@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.AttendanceParamsRequest;
+import serp.project.school_bus_service.dto.request.BatchAttendanceRequest;
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
+import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
@@ -344,6 +346,134 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     }
 
     @Override
+    @Transactional
+    public BatchAttendanceResponse batchUpdateAttendance(Long tripId, Long routeStopId,
+            BatchAttendanceRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        TripExecutionEntity trip = tripExecutionService.getTripEntity(tripId, tenantId);
+
+        if (trip.getStatus() != TripStatus.IN_PROGRESS) {
+            throw new AppException(AppErrorCode.Attendance.INVALID_STATE,
+                    messageCommon.getMessage(AppErrorCode.Attendance.INVALID_STATE));
+        }
+
+        RouteStopEntity routeStop = routeStopService.findRouteStop(routeStopId, tenantId)
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
+
+        if (!routeStop.getRoute().getId().equals(trip.getRoute().getId())) {
+            throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                    messageCommon.getMessage(AppErrorCode.Attendance.INVALID_REQUEST));
+        }
+
+        TripStopLogEntity stopLog = tripStopLogService.findByTripAndRouteStop(tripId, routeStopId, tenantId)
+                .orElse(null);
+        if (stopLog == null || stopLog.getStatus() != TripStopStatus.BOARDING) {
+            throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
+                    "Start boarding/dropoff at this stop before marking attendance.");
+        }
+
+        // Parse action
+        AttendanceEventType eventType;
+        TripStudentStatus targetStatus;
+        switch (request.getAction().toUpperCase()) {
+            case "MARK_BOARDED" -> {
+                eventType = AttendanceEventType.BOARDED;
+                targetStatus = TripStudentStatus.BOARDED;
+            }
+            case "MARK_ABSENT" -> {
+                eventType = AttendanceEventType.ABSENT;
+                targetStatus = TripStudentStatus.ABSENT;
+            }
+            case "MARK_NO_SHOW" -> {
+                eventType = AttendanceEventType.NO_SHOW;
+                targetStatus = TripStudentStatus.NO_SHOW;
+            }
+            default -> throw new AppException(AppErrorCode.Attendance.INVALID_REQUEST,
+                    "Invalid batch action: " + request.getAction());
+        }
+
+        Set<TripStudentStatus> terminalStatuses = Set.of(
+                TripStudentStatus.BOARDED, TripStudentStatus.ABSENT,
+                TripStudentStatus.NO_SHOW, TripStudentStatus.DROPPED_OFF,
+                TripStudentStatus.NOT_SERVED);
+
+        List<TripStudentEntity> allTripStudents = tripStudentService.findByTrip(tripId, tenantId);
+        java.util.Map<Long, TripStudentEntity> studentMap = allTripStudents.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ts -> ts.getStudent().getId(), ts -> ts, (a, b) -> a));
+
+        int updatedCount = 0;
+        int skippedCount = 0;
+        List<BatchAttendanceResponse.UpdatedStudent> updatedStudents = new java.util.ArrayList<>();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Long studentId : request.getStudentIds()) {
+            TripStudentEntity tripStudent = studentMap.get(studentId);
+            if (tripStudent == null) {
+                skippedCount++;
+                continue;
+            }
+
+            if (terminalStatuses.contains(tripStudent.getStatus())) {
+                skippedCount++;
+                continue;
+            }
+
+            if (tripStudent.getStatus() != TripStudentStatus.PLANNED) {
+                skippedCount++;
+                continue;
+            }
+
+            tripStudent.setStatus(targetStatus);
+            if (request.getNote() != null && !request.getNote().isBlank()) {
+                tripStudent.setNote(request.getNote());
+            }
+            tripStudent.markUpdated(actor(actorId));
+            tripStudentService.save(tripStudent);
+
+            AttendanceEntity attendance = new AttendanceEntity();
+            attendance.markCreated(tenantId, actor(actorId));
+            attendance.setRoute(trip.getRoute());
+            attendance.setTrip(trip);
+            attendance.setRouteStop(routeStop);
+            attendance.setStudent(tripStudent.getStudent());
+            attendance.setAttendanceType(eventType == AttendanceEventType.DROPPED_OFF
+                    ? AttendanceType.CHECKED_OUT : AttendanceType.CHECKED_IN);
+            attendance.setEventType(eventType);
+            attendance.setEventSource(EventSource.MANUAL);
+            attendance.setStatus(eventType == AttendanceEventType.ABSENT || eventType == AttendanceEventType.NO_SHOW
+                    ? AttendanceStatus.ABSENT : AttendanceStatus.PRESENT);
+            attendance.setRecordedAt(now);
+            attendance.setRecordedBy(actorId);
+            attendance.setNotes(request.getNote());
+            attendanceRepository.save(attendance);
+
+            domainNotificationService.notifyAttendanceRecorded(trip, tripStudent, eventType, actorId);
+
+            BatchAttendanceResponse.UpdatedStudent updated = new BatchAttendanceResponse.UpdatedStudent();
+            updated.setStudentId(studentId);
+            updated.setStatus(targetStatus.name());
+            updatedStudents.add(updated);
+            updatedCount++;
+        }
+
+        // Update stop log boarded count for MARK_BOARDED
+        if (eventType == AttendanceEventType.BOARDED && updatedCount > 0) {
+            stopLog.setActualBoardedCount(stopLog.getActualBoardedCount() + updatedCount);
+            stopLog.markUpdated(actor(actorId));
+            tripStopLogService.save(stopLog);
+        }
+
+        BatchAttendanceResponse response = new BatchAttendanceResponse();
+        response.setUpdatedCount(updatedCount);
+        response.setSkippedCount(skippedCount);
+        response.setUpdatedStudents(updatedStudents);
+        return response;
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessAttendance(tripId);
@@ -500,8 +630,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         response.setTripStatus(trip.getStatus().name());
         response.setServiceDate(trip.getServiceDate() != null ? trip.getServiceDate().toString() : null);
         response.setRouteGeometry(trip.getRouteGeometryPath() != null ? trip.getRouteGeometryPath() : (trip.getRoute() != null ? trip.getRoute().getGeometryPath() : null));
-        response.setDistanceKm(trip.getPlannedDistanceKm() != null ? trip.getPlannedDistanceKm() : (trip.getRoute() != null ? trip.getRoute().getPlannedDistanceKm() : null));
-        response.setDurationMin(trip.getPlannedDurationMin() != null ? trip.getPlannedDurationMin() : (trip.getRoute() != null ? trip.getRoute().getPlannedDurationMin() : null));
+        response.setDistanceKm(trip.getRoute() != null ? trip.getRoute().getPlannedDistanceKm() : null);
+        response.setDurationMin(trip.getRoute() != null ? trip.getRoute().getPlannedDurationMin() : null);
         response.setSummary(summary);
         response.setStops(stops);
         response.setStudents(students);

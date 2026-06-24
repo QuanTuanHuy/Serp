@@ -72,9 +72,6 @@ BEGIN
     DELETE FROM public.school_bus_trip_execution
     WHERE created_by = v_seed_by;
 
-    DELETE FROM public.school_bus_route_assignment_history
-    WHERE created_by = v_seed_by;
-
     DELETE FROM public.school_bus_route_assignment
     WHERE created_by = v_seed_by;
 
@@ -617,8 +614,7 @@ WHERE assignment.route_id = route.id
 INSERT INTO public.school_bus_trip_execution (
     tenant_id, trip_code, route_id, service_date, route_direction, status,
     planned_start_at, planned_end_at, started_at, completed_at,
-    planned_distance_km, planned_duration_min,
-    actual_distance_km, actual_duration_min, completion_note,
+    completion_note,
     bus_id, driver_id, attendant_id, route_geometry_path,
     start_location_type, start_school_id, start_depot_id,
     end_location_type, end_school_id, end_depot_id,
@@ -642,18 +638,6 @@ SELECT
     CASE
         WHEN definition.trip_status = 'COMPLETED'
             THEN (route.service_date + route.planned_end_time) + interval '3 minutes'
-        ELSE NULL
-    END,
-    route.planned_distance_km,
-    route.planned_duration_min,
-    CASE
-        WHEN definition.trip_status = 'COMPLETED' THEN route.planned_distance_km + 0.3
-        WHEN definition.trip_status = 'IN_PROGRESS' THEN round((route.planned_distance_km * 0.24)::numeric, 1)::double precision
-        ELSE NULL
-    END,
-    CASE
-        WHEN definition.trip_status = 'COMPLETED' THEN route.planned_duration_min + 3
-        WHEN definition.trip_status = 'IN_PROGRESS' THEN 18
         ELSE NULL
     END,
     CASE

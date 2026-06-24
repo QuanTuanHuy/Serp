@@ -51,18 +51,6 @@ public class TripExecutionEntity extends BaseModel {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    @Column(name = "planned_distance_km")
-    private Double plannedDistanceKm;
-
-    @Column(name = "planned_duration_min")
-    private Integer plannedDurationMin;
-
-    @Column(name = "actual_distance_km")
-    private Double actualDistanceKm;
-
-    @Column(name = "actual_duration_min")
-    private Integer actualDurationMin;
-
     @Column(name = "completion_note", columnDefinition = "TEXT")
     private String completionNote;
 

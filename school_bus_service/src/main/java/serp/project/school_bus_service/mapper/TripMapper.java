@@ -2,11 +2,9 @@ package serp.project.school_bus_service.mapper;
 
 import org.springframework.stereotype.Component;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
-import serp.project.school_bus_service.dto.response.TripHistoryResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
-import serp.project.school_bus_service.entity.TripHistoryEntity;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.shared.base.BaseMapper;
@@ -15,23 +13,6 @@ import java.util.List;
 
 @Component
 public class TripMapper extends BaseMapper {
-
-    public TripHistoryResponse toTripHistoryResponse(TripHistoryEntity entity) {
-        TripHistoryResponse response = enrich(new TripHistoryResponse(), entity);
-        response.setRouteId(entity.getRoute().getId());
-        response.setRouteCode(entity.getRouteCode());
-        response.setServiceDate(entity.getServiceDate());
-        response.setStatus(entity.getStatus());
-        response.setStartedAt(entity.getStartedAt());
-        response.setCompletedAt(entity.getCompletedAt());
-        response.setBusId(entity.getBus() == null ? null : entity.getBus().getId());
-        response.setBusPlateNumber(entity.getBus() == null ? null : entity.getBus().getPlateNumber());
-        response.setDriverId(entity.getDriver() == null ? null : entity.getDriver().getId());
-        response.setDriverName(entity.getDriver() == null ? null : entity.getDriver().getFullName());
-        response.setAttendantId(entity.getAttendant() == null ? null : entity.getAttendant().getId());
-        response.setAttendantName(entity.getAttendant() == null ? null : entity.getAttendant().getFullName());
-        return response;
-    }
 
     public TripExecutionResponse toTripExecutionResponse(TripExecutionEntity entity, List<TripStopLogEntity> stops,
             List<TripStudentEntity> students) {
@@ -47,10 +28,6 @@ public class TripMapper extends BaseMapper {
         response.setPlannedEndAt(entity.getPlannedEndAt());
         response.setStartedAt(entity.getStartedAt());
         response.setCompletedAt(entity.getCompletedAt());
-        response.setPlannedDistanceKm(entity.getPlannedDistanceKm());
-        response.setPlannedDurationMin(entity.getPlannedDurationMin());
-        response.setActualDistanceKm(entity.getActualDistanceKm());
-        response.setActualDurationMin(entity.getActualDurationMin());
         response.setCompletionNote(entity.getCompletionNote());
         response.setCancelledAt(entity.getCancelledAt());
         response.setCancelledBy(entity.getCancelledBy());

@@ -11,11 +11,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.params.TripExecutionParamsRequest;
+import serp.project.school_bus_service.dto.request.BatchAttendanceRequest;
 import serp.project.school_bus_service.dto.request.CancelTripRequest;
 import serp.project.school_bus_service.dto.request.CompleteTripRequest;
 import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
+import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
@@ -208,5 +210,15 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id) {
         return ok("Fetched trip attendance summary",
                 attendanceService.getTripAttendanceSummary(id, getCurrentTenantId()));
+    }
+
+    @PostMapping("/{id}/stops/{stopId}/attendance/batch")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.mark')")
+    public ResponseEntity<GeneralResponse<BatchAttendanceResponse>> batchAttendance(
+            @PathVariable Long id,
+            @PathVariable Long stopId,
+            @Valid @RequestBody BatchAttendanceRequest request) {
+        return ok("Batch attendance updated",
+                tripOperationService.batchUpdateAttendance(id, stopId, request, getCurrentTenantId(), getCurrentUserId()));
     }
 }

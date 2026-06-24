@@ -228,42 +228,9 @@ export interface SchoolBusTransportRequest extends SchoolBusBaseRecord {
   rejectionReason?: string | null;
 }
 
-export interface SchoolBusTransportRequestHistory extends SchoolBusBaseRecord {
-  requestId: number;
-  oldStatus?: string | null;
-  newStatus: string;
-  changedBy?: number | null;
-  changedAt: string;
-  reason?: string | null;
-  notes?: string | null;
-}
-
 export interface SchoolBusTransportRequestDetail {
   request: SchoolBusTransportRequest;
   students: SchoolBusRequestStudent[];
-}
-
-export interface SchoolBusSubscriptionHistory extends SchoolBusBaseRecord {
-  subscriptionId?: number | null;
-  sourceRequestId?: number | null;
-  requestStudentId?: number | null;
-  changeType: string;
-  oldStatus?: string | null;
-  newStatus?: string | null;
-  oldPickupPointId?: number | null;
-  newPickupPointId?: number | null;
-  oldDropoffPointId?: number | null;
-  newDropoffPointId?: number | null;
-  oldTripOption?: string | null;
-  newTripOption?: string | null;
-  oldEffectiveFrom?: string | null;
-  newEffectiveFrom?: string | null;
-  oldEffectiveTo?: string | null;
-  newEffectiveTo?: string | null;
-  changedBy?: number | null;
-  changedAt: string;
-  reason?: string | null;
-  notes?: string | null;
 }
 
 export interface SchoolBusSubscriptionPausePeriod extends SchoolBusBaseRecord {
@@ -361,19 +328,6 @@ export interface SchoolBusRouteStop extends SchoolBusBaseRecord {
   estimatedStudentCount?: number | null;
   distanceFromPreviousKm?: number | null;
   estimatedTravelTimeFromPrevious?: number | null;
-}
-
-export interface SchoolBusAssignmentHistory extends SchoolBusBaseRecord {
-  routeId: number;
-  oldBusId?: number | null;
-  newBusId?: number | null;
-  oldDriverId?: number | null;
-  newDriverId?: number | null;
-  oldAttendantId?: number | null;
-  newAttendantId?: number | null;
-  changedBy?: number | null;
-  changedAt?: string | null;
-  reason?: string | null;
 }
 
 export interface SchoolBusRouteAssignment extends SchoolBusBaseRecord {
@@ -499,10 +453,6 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   plannedEndAt?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
-  plannedDistanceKm?: number | null;
-  plannedDurationMin?: number | null;
-  actualDistanceKm?: number | null;
-  actualDurationMin?: number | null;
   completionNote?: string | null;
   cancelledAt?: string | null;
   cancelledBy?: number | null;
@@ -588,21 +538,6 @@ export interface SchoolBusTripAttendanceManifest {
   summary: SchoolBusTripAttendanceSummary;
   stops: TripAttendanceStopItem[];
   students: TripAttendanceStudentItem[];
-}
-
-export interface SchoolBusTripHistory extends SchoolBusBaseRecord {
-  routeId: number;
-  routeCode: string;
-  serviceDate: string;
-  status: string;
-  startedAt?: string | null;
-  completedAt?: string | null;
-  busId?: number | null;
-  busPlateNumber?: string | null;
-  driverId?: number | null;
-  driverName?: string | null;
-  attendantId?: number | null;
-  attendantName?: string | null;
 }
 
 export interface DashboardSummary {
@@ -798,6 +733,24 @@ export interface SchoolBusTripAttendanceActionRequest {
   studentId: number;
   notes?: string;
   isActive?: boolean;
+}
+
+
+export interface SchoolBusBatchAttendanceRequest {
+  action: 'MARK_BOARDED' | 'MARK_ABSENT' | 'MARK_NO_SHOW';
+  studentIds: number[];
+  note?: string;
+}
+
+export interface SchoolBusBatchAttendanceUpdatedStudent {
+  studentId: number;
+  status: string;
+}
+
+export interface SchoolBusBatchAttendanceResponse {
+  updatedCount: number;
+  skippedCount: number;
+  updatedStudents: SchoolBusBatchAttendanceUpdatedStudent[];
 }
 
 export interface SchoolBusMapAddressParts {

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.RoutePlanParamsRequest;
 import serp.project.school_bus_service.dto.request.*;
-import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
@@ -228,12 +227,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     public List<RouteStopResponse> reorderRouteStops(Long routeId, ReorderStopsRequest request, Long tenantId,
             Long actorId) {
         return routeStopService.reorderRouteStops(routeId, request, tenantId, actorId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AssignmentHistoryResponse> getAssignmentHistory(Long routeId, Long tenantId) {
-        return routeDispatchService.getAssignmentHistory(routeId, tenantId);
     }
 
     // ---- Manual editing (delegated to RouteStopService) ----

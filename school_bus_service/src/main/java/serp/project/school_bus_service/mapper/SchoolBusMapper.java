@@ -52,7 +52,6 @@ public class SchoolBusMapper extends BaseMapper {
     public RouteDetailResponse toRouteDetailResponse(RoutePlanEntity r, List<RouteStopEntity> s, RouteAssignmentEntity a) { return routeMapper.toRouteDetailResponse(r, s, a); }
 
     // --- Trip ---
-    public TripHistoryResponse toTripHistoryResponse(TripHistoryEntity e) { return tripMapper.toTripHistoryResponse(e); }
     public TripExecutionResponse toTripExecutionResponse(TripExecutionEntity e, List<TripStopLogEntity> s, List<TripStudentEntity> st) { return tripMapper.toTripExecutionResponse(e, s, st); }
     public TripStopLogResponse toTripStopLogResponse(TripStopLogEntity e) { return tripMapper.toTripStopLogResponse(e); }
     public TripStudentResponse toTripStudentResponse(TripStudentEntity e) { return tripMapper.toTripStudentResponse(e); }
@@ -62,9 +61,6 @@ public class SchoolBusMapper extends BaseMapper {
     public TransportRequestResponse toTransportRequestResponse(TransportRequestEntity e) { return transportMapper.toTransportRequestResponse(e); }
     public TransportRequestDetailResponse toTransportRequestDetailResponse(TransportRequestEntity e, List<RequestStudentEntity> s) { return transportMapper.toTransportRequestDetailResponse(e, s); }
     public StudentSubscriptionResponse toStudentSubscriptionResponse(StudentSubscriptionEntity e) { return transportMapper.toStudentSubscriptionResponse(e); }
-    public TransportRequestHistoryResponse toTransportRequestHistoryResponse(TransportRequestHistoryEntity e) { return transportMapper.toTransportRequestHistoryResponse(e); }
-    public StudentSubscriptionHistoryResponse toStudentSubscriptionHistoryResponse(StudentSubscriptionHistoryEntity e) { return transportMapper.toStudentSubscriptionHistoryResponse(e); }
-
     // --- Operations ---
     public AttendanceResponse toAttendanceResponse(AttendanceEntity e) { return operationsMapper.toAttendanceResponse(e); }
 
