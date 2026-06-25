@@ -465,7 +465,7 @@ function SchoolBusSchoolsPageContent() {
 
   let schoolId: number | null = null;
   let urlTab = searchParams.get('tab') || 'general';
-  let viewParam = searchParams.get('view') || 'directory';
+  let viewParam = searchParams.get('view') || 'network';
 
   if (rawId) {
     const decoded = decodeURIComponent(rawId);

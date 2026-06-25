@@ -6,18 +6,15 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.request.ManualDispatchRequest;
 import serp.project.school_bus_service.dto.request.ReorderStopsRequest;
 import serp.project.school_bus_service.dto.request.RouteAssignmentRequest;
-import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.entity.BusEntity;
 import serp.project.school_bus_service.entity.DriverProfileEntity;
 import serp.project.school_bus_service.entity.RouteAssignmentEntity;
-import serp.project.school_bus_service.entity.RouteAssignmentHistoryEntity;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.enums.RouteAssignmentStatus;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
-import serp.project.school_bus_service.repository.RouteAssignmentHistoryRepository;
 import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.RoutePlanRepository;
 import serp.project.school_bus_service.service.IAttendantService;
@@ -37,7 +34,6 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -49,7 +45,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
     private static final LocalTime DAY_END   = LocalTime.of(23, 59, 59);
 
     private final RouteAssignmentRepository routeAssignmentRepository;
-    private final RouteAssignmentHistoryRepository routeAssignmentHistoryRepository;
     private final IRouteService routeService;
     private final IBusService busService;
     private final IDriverService driverService;
@@ -62,7 +57,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
 
     public RouteDispatchServiceImpl(
     RouteAssignmentRepository routeAssignmentRepository,
-                                 RouteAssignmentHistoryRepository routeAssignmentHistoryRepository,
                                  @Lazy IRouteService routeService,
                                  IBusService busService,
                                  IDriverService driverService,
@@ -73,7 +67,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                                  MessageCommon messageCommon,
                                  ISchoolBusDomainNotificationService domainNotificationService) {
         this.routeAssignmentRepository = routeAssignmentRepository;
-        this.routeAssignmentHistoryRepository = routeAssignmentHistoryRepository;
         this.routeService = routeService;
         this.busService = busService;
         this.driverService = driverService;
@@ -142,8 +135,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                 .findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
                 .orElseGet(RouteAssignmentEntity::new);
 
-        RouteAssignmentSnapshot oldSnapshot = RouteAssignmentSnapshot.from(assignment);
-
         boolean isNew = assignment.getId() == null;
         if (isNew) {
             assignment.markCreated(tenantId, actor(actorId));
@@ -174,11 +165,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         route.setAssignedBusCapacity(bus.getCapacity());
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
-
-        // 8 — History
-        String reason = request.getReason() != null ? request.getReason()
-                : (isNew ? "ASSIGN" : "REPLACE");
-        recordAssignmentHistory(route, oldSnapshot, saved, tenantId, actorId, reason);
 
         RouteAssignmentResponse response = mapper.toRouteAssignmentResponse(saved);
 
@@ -216,18 +202,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         }
 
         return assignRoute(routeId, assignReq, tenantId, actorId);
-    }
-
-    // ── Assignment history ────────────────────────────────────────────────────
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AssignmentHistoryResponse> getAssignmentHistory(Long routeId, Long tenantId) {
-        return routeAssignmentHistoryRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(routeId, tenantId)
-                .stream()
-                .map(this::toHistoryResponse)
-                .toList();
     }
 
     // ── Validation helpers ────────────────────────────────────────────────────
@@ -330,50 +304,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                 .isEmpty()) {
             throw new AppException(AppErrorCode.Dispatch.ATTENDANT_TIME_CONFLICT,
                     messageCommon.getMessage(AppErrorCode.Dispatch.ATTENDANT_TIME_CONFLICT));
-        }
-    }
-
-    // ── Internal helpers ──────────────────────────────────────────────────────
-
-    private void recordAssignmentHistory(RoutePlanEntity route, RouteAssignmentSnapshot oldSnapshot,
-                                         RouteAssignmentEntity newAssignment, Long tenantId,
-                                         Long actorId, String reason) {
-        RouteAssignmentHistoryEntity history = new RouteAssignmentHistoryEntity();
-        history.markCreated(tenantId, actor(actorId));
-        history.setRoute(route);
-        history.setOldBusId(oldSnapshot.busId());
-        history.setNewBusId(newAssignment.getBus() == null ? null : newAssignment.getBus().getId());
-        history.setOldDriverId(oldSnapshot.driverId());
-        history.setNewDriverId(newAssignment.getDriver() == null ? null : newAssignment.getDriver().getId());
-        history.setOldAttendantId(oldSnapshot.attendantId());
-        history.setNewAttendantId(newAssignment.getAttendant() == null ? null : newAssignment.getAttendant().getId());
-        history.setChangedBy(actorId);
-        history.setChangedAt(LocalDateTime.now());
-        history.setReason(reason);
-        routeAssignmentHistoryRepository.save(history);
-    }
-
-    private AssignmentHistoryResponse toHistoryResponse(RouteAssignmentHistoryEntity e) {
-        AssignmentHistoryResponse r = new AssignmentHistoryResponse();
-        r.setRouteId(e.getRoute().getId());
-        r.setOldBusId(e.getOldBusId());
-        r.setNewBusId(e.getNewBusId());
-        r.setOldDriverId(e.getOldDriverId());
-        r.setNewDriverId(e.getNewDriverId());
-        r.setOldAttendantId(e.getOldAttendantId());
-        r.setNewAttendantId(e.getNewAttendantId());
-        r.setChangedBy(e.getChangedBy());
-        r.setChangedAt(e.getChangedAt());
-        r.setReason(e.getReason());
-        return r;
-    }
-
-    private record RouteAssignmentSnapshot(Long busId, Long driverId, Long attendantId) {
-        private static RouteAssignmentSnapshot from(RouteAssignmentEntity assignment) {
-            return new RouteAssignmentSnapshot(
-                    assignment.getBus() == null ? null : assignment.getBus().getId(),
-                    assignment.getDriver() == null ? null : assignment.getDriver().getId(),
-                    assignment.getAttendant() == null ? null : assignment.getAttendant().getId());
         }
     }
 

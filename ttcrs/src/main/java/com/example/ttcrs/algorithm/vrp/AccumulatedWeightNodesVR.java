@@ -4,14 +4,20 @@ import java.util.*;
 
 import com.example.ttcrs.algorithm.vrp.entities.NodeWeightsManager;
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Lớp này quản lý 1 bất biến về trọng lượng tích lũy của các điểm 
+// trên các tuyến đường. Nó cập nhật trọng lượng tích lũy khi có các 
+// thay đổi trong cấu trúc tuyến đường, như di chuyển điểm, thêm hoặc 
+// xóa điểm, hoặc thực hiện các thao tác khác trên tuyến đường. Trọng 
+// lượng tích lũy có thể được sử dụng để tính toán chi phí của tuyến 
+// đường hoặc để áp dụng các ràng buộc liên quan đến trọng lượng trong 
+// quá trình tối ưu hóa tuyến đường.
 public class AccumulatedWeightNodesVR implements InvariantVR {
 
-	protected VarRoutesVR XR;
-	protected VRManager mgr;
-	protected NodeWeightsManager nwm;
+	protected VarRoutesVR XR; // Biển quản lý route động
+	protected VRManager mgr; // Quản lý propagation (đăng ký invariant)
+	protected NodeWeightsManager nwm; // Biển quản lý trọng lượng của các điểm
 	
-	protected double[] sumWeights;
+	protected double[] sumWeights; // Trọng lượng tích lũy của Point
 	protected HashMap<Point, Integer> map;
 	
 	public AccumulatedWeightNodesVR(VarRoutesVR XR, NodeWeightsManager nwm){
@@ -24,7 +30,7 @@ public class AccumulatedWeightNodesVR implements InvariantVR {
 	private void post(){
 		sumWeights = new double[XR.getTotalNbPoints()];
 		map = new HashMap<Point, Integer>();
-		ArrayList<Point> points = XR.getAllPoints();
+		ArrayList<Point> points = XR.getAllPoints();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 		for (int i = 0; i < points.size(); i++) {
 			map.put(points.get(i), i);
 		}

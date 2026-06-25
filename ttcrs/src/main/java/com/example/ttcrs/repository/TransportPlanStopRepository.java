@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 public interface TransportPlanStopRepository extends JpaRepository<TransportPlanStopEntity, Long> {
     List<TransportPlanStopEntity> findAllByTransportPlanIdOrderBySequenceAsc(Long transportPlanId);
     List<TransportPlanStopEntity> findAllByTransportPlanIdIn(java.util.Collection<Long> planIds);
+    java.util.Optional<TransportPlanStopEntity> findByTransportPlanIdAndSequence(Long transportPlanId, Integer sequence);
 
     default Map<Long, Long> countByPlanIds(java.util.Collection<Long> planIds) {
         return findAllByTransportPlanIdIn(planIds).stream()

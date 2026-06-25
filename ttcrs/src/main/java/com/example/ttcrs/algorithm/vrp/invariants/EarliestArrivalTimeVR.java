@@ -41,12 +41,12 @@ public class EarliestArrivalTimeVR implements InvariantVR {
 
 	private void update(int k){
 		Point s = XR.getStartingPointOfRoute(k);
-		earliestArrivalTime.put( s ,1.0*earliestAllowedArrivalTime.get(s));
+		earliestArrivalTime.put( s ,1.0*earliestAllowedArrivalTime.get(s)); // earliestArrivalTime của điểm đầu tiên trên tuyến đường được đặt bằng earliestAllowedArrivalTime của nó, vì đó là thời gian sớm nhất mà điểm đó có thể được phục vụ.
 
 		for(Point x = s; x != XR.getTerminatingPointOfRoute(k); x = XR.next(x)){
 			Point nx = XR.next(x);
 			//System.out.println(earliestArrivalTime.get(x) + "  "+serviceDuration.get(x) + "   "+ awm.getDistance(x, nx));
-			double tnx = earliestArrivalTime.get(x) + serviceDuration.get(x) + awm.getDistance(x, nx);
+			double tnx = earliestArrivalTime.get(x) + serviceDuration.get(x) + awm.getDistance(x, nx); // earliestArrivalTime của điểm tiếp theo (nx) được tính bằng thời gian đến điểm x (earliestArrivalTime.get(x)) cộng với thời gian phục vụ tại điểm x (serviceDuration.get(x)) cộng với thời gian di chuyển từ điểm x đến điểm nx (awm.getDistance(x, nx)).
 			double tmp = tnx > earliestAllowedArrivalTime.get(nx) ? 
 					tnx : earliestAllowedArrivalTime.get(nx);
 				earliestArrivalTime.put(nx, tmp);
@@ -83,6 +83,7 @@ public class EarliestArrivalTimeVR implements InvariantVR {
 	{
 		return earliestAllowedArrivalTime.get(v);
 	}
+	// Cập nhật earliestArrivalTime cho tất cả các điểm sau điểm x trên tuyến đường của x. Điều này được gọi sau khi thực hiện một move có thể thay đổi thứ tự hoặc tuyến đường của các điểm, để đảm bảo rằng earliestArrivalTime luôn phản ánh trạng thái hiện tại của tuyến đường.
 	void updateFromPoint(Point x)
 	{
 		//System.out.println(name() + "::updateFromPoint(" + x.ID + "), earliestArrivalTime = " + earliestArrivalTime.get(x));

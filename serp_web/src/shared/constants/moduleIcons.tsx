@@ -230,12 +230,7 @@ export const getModuleRoute = (moduleCode: string): string => {
   if (canonicalCode === 'DISCUSSION') return '/discuss';
   if (canonicalCode === 'PTM') return '/ptm/dashboard';
   if (canonicalCode === 'CRM') return '/crm/dashboard';
-  if (canonicalCode === 'TMS') {
-    return '/first-mile';
-  }
-  if (canonicalCode === 'TTCRS') {
-    return '/ttcrs/dispatcher/locations';
-  }
+  if (canonicalCode === 'TMS') return '/first-mile';
   if (canonicalCode === 'SCHOOLBUS') {
     return '/school-bus';
   }

@@ -12,7 +12,6 @@ import serp.project.school_bus_service.dto.request.ReorderStopsRequest;
 import serp.project.school_bus_service.dto.request.RouteAssignmentRequest;
 import serp.project.school_bus_service.dto.request.RoutePlanUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.dto.response.AssignmentHistoryResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
@@ -45,8 +44,6 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
 
     RouteAssignmentResponse manualDispatchRoute(Long routeId, ManualDispatchRequest request, Long tenantId,
             Long actorId);
-
-    List<AssignmentHistoryResponse> getAssignmentHistory(Long routeId, Long tenantId);
 
     // Manual editing
     RouteStopResponse addStop(Long routeId, AddRouteStopRequest request, Long tenantId, Long actorId);

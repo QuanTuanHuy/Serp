@@ -4,11 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.school_bus_service.dto.request.BatchAttendanceRequest;
 import serp.project.school_bus_service.dto.request.CancelTripRequest;
 import serp.project.school_bus_service.dto.request.CompleteTripRequest;
 import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
+import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
@@ -21,7 +23,6 @@ import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
 import serp.project.school_bus_service.shared.i18n.MessageCommon;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -415,12 +416,6 @@ public class TripOperationServiceImpl implements ITripOperationService {
         trip.setStatus(TripStatus.COMPLETED);
         trip.setCompletedAt(completedAt);
 
-        if (trip.getStartedAt() != null) {
-            trip.setActualDurationMin((int) Duration.between(trip.getStartedAt(), completedAt).toMinutes());
-        }
-        if (trip.getActualDistanceKm() == null && trip.getPlannedDistanceKm() != null) {
-            trip.setActualDistanceKm(trip.getPlannedDistanceKm());
-        }
         if (request != null && request.getNote() != null && !request.getNote().isBlank()) {
             trip.setCompletionNote(request.getNote());
         }
@@ -577,5 +572,13 @@ public class TripOperationServiceImpl implements ITripOperationService {
         response.setNotes(request.getNotes());
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public BatchAttendanceResponse batchUpdateAttendance(Long tripId, Long routeStopId,
+            BatchAttendanceRequest request, Long tenantId, Long actorId) {
+        schoolBusDataScopeService.assertCanMarkAttendance(tripId);
+        return attendanceService.batchUpdateAttendance(tripId, routeStopId, request, tenantId, actorId);
     }
 }

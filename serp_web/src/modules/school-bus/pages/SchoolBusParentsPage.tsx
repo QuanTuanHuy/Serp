@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  Eye,
   Mail,
   Pencil,
   Phone,
@@ -323,6 +324,17 @@ export function SchoolBusParentsPage() {
       headerClassName: 'pr-6 text-right',
       render: (parent) => (
         <div className='flex justify-end gap-2'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingParent(parent);
+              setDialogOpen(true);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
           <Button
             size='icon'
             variant='outline'

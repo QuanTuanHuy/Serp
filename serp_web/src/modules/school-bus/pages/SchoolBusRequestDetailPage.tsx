@@ -20,13 +20,8 @@ import {
   useApproveTransportRequestMutation,
   useCancelTransportRequestMutation,
   useGetTransportRequestByIdQuery,
-  useGetTransportRequestHistoryQuery,
   useRejectTransportRequestMutation,
 } from '../api/schoolBusApi';
-import {
-  SchoolBusTimeline,
-  mapRequestHistoryToTimeline,
-} from '../components/history';
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -199,11 +194,6 @@ export function SchoolBusRequestDetailPage({
   const [rejectTransportRequest, { isLoading: rejecting }] =
     useRejectTransportRequestMutation();
   const [cancelTransportRequest] = useCancelTransportRequestMutation();
-  const {
-    data: historyData,
-    isLoading: historyLoading,
-    isError: historyError,
-  } = useGetTransportRequestHistoryQuery(requestId);
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const [fitAllKey, setFitAllKey] = React.useState(0);
   const detail = data?.data;
@@ -1030,23 +1020,6 @@ export function SchoolBusRequestDetailPage({
                 </div>
               )}
 
-              {/* Request history */}
-              <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
-                <h3 className='font-bold text-slate-900 text-base'>
-                  Request history
-                </h3>
-                <div className='border-t border-slate-100 pt-3'>
-                  <SchoolBusTimeline
-                    events={mapRequestHistoryToTimeline(
-                      historyData?.data ?? []
-                    )}
-                    mode='compact'
-                    isLoading={historyLoading}
-                    isError={historyError}
-                    maxHeight='320px'
-                  />
-                </div>
-              </div>
             </div>
           </div>
         </div>

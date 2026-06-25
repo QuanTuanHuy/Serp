@@ -20,6 +20,7 @@ import {
   SkipForward,
   User,
   Search,
+  CheckSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Client, StompSubscription } from '@stomp/stompjs';
@@ -40,6 +41,7 @@ import {
   useDropoffTripStudentMutation,
   useNoShowTripStudentMutation,
   useNotServedTripStudentMutation,
+  useBatchAttendanceTripStopMutation,
 } from '../api/schoolBusApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -592,6 +594,11 @@ export function SchoolBusTripOperationDetailPage({
     useNoShowTripStudentMutation();
   const [notServedStudent, { isLoading: markingNotServed }] =
     useNotServedTripStudentMutation();
+  const [batchAttendance, { isLoading: batchingAttendance }] =
+    useBatchAttendanceTripStopMutation();
+
+  // ── Batch selection state ──
+  const [selectedStudentIds, setSelectedStudentIds] = React.useState<Set<number>>(new Set());
 
   const isActing =
     starting ||
@@ -605,7 +612,8 @@ export function SchoolBusTripOperationDetailPage({
     droppingOffStudent ||
     markingAbsent ||
     markingNoShow ||
-    markingNotServed;
+    markingNotServed ||
+    batchingAttendance;
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
     try {
@@ -704,6 +712,43 @@ export function SchoolBusTripOperationDetailPage({
         body: { routeStopId: selectedStopId, studentId: s.studentId },
       }).unwrap()
     );
+  };
+
+  // ── Batch selection helpers ──
+  const toggleStudentSelection = (studentId: number) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  };
+
+  const plannedStudentsAtStop = React.useMemo(() => {
+    return studentsAtStop.filter((s) => (s.status || 'PLANNED').toUpperCase() === 'PLANNED');
+  }, [studentsAtStop]);
+
+  const toggleSelectAll = () => {
+    const allIds = plannedStudentsAtStop.map((s) => s.studentId);
+    const allSelected = allIds.every((id) => selectedStudentIds.has(id));
+    if (allSelected) {
+      setSelectedStudentIds(new Set());
+    } else {
+      setSelectedStudentIds(new Set(allIds));
+    }
+  };
+
+  const handleBatchAction = (action: 'MARK_BOARDED' | 'MARK_ABSENT' | 'MARK_NO_SHOW') => {
+    if (!selectedStopId || selectedStudentIds.size === 0) return;
+    const label = action === 'MARK_BOARDED' ? 'Board' : action === 'MARK_ABSENT' ? 'Absent' : 'No-show';
+    act(`Batch ${label} (${selectedStudentIds.size} students)`, async () => {
+      await batchAttendance({
+        tripId,
+        stopId: selectedStopId,
+        body: { action, studentIds: Array.from(selectedStudentIds) },
+      }).unwrap();
+      setSelectedStudentIds(new Set());
+    });
   };
 
   return (
@@ -859,9 +904,7 @@ export function SchoolBusTripOperationDetailPage({
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
                       {manifest?.distanceKm != null
                         ? `${manifest.distanceKm} km`
-                        : trip?.plannedDistanceKm != null
-                          ? `${trip.plannedDistanceKm} km`
-                          : '—'}
+                        : '—'}
                     </span>
                   </div>
                 </div>
@@ -875,9 +918,7 @@ export function SchoolBusTripOperationDetailPage({
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
                       {manifest?.durationMin != null
                         ? `${manifest.durationMin} mins`
-                        : trip?.plannedDurationMin != null
-                          ? `${trip.plannedDurationMin} mins`
-                          : '—'}
+                        : '—'}
                     </span>
                   </div>
                 </div>
@@ -1773,6 +1814,70 @@ export function SchoolBusTripOperationDetailPage({
               />
             </div>
 
+            {/* Batch Action Bar */}
+            {selectedStop &&
+              tripIsActive &&
+              isStopActionable &&
+              access.canMarkAttendance &&
+              !access.isParentOnly &&
+              (isPickupActionStop || isDropoffActionStop) && (
+              <div className='space-y-2 shrink-0'>
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={toggleSelectAll}
+                    className='flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-700 transition-colors'
+                    disabled={plannedStudentsAtStop.length === 0 || isActing}
+                  >
+                    <CheckSquare className='h-3.5 w-3.5' />
+                    {plannedStudentsAtStop.length > 0 &&
+                    plannedStudentsAtStop.every((s) => selectedStudentIds.has(s.studentId))
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </button>
+                  {selectedStudentIds.size > 0 && (
+                    <span className='text-[10px] text-slate-400 font-semibold'>
+                      {selectedStudentIds.size} selected
+                    </span>
+                  )}
+                </div>
+                {selectedStudentIds.size > 0 && (
+                  <div className='flex flex-wrap items-center gap-1.5'>
+                    {isPickupActionStop && (
+                      <>
+                        <Button
+                          size='sm'
+                          className='h-7 bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-3 text-[10px] font-bold shadow-none border-0'
+                          onClick={() => handleBatchAction('MARK_BOARDED')}
+                          disabled={isActing}
+                        >
+                          Board ({selectedStudentIds.size})
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='h-7 rounded-full border-amber-250 px-3 text-[10px] text-amber-700 hover:bg-amber-50 font-bold shadow-none'
+                          onClick={() => handleBatchAction('MARK_ABSENT')}
+                          disabled={isActing}
+                        >
+                          Absent ({selectedStudentIds.size})
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='h-7 rounded-full border-red-250 px-3 text-[10px] text-red-650 hover:bg-red-50 font-bold shadow-none'
+                          onClick={() => handleBatchAction('MARK_NO_SHOW')}
+                          disabled={isActing}
+                        >
+                          No-show ({selectedStudentIds.size})
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Main Content Area */}
             <div className='flex-1 overflow-y-auto min-h-0 pr-1'>
               {selectedStop ? (
@@ -1801,6 +1906,17 @@ export function SchoolBusTripOperationDetailPage({
                           key={student.tripStudentId}
                           className='bg-white border border-slate-150 rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4'
                         >
+                          <div className='flex items-start gap-3 min-w-0 flex-1'>
+                            {/* Batch selection checkbox */}
+                            {tripIsActive && isStopActionable && access.canMarkAttendance && isPlanned && (isPickupActionStop || isDropoffActionStop) && (
+                              <input
+                                type='checkbox'
+                                checked={selectedStudentIds.has(student.studentId)}
+                                onChange={() => toggleStudentSelection(student.studentId)}
+                                disabled={isActing}
+                                className='mt-0.5 h-4 w-4 rounded border-slate-300 text-[#C81E3A] focus:ring-[#C81E3A]/30 cursor-pointer shrink-0 accent-[#C81E3A]'
+                              />
+                            )}
                           <div className='space-y-1 min-w-0'>
                             <div className='flex items-center gap-2 flex-wrap'>
                               <p className='font-bold text-slate-800 text-xs truncate'>
@@ -1816,6 +1932,7 @@ export function SchoolBusTripOperationDetailPage({
                                 Note: {student.note}
                               </p>
                             )}
+                          </div>
                           </div>
 
                           {/* Attendance Actions */}

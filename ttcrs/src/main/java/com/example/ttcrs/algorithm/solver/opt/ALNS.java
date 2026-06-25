@@ -67,8 +67,8 @@ public class ALNS implements OptimizationStrategy {
 	}
 
 	public void adaptiveSearchOperators(String outputfile) {
-		int it = 0;
-		int iS = 0;
+		int it = 0; // number of iterations
+		int iS = 0; // number of iterations since last improvement
 
 		// Ensure ALNS bookkeeping maps are ready
 		initParamsForALNS();
@@ -132,6 +132,7 @@ public class ALNS implements OptimizationStrategy {
 			initialSolutionBuilder.removeAllMoocFromRoutes(solver);
 
 			int i_selected_removal = -1;
+			// if no improvement after maxStable iterations, apply all removal operator to diversify the search
 			if (iS >= solver.maxStable) {
 				opt.allRemoval();
 				iS = 0;
@@ -278,7 +279,7 @@ public class ALNS implements OptimizationStrategy {
 			System.out.println(e);
 		}
 	}
-
+	// Select an operator based on the given probabilities
 	private int get_operator(double[] p) {
 		int n = p.length;
 		double[] s = new double[n];

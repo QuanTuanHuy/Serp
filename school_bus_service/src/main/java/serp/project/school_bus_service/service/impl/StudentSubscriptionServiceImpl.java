@@ -8,7 +8,6 @@ import serp.project.school_bus_service.dto.params.StudentSubscriptionParamsReque
 import serp.project.school_bus_service.dto.request.BaseParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.dto.response.StudentSubscriptionHistoryResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 
 import serp.project.school_bus_service.service.ICodeGeneratorService;
@@ -18,7 +17,6 @@ import serp.project.school_bus_service.service.ISchoolBusDomainNotificationServi
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 
 import serp.project.school_bus_service.enums.RouteDirection;
-import serp.project.school_bus_service.enums.SubscriptionChangeType;
 import serp.project.school_bus_service.enums.SubscriptionStatus;
 import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
@@ -26,10 +24,7 @@ import serp.project.school_bus_service.entity.PickupPointEntity;
 import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
-import serp.project.school_bus_service.entity.StudentSubscriptionHistoryEntity;
-
 import serp.project.school_bus_service.entity.TransportRequestEntity;
-import serp.project.school_bus_service.repository.StudentSubscriptionHistoryRepository;
 import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
 
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
@@ -47,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -58,7 +52,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     private static final Logger log = LoggerFactory.getLogger(StudentSubscriptionServiceImpl.class);
 
     private final StudentSubscriptionRepository subscriptionRepository;
-    private final StudentSubscriptionHistoryRepository historyRepository;
     private final IMasterDataService masterDataService;
     private final ICodeGeneratorService codeGeneratorService;
     private final SchoolBusMapper mapper;
@@ -70,7 +63,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     public StudentSubscriptionServiceImpl(
             StudentSubscriptionRepository subscriptionRepository,
-            StudentSubscriptionHistoryRepository historyRepository,
             IMasterDataService masterDataService,
             ICodeGeneratorService codeGeneratorService,
             SchoolBusMapper mapper,
@@ -79,7 +71,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
             SchoolBusSecurityService securityService,
             ISchoolBusDomainNotificationService domainNotificationService) {
         this.subscriptionRepository = subscriptionRepository;
-        this.historyRepository = historyRepository;
         this.masterDataService = masterDataService;
         this.codeGeneratorService = codeGeneratorService;
         this.mapper = mapper;
@@ -135,14 +126,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public StudentSubscriptionEntity getSubscriptionEntity(Long id, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessSubscription(id);
         return findById(id, tenantId);
-    }
-
-    @Override
-    public List<StudentSubscriptionHistoryResponse> getSubscriptionHistory(Long subscriptionId, Long tenantId) {
-        schoolBusDataScopeService.assertCanAccessSubscription(subscriptionId);
-        findById(subscriptionId, tenantId);
-        return historyRepository.findBySubscriptionIdAndTenantIdAndIsDeletedFalseOrderByChangedAtDesc(subscriptionId, tenantId)
-                .stream().map(mapper::toStudentSubscriptionHistoryResponse).toList();
     }
 
     // ── MANUAL CRUD ─────────────────────────────────────────────────────────
@@ -268,8 +251,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.setIsActive(Boolean.TRUE);
         StudentSubscriptionEntity saved = subscriptionRepository.save(entity);
 
-        recordHistory(saved, rs, request, SubscriptionChangeType.CREATED, null,
-                SubscriptionStatus.ACTIVE.name(), actorId, null, "Created from approved NEW_SERVICE request");
         return saved;
     }
 
@@ -278,21 +259,14 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public void changeFromApprovedRequest(TransportRequestEntity request, RequestStudentEntity rs,
             Long tenantId, Long actorId) {
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
-        String oldStatus = target.getStatus().name();
-
         // Close old subscription
         target.setStatus(SubscriptionStatus.STOPPED);
         target.setEffectiveTo(request.getEffectiveFrom().minusDays(1));
         target.markUpdated(actor(actorId));
         subscriptionRepository.save(target);
-        recordHistory(target, rs, request, SubscriptionChangeType.CHANGED, oldStatus,
-                SubscriptionStatus.STOPPED.name(), actorId, null, "Closed by CHANGE_SERVICE request");
 
         // Create new subscription from snapshot
-        StudentSubscriptionEntity newSub = createFromApprovedRequest(request, rs, tenantId, actorId);
-        // Override the history type for the new one
-        recordHistory(newSub, rs, request, SubscriptionChangeType.CHANGED, null,
-                SubscriptionStatus.ACTIVE.name(), actorId, null, "Created by CHANGE_SERVICE (replaces " + target.getSubscriptionCode() + ")");
+        createFromApprovedRequest(request, rs, tenantId, actorId);
     }
 
     @Override
@@ -300,13 +274,10 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public void stopFromApprovedRequest(TransportRequestEntity request, RequestStudentEntity rs,
             Long tenantId, Long actorId) {
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
-        String oldStatus = target.getStatus().name();
         target.setStatus(SubscriptionStatus.STOPPED);
         target.setEffectiveTo(request.getEffectiveFrom());
         target.markUpdated(actor(actorId));
         subscriptionRepository.save(target);
-        recordHistory(target, rs, request, SubscriptionChangeType.STOPPED, oldStatus,
-                SubscriptionStatus.STOPPED.name(), actorId, null, "Stopped by STOP_SERVICE request");
     }
 
     @Override
@@ -314,15 +285,9 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public void pauseFromApprovedRequest(TransportRequestEntity request, RequestStudentEntity rs,
             Long tenantId, Long actorId) {
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
-        String oldStatus = target.getStatus().name();
-
         target.setStatus(SubscriptionStatus.PAUSED);
         target.markUpdated(actor(actorId));
         subscriptionRepository.save(target);
-
-        recordHistory(target, rs, request, SubscriptionChangeType.PAUSED, oldStatus,
-                SubscriptionStatus.PAUSED.name(), actorId, null,
-                "Paused by PAUSE_SERVICE request");
     }
 
     @Override
@@ -330,13 +295,9 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public void resumeFromApprovedRequest(TransportRequestEntity request, RequestStudentEntity rs,
             Long tenantId, Long actorId) {
         StudentSubscriptionEntity target = requireTarget(rs, tenantId);
-        String oldStatus = target.getStatus().name();
-
         target.setStatus(SubscriptionStatus.ACTIVE);
         target.markUpdated(actor(actorId));
         subscriptionRepository.save(target);
-        recordHistory(target, rs, request, SubscriptionChangeType.RESUMED, oldStatus,
-                SubscriptionStatus.ACTIVE.name(), actorId, null, "Resumed by RESUME_SERVICE request");
     }
 
     @Override
@@ -356,9 +317,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         }
 
         StudentSubscriptionEntity newSub = createFromApprovedRequest(request, rs, tenantId, actorId);
-        recordHistory(newSub, rs, request, SubscriptionChangeType.RENEWED, null,
-                SubscriptionStatus.ACTIVE.name(), actorId, null,
-                "Renewed by RENEW_SERVICE" + (target != null ? " (from " + target.getSubscriptionCode() + ")" : ""));
         return newSub;
     }
 
@@ -370,30 +328,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
                     messageCommon.getMessage(AppErrorCode.Subscription.TARGET_REQUIRED));
         }
         return findById(rs.getTargetSubscription().getId(), tenantId);
-    }
-
-    private void recordHistory(StudentSubscriptionEntity sub, RequestStudentEntity rs,
-            TransportRequestEntity request, SubscriptionChangeType changeType,
-            String oldStatus, String newStatus, Long actorId, String reason, String notes) {
-        StudentSubscriptionHistoryEntity h = new StudentSubscriptionHistoryEntity();
-        h.markCreated(sub.getTenantId(), actor(actorId));
-        h.setSubscription(sub);
-        h.setSourceRequest(request);
-        h.setRequestStudent(rs);
-        h.setChangeType(changeType);
-        h.setOldStatus(oldStatus);
-        h.setNewStatus(newStatus);
-        h.setChangedBy(actorId);
-        h.setChangedAt(LocalDateTime.now());
-        h.setReason(reason);
-        h.setNotes(notes);
-        // Snapshot key fields
-        h.setNewPickupPointId(sub.getPickupPoint() != null ? sub.getPickupPoint().getId() : null);
-        h.setNewDropoffPointId(sub.getDropoffPoint() != null ? sub.getDropoffPoint().getId() : null);
-        h.setNewTripOption(sub.getTripOption() != null ? sub.getTripOption().name() : null);
-        h.setNewEffectiveFrom(sub.getEffectiveFrom());
-        h.setNewEffectiveTo(sub.getEffectiveTo());
-        historyRepository.save(h);
     }
 
     private void copyDays(StudentSubscriptionEntity entity, RequestStudentEntity rs) {
@@ -425,20 +359,6 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
         entity.setStatus(newStatus);
         entity.markUpdated(actor(actorId));
         StudentSubscriptionEntity saved = subscriptionRepository.save(entity);
-
-        // Map transition → change type (no ACTIVATED in enum)
-        SubscriptionChangeType changeType = switch (newStatus) {
-            case ACTIVE -> SubscriptionChangeType.RESUMED;   // only reachable from PAUSED→ACTIVE
-            case PAUSED -> SubscriptionChangeType.PAUSED;
-            case STOPPED -> SubscriptionChangeType.STOPPED;
-            default -> SubscriptionChangeType.CHANGED;
-        };
-
-        // Record history (no request context for manual transitions)
-        recordHistory(saved, null, null, changeType,
-                oldStatus.name(), newStatus.name(), actorId, null,
-                "Manual " + changeType.name().toLowerCase() + " by admin");
-
         domainNotificationService.notifySubscriptionStatusChanged(saved, newStatus, actorId);
         return mapper.toStudentSubscriptionResponse(saved);
     }

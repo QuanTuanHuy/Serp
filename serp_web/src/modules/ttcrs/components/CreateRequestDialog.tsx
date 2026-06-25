@@ -163,23 +163,32 @@ export function CreateRequestDialog({
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const handleTypeChange = (value: string) => {
+    set('type', value);
+    if (value === 'OE') {
+      setForm((prev) => ({ ...prev, srcLocationCode: '' }));
+      setErrors((prev) => ({ ...prev, srcLocationCode: undefined }));
+    }
+  };
+
   // Validate
   function validate(): boolean {
     const next: Partial<Record<keyof FormState, string>> = {};
+    const requiresOrigin = Boolean(form.type && form.type !== 'OE');
 
     if (!form.customerId) next.customerId = 'Please select a customer';
     if (!form.type) next.type = 'Please select a request type';
-    if (!form.srcLocationCode)
+    if (requiresOrigin && !form.srcLocationCode) {
       next.srcLocationCode = 'Please select a source location';
-    if (!form.destLocationCode)
-      next.destLocationCode = 'Please select a destination location';
+    }
+    if (!form.destLocationCode) next.destLocationCode = 'Please select a destination location';
     if (
+      requiresOrigin &&
       form.srcLocationCode &&
       form.destLocationCode &&
       form.srcLocationCode === form.destLocationCode
     ) {
-      next.destLocationCode =
-        'Destination location must be different from source location';
+      next.destLocationCode = 'Destination location must be different from source location';
     }
 
     const qty = parseInt(form.quantity, 10);
@@ -202,14 +211,13 @@ export function CreateRequestDialog({
     e.preventDefault();
     if (!validate()) return;
 
-    const timeFields = form.type
-      ? TIME_WINDOW_FIELDS[form.type as RequestType]
-      : undefined;
+    const timeFields =
+      form.type ? TIME_WINDOW_FIELDS[form.type as RequestType] : undefined;
+    const requiresOrigin = form.type !== 'OE';
 
     const payload: CreateRequestPayload = {
       customerId: parseInt(form.customerId, 10),
       type: form.type as RequestType,
-      srcLocationCode: form.srcLocationCode,
       destLocationCode: form.destLocationCode,
       quantity: parseInt(form.quantity, 10),
       weight: form.weight ? parseFloat(form.weight) : null,
@@ -223,6 +231,12 @@ export function CreateRequestDialog({
       lateAtDest:
         timeFields?.lateAtDest && form.lateAtDest ? form.lateAtDest : null,
     };
+
+    if (requiresOrigin) {
+      payload.srcLocationCode = form.srcLocationCode;
+    } else {
+      payload.srcLocationCode = null;
+    }
 
     try {
       await createRequests(payload).unwrap();
@@ -324,7 +338,10 @@ export function CreateRequestDialog({
             <Label htmlFor={`${formId}-type`}>
               Request Type <span className='text-destructive'>*</span>
             </Label>
-            <Select value={form.type} onValueChange={(v) => set('type', v)}>
+            <Select
+              value={form.type}
+              onValueChange={handleTypeChange}
+            >
               <SelectTrigger
                 id={`${formId}-type`}
                 className={cn('w-full', errors.type && 'border-destructive')}
@@ -347,45 +364,48 @@ export function CreateRequestDialog({
           {/* Row 3: Origin + Destination */}
           <div className='grid grid-cols-2 gap-4'>
             {/* Origin */}
-            <div className='min-w-0 space-y-1.5'>
-              <Label htmlFor={`${formId}-src`}>
-                Origin <span className='text-destructive'>*</span>
-              </Label>
-              <Select
-                value={form.srcLocationCode}
-                onValueChange={(v) => set('srcLocationCode', v)}
-                disabled={locationsLoading}
-              >
-                <SelectTrigger
-                  id={`${formId}-src`}
-                  className={cn(
-                    'w-full',
-                    errors.srcLocationCode && 'border-destructive'
-                  )}
+            {form.type === 'OE' ? (
+              <div className="min-w-0 space-y-1.5">
+                <Label>Origin</Label>
+                <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  Origin for OE requests is determined by the selected container when building a route.
+                </div>
+              </div>
+            ) : (
+              <div className="min-w-0 space-y-1.5">
+                <Label htmlFor={`${formId}-src`}>
+                  Origin <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.srcLocationCode}
+                  onValueChange={(v) => set('srcLocationCode', v)}
+                  disabled={locationsLoading}
                 >
-                  <SelectValue
-                    placeholder={
-                      locationsLoading ? 'Loading…' : 'Select origin'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.locationCode}>
-                      {loc.locationCode}
-                      <span className='ml-1.5 text-xs text-muted-foreground'>
-                        ({loc.type})
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.srcLocationCode && (
-                <p className='text-xs text-destructive'>
-                  {errors.srcLocationCode}
-                </p>
-              )}
-            </div>
+                  <SelectTrigger
+                    id={`${formId}-src`}
+                    className={cn(
+                      'w-full',
+                      errors.srcLocationCode && 'border-destructive'
+                    )}
+                  >
+                    <SelectValue placeholder={locationsLoading ? 'Loading…' : 'Select origin'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.locationCode}>
+                        {loc.locationCode}
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          ({loc.type})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.srcLocationCode && (
+                  <p className="text-xs text-destructive">{errors.srcLocationCode}</p>
+                )}
+              </div>
+            )}
 
             {/* Destination */}
             <div className='min-w-0 space-y-1.5'>

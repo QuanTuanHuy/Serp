@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   ArrowDown,
@@ -31,7 +32,8 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetMyTransportPlansQuery } from '../../api/ttcrsApi';
-import { TodayRoutesCard } from '../../components/TodayRoutesCard';
+import { TodayRoutesCard } from './components/TodayRoutesCard';
+import { ExecutingRouteBanner } from './components/ExecutingRouteBanner';
 import type { TransportPlanListItem, TransportPlanStatus } from '../../types';
 
 // -------------------------------------------------------------------------
@@ -68,7 +70,13 @@ type SortField =
 
 function formatDateTime(dt: string | null) {
   if (!dt) return '—';
-  return dt.replace('T', ' ').slice(0, 16);
+  const [datePart, timePart] = dt.replace('T', ' ').split(' ');
+  if (!datePart || !timePart) return dt.replace('T', ' ').slice(0, 16);
+
+  const [year, month, day] = datePart.split('-');
+  if (!year || !month || !day) return dt.replace('T', ' ').slice(0, 16);
+
+  return `${day}-${month}-${year} ${timePart.slice(0, 5)}`;
 }
 
 // -------------------------------------------------------------------------
@@ -79,15 +87,15 @@ export function DriverRoutesPage() {
   const user = useAppSelector(selectUserProfile);
   const isDriver = user?.roles?.includes('TTCRS_DRIVER') ?? false;
 
-  const [statusTab, setStatusTab] = useState<TransportPlanStatus | 'ALL'>(
-    'ALL'
-  );
-  const [sortBy, setSortBy] = useState<SortField>('startTime');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [page, setPage] = useState(0);
+  const router = useRouter();
+  const [statusTab, setStatusTab] = useState<TransportPlanStatus | 'ALL'>('ALL');
+  const [sortBy, setSortBy]       = useState<SortField>('startTime');
+  const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('desc');
+  const [page, setPage]           = useState(0);
 
   const { data, isLoading, isError } = useGetMyTransportPlansQuery();
   const plans = data?.data ?? [];
+  const executingPlan = plans.find((p) => p.status === 'EXECUTING') ?? null;
 
   const filtered = useMemo(() => {
     let result: TransportPlanListItem[] = plans;
@@ -154,6 +162,13 @@ export function DriverRoutesPage() {
           All transport plans assigned to you.
         </p>
       </div>
+
+      {/* Executing route quick-access banner */}
+      {isLoading ? (
+        <Skeleton className='h-20 w-full rounded-xl' />
+      ) : executingPlan ? (
+        <ExecutingRouteBanner plan={executingPlan} />
+      ) : null}
 
       {/* Today's routes highlight */}
       {isLoading ? (
@@ -259,7 +274,11 @@ export function DriverRoutesPage() {
               </TableHeader>
               <TableBody>
                 {paginated.map((plan, idx) => (
-                  <TableRow key={plan.id} className='hover:bg-muted/50'>
+                  <TableRow
+                    key={plan.id}
+                    className='hover:bg-muted/50 cursor-pointer'
+                    onClick={() => router.push(`/ttcrs/driver/routes/${plan.id}`)}
+                  >
                     <TableCell className='text-center text-xs text-muted-foreground'>
                       {page * PAGE_SIZE + idx + 1}
                     </TableCell>
@@ -276,16 +295,10 @@ export function DriverRoutesPage() {
                         {plan.status}
                       </Badge>
                     </TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.startTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.endTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>{plan.stopCount}</TableCell>
                     <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.startTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {formatDateTime(plan.endTime)}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums'>
-                      {plan.stopCount}
-                    </TableCell>
-                    <TableCell className='text-sm tabular-nums text-muted-foreground'>
                       {formatDateTime(plan.createdStamp)}
                     </TableCell>
                   </TableRow>

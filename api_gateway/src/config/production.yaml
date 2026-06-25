@@ -142,3 +142,7 @@ external:
       host: ${PM_CORE_SERVICE_HOST}
       port: ${PM_CORE_SERVICE_PORT}
       timeout: 15s
+    ttcrsService:
+      host: ${TTCRS_SERVICE_HOST}
+      port: ${TTCRS_SERVICE_PORT}
+      timeout: 15s

@@ -34,6 +34,7 @@ export function ModuleCard({
 }: ModuleCardProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+
   const iconConfig = getModuleIcon(module.code);
 
   const isAvailable = module.status === 'ACTIVE';

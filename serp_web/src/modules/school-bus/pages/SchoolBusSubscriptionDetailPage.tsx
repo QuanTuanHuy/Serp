@@ -22,17 +22,13 @@ import {
   useActivateSchoolBusSubscriptionMutation,
   usePauseSchoolBusSubscriptionMutation,
   useStopSchoolBusSubscriptionMutation,
-  useGetSchoolBusSubscriptionHistoryQuery,
 } from '../api/schoolBusApi';
-import { SchoolBusTimeline } from '../components/history/SchoolBusTimeline';
-import { mapSubscriptionHistoryToTimeline } from '../components/history/mappers';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { formatDate } from '../utils';
-import type { TimelineEvent } from '../components/history/SchoolBusTimeline';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
@@ -68,12 +64,6 @@ export function SchoolBusSubscriptionDetailPage({
   const [stopSubscription, { isLoading: stopping }] =
     useStopSchoolBusSubscriptionMutation();
 
-  const {
-    data: historyData,
-    isLoading: historyLoading,
-    isError: historyError,
-  } = useGetSchoolBusSubscriptionHistoryQuery(subscriptionId);
-
   const sub = data?.data;
 
   const handleAction = async (action: 'activate' | 'pause' | 'stop') => {
@@ -89,16 +79,6 @@ export function SchoolBusSubscriptionDetailPage({
       toast.error(error?.data?.message || `Failed to ${action} subscription`);
     }
   };
-
-  const timelineEvents = React.useMemo<TimelineEvent[]>(() => {
-    const historyEvents = mapSubscriptionHistoryToTimeline(
-      historyData?.data ?? []
-    );
-    return historyEvents.sort(
-      (a, b) =>
-        new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-    );
-  }, [historyData]);
 
   if (isLoading) {
     return (
@@ -707,20 +687,6 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             )}
 
-            {/* History Event Log */}
-            <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
-              <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                Contract History Log
-              </h3>
-              <SchoolBusTimeline
-                events={timelineEvents}
-                mode='compact'
-                groupByDate={false}
-                isLoading={historyLoading}
-                isError={historyError}
-                maxHeight='320px'
-              />
-            </div>
           </div>
         </div>
       </div>

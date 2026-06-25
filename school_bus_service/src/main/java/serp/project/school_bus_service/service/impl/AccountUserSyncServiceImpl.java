@@ -56,7 +56,8 @@ public class AccountUserSyncServiceImpl implements IAccountUserSyncService {
         log.info("Starting Account User Sync job. StartedAt={}", startedAt);
 
         // 1. Fetch or initialize checkpoint
-        SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository.findBySyncCodeAndIsDeletedFalse(SYNC_CODE)
+        SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository
+                .findFirstBySyncCodeAndIsDeletedFalseOrderByUpdatedAtDescIdDesc(SYNC_CODE)
                 .orElseGet(() -> {
                     SchoolBusSyncCheckpointEntity newCheckpoint = new SchoolBusSyncCheckpointEntity();
                     newCheckpoint.setSyncCode(SYNC_CODE);

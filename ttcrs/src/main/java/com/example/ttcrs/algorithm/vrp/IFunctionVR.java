@@ -3,7 +3,19 @@ package com.example.ttcrs.algorithm.vrp;
 import java.util.ArrayList;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Interface này định nghĩa các phương thức để đánh giá tác 
+// động của các loại di chuyển khác nhau trong bài toán VRP. 
+// Nó bao gồm các phương thức để đánh giá tác động của các 
+// di chuyển như TwoOptMove, OnePointMove, TwoPointsMove, 
+// OrOptMove, ThreeOptMove, CrossExchangeMove, và các di 
+// chuyển khác. Mỗi phương thức nhận vào các điểm liên quan 
+// đến di chuyển và trả về một giá trị double đại diện cho 
+// tác động của di chuyển đó đối với hàm mục tiêu (ví dụ: 
+// tổng khoảng cách, tổng thời gian, hoặc một hàm mục tiêu 
+// đa mục tiêu). Giao diện này cũng mở rộng từ InvariantVR, có 
+// thể chứa các phương thức khác liên quan đến việc duy trì 
+// các ràng buộc hoặc tính chất không đổi trong quá trình thực 
+// hiện các di chuyển.
 public interface IFunctionVR extends InvariantVR{
 
 	/*

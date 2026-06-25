@@ -3,7 +3,7 @@ package com.example.ttcrs.algorithm.vrp.entities;
 import java.util.*;
 
 import com.example.ttcrs.algorithm.vrp.IDistanceManager;
-
+// Lớp này quản lý trọng số của các cung (arc) giữa các điểm trong bài toán VRP. Nó sử dụng một ma trận hai chiều để lưu trữ trọng số giữa mỗi cặp điểm, và một HashMap để ánh xạ mỗi điểm đến chỉ số của nó trong ma trận. Các phương thức setWeight và getWeight cho phép cập nhật và truy cập trọng số giữa hai điểm cụ thể. Lớp này cũng triển khai giao diện IDistanceManager, cho phép nó được sử dụng như một đối tượng quản lý khoảng cách giữa các điểm trong các thuật toán VRP.
 public class ArcWeightsManager implements IDistanceManager{
 	private ArrayList<Point> points;
 	private HashMap<Point, Integer> map;

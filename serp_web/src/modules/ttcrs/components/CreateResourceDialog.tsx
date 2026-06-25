@@ -40,7 +40,6 @@ import type {
 
 const CONTAINER_SIZES: { value: ResourceContainerSize; label: string }[] = [
   { value: 'TWENTY', label: '20 ft' },
-  { value: 'FORTY', label: '40 ft' },
 ];
 
 const KIND_TABS: { value: ResourceKind; label: string }[] = [

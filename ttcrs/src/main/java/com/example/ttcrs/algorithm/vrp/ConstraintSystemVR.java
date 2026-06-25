@@ -3,7 +3,12 @@ package com.example.ttcrs.algorithm.vrp;
 import java.util.ArrayList;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Lớp gom các constraint lại. Mỗi khi có move, gọi các constraint 
+// để đánh giá vi phạm và propagate. Xem xem nếu 1 move được thực hiện 
+// thì sẽ violate bao nhiêu constraint.
+// Evaluate để đánh giá hậu quả của 1 move giả định mà không thay đổi
+// trạng thái nội bộ hiện tại. Propagate để cập nhật trạng thái nội bộ
+// sau khi move được thực hiện.
 public class ConstraintSystemVR implements IConstraintVR {
 	
 	private ArrayList<IConstraintVR> _constraints;
@@ -29,7 +34,7 @@ public class ConstraintSystemVR implements IConstraintVR {
 		// TODO Auto-generated method stub
 		return _violations;
 	}
-
+	// Lặp qua _constraints và cộng kết quả trả về từ từng constraint — tức là trả về tổng "điểm vi phạm/chi phí" cho move đó
 	//@Override
 	public int evaluateOnePointMove(Point x, Point y) {
 		// TODO Auto-generated method stub
@@ -125,7 +130,7 @@ public class ConstraintSystemVR implements IConstraintVR {
 	public int evaluateOrOptMove2(Point x1, Point x2, Point y) {
 		// TODO Auto-generated method stub
 		int eval = 0;
-		for(IConstraintVR f : _constraints) eval += f.evaluateOrOptMove1(x1, x2, y);
+		for(IConstraintVR f : _constraints) eval += f.evaluateOrOptMove2(x1, x2, y);
 		return eval;
 	}
 

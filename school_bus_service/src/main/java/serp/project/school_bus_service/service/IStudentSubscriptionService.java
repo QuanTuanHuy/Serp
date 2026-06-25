@@ -5,7 +5,6 @@ import serp.project.school_bus_service.shared.base.IBaseService;
 import serp.project.school_bus_service.dto.params.StudentSubscriptionParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
-import serp.project.school_bus_service.dto.response.StudentSubscriptionHistoryResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -71,8 +70,6 @@ public interface IStudentSubscriptionService extends IBaseService<StudentSubscri
             TransportRequestEntity request,
             RequestStudentEntity requestStudent,
             Long tenantId, Long actorId);
-
-    List<StudentSubscriptionHistoryResponse> getSubscriptionHistory(Long subscriptionId, Long tenantId);
 
     /** Find eligible subscriptions for route planning (DB-filtered). */
     List<StudentSubscriptionEntity> findEligibleForPlanning(

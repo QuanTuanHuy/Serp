@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Bus,
   ChevronDown,
+  Eye,
   MapPin,
   Pencil,
   Plus,
@@ -488,6 +489,17 @@ export function SchoolBusFleetPage() {
           <Button
             size='icon'
             variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingBus(bus);
+              setBusDialogOpen(true);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
               setEditingBus(bus);
@@ -600,6 +612,17 @@ export function SchoolBusFleetPage() {
           <Button
             size='icon'
             variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingDriver(driver);
+              setDriverDialogOpen(true);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
+          <Button
+            size='icon'
+            variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
               setEditingDriver(driver);
@@ -694,6 +717,17 @@ export function SchoolBusFleetPage() {
       headerClassName: 'pr-6 text-right',
       render: (attendant) => (
         <div className='flex justify-end gap-2'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingAttendant(attendant);
+              setAttendantDialogOpen(true);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
           <Button
             size='icon'
             variant='outline'
@@ -817,6 +851,17 @@ export function SchoolBusFleetPage() {
       headerClassName: 'pr-6 text-right',
       render: (depot) => (
         <div className='flex justify-end gap-2'>
+          <Button
+            size='icon'
+            variant='outline'
+            className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            onClick={() => {
+              setEditingDepot(depot);
+              setDepotDialogOpen(true);
+            }}
+          >
+            <Eye className='h-3.5 w-3.5' />
+          </Button>
           <Button
             size='icon'
             variant='outline'
