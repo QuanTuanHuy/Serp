@@ -48,6 +48,14 @@ import {
 import { CreateRequestDialog } from '../../components';
 import type { RequestStatus, RequestType, TtcrsRequest } from '../../types';
 
+const REQUEST_TYPES: { label: string; value: RequestType | '' }[] = [
+  { label: 'All Types', value: '' },
+  { label: 'OF - Outbound Full', value: 'OF' },
+  { label: 'IF - Inbound Full', value: 'IF' },
+  { label: 'OE - Outbound Empty', value: 'OE' },
+  { label: 'IE - Inbound Empty', value: 'IE' },
+];
+
 // -------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------
@@ -214,6 +222,7 @@ export function DispatcherDashboardPage() {
 
   const [activeTab, setActiveTab] = useState<RequestStatus | 'ALL'>('PENDING');
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<RequestType | ''>('');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
@@ -237,12 +246,13 @@ export function DispatcherDashboardPage() {
   const queryParams = useMemo(
     () => ({
       ...(activeTab !== 'ALL' ? { statuses: [activeTab] } : {}),
+      ...(typeFilter !== '' ? { type: typeFilter } : {}),
       page,
       size: PAGE_SIZE,
       sortBy,
       sortDirection,
     }),
-    [activeTab, page, sortBy, sortDirection]
+    [activeTab, typeFilter, page, sortBy, sortDirection]
   );
 
   const { data, isLoading, isError, isFetching } =
@@ -302,6 +312,7 @@ export function DispatcherDashboardPage() {
     setActiveTab(tab as RequestStatus | 'ALL');
     setPage(0);
     setSelectedIds(new Set());
+    setTypeFilter('');
   };
 
   const isPlannedTab = activeTab === 'PLANNED';
@@ -393,6 +404,22 @@ export function DispatcherDashboardPage() {
             className='pl-9'
           />
         </div>
+
+        {/* <select
+          id='dispatcher-type-filter'
+          value={typeFilter}
+          onChange={(e) => {
+            setTypeFilter(e.target.value as RequestType | '');
+            setPage(0);
+          }}
+          className='rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary'
+        >
+          {REQUEST_TYPES.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select> */}
 
         {/* Action buttons */}
         <div className='flex items-center gap-2'>
