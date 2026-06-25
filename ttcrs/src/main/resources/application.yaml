@@ -1,0 +1,81 @@
+spring:
+  application:
+    app:
+      name: "@project.name@"
+      version: "@project.version@"
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL}/realms/serp
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  devtools:
+    restart:
+      enabled: false
+server:
+  port: ${SERVER_PORT:8094}
+
+storage:
+  s3:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    region: ${MINIO_REGION:us-east-1}
+    bucket: ${MINIO_BUCKET:ttcrs-evidence}
+
+app:
+  external:
+    services:
+      - name: account-service
+        url: ${ACCOUNT_SERVICE_URL:http://localhost:8081/account-service}
+  ttcrs:
+    driver-role-name: ${TTCRS_DRIVER_ROLE_NAME:TTCRS_DRIVER}
+
+security:
+  role-prefix: ROLE_
+  roles:
+    serp_service: ${SECURITY_ROLE_SERP_SERVICE:SERP_SERVICES}
+  urls:
+    public-urls:
+      - first: "/v3/api-docs/**"
+        second: GET
+      - first: "/swagger-ui/**"
+        second: GET
+      - first: "/swagger-ui.html"
+        second: GET
+    protected-urls:
+      # ==================== LOCATION ====================
+      - url-pattern: /ttcrs/api/v1/locations/**
+        roles:
+          - TTCRS_ADMIN
+          - TTCRS_PLANNER
+          - TTCRS_DISPATCHER
+          - TTCRS_DRIVER
+
+      # ==================== TRUCK ====================
+      - url-pattern: /ttcrs/api/v1/trucks/**
+        roles:
+          - TTCRS_ADMIN
+          - TTCRS_PLANNER
+
+      # ==================== DISPATCHER ====================
+      - url-pattern: /ttcrs/api/v1/dispatcher/**
+        roles:
+          - TTCRS_DISPATCHER
+          - SUPER_ADMIN
+
+      # ==================== DRIVER ====================
+      - url-pattern: /ttcrs/api/v1/driver/**
+        roles:
+          - TTCRS_DRIVER
+          - SUPER_ADMIN
+
+      # ==================== CUSTOMER ====================
+      - url-pattern: /ttcrs/api/v1/customer/**
+        roles:
+          - TTCRS_CUSTOMER
+          - SUPER_ADMIN
