@@ -26,6 +26,7 @@ public class AccountClientAdapter {
 
     private static final String ACCOUNT_SERVICE = "account-service";
     private static final String USERS_PATH = "/internal/api/v1/users";
+    private static final String ROLES_PATH = "/api/v1/roles";
 
     private final TokenUtils tokenUtils;
     private final HttpClientHelper httpClientHelper;
@@ -33,16 +34,24 @@ public class AccountClientAdapter {
     private final AppProperties appProperties;
     private final Gson gson;
 
+    private volatile Long cachedDriverRoleId;
+
     /**
      * Returns all users with the TTCRS_DRIVER role belonging to the given tenant.
      */
     public List<AccountUserDTO> getDriverUsers(Long tenantId) {
         try {
+            Long driverRoleId = resolveDriverRoleId();
+            if (driverRoleId == null) {
+                log.error("[AccountClientAdapter] Cannot resolve driver role id for name={}", appProperties.getDriverRoleName());
+                return List.of();
+            }
+
             String token = tokenUtils.getServiceToken();
             String baseUrl = serviceProperties.getServiceUrlByName(ACCOUNT_SERVICE);
 
             var params = new LinkedMultiValueMap<String, String>();
-            params.add("roleId", String.valueOf(appProperties.getDriverRoleId()));
+            params.add("roleId", String.valueOf(driverRoleId));
             params.add("organizationId", String.valueOf(tenantId));
             params.add("pageSize", "1000");
             params.add("status", "ACTIVE");
@@ -84,6 +93,44 @@ public class AccountClientAdapter {
             return null;
         } catch (Exception e) {
             log.error("[AccountClientAdapter] Failed to fetch user id={}: {}", userId, e.getMessage());
+            return null;
+        }
+    }
+
+    private Long resolveDriverRoleId() {
+        if (cachedDriverRoleId != null) {
+            return cachedDriverRoleId;
+        }
+        synchronized (this) {
+            if (cachedDriverRoleId != null) {
+                return cachedDriverRoleId;
+            }
+            try {
+                String token = tokenUtils.getServiceToken();
+                String url = serviceProperties.getServiceUrlByName(ACCOUNT_SERVICE) + ROLES_PATH;
+
+                GeneralResponse response = httpClientHelper
+                        .get(url, null,
+                                Map.of("Authorization", "Bearer " + token),
+                                GeneralResponse.class)
+                        .block();
+
+                if (response != null && response.isSuccess() && response.getData() != null) {
+                    JsonArray roles = gson.toJsonTree(response.getData()).getAsJsonArray();
+                    String targetName = appProperties.getDriverRoleName();
+                    for (JsonElement el : roles) {
+                        JsonObject role = el.getAsJsonObject();
+                        if (targetName.equals(role.get("name").getAsString())) {
+                            cachedDriverRoleId = role.get("id").getAsLong();
+                            log.info("[AccountClientAdapter] Resolved driver role '{}' -> id={}", targetName, cachedDriverRoleId);
+                            return cachedDriverRoleId;
+                        }
+                    }
+                    log.warn("[AccountClientAdapter] Role '{}' not found in account service", targetName);
+                }
+            } catch (Exception e) {
+                log.error("[AccountClientAdapter] Failed to resolve driver role name: {}", e.getMessage());
+            }
             return null;
         }
     }
